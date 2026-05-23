@@ -24,11 +24,11 @@ export default function ParentSignup() {
     if (data.user) {
       await supabase.from('profiles').upsert({ id: data.user.id, full_name: name })
     }
-    nav('/parent/dashboard')
+    nav('/parent/onboarding')
   }
 
   const googleSignup = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/parent/dashboard' } })
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/parent/onboarding' } })
   }
 
   return (

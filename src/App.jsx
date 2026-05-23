@@ -9,6 +9,9 @@ import ParentDashboard from './screens/ParentDashboard'
 import ChildPin from './screens/ChildPin'
 import ChildHome from './screens/ChildHome'
 import TaskFlow from './screens/TaskFlow'
+import ReadingFlow from './screens/ReadingFlow'
+import LibraryScreen from './screens/LibraryScreen'
+import ParentOnboarding from './screens/ParentOnboarding'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -37,10 +40,13 @@ export default function App() {
         <Route path="/" element={<Opening />} />
         <Route path="/parent/login" element={<ParentLogin />} />
         <Route path="/parent/signup" element={<ParentSignup />} />
-        <Route path="/parent/dashboard" element={session ? <ParentDashboard /> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/dashboard"   element={session ? <ParentDashboard />   : <Navigate to="/parent/login" />} />
+        <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<TaskFlow />} />
+        <Route path="/child/reading" element={<ReadingFlow />} />
+        <Route path="/child/library" element={<LibraryScreen />} />
       </Routes>
     </BrowserRouter>
   )

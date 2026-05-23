@@ -32,7 +32,14 @@ function buildEvalPrompt(taskType, age, language = 'en') {
     case 'writing':
       return `This photo shows a ${n}-year-old child's handwritten composition. Evaluate content, length and spelling appropriately for their age. ${lang} Return JSON only: {score, feedback, gem_earned, generated_questions} where gem_earned = 30 if score >= 60 else 0, generated_questions is a string array of the writing topics or prompts identified`
     case 'reading':
-      return `These photos show a ${n}-year-old child's book pages and written summary. Does the summary match the content? Evaluate appropriately for their age. ${lang} Return JSON only: {score, feedback, gem_earned, generated_questions} where gem_earned = 30 if score >= 60 else 0, generated_questions is a string array of comprehension questions about the text`
+      return `You are looking at photos of book pages that a ${n}-year-old child just read.
+Generate questions ONLY based on what is visible in these page photos.
+Do NOT use your knowledge of the book from training data.
+Do NOT ask about parts of the book not shown in the photos.
+If the photos are not book pages, say so in the feedback field.
+If you cannot read the text clearly, ask simpler visual questions about what the child can see in the illustrations.
+Base everything strictly on these specific pages shown.
+${lang} Return JSON only: {score, feedback, gem_earned, generated_questions} where gem_earned = 30 if score >= 60 else 0, generated_questions is a string array of comprehension questions about ONLY what is visible in these specific pages`
     case 'chore':
       return `You are evaluating a child's household chore photo. Be GENEROUS and FLEXIBLE in your evaluation. The child did SOME tidying - reward the effort. If you can see ANY sign of tidiness, cleanliness or organization, mark as completed. Do NOT ask for specific chore details - just evaluate what you see. If the space looks reasonably tidy, score 100. If somewhat tidy, score 70-90. Only score below 50 if the space is clearly messy. ${lang} ${msgGuide}. Never show technical explanations to the child. Return JSON only: {completed: true|false|"uncertain", score: 0-100, child_message: "...", gems_earned: 0-10}`
     default:

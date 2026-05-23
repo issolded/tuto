@@ -95,7 +95,10 @@ export default function ParentDashboard() {
 
   const loadChildren = async (uid) => {
     const { data } = await supabase.from('children').select('*').eq('parent_id', uid).order('created_at')
-    if (data) setChildren(data)
+    if (data) {
+      setChildren(data)
+      if (data.length === 0) nav('/parent/onboarding')
+    }
   }
 
   const logout = async () => {
