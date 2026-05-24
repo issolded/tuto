@@ -188,14 +188,14 @@ function buildCorrectedText(text, errors, states) {
   return result
 }
 
-function SpellingText({ text, errors, states, activeError, onWordClick }) {
-  if (!text) return null
-  if (!errors.length) return (
-    <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>{text}</span>
-  )
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
-  // Build a lowercase set of wrong words → their error index
-  // (last one wins if duplicates; index field handles same-word disambiguation)
+function buildSpellingHTML(text, errors, states, activeError) {
+  if (!text) return ''
+  if (!errors.length) return escHtml(text)
+
   const wrongMap = {}
   errors.forEach((e, i) => {
     const key = e.wrong.toLowerCase().trim()
@@ -203,44 +203,23 @@ function SpellingText({ text, errors, states, activeError, onWordClick }) {
     wrongMap[key].push(i)
   })
   const seenCount = {}
-
-  // Split text into tokens: words and non-word separators (spaces, newlines, punctuation)
   const tokens = text.split(/(\s+|[.,!?;:()\-"']+)/)
 
-  return (
-    <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>
-      {tokens.map((token, i) => {
-        const clean = token.toLowerCase().replace(/[^a-z0-9']/g, '')
-        const candidates = wrongMap[clean]
-        if (!candidates) return <span key={i}>{token}</span>
+  return tokens.map(token => {
+    const clean = token.toLowerCase().replace(/[^a-z0-9']/g, '')
+    const candidates = wrongMap[clean]
+    if (!candidates) return escHtml(token)
 
-        // Pick the right error index based on occurrence count
-        seenCount[clean] = (seenCount[clean] || 0)
-        const errIdx = candidates.find(ci => (errors[ci].index || 0) === seenCount[clean]) ?? candidates[0]
-        seenCount[clean]++
+    seenCount[clean] = (seenCount[clean] || 0)
+    const errIdx = candidates.find(ci => (errors[ci].index || 0) === seenCount[clean]) ?? candidates[0]
+    seenCount[clean]++
 
-        const state = states[errIdx] || 'pending'
-        return (
-          <span
-            key={i}
-            onClick={() => onWordClick(errIdx)}
-            style={{
-              color: state === 'fixed' ? '#2EC486' : '#FF6B35',
-              fontWeight: 800,
-              cursor: 'pointer',
-              textDecoration: state === 'not_sure' ? 'none' : 'underline',
-              textDecorationColor: state === 'fixed' ? '#2EC486' : '#FF6B35',
-              background: activeError === errIdx ? 'rgba(255,107,53,0.12)' : 'transparent',
-              borderRadius: 4,
-              padding: '0 2px',
-            }}
-          >
-            {token}
-          </span>
-        )
-      })}
-    </span>
-  )
+    const state = states[errIdx] || 'pending'
+    const color = state === 'fixed' ? '#2EC486' : '#FF6B35'
+    const dec = state === 'not_sure' ? 'none' : 'underline'
+    const bg = activeError === errIdx ? 'rgba(255,107,53,0.12)' : 'transparent'
+    return `<span data-err="${errIdx}" style="color:${color};font-weight:800;cursor:pointer;text-decoration:${dec};text-decoration-color:${color};background:${bg};border-radius:4px;padding:0 2px">${escHtml(token)}</span>`
+  }).join('')
 }
 
 const CARD_COLORS = ['#E8F5E9', '#E3F2FD', '#FFF8E1', '#FCE4EC']
@@ -278,6 +257,21 @@ export default function StoriesScreen() {
   const [evalResult, setEvalResult] = useState(null)
   const [spellingState, setSpellingState] = useState([])
   const [activeError, setActiveError] = useState(null)
+  const editorRef = useRef(null)
+  const editableTextRef = useRef('')
+
+  // Initialize editor when entering spelling step
+  useEffect(() => {
+    if (step !== 'spelling' || !editorRef.current || !evalResult) return
+    editableTextRef.current = evalResult.transcribed_text || ''
+    editorRef.current.innerHTML = buildSpellingHTML(editableTextRef.current, evalResult.spelling_errors || [], spellingState, activeError)
+  }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refresh highlights after popup interactions (cursor already lost, safe to update)
+  useEffect(() => {
+    if (step !== 'spelling' || !editorRef.current || !evalResult) return
+    editorRef.current.innerHTML = buildSpellingHTML(editableTextRef.current, evalResult.spelling_errors || [], spellingState, activeError)
+  }, [spellingState, activeError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startEvaluation = async () => {
     setStep('evaluating')
@@ -304,9 +298,10 @@ export default function StoriesScreen() {
   }
 
   const finishStory = async (status) => {
-    const corrected = buildCorrectedText(evalResult?.transcribed_text || '', evalResult?.spelling_errors || [], spellingState)
+    const baseText = editableTextRef.current || evalResult?.transcribed_text || ''
+    const corrected = buildCorrectedText(baseText, evalResult?.spelling_errors || [], spellingState)
     if (child?.id) {
-      await supabase.from('stories').insert({ child_id: child.id, title: displayTitle, topic: chosenIdea?.topic || '', transcribed_text: evalResult?.transcribed_text || '', corrected_text: corrected, status, gems_earned: evalResult?.gems_earned || 0 }).then(() => {})
+      await supabase.from('stories').insert({ child_id: child.id, title: displayTitle, topic: chosenIdea?.topic || '', transcribed_text: baseText, corrected_text: corrected, status, gems_earned: evalResult?.gems_earned || 0 }).then(() => {})
       await supabase.from('bt_ledger').insert({ child_id: child.id, amount: evalResult?.gems_earned || 0, source: 'story' }).then(() => {})
     }
     setStep('done')
@@ -558,18 +553,24 @@ export default function StoriesScreen() {
           <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
             Your story! 📖
           </div>
-          {errors.length > 0 && (
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both' }}>
-              Tap the <span style={{ color: '#FF6B35', fontWeight: 800 }}>orange words</span> to check spelling
-            </div>
-          )}
-          <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 20, animation: 'fadeUp 0.35s ease 0.1s both' }}>
-            <SpellingText
-              text={evalResult?.transcribed_text || ''}
-              errors={errors}
-              states={spellingState}
-              activeError={activeError}
-              onWordClick={i => setActiveError(activeError === i ? null : i)}
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both' }}>
+            {errors.length > 0
+              ? <>Tap the <span style={{ color: '#FF6B35', fontWeight: 800 }}>orange words</span> to fix spelling, or edit directly if something looks wrong ✏️</>
+              : 'Edit directly if something looks wrong ✏️'}
+          </div>
+          <div
+            style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 20, animation: 'fadeUp 0.35s ease 0.1s both' }}
+          >
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={e => { editableTextRef.current = e.currentTarget.innerText }}
+              onClick={e => {
+                const errIdx = e.target.dataset?.err
+                if (errIdx !== undefined) setActiveError(activeError === Number(errIdx) ? null : Number(errIdx))
+              }}
+              style={{ outline: 'none', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D', minHeight: 80 }}
             />
           </div>
           <button onClick={goToCorrections} style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.35s ease 0.15s both' }}>
@@ -608,7 +609,7 @@ export default function StoriesScreen() {
 
   // ── STEP: CORRECTED ───────────────────────────────────────────────────────
   if (step === 'corrected') {
-    const corrected = buildCorrectedText(evalResult?.transcribed_text || '', evalResult?.spelling_errors || [], spellingState)
+    const corrected = buildCorrectedText(editableTextRef.current || evalResult?.transcribed_text || '', evalResult?.spelling_errors || [], spellingState)
     return (
       <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
