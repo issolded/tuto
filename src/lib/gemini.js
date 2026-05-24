@@ -111,6 +111,34 @@ export async function evaluateTask(file, taskType, age, language = 'en') {
   ])
 }
 
+export async function evaluateStory(photos, topic, age, language = 'en') {
+  const n = Number(age) || 7
+  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const prompt = `You are reading a creative story written by a ${n}-year-old child on the topic: "${topic}".
+Transcribe and evaluate the handwritten text in the photo(s). Return JSON only, no other text:
+{
+  "word_count": number,
+  "has_profanity": boolean,
+  "too_short": boolean,
+  "encouragement": "short warm message max 2 sentences in ${lang}",
+  "transcribed_text": "full text exactly as written by child",
+  "spelling_errors": [{ "wrong": "misspelled word as written", "correct": "correct spelling", "index": 0 }],
+  "gems_earned": number
+}
+Rules:
+- too_short: true if word_count < 15
+- encouragement: always positive and warm, age-appropriate for a ${n}-year-old, in ${lang}, never mention evaluation or checking
+- spelling_errors: only genuine spelling mistakes; do not flag creative or intentional stylistic choices; index = 0-based occurrence if the same wrong word appears multiple times
+- has_profanity: true if any profanity or inappropriate language is present
+- gems_earned: 10 minimum, up to 50 based on word_count and quality`
+  const parts = [{ text: prompt }]
+  for (const photo of photos) {
+    const base64 = await fileToBase64(photo)
+    parts.push({ inline_data: { mime_type: photo.type, data: base64 } })
+  }
+  return callGemini(parts)
+}
+
 export async function generateStoryIdeas(age, language = 'en') {
   const n = Number(age) || 7
   const lang = language === 'tr' ? 'Turkish' : 'English'

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { validateStoryInput } from '../lib/gemini'
+import { validateStoryInput, evaluateStory } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
 
 const STORY_IDEAS = {
@@ -169,7 +169,76 @@ const ANIM = `
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes confettiFall {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
 `
+
+const CONFETTI_COLORS = ['#FF6B35','#FFD93D','#2EC486','#7C5CBF','#4ECDC4','#FF8CC8','#A8E6CF','#FFB347']
+
+function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+function buildCorrectedText(text, errors, states) {
+  let result = text
+  errors.forEach((e, i) => {
+    if (states[i] !== 'fixed') return
+    result = result.replace(new RegExp(`\\b${escRe(e.wrong)}\\b`, 'gi'), e.correct)
+  })
+  return result
+}
+
+function SpellingText({ text, errors, states, activeError, onWordClick }) {
+  if (!text) return null
+  if (!errors.length) return <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>{text}</span>
+
+  const positions = []
+  errors.forEach((e, i) => {
+    const re = new RegExp(`\\b${escRe(e.wrong)}\\b`, 'gi')
+    let match, occ = 0
+    while ((match = re.exec(text)) !== null) {
+      if (occ === (e.index || 0)) { positions.push({ start: match.index, end: match.index + match[0].length, errIdx: i }); break }
+      occ++
+    }
+  })
+  positions.sort((a, b) => a.start - b.start)
+
+  const segs = []
+  let cursor = 0
+  for (const p of positions) {
+    if (p.start > cursor) segs.push({ text: text.slice(cursor, p.start), errIdx: -1 })
+    segs.push({ text: text.slice(p.start, p.end), errIdx: p.errIdx })
+    cursor = p.end
+  }
+  if (cursor < text.length) segs.push({ text: text.slice(cursor), errIdx: -1 })
+
+  return (
+    <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>
+      {segs.map((seg, i) => {
+        if (seg.errIdx === -1) return <span key={i}>{seg.text}</span>
+        const state = states[seg.errIdx] || 'pending'
+        return (
+          <span
+            key={i}
+            onClick={() => onWordClick(seg.errIdx)}
+            style={{
+              color: state === 'fixed' ? '#2EC486' : '#FF6B35',
+              fontWeight: 800,
+              cursor: 'pointer',
+              textDecoration: state === 'not_sure' ? 'none' : 'underline',
+              textDecorationColor: state === 'fixed' ? '#2EC486' : '#FF6B35',
+              background: activeError === seg.errIdx ? 'rgba(255,107,53,0.12)' : 'transparent',
+              borderRadius: 4,
+              padding: '0 2px',
+            }}
+          >
+            {seg.text}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
 
 const CARD_COLORS = ['#E8F5E9', '#E3F2FD', '#FFF8E1', '#FCE4EC']
 const BG = 'linear-gradient(180deg, #E8F5E9 0%, #F1F8E9 100%)'
@@ -203,6 +272,40 @@ export default function StoriesScreen() {
   const [storyTitle, setStoryTitle] = useState('')
   const [photos, setPhotos] = useState([])
   const fileRef = useRef(null)
+  const [evalResult, setEvalResult] = useState(null)
+  const [spellingState, setSpellingState] = useState([])
+  const [activeError, setActiveError] = useState(null)
+
+  const startEvaluation = async () => {
+    setStep('evaluating')
+    try {
+      const result = await evaluateStory(photos, chosenIdea?.topic || '', child?.age || 7, 'en')
+      setEvalResult(result)
+      setSpellingState((result.spelling_errors || []).map(() => 'pending'))
+      setStep('encourage')
+    } catch {
+      setStep('write')
+    }
+  }
+
+  const goToCorrections = async () => {
+    const errors = evalResult?.spelling_errors || []
+    if (errors.length > 0 && child?.id) {
+      await supabase.from('spelling_errors').insert(
+        errors.map((e, i) => ({ child_id: child.id, wrong: e.wrong, correct: e.correct, state: spellingState[i] || 'pending' }))
+      ).then(() => {})
+    }
+    setStep('corrected')
+  }
+
+  const finishStory = async (status) => {
+    const corrected = buildCorrectedText(evalResult?.transcribed_text || '', evalResult?.spelling_errors || [], spellingState)
+    if (child?.id) {
+      await supabase.from('stories').insert({ child_id: child.id, title: displayTitle, topic: chosenIdea?.topic || '', transcribed_text: evalResult?.transcribed_text || '', corrected_text: corrected, status, gems_earned: evalResult?.gems_earned || 0 }).then(() => {})
+      await supabase.from('bt_ledger').insert({ child_id: child.id, amount: evalResult?.gems_earned || 0, source: 'story' }).then(() => {})
+    }
+    setStep('done')
+  }
 
   useEffect(() => {
     if (!child?.id) { setLoadingStories(false); return }
@@ -370,13 +473,195 @@ export default function StoriesScreen() {
           {/* Submit */}
           {photos.length > 0 && (
             <button
-              onClick={() => nav('/child/reading', { state: { storyTopic: chosenIdea?.topic, storyTitle: displayTitle, photos, mode: 'new' } })}
+              onClick={startEvaluation}
               style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.25s ease both' }}
             >
               I'm done! 🎉
             </button>
           )}
         </div>
+      </div>
+    )
+  }
+
+  // ── STEP: EVALUATING ──────────────────────────────────────────────────────
+  if (step === 'evaluating') {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '40px 28px' }}>
+        <style>{ANIM}</style>
+        <TutoMascot size={160} expression="thinking" style={{ animation: 'fadeUp 0.4s ease both' }} />
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', textAlign: 'center', animation: 'fadeUp 0.4s ease 0.1s both' }}>
+          Reading your story... ✨
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', textAlign: 'center', animation: 'fadeUp 0.4s ease 0.2s both' }}>
+          Just a moment!
+        </div>
+      </div>
+    )
+  }
+
+  // ── STEP: ENCOURAGE ───────────────────────────────────────────────────────
+  if (step === 'encourage') {
+    const isBlocked = evalResult?.has_profanity || evalResult?.too_short
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <style>{ANIM}</style>
+        <div style={{ padding: '56px 24px 0' }}>
+          <BackBtn onClick={() => setStep('write')} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px' }}>
+          <TutoMascot size={160} expression={isBlocked ? 'default' : 'excited'} style={{ animation: 'fadeUp 0.4s ease both' }} />
+          <div style={{ background: 'white', borderRadius: 28, padding: '28px 24px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', textAlign: 'center', marginTop: 24, boxSizing: 'border-box', animation: 'fadeUp 0.4s ease 0.1s both' }}>
+            {evalResult?.has_profanity ? (
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
+                Hmm, let's keep our story friendly!<br />Some words aren't great for stories. Try again? 😊
+              </div>
+            ) : evalResult?.too_short ? (
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
+                Hmm, I think there's more to this story!<br />Can you write a bit more? 📝
+              </div>
+            ) : (
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
+                {evalResult?.encouragement}
+              </div>
+            )}
+          </div>
+          {isBlocked ? (
+            <button onClick={() => setStep('write')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
+              ← Go back and try again
+            </button>
+          ) : (
+            <button onClick={() => setStep('spelling')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
+              Let's look at your story! →
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── STEP: SPELLING ────────────────────────────────────────────────────────
+  if (step === 'spelling') {
+    const errors = evalResult?.spelling_errors || []
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <style>{ANIM}</style>
+        <div style={{ padding: '56px 24px 0' }}>
+          <BackBtn onClick={() => setStep('encourage')} />
+        </div>
+        <div style={{ flex: 1, padding: '0 24px 48px' }}>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
+            Your story! 📖
+          </div>
+          {errors.length > 0 && (
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both' }}>
+              Tap the <span style={{ color: '#FF6B35', fontWeight: 800 }}>orange words</span> to check spelling
+            </div>
+          )}
+          <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 20, animation: 'fadeUp 0.35s ease 0.1s both' }}>
+            <SpellingText
+              text={evalResult?.transcribed_text || ''}
+              errors={errors}
+              states={spellingState}
+              activeError={activeError}
+              onWordClick={i => setActiveError(activeError === i ? null : i)}
+            />
+          </div>
+          <button onClick={goToCorrections} style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.35s ease 0.15s both' }}>
+            Looks good! →
+          </button>
+        </div>
+
+        {/* Spelling popup */}
+        {activeError !== null && errors[activeError] && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(45,80,22,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }} onClick={() => setActiveError(null)}>
+            <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '28px 28px 0 0', padding: '28px 24px 44px', animation: 'fadeUp 0.25s ease both' }} onClick={e => e.stopPropagation()}>
+              <div style={{ width: 36, height: 4, background: '#E8E8F0', borderRadius: 4, margin: '0 auto 20px' }} />
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginBottom: 20 }}>
+                Did you mean <span style={{ color: '#2EC486' }}>"{errors[activeError].correct}"</span>?
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'fixed' : s)); setActiveError(null) }}
+                  style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer' }}
+                >
+                  ✅ Yes, fix it!
+                </button>
+                <button
+                  onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'not_sure' : s)); setActiveError(null) }}
+                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
+                >
+                  🤷 Not sure
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── STEP: CORRECTED ───────────────────────────────────────────────────────
+  if (step === 'corrected') {
+    const corrected = buildCorrectedText(evalResult?.transcribed_text || '', evalResult?.spelling_errors || [], spellingState)
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <style>{ANIM}</style>
+        <div style={{ padding: '56px 24px 0' }}>
+          <BackBtn onClick={() => setStep('spelling')} />
+        </div>
+        <div style={{ flex: 1, padding: '0 24px 48px' }}>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, animation: 'fadeUp 0.35s ease both' }}>
+            {displayTitle}
+          </div>
+          <div style={{ background: 'white', borderRadius: 24, padding: '16px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <TutoMascot size={64} expression="excited" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#2D5016', lineHeight: 1.7, paddingTop: 8 }}>
+              Here's your story with the fixes! How does it look? ✨
+            </div>
+          </div>
+          <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 24, animation: 'fadeUp 0.35s ease 0.12s both' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#2D2D2D', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{corrected}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.16s both' }}>
+            <button onClick={() => finishStory('completed')} style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}>
+              🏆 My story is finished!
+            </button>
+            <button onClick={() => finishStory('in_progress')} style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}>
+              📝 I'll add more later
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── STEP: DONE ────────────────────────────────────────────────────────────
+  if (step === 'done') {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', position: 'relative', overflow: 'hidden' }}>
+        <style>{ANIM}</style>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          {CONFETTI_COLORS.map((c, i) => (
+            <div key={i} style={{ position: 'absolute', top: '-12px', left: `${(i * 12.5) % 100}%`, width: 10, height: 10, borderRadius: '50%', background: c, animation: `confettiFall ${1.4 + (i % 4) * 0.3}s ease ${(i * 0.13) % 1.3}s infinite` }} />
+          ))}
+        </div>
+        <TutoMascot size={180} expression="proud" style={{ animation: 'fadeUp 0.4s ease both' }} />
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 34, fontWeight: 900, color: '#2D5016', marginTop: 20, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+          Amazing! 🎉
+        </div>
+        <div style={{ background: 'white', borderRadius: 28, padding: '20px 40px', marginTop: 20, boxShadow: '0 6px 24px rgba(46,196,134,0.20)', animation: 'fadeUp 0.4s ease 0.15s both', textAlign: 'center' }}>
+          <div style={{ fontSize: 52, fontWeight: 900, fontFamily: "'Baloo 2', cursive", color: '#FF6B35', lineHeight: 1 }}>
+            +{evalResult?.gems_earned ?? 0}
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#6A9956', marginTop: 4 }}>Gems earned! ⭐</div>
+        </div>
+        <button
+          onClick={() => nav('/child/stories')}
+          style={{ marginTop: 32, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+        >
+          Back to My Stories
+        </button>
       </div>
     )
   }
