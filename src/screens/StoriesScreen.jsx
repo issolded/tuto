@@ -449,7 +449,7 @@ export default function StoriesScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {moderationError ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '28px 20px', background: 'white', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.07)', animation: 'fadeUp 0.3s ease both' }}>
-                <TutoMascot size={120} expression="thinking" />
+                <TutoMascot size={120} expression="default" />
                 <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', textAlign: 'center' }}>
                   Hmm, let's try something a bit different! 😊
                 </div>
