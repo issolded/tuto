@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { validateStoryInput, evaluateStory } from '../lib/gemini'
+import { validateStoryInput, evaluateStory, checkTitleSpelling } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
 
 const STORY_IDEAS = {
@@ -259,6 +259,24 @@ export default function StoriesScreen() {
   const [activeError, setActiveError] = useState(null)
   const editorRef = useRef(null)
   const editableTextRef = useRef('')
+  const [checkingTitle, setCheckingTitle] = useState(false)
+  const [titleSuggestion, setTitleSuggestion] = useState(null)
+
+  const handleTitleNext = async () => {
+    if (!storyTitle.trim() || checkingTitle) return
+    setCheckingTitle(true)
+    try {
+      const result = await checkTitleSpelling(storyTitle.trim())
+      if (result.has_errors && result.corrected && result.corrected !== storyTitle.trim()) {
+        setTitleSuggestion(result.corrected)
+      } else {
+        setStep('write')
+      }
+    } catch {
+      setStep('write')
+    }
+    setCheckingTitle(false)
+  }
 
   // Initialize editor when entering spelling step
   useEffect(() => {
@@ -363,21 +381,47 @@ export default function StoriesScreen() {
           <input
             type="text"
             value={storyTitle}
-            onChange={e => setStoryTitle(e.target.value)}
+            onChange={e => { setStoryTitle(e.target.value); setTitleSuggestion(null) }}
             placeholder="My amazing story..."
             autoFocus
             style={{ width: '100%', borderRadius: 18, border: '2.5px solid #A5D6A7', padding: '16px 18px', fontSize: 16, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D5016', background: 'white', outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 12px rgba(46,196,134,0.10)', animation: 'fadeUp 0.4s ease 0.15s both' }}
-            onKeyDown={e => e.key === 'Enter' && storyTitle.trim() && setStep('write')}
+            onKeyDown={e => e.key === 'Enter' && storyTitle.trim() && !titleSuggestion && handleTitleNext()}
           />
+
+          {titleSuggestion ? (
+            <div style={{ width: '100%', marginTop: 16, background: 'white', borderRadius: 20, padding: '16px 18px', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', animation: 'fadeUp 0.25s ease both', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <TutoMascot size={48} expression="excited" style={{ flexShrink: 0 }} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#2D5016', lineHeight: 1.5 }}>
+                  Did you mean: <span style={{ color: '#2EC486', fontWeight: 800 }}>"{titleSuggestion}"</span>? ✨
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => { setStoryTitle(titleSuggestion); setTitleSuggestion(null); setStep('write') }}
+                  style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 14, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: 'white', cursor: 'pointer' }}
+                >
+                  Yes, fix it!
+                </button>
+                <button
+                  onClick={() => { setTitleSuggestion(null); setStep('write') }}
+                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 14, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
+                >
+                  No, keep mine
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={handleTitleNext}
+              disabled={!storyTitle.trim() || checkingTitle}
+              style={{ width: '100%', marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 18, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white', cursor: storyTitle.trim() && !checkingTitle ? 'pointer' : 'default', opacity: storyTitle.trim() && !checkingTitle ? 1 : 0.4, boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+            >
+              {checkingTitle ? 'Checking... ✨' : 'Next →'}
+            </button>
+          )}
           <button
-            onClick={() => setStep('write')}
-            disabled={!storyTitle.trim()}
-            style={{ width: '100%', marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 18, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white', cursor: storyTitle.trim() ? 'pointer' : 'default', opacity: storyTitle.trim() ? 1 : 0.4, boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}
-          >
-            Next →
-          </button>
-          <button
-            onClick={() => { setStoryTitle(''); setStep('write') }}
+            onClick={() => { setStoryTitle(''); setTitleSuggestion(null); setStep('write') }}
             style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 14, textDecoration: 'underline', animation: 'fadeUp 0.4s ease 0.25s both' }}
           >
             I'll think of a title later

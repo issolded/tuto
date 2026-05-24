@@ -145,6 +145,11 @@ Flag ALL spelling and grammar errors you see.`
   return callGemini(parts)
 }
 
+export async function checkTitleSpelling(title) {
+  const prompt = `Check this story title for spelling errors: "${title}". Return JSON only: { "corrected": "corrected title or same if no errors", "has_errors": true or false }`
+  return callGemini([{ text: prompt }])
+}
+
 export async function generateStoryIdeas(age, language = 'en') {
   const n = Number(age) || 7
   const lang = language === 'tr' ? 'Turkish' : 'English'
