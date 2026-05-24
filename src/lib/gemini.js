@@ -130,7 +130,13 @@ Rules:
 - encouragement: always positive and warm, age-appropriate for a ${n}-year-old, in ${lang}, never mention evaluation or checking
 - spelling_errors: only genuine spelling mistakes; do not flag creative or intentional stylistic choices; index = 0-based occurrence if the same wrong word appears multiple times
 - has_profanity: true if any profanity or inappropriate language is present
-- gems_earned: 10 minimum, up to 50 based on word_count and quality`
+- gems_earned: 10 minimum, up to 50 based on word_count and quality
+Be thorough with spelling errors. Common mistakes to catch:
+- wrong homophones (off/of, their/there, to/too)
+- missing or extra letters (bumms→bumps, weres→were)
+- run-together or split words (danc er→dancer, in to→into)
+- wrong capitalization mid-sentence
+Flag ALL spelling and grammar errors you see.`
   const parts = [{ text: prompt }]
   for (const photo of photos) {
     const base64 = await fileToBase64(photo)

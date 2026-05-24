@@ -190,49 +190,52 @@ function buildCorrectedText(text, errors, states) {
 
 function SpellingText({ text, errors, states, activeError, onWordClick }) {
   if (!text) return null
-  if (!errors.length) return <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>{text}</span>
+  if (!errors.length) return (
+    <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>{text}</span>
+  )
 
-  const positions = []
+  // Build a lowercase set of wrong words → their error index
+  // (last one wins if duplicates; index field handles same-word disambiguation)
+  const wrongMap = {}
   errors.forEach((e, i) => {
-    const re = new RegExp(`\\b${escRe(e.wrong)}\\b`, 'gi')
-    let match, occ = 0
-    while ((match = re.exec(text)) !== null) {
-      if (occ === (e.index || 0)) { positions.push({ start: match.index, end: match.index + match[0].length, errIdx: i }); break }
-      occ++
-    }
+    const key = e.wrong.toLowerCase().trim()
+    if (!wrongMap[key]) wrongMap[key] = []
+    wrongMap[key].push(i)
   })
-  positions.sort((a, b) => a.start - b.start)
+  const seenCount = {}
 
-  const segs = []
-  let cursor = 0
-  for (const p of positions) {
-    if (p.start > cursor) segs.push({ text: text.slice(cursor, p.start), errIdx: -1 })
-    segs.push({ text: text.slice(p.start, p.end), errIdx: p.errIdx })
-    cursor = p.end
-  }
-  if (cursor < text.length) segs.push({ text: text.slice(cursor), errIdx: -1 })
+  // Split text into tokens: words and non-word separators (spaces, newlines, punctuation)
+  const tokens = text.split(/(\s+|[.,!?;:()\-"']+)/)
 
   return (
     <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D' }}>
-      {segs.map((seg, i) => {
-        if (seg.errIdx === -1) return <span key={i}>{seg.text}</span>
-        const state = states[seg.errIdx] || 'pending'
+      {tokens.map((token, i) => {
+        const clean = token.toLowerCase().replace(/[^a-z0-9']/g, '')
+        const candidates = wrongMap[clean]
+        if (!candidates) return <span key={i}>{token}</span>
+
+        // Pick the right error index based on occurrence count
+        seenCount[clean] = (seenCount[clean] || 0)
+        const errIdx = candidates.find(ci => (errors[ci].index || 0) === seenCount[clean]) ?? candidates[0]
+        seenCount[clean]++
+
+        const state = states[errIdx] || 'pending'
         return (
           <span
             key={i}
-            onClick={() => onWordClick(seg.errIdx)}
+            onClick={() => onWordClick(errIdx)}
             style={{
               color: state === 'fixed' ? '#2EC486' : '#FF6B35',
               fontWeight: 800,
               cursor: 'pointer',
               textDecoration: state === 'not_sure' ? 'none' : 'underline',
               textDecorationColor: state === 'fixed' ? '#2EC486' : '#FF6B35',
-              background: activeError === seg.errIdx ? 'rgba(255,107,53,0.12)' : 'transparent',
+              background: activeError === errIdx ? 'rgba(255,107,53,0.12)' : 'transparent',
               borderRadius: 4,
               padding: '0 2px',
             }}
           >
-            {seg.text}
+            {token}
           </span>
         )
       })}
@@ -281,6 +284,8 @@ export default function StoriesScreen() {
     try {
       const result = await evaluateStory(photos, chosenIdea?.topic || '', child?.age || 7, 'en')
       setEvalResult(result)
+      console.log('[evaluateStory] spelling_errors:', result.spelling_errors)
+      console.log('[evaluateStory] transcribed_text:', result.transcribed_text)
       setSpellingState((result.spelling_errors || []).map(() => 'pending'))
       setStep('encourage')
     } catch {
