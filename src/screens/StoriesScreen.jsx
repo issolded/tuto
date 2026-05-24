@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { validateStoryInput } from '../lib/gemini'
@@ -191,6 +191,11 @@ export default function StoriesScreen() {
   const [moderating, setModerating] = useState(false)
   const [moderationError, setModerationError] = useState(false)
   const [startNew, setStartNew] = useState(false)
+  const [step, setStep] = useState('idle') // 'idle' | 'title' | 'write'
+  const [chosenIdea, setChosenIdea] = useState(null)
+  const [storyTitle, setStoryTitle] = useState('')
+  const [photo, setPhoto] = useState(null)
+  const fileRef = useRef(null)
 
   useEffect(() => {
     if (!child?.id) { setLoadingStories(false); return }
@@ -201,7 +206,10 @@ export default function StoriesScreen() {
   }, [])
 
   const confirmIdea = (idea) => {
-    nav('/child/reading', { state: { storyTopic: idea.topic, storyTitle: idea.title, mode: 'new' } })
+    setChosenIdea(idea)
+    setSelectedIdea(null)
+    setStoryTitle('')
+    setStep('title')
   }
 
   const submitFreeText = async () => {
@@ -211,16 +219,122 @@ export default function StoriesScreen() {
     try {
       const result = await validateStoryInput(freeText.trim(), child?.age || 7, 'en')
       if (result.ok) {
-        nav('/child/reading', { state: { storyTopic: freeText.trim(), storyTitle: freeText.trim(), mode: 'new' } })
+        setChosenIdea({ emoji: '✏️', title: freeText.trim(), topic: freeText.trim() })
+        setStoryTitle('')
+        setStep('title')
         return
       }
       setModerationError(true)
       setTimeout(() => setModerationError(false), 3500)
     } catch {
-      nav('/child/reading', { state: { storyTopic: freeText.trim(), storyTitle: freeText.trim(), mode: 'new' } })
+      setChosenIdea({ emoji: '✏️', title: freeText.trim(), topic: freeText.trim() })
+      setStoryTitle('')
+      setStep('title')
       return
     }
     setModerating(false)
+  }
+
+  const displayTitle = storyTitle.trim() || `${child?.name ?? 'Your'}'s Untitled Story ✨`
+
+  // ── STEP: TITLE ────────────────────────────────────────────────────────────
+  if (step === 'title') {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <style>{ANIM}</style>
+        <div style={{ padding: '56px 24px 0' }}>
+          <BackBtn onClick={() => { setStep('idle'); setChosenIdea(null) }} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 0 }}>
+          <TutoMascot size={140} expression="excited" style={{ animation: 'fadeUp 0.4s ease both' }} />
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 20, marginBottom: 28, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+            What will your story be called? 📖
+          </div>
+          <input
+            type="text"
+            value={storyTitle}
+            onChange={e => setStoryTitle(e.target.value)}
+            placeholder="My amazing story..."
+            autoFocus
+            style={{ width: '100%', borderRadius: 18, border: '2.5px solid #A5D6A7', padding: '16px 18px', fontSize: 16, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D5016', background: 'white', outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 12px rgba(46,196,134,0.10)', animation: 'fadeUp 0.4s ease 0.15s both' }}
+            onKeyDown={e => e.key === 'Enter' && storyTitle.trim() && setStep('write')}
+          />
+          <button
+            onClick={() => setStep('write')}
+            disabled={!storyTitle.trim()}
+            style={{ width: '100%', marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 18, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white', cursor: storyTitle.trim() ? 'pointer' : 'default', opacity: storyTitle.trim() ? 1 : 0.4, boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+          >
+            Next →
+          </button>
+          <button
+            onClick={() => { setStoryTitle(''); setStep('write') }}
+            style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 14, textDecoration: 'underline', animation: 'fadeUp 0.4s ease 0.25s both' }}
+          >
+            I'll think of a title later
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── STEP: WRITE ────────────────────────────────────────────────────────────
+  if (step === 'write') {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <style>{ANIM}</style>
+        <div style={{ padding: '56px 24px 0' }}>
+          <BackBtn onClick={() => setStep('title')} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 0 }}>
+          <div style={{ fontSize: 72, lineHeight: 1, animation: 'fadeUp 0.35s ease both' }}>{chosenIdea?.emoji ?? '✏️'}</div>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 14, marginBottom: 24, lineHeight: 1.3, animation: 'fadeUp 0.35s ease 0.08s both' }}>
+            {displayTitle}
+          </div>
+
+          {/* Tuto message card */}
+          <div style={{ background: 'white', borderRadius: 24, padding: '24px 20px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginBottom: 28, animation: 'fadeUp 0.35s ease 0.15s both', boxSizing: 'border-box' }}>
+            <TutoMascot size={100} expression="default" />
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#2D5016', textAlign: 'center', lineHeight: 1.7 }}>
+              Now grab a pen and paper and start writing!<br />
+              Take a photo when you're done and I'll read it 📸
+            </div>
+          </div>
+
+          {/* Hidden file input */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={e => setPhoto(e.target.files?.[0] || null)}
+          />
+
+          {!photo ? (
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ width: '100%', background: '#2D5016', border: 'none', borderRadius: 20, padding: '20px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(45,80,22,0.25)', animation: 'fadeUp 0.35s ease 0.2s both' }}
+            >
+              📸 Take a Photo
+            </button>
+          ) : (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.3s ease both' }}>
+              <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                <span style={{ fontSize: 24 }}>📄</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#2D5016', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.name}</span>
+                <button onClick={() => setPhoto(null)} style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 18, cursor: 'pointer', padding: 0 }}>✕</button>
+              </div>
+              <button
+                onClick={() => nav('/child/reading', { state: { storyTopic: chosenIdea?.topic, storyTitle: displayTitle, photo, mode: 'new' } })}
+                style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
+              >
+                Submit ✅
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   const inProgress = stories.find(s => s.status === 'in_progress')
