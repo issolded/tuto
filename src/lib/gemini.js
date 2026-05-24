@@ -111,6 +111,20 @@ export async function evaluateTask(file, taskType, age, language = 'en') {
   ])
 }
 
+export async function generateStoryIdeas(age, language = 'en') {
+  const n = Number(age) || 7
+  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const prompt = `Generate 4 creative and imaginative story ideas for a ${n}-year-old child in ${lang}. Each idea should be fun, age-appropriate, and spark curiosity. Return JSON only: { "ideas": [ { "emoji": string, "title": string, "topic": string, "description": string } ] }`
+  return callGemini([{ text: prompt }])
+}
+
+export async function validateStoryInput(text, age, language = 'en') {
+  const n = Number(age) || 7
+  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const prompt = `You are a content moderator for a children's educational app. A ${n}-year-old child submitted this story idea: "${text}". Determine if this is appropriate, safe, and suitable for a child's story — no violence, scary content, adult themes, or inappropriate language. Respond in ${lang}. Return JSON only: { "ok": boolean, "reason": string }`
+  return callGemini([{ text: prompt }])
+}
+
 export async function generateTask(childId, taskType, age, language = 'en') {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
