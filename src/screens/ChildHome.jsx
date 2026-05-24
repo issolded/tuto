@@ -22,7 +22,7 @@ const TASKS = [
 const NAV = [
   { icon: '🏠', label: 'Home',    active: true,  route: '/child/home'    },
   { icon: '📚', label: 'Library', active: false, route: '/child/library' },
-  { icon: '⭐', label: 'Gems',    active: false, route: null             },
+  { icon: '⭐', label: 'Gems',    active: false, route: '/child/gems'   },
   { icon: '🏆', label: 'Goals',   active: false, route: '/child/goals'  },
 ]
 

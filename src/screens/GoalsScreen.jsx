@@ -61,7 +61,7 @@ function RewardCard({ reward, currentGems, index }) {
 const NAV = [
   { icon: '🏠', label: 'Home',    route: '/child/home'    },
   { icon: '📚', label: 'Library', route: '/child/library' },
-  { icon: '⭐', label: 'Gems',    route: null             },
+  { icon: '⭐', label: 'Gems',    route: '/child/gems'   },
   { icon: '🏆', label: 'Goals',   route: '/child/goals'  },
 ]
 
