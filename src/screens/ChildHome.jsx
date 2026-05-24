@@ -23,7 +23,7 @@ const NAV = [
   { icon: '🏠', label: 'Home',    active: true,  route: '/child/home'    },
   { icon: '📚', label: 'Library', active: false, route: '/child/library' },
   { icon: '⭐', label: 'Gems',    active: false, route: null             },
-  { icon: '🏆', label: 'Goals',   active: false, route: null             },
+  { icon: '🏆', label: 'Goals',   active: false, route: '/child/goals'  },
 ]
 
 export default function ChildHome() {

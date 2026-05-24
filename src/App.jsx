@@ -11,6 +11,7 @@ import ChildHome from './screens/ChildHome'
 import TaskFlow from './screens/TaskFlow'
 import ReadingFlow from './screens/ReadingFlow'
 import StoriesScreen from './screens/StoriesScreen'
+import GoalsScreen from './screens/GoalsScreen'
 import LibraryScreen from './screens/LibraryScreen'
 import ParentOnboarding from './screens/ParentOnboarding'
 
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<TaskFlow />} />
         <Route path="/child/stories" element={<StoriesScreen />} />
+        <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/reading" element={<ReadingFlow />} />
         <Route path="/child/library" element={<LibraryScreen />} />
       </Routes>
