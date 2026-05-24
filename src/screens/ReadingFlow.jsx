@@ -412,7 +412,7 @@ export default function ReadingFlow() {
         ref={coverRef}
         type="file"
         accept="image/*"
-        capture="environment"
+
         style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) submitCover(f) }}
       />
@@ -759,7 +759,7 @@ export default function ReadingFlow() {
         ref={pageRef}
         type="file"
         accept="image/*"
-        capture="environment"
+
         style={{ display: 'none' }}
         onChange={e => {
           const f = e.target.files?.[0]
