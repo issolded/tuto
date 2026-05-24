@@ -5,6 +5,13 @@ import { supabase } from '../lib/supabase'
 
 const ACCENT = '#FF6B35'
 
+const NAV = [
+  { icon: '🏠', label: 'Home',    route: '/child/home'    },
+  { icon: '📚', label: 'Library', route: '/child/library' },
+  { icon: '⭐', label: 'Gems',    route: '/child/gems'   },
+  { icon: '🏆', label: 'Goals',   route: '/child/goals'  },
+]
+
 const ANIM_CSS = `
 @keyframes jiggle {
   0%, 100% { transform: rotate(0deg); }
@@ -141,7 +148,7 @@ export default function LibraryScreen() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '20px 16px 48px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ padding: '20px 16px 80px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 30, fontWeight: 800, color: '#1A1A2E', marginBottom: 20 }}>
           My Library 📚
         </div>
@@ -219,6 +226,25 @@ export default function LibraryScreen() {
           onDone={() => setCelebrationTitle(null)}
         />
       )}
+
+      {/* Bottom nav */}
+      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
+        {NAV.map(({ icon, label, route }) => {
+          const active = label === 'Library'
+          return (
+            <button
+              key={label}
+              onClick={() => route && nav(route)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 14px', borderRadius: 16, background: active ? '#FFE8D4' : 'none', border: 'none', cursor: route ? 'pointer' : 'default', minWidth: 60 }}
+            >
+              <span style={{ fontSize: 22 }}>{icon}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: active ? '#FF6B35' : '#A0A0BC', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                {label}
+              </span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -97,7 +97,7 @@ export default function ChildHome() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ padding: '24px 20px 20px', flex: 1 }}>
+      <div style={{ padding: '24px 20px 80px', flex: 1 }}>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D2560', marginBottom: 16 }}>
           Ready to earn? 🌟
         </div>
@@ -153,6 +153,11 @@ export default function ChildHome() {
         display: 'flex',
         justifyContent: 'space-around',
         borderTop: '1px solid #F0F0FA',
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
       }}>
         {NAV.map(({ icon, label, active, route }) => (
           <button

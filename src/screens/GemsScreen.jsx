@@ -78,7 +78,7 @@ export default function GemsScreen() {
       </div>
 
       {/* Transaction history */}
-      <div style={{ flex: 1, padding: '20px 20px 12px' }}>
+      <div style={{ flex: 1, padding: '20px 20px 80px' }}>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', marginBottom: 14 }}>
           History
         </div>
@@ -126,7 +126,7 @@ export default function GemsScreen() {
       </div>
 
       {/* Bottom nav */}
-      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0' }}>
+      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
         {NAV.map(({ icon, label, route }) => {
           const active = label === 'Gems'
           return (

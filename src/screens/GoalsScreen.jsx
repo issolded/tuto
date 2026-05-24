@@ -99,7 +99,7 @@ export default function GoalsScreen() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, padding: '24px 20px 80px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {loading ? (
           [0, 1, 2].map(i => (
             <div key={i} style={{ background: 'white', borderRadius: 24, height: 116, opacity: 0.4 + i * 0.15 }} />
@@ -119,7 +119,7 @@ export default function GoalsScreen() {
       </div>
 
       {/* Bottom nav */}
-      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0' }}>
+      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
         {NAV.map(({ icon, label, route }) => {
           const active = label === 'Goals'
           return (
