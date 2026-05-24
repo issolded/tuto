@@ -1,17 +1,52 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { generateStoryIdeas, validateStoryInput } from '../lib/gemini'
+import { validateStoryInput } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
+
+const STORY_IDEAS = {
+  '5-7': [
+    { emoji: '🐉', title: 'A friendly dragon', topic: 'A dragon who is afraid of fire makes an unlikely friend' },
+    { emoji: '🌈', title: 'Magic paintbrush', topic: 'A paintbrush that brings drawings to life' },
+    { emoji: '🚀', title: 'Space adventure', topic: 'A trip to a planet made of candy' },
+    { emoji: '🐠', title: 'Underwater world', topic: 'A fish who wants to fly' },
+    { emoji: '🦄', title: 'Unicorn mystery', topic: 'A unicorn who lost their horn' },
+    { emoji: '🍄', title: 'Tiny mushroom town', topic: 'A tiny village inside a mushroom' },
+    { emoji: '⭐', title: 'Falling star', topic: 'A star that falls from the sky and needs help getting back' },
+    { emoji: '🐻', title: "Bear's big day", topic: "A bear cub's first adventure alone in the forest" },
+  ],
+  '8-10': [
+    { emoji: '🗺️', title: 'Hidden map', topic: 'A mysterious map found in an old book leads to a secret' },
+    { emoji: '🤖', title: 'Robot friend', topic: 'A robot who learns what it means to have feelings' },
+    { emoji: '🌊', title: 'Ocean secret', topic: 'A kid discovers they can breathe underwater' },
+    { emoji: '🏰', title: 'Forgotten castle', topic: 'An abandoned castle that comes alive at night' },
+    { emoji: '🦊', title: 'Clever fox', topic: 'A fox who must outsmart a trickster to save the forest' },
+    { emoji: '⏰', title: 'Time traveler', topic: 'Accidentally traveling back in time to medieval days' },
+    { emoji: '🌙', title: 'Moon guardian', topic: 'A child chosen to protect the moon from darkness' },
+    { emoji: '🎭', title: 'Magic theater', topic: 'A theater where characters from stories come to life' },
+  ],
+  '11+': [
+    { emoji: '🧬', title: 'DNA mystery', topic: 'Discovering a family secret hidden in old DNA records' },
+    { emoji: '🌍', title: 'Last forest', topic: 'The last kid living in a world without nature fights to restore it' },
+    { emoji: '💻', title: 'Digital world', topic: 'Getting trapped inside a video game with no way out' },
+    { emoji: '🔮', title: 'Future vision', topic: 'Seeing the future but unable to change it' },
+    { emoji: '🏔️', title: 'Summit secret', topic: 'A mountain expedition reveals an ancient civilization' },
+    { emoji: '🎵', title: 'Sound magic', topic: 'Music that can alter emotions and memories' },
+    { emoji: '🌑', title: 'Shadow realm', topic: 'A world where shadows have their own lives' },
+    { emoji: '🧩', title: 'Missing piece', topic: 'A puzzle that reveals the truth about a disappeared person' },
+  ],
+}
+
+function getIdeasForAge(age) {
+  const n = Number(age) || 7
+  const pool = n <= 7 ? STORY_IDEAS['5-7'] : n <= 10 ? STORY_IDEAS['8-10'] : STORY_IDEAS['11+']
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, 4)
+}
 
 const ANIM = `
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 0.35; }
-  50%       { opacity: 0.75; }
 }
 `
 
@@ -35,8 +70,7 @@ export default function StoriesScreen() {
 
   const [loadingStories, setLoadingStories] = useState(true)
   const [stories, setStories] = useState([])
-  const [ideas, setIdeas] = useState(null)
-  const [loadingIdeas, setLoadingIdeas] = useState(false)
+  const [ideas] = useState(() => getIdeasForAge(child?.age))
   const [selectedIdea, setSelectedIdea] = useState(null)
   const [showFreeText, setShowFreeText] = useState(false)
   const [freeText, setFreeText] = useState('')
@@ -47,27 +81,10 @@ export default function StoriesScreen() {
   useEffect(() => {
     if (!child?.id) { setLoadingStories(false); return }
     supabase.from('stories').select('*').eq('child_id', child.id).then(({ data }) => {
-      const list = data || []
-      setStories(list)
+      setStories(data || [])
       setLoadingStories(false)
-      if (list.length === 0) fetchIdeas()
     })
   }, [])
-
-  useEffect(() => {
-    if (startNew && !ideas) fetchIdeas()
-  }, [startNew])
-
-  const fetchIdeas = async () => {
-    setLoadingIdeas(true)
-    try {
-      const res = await generateStoryIdeas(child?.age || 7, 'en')
-      setIdeas(res.ideas || [])
-    } catch {
-      setIdeas([])
-    }
-    setLoadingIdeas(false)
-  }
 
   const confirmIdea = (idea) => {
     nav('/child/reading', { state: { storyTopic: idea.topic, storyTitle: idea.title, mode: 'new' } })
@@ -196,13 +213,7 @@ export default function StoriesScreen() {
         ) : (
           // Idea grid mode
           <>
-            {loadingIdeas ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {[0, 1, 2, 3].map(i => (
-                  <div key={i} style={{ background: CARD_COLORS[i], borderRadius: 24, aspectRatio: '1', animation: `pulse 1.3s ease-in-out ${i * 0.18}s infinite` }} />
-                ))}
-              </div>
-            ) : ideas && ideas.length > 0 ? (
+            {ideas.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {ideas.map((idea, i) => (
                   <button
