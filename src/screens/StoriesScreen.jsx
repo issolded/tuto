@@ -157,6 +157,13 @@ function getIdeasForAge(age) {
   return [...pool].sort(() => Math.random() - 0.5).slice(0, 4)
 }
 
+function getTutoMessage(age) {
+  const n = Number(age) || 7
+  if (n <= 7) return "I can't wait to see what happens in your story! 🤩\nGrab a pen and let your imagination run wild!\nWhen you're done, show me what you wrote!"
+  if (n <= 10) return "I'm SO curious about your story! ✨\nWhere will it take me? Who will I meet?\nWrite it down and let's go on this adventure together!"
+  return "Every great story starts with a single word...\nI wonder what world you'll create. 🌍\nWrite it down — I promise I'll be your first reader!"
+}
+
 const ANIM = `
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
@@ -294,9 +301,8 @@ export default function StoriesScreen() {
           {/* Tuto message card */}
           <div style={{ background: 'white', borderRadius: 24, padding: '24px 20px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginBottom: 28, animation: 'fadeUp 0.35s ease 0.15s both', boxSizing: 'border-box' }}>
             <TutoMascot size={100} expression="default" />
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#2D5016', textAlign: 'center', lineHeight: 1.7 }}>
-              Now grab a pen and paper and start writing!<br />
-              Take a photo when you're done and I'll read it 📸
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#2D5016', textAlign: 'center', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
+              {getTutoMessage(child?.age)}
             </div>
           </div>
 
