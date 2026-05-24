@@ -373,7 +373,7 @@ export default function StoriesScreen() {
               onClick={() => nav('/child/reading', { state: { storyTopic: chosenIdea?.topic, storyTitle: displayTitle, photos, mode: 'new' } })}
               style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.25s ease both' }}
             >
-              Submit my story! →
+              I'm done! 🎉
             </button>
           )}
         </div>
