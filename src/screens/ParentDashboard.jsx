@@ -11,9 +11,9 @@ function AddChildModal({ parentId, onClose, onSaved }) {
   const [error, setError] = useState('')
 
   const save = async () => {
-    if (!name.trim()) return setError('İsim gerekli.')
-    if (!age || isNaN(age) || +age < 1 || +age > 18) return setError('Geçerli bir yaş girin (1-18).')
-    if (!/^\d{4}$/.test(pin)) return setError('PIN 4 rakam olmalı.')
+    if (!name.trim()) return setError('Name is required.')
+    if (!age || isNaN(age) || +age < 1 || +age > 18) return setError('Enter a valid age (1–18).')
+    if (!/^\d{4}$/.test(pin)) return setError('PIN must be 4 digits.')
     setLoading(true); setError('')
     const pin_hash = await hashPin(pin)
     const { data, error: dbError } = await supabase
@@ -31,20 +31,20 @@ function AddChildModal({ parentId, onClose, onSaved }) {
         {/* Handle */}
         <div style={{ width: 40, height: 4, background: '#E8E8F0', borderRadius: 4, alignSelf: 'center', marginBottom: 4 }} />
 
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D2D2D' }}>Çocuk Ekle 🧒</div>
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D2D2D' }}>Add Child 🧒</div>
 
         <div className="input-wrap">
-          <label>Çocuğun Adı</label>
-          <input type="text" placeholder="Örn: Zeynep" value={name} onChange={e => setName(e.target.value)} />
+          <label>Child's Name</label>
+          <input type="text" placeholder="e.g. Emma" value={name} onChange={e => setName(e.target.value)} />
         </div>
 
         <div className="input-wrap">
-          <label>Yaş</label>
+          <label>Age</label>
           <input type="number" placeholder="8" min="1" max="18" value={age} onChange={e => setAge(e.target.value)} />
         </div>
 
         <div className="input-wrap">
-          <label>4 Haneli PIN</label>
+          <label>4-Digit PIN</label>
           <input
             type="password"
             placeholder="••••"
@@ -58,24 +58,28 @@ function AddChildModal({ parentId, onClose, onSaved }) {
         {error && <div style={{ color: '#FF6B35', fontSize: 14, fontWeight: 700 }}>{error}</div>}
 
         <button className="btn btn-orange" onClick={save} disabled={loading}>
-          {loading ? 'Kaydediliyor...' : 'Kaydet'}
+          {loading ? 'Saving...' : 'Save'}
         </button>
-        <button className="btn btn-ghost" onClick={onClose} disabled={loading}>İptal</button>
+        <button className="btn btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
       </div>
     </div>
   )
 }
 
-function ChildCard({ child }) {
+function ChildCard({ child, onClick }) {
   const avatars = ['🧒', '👦', '👧', '🧑']
   const avatar = avatars[child.name.charCodeAt(0) % avatars.length]
   return (
-    <div style={{ background: 'white', borderRadius: 20, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+    <div
+      onClick={onClick}
+      style={{ background: 'white', borderRadius: 20, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.06)', cursor: 'pointer' }}
+    >
       <div style={{ width: 52, height: 52, borderRadius: 16, background: '#FFF0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>{avatar}</div>
-      <div>
+      <div style={{ flex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>{child.name}</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>{child.age} yaşında</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>{child.age} years old</div>
       </div>
+      <span style={{ fontSize: 18, color: '#C0C0D0' }}>›</span>
     </div>
   )
 }
@@ -119,14 +123,14 @@ export default function ParentDashboard() {
       <div style={{ background: '#FF6B35', padding: '56px 28px 36px', borderRadius: '0 0 40px 40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Hoş geldiniz 👋</div>
+            <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Welcome 👋</div>
             <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: 'white', lineHeight: 1.2 }}>{displayName}</div>
           </div>
           <button
             onClick={logout}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 12, padding: '10px 16px', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'Nunito, sans-serif', whiteSpace: 'nowrap' }}
           >
-            Çıkış Yap
+            Sign Out
           </button>
         </div>
       </div>
@@ -134,13 +138,13 @@ export default function ParentDashboard() {
       {/* Body */}
       <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: '#2D2D2D' }}>Çocuklarım</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: '#2D2D2D' }}>My Children</div>
           {children.length > 0 && (
             <button
               onClick={() => setShowModal(true)}
               style={{ background: '#FF6B35', border: 'none', borderRadius: 12, padding: '8px 14px', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
             >
-              + Ekle
+              + Add Child
             </button>
           )}
         </div>
@@ -149,13 +153,13 @@ export default function ParentDashboard() {
           <>
             <div style={{ background: 'white', borderRadius: 24, padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '2px dashed #FFD3C2' }}>
               <div style={{ fontSize: 52 }}>🧒</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>Henüz çocuk eklenmedi</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#7A7A9A', textAlign: 'center' }}>Çocuğunu ekleyerek öğrenme yolculuğuna başlayın.</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>No children added yet</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#7A7A9A', textAlign: 'center' }}>Add your child to start the learning journey.</div>
             </div>
-            <button className="btn btn-orange" onClick={() => setShowModal(true)}>+ İlk Çocuğunu Ekle</button>
+            <button className="btn btn-orange" onClick={() => setShowModal(true)}>+ Add First Child</button>
           </>
         ) : (
-          children.map(child => <ChildCard key={child.id} child={child} />)
+          children.map(child => <ChildCard key={child.id} child={child} onClick={() => nav(`/parent/child/${child.id}`)} />)
         )}
       </div>
 

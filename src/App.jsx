@@ -15,6 +15,7 @@ import GoalsScreen from './screens/GoalsScreen'
 import GemsScreen from './screens/GemsScreen'
 import LibraryScreen from './screens/LibraryScreen'
 import ParentOnboarding from './screens/ParentOnboarding'
+import ParentChildDetail from './screens/ParentChildDetail'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/parent/signup" element={<ParentSignup />} />
         <Route path="/parent/dashboard"   element={session ? <ParentDashboard />   : <Navigate to="/parent/login" />} />
         <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<TaskFlow />} />
