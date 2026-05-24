@@ -201,7 +201,7 @@ export default function StoriesScreen() {
   const [step, setStep] = useState('idle') // 'idle' | 'title' | 'write'
   const [chosenIdea, setChosenIdea] = useState(null)
   const [storyTitle, setStoryTitle] = useState('')
-  const [photo, setPhoto] = useState(null)
+  const [photos, setPhotos] = useState([])
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -286,11 +286,14 @@ export default function StoriesScreen() {
 
   // ── STEP: WRITE ────────────────────────────────────────────────────────────
   if (step === 'write') {
+    const addPhoto = (file) => setPhotos(prev => [...prev, file])
+    const removePhoto = (i) => setPhotos(prev => prev.filter((_, idx) => idx !== i))
+
     return (
       <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
-          <BackBtn onClick={() => setStep('title')} />
+          <BackBtn onClick={() => { setStep('title'); setPhotos([]) }} />
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 0 }}>
           <div style={{ fontSize: 72, lineHeight: 1, animation: 'fadeUp 0.35s ease both' }}>{chosenIdea?.emoji ?? '✏️'}</div>
@@ -299,44 +302,79 @@ export default function StoriesScreen() {
           </div>
 
           {/* Tuto message card */}
-          <div style={{ background: 'white', borderRadius: 24, padding: '24px 20px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginBottom: 28, animation: 'fadeUp 0.35s ease 0.15s both', boxSizing: 'border-box' }}>
-            <TutoMascot size={100} expression="default" />
+          <div style={{ background: 'white', borderRadius: 24, padding: '24px 20px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginBottom: 24, animation: 'fadeUp 0.35s ease 0.15s both', boxSizing: 'border-box' }}>
+            <TutoMascot size={100} expression={photos.length > 0 ? 'excited' : 'default'} />
             <div style={{ fontSize: 15, fontWeight: 700, color: '#2D5016', textAlign: 'center', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
-              {getTutoMessage(child?.age)}
+              {photos.length > 0
+                ? 'Great! Add more pages if you wrote more,\nor submit when you\'re ready! 🌟'
+                : getTutoMessage(child?.age)}
             </div>
           </div>
 
-          {/* Hidden file input */}
+          {/* Hidden file input — reset value so same file can be re-picked */}
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
             capture="environment"
             style={{ display: 'none' }}
-            onChange={e => setPhoto(e.target.files?.[0] || null)}
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) addPhoto(file)
+              e.target.value = ''
+            }}
           />
 
-          {!photo ? (
+          {/* Photo thumbnails */}
+          {photos.length > 0 && (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {photos.map((file, i) => (
+                <div key={i} style={{ background: 'white', borderRadius: 16, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.07)', animation: 'fadeUp 0.25s ease both' }}>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Page ${i + 1}`}
+                    style={{ width: 64, height: 64, objectFit: 'cover', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#2D5016', flex: 1 }}>Page {i + 1}</span>
+                  <button
+                    onClick={() => removePhoto(i)}
+                    style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 20, cursor: 'pointer', padding: '0 16px 0 0', lineHeight: 1 }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add another page — visible after first photo, max 10 */}
+          {photos.length > 0 && photos.length < 10 && (
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ width: '100%', background: 'none', border: '2.5px dashed #A5D6A7', borderRadius: 18, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer', marginBottom: 14 }}
+            >
+              📸 Add another page
+            </button>
+          )}
+
+          {/* First photo CTA */}
+          {photos.length === 0 && (
             <button
               onClick={() => fileRef.current?.click()}
               style={{ width: '100%', background: '#2D5016', border: 'none', borderRadius: 20, padding: '20px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(45,80,22,0.25)', animation: 'fadeUp 0.35s ease 0.2s both' }}
             >
               I'm ready, Tuto! 📸
             </button>
-          ) : (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.3s ease both' }}>
-              <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-                <span style={{ fontSize: 24 }}>📄</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#2D5016', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.name}</span>
-                <button onClick={() => setPhoto(null)} style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 18, cursor: 'pointer', padding: 0 }}>✕</button>
-              </div>
-              <button
-                onClick={() => nav('/child/reading', { state: { storyTopic: chosenIdea?.topic, storyTitle: displayTitle, photo, mode: 'new' } })}
-                style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
-              >
-                Submit ✅
-              </button>
-            </div>
+          )}
+
+          {/* Submit */}
+          {photos.length > 0 && (
+            <button
+              onClick={() => nav('/child/reading', { state: { storyTopic: chosenIdea?.topic, storyTitle: displayTitle, photos, mode: 'new' } })}
+              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.25s ease both' }}
+            >
+              Submit my story! →
+            </button>
           )}
         </div>
       </div>
