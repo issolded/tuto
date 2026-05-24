@@ -321,7 +321,7 @@ export default function StoriesScreen() {
               onClick={() => fileRef.current?.click()}
               style={{ width: '100%', background: '#2D5016', border: 'none', borderRadius: 20, padding: '20px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(45,80,22,0.25)', animation: 'fadeUp 0.35s ease 0.2s both' }}
             >
-              📸 Take a Photo
+              I'm ready, Tuto! 📸
             </button>
           ) : (
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.3s ease both' }}>
