@@ -10,16 +10,20 @@ const ANIM = `
 }
 `
 
-const REASON_META = {
-  math:         { emoji: '🔢', label: 'Math' },
-  reading:      { emoji: '📚', label: 'Reading' },
-  writing:      { emoji: '✏️', label: 'Writing' },
-  chore:        { emoji: '🏠', label: 'Chore' },
-  bonus:        { emoji: '🎁', label: 'Bonus' },
-  spent_roblox: { emoji: '🎮', label: 'Roblox' },
-  story:        { emoji: '📖', label: 'Story' },
+const REASON_LABELS = {
+  math:         'My Math ✏️',
+  reading:      'My Books 📚',
+  writing:      'My Stories ✏️',
+  chore:        'My House 🏠',
+  bonus:        'Bonus Gift 🎁',
+  spent_roblox: 'Roblox Time 🎮',
+  story:        'My Stories ✏️',
 }
-const DEFAULT_META = { emoji: '⭐', label: 'Activity' }
+
+const REASON_EMOJI = {
+  math: '🔢', reading: '📚', writing: '✏️',
+  chore: '🏠', bonus: '🎁', spent_roblox: '🎮', story: '📖',
+}
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
@@ -94,7 +98,8 @@ export default function GemsScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {ledger.map((row, i) => {
               const key = row.reason || row.source || ''
-              const meta = REASON_META[key] || DEFAULT_META
+              const label = REASON_LABELS[key] || 'Task ⭐'
+              const emoji = REASON_EMOJI[key] || '⭐'
               const isPositive = (row.amount || 0) >= 0
               return (
                 <div
@@ -102,10 +107,10 @@ export default function GemsScreen() {
                   style={{ background: 'white', borderRadius: 18, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', animation: `fadeUp 0.35s ease ${Math.min(i, 8) * 0.05}s both` }}
                 >
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                    {meta.emoji}
+                    {emoji}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{meta.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{label}</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', marginTop: 2 }}>
                       {row.created_at ? formatDate(row.created_at) : ''}
                     </div>
