@@ -352,6 +352,7 @@ export default function StoriesScreen() {
         setStep('title')
         return
       }
+      setFreeText('')
       setModerationError(true)
       setTimeout(() => setModerationError(false), 3500)
     } catch {
