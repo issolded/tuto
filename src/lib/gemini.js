@@ -164,6 +164,80 @@ export async function validateStoryInput(text, age, language = 'en') {
   return callGemini([{ text: prompt }])
 }
 
+const MATH_LEVEL_DESC = {
+  1: 'Counting, numbers 1-10',
+  2: 'Addition up to 10',
+  3: 'Subtraction up to 10',
+  4: 'Addition up to 20',
+  5: 'Subtraction up to 20',
+  6: 'Simple word problems (e.g. "You have 5 pencils and give away 3. How many left?")',
+  7: 'Addition and subtraction up to 100',
+  8: 'Multiplication tables 2, 5, 10',
+  9: 'Fractions (1/2, 1/4, 3/4 — express as whole-number answers)',
+  10: 'Division (simple, related to multiplication tables)',
+  11: 'Geometry basics (shapes, sides, corners)',
+  12: 'Measurement (time, money, weight — simple)',
+  13: 'Multiplication tables 3, 4, 6, 7, 8, 9',
+  14: 'Complex word problems (multi-step)',
+  15: 'Fractions and decimals (express as whole-number answers)',
+}
+
+export async function generateMathQuestions(age, level, previousQuestions = []) {
+  const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
+  const levelDesc = MATH_LEVEL_DESC[clampedLevel] || MATH_LEVEL_DESC[5]
+  const avoidClause = previousQuestions.length > 0
+    ? `\nDo NOT repeat these questions: ${JSON.stringify(previousQuestions.slice(-10))}`
+    : ''
+  const prompt = `Generate 5 math questions for a ${age} year old at level ${clampedLevel} (${levelDesc}).
+Mix question types: symbolic equations, word problems, and patterns.
+Make them fun, relatable and age-appropriate. Use names, animals, food, toys in word problems.
+IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.${avoidClause}
+Return JSON only:
+{
+  "questions": ["5 + 3 = ?", "Sara has 8 apples and eats 3. How many does she have left?", "2, 4, 6, __ what comes next?"],
+  "topic": "addition",
+  "answers": [8, 5, 8],
+  "question_types": ["symbolic", "word", "pattern"]
+}`
+  return callGemini([{ text: prompt }])
+}
+
+export async function evaluateMath(photos, questions, answers, age, level) {
+  const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
+  const questionsText = questions.map((q, i) => `Q${i + 1}: ${q} (correct answer: ${answers[i]})`).join('\n')
+  const prompt = `Evaluate this ${age}-year-old child's math work photo.
+The questions were:
+${questionsText}
+
+Be generous and tolerant with handwriting. Try hard to read each digit. When in doubt, assume correct.
+Only mark wrong if clearly and unambiguously incorrect.
+For word problems, check if the logic and final answer are correct.
+For patterns, accept if the child identified the pattern correctly.
+Return JSON only:
+{
+  "results": [
+    {"question": "5+3=?", "correct_answer": 8, "child_answer": 8, "correct": true},
+    {"question": "Sara has 8 apples...", "correct_answer": 5, "child_answer": 4, "correct": false}
+  ],
+  "score": 80,
+  "accuracy": 80,
+  "level_change": "up",
+  "new_level": ${clampedLevel},
+  "topic": "addition",
+  "gemini_notes": "Strong at addition, word problems need practice",
+  "next_session": "Try more word problems",
+  "encouragement": "warm age-appropriate message max 2 sentences, never mention level number or level change, never say wrong",
+  "gems_earned": 30
+}
+Rules: level_change is "up" if accuracy>=80, "down" if accuracy<40, else "same". new_level = ${clampedLevel} adjusted by level_change (min 1, max 15). gems_earned: 30 if accuracy>=80, 25 if>=60, 15 if>=40, else 10.`
+  const parts = [{ text: prompt }]
+  for (const photo of photos) {
+    const base64 = await fileToBase64(photo)
+    parts.push({ inline_data: { mime_type: photo.type, data: base64 } })
+  }
+  return callGemini(parts)
+}
+
 export async function generateTask(childId, taskType, age, language = 'en') {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 

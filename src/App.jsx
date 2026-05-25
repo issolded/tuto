@@ -16,6 +16,7 @@ import GemsScreen from './screens/GemsScreen'
 import LibraryScreen from './screens/LibraryScreen'
 import ParentOnboarding from './screens/ParentOnboarding'
 import ParentChildDetail from './screens/ParentChildDetail'
+import MathScreen from './screens/MathScreen'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<TaskFlow />} />
+        <Route path="/child/math" element={<MathScreen />} />
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />

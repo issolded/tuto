@@ -14,7 +14,7 @@ const FLOAT_CSS = `
 
 const TASKS = [
   { emoji: '📖', bg: '#E8E0FF', name: 'My Books',   gem: 30, route: '/child/library',             type: 'reading' },
-  { emoji: '🔢', bg: '#D4EDFF', name: 'My Math',    gem: 30, route: '/child/task',                type: 'math'    },
+  { emoji: '🔢', bg: '#D4EDFF', name: 'My Math',    gem: 30, route: '/child/math',               type: 'math'    },
   { emoji: '✏️', bg: '#D4F5E0', name: 'My Stories', gem: 30, route: '/child/stories',            type: 'writing' },
   { emoji: '🏠', bg: '#FFE8D4', name: 'My House',   gem: 10, route: '/child/task',                type: 'chore'   },
 ]
