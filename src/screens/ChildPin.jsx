@@ -41,10 +41,15 @@ export default function ChildPin() {
     setExpression('thinking')
     try {
       const pin_hash = await hashPin(entered)
+      console.log('[ChildPin] entered PIN:', entered)
+      console.log('[ChildPin] computed hash:', pin_hash)
+
       const { data: children, error: dbError } = await supabase
         .from('children')
-        .select('id, name, age')
+        .select('id, name, age, pin_hash')
         .eq('pin_hash', pin_hash)
+      console.log('[ChildPin] Supabase response — data:', children, '| error:', dbError)
+
       if (dbError) {
         console.error('PIN lookup error:', dbError)
         fail("Something went wrong. Try again! 🤔")
