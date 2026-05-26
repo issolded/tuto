@@ -54,7 +54,11 @@ export default function GemsScreen() {
       .select('*')
       .eq('child_id', child.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => setLedger(data || []))
+      .then(({ data, error }) => {
+        console.log('[GemsScreen] bt_ledger rows:', data)
+        console.log('[GemsScreen] error:', error)
+        setLedger(data || [])
+      })
   }, [])
 
   const loading = ledger === null
