@@ -19,6 +19,7 @@ export default function ChildPin() {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
+  const [expression, setExpression] = useState('default')
 
   const addPin = (d) => {
     if (checking || pin.length >= 4) return
@@ -27,33 +28,47 @@ export default function ChildPin() {
     if (next.length === 4) verifyPin(next)
   }
 
+  const fail = (msg) => {
+    setError(msg)
+    setExpression('default')
+    setPin('')
+    setChecking(false)
+  }
+
   const verifyPin = async (entered) => {
     setChecking(true)
     setError('')
+    setExpression('thinking')
     try {
       const pin_hash = await hashPin(entered)
-      const { data: children } = await supabase.from('children').select('id, name, age').eq('pin_hash', pin_hash)
+      const { data: children, error: dbError } = await supabase
+        .from('children')
+        .select('id, name, age')
+        .eq('pin_hash', pin_hash)
+      if (dbError) {
+        console.error('PIN lookup error:', dbError)
+        fail("Something went wrong. Try again! 🤔")
+        return
+      }
       if (children && children.length > 0) {
         const child = children[0]
         sessionStorage.setItem('tuto_child', JSON.stringify(child))
         await giveWelcomeBonus(child.id)
-        setTimeout(() => nav('/child/home'), 300)
+        setExpression('excited')
+        setTimeout(() => nav('/child/home'), 350)
       } else {
-        setError('Wrong PIN. Try again.')
-        setPin('')
-        setChecking(false)
+        fail("Hmm, that's not right! Try again 🤔")
       }
-    } catch {
-      // RLS veya ağ hatası — yine de geçiş yap
-      sessionStorage.removeItem('tuto_child')
-      setTimeout(() => nav('/child/home'), 300)
+    } catch (e) {
+      console.error('verifyPin error:', e)
+      fail("Something went wrong. Try again! 🤔")
     }
   }
 
   return (
     <div className="screen" style={{ background: '#FF6B35', alignItems: 'center', padding: '60px 32px 40px' }}>
       <button onClick={() => nav('/')} style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.2)', border: 'none', width: 40, height: 40, borderRadius: 12, fontSize: 18, color: 'white', cursor: 'pointer', marginBottom: 24 }}>←</button>
-      <TutoMascot size={120} />
+      <TutoMascot size={120} expression={expression} />
       <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: 'white', textAlign: 'center', marginTop: 16 }}>Hi! I'm Tuto 👋</div>
       <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600, textAlign: 'center', marginBottom: 32, marginTop: 4 }}>Enter your PIN to start!</div>
 
