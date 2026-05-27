@@ -166,13 +166,13 @@ export default function MathScreen() {
     if (!child?.id) { setLevel(getStartingLevel(age)); return }
     supabase
       .from('math_progress')
-      .select('new_level, level')
+      .select('level')
       .eq('child_id', child.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .then(({ data }) => {
         const rec = data?.[0]
-        setLevel(rec ? (rec.new_level || rec.level) : getStartingLevel(age))
+        setLevel(rec ? rec.level : getStartingLevel(age))
       })
       .catch(() => setLevel(getStartingLevel(age)))
     return () => clearTimeout(flashTimer.current)
@@ -185,13 +185,7 @@ export default function MathScreen() {
     setMode(selectedMode)
     setStep('loading')
     try {
-      const { data: prevData } = await supabase
-        .from('math_progress')
-        .select('questions_used')
-        .eq('child_id', child?.id)
-        .order('created_at', { ascending: false })
-        .limit(3)
-      const prevQs = (prevData || []).flatMap(r => r.questions_used || [])
+      const prevQs = []
 
       const result = await generateMathQuestions(age, effectiveLevel, prevQs)
       setQuestions(result.questions   || [])
@@ -287,8 +281,7 @@ export default function MathScreen() {
       await supabase.from('math_progress').insert({
         child_id: child.id,
         session_date: new Date().toISOString().split('T')[0],
-        level: effectiveLevel,
-        new_level: newLevel,
+        level: newLevel,
         topic: evalData.topic || topic,
         questions_total: questions.length,
         questions_correct: numCorrect,
@@ -296,8 +289,6 @@ export default function MathScreen() {
         gemini_notes: evalData.gemini_notes || null,
         next_session: evalData.next_session || null,
         level_change: evalData.level_change || 'same',
-        questions_used: questions,
-        mode,
       })
       if ((evalData.gems_earned || 0) > 0) {
         await supabase.from('bt_ledger').insert({
