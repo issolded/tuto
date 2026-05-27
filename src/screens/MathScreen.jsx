@@ -242,7 +242,7 @@ export default function MathScreen() {
       child_answer: finalAnswers[i],
       correct: finalAnswers[i] === correctAns[i],
     }))
-    const gemsEarned = 30
+    const gemsEarned = child?.task_settings?.math?.gems ?? 30
     const evalData = {
       results, score: accuracy, accuracy, level_change: levelChange,
       new_level: newLevel, topic,
@@ -261,15 +261,17 @@ export default function MathScreen() {
       const result   = await evaluateMath([file], questions, correctAns, age, effectiveLevel)
       const newLevel = result.new_level ?? effectiveLevel
       if (result.level_change === 'up') setLeveledUp(true)
-      setEvalResult({ ...result, gems_earned: result.gems_earned ?? 25 })
+      const mathGems = child?.task_settings?.math?.gems ?? 30
+      setEvalResult({ ...result, gems_earned: result.gems_earned ?? mathGems })
       await saveResults(result, newLevel)
       setStep('result')
     } catch (e) {
       console.error('evaluateMath:', e)
+      const mathGems = child?.task_settings?.math?.gems ?? 30
       const fallback = {
         results: questions.map((q, i) => ({ question: q, correct_answer: correctAns[i], child_answer: '?', correct: false })),
         score: 70, accuracy: 70, level_change: 'same', new_level: effectiveLevel,
-        topic, encouragement: "Great effort! Keep going! 🌟", gems_earned: 25,
+        topic, encouragement: "Great effort! Keep going! 🌟", gems_earned: mathGems,
       }
       setEvalResult(fallback)
       await saveResults(fallback, effectiveLevel)

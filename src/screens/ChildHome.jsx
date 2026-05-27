@@ -12,11 +12,13 @@ const FLOAT_CSS = `
 }
 `
 
-const TASKS = [
-  { emoji: '📖', bg: '#E8E0FF', name: 'My Books',   gem: 30, route: '/child/library',             type: 'reading' },
-  { emoji: '🔢', bg: '#D4EDFF', name: 'My Math',    gem: 30, route: '/child/math',               type: 'math'    },
-  { emoji: '✏️', bg: '#D4F5E0', name: 'My Stories', gem: 30, route: '/child/stories',            type: 'writing' },
-  { emoji: '🏠', bg: '#FFE8D4', name: 'My House',   gem: 10, route: '/child/task',                type: 'chore'   },
+const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, chore: 10 }
+
+const BASE_TASKS = [
+  { emoji: '📖', bg: '#E8E0FF', name: 'My Books',   route: '/child/library', type: 'reading' },
+  { emoji: '🔢', bg: '#D4EDFF', name: 'My Math',    route: '/child/math',    type: 'math'    },
+  { emoji: '✏️', bg: '#D4F5E0', name: 'My Stories', route: '/child/stories', type: 'writing' },
+  { emoji: '🏠', bg: '#FFE8D4', name: 'My House',   route: '/child/task',    type: 'chore'   },
 ]
 
 const NAV = [
@@ -30,6 +32,11 @@ export default function ChildHome() {
   const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [gems, setGems] = useState(null)
+
+  const ts = child?.task_settings || {}
+  const TASKS = BASE_TASKS
+    .filter(t => (ts[t.type]?.active ?? true))
+    .map(t => ({ ...t, gem: ts[t.type]?.gems ?? DEFAULT_TASK_GEMS[t.type] }))
 
   useEffect(() => {
     if (!child?.id) { nav('/child', { replace: true }); return }
