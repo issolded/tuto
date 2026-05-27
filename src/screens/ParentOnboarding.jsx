@@ -320,7 +320,7 @@ export default function ParentOnboarding() {
     <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <style>{CSS}</style>
 
-      {step > 1 && step < 10 && <ProgressBar step={step} />}
+      {step > 1 && <ProgressBar step={step} />}
 
       {showBack && (
         <button onClick={back} style={{
@@ -331,7 +331,7 @@ export default function ParentOnboarding() {
 
       <div style={{
         flex: 1,
-        padding: (step === 1 || step === 10) ? '0 24px 48px' : '18px 24px 48px',
+        padding: step === 1 ? '0 24px 48px' : '18px 24px 48px',
         display: 'flex', flexDirection: 'column',
       }}>
 
