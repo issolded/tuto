@@ -292,6 +292,8 @@ export default function ParentOnboarding() {
 
       nav('/parent/dashboard')
     } catch (err) {
+      console.error('[handleFinish] ERROR:', err)
+      alert('Error: ' + err.message)
       setSaveError(err.message || 'Something went wrong. Please try again.')
       setSaving(false)
     }
