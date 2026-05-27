@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 
@@ -89,13 +90,34 @@ export default function ParentDashboard() {
   const [user, setUser] = useState(null)
   const [children, setChildren] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [familyCode, setFamilyCode] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
-      if (user) loadChildren(user.id)
+      if (user) {
+        loadChildren(user.id)
+        loadFamilyCode(user.id)
+      }
     })
   }, [])
+
+  const loadFamilyCode = async (uid) => {
+    const { data } = await supabase
+      .from('parents')
+      .select('family_code')
+      .eq('id', uid)
+      .single()
+
+    if (data?.family_code) {
+      setFamilyCode(data.family_code)
+    } else {
+      // Auto-generate if missing
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase()
+      await supabase.from('parents').update({ family_code: code }).eq('id', uid)
+      setFamilyCode(code)
+    }
+  }
 
   const loadChildren = async (uid) => {
     const { data } = await supabase.from('children').select('*').eq('parent_id', uid).order('created_at')
@@ -160,6 +182,38 @@ export default function ParentDashboard() {
           </>
         ) : (
           children.map(child => <ChildCard key={child.id} child={child} onClick={() => nav(`/parent/child/${child.id}`)} />)
+        )}
+
+        {/* Setup Child Device */}
+        {familyCode && (
+          <div style={{ background: 'white', borderRadius: 24, padding: '28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginTop: 8 }}>
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 24 }}>📱</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>Setup Child Device</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>Scan this QR code on your child's device</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#FAFAFA', borderRadius: 16, padding: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <QRCodeSVG
+                value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
+                size={200}
+                bgColor="#FAFAFA"
+                fgColor="#1A1A2E"
+                level="M"
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ background: '#F5F0FF', borderRadius: 10, padding: '6px 14px' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: '#6C63FF', letterSpacing: 2 }}>
+                  {familyCode}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#7A7A9A' }}>manual code</div>
+            </div>
+          </div>
         )}
       </div>
 
