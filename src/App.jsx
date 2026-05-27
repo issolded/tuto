@@ -53,7 +53,7 @@ export default function App() {
         <Route path="/parent/child/:id/settings" element={session ? <TaskSettings /> : <Navigate to="/parent/login" />} />
         <Route path="/setup" element={<FamilySetup />} />
         <Route path="/child" element={<ChildPin />} />
-        <Route path="/child/home" element={localStorage.getItem('child') ? <ChildHome /> : <Navigate to="/child" />} />
+        <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<TaskFlow />} />
         <Route path="/child/math" element={<MathScreen />} />
         <Route path="/child/stories" element={<StoriesScreen />} />

@@ -32,7 +32,8 @@ export default function ChildHome() {
   const [gems, setGems] = useState(null)
 
   useEffect(() => {
-    if (!child?.id) return
+    if (!child?.id) { nav('/child', { replace: true }); return }
+
 
     const fetchGems = async () => {
       const { data } = await supabase
