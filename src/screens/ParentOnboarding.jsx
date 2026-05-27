@@ -271,13 +271,15 @@ export default function ParentOnboarding() {
       const pin_hash = await hashPin(pin)
       const insertData = { parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' }
       if (deviceMode === 'same') insertData.same_device = true
-      console.log('[handleFinish] insertData:', JSON.stringify(insertData))
       const { data: child, error: cErr } = await supabase
         .from('children')
         .insert(insertData)
-        .select().single()
-      console.log('[handleFinish] child inserted:', child)
-      console.log('[handleFinish] cErr:', cErr)
+        .select()
+        .single()
+      console.log('[INSERT] data:', JSON.stringify(child))
+      console.log('[INSERT] error:', JSON.stringify(cErr))
+      console.log('[INSERT] insertData:', JSON.stringify(insertData))
+      alert('Insert result: ' + JSON.stringify({ child, cErr, insertData }))
       if (cErr) throw cErr
 
       const active = rewards.filter(r => r.label.trim())
