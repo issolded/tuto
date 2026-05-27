@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import TutoMascot from '../components/TutoMascot'
 
@@ -14,20 +14,21 @@ const ANIM = `
 }
 `
 
+// Read ?code= synchronously — before any render
+const codeFromUrl = new URLSearchParams(window.location.search).get('code')
+
 export default function FamilySetup() {
   const nav = useNavigate()
-  const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState('idle') // 'idle' | 'scanning' | 'success' | 'error'
+  const [status, setStatus] = useState(codeFromUrl ? 'success' : 'idle')
   const [errorMsg, setErrorMsg] = useState('')
   const scannerRef = useRef(null)
   const mountedRef = useRef(true)
 
-  // If QR link contains ?code=, store immediately and redirect
+  // If code came from URL, save it and redirect immediately
   useEffect(() => {
-    const code = searchParams.get('code')
-    if (code) {
-      localStorage.setItem('family_code', code)
-      setStatus('success')
+    if (codeFromUrl) {
+      console.log('[FamilySetup] code from URL:', codeFromUrl)
+      localStorage.setItem('family_code', codeFromUrl)
       setTimeout(() => nav('/child'), 1400)
     }
   }, [])
