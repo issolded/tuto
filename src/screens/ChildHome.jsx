@@ -28,7 +28,7 @@ const NAV = [
 
 export default function ChildHome() {
   const nav = useNavigate()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [gems, setGems] = useState(null)
 
   useEffect(() => {
@@ -87,6 +87,14 @@ export default function ChildHome() {
               {gems === null ? '...' : gems} Gems
             </span>
           </div>
+
+          {/* Switch child */}
+          <button
+            onClick={() => { localStorage.removeItem('child'); nav('/child') }}
+            style={{ marginTop: 10, background: 'none', border: 'none', fontSize: 12, fontWeight: 700, color: '#9B8FC0', cursor: 'pointer', padding: 0, fontFamily: 'Nunito, sans-serif' }}
+          >
+            Switch child ↩
+          </button>
         </div>
 
         {/* Tuto mascot */}

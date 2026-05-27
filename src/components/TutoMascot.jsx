@@ -5,9 +5,9 @@ const BODY =
 export default function TutoMascot({ size = 160, expression = 'default', style = {} }) {
   const e = expression
 
-  // ── Eyebrow paths ───────────────────────────────────────────────────────────
+  // ── Eyebrow paths ────────────────────────────────────────────────────────────
   const leftBrow = e === 'excited'
-    ? 'M 52 72 Q 64 63 82 68'
+    ? 'M 48 62 Q 64 49 86 56'       // raised ~15px higher, wide dramatic arch
     : e === 'proud'
     ? 'M 52 75 Q 64 68 82 72'
     : 'M 52 77 Q 64 71 82 74'
@@ -15,19 +15,24 @@ export default function TutoMascot({ size = 160, expression = 'default', style =
   const rightBrow = e === 'thinking'
     ? 'M 118 66 Q 136 58 148 67'
     : e === 'excited'
-    ? 'M 118 68 Q 136 61 148 68'
+    ? 'M 114 56 Q 136 48 152 55'    // raised ~18px higher, wide dramatic arch
     : e === 'proud'
     ? 'M 118 72 Q 136 68 148 75'
     : 'M 118 74 Q 136 71 148 77'
 
-  // ── Iris config per expression ───────────────────────────────────────────────
+  // ── Iris config per expression ────────────────────────────────────────────────
   const liX = e === 'thinking' ? 78  : 75
   const liY = (e === 'default' || e === 'thinking') ? 107 : 103
   const riX = e === 'thinking' ? 128 : 125
   const riY = liY
-  const irisR = e === 'excited' ? 16  : 13
-  const pupR  = e === 'excited' ? 10  : 7
-  const hiR   = e === 'excited' ? 4.5 : 3
+  const irisR = e === 'excited' ? 20  : 13   // 54% bigger than default
+  const pupR  = e === 'excited' ? 13  : 7
+  const hiR   = e === 'excited' ? 6   : 3
+
+  // ── Blush config ─────────────────────────────────────────────────────────────
+  const blushRx = e === 'excited' ? 18   : 14
+  const blushRy = e === 'excited' ? 11   : 8
+  const blushOp = e === 'excited' ? 0.72 : 0.48
 
   return (
     <svg
@@ -48,39 +53,38 @@ export default function TutoMascot({ size = 160, expression = 'default', style =
       {/* Top-left highlight */}
       <ellipse cx="78" cy="58" rx="22" ry="16" fill="rgba(255,255,255,0.55)" transform="rotate(-15 78 58)" />
 
-      {/* ── Glasses temple arms (behind frames) ────────────────────────────── */}
-      <line x1="51" y1="105" x2="30"  y2="96" stroke="#5B4B8A" strokeWidth="3"   strokeLinecap="round" />
-      <line x1="149" y1="105" x2="170" y2="96" stroke="#5B4B8A" strokeWidth="3"   strokeLinecap="round" />
+      {/* ── Glasses assembly — shifts up 6px when excited ──────────────────── */}
+      <g transform={e === 'excited' ? 'translate(0,-6)' : undefined}>
+        {/* Temple arms (behind frames) */}
+        <line x1="51"  y1="105" x2="30"  y2="96" stroke="#5B4B8A" strokeWidth="3" strokeLinecap="round" />
+        <line x1="149" y1="105" x2="170" y2="96" stroke="#5B4B8A" strokeWidth="3" strokeLinecap="round" />
 
-      {/* ── Left lens ──────────────────────────────────────────────────────── */}
-      {/* Glass tint */}
-      <circle cx="75" cy="105" r="24" fill="#E5F3F8" opacity="0.55" />
-      {/* Iris */}
-      <circle cx={liX} cy={liY} r={irisR} fill="#6BBFD4" />
-      {/* Pupil */}
-      <circle cx={liX} cy={liY} r={pupR}  fill="#1A1A2E" />
-      {/* Highlight */}
-      <circle cx={liX + 4} cy={liY - 4} r={hiR} fill="white" />
+        {/* Left lens */}
+        <circle cx="75" cy="105" r="24" fill="#E5F3F8" opacity="0.55" />
+        <circle cx={liX} cy={liY} r={irisR} fill="#6BBFD4" />
+        <circle cx={liX} cy={liY} r={pupR}  fill="#1A1A2E" />
+        <circle cx={liX + 4} cy={liY - 4} r={hiR} fill="white" />
 
-      {/* ── Right lens ─────────────────────────────────────────────────────── */}
-      <circle cx="125" cy="105" r="24" fill="#E5F3F8" opacity="0.55" />
-      <circle cx={riX} cy={riY} r={irisR} fill="#6BBFD4" />
-      <circle cx={riX} cy={riY} r={pupR}  fill="#1A1A2E" />
-      <circle cx={riX + 4} cy={riY - 4} r={hiR} fill="white" />
+        {/* Right lens */}
+        <circle cx="125" cy="105" r="24" fill="#E5F3F8" opacity="0.55" />
+        <circle cx={riX} cy={riY} r={irisR} fill="#6BBFD4" />
+        <circle cx={riX} cy={riY} r={pupR}  fill="#1A1A2E" />
+        <circle cx={riX + 4} cy={riY - 4} r={hiR} fill="white" />
 
-      {/* ── Lens frames (rendered over iris so edges look sharp) ───────────── */}
-      <circle cx="75"  cy="105" r="24" fill="none" stroke="#5B4B8A" strokeWidth="4.5" />
-      <circle cx="125" cy="105" r="24" fill="none" stroke="#5B4B8A" strokeWidth="4.5" />
-      {/* Nose bridge */}
-      <path d="M 99 105 Q 100 100 101 105" fill="none" stroke="#5B4B8A" strokeWidth="3" strokeLinecap="round" />
+        {/* Lens frames (rendered over iris so edges look sharp) */}
+        <circle cx="75"  cy="105" r="24" fill="none" stroke="#5B4B8A" strokeWidth="4.5" />
+        <circle cx="125" cy="105" r="24" fill="none" stroke="#5B4B8A" strokeWidth="4.5" />
+        {/* Nose bridge */}
+        <path d="M 99 105 Q 100 100 101 105" fill="none" stroke="#5B4B8A" strokeWidth="3" strokeLinecap="round" />
+      </g>
 
       {/* ── Eyebrows ───────────────────────────────────────────────────────── */}
-      <path d={leftBrow}  fill="none" stroke="#3D2D6E" strokeWidth="3"   strokeLinecap="round" />
-      <path d={rightBrow} fill="none" stroke="#3D2D6E" strokeWidth="3"   strokeLinecap="round" />
+      <path d={leftBrow}  fill="none" stroke="#3D2D6E" strokeWidth="3" strokeLinecap="round" />
+      <path d={rightBrow} fill="none" stroke="#3D2D6E" strokeWidth="3" strokeLinecap="round" />
 
       {/* ── Blush ──────────────────────────────────────────────────────────── */}
-      <ellipse cx="45"  cy="124" rx="14" ry="8" fill="#FFB5C8" opacity="0.48" />
-      <ellipse cx="155" cy="124" rx="14" ry="8" fill="#FFB5C8" opacity="0.48" />
+      <ellipse cx="45"  cy="124" rx={blushRx} ry={blushRy} fill="#FFB5C8" opacity={blushOp} />
+      <ellipse cx="155" cy="124" rx={blushRx} ry={blushRy} fill="#FFB5C8" opacity={blushOp} />
 
       {/* ── Mouth ──────────────────────────────────────────────────────────── */}
       {e === 'default' && (
@@ -91,8 +95,10 @@ export default function TutoMascot({ size = 160, expression = 'default', style =
       )}
       {e === 'excited' && (
         <>
-          <path d="M 84 138 A 16 14 0 0 1 116 138 Z" fill="#2D2560" />
-          <path d="M 89 138 A 11  5 0 0 1 111 138"   fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" />
+          {/* Wide smile — corners high (y=130), control dips to y=158 */}
+          <path d="M 71 130 Q 100 158 129 130 Z" fill="#2D2560" />
+          {/* Teeth — shallower curve, white filled */}
+          <path d="M 75 130 Q 100 143 125 130 Z" fill="white" />
         </>
       )}
       {e === 'proud' && (

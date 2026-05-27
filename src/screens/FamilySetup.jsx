@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import TutoMascot from '../components/TutoMascot'
+import { supabase } from '../lib/supabase'
 
 const ANIM = `
 @keyframes fadeUp {
@@ -21,6 +22,9 @@ export default function FamilySetup() {
   const nav = useNavigate()
   const [status, setStatus] = useState(codeFromUrl ? 'success' : 'idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [manualCode, setManualCode] = useState('')
+  const [manualError, setManualError] = useState('')
+  const [manualLoading, setManualLoading] = useState(false)
   const scannerRef = useRef(null)
   const mountedRef = useRef(true)
 
@@ -96,6 +100,22 @@ export default function FamilySetup() {
     }
   }
 
+  const submitManualCode = async () => {
+    const code = manualCode.trim().toUpperCase()
+    if (code.length !== 8) return
+    setManualLoading(true)
+    setManualError('')
+    const { data } = await supabase.from('parents').select('id').eq('family_code', code).single()
+    if (data) {
+      localStorage.setItem('family_code', code)
+      setStatus('success')
+      setTimeout(() => nav('/child'), 1400)
+    } else {
+      setManualError('Code not found. Try again.')
+      setManualLoading(false)
+    }
+  }
+
   return (
     <div style={{ background: '#1A1A2E', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 28px 40px', color: 'white' }}>
       <style>{ANIM}</style>
@@ -129,7 +149,7 @@ export default function FamilySetup() {
         <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, animation: 'fadeUp 0.4s ease both' }}>
           <div style={{ fontSize: 64 }}>✅</div>
           <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2EC486', textAlign: 'center' }}>
-            Connected! ✅
+            Connected! ✅ Code: {localStorage.getItem('family_code')}
           </div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
             Now enter your PIN
@@ -159,6 +179,51 @@ export default function FamilySetup() {
           >
             {status === 'scanning' ? 'Cancel' : '📷 Scan QR Code'}
           </button>
+
+          {/* Manual code entry */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+            <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>
+              Or enter code manually
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={manualCode}
+                onChange={e => {
+                  setManualError('')
+                  setManualCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8))
+                }}
+                onKeyDown={e => e.key === 'Enter' && submitManualCode()}
+                placeholder="XXXXXXXX"
+                maxLength={8}
+                style={{
+                  flex: 1, padding: '14px 16px', border: '2px solid rgba(255,255,255,0.15)',
+                  borderRadius: 14, background: 'rgba(255,255,255,0.08)', color: 'white',
+                  fontFamily: 'monospace', fontSize: 18, fontWeight: 800,
+                  letterSpacing: 3, outline: 'none', textAlign: 'center',
+                  caretColor: '#FFD93D',
+                }}
+              />
+              <button
+                onClick={submitManualCode}
+                disabled={manualCode.length !== 8 || manualLoading}
+                style={{
+                  padding: '14px 18px', border: 'none', borderRadius: 14,
+                  background: manualCode.length === 8 && !manualLoading ? '#FFD93D' : 'rgba(255,255,255,0.1)',
+                  color: manualCode.length === 8 && !manualLoading ? '#1A1A2E' : 'rgba(255,255,255,0.3)',
+                  fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800,
+                  cursor: manualCode.length === 8 && !manualLoading ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.2s, color 0.2s', whiteSpace: 'nowrap',
+                }}
+              >
+                {manualLoading ? '...' : 'Connect →'}
+              </button>
+            </div>
+            {manualError && (
+              <div style={{ background: 'rgba(255,59,48,0.15)', borderRadius: 12, padding: '10px 14px', fontSize: 13, fontWeight: 700, color: '#FF6B6B', textAlign: 'center' }}>
+                {manualError}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => nav('/')}

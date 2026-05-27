@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import TutoMascot from '../components/TutoMascot'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
@@ -67,7 +68,7 @@ const TASKS_META = [
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
-function ProgressBar({ step, total = 8 }) {
+function ProgressBar({ step, total = 10 }) {
   return (
     <div style={{ padding: '52px 24px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -177,6 +178,8 @@ export default function ParentOnboarding() {
   const [pinConfirm,   setPinConfirm]   = useState('')
   const [pinPhase,     setPinPhase]     = useState('enter')
   const [pinError,     setPinError]     = useState('')
+  const [deviceMode,   setDeviceMode]   = useState(null) // 'separate' | 'same'
+  const [familyCode,   setFamilyCode]   = useState(null)
   const [addingReward,    setAddingReward]    = useState(false)
   const [editingLabelIdx, setEditingLabelIdx] = useState(null)
   const [newReward,    setNewReward]    = useState({ emoji: '⭐', label: '', gems: 0 })
@@ -188,17 +191,43 @@ export default function ParentOnboarding() {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [])
 
-  const next = () => setStep(s => s + 1)
+  // Load/generate family_code when QR step is reached
+  useEffect(() => {
+    if (step !== 8 || !user) return
+    const load = async () => {
+      const { data } = await supabase.from('parents').select('family_code').eq('id', user.id).single()
+      if (data?.family_code) {
+        setFamilyCode(data.family_code)
+      } else {
+        const code = Math.random().toString(36).substring(2, 10).toUpperCase()
+        await supabase.from('parents').update({ family_code: code }).eq('id', user.id)
+        setFamilyCode(code)
+      }
+    }
+    load()
+  }, [step, user])
+
+  const hasRobloxReward = rewards.some(r => r.label.toLowerCase().includes('roblox'))
+
+  const next = () => setStep(s => (s === 8 && !hasRobloxReward) ? 10 : s + 1)
   const back = () => {
-    // Reset PIN state whenever leaving step 6 or 7
+    // Reset PIN state when leaving step 6 or 7 (device setup)
     if (step === 6 || step === 7) {
       setPinPhase('enter'); setPin(''); setPinConfirm(''); setPinError('')
+    }
+    // Skip QR step when going back from Roblox in same-device mode
+    if (step === 9 && deviceMode === 'same') {
+      setStep(7); return
+    }
+    // Skip Roblox step when going back from All Done if no Roblox reward
+    if (step === 10 && !hasRobloxReward) {
+      setStep(deviceMode === 'same' ? 7 : 8); return
     }
     setStep(s => s - 1)
   }
 
   // ── PIN entry logic ───────────────────────────────────────────────────────
-  const handlePinInput = val => {
+  const handlePinInput = async val => {
     if (pinPhase === 'enter') {
       setPin(val)
       if (val.length === 4) setTimeout(() => setPinPhase('confirm'), 300)
@@ -206,6 +235,16 @@ export default function ParentOnboarding() {
       setPinConfirm(val)
       if (val.length === 4) {
         if (val === pin) {
+          if (user) {
+            const pin_hash = await hashPin(pin)
+            const { data: existing } = await supabase
+              .from('children').select('pin_hash').eq('parent_id', user.id)
+            if (existing?.some(c => c.pin_hash === pin_hash)) {
+              setPinError('This PIN is already used by another child. Choose a different one.')
+              setTimeout(() => { setPin(''); setPinConfirm(''); setPinPhase('enter'); setPinError('') }, 1500)
+              return
+            }
+          }
           setTimeout(next, 300)
         } else {
           setPinError("PINs don't match — try again.")
@@ -230,9 +269,11 @@ export default function ParentOnboarding() {
       if (!uid) throw new Error('Not logged in. Please sign in and try again.')
 
       const pin_hash = await hashPin(pin)
+      const insertData = { parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' }
+      if (deviceMode === 'same') insertData.same_device = true
       const { data: child, error: cErr } = await supabase
         .from('children')
-        .insert({ parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' })
+        .insert(insertData)
         .select().single()
       if (cErr) throw cErr
 
@@ -267,14 +308,14 @@ export default function ParentOnboarding() {
     setAddingReward(false)
   }
 
-  const showBack = step > 1 && step < 8
+  const showBack = step > 1 && step < 10
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <style>{CSS}</style>
 
-      {step > 1 && step < 8 && <ProgressBar step={step} />}
+      {step > 1 && step < 10 && <ProgressBar step={step} />}
 
       {showBack && (
         <button onClick={back} style={{
@@ -285,7 +326,7 @@ export default function ParentOnboarding() {
 
       <div style={{
         flex: 1,
-        padding: (step === 1 || step === 8) ? '0 24px 48px' : '18px 24px 48px',
+        padding: (step === 1 || step === 10) ? '0 24px 48px' : '18px 24px 48px',
         display: 'flex', flexDirection: 'column',
       }}>
 
@@ -491,8 +532,81 @@ export default function ParentOnboarding() {
           </div>
         )}
 
-        {/* ── STEP 7: Roblox ───────────────────────────────────────────────── */}
+        {/* ── STEP 7: Device Setup ─────────────────────────────────────────── */}
         {step === 7 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>How will {childName} use Tuto? 📱</div>
+            </div>
+            <button
+              onClick={() => { setDeviceMode('separate'); setStep(8) }}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 16,
+                padding: '22px 20px', background: deviceMode === 'separate' ? LPRP : 'white',
+                border: `2px solid ${deviceMode === 'separate' ? PRP : '#E8E0FF'}`,
+                borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+              }}
+            >
+              <span style={{ fontSize: 32, flexShrink: 0, marginTop: 2 }}>📱</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif', marginBottom: 4 }}>Separate device</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.5 }}>I'll scan a QR code to connect {childName}'s device</div>
+              </div>
+            </button>
+            <button
+              onClick={() => { setDeviceMode('same'); setStep(hasRobloxReward ? 9 : 10) }}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 16,
+                padding: '22px 20px', background: deviceMode === 'same' ? LPRP : 'white',
+                border: `2px solid ${deviceMode === 'same' ? PRP : '#E8E0FF'}`,
+                borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+              }}
+            >
+              <span style={{ fontSize: 32, flexShrink: 0, marginTop: 2 }}>🔄</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif', marginBottom: 4 }}>Same device</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.5 }}>{childName} will switch to their profile from here</div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* ── STEP 8: QR Code ──────────────────────────────────────────────── */}
+        {step === 8 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Connect {childName}'s device 📲</div>
+              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Scan this on {childName}'s device to connect it</div>
+            </div>
+            {familyCode ? (
+              <div style={{ background: 'white', borderRadius: 24, padding: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+                <QRCodeSVG
+                  value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
+                  size={220}
+                  bgColor="#FFFFFF"
+                  fgColor="#1A1A2E"
+                  level="M"
+                />
+              </div>
+            ) : (
+              <div style={{ width: 260, height: 260, background: LPRP, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: PRP }}>Loading…</div>
+              </div>
+            )}
+            {familyCode && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ background: LPRP, borderRadius: 10, padding: '6px 14px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PRP, letterSpacing: 2 }}>{familyCode}</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0' }}>manual code</div>
+              </div>
+            )}
+            <BigBtn onClick={next}>Next →</BigBtn>
+          </div>
+        )}
+
+        {/* ── STEP 9: Roblox ───────────────────────────────────────────────── */}
+        {step === 9 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div style={{ fontSize: 64, textAlign: 'center', marginTop: 8 }}>🎮</div>
             <div style={{ textAlign: 'center' }}>
@@ -511,8 +625,8 @@ export default function ParentOnboarding() {
           </div>
         )}
 
-        {/* ── STEP 8: All Done ─────────────────────────────────────────────── */}
-        {step === 8 && (
+        {/* ── STEP 10: All Done ────────────────────────────────────────────── */}
+        {step === 10 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, textAlign: 'center', position: 'relative', overflow: 'hidden', paddingTop: 48 }}>
             {['#FF6B35','#FFD93D','#7C5CBF','#2EC486','#FF6B8B','#6BBFD4','#FFB5C8','#B5A0E8','#FF6B35','#2EC486','#FFD93D','#7C5CBF'].map((color, i) => (
               <div key={i} style={{

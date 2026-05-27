@@ -63,7 +63,7 @@ export default function ChildPin() {
 
       if (match) {
         const child = { id: match.id, name: match.name, age: match.age }
-        sessionStorage.setItem('tuto_child', JSON.stringify(child))
+        localStorage.setItem('child', JSON.stringify(child))
         await giveWelcomeBonus(child.id)
         setExpression('excited')
         setTimeout(() => nav('/child/home'), 350)
@@ -97,7 +97,10 @@ export default function ChildPin() {
       <button onClick={() => nav('/')} style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.2)', border: 'none', width: 40, height: 40, borderRadius: 12, fontSize: 18, color: 'white', cursor: 'pointer', marginBottom: 24 }}>←</button>
       <TutoMascot size={120} expression={expression} />
       <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: 'white', textAlign: 'center', marginTop: 16 }}>Hi! I'm Tuto 👋</div>
-      <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600, textAlign: 'center', marginBottom: 32, marginTop: 4 }}>Enter your PIN to start!</div>
+      <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600, textAlign: 'center', marginBottom: 8, marginTop: 4 }}>Enter your PIN to start!</div>
+      <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, textAlign: 'center', marginBottom: 24 }}>
+        {familyChildren === null ? 'Loading...' : `${familyChildren.length} children loaded`}
+      </div>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         {[0,1,2,3].map(i => (
