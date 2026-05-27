@@ -4,6 +4,12 @@ import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 import TutoMascot from '../components/TutoMascot'
 
+const SLIDER_CSS = `
+.task-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 5px; outline: none; cursor: pointer; margin: 4px 0; }
+.task-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #FF6B35; cursor: pointer; box-shadow: 0 2px 8px rgba(255,107,53,0.4); border: 3px solid white; }
+.task-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #FF6B35; cursor: pointer; border: 3px solid white; }
+`
+
 const TASK_LABELS = {
   math:    { label: 'My Math',    emoji: '🔢' },
   reading: { label: 'My Books',   emoji: '📚' },
@@ -270,6 +276,86 @@ function EditChildModal({ child, onClose, onSaved }) {
   )
 }
 
+// ── Add / Edit Reward modal ───────────────────────────────────────────────────
+const REWARD_EMOJIS = ['🎮','🍦','🎬','🧸','📱','🎁','🏖️','🎨','🚲','⚽','🎤','📚','🍕','🎡','🛹']
+
+function AddRewardModal({ childId, onClose, onSaved }) {
+  const [icon,    setIcon]    = useState('🎁')
+  const [name,    setName]    = useState('')
+  const [btCost,  setBtCost]  = useState(50)
+  const [saving,  setSaving]  = useState(false)
+  const [error,   setError]   = useState('')
+
+  const save = async () => {
+    if (!name.trim()) return setError('Give this goal a name.')
+    setSaving(true); setError('')
+    const { error: dbErr } = await supabase.from('rewards').insert({
+      child_id: childId, icon, name: name.trim(), bt_cost: btCost,
+    })
+    if (dbErr) { setError(dbErr.message); setSaving(false); return }
+    onSaved()
+  }
+
+  const pct = ((btCost - 5) / (200 - 5)) * 100
+  const trackBg = `linear-gradient(to right, #FF6B35 ${pct}%, #FFE8D4 ${pct}%)`
+
+  return (
+    <ModalSheet onClose={onClose}>
+      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2D2D' }}>Add Goal 🏆</div>
+
+      {/* Emoji picker */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 8 }}>ICON</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {REWARD_EMOJIS.map(e => (
+            <button key={e} onClick={() => setIcon(e)}
+              style={{ width: 42, height: 42, borderRadius: 12, border: `2px solid ${icon === e ? '#FF6B35' : '#FFE8D4'}`, background: icon === e ? '#FFF0E8' : 'white', fontSize: 22, cursor: 'pointer' }}>
+              {e}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Name */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 6 }}>GOAL NAME</div>
+        <input
+          type="text" value={name} onChange={e => setName(e.target.value)}
+          placeholder="e.g. Roblox time, Ice cream…"
+          style={{ width: '100%', padding: '12px 16px', border: '2px solid #FFE8D4', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
+
+      {/* Gem cost slider */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 6 }}>
+          GEM COST — <span style={{ color: '#2D2D2D' }}>⭐ {btCost} gems</span>
+        </div>
+        <input
+          type="range" min={5} max={200} step={5} value={btCost}
+          onChange={e => setBtCost(Number(e.target.value))}
+          className="task-slider" style={{ background: trackBg, width: '100%' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#C0C0C0' }}>5</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#C0C0C0' }}>200</span>
+        </div>
+      </div>
+
+      {error && <div style={{ color: '#FF6B35', fontSize: 13, fontWeight: 700 }}>{error}</div>}
+
+      <button onClick={save} disabled={saving}
+        style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 16, background: '#FF6B35', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer' }}>
+        {saving ? 'Saving...' : 'Add Goal'}
+      </button>
+      <button onClick={onClose}
+        style={{ width: '100%', padding: '10px', border: 'none', borderRadius: 16, background: 'none', color: '#7A7A9A', fontFamily: 'Nunito, sans-serif', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+        Cancel
+      </button>
+    </ModalSheet>
+  )
+}
+
 // ── Remove Child modal ────────────────────────────────────────────────────────
 function RemoveConfirmModal({ child, onClose, onConfirm }) {
   const [removing, setRemoving] = useState(false)
@@ -311,6 +397,7 @@ export default function ParentChildDetail() {
   const [showPinModal,    setShowPinModal]    = useState(false)
   const [showEditModal,   setShowEditModal]   = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
+  const [showAddReward,   setShowAddReward]   = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -318,7 +405,7 @@ export default function ParentChildDetail() {
       supabase.from('children').select('*').eq('id', id).single(),
       supabase.from('bt_ledger').select('amount').eq('child_id', id),
       supabase.from('submissions').select('*').eq('child_id', id).order('created_at', { ascending: false }),
-      supabase.from('rewards').select('*').eq('child_id', id).order('gems'),
+      supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost'),
     ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
@@ -354,6 +441,7 @@ export default function ParentChildDetail() {
 
   return (
     <div style={{ background: '#FFF8F0', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <style>{SLIDER_CSS}</style>
 
       {/* Header */}
       <div style={{ background: '#FF6B35', padding: '52px 24px 28px', borderRadius: '0 0 32px 32px' }}>
@@ -413,34 +501,50 @@ export default function ParentChildDetail() {
         </Section>
 
         {/* Reward goals */}
-        <Section title="🏆 Reward Goals">
-          {rewards.length === 0 ? (
-            <EmptyCard text="No reward goals set yet." />
-          ) : (
-            rewards.map(r => {
-              const pct = r.bt_cost > 0 ? Math.min(100, Math.round((gems / r.bt_cost) * 100)) : 0
-              const ready = gems >= r.bt_cost
-              return (
-                <div key={r.id} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 26 }}>{r.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{r.name}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#C8900A' }}>⭐ {r.bt_cost} gems needed</div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>🏆 Reward Goals</div>
+            <button onClick={() => setShowAddReward(true)}
+              style={{ background: '#FF6B35', border: 'none', borderRadius: 10, padding: '6px 14px', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+              + Add Goal
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {rewards.length === 0 ? (
+              <EmptyCard text="No reward goals set yet." />
+            ) : (
+              rewards.map(r => {
+                const pct = r.bt_cost > 0 ? Math.min(100, Math.round((gems / r.bt_cost) * 100)) : 0
+                const ready = gems >= r.bt_cost
+                return (
+                  <div key={r.id} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 26 }}>{r.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{r.name}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#C8900A' }}>⭐ {r.bt_cost} gems needed</div>
+                      </div>
+                      {ready && <span style={{ fontSize: 20 }}>🎉</span>}
+                      <button
+                        onClick={async () => {
+                          await supabase.from('rewards').delete().eq('id', r.id)
+                          setRewards(prev => prev.filter(x => x.id !== r.id))
+                        }}
+                        style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: '#C0C0C0', padding: 4 }}
+                      >🗑️</button>
                     </div>
-                    {ready && <span style={{ fontSize: 20 }}>🎉</span>}
+                    <div style={{ background: '#F5F0D0', borderRadius: 8, height: 8, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: ready ? '#2EC486' : 'linear-gradient(90deg, #FF6B35, #FFD93D)', borderRadius: 8, transition: 'width 0.6s ease' }} />
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: ready ? '#2EC486' : '#7A7A9A' }}>
+                      {ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
+                    </div>
                   </div>
-                  <div style={{ background: '#F5F0D0', borderRadius: 8, height: 8, overflow: 'hidden' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', background: ready ? '#2EC486' : 'linear-gradient(90deg, #FF6B35, #FFD93D)', borderRadius: 8, transition: 'width 0.6s ease' }} />
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: ready ? '#2EC486' : '#7A7A9A' }}>
-                    {ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </Section>
+                )
+              })
+            )}
+          </div>
+        </div>
 
         {/* Settings group */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -486,6 +590,17 @@ export default function ParentChildDetail() {
           child={child}
           onClose={() => setShowRemoveModal(false)}
           onConfirm={() => nav('/parent/dashboard', { state: { removedId: child.id } })}
+        />
+      )}
+      {showAddReward && (
+        <AddRewardModal
+          childId={id}
+          onClose={() => setShowAddReward(false)}
+          onSaved={async () => {
+            const { data } = await supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost')
+            setRewards(data || [])
+            setShowAddReward(false)
+          }}
         />
       )}
     </div>

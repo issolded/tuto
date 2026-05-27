@@ -74,7 +74,7 @@ export default function GoalsScreen() {
   useEffect(() => {
     if (!child?.id) { setRewards([]); setGems(0); return }
     Promise.all([
-      supabase.from('rewards').select('*').eq('child_id', child.id).order('gems'),
+      supabase.from('rewards').select('*').eq('child_id', child.id).order('bt_cost'),
       supabase.from('bt_ledger').select('amount').eq('child_id', child.id),
     ]).then(([{ data: rewardData }, { data: ledgerData }]) => {
       setRewards(rewardData || [])
