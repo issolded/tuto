@@ -22,7 +22,7 @@ export default function ParentSignup() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (signInError) { setError(signInError.message); setLoading(false); return }
     if (data.user) {
-      await supabase.from('profiles').upsert({ id: data.user.id, full_name: name })
+      await supabase.from('parents').update({ full_name: name }).eq('id', data.user.id)
     }
     nav('/parent/onboarding')
   }
