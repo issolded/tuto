@@ -11,18 +11,21 @@ const ANIM = `
 `
 
 const REASON_LABELS = {
-  math:         'My Math ✏️',
-  reading:      'My Books 📚',
-  writing:      'My Stories ✏️',
-  chore:        'My House 🏠',
-  bonus:        'Bonus Gift 🎁',
-  spent_roblox: 'Roblox Time 🎮',
-  story:        'My Stories ✏️',
+  math:            'My Math 🔢',
+  reading:         'My Books 📚',
+  writing:         'My Stories ✏️',
+  chore:           'My House 🏠',
+  bonus:           'Bonus Gift 🎁',
+  spent_roblox:    'Roblox Time 🎮',
+  story:           'My Stories ✏️',
+  'Welcome bonus': 'Welcome Bonus 🎉',
+  welcome:         'Welcome Bonus 🎉',
 }
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
   chore: '🏠', bonus: '🎁', spent_roblox: '🎮', story: '📖',
+  'Welcome bonus': '🎉', welcome: '🎉',
 }
 
 function formatDate(dateStr) {

@@ -242,7 +242,7 @@ export default function MathScreen() {
       child_answer: finalAnswers[i],
       correct: finalAnswers[i] === correctAns[i],
     }))
-    const gemsEarned = accuracy >= 60 ? 20 : 10
+    const gemsEarned = 30
     const evalData = {
       results, score: accuracy, accuracy, level_change: levelChange,
       new_level: newLevel, topic,
