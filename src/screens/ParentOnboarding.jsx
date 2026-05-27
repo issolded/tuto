@@ -17,6 +17,35 @@ const CSS = `
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+.gem-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+  margin: 2px 0;
+}
+.gem-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #7C5CBF;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(124,92,191,0.45);
+  border: 3px solid white;
+}
+.gem-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #7C5CBF;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(124,92,191,0.45);
+}
 `
 
 const PRP  = '#7C5CBF'
@@ -337,22 +366,47 @@ export default function ParentOnboarding() {
               <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>What can your child earn Gems for? 💎</div>
               <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Tap any field to edit.</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {rewards.map((r, i) => (
-                <div key={i} style={{ background: 'white', border: '2px solid #E8E0FF', borderRadius: 18, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input value={r.emoji} onChange={e => updateReward(i, 'emoji', e.target.value)}
-                    style={{ width: 36, border: 'none', outline: 'none', fontSize: 22, textAlign: 'center', background: 'transparent', cursor: 'text' }} />
-                  <input value={r.label} onChange={e => updateReward(i, 'label', e.target.value)} placeholder="Reward name"
-                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', background: 'transparent', minWidth: 0 }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: LPRP, borderRadius: 12, padding: '4px 8px', flexShrink: 0 }}>
-                    <input type="number" value={r.gems} onChange={e => updateReward(i, 'gems', e.target.value)}
-                      style={{ width: 44, border: 'none', outline: 'none', background: 'transparent', fontSize: 13, fontWeight: 800, color: PRP, fontFamily: 'Nunito, sans-serif', textAlign: 'right' }} />
-                    <span style={{ fontSize: 13 }}>💎</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {rewards.map((r, i) => {
+                const pct = ((Math.min(Math.max(r.gems, 10), 1000) - 10) / 990) * 100
+                const trackBg = `linear-gradient(to right, ${PRP} ${pct}%, #E8E0FF ${pct}%)`
+                return (
+                  <div key={i} style={{ background: 'white', border: '2px solid #E8E0FF', borderRadius: 18, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Top row: emoji + name + gem amount + delete */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input value={r.emoji} onChange={e => updateReward(i, 'emoji', e.target.value)}
+                        style={{ width: 36, border: 'none', outline: 'none', fontSize: 22, textAlign: 'center', background: 'transparent', cursor: 'text', flexShrink: 0 }} />
+                      <input value={r.label} onChange={e => updateReward(i, 'label', e.target.value)} placeholder="Reward name"
+                        style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', background: 'transparent', minWidth: 0 }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: LPRP, borderRadius: 12, padding: '5px 10px', flexShrink: 0 }}>
+                        <input
+                          type="number" value={r.gems}
+                          onChange={e => updateReward(i, 'gems', e.target.value)}
+                          style={{ width: 52, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, fontWeight: 800, color: PRP, fontFamily: 'Nunito, sans-serif', textAlign: 'right' }}
+                        />
+                        <span style={{ fontSize: 14 }}>💎</span>
+                      </div>
+                      <button onClick={() => setRewards(p => p.filter((_, idx) => idx !== i))}
+                        style={{ background: 'none', border: 'none', color: '#C8B8D8', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+                    </div>
+
+                    {/* Slider */}
+                    <input
+                      type="range" min={10} max={1000} step={10}
+                      value={Math.min(Math.max(r.gems, 10), 1000)}
+                      onChange={e => updateReward(i, 'gems', e.target.value)}
+                      className="gem-slider"
+                      style={{ background: trackBg }}
+                    />
+
+                    {/* Min / max labels */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: -4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#B0A0CC' }}>10</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#B0A0CC' }}>1000</span>
+                    </div>
                   </div>
-                  <button onClick={() => setRewards(p => p.filter((_, idx) => idx !== i))}
-                    style={{ background: 'none', border: 'none', color: '#C8B8D8', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 2px' }}>×</button>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <button onClick={() => setAddingReward(true)} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
