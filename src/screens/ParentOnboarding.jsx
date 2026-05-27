@@ -269,19 +269,12 @@ export default function ParentOnboarding() {
         .insert(insertData)
         .select()
         .single()
-      console.log('[INSERT] data:', JSON.stringify(child))
-      console.log('[INSERT] error:', JSON.stringify(cErr))
-      console.log('[INSERT] insertData:', JSON.stringify(insertData))
-      alert('Insert result: ' + JSON.stringify({ child, cErr, insertData }))
       if (cErr) throw cErr
 
       const active = rewards.filter(r => r.label.trim())
       if (active.length) {
         const rewardsPayload = active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), bt_cost: r.gems }))
-        console.log('[rewards] inserting:', JSON.stringify(rewardsPayload))
-        const { error: rErr } = await supabase.from('rewards').insert(rewardsPayload)
-        console.log('[rewards] error:', JSON.stringify(rErr))
-        if (rErr) alert('Rewards error: ' + JSON.stringify(rErr))
+        await supabase.from('rewards').insert(rewardsPayload)
       }
 
       if (whatsapp.trim()) {
@@ -295,8 +288,6 @@ export default function ParentOnboarding() {
         nav('/parent/dashboard')
       }
     } catch (err) {
-      console.error('[handleFinish] ERROR:', err)
-      alert('Error: ' + err.message)
       setSaveError(err.message || 'Something went wrong. Please try again.')
       setSaving(false)
     }
