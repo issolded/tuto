@@ -193,7 +193,7 @@ export default function ParentOnboarding() {
 
   // Load/generate family_code when QR step is reached
   useEffect(() => {
-    if (step !== 8 || !user) return
+    if (step !== 10 || !user) return
     const load = async () => {
       const { data } = await supabase.from('parents').select('family_code').eq('id', user.id).single()
       if (data?.family_code) {
@@ -209,20 +209,13 @@ export default function ParentOnboarding() {
 
   const hasRobloxReward = rewards.some(r => r.label.toLowerCase().includes('roblox'))
 
-  const next = () => setStep(s => (s === 8 && !hasRobloxReward) ? 10 : s + 1)
+  const next = () => setStep(s => s + 1)
   const back = () => {
-    // Reset PIN state when leaving step 6 or 7 (device setup)
     if (step === 6 || step === 7) {
       setPinPhase('enter'); setPin(''); setPinConfirm(''); setPinError('')
     }
-    // Skip QR step when going back from Roblox in same-device mode
-    if (step === 9 && deviceMode === 'same') {
-      setStep(7); return
-    }
-    // Skip Roblox step when going back from All Done if no Roblox reward
-    if (step === 10 && !hasRobloxReward) {
-      setStep(deviceMode === 'same' ? 7 : 8); return
-    }
+    // Skip Roblox step going back from All Done if no Roblox reward
+    if (step === 9 && !hasRobloxReward) { setStep(7); return }
     setStep(s => s - 1)
   }
 
@@ -293,7 +286,12 @@ export default function ParentOnboarding() {
         await supabase.from('parents').update({ whatsapp_phone: whatsapp.trim() }).eq('id', uid.id)
       }
 
-      nav('/parent/dashboard')
+      if (deviceMode === 'separate') {
+        setSaving(false)
+        setStep(10)
+      } else {
+        nav('/parent/dashboard')
+      }
     } catch (err) {
       console.error('[handleFinish] ERROR:', err)
       alert('Error: ' + err.message)
@@ -315,7 +313,7 @@ export default function ParentOnboarding() {
     setAddingReward(false)
   }
 
-  const showBack = step > 1 && step < 10
+  const showBack = step > 1 && step < 9
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -546,7 +544,7 @@ export default function ParentOnboarding() {
               <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>How will {childName} use Tuto? 📱</div>
             </div>
             <button
-              onClick={() => { setDeviceMode('separate'); setStep(8) }}
+              onClick={() => { setDeviceMode('separate'); setStep(hasRobloxReward ? 8 : 9) }}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 16,
                 padding: '22px 20px', background: deviceMode === 'separate' ? LPRP : 'white',
@@ -561,7 +559,7 @@ export default function ParentOnboarding() {
               </div>
             </button>
             <button
-              onClick={() => { setDeviceMode('same'); setStep(hasRobloxReward ? 9 : 10) }}
+              onClick={() => { setDeviceMode('same'); setStep(hasRobloxReward ? 8 : 9) }}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 16,
                 padding: '22px 20px', background: deviceMode === 'same' ? LPRP : 'white',
@@ -578,8 +576,55 @@ export default function ParentOnboarding() {
           </div>
         )}
 
-        {/* ── STEP 8: QR Code ──────────────────────────────────────────────── */}
+        {/* ── STEP 8: Roblox ───────────────────────────────────────────────── */}
         {step === 8 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+            <div style={{ fontSize: 64, textAlign: 'center', marginTop: 8 }}>🎮</div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Want me to open Roblox automatically?</div>
+              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>I'll add screen time when your child earns enough Gems.</div>
+            </div>
+            <div style={{ background: LPRP, borderRadius: 20, padding: '16px 18px', width: '100%' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: PRP, marginBottom: 4 }}>How it works</div>
+              <div style={{ fontSize: 13, color: '#7C5CBF', lineHeight: 1.5 }}>When your child spends Gems on "Roblox 30min", Tuto will automatically launch the app and start a countdown timer.</div>
+            </div>
+            <div style={{ width: '100%' }}>
+              <BigBtn outline disabled style={{ opacity: 0.4 }}>Yes, connect Roblox</BigBtn>
+              <div style={{ textAlign: 'center', fontSize: 11, color: '#C0B0D0', fontWeight: 600, marginTop: 6 }}>Coming soon</div>
+            </div>
+            <GhostBtn onClick={next}>Skip for now</GhostBtn>
+          </div>
+        )}
+
+        {/* ── STEP 9: All Done ─────────────────────────────────────────────── */}
+        {step === 9 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, textAlign: 'center', position: 'relative', overflow: 'hidden', paddingTop: 48 }}>
+            {['#FF6B35','#FFD93D','#7C5CBF','#2EC486','#FF6B8B','#6BBFD4','#FFB5C8','#B5A0E8','#FF6B35','#2EC486','#FFD93D','#7C5CBF'].map((color, i) => (
+              <div key={i} style={{
+                position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: color,
+                left: `${4 + i * 8.5}%`, top: '-14px',
+                animation: `confettiFall ${1.1 + (i % 5) * 0.22}s ease-in ${i * 0.1}s infinite`,
+                pointerEvents: 'none',
+              }} />
+            ))}
+            <TutoMascot size={180} expression="excited" style={{ animation: 'float 3s ease-in-out infinite' }} />
+            <div style={{ animation: 'fadeUp 0.5s ease' }}>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 30, fontWeight: 800, color: '#2D2560', lineHeight: 1.2 }}>All set! 🎉</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: PRP, marginTop: 10 }}>
+                {childName || 'Your child'} is ready to start earning Gems!
+              </div>
+            </div>
+            {saveError && (
+              <div style={{ background: '#FFE8E8', color: '#CC0000', borderRadius: 14, padding: '10px 20px', fontSize: 13, fontWeight: 700 }}>{saveError}</div>
+            )}
+            <BigBtn onClick={handleFinish} disabled={saving} style={{ maxWidth: 280 }}>
+              {saving ? 'Saving...' : "Let's Go! 🚀"}
+            </BigBtn>
+          </div>
+        )}
+
+        {/* ── STEP 10: QR Code (separate device only) ──────────────────────── */}
+        {step === 10 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Connect {childName}'s device 📲</div>
@@ -608,55 +653,7 @@ export default function ParentOnboarding() {
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0' }}>manual code</div>
               </div>
             )}
-            <BigBtn onClick={next}>Next →</BigBtn>
-          </div>
-        )}
-
-        {/* ── STEP 9: Roblox ───────────────────────────────────────────────── */}
-        {step === 9 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-            <div style={{ fontSize: 64, textAlign: 'center', marginTop: 8 }}>🎮</div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Want me to open Roblox automatically?</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>I'll add screen time when your child earns enough Gems.</div>
-            </div>
-            <div style={{ background: LPRP, borderRadius: 20, padding: '16px 18px', width: '100%' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: PRP, marginBottom: 4 }}>How it works</div>
-              <div style={{ fontSize: 13, color: '#7C5CBF', lineHeight: 1.5 }}>When your child spends Gems on "Roblox 30min", Tuto will automatically launch the app and start a countdown timer.</div>
-            </div>
-            <div style={{ width: '100%' }}>
-              <BigBtn outline disabled style={{ opacity: 0.4 }}>Yes, connect Roblox</BigBtn>
-              <div style={{ textAlign: 'center', fontSize: 11, color: '#C0B0D0', fontWeight: 600, marginTop: 6 }}>Coming soon</div>
-            </div>
-            <GhostBtn onClick={next}>Skip for now</GhostBtn>
-          </div>
-        )}
-
-        {/* ── STEP 10: All Done ────────────────────────────────────────────── */}
-        {step === 10 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, textAlign: 'center', position: 'relative', overflow: 'hidden', paddingTop: 48 }}>
-            {['#FF6B35','#FFD93D','#7C5CBF','#2EC486','#FF6B8B','#6BBFD4','#FFB5C8','#B5A0E8','#FF6B35','#2EC486','#FFD93D','#7C5CBF'].map((color, i) => (
-              <div key={i} style={{
-                position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: color,
-                left: `${4 + i * 8.5}%`, top: '-14px',
-                animation: `confettiFall ${1.1 + (i % 5) * 0.22}s ease-in ${i * 0.1}s infinite`,
-                pointerEvents: 'none',
-              }} />
-            ))}
-            <TutoMascot size={180} expression="excited" style={{ animation: 'float 3s ease-in-out infinite' }} />
-            <div style={{ animation: 'fadeUp 0.5s ease' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 30, fontWeight: 800, color: '#2D2560', lineHeight: 1.2 }}>All set! 🎉</div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: PRP, marginTop: 10 }}>
-                {childName || 'Your child'} is ready to start earning Gems!
-              </div>
-              <div style={{ fontSize: 14, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Hand the device to your child 📱</div>
-            </div>
-            {saveError && (
-              <div style={{ background: '#FFE8E8', color: '#CC0000', borderRadius: 14, padding: '10px 20px', fontSize: 13, fontWeight: 700 }}>{saveError}</div>
-            )}
-            <BigBtn onClick={handleFinish} disabled={saving} style={{ maxWidth: 280 }}>
-              {saving ? 'Saving...' : "Let's Go! 🚀"}
-            </BigBtn>
+            <BigBtn onClick={() => nav('/parent/dashboard')}>Go to Dashboard →</BigBtn>
           </div>
         )}
       </div>
