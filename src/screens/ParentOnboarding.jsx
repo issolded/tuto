@@ -53,9 +53,9 @@ const LPRP = '#EDE8FF'
 const BG   = '#F8F5FF'
 
 const DEFAULT_REWARDS = [
-  { emoji: '🎮', label: 'Roblox 30min', gems: 30  },
-  { emoji: '📺', label: 'TV 1 hour',    gems: 60  },
-  { emoji: '🧸', label: 'New toy',      gems: 500 },
+  { emoji: '🎮', label: 'Roblox 30min', gems: 30,  lockTitle: true,  hint: '💡 30 mins of playtime' },
+  { emoji: '📺', label: 'TV 1 hour',    gems: 60,  lockTitle: true,  hint: '💡 1 hour of screen time' },
+  { emoji: '🧸', label: 'New toy',      gems: 500, lockTitle: false, hint: '💡 Something special to save up for!' },
 ]
 
 const TASKS_META = [
@@ -177,7 +177,8 @@ export default function ParentOnboarding() {
   const [pinConfirm,   setPinConfirm]   = useState('')
   const [pinPhase,     setPinPhase]     = useState('enter')
   const [pinError,     setPinError]     = useState('')
-  const [addingReward, setAddingReward] = useState(false)
+  const [addingReward,    setAddingReward]    = useState(false)
+  const [editingLabelIdx, setEditingLabelIdx] = useState(null)
   const [newReward,    setNewReward]    = useState({ emoji: '⭐', label: '', gems: 0 })
   const [saving,       setSaving]       = useState(false)
   const [saveError,    setSaveError]    = useState('')
@@ -368,16 +369,40 @@ export default function ParentOnboarding() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rewards.map((r, i) => {
-                const pct = ((Math.min(Math.max(r.gems, 10), 1000) - 10) / 990) * 100
+                const pct     = ((Math.min(Math.max(r.gems, 10), 1000) - 10) / 990) * 100
                 const trackBg = `linear-gradient(to right, ${PRP} ${pct}%, #E8E0FF ${pct}%)`
+                const isEditingLabel = editingLabelIdx === i
+                const canEditLabel   = !r.lockTitle
+
                 return (
                   <div key={i} style={{ background: 'white', border: '2px solid #E8E0FF', borderRadius: 18, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Top row: emoji + name + gem amount + delete */}
+
+                    {/* Top row */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <input value={r.emoji} onChange={e => updateReward(i, 'emoji', e.target.value)}
-                        style={{ width: 36, border: 'none', outline: 'none', fontSize: 22, textAlign: 'center', background: 'transparent', cursor: 'text', flexShrink: 0 }} />
-                      <input value={r.label} onChange={e => updateReward(i, 'label', e.target.value)} placeholder="Reward name"
-                        style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', background: 'transparent', minWidth: 0 }} />
+                      {/* Emoji — always static for default rewards */}
+                      <span style={{ fontSize: 22, flexShrink: 0, width: 28, textAlign: 'center' }}>{r.emoji}</span>
+
+                      {/* Label — fixed or click-to-edit */}
+                      {r.lockTitle ? (
+                        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>{r.label}</span>
+                      ) : isEditingLabel ? (
+                        <input
+                          autoFocus
+                          value={r.label}
+                          onChange={e => updateReward(i, 'label', e.target.value)}
+                          onBlur={() => setEditingLabelIdx(null)}
+                          onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
+                          placeholder="e.g. Lego set, new game..."
+                          style={{ flex: 1, border: 'none', borderBottom: `2px solid ${PRP}`, outline: 'none', fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', background: 'transparent', minWidth: 0, paddingBottom: 2 }}
+                        />
+                      ) : (
+                        <span
+                          onClick={() => canEditLabel && setEditingLabelIdx(i)}
+                          style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', cursor: canEditLabel ? 'text' : 'default', borderBottom: canEditLabel ? '2px dashed #C8B8D8' : 'none', paddingBottom: canEditLabel ? 2 : 0 }}
+                        >{r.label || <span style={{ color: '#B0A0CC' }}>Tap to name…</span>}</span>
+                      )}
+
+                      {/* Gem amount */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: LPRP, borderRadius: 12, padding: '5px 10px', flexShrink: 0 }}>
                         <input
                           type="number" value={r.gems}
@@ -386,6 +411,8 @@ export default function ParentOnboarding() {
                         />
                         <span style={{ fontSize: 14 }}>💎</span>
                       </div>
+
+                      {/* Delete */}
                       <button onClick={() => setRewards(p => p.filter((_, idx) => idx !== i))}
                         style={{ background: 'none', border: 'none', color: '#C8B8D8', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
                     </div>
@@ -399,11 +426,14 @@ export default function ParentOnboarding() {
                       style={{ background: trackBg }}
                     />
 
-                    {/* Min / max labels */}
+                    {/* Min / max + hint */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: -4 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#B0A0CC' }}>10</span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#B0A0CC' }}>1000</span>
                     </div>
+                    {r.hint && (
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#9B8FC0', marginTop: 2 }}>{r.hint}</div>
+                    )}
                   </div>
                 )
               })}
