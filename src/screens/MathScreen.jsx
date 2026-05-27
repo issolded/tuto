@@ -141,7 +141,7 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
 
 export default function MathScreen() {
   const nav   = useNavigate()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
   const age   = child?.age || 7
 
   const [step,          setStep]         = useState('welcome')

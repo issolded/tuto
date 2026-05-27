@@ -180,7 +180,7 @@ function PhotoArea({ inputRef, label }) {
 export default function ReadingFlow() {
   const nav = useNavigate()
   const location = useLocation()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
   const childId = child?.id
   const age = Number(child?.age) || 7
   const language = child?.language || 'en'

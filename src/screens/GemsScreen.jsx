@@ -44,7 +44,7 @@ const NAV = [
 
 export default function GemsScreen() {
   const nav = useNavigate()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [ledger, setLedger] = useState(null)
 
   useEffect(() => {

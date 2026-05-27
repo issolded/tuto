@@ -68,7 +68,7 @@ function useLongPress(onLongPress, ms = 600) {
 
 export default function LibraryScreen() {
   const nav = useNavigate()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [books, setBooks] = useState(null)
   const [jiggling, setJiggling] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId]   = useState(null)

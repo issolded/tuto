@@ -67,7 +67,7 @@ const NAV = [
 
 export default function GoalsScreen() {
   const nav = useNavigate()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [rewards, setRewards] = useState(null)
   const [gems, setGems] = useState(null)
 

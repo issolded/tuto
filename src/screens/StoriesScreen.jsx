@@ -238,7 +238,7 @@ function BackBtn({ onClick }) {
 
 export default function StoriesScreen() {
   const nav = useNavigate()
-  const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+  const child = JSON.parse(localStorage.getItem('child') || 'null')
 
   const [loadingStories, setLoadingStories] = useState(true)
   const [stories, setStories] = useState([])

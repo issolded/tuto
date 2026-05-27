@@ -112,7 +112,7 @@ export default function TaskFlow() {
   useEffect(() => {
     if (calledRef.current) return
     calledRef.current = true
-    const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+    const child = JSON.parse(localStorage.getItem('child') || 'null')
     generateTask(child?.id, task.type, child?.age, child?.language)
       .then(data => setQuestions(data.questions ?? []))
       .catch(() => setQuestions([]))
@@ -130,7 +130,7 @@ export default function TaskFlow() {
     setStatus('loading')
     setError('')
     try {
-      const child = JSON.parse(sessionStorage.getItem('tuto_child') || 'null')
+      const child = JSON.parse(localStorage.getItem('child') || 'null')
       const [res, photoUrl] = await Promise.all([
         evaluateTask(file, task.type, child?.age, child?.language),
         uploadPhoto(file, child?.id),
