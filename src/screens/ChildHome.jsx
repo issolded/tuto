@@ -83,13 +83,16 @@ export default function ChildHome() {
             Hello, {child?.name ?? 'Friend'}!
           </div>
           {/* Gem pill */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'white',
-            borderRadius: 20,
-            padding: '6px 14px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
-          }}>
+          <div
+            onClick={() => nav('/child/gems')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'white',
+              borderRadius: 20,
+              padding: '6px 14px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+              cursor: 'pointer',
+            }}>
             <span style={{ fontSize: 17 }}>⭐</span>
             <span style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: ACCENT }}>
               {gems === null ? '...' : gems} Gems
