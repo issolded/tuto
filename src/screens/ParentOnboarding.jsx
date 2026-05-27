@@ -278,7 +278,7 @@ export default function ParentOnboarding() {
       const active = rewards.filter(r => r.label.trim())
       if (active.length) {
         await supabase.from('rewards').insert(
-          active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), gems: r.gems }))
+          active.map(r => ({ child_id: child.id, emoji: r.emoji, name: r.label.trim(), gems: r.gems }))
         )
       }
 
