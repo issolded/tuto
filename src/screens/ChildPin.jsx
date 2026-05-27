@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { supabase } from '../lib/supabase'
+import { supabase, getChildrenByFamilyCode } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 
 async function giveWelcomeBonus(childId) {
@@ -20,6 +20,18 @@ export default function ChildPin() {
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
   const [expression, setExpression] = useState('default')
+  const [familyChildren, setFamilyChildren] = useState(null) // null = loading
+
+  const familyCode = localStorage.getItem('family_code')
+
+  // Load children for this family on mount
+  useEffect(() => {
+    if (!familyCode) { setFamilyChildren([]); return }
+    getChildrenByFamilyCode(familyCode).then(children => {
+      console.log('[ChildPin] family_code:', familyCode, '| children:', children)
+      setFamilyChildren(children || [])
+    })
+  }, [])
 
   const addPin = (d) => {
     if (checking || pin.length >= 4) return
@@ -43,20 +55,14 @@ export default function ChildPin() {
       const pin_hash = await hashPin(entered)
       console.log('[ChildPin] entered PIN:', entered)
       console.log('[ChildPin] computed hash:', pin_hash)
+      console.log('[ChildPin] matching against', familyChildren?.length ?? '?', 'children')
 
-      const { data: children, error: dbError } = await supabase
-        .from('children')
-        .select('id, name, age, pin_hash')
-        .eq('pin_hash', pin_hash)
-      console.log('[ChildPin] Supabase response — data:', children, '| error:', dbError)
+      // Match against family's children list
+      const match = (familyChildren || []).find(c => c.pin_hash === pin_hash)
+      console.log('[ChildPin] match result:', match ?? 'none')
 
-      if (dbError) {
-        console.error('PIN lookup error:', dbError)
-        fail("Something went wrong. Try again! 🤔")
-        return
-      }
-      if (children && children.length > 0) {
-        const child = children[0]
+      if (match) {
+        const child = { id: match.id, name: match.name, age: match.age }
         sessionStorage.setItem('tuto_child', JSON.stringify(child))
         await giveWelcomeBonus(child.id)
         setExpression('excited')
@@ -69,6 +75,22 @@ export default function ChildPin() {
       fail("Something went wrong. Try again! 🤔")
     }
   }
+
+  // No family code — prompt setup
+  if (!familyCode) return (
+    <div className="screen" style={{ background: '#1A1A2E', alignItems: 'center', padding: '60px 32px 40px' }}>
+      <TutoMascot size={120} expression="default" />
+      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
+        Ask your parent to scan<br />the setup QR first 👨‍👩‍👧
+      </div>
+      <button
+        onClick={() => nav('/setup')}
+        style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}
+      >
+        Set up now →
+      </button>
+    </div>
+  )
 
   return (
     <div className="screen" style={{ background: '#FF6B35', alignItems: 'center', padding: '60px 32px 40px' }}>
