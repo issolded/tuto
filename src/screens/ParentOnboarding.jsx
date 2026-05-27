@@ -277,7 +277,7 @@ export default function ParentOnboarding() {
 
       const active = rewards.filter(r => r.label.trim())
       if (active.length) {
-        const rewardsPayload = active.map(r => ({ child_id: child.id, icon: r.emoji, label: r.label.trim(), price: r.gems }))
+        const rewardsPayload = active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), bt_cost: r.gems }))
         console.log('[rewards] inserting:', JSON.stringify(rewardsPayload))
         const { error: rErr } = await supabase.from('rewards').insert(rewardsPayload)
         console.log('[rewards] error:', JSON.stringify(rErr))

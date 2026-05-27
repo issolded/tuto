@@ -24,7 +24,7 @@ function ProgressBar({ current, total }) {
 }
 
 function RewardCard({ reward, currentGems, index }) {
-  const needed = reward.gems || 0
+  const needed = reward.bt_cost || 0
   const ready = needed > 0 && currentGems >= needed
   const remaining = Math.max(0, needed - currentGems)
 
@@ -40,7 +40,7 @@ function RewardCard({ reward, currentGems, index }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ width: 52, height: 52, borderRadius: 16, background: '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>
-          {reward.emoji}
+          {reward.icon}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D', marginBottom: 2 }}>{reward.name}</div>

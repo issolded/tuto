@@ -418,15 +418,15 @@ export default function ParentChildDetail() {
             <EmptyCard text="No reward goals set yet." />
           ) : (
             rewards.map(r => {
-              const pct = r.gems > 0 ? Math.min(100, Math.round((gems / r.gems) * 100)) : 0
-              const ready = gems >= r.gems
+              const pct = r.bt_cost > 0 ? Math.min(100, Math.round((gems / r.bt_cost) * 100)) : 0
+              const ready = gems >= r.bt_cost
               return (
                 <div key={r.id} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 26 }}>{r.emoji}</span>
+                    <span style={{ fontSize: 26 }}>{r.icon}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{r.name}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#C8900A' }}>⭐ {r.gems} gems needed</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#C8900A' }}>⭐ {r.bt_cost} gems needed</div>
                     </div>
                     {ready && <span style={{ fontSize: 20 }}>🎉</span>}
                   </div>
@@ -434,7 +434,7 @@ export default function ParentChildDetail() {
                     <div style={{ width: `${pct}%`, height: '100%', background: ready ? '#2EC486' : 'linear-gradient(90deg, #FF6B35, #FFD93D)', borderRadius: 8, transition: 'width 0.6s ease' }} />
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: ready ? '#2EC486' : '#7A7A9A' }}>
-                    {ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.gems - gems)} more gems to go`}
+                    {ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
                   </div>
                 </div>
               )
