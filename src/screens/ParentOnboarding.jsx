@@ -287,7 +287,7 @@ export default function ParentOnboarding() {
       }
 
       if (whatsapp.trim()) {
-        await supabase.from('profiles').upsert({ id: uid.id, whatsapp_phone: whatsapp.trim() })
+        await supabase.from('parents').update({ whatsapp_phone: whatsapp.trim() }).eq('id', uid.id)
       }
 
       nav('/parent/dashboard')
