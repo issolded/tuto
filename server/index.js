@@ -54,15 +54,19 @@ async function getParentContext(parentId) {
       supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
     ])
 
+    const sub = submissions || []
+    const math = mathProgress || []
+    const led = ledger || []
+
     return {
       name: child.name,
       age: child.age,
-      totalGems: (ledger || []).reduce((s, r) => s + (r.amount || 0), 0),
-      submissions: submissions || [],
-      mathProgress: mathProgress || [],
-      gemHistory: ledger || [],
-      stories: stories || [],
-      books: books || [],
+      totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
+      submissions: sub.length ? sub : `${child.name} has not completed any tasks yet`,
+      mathProgress: math.length ? math : `${child.name} has not done any math yet`,
+      gemHistory: led.length ? led : `${child.name} has no gem history yet`,
+      stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
+      books: (books || []).length ? books : `${child.name} has not read any books yet`,
     }
   }))
 }
@@ -77,7 +81,11 @@ async function askGeminiWithContext(parentId, userMessage) {
     `- Be conversational and warm, like a trusted friend who knows the kids\n` +
     `- Reference specific data when relevant (e.g. "Ada earned 30 gems yesterday!")\n` +
     `- Keep responses concise — max 3-4 sentences for simple questions\n` +
-    `- For progress questions, give concrete insights from the data`
+    `- For progress questions, give concrete insights from the data\n\n` +
+    `CRITICAL: Only report facts from the data provided.\n` +
+    `If the data is empty or null, say so honestly.\n` +
+    `NEVER invent or assume activity that is not in the data.\n` +
+    `If a field is empty, say the child hasn't done that yet.`
 
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
