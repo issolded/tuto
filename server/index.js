@@ -231,6 +231,10 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
+app.get('/api/whatsapp-status/:parentId', (req, res) => {
+  res.json({ connected: isConnected(req.params.parentId) })
+})
+
 app.post('/api/connect-whatsapp', async (req, res) => {
   const { parentId, phoneNumber } = req.body
   if (!parentId || !phoneNumber) {

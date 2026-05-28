@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 
 const PRP = '#7C5CBF'
+const SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
 
 let _childrenCache = null
 
@@ -125,6 +126,118 @@ function AddChildModal({ parentId, siblings = [], onClose, onSaved }) {
         </button>
         <button className="btn btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
       </div>
+    </div>
+  )
+}
+
+function WhatsAppCard({ parentId }) {
+  const [phone,       setPhone]       = useState('')
+  const [pairingCode, setPairingCode] = useState(null)
+  const [connected,   setConnected]   = useState(false)
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
+  const pollRef = useRef(null)
+
+  useEffect(() => {
+    if (!parentId) return
+    fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
+      .then(r => r.json())
+      .then(d => setConnected(d.connected))
+      .catch(() => {})
+  }, [parentId])
+
+  useEffect(() => {
+    if (pairingCode && !connected) {
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
+          const d = await r.json()
+          if (d.connected) {
+            setConnected(true)
+            setPairingCode(null)
+            clearInterval(pollRef.current)
+          }
+        } catch (_) {}
+      }, 4000)
+    }
+    return () => clearInterval(pollRef.current)
+  }, [pairingCode, connected])
+
+  const getPairingCode = async () => {
+    const normalized = phone.replace(/\s/g, '')
+    if (!normalized) return setError('Enter a phone number.')
+    setLoading(true); setError('')
+    try {
+      const res = await fetch(`${SERVER}/api/connect-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId, phoneNumber: normalized }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Server error')
+      if (data.alreadyConnected) { setConnected(true); return }
+      setPairingCode(data.pairingCode)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (connected) {
+    return (
+      <div style={{ background: '#E8F8F0', borderRadius: 24, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+        <span style={{ fontSize: 28 }}>✅</span>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#1A7A4A' }}>WhatsApp Connected!</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#4CAF82', marginTop: 2 }}>You'll receive task notifications via WhatsApp.</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: 24, padding: '24px', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 26 }}>💬</span>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>Connect WhatsApp</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>Get task updates & chat with Tuto</div>
+        </div>
+      </div>
+
+      {!pairingCode ? (
+        <>
+          <input
+            type="tel"
+            placeholder="+905XXXXXXXXX"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            style={{ padding: '12px 16px', border: '2px solid #FFE8D4', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none' }}
+          />
+          {error && <div style={{ fontSize: 13, fontWeight: 700, color: '#FF3B30' }}>{error}</div>}
+          <button
+            onClick={getPairingCode}
+            disabled={loading}
+            style={{ padding: '13px', border: 'none', borderRadius: 14, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}
+          >
+            {loading ? 'Connecting...' : 'Get Pairing Code'}
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#7A7A9A', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 10 }}>Your pairing code</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 40, fontWeight: 900, color: '#1A1A2E', letterSpacing: 8, background: '#F5F5FF', borderRadius: 16, padding: '16px 24px', display: 'inline-block' }}>
+              {pairingCode}
+            </div>
+          </div>
+          <div style={{ background: '#FFF8E0', borderRadius: 14, padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#7A6000', lineHeight: 1.7 }}>
+            📱 Open <strong>WhatsApp</strong> → <strong>Linked Devices</strong> → <strong>Link with phone number</strong> → enter this code
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', textAlign: 'center' }}>Waiting for connection…</div>
+        </>
+      )}
     </div>
   )
 }
@@ -301,6 +414,8 @@ export default function ParentDashboard() {
             )}
           </div>
         )}
+
+        {user && <WhatsAppCard parentId={user.id} />}
       </div>
 
       {showModal && user && (
