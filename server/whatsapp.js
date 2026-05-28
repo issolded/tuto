@@ -7,11 +7,12 @@ import { wrapSocket } from 'baileys-antiban'
 import pino from 'pino'
 import { mkdirSync, existsSync, readdirSync, rmSync } from 'fs'
 
-const sessions = new Map()       // parentId → sock
-const phoneNumbers = new Map()   // parentId → phoneNumber
-const newConnections = new Set() // parentIds awaiting first 'open' (not restores)
+const sessions = new Map()          // parentId → sock (exists as soon as session starts)
+const connectedSessions = new Set() // parentId → confirmed open connection only
+const phoneNumbers = new Map()      // parentId → phoneNumber
+const newConnections = new Set()    // parentIds awaiting first 'open' (not restores)
 let globalMessageHandler = null
-let onConnectHandler = null      // called as handler(parentId, phoneNumber) on first connect
+let onConnectHandler = null         // called as handler(parentId, phoneNumber) on first connect
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -40,6 +41,7 @@ async function startSession(parentId) {
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
       console.log(`[WA] Parent ${parentId} connected.`)
+      connectedSessions.add(parentId)
       if (newConnections.has(parentId)) {
         newConnections.delete(parentId)
         const phone = phoneNumbers.get(parentId)
@@ -47,6 +49,7 @@ async function startSession(parentId) {
       }
     }
     if (connection === 'close') {
+      connectedSessions.delete(parentId)
       sessions.delete(parentId)
       const code = lastDisconnect?.error?.output?.statusCode
       if (code !== DisconnectReason.loggedOut) {
@@ -120,7 +123,7 @@ export function setConnectHandler(handler) {
 }
 
 export function isConnected(parentId) {
-  return sessions.has(parentId)
+  return connectedSessions.has(parentId)
 }
 
 export async function disconnectParent(parentId) {
@@ -128,6 +131,7 @@ export async function disconnectParent(parentId) {
   if (sock) {
     try { await sock.logout() } catch (_) {}
     sessions.delete(parentId)
+    connectedSessions.delete(parentId)
   }
   const dir = sessionDir(parentId)
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true })
