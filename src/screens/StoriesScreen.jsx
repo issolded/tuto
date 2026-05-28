@@ -319,8 +319,14 @@ export default function StoriesScreen() {
     const baseText = editableTextRef.current || evalResult?.transcribed_text || ''
     const corrected = buildCorrectedText(baseText, evalResult?.spelling_errors || [], spellingState)
     if (child?.id) {
-      await supabase.from('stories').insert({ child_id: child.id, title: displayTitle, topic: chosenIdea?.topic || '', transcribed_text: baseText, corrected_text: corrected, status, gems_earned: evalResult?.gems_earned || 0 }).then(() => {})
-      await supabase.from('bt_ledger').insert({ child_id: child.id, amount: evalResult?.gems_earned || 0, source: 'story' }).then(() => {})
+      await supabase.from('stories').insert({ child_id: child.id, title: displayTitle, topic: chosenIdea?.topic || '', transcribed_text: baseText, corrected_text: corrected, status, gems_earned: evalResult?.gems_earned || 0 })
+      await supabase.from('bt_ledger').insert({ child_id: child.id, amount: evalResult?.gems_earned || 0, reason: 'story' })
+    }
+    // Reload stories list so My Stories is up to date when we go back
+    if (child?.id) {
+      supabase.from('stories').select('*').eq('child_id', child.id).then(({ data }) => {
+        if (data) setStories(data)
+      })
     }
     setStep('done')
   }
@@ -711,7 +717,16 @@ export default function StoriesScreen() {
           <div style={{ fontSize: 16, fontWeight: 800, color: '#6A9956', marginTop: 4 }}>Gems earned! ⭐</div>
         </div>
         <button
-          onClick={() => nav('/child/stories')}
+          onClick={() => {
+            setStep('idle')
+            setStartNew(false)
+            setChosenIdea(null)
+            setStoryTitle('')
+            setPhotos([])
+            setEvalResult(null)
+            setSpellingState([])
+            setActiveError(null)
+          }}
           style={{ marginTop: 32, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
         >
           Back to My Stories
