@@ -332,8 +332,8 @@ app.post('/api/connect-whatsapp', async (req, res) => {
   }
 })
 
-const WA_VERIFY_TOKEN = 'tuto_webhook_2024'
-const WA_API_TOKEN = process.env.WHATSAPP_API_TOKEN
+const WA_VERIFY_TOKEN   = process.env.WHATSAPP_VERIFY_TOKEN || 'tuto_webhook_2024'
+const WA_API_TOKEN      = process.env.WHATSAPP_API_TOKEN
 const WA_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID
 
 async function sendWhatsAppBusinessMessage(to, message) {
