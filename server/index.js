@@ -391,16 +391,20 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
     console.log(`[WA-BIZ] Incoming from ${from}: "${text}"`)
 
-    // Find parent by phone number
-    const { data: children } = await supabase
-      .from('children')
-      .select('parent_id')
-      .eq('parent_phone', from)
+    // Find parent by whatsapp_phone in parents table
+    // Meta sends numbers without '+', e.g. "905XXXXXXXXX"
+    console.log(`[WA-BIZ] Looking up parent for phone: "${from}"`)
+    const { data: parents, error: lookupErr } = await supabase
+      .from('parents')
+      .select('id')
+      .eq('whatsapp_phone', from)
       .limit(1)
 
-    const parentId = children?.[0]?.parent_id
+    console.log(`[WA-BIZ] Lookup result: parents=${JSON.stringify(parents)}, error=${lookupErr ? lookupErr.message : 'none'}`)
+
+    const parentId = parents?.[0]?.id
     if (!parentId) {
-      console.log(`[WA-BIZ] No parent found for phone ${from}`)
+      console.log(`[WA-BIZ] No parent found for phone ${from} — check whatsapp_phone column in parents table`)
       return
     }
 
