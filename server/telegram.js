@@ -34,11 +34,14 @@ export function startTelegramBot() {
     // ── Family code verification ───────────────────────────────────────────
     if (awaitingCode.has(chatId)) {
       awaitingCode.delete(chatId)
+      console.log(`[TG] Family code attempt: "${text}" (normalized: "${text.toUpperCase()}") from chatId=${chatId}`)
       const { data: parent, error } = await supabase
         .from('parents')
         .select('id')
         .eq('family_code', text.toUpperCase())
         .single()
+
+      console.log(`[TG] Supabase result: parent=${JSON.stringify(parent)}, error=${error ? error.message : 'none'} (code=${error?.code})`)
 
       if (error || !parent) {
         awaitingCode.add(chatId) // let them try again
