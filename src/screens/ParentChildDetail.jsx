@@ -1,8 +1,124 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 import TutoMascot from '../components/TutoMascot'
+
+const SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
+
+function WhatsAppCard({ parentId }) {
+  const [phone,       setPhone]       = useState('')
+  const [pairingCode, setPairingCode] = useState(null)
+  const [connected,   setConnected]   = useState(false)
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
+  const pollRef = useRef(null)
+
+  const checkStatus = useCallback(async () => {
+    if (!parentId) return
+    try {
+      const r = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
+      const d = await r.json()
+      setConnected(d.connected)
+      return d.connected
+    } catch (_) { return false }
+  }, [parentId])
+
+  useEffect(() => { checkStatus() }, [checkStatus])
+
+  useEffect(() => {
+    if (pairingCode && !connected) {
+      pollRef.current = setInterval(async () => {
+        const ok = await checkStatus()
+        if (ok) { setPairingCode(null); clearInterval(pollRef.current) }
+      }, 4000)
+    }
+    return () => clearInterval(pollRef.current)
+  }, [pairingCode, connected, checkStatus])
+
+  const connect = async () => {
+    const normalized = phone.replace(/\s/g, '')
+    if (!normalized) return setError('Enter a phone number.')
+    setLoading(true); setError('')
+    try {
+      const res = await fetch(`${SERVER}/api/connect-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId, phoneNumber: normalized }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Server error')
+      if (data.alreadyConnected) { setConnected(true); return }
+      setPairingCode(data.pairingCode)
+    } catch (e) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  const disconnect = async () => {
+    setLoading(true)
+    try {
+      await fetch(`${SERVER}/api/disconnect-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId }),
+      })
+      setConnected(false); setPairingCode(null); setPhone('')
+    } catch (e) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: 20, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 24 }}>📱</span>
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D2D2D' }}>WhatsApp Notifications</div>
+      </div>
+
+      {connected ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18 }}>✅</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A' }}>WhatsApp Connected</span>
+          </div>
+          <button
+            onClick={disconnect} disabled={loading}
+            style={{ background: 'none', border: '1.5px solid #FFD0CC', borderRadius: 10, padding: '6px 14px', fontSize: 13, fontWeight: 700, color: '#FF3B30', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
+          >
+            Disconnect
+          </button>
+        </div>
+      ) : pairingCode ? (
+        <>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#7A7A9A', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>Your pairing code</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 36, fontWeight: 900, color: '#1A1A2E', letterSpacing: 6, background: '#F5F5FF', borderRadius: 14, padding: '14px 20px', display: 'inline-block' }}>
+              {pairingCode}
+            </div>
+          </div>
+          <div style={{ background: '#FFF8E0', borderRadius: 12, padding: '12px 14px', fontSize: 13, fontWeight: 700, color: '#7A6000', lineHeight: 1.7 }}>
+            📱 Open <strong>WhatsApp</strong> → <strong>Linked Devices</strong> → <strong>Link with phone number</strong> → enter this code
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', textAlign: 'center' }}>Waiting for connection…</div>
+        </>
+      ) : (
+        <>
+          <input
+            type="tel" placeholder="+905XXXXXXXXX" value={phone}
+            onChange={e => setPhone(e.target.value)}
+            style={{ padding: '11px 14px', border: '2px solid #FFE8D4', borderRadius: 12, fontSize: 14, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none' }}
+          />
+          {error && <div style={{ fontSize: 12, fontWeight: 700, color: '#FF3B30' }}>{error}</div>}
+          <button
+            onClick={connect} disabled={loading}
+            style={{ padding: '12px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}
+          >
+            {loading ? 'Connecting...' : 'Connect WhatsApp'}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
 
 const SLIDER_CSS = `
 .task-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 5px; outline: none; cursor: pointer; margin: 4px 0; }
@@ -545,6 +661,9 @@ export default function ParentChildDetail() {
             )}
           </div>
         </div>
+
+        {/* WhatsApp Notifications */}
+        {child && <WhatsAppCard parentId={child.parent_id} />}
 
         {/* Settings group */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -5,7 +5,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys'
 import { wrapSocket } from 'baileys-antiban'
 import pino from 'pino'
-import { mkdirSync, existsSync, readdirSync } from 'fs'
+import { mkdirSync, existsSync, readdirSync, rmSync } from 'fs'
 
 const sessions = new Map() // parentId → sock
 let globalMessageHandler = null
@@ -108,6 +108,16 @@ export function setMessageHandler(handler) {
 
 export function isConnected(parentId) {
   return sessions.has(parentId)
+}
+
+export async function disconnectParent(parentId) {
+  const sock = sessions.get(parentId)
+  if (sock) {
+    try { await sock.logout() } catch (_) {}
+    sessions.delete(parentId)
+  }
+  const dir = sessionDir(parentId)
+  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true })
 }
 
 // Restore all saved sessions from disk on startup

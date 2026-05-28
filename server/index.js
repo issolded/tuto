@@ -1,6 +1,6 @@
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
-import { connectParent, sendMessage, setMessageHandler, restoreSessions, isConnected } from './whatsapp.js'
+import { connectParent, sendMessage, setMessageHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -233,6 +233,17 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
 app.get('/api/whatsapp-status/:parentId', (req, res) => {
   res.json({ connected: isConnected(req.params.parentId) })
+})
+
+app.post('/api/disconnect-whatsapp', async (req, res) => {
+  const { parentId } = req.body
+  if (!parentId) return res.status(400).json({ error: 'parentId required' })
+  try {
+    await disconnectParent(parentId)
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.post('/api/connect-whatsapp', async (req, res) => {
