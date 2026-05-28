@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env index.js",
+    "start": "node index.js",
     "dev": "node --env-file=.env --watch index.js"
   },
   "dependencies": {
@@ -11,6 +11,7 @@
     "@whiskeysockets/baileys": "^6.7.18",
     "baileys-antiban": "^3.9.0",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "pino": "^9.6.0",
     "qrcode-terminal": "^0.12.0"
