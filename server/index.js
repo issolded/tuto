@@ -167,22 +167,28 @@ async function handleMessage(parentId, replyCb, text) {
       const { data: latest } = await supabase
         .from('submissions').select('id, task_type, child_id, gems_earned')
         .in('child_id', childIds).eq('status', 'pending')
-        .order('created_at', { ascending: false }).limit(1).single()
+        .order('created_at', { ascending: false }).limit(1)
+        .maybeSingle()
 
+      // No pending submission → treat as normal conversation
       if (!latest) {
-        await replyCb('No pending tasks found.')
+        console.log(`[MSG] Intent was ${intent} but no pending submission found — routing to Gemini`)
+        const reply = await askGeminiWithContext(parentId, text)
+        await replyCb(reply)
         return
       }
+
       const status = intent === 'approve' ? 'approved' : 'rejected'
       await supabase.from('submissions').update({ status }).eq('id', latest.id)
+      const gems = latest.gems_earned ?? 30
       if (intent === 'approve') {
-        await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: latest.gems_earned ?? 30, reason: latest.task_type })
+        await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: gems, reason: latest.task_type })
       }
       const childName = children.find(c => c.id === latest.child_id)?.name || ''
       const label = TASK_LABELS[latest.task_type] || latest.task_type
       await replyCb(intent === 'approve'
-        ? `✅ ${childName}'s "${label}" task approved!`
-        : `❌ ${childName}'s "${label}" task rejected.`)
+        ? `✅ ${childName}'s ${label} task has been approved! They earned ${gems} Gems 🎉`
+        : `❌ ${childName}'s ${label} task has been rejected.`)
       return
     }
 
