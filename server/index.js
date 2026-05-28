@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
-import { connectParent, sendMessage, setMessageHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
+import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -92,6 +92,21 @@ async function askGeminiWithContext(parentId, userMessage) {
   }
   const data = await res.json()
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
+}
+
+function setupConnectHandler() {
+  setConnectHandler(async (parentId, phoneNumber) => {
+    console.log(`[WA] First connect for parent ${parentId} — sending welcome message`)
+    try {
+      await sendMessage(
+        parentId,
+        phoneNumber,
+        `Merhaba! Ben Tuto 👋\n\nÇocuklarınızın öğrenme yolculuğunu takip etmek için buradayım.\n\nGörev onayları, puan durumları ve her şey için bana yazabilirsiniz! 🌟`
+      )
+    } catch (err) {
+      console.error('[WA] Welcome message error:', err.message)
+    }
+  })
 }
 
 function setupMessageListener() {
@@ -270,5 +285,6 @@ app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
   await restoreSessions()
   await startSubmissionListener()
+  setupConnectHandler()
   setupMessageListener()
 })

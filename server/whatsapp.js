@@ -7,8 +7,11 @@ import { wrapSocket } from 'baileys-antiban'
 import pino from 'pino'
 import { mkdirSync, existsSync, readdirSync, rmSync } from 'fs'
 
-const sessions = new Map() // parentId → sock
+const sessions = new Map()       // parentId → sock
+const phoneNumbers = new Map()   // parentId → phoneNumber
+const newConnections = new Set() // parentIds awaiting first 'open' (not restores)
 let globalMessageHandler = null
+let onConnectHandler = null      // called as handler(parentId, phoneNumber) on first connect
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -37,6 +40,11 @@ async function startSession(parentId) {
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
       console.log(`[WA] Parent ${parentId} connected.`)
+      if (newConnections.has(parentId)) {
+        newConnections.delete(parentId)
+        const phone = phoneNumbers.get(parentId)
+        if (onConnectHandler && phone) onConnectHandler(parentId, phone)
+      }
     }
     if (connection === 'close') {
       sessions.delete(parentId)
@@ -70,12 +78,13 @@ async function startSession(parentId) {
 // Connect a new parent via pairing code (no QR).
 // Returns the 8-digit code to show the user.
 export async function connectParent(parentId, phoneNumber) {
-  // If already has a live session, return null (already connected)
   if (sessions.has(parentId)) return null
+
+  phoneNumbers.set(parentId, phoneNumber)
+  newConnections.add(parentId)
 
   const sock = await startSession(parentId)
 
-  // Give the socket a moment to initialize before requesting the code
   await sleep(2000)
 
   const normalized = phoneNumber.replace(/\D/g, '')
@@ -104,6 +113,10 @@ export async function sendMessage(parentId, toPhone, message, imageUrl = null) {
 // Called as handler(parentId, fromPhone, text)
 export function setMessageHandler(handler) {
   globalMessageHandler = handler
+}
+
+export function setConnectHandler(handler) {
+  onConnectHandler = handler
 }
 
 export function isConnected(parentId) {
