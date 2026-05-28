@@ -7,34 +7,44 @@ import TutoMascot from '../components/TutoMascot'
 const SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
 
 function WhatsAppCard({ parentId }) {
-  const [phone,       setPhone]       = useState('')
-  const [pairingCode, setPairingCode] = useState(null)
-  const [connected,   setConnected]   = useState(false)
-  const [loading,     setLoading]     = useState(false)
-  const [error,       setError]       = useState('')
-  const pollRef = useRef(null)
-
-  const checkStatus = useCallback(async () => {
-    if (!parentId) return
-    try {
-      const r = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
-      const d = await r.json()
-      setConnected(d.connected)
-      return d.connected
-    } catch (_) { return false }
-  }, [parentId])
-
-  useEffect(() => { checkStatus() }, [checkStatus])
+  const [phone,         setPhone]         = useState('')
+  const [pairingCode,   setPairingCode]   = useState(null)
+  const [connected,     setConnected]     = useState(false)
+  const [justConnected, setJustConnected] = useState(false)
+  const [copied,        setCopied]        = useState(false)
+  const [loading,       setLoading]       = useState(false)
+  const [error,         setError]         = useState('')
+  const pollRef  = useRef(null)
+  const delayRef = useRef(null)
 
   useEffect(() => {
-    if (pairingCode && !connected) {
+    if (!parentId) return
+    fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
+      .then(r => r.json()).then(d => setConnected(d.connected)).catch(() => {})
+  }, [parentId])
+
+  useEffect(() => {
+    if (!pairingCode) return
+    delayRef.current = setTimeout(() => {
       pollRef.current = setInterval(async () => {
-        const ok = await checkStatus()
-        if (ok) { setPairingCode(null); clearInterval(pollRef.current) }
+        try {
+          const d = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`).then(r => r.json())
+          if (d.connected) {
+            clearInterval(pollRef.current)
+            setConnected(true)
+            setJustConnected(true)
+          }
+        } catch (_) {}
       }, 4000)
-    }
-    return () => clearInterval(pollRef.current)
-  }, [pairingCode, connected, checkStatus])
+    }, 20000)
+    return () => { clearTimeout(delayRef.current); clearInterval(pollRef.current) }
+  }, [pairingCode])
+
+  const copy = () => {
+    navigator.clipboard.writeText(pairingCode).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const connect = async () => {
     const normalized = phone.replace(/\s/g, '')
@@ -42,8 +52,7 @@ function WhatsAppCard({ parentId }) {
     setLoading(true); setError('')
     try {
       const res = await fetch(`${SERVER}/api/connect-whatsapp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId, phoneNumber: normalized }),
       })
       const data = await res.json()
@@ -58,11 +67,10 @@ function WhatsAppCard({ parentId }) {
     setLoading(true)
     try {
       await fetch(`${SERVER}/api/disconnect-whatsapp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId }),
       })
-      setConnected(false); setPairingCode(null); setPhone('')
+      setConnected(false); setPairingCode(null); setPhone(''); setJustConnected(false)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -74,44 +82,55 @@ function WhatsAppCard({ parentId }) {
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D2D2D' }}>WhatsApp Notifications</div>
       </div>
 
-      {connected ? (
+      {connected && !pairingCode ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 18 }}>✅</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A' }}>WhatsApp Connected</span>
           </div>
-          <button
-            onClick={disconnect} disabled={loading}
-            style={{ background: 'none', border: '1.5px solid #FFD0CC', borderRadius: 10, padding: '6px 14px', fontSize: 13, fontWeight: 700, color: '#FF3B30', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
-          >
+          <button onClick={disconnect} disabled={loading}
+            style={{ background: 'none', border: '1.5px solid #FFD0CC', borderRadius: 10, padding: '6px 14px', fontSize: 13, fontWeight: 700, color: '#FF3B30', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}>
             Disconnect
           </button>
         </div>
       ) : pairingCode ? (
         <>
+          {justConnected && (
+            <div style={{ background: '#E8F8F0', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>✅</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#1A7A4A' }}>Connected! You can close this.</span>
+            </div>
+          )}
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#7A7A9A', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>Your pairing code</div>
             <div style={{ fontFamily: 'monospace', fontSize: 36, fontWeight: 900, color: '#1A1A2E', letterSpacing: 6, background: '#F5F5FF', borderRadius: 14, padding: '14px 20px', display: 'inline-block' }}>
               {pairingCode}
             </div>
           </div>
+          <button onClick={copy}
+            style={{ padding: '10px', border: '2px solid #E0E0F0', borderRadius: 10, background: copied ? '#E8F8F0' : 'white', color: copied ? '#1A7A4A' : '#7C5CBF', fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+            {copied ? '✅ Copied!' : '📋 Copy Code'}
+          </button>
           <div style={{ background: '#FFF8E0', borderRadius: 12, padding: '12px 14px', fontSize: 13, fontWeight: 700, color: '#7A6000', lineHeight: 1.7 }}>
             📱 Open <strong>WhatsApp</strong> → <strong>Linked Devices</strong> → <strong>Link with phone number</strong> → enter this code
           </div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', textAlign: 'center' }}>Waiting for connection…</div>
+          {justConnected
+            ? <button onClick={() => setPairingCode(null)}
+                style={{ padding: '11px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                Done ✓
+              </button>
+            : <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', textAlign: 'center' }}>Waiting for connection… (checking in 20s)</div>
+          }
         </>
       ) : (
         <>
-          <input
-            type="tel" placeholder="+905XXXXXXXXX" value={phone}
+          <input type="tel" placeholder="+905XXXXXXXXX" value={phone}
             onChange={e => setPhone(e.target.value)}
             style={{ padding: '11px 14px', border: '2px solid #FFE8D4', borderRadius: 12, fontSize: 14, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none' }}
           />
           {error && <div style={{ fontSize: 12, fontWeight: 700, color: '#FF3B30' }}>{error}</div>}
-          <button
-            onClick={connect} disabled={loading}
-            style={{ padding: '12px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}
-          >
+          <button onClick={connect} disabled={loading}
+            style={{ padding: '12px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}>
             {loading ? 'Connecting...' : 'Connect WhatsApp'}
           </button>
         </>
