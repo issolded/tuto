@@ -10,6 +10,7 @@
     "@supabase/supabase-js": "^2.49.4",
     "@whiskeysockets/baileys": "^6.7.18",
     "baileys-antiban": "^3.9.0",
+    "cors": "^2.8.6",
     "express": "^4.21.2",
     "pino": "^9.6.0",
     "qrcode-terminal": "^0.12.0"
