@@ -10,34 +10,77 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 const GEMINI_API_KEY = 'AIzaSyDHMBb9SbxkPJKSqNWB7vgRYJ8yiT8Cq5Q'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
-const TUTO_SYSTEM_PROMPT = `You are Tuto, a friendly AI learning assistant. You help parents track their child's educational progress. Be warm, encouraging and concise.`
-
 async function classifyIntent(text) {
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{
-        parts: [{ text: `Classify this parent message intent. Return JSON only:\n{\n  "intent": "approve" | "reject" | "auto_approve" | "manual_approve" | "question" | "other",\n  "confidence": 0-1\n}\nMessage: '${text.replace(/'/g, "\\'")}'` }],
-      }],
+      contents: [{ parts: [{ text:
+        `Classify this parent message intent. Return JSON only:\n` +
+        `{"intent":"approve"|"reject"|"auto_approve"|"manual_approve"|"other","confidence":0-1}\n` +
+        `Message: '${text.replace(/'/g, "\\'")}'`
+      }] }],
       generationConfig: { response_mime_type: 'application/json' },
     }),
   })
   if (!res.ok) return { intent: 'other', confidence: 0 }
   const data = await res.json()
-  try {
-    return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
-  } catch {
-    return { intent: 'other', confidence: 0 }
-  }
+  try { return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}') }
+  catch { return { intent: 'other', confidence: 0 } }
 }
 
-async function askGemini(userMessage) {
+async function getParentContext(parentId) {
+  const { data: children } = await supabase
+    .from('children')
+    .select('id, name, age, task_settings')
+    .eq('parent_id', parentId)
+  if (!children?.length) return []
+
+  return Promise.all(children.map(async child => {
+    const [
+      { data: submissions },
+      { data: mathProgress },
+      { data: ledger },
+      { data: stories },
+      { data: books },
+    ] = await Promise.all([
+      supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('math_progress').select('level, topic, accuracy, level_change, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
+      supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
+      supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
+    ])
+
+    return {
+      name: child.name,
+      age: child.age,
+      totalGems: (ledger || []).reduce((s, r) => s + (r.amount || 0), 0),
+      submissions: submissions || [],
+      mathProgress: mathProgress || [],
+      gemHistory: ledger || [],
+      stories: stories || [],
+      books: books || [],
+    }
+  }))
+}
+
+async function askGeminiWithContext(parentId, userMessage) {
+  const familyData = await getParentContext(parentId)
+  const systemPrompt =
+    `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
+    `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
+    `Guidelines:\n` +
+    `- Respond in the SAME LANGUAGE as the parent's message\n` +
+    `- Be conversational and warm, like a trusted friend who knows the kids\n` +
+    `- Reference specific data when relevant (e.g. "Ada earned 30 gems yesterday!")\n` +
+    `- Keep responses concise — max 3-4 sentences for simple questions\n` +
+    `- For progress questions, give concrete insights from the data`
+
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: TUTO_SYSTEM_PROMPT }] },
+      system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
     }),
   })
@@ -49,92 +92,62 @@ async function askGemini(userMessage) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
 }
 
-async function getLatestSubmission(childId) {
-  const { data } = await supabase
-    .from('submissions')
-    .select('id, task_type')
-    .eq('child_id', childId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-  return data
-}
-
-async function getChildStats(childId) {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: submissions } = await supabase
-    .from('submissions')
-    .select('task_type, score, gems_earned, created_at')
-    .eq('child_id', childId)
-    .gte('created_at', sevenDaysAgo)
-    .order('created_at', { ascending: false })
-  const totalGems = (submissions || []).reduce((sum, s) => sum + (s.gems_earned || 0), 0)
-  return { submissions: submissions || [], totalGems }
-}
-
 function setupMessageListener() {
   setMessageHandler(async (parentId, phone, text) => {
-    console.log(`[WHATSAPP] Gelen mesaj: parent=${parentId} phone=${phone} → "${text}"`)
+    console.log(`[WA] Message: parent=${parentId} from=${phone} → "${text}"`)
     try {
-      const { data: child, error } = await supabase
-        .from('children')
-        .select('id, name')
-        .eq('parent_phone', phone)
-        .single()
+      const { intent } = await classifyIntent(text)
+      console.log(`[WA] Intent: ${intent}`)
 
-      if (error || !child) {
-        console.log(`[WHATSAPP] Kayıtlı ebeveyn bulunamadı: ${phone}`)
-        await sendMessage(parentId, phone, 'Merhaba! Sisteme kayıtlı bir hesap bulunamadı.')
-        return
-      }
-
-      const { intent, confidence } = await classifyIntent(text)
-      console.log(`[WHATSAPP] Intent: ${intent} (${confidence}) — ${child.name}`)
-
+      // ── Fast-path: approve / reject pending submission ────────────────────
       if (intent === 'approve' || intent === 'reject') {
-        const latest = await getLatestSubmission(child.id)
+        const { data: children } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
+        const childIds = (children || []).map(c => c.id)
+        const { data: latest } = await supabase
+          .from('submissions').select('id, task_type, child_id, gems_earned')
+          .in('child_id', childIds).eq('status', 'pending')
+          .order('created_at', { ascending: false }).limit(1).single()
+
         if (!latest) {
-          await sendMessage(parentId, phone, 'Son bir görev bulunamadı.')
+          await sendMessage(parentId, phone, 'Onay bekleyen bir görev bulunamadı.')
           return
         }
         const status = intent === 'approve' ? 'approved' : 'rejected'
         await supabase.from('submissions').update({ status }).eq('id', latest.id)
+        if (intent === 'approve') {
+          await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: latest.gems_earned ?? 30, reason: latest.task_type })
+        }
+        const childName = children.find(c => c.id === latest.child_id)?.name || ''
         const label = TASK_LABELS[latest.task_type] || latest.task_type
-        const reply = intent === 'approve'
-          ? `✅ ${child.name}'in "${label}" görevi onaylandı!`
-          : `❌ ${child.name}'in "${label}" görevi reddedildi.`
-        await sendMessage(parentId, phone, reply)
-
-      } else if (intent === 'auto_approve') {
-        await supabase.from('children').update({ auto_approve_chore: true }).eq('id', child.id)
-        await sendMessage(parentId, phone, `Anlaşıldı! Bundan sonra ev görevi fotoğraflarını ben kontrol ederim 🤖`)
-
-      } else if (intent === 'manual_approve') {
-        await supabase.from('children').update({ auto_approve_chore: false }).eq('id', child.id)
-        await sendMessage(parentId, phone, `Tamam! Bundan sonra ev görevi onayları size gelecek.`)
-
-      } else if (intent === 'question') {
-        const { submissions, totalGems } = await getChildStats(child.id)
-        const context =
-          `Child's name: ${child.name}\n` +
-          `Last 7 days: ${submissions.length} submission(s), ${totalGems} gems earned total.\n` +
-          `Submissions: ${JSON.stringify(submissions)}\n\n` +
-          `Parent's question: ${text}`
-        const reply = await askGemini(context)
-        await sendMessage(parentId, phone, reply)
-
-      } else {
-        const reply = await askGemini(text)
-        await sendMessage(parentId, phone, reply)
+        await sendMessage(parentId, phone, intent === 'approve'
+          ? `✅ ${childName}'in "${label}" görevi onaylandı!`
+          : `❌ ${childName}'in "${label}" görevi reddedildi.`)
+        return
       }
 
-      console.log(`[WHATSAPP] Yanıt gönderildi → ${phone}`)
+      // ── Fast-path: auto-approve toggle ────────────────────────────────────
+      if (intent === 'auto_approve' || intent === 'manual_approve') {
+        const val = intent === 'auto_approve'
+        const { data: children } = await supabase.from('children').select('id').eq('parent_id', parentId)
+        for (const c of children || []) {
+          await supabase.from('children').update({ auto_approve_chore: val }).eq('id', c.id)
+        }
+        await sendMessage(parentId, phone, val
+          ? 'Anlaşıldı! Bundan sonra ev görevi fotoğraflarını ben kontrol ederim 🤖'
+          : 'Tamam! Bundan sonra ev görevi onayları size gelecek.')
+        return
+      }
+
+      // ── Default: full family context → Gemini ────────────────────────────
+      const reply = await askGeminiWithContext(parentId, text)
+      await sendMessage(parentId, phone, reply)
+      console.log(`[WA] Reply sent → ${phone}`)
     } catch (err) {
-      console.error('[WHATSAPP] Mesaj işleme hatası:', err.message)
+      console.error('[WA] Message handling error:', err.message)
     }
   })
 
-  console.log('WhatsApp mesaj dinleyici başlatıldı.')
+  console.log('WhatsApp message listener started.')
 }
 
 const TASK_LABELS = {
