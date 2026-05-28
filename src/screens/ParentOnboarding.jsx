@@ -5,6 +5,8 @@ import TutoMascot from '../components/TutoMascot'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+
 const CSS = `
 @keyframes confettiFall {
   0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }
@@ -174,8 +176,12 @@ export default function ParentOnboarding() {
   const [tasks,        setTasks]        = useState({ reading: true, math: true, writing: true, chore: true })
   const [rewards,      setRewards]      = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
   const [whatsapp,     setWhatsapp]     = useState('')
-  const [notifChannel, setNotifChannel] = useState(null) // 'telegram' | null
-  const [codeCopied,   setCodeCopied]   = useState(false)
+  const [notifChannel,    setNotifChannel]    = useState(null) // 'telegram' | 'whatsapp' | null
+  const [codeCopied,      setCodeCopied]      = useState(false)
+  const [waPhone,         setWaPhone]         = useState('')
+  const [waSending,       setWaSending]       = useState(false)
+  const [waVerifySent,    setWaVerifySent]     = useState(false)
+  const [waError,         setWaError]         = useState('')
   const [pin,          setPin]          = useState('')
   const [pinConfirm,   setPinConfirm]   = useState('')
   const [pinPhase,     setPinPhase]     = useState('enter')
@@ -500,15 +506,69 @@ export default function ParentOnboarding() {
               <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Choose how you'd like to receive updates about {childName || 'your child'}.</div>
             </div>
 
-            {/* WhatsApp — coming soon */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', background: 'white', border: '2px solid #E8E0FF', borderRadius: 22, opacity: 0.45 }}>
+            {/* WhatsApp */}
+            <button
+              onClick={() => { setNotifChannel(notifChannel === 'whatsapp' ? null : 'whatsapp'); setWaVerifySent(false); setWaError('') }}
+              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', background: notifChannel === 'whatsapp' ? '#E8F8F0' : 'white', border: `2px solid ${notifChannel === 'whatsapp' ? '#25D366' : '#E8E0FF'}`, borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%' }}
+            >
               <span style={{ fontSize: 32, flexShrink: 0 }}>📱</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>WhatsApp</div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0', marginTop: 2 }}>Receive updates via WhatsApp</div>
               </div>
-              <div style={{ background: '#F0EAF8', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, color: PRP }}>Coming soon</div>
-            </div>
+            </button>
+
+            {/* WhatsApp setup */}
+            {notifChannel === 'whatsapp' && (
+              <div style={{ background: 'white', border: '2px solid #25D366', borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp 0.25s ease both' }}>
+                {waVerifySent ? (
+                  <>
+                    <div style={{ textAlign: 'center', fontSize: 32 }}>📲</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A', textAlign: 'center', lineHeight: 1.6 }}>
+                      Check your WhatsApp for a verification message!
+                    </div>
+                    <BigBtn onClick={() => { setNotifChannel('whatsapp'); next() }}>
+                      Done! ✅
+                    </BigBtn>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#2D2560' }}>Enter your WhatsApp number:</div>
+                    <input
+                      type="tel"
+                      placeholder="+905XXXXXXXXX"
+                      value={waPhone}
+                      onChange={e => { setWaPhone(e.target.value); setWaError('') }}
+                      style={{ padding: '12px 16px', border: '2px solid #D4F5E0', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2560', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    {waError && <div style={{ fontSize: 12, fontWeight: 700, color: '#CC0000' }}>{waError}</div>}
+                    <BigBtn
+                      disabled={!waPhone.trim() || waSending}
+                      onClick={async () => {
+                        if (!user) return setWaError('Not logged in.')
+                        setWaSending(true); setWaError('')
+                        try {
+                          const res = await fetch(`${SERVER}/api/verify-whatsapp`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ phoneNumber: waPhone.trim(), parentId: user.id }),
+                          })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error || 'Server error')
+                          setWaVerifySent(true)
+                        } catch (e) {
+                          setWaError(e.message)
+                        } finally {
+                          setWaSending(false)
+                        }
+                      }}
+                    >
+                      {waSending ? 'Sending...' : 'Send verification 📲'}
+                    </BigBtn>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Telegram — recommended */}
             <button
@@ -530,7 +590,6 @@ export default function ParentOnboarding() {
                   1. Open Telegram and message <span style={{ color: PRP, fontWeight: 900 }}>@TutoParentBot</span><br />
                   2. Send <strong>/start</strong>, then enter your family code:
                 </div>
-
                 {familyCode ? (
                   <button
                     onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
@@ -542,14 +601,13 @@ export default function ParentOnboarding() {
                 ) : (
                   <div style={{ background: LPRP, borderRadius: 16, padding: '14px', textAlign: 'center', fontSize: 13, color: PRP, fontWeight: 700 }}>Loading code…</div>
                 )}
-
                 <BigBtn onClick={() => { setNotifChannel('telegram'); next() }}>
                   Done! I'll send updates to Telegram ✅
                 </BigBtn>
               </div>
             )}
 
-            {notifChannel !== 'telegram' && (
+            {!notifChannel && (
               <GhostBtn onClick={next}>Skip for now</GhostBtn>
             )}
           </div>
