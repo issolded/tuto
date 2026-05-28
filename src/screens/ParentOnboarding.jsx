@@ -174,6 +174,8 @@ export default function ParentOnboarding() {
   const [tasks,        setTasks]        = useState({ reading: true, math: true, writing: true, chore: true })
   const [rewards,      setRewards]      = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
   const [whatsapp,     setWhatsapp]     = useState('')
+  const [notifChannel, setNotifChannel] = useState(null) // 'telegram' | null
+  const [codeCopied,   setCodeCopied]   = useState(false)
   const [pin,          setPin]          = useState('')
   const [pinConfirm,   setPinConfirm]   = useState('')
   const [pinPhase,     setPinPhase]     = useState('enter')
@@ -191,9 +193,9 @@ export default function ParentOnboarding() {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [])
 
-  // Load/generate family_code when QR step is reached
+  // Load/generate family_code when notification or QR step is reached
   useEffect(() => {
-    if (step !== 10 || !user) return
+    if ((step !== 5 && step !== 10) || !user) return
     const load = async () => {
       const { data } = await supabase.from('parents').select('family_code').eq('id', user.id).single()
       if (data?.family_code) {
@@ -279,6 +281,9 @@ export default function ParentOnboarding() {
 
       if (whatsapp.trim()) {
         await supabase.from('parents').update({ whatsapp_phone: whatsapp.trim() }).eq('id', uid.id)
+      }
+      if (notifChannel) {
+        await supabase.from('parents').update({ notification_channel: notifChannel }).eq('id', uid.id)
       }
 
       if (deviceMode === 'separate') {
@@ -487,26 +492,66 @@ export default function ParentOnboarding() {
           </div>
         )}
 
-        {/* ── STEP 5: WhatsApp ──────────────────────────────────────────────── */}
+        {/* ── STEP 5: Notification channel ─────────────────────────────────── */}
         {step === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Get notified on WhatsApp 📱</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>We'll message you when your child completes a task.</div>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Stay in the loop! 🔔</div>
+              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Choose how you'd like to receive updates about {childName || 'your child'}.</div>
             </div>
-            <div style={{ background: LPRP, borderRadius: 20, padding: '16px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 24 }}>💬</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#5B4B8A', lineHeight: 1.5 }}>
-                "{childName || 'Your child'} just finished My Books and earned 30 Gems! 🎉"
-              </span>
+
+            {/* WhatsApp — coming soon */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', background: 'white', border: '2px solid #E8E0FF', borderRadius: 22, opacity: 0.45 }}>
+              <span style={{ fontSize: 32, flexShrink: 0 }}>📱</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>WhatsApp</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0', marginTop: 2 }}>Receive updates via WhatsApp</div>
+              </div>
+              <div style={{ background: '#F0EAF8', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, color: PRP }}>Coming soon</div>
             </div>
-            <div>
-              <FieldLabel>PHONE NUMBER (OPTIONAL)</FieldLabel>
-              <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="+1 555 000 0000" type="tel" />
-              <div style={{ fontSize: 12, color: '#B0A0CC', fontWeight: 600, marginTop: 6, paddingLeft: 2 }}>Include country code, e.g. +1, +44, +90</div>
-            </div>
-            <BigBtn onClick={next}>Next →</BigBtn>
-            <GhostBtn onClick={next}>Skip for now</GhostBtn>
+
+            {/* Telegram — recommended */}
+            <button
+              onClick={() => setNotifChannel(notifChannel === 'telegram' ? null : 'telegram')}
+              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', background: notifChannel === 'telegram' ? LPRP : 'white', border: `2px solid ${notifChannel === 'telegram' ? PRP : '#E8E0FF'}`, borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%' }}
+            >
+              <span style={{ fontSize: 32, flexShrink: 0 }}>✈️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>Telegram</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0', marginTop: 2 }}>Fast, reliable notifications via Telegram</div>
+              </div>
+              <div style={{ background: '#E8F8F0', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, color: '#1A7A4A' }}>Recommended</div>
+            </button>
+
+            {/* Telegram instructions */}
+            {notifChannel === 'telegram' && (
+              <div style={{ background: 'white', border: `2px solid ${PRP}`, borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeUp 0.25s ease both' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2560', lineHeight: 1.6 }}>
+                  1. Open Telegram and message <span style={{ color: PRP, fontWeight: 900 }}>@TutoParentBot</span><br />
+                  2. Send <strong>/start</strong>, then enter your family code:
+                </div>
+
+                {familyCode ? (
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
+                    style={{ background: LPRP, border: `2px solid ${codeCopied ? '#2EC486' : PRP}`, borderRadius: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                  >
+                    <span style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 900, color: '#2D2560', letterSpacing: 4 }}>{familyCode}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: codeCopied ? '#2EC486' : PRP }}>{codeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                  </button>
+                ) : (
+                  <div style={{ background: LPRP, borderRadius: 16, padding: '14px', textAlign: 'center', fontSize: 13, color: PRP, fontWeight: 700 }}>Loading code…</div>
+                )}
+
+                <BigBtn onClick={() => { setNotifChannel('telegram'); next() }}>
+                  Done! I'll send updates to Telegram ✅
+                </BigBtn>
+              </div>
+            )}
+
+            {notifChannel !== 'telegram' && (
+              <GhostBtn onClick={next}>Skip for now</GhostBtn>
+            )}
           </div>
         )}
 
