@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 
 const PRP = '#7C5CBF'
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 let _childrenCache = null
 
@@ -159,6 +160,14 @@ export default function ParentDashboard() {
   const [children, setChildren] = useState(_childrenCache || [])
   const [showModal, setShowModal] = useState(false)
   const [familyCode, setFamilyCode] = useState(null)
+  const [notifData, setNotifData] = useState({ telegramChatId: null, whatsappPhone: null, channel: null })
+  const [showTelegramSetup, setShowTelegramSetup] = useState(false)
+  const [showWaSetup, setShowWaSetup] = useState(false)
+  const [waPhone, setWaPhone] = useState('')
+  const [waSending, setWaSending] = useState(false)
+  const [waVerifySent, setWaVerifySent] = useState(false)
+  const [waError, setWaError] = useState('')
+  const [telegramCodeCopied, setTelegramCodeCopied] = useState(false)
 
   const updateChildren = (next) => {
     _childrenCache = next
@@ -170,7 +179,7 @@ export default function ParentDashboard() {
       setUser(user)
       if (!user) return
 
-      loadFamilyCode(user.id)
+      loadParentData(user.id)
 
       const { updatedChild, removedId } = location.state || {}
       if (updatedChild && _childrenCache) {
@@ -183,20 +192,29 @@ export default function ParentDashboard() {
     })
   }, [])
 
-  const loadFamilyCode = async (uid) => {
+  const loadParentData = async (uid) => {
     const { data } = await supabase
       .from('parents')
-      .select('family_code')
+      .select('family_code, telegram_chat_id, whatsapp_phone, notification_channel')
       .eq('id', uid)
       .single()
 
-    if (data?.family_code) {
-      setFamilyCode(data.family_code)
-    } else {
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase()
+    let code = data?.family_code
+    if (!code) {
+      code = Math.random().toString(36).substring(2, 10).toUpperCase()
       await supabase.from('parents').update({ family_code: code }).eq('id', uid)
-      setFamilyCode(code)
     }
+    setFamilyCode(code)
+    setNotifData({
+      telegramChatId: data?.telegram_chat_id || null,
+      whatsappPhone: data?.whatsapp_phone || null,
+      channel: data?.notification_channel || null,
+    })
+  }
+
+  const updateChannel = async (ch) => {
+    setNotifData(d => ({ ...d, channel: ch }))
+    if (user) await supabase.from('parents').update({ notification_channel: ch }).eq('id', user.id)
   }
 
   const loadChildren = async (uid) => {
@@ -302,6 +320,129 @@ export default function ParentDashboard() {
             )}
           </div>
         )}
+
+        {/* Notifications */}
+        <div style={{ background: 'white', borderRadius: 24, padding: '24px', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>🔔 Notifications</div>
+
+          {/* Telegram row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22, width: 28, textAlign: 'center' }}>✈️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>Telegram</div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: notifData.telegramChatId ? '#2EC486' : '#9999AA' }}>
+                {notifData.telegramChatId ? '✅ Connected' : 'Not connected'}
+              </div>
+            </div>
+            {!notifData.telegramChatId ? (
+              <button
+                onClick={() => setShowTelegramSetup(s => !s)}
+                style={{ background: '#F5F0FF', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 800, color: PRP, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
+              >
+                {showTelegramSetup ? 'Cancel' : '➕ Connect'}
+              </button>
+            ) : notifData.whatsappPhone ? (
+              <button
+                onClick={() => updateChannel('telegram')}
+                style={{ background: notifData.channel === 'telegram' ? PRP : '#F5F0FF', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 800, color: notifData.channel === 'telegram' ? 'white' : PRP, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
+              >
+                {notifData.channel === 'telegram' ? '★ Primary' : 'Set primary'}
+              </button>
+            ) : null}
+          </div>
+
+          {/* Telegram setup */}
+          {showTelegramSetup && !notifData.telegramChatId && (
+            <div style={{ background: '#F5F0FF', borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#2D2560', lineHeight: 1.6 }}>
+                1. Open Telegram → message <span style={{ color: PRP, fontWeight: 900 }}>@TutoParentBot</span><br />
+                2. Send <strong>/start</strong>, then enter your family code:
+              </div>
+              {familyCode && (
+                <button
+                  onClick={() => { navigator.clipboard.writeText(familyCode); setTelegramCodeCopied(true); setTimeout(() => setTelegramCodeCopied(false), 2000) }}
+                  style={{ background: 'white', border: `2px solid ${telegramCodeCopied ? '#2EC486' : PRP}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                >
+                  <span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 900, color: '#2D2560', letterSpacing: 3 }}>{familyCode}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: telegramCodeCopied ? '#2EC486' : PRP }}>{telegramCodeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* WhatsApp row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22, width: 28, textAlign: 'center' }}>📱</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>WhatsApp</div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: notifData.whatsappPhone ? '#2EC486' : '#9999AA' }}>
+                {notifData.whatsappPhone ? `✅ ${notifData.whatsappPhone}` : 'Not connected'}
+              </div>
+            </div>
+            {!notifData.whatsappPhone ? (
+              <button
+                onClick={() => { setShowWaSetup(s => !s); setWaVerifySent(false); setWaError('') }}
+                style={{ background: '#E8F8F0', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 800, color: '#1A7A4A', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
+              >
+                {showWaSetup ? 'Cancel' : '➕ Add number'}
+              </button>
+            ) : notifData.telegramChatId ? (
+              <button
+                onClick={() => updateChannel('whatsapp')}
+                style={{ background: notifData.channel === 'whatsapp' ? '#25D366' : '#E8F8F0', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 800, color: notifData.channel === 'whatsapp' ? 'white' : '#1A7A4A', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
+              >
+                {notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}
+              </button>
+            ) : null}
+          </div>
+
+          {/* WhatsApp setup */}
+          {showWaSetup && !notifData.whatsappPhone && (
+            <div style={{ background: '#E8F8F0', borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {waVerifySent ? (
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1A7A4A', textAlign: 'center' }}>
+                  📲 Verification sent! Check your WhatsApp
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="tel"
+                    placeholder="+905XXXXXXXXX"
+                    value={waPhone}
+                    onChange={e => { setWaPhone(e.target.value); setWaError('') }}
+                    style={{ padding: '11px 14px', border: '2px solid #B8E8CC', borderRadius: 12, fontSize: 14, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {waError && <div style={{ fontSize: 12, fontWeight: 700, color: '#CC0000' }}>{waError}</div>}
+                  <button
+                    disabled={!waPhone.trim() || waSending}
+                    onClick={async () => {
+                      if (!user) return
+                      setWaSending(true); setWaError('')
+                      try {
+                        const res = await fetch(`${SERVER}/api/verify-whatsapp`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ phoneNumber: waPhone.trim(), parentId: user.id }),
+                        })
+                        const json = await res.json()
+                        if (!res.ok) throw new Error(json.error || 'Server error')
+                        setWaVerifySent(true)
+                        setNotifData(d => ({ ...d, whatsappPhone: waPhone.trim(), channel: d.channel || 'whatsapp' }))
+                      } catch (e) {
+                        setWaError(e.message)
+                      } finally {
+                        setWaSending(false)
+                      }
+                    }}
+                    style={{ padding: '11px 16px', background: waSending || !waPhone.trim() ? '#B0C0B0' : '#25D366', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 800, color: 'white', cursor: waSending || !waPhone.trim() ? 'not-allowed' : 'pointer', fontFamily: 'Nunito, sans-serif' }}
+                  >
+                    {waSending ? 'Sending...' : 'Connect WhatsApp 📲'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
       </div>
 

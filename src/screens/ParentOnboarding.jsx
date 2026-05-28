@@ -502,30 +502,81 @@ export default function ParentOnboarding() {
         {step === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Stay in the loop! 🔔</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Choose how you'd like to receive updates about {childName || 'your child'}.</div>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Stay connected 📱</div>
+              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Choose how you want to receive updates about {childName || 'your child'}.</div>
             </div>
 
-            {/* WhatsApp */}
-            <button
-              onClick={() => { setNotifChannel(notifChannel === 'whatsapp' ? null : 'whatsapp'); setWaVerifySent(false); setWaError('') }}
-              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', background: notifChannel === 'whatsapp' ? '#E8F8F0' : 'white', border: `2px solid ${notifChannel === 'whatsapp' ? '#25D366' : '#E8E0FF'}`, borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%' }}
-            >
-              <span style={{ fontSize: 32, flexShrink: 0 }}>📱</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>WhatsApp</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0', marginTop: 2 }}>Receive updates via WhatsApp</div>
-              </div>
-            </button>
+            {/* Two side-by-side cards */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              {/* Telegram card */}
+              <button
+                onClick={() => setNotifChannel(notifChannel === 'telegram' ? null : 'telegram')}
+                style={{
+                  flex: 1, padding: '18px 10px',
+                  background: notifChannel === 'telegram' ? LPRP : 'white',
+                  border: `2px solid ${notifChannel === 'telegram' ? PRP : '#E8E0FF'}`,
+                  borderRadius: 20, cursor: 'pointer', textAlign: 'center',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  transition: 'all 0.18s',
+                }}
+              >
+                <span style={{ fontSize: 28 }}>✈️</span>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>Telegram</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9B8FC0', lineHeight: 1.3 }}>Free & instant</div>
+                {notifChannel === 'telegram' && <div style={{ fontSize: 11, fontWeight: 800, color: PRP }}>Selected ✓</div>}
+              </button>
 
-            {/* WhatsApp setup */}
+              {/* WhatsApp card */}
+              <button
+                onClick={() => { setNotifChannel(notifChannel === 'whatsapp' ? null : 'whatsapp'); setWaVerifySent(false); setWaError('') }}
+                style={{
+                  flex: 1, padding: '18px 10px',
+                  background: notifChannel === 'whatsapp' ? '#E8F8F0' : 'white',
+                  border: `2px solid ${notifChannel === 'whatsapp' ? '#25D366' : '#E8E0FF'}`,
+                  borderRadius: 20, cursor: 'pointer', textAlign: 'center',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  transition: 'all 0.18s',
+                }}
+              >
+                <span style={{ fontSize: 28 }}>📱</span>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>WhatsApp</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9B8FC0', lineHeight: 1.3 }}>Official updates</div>
+                {notifChannel === 'whatsapp' && <div style={{ fontSize: 11, fontWeight: 800, color: '#25D366' }}>Selected ✓</div>}
+              </button>
+            </div>
+
+            {/* Telegram detail */}
+            {notifChannel === 'telegram' && (
+              <div style={{ background: 'white', border: `2px solid ${PRP}`, borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeUp 0.25s ease both' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2560', lineHeight: 1.6 }}>
+                  1. Open Telegram and message <span style={{ color: PRP, fontWeight: 900 }}>@TutoParentBot</span><br />
+                  2. Send <strong>/start</strong>, then enter your family code:
+                </div>
+                {familyCode ? (
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
+                    style={{ background: LPRP, border: `2px solid ${codeCopied ? '#2EC486' : PRP}`, borderRadius: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                  >
+                    <span style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 900, color: '#2D2560', letterSpacing: 4 }}>{familyCode}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: codeCopied ? '#2EC486' : PRP }}>{codeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                  </button>
+                ) : (
+                  <div style={{ background: LPRP, borderRadius: 16, padding: '14px', textAlign: 'center', fontSize: 13, color: PRP, fontWeight: 700 }}>Loading code…</div>
+                )}
+                <BigBtn onClick={() => { setNotifChannel('telegram'); next() }}>
+                  I've connected Telegram ✅
+                </BigBtn>
+              </div>
+            )}
+
+            {/* WhatsApp detail */}
             {notifChannel === 'whatsapp' && (
               <div style={{ background: 'white', border: '2px solid #25D366', borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp 0.25s ease both' }}>
                 {waVerifySent ? (
                   <>
                     <div style={{ textAlign: 'center', fontSize: 32 }}>📲</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A', textAlign: 'center', lineHeight: 1.6 }}>
-                      Check your WhatsApp for a verification message!
+                      Verification sent! Check your WhatsApp
                     </div>
                     <BigBtn onClick={() => { setNotifChannel('whatsapp'); next() }}>
                       Done! ✅
@@ -563,47 +614,10 @@ export default function ParentOnboarding() {
                         }
                       }}
                     >
-                      {waSending ? 'Sending...' : 'Send verification 📲'}
+                      {waSending ? 'Sending...' : 'Connect WhatsApp 📲'}
                     </BigBtn>
                   </>
                 )}
-              </div>
-            )}
-
-            {/* Telegram — recommended */}
-            <button
-              onClick={() => setNotifChannel(notifChannel === 'telegram' ? null : 'telegram')}
-              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', background: notifChannel === 'telegram' ? LPRP : 'white', border: `2px solid ${notifChannel === 'telegram' ? PRP : '#E8E0FF'}`, borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%' }}
-            >
-              <span style={{ fontSize: 32, flexShrink: 0 }}>✈️</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>Telegram</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0', marginTop: 2 }}>Fast, reliable notifications via Telegram</div>
-              </div>
-              <div style={{ background: '#E8F8F0', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, color: '#1A7A4A' }}>Recommended</div>
-            </button>
-
-            {/* Telegram instructions */}
-            {notifChannel === 'telegram' && (
-              <div style={{ background: 'white', border: `2px solid ${PRP}`, borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeUp 0.25s ease both' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2560', lineHeight: 1.6 }}>
-                  1. Open Telegram and message <span style={{ color: PRP, fontWeight: 900 }}>@TutoParentBot</span><br />
-                  2. Send <strong>/start</strong>, then enter your family code:
-                </div>
-                {familyCode ? (
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
-                    style={{ background: LPRP, border: `2px solid ${codeCopied ? '#2EC486' : PRP}`, borderRadius: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s' }}
-                  >
-                    <span style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 900, color: '#2D2560', letterSpacing: 4 }}>{familyCode}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: codeCopied ? '#2EC486' : PRP }}>{codeCopied ? '✅ Copied!' : '📋 Copy'}</span>
-                  </button>
-                ) : (
-                  <div style={{ background: LPRP, borderRadius: 16, padding: '14px', textAlign: 'center', fontSize: 13, color: PRP, fontWeight: 700 }}>Loading code…</div>
-                )}
-                <BigBtn onClick={() => { setNotifChannel('telegram'); next() }}>
-                  Done! I'll send updates to Telegram ✅
-                </BigBtn>
               </div>
             )}
 
