@@ -332,6 +332,88 @@ app.post('/api/connect-whatsapp', async (req, res) => {
   }
 })
 
+const WA_VERIFY_TOKEN = 'tuto_webhook_2024'
+const WA_API_TOKEN = process.env.WHATSAPP_API_TOKEN
+const WA_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID
+
+async function sendWhatsAppBusinessMessage(to, message) {
+  const res = await fetch(
+    `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${WA_API_TOKEN}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'text',
+        text: { body: message },
+      }),
+    }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message || `WhatsApp API error ${res.status}`)
+  }
+  return res.json()
+}
+
+// Webhook verification
+app.get('/webhook/whatsapp', (req, res) => {
+  const mode      = req.query['hub.mode']
+  const token     = req.query['hub.verify_token']
+  const challenge = req.query['hub.challenge']
+  if (mode === 'subscribe' && token === WA_VERIFY_TOKEN) {
+    console.log('[WA-BIZ] Webhook verified.')
+    return res.status(200).send(challenge)
+  }
+  res.sendStatus(403)
+})
+
+// Incoming messages
+app.post('/webhook/whatsapp', async (req, res) => {
+  res.sendStatus(200) // acknowledge immediately
+
+  try {
+    const entry   = req.body?.entry?.[0]
+    const changes = entry?.changes?.[0]
+    const value   = changes?.value
+
+    // Ignore status updates (delivered, read, etc.)
+    if (!value?.messages?.length) return
+
+    const msg  = value.messages[0]
+    const from = msg.from // phone number in E.164 without +
+    const text = msg.text?.body?.trim()
+    if (!text) return
+
+    console.log(`[WA-BIZ] Incoming from ${from}: "${text}"`)
+
+    // Find parent by phone number
+    const { data: children } = await supabase
+      .from('children')
+      .select('parent_id')
+      .eq('parent_phone', from)
+      .limit(1)
+
+    const parentId = children?.[0]?.parent_id
+    if (!parentId) {
+      console.log(`[WA-BIZ] No parent found for phone ${from}`)
+      return
+    }
+
+    await handleMessage(
+      parentId,
+      reply => sendWhatsAppBusinessMessage(from, reply),
+      text
+    )
+  } catch (err) {
+    console.error('[WA-BIZ] Webhook error:', err.message)
+  }
+})
+
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
   startTelegramBot()
