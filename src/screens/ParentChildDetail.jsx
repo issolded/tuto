@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 import TutoMascot from '../components/TutoMascot'
 
-const SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 function WhatsAppCard({ parentId }) {
   const [phone,         setPhone]         = useState('')

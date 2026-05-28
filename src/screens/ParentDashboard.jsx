@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 
 const PRP = '#7C5CBF'
-const SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 let _childrenCache = null
 
