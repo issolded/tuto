@@ -1,0 +1,110 @@
+import TelegramBot from 'node-telegram-bot-api'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+
+let bot = null
+let globalMessageHandler = null // called as handler(parentId, chatId, text)
+
+// chatId → parentId cache for connected users
+const chatToParent = new Map()
+
+export function startTelegramBot() {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  if (!token) { console.log('[TG] No TELEGRAM_BOT_TOKEN — skipping'); return }
+
+  bot = new TelegramBot(token, { polling: true })
+
+  // Track pending family-code prompts: chatId → true
+  const awaitingCode = new Set()
+
+  bot.onText(/\/start/, async (msg) => {
+    const chatId = msg.chat.id
+    awaitingCode.add(chatId)
+    await bot.sendMessage(chatId,
+      `Welcome to Tuto! 🎉 I'll keep you updated on your child's progress.\n\nPlease enter your family code to connect:`
+    )
+  })
+
+  bot.on('message', async (msg) => {
+    const chatId = msg.chat.id
+    const text = (msg.text || '').trim()
+    if (!text || text.startsWith('/')) return
+
+    // ── Family code verification ───────────────────────────────────────────
+    if (awaitingCode.has(chatId)) {
+      awaitingCode.delete(chatId)
+      const { data: parent, error } = await supabase
+        .from('parents')
+        .select('id')
+        .eq('family_code', text.toUpperCase())
+        .single()
+
+      if (error || !parent) {
+        awaitingCode.add(chatId) // let them try again
+        await bot.sendMessage(chatId, '❌ Family code not found. Please check and try again:')
+        return
+      }
+
+      await supabase.from('parents').update({ telegram_chat_id: chatId }).eq('id', parent.id)
+      chatToParent.set(chatId, parent.id)
+      await bot.sendMessage(chatId, '✅ Connected! You\'ll now receive updates here.')
+      console.log(`[TG] Parent ${parent.id} connected via Telegram (chatId=${chatId})`)
+      return
+    }
+
+    // ── Regular message → forward to Gemini ───────────────────────────────
+    let parentId = chatToParent.get(chatId)
+
+    if (!parentId) {
+      // Look up in DB (e.g. after server restart)
+      const { data: parent } = await supabase
+        .from('parents')
+        .select('id')
+        .eq('telegram_chat_id', chatId)
+        .single()
+
+      if (!parent) {
+        await bot.sendMessage(chatId, 'Please send /start to connect your family first.')
+        return
+      }
+      parentId = parent.id
+      chatToParent.set(chatId, parentId)
+    }
+
+    console.log(`[TG] Message from parent ${parentId}: "${text}"`)
+    if (globalMessageHandler) {
+      globalMessageHandler(parentId, String(chatId), text)
+    }
+  })
+
+  bot.on('polling_error', (err) => console.error('[TG] Polling error:', err.message))
+  console.log('[TG] Telegram bot started.')
+}
+
+export async function sendTelegramMessage(chatId, message) {
+  if (!bot) throw new Error('Telegram bot not started')
+  await bot.sendMessage(String(chatId), message)
+}
+
+export async function getTelegramChatId(parentId) {
+  // Check in-memory cache first
+  for (const [cid, pid] of chatToParent.entries()) {
+    if (pid === parentId) return cid
+  }
+  // Fall back to DB
+  const { data } = await supabase
+    .from('parents')
+    .select('telegram_chat_id')
+    .eq('id', parentId)
+    .single()
+  if (data?.telegram_chat_id) {
+    chatToParent.set(data.telegram_chat_id, parentId)
+    return data.telegram_chat_id
+  }
+  return null
+}
+
+export function setTelegramMessageHandler(handler) {
+  globalMessageHandler = handler
+}

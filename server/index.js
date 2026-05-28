@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
+import { startTelegramBot, sendTelegramMessage, getTelegramChatId, setTelegramMessageHandler } from './telegram.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -94,6 +95,42 @@ async function askGeminiWithContext(parentId, userMessage) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
 }
 
+async function sendNotification(parentId, message) {
+  // 1. Try Telegram
+  try {
+    const chatId = await getTelegramChatId(parentId)
+    if (chatId) {
+      await sendTelegramMessage(chatId, message)
+      console.log(`[NOTIFY] Telegram → parent ${parentId}`)
+      return
+    }
+  } catch (err) {
+    console.error('[NOTIFY] Telegram error:', err.message)
+  }
+
+  // 2. Try WhatsApp
+  if (isConnected(parentId)) {
+    try {
+      const { data: child } = await supabase
+        .from('children')
+        .select('parent_phone')
+        .eq('parent_id', parentId)
+        .not('parent_phone', 'is', null)
+        .limit(1)
+        .single()
+      if (child?.parent_phone) {
+        await sendMessage(parentId, child.parent_phone, message)
+        console.log(`[NOTIFY] WhatsApp → parent ${parentId}`)
+        return
+      }
+    } catch (err) {
+      console.error('[NOTIFY] WhatsApp error:', err.message)
+    }
+  }
+
+  console.log(`[NOTIFY] No channel for parent ${parentId} — message: ${message}`)
+}
+
 function setupConnectHandler() {
   setConnectHandler(async (parentId, phoneNumber) => {
     console.log(`[WA] First connect for parent ${parentId} — sending welcome message`)
@@ -109,62 +146,68 @@ function setupConnectHandler() {
   })
 }
 
-function setupMessageListener() {
-  setMessageHandler(async (parentId, phone, text) => {
-    console.log(`[WA] Message: parent=${parentId} from=${phone} → "${text}"`)
-    try {
-      const { intent } = await classifyIntent(text)
-      console.log(`[WA] Intent: ${intent}`)
+async function handleMessage(parentId, replyCb, text) {
+  console.log(`[MSG] parent=${parentId} → "${text}"`)
+  try {
+    const { intent } = await classifyIntent(text)
+    console.log(`[MSG] Intent: ${intent}`)
 
-      // ── Fast-path: approve / reject pending submission ────────────────────
-      if (intent === 'approve' || intent === 'reject') {
-        const { data: children } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
-        const childIds = (children || []).map(c => c.id)
-        const { data: latest } = await supabase
-          .from('submissions').select('id, task_type, child_id, gems_earned')
-          .in('child_id', childIds).eq('status', 'pending')
-          .order('created_at', { ascending: false }).limit(1).single()
+    // ── Fast-path: approve / reject pending submission ────────────────────
+    if (intent === 'approve' || intent === 'reject') {
+      const { data: children } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
+      const childIds = (children || []).map(c => c.id)
+      const { data: latest } = await supabase
+        .from('submissions').select('id, task_type, child_id, gems_earned')
+        .in('child_id', childIds).eq('status', 'pending')
+        .order('created_at', { ascending: false }).limit(1).single()
 
-        if (!latest) {
-          await sendMessage(parentId, phone, 'Onay bekleyen bir görev bulunamadı.')
-          return
-        }
-        const status = intent === 'approve' ? 'approved' : 'rejected'
-        await supabase.from('submissions').update({ status }).eq('id', latest.id)
-        if (intent === 'approve') {
-          await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: latest.gems_earned ?? 30, reason: latest.task_type })
-        }
-        const childName = children.find(c => c.id === latest.child_id)?.name || ''
-        const label = TASK_LABELS[latest.task_type] || latest.task_type
-        await sendMessage(parentId, phone, intent === 'approve'
-          ? `✅ ${childName}'in "${label}" görevi onaylandı!`
-          : `❌ ${childName}'in "${label}" görevi reddedildi.`)
+      if (!latest) {
+        await replyCb('No pending tasks found.')
         return
       }
-
-      // ── Fast-path: auto-approve toggle ────────────────────────────────────
-      if (intent === 'auto_approve' || intent === 'manual_approve') {
-        const val = intent === 'auto_approve'
-        const { data: children } = await supabase.from('children').select('id').eq('parent_id', parentId)
-        for (const c of children || []) {
-          await supabase.from('children').update({ auto_approve_chore: val }).eq('id', c.id)
-        }
-        await sendMessage(parentId, phone, val
-          ? 'Anlaşıldı! Bundan sonra ev görevi fotoğraflarını ben kontrol ederim 🤖'
-          : 'Tamam! Bundan sonra ev görevi onayları size gelecek.')
-        return
+      const status = intent === 'approve' ? 'approved' : 'rejected'
+      await supabase.from('submissions').update({ status }).eq('id', latest.id)
+      if (intent === 'approve') {
+        await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: latest.gems_earned ?? 30, reason: latest.task_type })
       }
-
-      // ── Default: full family context → Gemini ────────────────────────────
-      const reply = await askGeminiWithContext(parentId, text)
-      await sendMessage(parentId, phone, reply)
-      console.log(`[WA] Reply sent → ${phone}`)
-    } catch (err) {
-      console.error('[WA] Message handling error:', err.message)
+      const childName = children.find(c => c.id === latest.child_id)?.name || ''
+      const label = TASK_LABELS[latest.task_type] || latest.task_type
+      await replyCb(intent === 'approve'
+        ? `✅ ${childName}'s "${label}" task approved!`
+        : `❌ ${childName}'s "${label}" task rejected.`)
+      return
     }
-  })
 
-  console.log('WhatsApp message listener started.')
+    // ── Fast-path: auto-approve toggle ────────────────────────────────────
+    if (intent === 'auto_approve' || intent === 'manual_approve') {
+      const val = intent === 'auto_approve'
+      const { data: children } = await supabase.from('children').select('id').eq('parent_id', parentId)
+      for (const c of children || []) {
+        await supabase.from('children').update({ auto_approve_chore: val }).eq('id', c.id)
+      }
+      await replyCb(val
+        ? 'Got it! I\'ll review chore photos from now on 🤖'
+        : 'Got it! Chore approvals will come to you from now on.')
+      return
+    }
+
+    // ── Default: full family context → Gemini ────────────────────────────
+    const reply = await askGeminiWithContext(parentId, text)
+    await replyCb(reply)
+    console.log(`[MSG] Reply sent to parent ${parentId}`)
+  } catch (err) {
+    console.error('[MSG] Message handling error:', err.message)
+  }
+}
+
+function setupMessageListener() {
+  setMessageHandler((parentId, phone, text) =>
+    handleMessage(parentId, msg => sendMessage(parentId, phone, msg), text)
+  )
+  setTelegramMessageHandler((parentId, chatId, text) =>
+    handleMessage(parentId, msg => sendTelegramMessage(chatId, msg), text)
+  )
+  console.log('Message listeners started (WhatsApp + Telegram).')
 }
 
 const TASK_LABELS = {
@@ -227,8 +270,8 @@ async function startSubmissionListener() {
             await supabase.from('bt_ledger').insert({ child_id: submission.child_id, amount: gems, reason: taskLabel })
           }
 
-          await sendMessage(child.parent_id, child.parent_phone, message)
-          console.log(`[APPROVAL] Mesaj gönderildi → ${child.parent_phone}`)
+          await sendNotification(child.parent_id, message)
+          console.log(`[APPROVAL] Bildirim gönderildi → parent ${child.parent_id}`)
         } catch (err) {
           console.error('Mesaj gönderilemedi:', err.message)
         }
@@ -283,6 +326,7 @@ app.post('/api/connect-whatsapp', async (req, res) => {
 
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
+  startTelegramBot()
   await restoreSessions()
   await startSubmissionListener()
   setupConnectHandler()
