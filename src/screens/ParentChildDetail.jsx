@@ -81,6 +81,11 @@ function WhatsAppCard({ parentId }) {
         <span style={{ fontSize: 24 }}>📱</span>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D2D2D' }}>WhatsApp Notifications</div>
       </div>
+      {!connected && (
+        <div style={{ background: '#FFF8E0', borderRadius: 10, padding: '8px 12px', fontSize: 12, fontWeight: 700, color: '#7A6000' }}>
+          📌 Messages will come from your own number — don't be surprised!
+        </div>
+      )}
 
       {connected && !pairingCode ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

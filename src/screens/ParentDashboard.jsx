@@ -218,6 +218,9 @@ function WhatsAppCard({ parentId }) {
           <div style={{ fontSize: 12, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>Get task updates & chat with Tuto</div>
         </div>
       </div>
+      <div style={{ background: '#FFF8E0', borderRadius: 12, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7A6000' }}>
+        📌 Messages will come from your own number — don't be surprised!
+      </div>
 
       {!pairingCode ? (
         <>

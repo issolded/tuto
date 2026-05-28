@@ -101,7 +101,7 @@ function setupConnectHandler() {
       await sendMessage(
         parentId,
         phoneNumber,
-        `Merhaba! Ben Tuto 👋\n\nÇocuklarınızın öğrenme yolculuğunu takip etmek için buradayım.\n\nGörev onayları, puan durumları ve her şey için bana yazabilirsiniz! 🌟`
+        `Hi! I'm Tuto 👋\n\nI'm here to help you track your children's learning journey.\n\nYou'll get task updates here, and you can ask me anything about your kids' progress! 🌟`
       )
     } catch (err) {
       console.error('[WA] Welcome message error:', err.message)
