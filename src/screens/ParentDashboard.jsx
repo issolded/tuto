@@ -131,15 +131,15 @@ function AddChildModal({ parentId, siblings = [], onClose, onSaved }) {
 }
 
 function WhatsAppCard({ parentId }) {
-  const [phone,       setPhone]       = useState('')
-  const [pairingCode, setPairingCode] = useState(null)
-  const [connected,   setConnected]   = useState(false)
+  const [phone,         setPhone]         = useState('')
+  const [pairingCode,   setPairingCode]   = useState(null)
+  const [connected,     setConnected]     = useState(false)
   const [justConnected, setJustConnected] = useState(false)
-  const [copied,      setCopied]      = useState(false)
-  const [loading,     setLoading]     = useState(false)
-  const [error,       setError]       = useState('')
-  const pollRef  = useRef(null)
-  const delayRef = useRef(null)
+  const [copied,        setCopied]        = useState(false)
+  const [waiting,       setWaiting]       = useState(false)
+  const [loading,       setLoading]       = useState(false)
+  const [error,         setError]         = useState('')
+  const pollRef = useRef(null)
 
   useEffect(() => {
     if (!parentId) return
@@ -150,22 +150,20 @@ function WhatsAppCard({ parentId }) {
   }, [parentId])
 
   useEffect(() => {
-    if (!pairingCode) return
-    delayRef.current = setTimeout(() => {
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
-          const d = await r.json()
-          if (d.connected) {
-            clearInterval(pollRef.current)
-            setJustConnected(true)
-            setConnected(true)
-          }
-        } catch (_) {}
-      }, 4000)
-    }, 20000)
-    return () => { clearTimeout(delayRef.current); clearInterval(pollRef.current) }
-  }, [pairingCode])
+    if (!waiting) return
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
+        const d = await r.json()
+        if (d.connected) {
+          clearInterval(pollRef.current)
+          setJustConnected(true)
+          setConnected(true)
+        }
+      } catch (_) {}
+    }, 3000)
+    return () => clearInterval(pollRef.current)
+  }, [waiting])
 
   const confirmDone = async () => {
     try {
@@ -186,7 +184,7 @@ function WhatsAppCard({ parentId }) {
   const copy = () => {
     navigator.clipboard.writeText(pairingCode).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setWaiting(true)
     })
   }
 
@@ -256,37 +254,49 @@ function WhatsAppCard({ parentId }) {
         </>
       ) : (
         <>
-          {justConnected && (
-            <div style={{ background: '#E8F8F0', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>✅</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#1A7A4A' }}>Connected! You can close this.</span>
-            </div>
-          )}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#7A7A9A', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 10 }}>Your pairing code</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 40, fontWeight: 900, color: '#1A1A2E', letterSpacing: 8, background: '#F5F5FF', borderRadius: 16, padding: '16px 24px', display: 'inline-block' }}>
-              {pairingCode}
-            </div>
-          </div>
-          <button
-            onClick={copy}
-            style={{ padding: '11px', border: '2px solid #E0E0F0', borderRadius: 12, background: copied ? '#E8F8F0' : 'white', color: copied ? '#1A7A4A' : '#7C5CBF', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
-          >
-            {copied ? '✅ Copied!' : '📋 Copy Code'}
-          </button>
-          <div style={{ background: '#FFF8E0', borderRadius: 14, padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#7A6000', lineHeight: 1.7 }}>
-            📱 Open <strong>WhatsApp</strong> → <strong>Linked Devices</strong> → <strong>Link with phone number</strong> → enter this code
-          </div>
-          {!justConnected && (
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', textAlign: 'center' }}>Waiting for connection… (checking in 20s)</div>
-          )}
-          {justConnected && (
-            <button
-              onClick={confirmDone}
-              style={{ padding: '11px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
-            >
-              Done ✓
-            </button>
+          {justConnected ? (
+            <>
+              <div style={{ background: '#E8F8F0', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>✅</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#1A7A4A' }}>Connected! You can close this.</span>
+              </div>
+              <button onClick={confirmDone} style={{ padding: '11px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                Done ✓
+              </button>
+            </>
+          ) : waiting ? (
+            <>
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>📱</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#2D2D2D', marginBottom: 4 }}>Open WhatsApp</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.6 }}>
+                  Tap the notification from WhatsApp<br />and enter the code you just copied.
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 0' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#25D366', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#7A7A9A' }}>Waiting for connection…</div>
+              </div>
+              <div style={{ background: '#F5F5FF', borderRadius: 12, padding: '10px 14px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#9A9AB0', marginBottom: 4 }}>Code</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 900, color: '#1A1A2E', letterSpacing: 4 }}>{pairingCode}</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#7A7A9A', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 10 }}>Your pairing code</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 40, fontWeight: 900, color: '#1A1A2E', letterSpacing: 8, background: '#F5F5FF', borderRadius: 16, padding: '16px 24px', display: 'inline-block' }}>
+                  {pairingCode}
+                </div>
+              </div>
+              <button onClick={copy} style={{ padding: '11px', border: '2px solid #E0E0F0', borderRadius: 12, background: 'white', color: '#7C5CBF', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                📋 Copy Code
+              </button>
+              <div style={{ background: '#FFF8E0', borderRadius: 14, padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#7A6000', lineHeight: 1.7 }}>
+                Copy the code first, then open WhatsApp — you'll get a notification to link the device.
+              </div>
+            </>
           )}
         </>
       )}
