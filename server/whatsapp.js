@@ -3,6 +3,7 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
 } from '@whiskeysockets/baileys'
+import { wrapSocket } from 'baileys-antiban'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
 
@@ -14,12 +15,13 @@ export async function connectWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info')
   const { version } = await fetchLatestBaileysVersion()
 
-  sock = makeWASocket({
+  const rawSock = makeWASocket({
     version,
     auth: state,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: true,
   })
+  sock = wrapSocket(rawSock, 'conservative')
 
   sock.ev.on('creds.update', saveCreds)
 
