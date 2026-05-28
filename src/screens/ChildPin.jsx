@@ -81,13 +81,13 @@ export default function ChildPin() {
     <div className="screen" style={{ background: '#1A1A2E', alignItems: 'center', padding: '60px 32px 40px' }}>
       <TutoMascot size={120} expression="default" />
       <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
-        Ask your parent to scan<br />the setup QR first 👨‍👩‍👧
+        Ask your parent to scan the setup QR code first! 📱
       </div>
       <button
         onClick={() => nav('/setup')}
         style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}
       >
-        Set up now →
+        Set up this device →
       </button>
     </div>
   )
@@ -98,10 +98,6 @@ export default function ChildPin() {
       <TutoMascot size={120} expression={expression} />
       <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: 'white', textAlign: 'center', marginTop: 16 }}>Hi! I'm Tuto 👋</div>
       <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600, textAlign: 'center', marginBottom: 8, marginTop: 4 }}>Enter your PIN to start!</div>
-      <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, textAlign: 'center', marginBottom: 24 }}>
-        {familyChildren === null ? 'Loading...' : `${familyChildren.length} children loaded`}
-      </div>
-
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         {[0,1,2,3].map(i => (
           <div key={i} style={{ width: 20, height: 20, borderRadius: '50%', background: pin.length > i ? 'white' : 'rgba(255,255,255,0.3)', transition: 'background 0.2s, transform 0.2s', transform: pin.length > i ? 'scale(1.1)' : 'scale(1)' }} />
