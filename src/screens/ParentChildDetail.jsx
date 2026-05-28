@@ -40,6 +40,21 @@ function WhatsAppCard({ parentId }) {
     return () => { clearTimeout(delayRef.current); clearInterval(pollRef.current) }
   }, [pairingCode])
 
+  const confirmDone = async () => {
+    try {
+      const d = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`).then(r => r.json())
+      if (d.connected) {
+        setPairingCode(null)
+      } else {
+        setJustConnected(false)
+        setConnected(false)
+        setPairingCode(null)
+      }
+    } catch (_) {
+      setPairingCode(null)
+    }
+  }
+
   const copy = () => {
     navigator.clipboard.writeText(pairingCode).then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000)
@@ -120,7 +135,7 @@ function WhatsAppCard({ parentId }) {
             📱 Open <strong>WhatsApp</strong> → <strong>Linked Devices</strong> → <strong>Link with phone number</strong> → enter this code
           </div>
           {justConnected
-            ? <button onClick={() => setPairingCode(null)}
+            ? <button onClick={confirmDone}
                 style={{ padding: '11px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
                 Done ✓
               </button>

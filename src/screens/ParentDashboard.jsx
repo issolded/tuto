@@ -151,7 +151,6 @@ function WhatsAppCard({ parentId }) {
 
   useEffect(() => {
     if (!pairingCode) return
-    // Wait 20s before polling — give user time to read and copy the code
     delayRef.current = setTimeout(() => {
       pollRef.current = setInterval(async () => {
         try {
@@ -167,6 +166,22 @@ function WhatsAppCard({ parentId }) {
     }, 20000)
     return () => { clearTimeout(delayRef.current); clearInterval(pollRef.current) }
   }, [pairingCode])
+
+  const confirmDone = async () => {
+    try {
+      const r = await fetch(`${SERVER}/api/whatsapp-status/${parentId}`)
+      const d = await r.json()
+      if (d.connected) {
+        setPairingCode(null)
+      } else {
+        setJustConnected(false)
+        setConnected(false)
+        setPairingCode(null)
+      }
+    } catch (_) {
+      setPairingCode(null)
+    }
+  }
 
   const copy = () => {
     navigator.clipboard.writeText(pairingCode).then(() => {
@@ -267,7 +282,7 @@ function WhatsAppCard({ parentId }) {
           )}
           {justConnected && (
             <button
-              onClick={() => setPairingCode(null)}
+              onClick={confirmDone}
               style={{ padding: '11px', border: 'none', borderRadius: 12, background: '#25D366', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
             >
               Done ✓
