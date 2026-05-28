@@ -613,7 +613,10 @@ export default function StoriesScreen() {
               onInput={e => { editableTextRef.current = e.currentTarget.innerText }}
               onClick={e => {
                 const errIdx = e.target.dataset?.err
-                if (errIdx !== undefined) setActiveError(activeError === Number(errIdx) ? null : Number(errIdx))
+                if (errIdx !== undefined) {
+                  editorRef.current?.blur()
+                  setActiveError(activeError === Number(errIdx) ? null : Number(errIdx))
+                }
               }}
               style={{ outline: 'none', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D', minHeight: 80 }}
             />
