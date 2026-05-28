@@ -1,6 +1,6 @@
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
-import { connectWhatsApp, sendWhatsAppMessage, onMessage } from './whatsapp.js'
+import { connectParent, sendMessage, setMessageHandler, restoreSessions, isConnected } from './whatsapp.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -72,9 +72,9 @@ async function getChildStats(childId) {
   return { submissions: submissions || [], totalGems }
 }
 
-async function setupMessageListener() {
-  onMessage(async ({ phone, text }) => {
-    console.log(`[WHATSAPP] Gelen mesaj: ${phone} → "${text}"`)
+function setupMessageListener() {
+  setMessageHandler(async (parentId, phone, text) => {
+    console.log(`[WHATSAPP] Gelen mesaj: parent=${parentId} phone=${phone} → "${text}"`)
     try {
       const { data: child, error } = await supabase
         .from('children')
@@ -84,7 +84,7 @@ async function setupMessageListener() {
 
       if (error || !child) {
         console.log(`[WHATSAPP] Kayıtlı ebeveyn bulunamadı: ${phone}`)
-        await sendWhatsAppMessage(phone, 'Merhaba! Sisteme kayıtlı bir hesap bulunamadı.')
+        await sendMessage(parentId, phone, 'Merhaba! Sisteme kayıtlı bir hesap bulunamadı.')
         return
       }
 
@@ -94,7 +94,7 @@ async function setupMessageListener() {
       if (intent === 'approve' || intent === 'reject') {
         const latest = await getLatestSubmission(child.id)
         if (!latest) {
-          await sendWhatsAppMessage(phone, 'Son bir görev bulunamadı.')
+          await sendMessage(parentId, phone, 'Son bir görev bulunamadı.')
           return
         }
         const status = intent === 'approve' ? 'approved' : 'rejected'
@@ -103,15 +103,15 @@ async function setupMessageListener() {
         const reply = intent === 'approve'
           ? `✅ ${child.name}'in "${label}" görevi onaylandı!`
           : `❌ ${child.name}'in "${label}" görevi reddedildi.`
-        await sendWhatsAppMessage(phone, reply)
+        await sendMessage(parentId, phone, reply)
 
       } else if (intent === 'auto_approve') {
         await supabase.from('children').update({ auto_approve_chore: true }).eq('id', child.id)
-        await sendWhatsAppMessage(phone, `Anlaşıldı! Bundan sonra ev görevi fotoğraflarını ben kontrol ederim 🤖`)
+        await sendMessage(parentId, phone, `Anlaşıldı! Bundan sonra ev görevi fotoğraflarını ben kontrol ederim 🤖`)
 
       } else if (intent === 'manual_approve') {
         await supabase.from('children').update({ auto_approve_chore: false }).eq('id', child.id)
-        await sendWhatsAppMessage(phone, `Tamam! Bundan sonra ev görevi onayları size gelecek.`)
+        await sendMessage(parentId, phone, `Tamam! Bundan sonra ev görevi onayları size gelecek.`)
 
       } else if (intent === 'question') {
         const { submissions, totalGems } = await getChildStats(child.id)
@@ -121,11 +121,11 @@ async function setupMessageListener() {
           `Submissions: ${JSON.stringify(submissions)}\n\n` +
           `Parent's question: ${text}`
         const reply = await askGemini(context)
-        await sendWhatsAppMessage(phone, reply)
+        await sendMessage(parentId, phone, reply)
 
       } else {
         const reply = await askGemini(text)
-        await sendWhatsAppMessage(phone, reply)
+        await sendMessage(parentId, phone, reply)
       }
 
       console.log(`[WHATSAPP] Yanıt gönderildi → ${phone}`)
@@ -157,7 +157,7 @@ async function startSubmissionListener() {
         try {
           const { data: child, error } = await supabase
             .from('children')
-            .select('name, parent_phone')
+            .select('name, parent_id, parent_phone')
             .eq('id', submission.child_id)
             .single()
 
@@ -167,7 +167,12 @@ async function startSubmissionListener() {
           }
 
           if (!child?.parent_phone) {
-            console.log(`[DEBUG] parent_phone boş — child_id=${submission.child_id}, child=${JSON.stringify(child)}`)
+            console.log(`[DEBUG] parent_phone boş — child_id=${submission.child_id}`)
+            return
+          }
+
+          if (!isConnected(child.parent_id)) {
+            console.log(`[WA] Parent ${child.parent_id} has no active session — skipping notification`)
             return
           }
 
@@ -192,7 +197,7 @@ async function startSubmissionListener() {
             await supabase.from('bt_ledger').insert({ child_id: submission.child_id, amount: gems, reason: taskLabel })
           }
 
-          await sendWhatsAppMessage(child.parent_phone, message)
+          await sendMessage(child.parent_id, child.parent_phone, message)
           console.log(`[APPROVAL] Mesaj gönderildi → ${child.parent_phone}`)
         } catch (err) {
           console.error('Mesaj gönderilemedi:', err.message)
@@ -213,9 +218,26 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
+app.post('/api/connect-whatsapp', async (req, res) => {
+  const { parentId, phoneNumber } = req.body
+  if (!parentId || !phoneNumber) {
+    return res.status(400).json({ error: 'parentId and phoneNumber are required' })
+  }
+  try {
+    const code = await connectParent(parentId, phoneNumber)
+    if (code === null) {
+      return res.json({ alreadyConnected: true })
+    }
+    res.json({ pairingCode: code })
+  } catch (err) {
+    console.error('[connect-whatsapp]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
-  await connectWhatsApp()
+  await restoreSessions()
   await startSubmissionListener()
   setupMessageListener()
 })
