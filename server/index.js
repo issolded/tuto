@@ -4,7 +4,7 @@ import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
 import { DateTime } from 'luxon'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
-import { startTelegramBot, sendTelegramMessage, getTelegramChatId, setTelegramMessageHandler } from './telegram.js'
+import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, getTelegramChatId, setTelegramMessageHandler } from './telegram.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -121,6 +121,9 @@ async function askGeminiWithContext(parentId, userMessage) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
 }
 
+// parentId → { subId, childName, gems, approved, replyCb }
+const awaitingNote = new Map()
+
 async function sendNotification(parentId, message) {
   // 1. Try Telegram
   try {
@@ -157,6 +160,46 @@ async function sendNotification(parentId, message) {
   console.log(`[NOTIFY] No channel for parent ${parentId} — message: ${message}`)
 }
 
+async function sendNotificationWithPhoto(parentId, message, photoUrl) {
+  // 1. Try Telegram with photo
+  try {
+    const chatId = await getTelegramChatId(parentId)
+    if (chatId) {
+      try {
+        await sendTelegramPhoto(chatId, photoUrl, message)
+      } catch {
+        await sendTelegramMessage(chatId, message)
+      }
+      console.log(`[NOTIFY] Telegram photo → parent ${parentId}`)
+      return
+    }
+  } catch (err) {
+    console.error('[NOTIFY] Telegram photo error:', err.message)
+  }
+
+  // 2. Try WhatsApp with photo
+  if (isConnected(parentId)) {
+    try {
+      const { data: child } = await supabase
+        .from('children')
+        .select('parent_phone')
+        .eq('parent_id', parentId)
+        .not('parent_phone', 'is', null)
+        .limit(1)
+        .single()
+      if (child?.parent_phone) {
+        await sendMessage(parentId, child.parent_phone, message, photoUrl)
+        console.log(`[NOTIFY] WhatsApp photo → parent ${parentId}`)
+        return
+      }
+    } catch (err) {
+      console.error('[NOTIFY] WhatsApp photo error:', err.message)
+    }
+  }
+
+  console.log(`[NOTIFY] No channel for parent ${parentId} — message: ${message}`)
+}
+
 function setupConnectHandler() {
   setConnectHandler(async (parentId, phoneNumber) => {
     console.log(`[WA] First connect for parent ${parentId} — sending welcome message`)
@@ -175,55 +218,118 @@ function setupConnectHandler() {
 async function handleMessage(parentId, replyCb, text) {
   console.log(`[MSG] parent=${parentId} → "${text}"`)
   try {
+    // ── 1. Multi-turn: parent is writing a note after approve/reject ──────
+    if (awaitingNote.has(parentId)) {
+      const { subId, childName, gems, approved } = awaitingNote.get(parentId)
+      awaitingNote.delete(parentId)
+      const lower = text.toLowerCase().trim()
+      const skip = ['geç', 'gec', 'skip', 'hayir', 'hayır', 'yok', 'no'].includes(lower)
+      if (!skip && text.trim()) {
+        await supabase.from('submissions').update({ parent_note: text.trim() }).eq('id', subId)
+      }
+      await replyCb(approved
+        ? `✅ ${childName}'in ev görevi onaylandı! ${gems} Gem kazandı 🎉${skip ? '' : ' Notun iletildi.'}`
+        : `Tamam, anladım.${skip ? '' : ' Notun iletildi.'}`)
+      return
+    }
+
+    // ── 2. Fetch children once ─────────────────────────────────────────────
+    const { data: children } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
+    const childIds = (children || []).map(c => c.id)
+
+    // ── 3. Keyword/number check for pending chore submissions ─────────────
+    if (childIds.length > 0) {
+      const { data: latestChore } = await supabase
+        .from('submissions')
+        .select('id, child_id, suggested_gems, gems_earned')
+        .in('child_id', childIds)
+        .eq('status', 'pending')
+        .eq('task_type', 'chore')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestChore) {
+        const lower = text.toLowerCase().trim()
+        const num = parseInt(text.trim(), 10)
+        const isApprove = ['evet', 'yes', 'onay', 'onayla', 'approve', 'ok', 'tamam', 'kabul'].some(k => lower === k)
+        const isReject  = ['hayır', 'hayir', 'no', 'reddet', 'reject', 'iptal', 'olmaz'].some(k => lower === k)
+        const isNumber  = !isNaN(num) && num > 0 && num <= 200
+
+        if (isApprove || isNumber) {
+          const gems = isNumber ? num : (latestChore.suggested_gems ?? latestChore.gems_earned ?? 20)
+          const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
+          await supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', latestChore.id)
+          await supabase.from('bt_ledger').insert({ child_id: latestChore.child_id, amount: gems, reason: 'chore' })
+          awaitingNote.set(parentId, { subId: latestChore.id, childName, gems, approved: true })
+          await replyCb(`✅ Harika! ${childName} ${gems} Gem kazandı 🎉\n\n${childName} için bir not bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
+          return
+        }
+
+        if (isReject) {
+          const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
+          await supabase.from('submissions').update({ status: 'rejected' }).eq('id', latestChore.id)
+          awaitingNote.set(parentId, { subId: latestChore.id, childName, gems: 0, approved: false })
+          await replyCb(`❌ ${childName}'in ev görevi reddedildi.\n\n${childName} için bir mesaj bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
+          return
+        }
+      }
+    }
+
+    // ── 4. Gemini intent classify for non-chore tasks ─────────────────────
     const { intent } = await classifyIntent(text)
     console.log(`[MSG] Intent: ${intent}`)
 
-    // ── Fast-path: approve / reject pending submission ────────────────────
     if (intent === 'approve' || intent === 'reject') {
-      const { data: children } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
-      const childIds = (children || []).map(c => c.id)
       const { data: latest } = await supabase
-        .from('submissions').select('id, task_type, child_id, gems_earned')
+        .from('submissions').select('id, task_type, child_id, suggested_gems, gems_earned')
         .in('child_id', childIds).eq('status', 'pending')
         .order('created_at', { ascending: false }).limit(1)
         .maybeSingle()
 
-      // No pending submission → treat as normal conversation
       if (!latest) {
-        console.log(`[MSG] Intent was ${intent} but no pending submission found — routing to Gemini`)
         const reply = await askGeminiWithContext(parentId, text)
         await replyCb(reply)
         return
       }
 
-      const status = intent === 'approve' ? 'approved' : 'rejected'
-      await supabase.from('submissions').update({ status }).eq('id', latest.id)
-      const gems = latest.gems_earned ?? 30
-      if (intent === 'approve') {
-        await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: gems, reason: latest.task_type })
-      }
-      const childName = children.find(c => c.id === latest.child_id)?.name || ''
+      const gems = latest.suggested_gems ?? latest.gems_earned ?? 30
+      const childName = children?.find(c => c.id === latest.child_id)?.name || ''
       const label = TASK_LABELS[latest.task_type] || latest.task_type
-      await replyCb(intent === 'approve'
-        ? `✅ ${childName}'s ${label} task has been approved! They earned ${gems} Gems 🎉`
-        : `❌ ${childName}'s ${label} task has been rejected.`)
+
+      if (intent === 'approve') {
+        await supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', latest.id)
+        await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: gems, reason: latest.task_type })
+        if (latest.task_type === 'chore') {
+          awaitingNote.set(parentId, { subId: latest.id, childName, gems, approved: true })
+          await replyCb(`✅ ${childName}'in ev görevi onaylandı! ${gems} Gem kazandı 🎉\n\n${childName} için bir not bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
+        } else {
+          await replyCb(`✅ ${childName}'in ${label} görevi onaylandı! ${gems} Gem kazandı 🎉`)
+        }
+      } else {
+        await supabase.from('submissions').update({ status: 'rejected' }).eq('id', latest.id)
+        if (latest.task_type === 'chore') {
+          awaitingNote.set(parentId, { subId: latest.id, childName, gems: 0, approved: false })
+          await replyCb(`❌ ${childName}'in ev görevi reddedildi.\n\n${childName} için bir mesaj bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
+        } else {
+          await replyCb(`❌ ${childName}'in ${label} görevi reddedildi.`)
+        }
+      }
       return
     }
 
-    // ── Fast-path: auto-approve toggle ────────────────────────────────────
     if (intent === 'auto_approve' || intent === 'manual_approve') {
       const val = intent === 'auto_approve'
-      const { data: children } = await supabase.from('children').select('id').eq('parent_id', parentId)
       for (const c of children || []) {
         await supabase.from('children').update({ auto_approve_chore: val }).eq('id', c.id)
       }
       await replyCb(val
-        ? 'Got it! I\'ll review chore photos from now on 🤖'
-        : 'Got it! Chore approvals will come to you from now on.')
+        ? 'Tamam! Artık ev görevlerini otomatik onaylayacağım 🤖'
+        : 'Tamam! Ev görevleri artık manuel onaylanacak.')
       return
     }
 
-    // ── Default: full family context → Gemini ────────────────────────────
+    // ── 5. Default: full family context → Gemini ─────────────────────────
     const reply = await askGeminiWithContext(parentId, text)
     await replyCb(reply)
     console.log(`[MSG] Reply sent to parent ${parentId}`)
@@ -258,6 +364,9 @@ async function startSubmissionListener() {
       async (payload) => {
         const submission = payload.new
         console.log('Yeni submission!', JSON.stringify(submission, null, 2))
+
+        // Chore submissions are handled by /api/notify-parent-chore
+        if (submission.task_type === 'chore') return
 
         try {
           const { data: child, error } = await supabase
@@ -363,6 +472,61 @@ app.post('/api/children/:childId/stories', async (req, res) => {
     await supabase.from('bt_ledger').insert({ child_id: childId, amount: gems_earned, reason: 'story' })
   }
   res.json({ story })
+})
+
+app.get('/api/submissions/:id', async (req, res) => {
+  const { id } = req.params
+  const { data, error } = await supabase
+    .from('submissions')
+    .select('id, status, gems_earned, parent_note, suggested_gems')
+    .eq('id', id)
+    .single()
+  if (error || !data) return res.status(404).json({ error: 'Not found' })
+  res.json(data)
+})
+
+app.post('/api/notify-parent-chore', async (req, res) => {
+  const { childId, photoUrl, taskDescription, suggestedGems, qualityScore, childNote } = req.body
+  if (!childId) return res.status(400).json({ error: 'childId required' })
+  try {
+    const { data: child } = await supabase
+      .from('children').select('name, parent_id').eq('id', childId).single()
+    if (!child) return res.status(404).json({ error: 'Child not found' })
+
+    const gems = suggestedGems || 20
+    const { data: submission, error: subErr } = await supabase
+      .from('submissions')
+      .insert({
+        child_id: childId,
+        task_type: 'chore',
+        status: 'pending',
+        media_url: photoUrl,
+        task_description: taskDescription || 'Ev görevi',
+        suggested_gems: gems,
+        child_note: childNote || null,
+        score: qualityScore || null,
+        gems_earned: null,
+      })
+      .select('id').single()
+
+    if (subErr) {
+      console.error('[notify-parent-chore] submission error:', subErr.message)
+      return res.status(500).json({ error: subErr.message })
+    }
+
+    const message =
+      `🏠 ${child.name} ev görevi gönderdi!\n\n` +
+      `📝 ${taskDescription || 'Ev görevi'}\n` +
+      `🤖 AI önerisi: ${gems} Gem\n` +
+      (childNote ? `💬 "${childNote}"\n` : '') +
+      `\n✅ Onaylamak için: 'evet' veya gem sayısı (örn: ${gems})\n❌ Reddetmek için: 'hayır'`
+
+    await sendNotificationWithPhoto(child.parent_id, message, photoUrl)
+    res.json({ submissionId: submission.id })
+  } catch (err) {
+    console.error('[notify-parent-chore] error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.post('/api/children/:childId/spelling-errors', async (req, res) => {

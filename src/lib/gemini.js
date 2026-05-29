@@ -238,6 +238,33 @@ Rules: level_change is "up" if accuracy>=80, "down" if accuracy<40, else "same".
   return callGemini(parts)
 }
 
+export async function evaluateChore(file, age) {
+  const n = Number(age) || 7
+  const prompt = `You are evaluating a photo submitted by a ${n}-year-old child as evidence of completing a household chore.
+Return JSON only:
+{
+  "appropriate": boolean,
+  "task_description": "brief Turkish description of what was done, e.g. 'Oda toplandı', 'Bulaşıklar yıkandı'",
+  "photo_is_recent": true or false or "unknown",
+  "quality_score": 0-100,
+  "suggested_gems": 10-50,
+  "encouragement": "warm Turkish message for child, max 2 sentences, lots of emojis",
+  "inappropriate_reason": null or "brief Turkish reason if not appropriate"
+}
+Rules:
+- appropriate: false if the photo contains nothing household-related, is blurry/blank, shows inappropriate content, or is clearly not a chore photo
+- task_description: Turkish, brief (3-6 words), describe what was accomplished
+- photo_is_recent: "unknown" if you cannot tell; true if it looks recently done; false if clearly old or neglected
+- quality_score: 0-100, how well the chore was done; be generous with effort
+- suggested_gems: 10-50 based on quality_score; minimum 10 for any effort
+- encouragement: warm, positive, age-appropriate Turkish message, never mention the word "evaluation"`
+  const base64 = await fileToBase64(file)
+  return callGemini([
+    { text: prompt },
+    { inline_data: { mime_type: file.type, data: base64 } },
+  ])
+}
+
 export async function generateTask(childId, taskType, age, language = 'en') {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 

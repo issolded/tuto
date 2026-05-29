@@ -47,20 +47,39 @@ function EmptyCard({ text }) {
 
 function SubmissionCard({ sub, onApprove, onReject }) {
   const meta = TASK_LABELS[sub.task_type] || { label: 'Task', emoji: '⭐' }
+  const isChore = sub.task_type === 'chore'
+  const displayGems = sub.gems_earned ?? sub.suggested_gems ?? 0
+  const time = sub.created_at ? new Date(sub.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''
+
   return (
     <div style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <span style={{ fontSize: 24 }}>{meta.emoji}</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{meta.label}</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090' }}>
-            {sub.created_at ? new Date(sub.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
-          </div>
+          {sub.task_description && (
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#5A4A3A', marginTop: 1 }}>{sub.task_description}</div>
+          )}
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', marginTop: 2 }}>{time}</div>
         </div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: '#FF6B35' }}>+{sub.gems_earned ?? 0} ⭐</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#FF6B35' }}>+{displayGems} ⭐</div>
+          {isChore && sub.suggested_gems != null && (
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#9B8FC0' }}>🤖 AI öneri</div>
+          )}
+        </div>
       </div>
-      {sub.media_url && (
-        <img src={sub.media_url} alt="submission" style={{ width: '100%', borderRadius: 10, maxHeight: 200, objectFit: 'cover' }} />
+      {(sub.media_url || sub.photo_urls?.[0]) && (
+        <img
+          src={sub.media_url || sub.photo_urls[0]}
+          alt="submission"
+          style={{ width: '100%', borderRadius: 10, maxHeight: 200, objectFit: 'cover' }}
+        />
+      )}
+      {sub.child_note && (
+        <div style={{ background: '#F5F0FF', borderRadius: 12, padding: '10px 14px', fontSize: 13, fontWeight: 600, color: '#5A4090', lineHeight: 1.4 }}>
+          💬 {sub.child_note}
+        </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
         <button
@@ -421,12 +440,13 @@ export default function ParentChildDetail() {
   const todayDone = (submissions || []).filter(s => s.status === 'approved' && isToday(s.created_at))
 
   async function handleApprove(sub) {
+    const gems = sub.gems_earned ?? sub.suggested_gems ?? 30
     await Promise.all([
-      supabase.from('submissions').update({ status: 'approved' }).eq('id', sub.id),
-      supabase.from('bt_ledger').insert({ child_id: id, amount: sub.gems_earned ?? 30, reason: sub.task_type || 'task' }),
+      supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', sub.id),
+      supabase.from('bt_ledger').insert({ child_id: id, amount: gems, reason: sub.task_type || 'task' }),
     ])
-    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved' } : s))
-    setGems(prev => (prev ?? 0) + (sub.gems_earned ?? 30))
+    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved', gems_earned: gems } : s))
+    setGems(prev => (prev ?? 0) + gems)
   }
 
   async function handleReject(subId) {

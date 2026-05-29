@@ -90,6 +90,11 @@ export async function sendTelegramMessage(chatId, message) {
   await bot.sendMessage(String(chatId), message)
 }
 
+export async function sendTelegramPhoto(chatId, photoUrl, caption) {
+  if (!bot) throw new Error('Telegram bot not started')
+  await bot.sendPhoto(String(chatId), photoUrl, { caption })
+}
+
 export async function getTelegramChatId(parentId) {
   // Check in-memory cache first
   for (const [cid, pid] of chatToParent.entries()) {
