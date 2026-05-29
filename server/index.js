@@ -306,6 +306,15 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
+app.get('/api/family/:code/children', async (req, res) => {
+  const code = req.params.code?.trim().toUpperCase()
+  if (!code) return res.status(400).json({ error: 'code required' })
+  const { data: parent } = await supabase.from('parents').select('id').eq('family_code', code).maybeSingle()
+  if (!parent) return res.json({ children: [] })
+  const { data: children } = await supabase.from('children').select('*').eq('parent_id', parent.id)
+  res.json({ children: children || [] })
+})
+
 app.get('/api/whatsapp-status/:parentId', (req, res) => {
   res.json({ connected: isConnected(req.params.parentId) })
 })
