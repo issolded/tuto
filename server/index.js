@@ -414,7 +414,8 @@ app.post('/api/send-welcome-whatsapp', async (req, res) => {
       `I'll keep you updated on ${childName}'s progress right here.\n\n` +
       `Tap 'Yes, I got it!' in the app to confirm. 🎉`
 
-    await sendWhatsAppBusinessMessage(phoneNumber, message)
+    const response = await sendWhatsAppBusinessMessage(phoneNumber, message)
+    console.log('[WA-BIZ] Meta response:', JSON.stringify(response))
     await supabase.from('parents').update({ whatsapp_phone: phoneNumber, notification_channel: 'whatsapp' }).eq('id', parentId)
     console.log(`[WA-BIZ] Welcome sent to ${phoneNumber} for parent ${parentId}`)
     res.json({ success: true })
