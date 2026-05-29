@@ -641,6 +641,7 @@ async function sendWhatsAppBusinessMessage(to, message) {
   )
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
+    console.log('[WA] Error response:', JSON.stringify(err))
     throw new Error(err.error?.message || `WhatsApp API error ${res.status}`)
   }
   return res.json()
@@ -666,6 +667,7 @@ async function sendWhatsAppPhoto(phoneNumber, photoUrl, caption) {
   )
   if (!uploadRes.ok) {
     const err = await uploadRes.json().catch(() => ({}))
+    console.log('[WA] Error response:', JSON.stringify(err))
     throw new Error(err.error?.message || `WhatsApp media upload error ${uploadRes.status}`)
   }
   const { id: mediaId } = await uploadRes.json()
@@ -690,6 +692,7 @@ async function sendWhatsAppPhoto(phoneNumber, photoUrl, caption) {
   )
   if (!msgRes.ok) {
     const err = await msgRes.json().catch(() => ({}))
+    console.log('[WA] Error response:', JSON.stringify(err))
     throw new Error(err.error?.message || `WhatsApp send photo error ${msgRes.status}`)
   }
   console.log(`[WA-PHOTO] ✅ Photo sent to ${phoneNumber}`)
