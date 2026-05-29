@@ -113,19 +113,34 @@ function ChoreFlow({ task }) {
 
   const runEvaluation = async (f) => {
     setStep('evaluating')
+
+    // file.lastModified = fotoğrafın çekilme zamanı (EXIF'ten daha erişilebilir,
+    // iOS/Android kamera uygulamalarında güvenilir)
+    const THREE_HOURS = 3 * 60 * 60 * 1000
+    const photoAgeMs = Date.now() - f.lastModified
+    const fileIsRecent = photoAgeMs < THREE_HOURS
+    console.log(
+      `[CHORE] lastModified=${new Date(f.lastModified).toISOString()} ` +
+      `age=${Math.round(photoAgeMs / 60000)}min recent=${fileIsRecent}`
+    )
+
     try {
       const result = await evaluateChore(f, child?.age)
       setEvaluation(result)
       if (!result.appropriate) {
         setStep('inappropriate')
-      } else if (result.photo_is_recent === false) {
+      } else if (!fileIsRecent) {
         setStep('confirm_recent')
       } else {
         setStep('child_note')
       }
     } catch {
-      setEvaluation({ appropriate: true, task_description: 'Ev görevi', suggested_gems: 20, encouragement: 'Harika iş! 🌟', photo_is_recent: 'unknown' })
-      setStep('child_note')
+      setEvaluation({ appropriate: true, task_description: 'Ev görevi', suggested_gems: 20, encouragement: 'Harika iş! 🌟' })
+      if (!fileIsRecent) {
+        setStep('confirm_recent')
+      } else {
+        setStep('child_note')
+      }
     }
   }
 

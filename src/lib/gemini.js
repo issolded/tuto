@@ -245,7 +245,6 @@ Return JSON only:
 {
   "appropriate": boolean,
   "task_description": "brief Turkish description of what was done, e.g. 'Oda toplandı', 'Bulaşıklar yıkandı'",
-  "photo_is_recent": true or false or "unknown",
   "quality_score": 0-100,
   "suggested_gems": 10-50,
   "encouragement": "warm Turkish message for child, max 2 sentences, lots of emojis",
@@ -254,7 +253,6 @@ Return JSON only:
 Rules:
 - appropriate: false if the photo contains nothing household-related, is blurry/blank, shows inappropriate content, or is clearly not a chore photo
 - task_description: Turkish, brief (3-6 words), describe what was accomplished
-- photo_is_recent: "unknown" if you cannot tell; true if it looks recently done; false if clearly old or neglected
 - quality_score: 0-100, how well the chore was done; be generous with effort
 - suggested_gems: 10-50 based on quality_score; minimum 10 for any effort
 - encouragement: warm, positive, age-appropriate Turkish message, never mention the word "evaluation"`
