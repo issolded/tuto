@@ -338,9 +338,31 @@ app.post('/api/connect-whatsapp', async (req, res) => {
   }
 })
 
-const WA_VERIFY_TOKEN   = process.env.WHATSAPP_VERIFY_TOKEN || 'tuto_webhook_2024'
-const WA_API_TOKEN      = process.env.WHATSAPP_API_TOKEN
+const WA_VERIFY_TOKEN    = process.env.WHATSAPP_VERIFY_TOKEN || 'tuto_webhook_2024'
+const WA_APP_ID          = process.env.WHATSAPP_APP_ID
+const WA_APP_SECRET      = process.env.WHATSAPP_APP_SECRET
 const WA_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID
+let   whatsappToken      = process.env.WHATSAPP_API_TOKEN
+
+async function refreshWhatsAppToken() {
+  if (!WA_APP_ID || !WA_APP_SECRET || !whatsappToken) {
+    console.log('[WA-TOKEN] Skipping refresh — APP_ID, APP_SECRET or current token missing')
+    return
+  }
+  try {
+    const url = `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${WA_APP_ID}&client_secret=${WA_APP_SECRET}&fb_exchange_token=${whatsappToken}`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (!res.ok || !data.access_token) {
+      console.error('[WA-TOKEN] Refresh failed:', JSON.stringify(data))
+      return
+    }
+    whatsappToken = data.access_token
+    console.log('[WA-TOKEN] Token refreshed successfully')
+  } catch (err) {
+    console.error('[WA-TOKEN] Refresh error:', err.message)
+  }
+}
 
 async function sendWhatsAppBusinessMessage(to, message) {
   const res = await fetch(
@@ -349,7 +371,7 @@ async function sendWhatsAppBusinessMessage(to, message) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${WA_API_TOKEN}`,
+        Authorization: `Bearer ${whatsappToken}`,
       },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
@@ -378,7 +400,7 @@ app.post('/api/verify-whatsapp', async (req, res) => {
       `https://graph.facebook.com/v18.0/${WA_PHONE_NUMBER_ID}/recipients`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${WA_API_TOKEN}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${whatsappToken}` },
         body: JSON.stringify({ phone_number: normalized }),
       }
     )
@@ -455,6 +477,8 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
+  await refreshWhatsAppToken()
+  setInterval(refreshWhatsAppToken, 20 * 60 * 60 * 1000)
   startTelegramBot()
   await restoreSessions()
   await startSubmissionListener()
