@@ -12,7 +12,7 @@ export async function getChildrenByFamilyCode(familyCode) {
     .from('parents')
     .select('id')
     .eq('family_code', familyCode)
-    .single()
+    .maybeSingle()
 
   console.log('[getChildren] parent:', parent, 'error:', parentError)
 
