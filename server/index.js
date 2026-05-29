@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
+import { DateTime } from 'luxon'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 import { startTelegramBot, sendTelegramMessage, getTelegramChatId, setTelegramMessageHandler } from './telegram.js'
 
@@ -40,17 +41,21 @@ async function getParentContext(parentId) {
   if (!children?.length) return []
 
   const tz = parentRow?.timezone || 'UTC'
-  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date())
+  const userNow = DateTime.now().setZone(tz)
+  const todayStart = userNow.startOf('day').toUTC().toISO()
+  const todayEnd   = userNow.endOf('day').toUTC().toISO()
 
   return Promise.all(children.map(async child => {
     const [
       { data: submissions },
+      { data: todaySubs },
       { data: mathProgress },
       { data: ledger },
       { data: stories },
       { data: books },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
       supabase.from('math_progress').select('level, topic, accuracy, level_change, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
       supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
@@ -60,16 +65,13 @@ async function getParentContext(parentId) {
     const sub = submissions || []
     const math = mathProgress || []
     const led = ledger || []
-
-    const todaySubmissions = sub.filter(s => s.created_at?.startsWith(todayStr))
+    const today = todaySubs || []
 
     return {
       name: child.name,
       age: child.age,
-      today: todayStr,
-      timezone: tz,
       totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
-      todaySubmissions: todaySubmissions.length ? todaySubmissions : `${child.name} has not completed any tasks today`,
+      todaySubmissions: today.length ? today : `${child.name} has not completed any tasks today`,
       submissions: sub.length ? sub : `${child.name} has not completed any tasks yet`,
       mathProgress: math.length ? math : `${child.name} has not done any math yet`,
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
@@ -80,9 +82,17 @@ async function getParentContext(parentId) {
 }
 
 async function askGeminiWithContext(parentId, userMessage) {
-  const familyData = await getParentContext(parentId)
+  const [familyData, { data: parentRow }] = await Promise.all([
+    getParentContext(parentId),
+    supabase.from('parents').select('timezone').eq('id', parentId).single(),
+  ])
+  const tz = parentRow?.timezone || 'UTC'
+  const userNow = DateTime.now().setZone(tz)
+  const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
+
   const systemPrompt =
     `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
+    `Current local time for parent: ${localTimeStr}\n` +
     `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
     `Guidelines:\n` +
     `- Respond in the SAME LANGUAGE as the parent's message\n` +

@@ -13,6 +13,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",
+    "luxon": "^3.7.2",
     "node-telegram-bot-api": "^0.67.0",
     "pino": "^9.6.0",
     "qrcode-terminal": "^0.12.0"
