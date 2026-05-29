@@ -287,9 +287,11 @@ export default function ParentOnboarding() {
         await supabase.from('rewards').insert(rewardsPayload)
       }
 
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
       await supabase.from('parents').update({
         email_notifications: emailNotif,
         push_notifications: pushNotif,
+        timezone,
         ...(whatsapp.trim() && { whatsapp_phone: whatsapp.trim() }),
         ...(notifChannel && { notification_channel: notifChannel }),
       }).eq('id', uid.id)

@@ -33,11 +33,14 @@ async function classifyIntent(text) {
 }
 
 async function getParentContext(parentId) {
-  const { data: children } = await supabase
-    .from('children')
-    .select('id, name, age, task_settings')
-    .eq('parent_id', parentId)
+  const [{ data: parentRow }, { data: children }] = await Promise.all([
+    supabase.from('parents').select('timezone').eq('id', parentId).single(),
+    supabase.from('children').select('id, name, age, task_settings').eq('parent_id', parentId),
+  ])
   if (!children?.length) return []
+
+  const tz = parentRow?.timezone || 'UTC'
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date())
 
   return Promise.all(children.map(async child => {
     const [
@@ -58,10 +61,15 @@ async function getParentContext(parentId) {
     const math = mathProgress || []
     const led = ledger || []
 
+    const todaySubmissions = sub.filter(s => s.created_at?.startsWith(todayStr))
+
     return {
       name: child.name,
       age: child.age,
+      today: todayStr,
+      timezone: tz,
       totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
+      todaySubmissions: todaySubmissions.length ? todaySubmissions : `${child.name} has not completed any tasks today`,
       submissions: sub.length ? sub : `${child.name} has not completed any tasks yet`,
       mathProgress: math.length ? math : `${child.name} has not done any math yet`,
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
