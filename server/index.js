@@ -409,13 +409,22 @@ app.post('/api/send-welcome-whatsapp', async (req, res) => {
   if (!phoneNumber || !childName || !parentId) return res.status(400).json({ error: 'phoneNumber, childName and parentId required' })
 
   try {
-    const message =
-      `👋 Hi! I'm Tuto, ${childName}'s learning buddy!\n\n` +
-      `I'll keep you updated on ${childName}'s progress right here.\n\n` +
-      `Tap 'Yes, I got it!' in the app to confirm. 🎉`
-
-    const response = await sendWhatsAppBusinessMessage(phoneNumber, message)
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${whatsappToken}` },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: phoneNumber,
+          type: 'template',
+          template: { name: 'hello_world', language: { code: 'en_US' } },
+        }),
+      }
+    )
+    const response = await metaRes.json()
     console.log('[WA-BIZ] Meta response:', JSON.stringify(response))
+    if (!metaRes.ok) throw new Error(response.error?.message || `Meta API error ${metaRes.status}`)
     await supabase.from('parents').update({ whatsapp_phone: phoneNumber, notification_channel: 'whatsapp' }).eq('id', parentId)
     console.log(`[WA-BIZ] Welcome sent to ${phoneNumber} for parent ${parentId}`)
     res.json({ success: true })
