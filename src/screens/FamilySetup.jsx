@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import TutoMascot from '../components/TutoMascot'
-import { supabase } from '../lib/supabase'
+
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 const ANIM = `
 @keyframes fadeUp {
@@ -105,13 +106,19 @@ export default function FamilySetup() {
     if (code.length !== 8) return
     setManualLoading(true)
     setManualError('')
-    const { data } = await supabase.from('parents').select('id').eq('family_code', code).single()
-    if (data) {
-      localStorage.setItem('family_code', code)
-      setStatus('success')
-      setTimeout(() => nav('/child'), 1400)
-    } else {
-      setManualError('Code not found. Try again.')
+    try {
+      const res = await fetch(`${SERVER}/api/family/${code}/children`)
+      const json = await res.json()
+      if (json.children?.length > 0) {
+        localStorage.setItem('family_code', code)
+        setStatus('success')
+        setTimeout(() => nav('/child'), 1400)
+      } else {
+        setManualError('Code not found. Try again.')
+        setManualLoading(false)
+      }
+    } catch {
+      setManualError('Connection error. Try again.')
       setManualLoading(false)
     }
   }
