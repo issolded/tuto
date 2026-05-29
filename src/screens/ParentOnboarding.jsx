@@ -273,7 +273,6 @@ export default function ParentOnboarding() {
 
       const pin_hash = await hashPin(pin)
       const insertData = { parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' }
-      if (deviceMode === 'same') insertData.same_device = true
       const { data: child, error: cErr } = await supabase
         .from('children')
         .insert(insertData)
