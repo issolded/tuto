@@ -594,11 +594,12 @@ export default function ParentOnboarding() {
               <div style={{ background: 'white', border: '2px solid #25D366', borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp 0.25s ease both' }}>
                 {waVerifySent ? (
                   <>
-                    <div style={{ textAlign: 'center', fontSize: 32 }}>📲</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A', textAlign: 'center', lineHeight: 1.6 }}>
-                      Verification sent! Check your WhatsApp
+                    <div style={{ textAlign: 'center', fontSize: 36 }}>📱</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A', textAlign: 'center', lineHeight: 1.7 }}>
+                      We just sent you a message on WhatsApp!<br />
+                      Check your WhatsApp and come back here.
                     </div>
-                    <BigBtn onClick={next}>Done! ✅</BigBtn>
+                    <BigBtn onClick={next}>Yes, I got it! ✅</BigBtn>
                   </>
                 ) : (
                   <>
@@ -617,10 +618,10 @@ export default function ParentOnboarding() {
                         if (!user) return setWaError('Not logged in.')
                         setWaSending(true); setWaError('')
                         try {
-                          const res = await fetch(`${SERVER}/api/verify-whatsapp`, {
+                          const res = await fetch(`${SERVER}/api/send-welcome-whatsapp`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phoneNumber: waPhone.trim(), parentId: user.id }),
+                            body: JSON.stringify({ phoneNumber: waPhone.trim(), childName: childName || 'your child', parentId: user.id }),
                           })
                           const data = await res.json()
                           if (!res.ok) throw new Error(data.error || 'Server error')

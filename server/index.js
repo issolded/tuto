@@ -404,6 +404,26 @@ app.post('/api/verify-whatsapp', async (req, res) => {
   }
 })
 
+app.post('/api/send-welcome-whatsapp', async (req, res) => {
+  const { phoneNumber, childName, parentId } = req.body
+  if (!phoneNumber || !childName || !parentId) return res.status(400).json({ error: 'phoneNumber, childName and parentId required' })
+
+  try {
+    const message =
+      `👋 Hi! I'm Tuto, ${childName}'s learning buddy!\n\n` +
+      `I'll keep you updated on ${childName}'s progress right here.\n\n` +
+      `Tap 'Yes, I got it!' in the app to confirm. 🎉`
+
+    await sendWhatsAppBusinessMessage(phoneNumber, message)
+    await supabase.from('parents').update({ whatsapp_phone: phoneNumber, notification_channel: 'whatsapp' }).eq('id', parentId)
+    console.log(`[WA-BIZ] Welcome sent to ${phoneNumber} for parent ${parentId}`)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[send-welcome-whatsapp]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/send-welcome', async (req, res) => {
   const { parentId } = req.body
   if (!parentId) return res.status(400).json({ error: 'parentId required' })
