@@ -294,6 +294,12 @@ export default function ParentOnboarding() {
         ...(notifChannel && { notification_channel: notifChannel }),
       }).eq('id', uid.id)
 
+      fetch(`${SERVER}/api/send-welcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: uid.id }),
+      }).catch(() => {})
+
       if (deviceMode === 'separate') {
         setSaving(false)
         setStep(10)

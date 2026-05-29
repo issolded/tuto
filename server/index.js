@@ -404,6 +404,41 @@ app.post('/api/verify-whatsapp', async (req, res) => {
   }
 })
 
+app.post('/api/send-welcome', async (req, res) => {
+  const { parentId } = req.body
+  if (!parentId) return res.status(400).json({ error: 'parentId required' })
+
+  try {
+    const [{ data: parent }, { data: children }] = await Promise.all([
+      supabase.from('parents').select('notification_channel, whatsapp_phone, telegram_chat_id').eq('id', parentId).single(),
+      supabase.from('children').select('name').eq('parent_id', parentId).order('created_at').limit(1),
+    ])
+
+    const childName = children?.[0]?.name || 'your child'
+    const isTurkish = parent?.whatsapp_phone?.startsWith('90')
+
+    const message = isTurkish
+      ? `👋 Merhaba! Ben Tuto, ${childName}'in öğrenme arkadaşı!\n\n${childName} görevlerini tamamladıkça sizi buradan haberdar edeceğim. 🎉\n\nBana istediğiniz zaman yazabilirsiniz — ${childName}'in gelişimini, kazandığı Gems'leri ve daha fazlasını sorabilirsiniz! 💎`
+      : `👋 Hi! I'm Tuto, ${childName}'s learning companion!\n\nI'll keep you updated here as ${childName} completes tasks. 🎉\n\nFeel free to message me anytime — you can ask about ${childName}'s progress, earned Gems, and more! 💎`
+
+    const channel = parent?.notification_channel
+    if (channel === 'telegram' && parent?.telegram_chat_id) {
+      await sendTelegramMessage(parent.telegram_chat_id, message)
+      console.log(`[WELCOME] Sent via Telegram to parent ${parentId}`)
+    } else if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+      console.log(`[WELCOME] Sent via WhatsApp to parent ${parentId}`)
+    } else {
+      console.log(`[WELCOME] No channel configured for parent ${parentId} — skipped`)
+    }
+
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[send-welcome]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Webhook verification
 app.get('/webhook/whatsapp', (req, res) => {
   const mode      = req.query['hub.mode']
