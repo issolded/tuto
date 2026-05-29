@@ -393,23 +393,10 @@ app.post('/api/verify-whatsapp', async (req, res) => {
   if (!phoneNumber || !parentId) return res.status(400).json({ error: 'phoneNumber and parentId required' })
 
   try {
-    const normalized = phoneNumber.replace(/\D/g, '')
-    console.log(`[WA-BIZ] Adding recipient: ${normalized}`)
-
-    const metaRes = await fetch(
-      `https://graph.facebook.com/v18.0/${WA_PHONE_NUMBER_ID}/recipients`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${whatsappToken}` },
-        body: JSON.stringify({ phone_number: normalized }),
-      }
-    )
-    const metaData = await metaRes.json()
-    console.log(`[WA-BIZ] Meta recipient response:`, JSON.stringify(metaData))
-
-    if (!metaRes.ok) throw new Error(metaData.error?.message || `Meta API error ${metaRes.status}`)
-
-    await supabase.from('parents').update({ whatsapp_phone: normalized }).eq('id', parentId)
+    await supabase
+      .from('parents')
+      .update({ whatsapp_phone: phoneNumber, notification_channel: 'whatsapp' })
+      .eq('id', parentId)
     res.json({ success: true })
   } catch (err) {
     console.error('[verify-whatsapp]', err.message)
