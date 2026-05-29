@@ -76,7 +76,9 @@ export default function GoalsScreen() {
     Promise.all([
       supabase.from('rewards').select('*').eq('child_id', child.id).order('bt_cost'),
       supabase.from('bt_ledger').select('amount').eq('child_id', child.id),
-    ]).then(([{ data: rewardData }, { data: ledgerData }]) => {
+    ]).then(([{ data: rewardData, error: rewardErr }, { data: ledgerData }]) => {
+      console.log('[GOALS] child.id:', child.id)
+      console.log('[GOALS] rewardData:', rewardData, 'error:', rewardErr)
       setRewards(rewardData || [])
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
     })
