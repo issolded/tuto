@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { getChildStories, saveChildStory, saveSpellingErrors } from '../lib/supabase'
 import { validateStoryInput, evaluateStory, checkTitleSpelling } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
 
@@ -248,7 +248,6 @@ export default function StoriesScreen() {
   const [freeText, setFreeText] = useState('')
   const [moderating, setModerating] = useState(false)
   const [moderationError, setModerationError] = useState(false)
-  const [startNew, setStartNew] = useState(false)
   const [step, setStep] = useState('idle') // 'idle' | 'title' | 'write'
   const [chosenIdea, setChosenIdea] = useState(null)
   const [storyTitle, setStoryTitle] = useState('')
@@ -308,9 +307,7 @@ export default function StoriesScreen() {
   const goToCorrections = async () => {
     const errors = evalResult?.spelling_errors || []
     if (errors.length > 0 && child?.id) {
-      await supabase.from('spelling_errors').insert(
-        errors.map((e, i) => ({ child_id: child.id, wrong: e.wrong, correct: e.correct, state: spellingState[i] || 'pending' }))
-      ).then(() => {})
+      await saveSpellingErrors(child.id, errors.map((e, i) => ({ wrong: e.wrong, correct: e.correct, state: spellingState[i] || 'pending' })))
     }
     setStep('corrected')
   }
@@ -319,22 +316,20 @@ export default function StoriesScreen() {
     const baseText = editableTextRef.current || evalResult?.transcribed_text || ''
     const corrected = buildCorrectedText(baseText, evalResult?.spelling_errors || [], spellingState)
     if (child?.id) {
-      await supabase.from('stories').insert({ child_id: child.id, title: displayTitle, topic: chosenIdea?.topic || '', transcribed_text: baseText, corrected_text: corrected, status, gems_earned: evalResult?.gems_earned || 0 })
-      await supabase.from('bt_ledger').insert({ child_id: child.id, amount: evalResult?.gems_earned || 0, reason: 'story' })
-    }
-    // Reload stories list so My Stories is up to date when we go back
-    if (child?.id) {
-      supabase.from('stories').select('*').eq('child_id', child.id).then(({ data }) => {
-        if (data) setStories(data)
+      const { story } = await saveChildStory(child.id, {
+        title: displayTitle, topic: chosenIdea?.topic || '',
+        transcribed_text: baseText, corrected_text: corrected,
+        status, gems_earned: evalResult?.gems_earned || 0,
       })
+      if (story) setStories(prev => [story, ...prev])
     }
     setStep('done')
   }
 
   useEffect(() => {
     if (!child?.id) { setLoadingStories(false); return }
-    supabase.from('stories').select('*').eq('child_id', child.id).then(({ data }) => {
-      setStories(data || [])
+    getChildStories(child.id).then(data => {
+      setStories(data)
       setLoadingStories(false)
     })
   }, [])
@@ -719,7 +714,6 @@ export default function StoriesScreen() {
         <button
           onClick={() => {
             setStep('idle')
-            setStartNew(false)
             setChosenIdea(null)
             setStoryTitle('')
             setPhotos([])
@@ -735,71 +729,85 @@ export default function StoriesScreen() {
     )
   }
 
-  const inProgress = stories.find(s => s.status === 'in_progress')
-  const showDurum2 = !loadingStories && stories.length > 0 && !startNew
+  const inProgressStory = stories.find(s => s.status === 'in_progress')
+  const completedStories = stories.filter(s => s.status !== 'in_progress')
 
-  // ── DURUM 2 ────────────────────────────────────────────────────────────────
-  if (showDurum2) {
-    return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-        <style>{ANIM}</style>
-        <div style={{ padding: '56px 24px 24px' }}>
-          <BackBtn onClick={() => nav('/child/home')} />
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
-            {child?.name ?? 'Friend'}, the Creative Writer ✏️
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', marginTop: 6 }}>What would you like to do?</div>
-        </div>
-
-        <div style={{ padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <button
-            onClick={() => setStartNew(true)}
-            style={{ background: 'white', border: '3px solid #A5D6A7', borderRadius: 28, padding: '32px 24px', display: 'flex', alignItems: 'center', gap: 20, cursor: 'pointer', boxShadow: '0 6px 24px rgba(46,196,134,0.15)', animation: 'fadeUp 0.35s ease both', textAlign: 'left', width: '100%' }}
-          >
-            <span style={{ fontSize: 56 }}>🌱</span>
-            <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', marginBottom: 6 }}>Begin a New Story</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956' }}>Start a brand new adventure!</div>
-            </div>
-          </button>
-
-          {inProgress && (
-            <button
-              onClick={() => nav('/child/reading', { state: { storyId: inProgress.id, storyTitle: inProgress.title, mode: 'continue' } })}
-              style={{ background: 'white', border: '3px solid #C8E6C9', borderRadius: 28, padding: '32px 24px', display: 'flex', alignItems: 'center', gap: 20, cursor: 'pointer', boxShadow: '0 6px 24px rgba(46,196,134,0.10)', animation: 'fadeUp 0.35s ease 0.1s both', textAlign: 'left', width: '100%' }}
-            >
-              <span style={{ fontSize: 56 }}>🌳</span>
-              <div>
-                <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', marginBottom: 6 }}>Continue My Story</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {inProgress.title || 'Pick up where you left off'}
-                </div>
-              </div>
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // ── DURUM 1 ────────────────────────────────────────────────────────────────
+  // ── IDLE ───────────────────────────────────────────────────────────────────
   return (
     <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <style>{ANIM}</style>
 
       <div style={{ padding: '56px 24px 20px' }}>
-        <BackBtn onClick={() => startNew ? setStartNew(false) : nav('/child/home')} />
+        <BackBtn onClick={() => nav('/child/library')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
           {child?.name ?? 'Friend'}, the Creative Writer ✏️
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', marginTop: 6 }}>
-          {showFreeText ? 'What would you like to write about?' : 'Pick a story idea to get started!'}
+          {loadingStories ? 'Loading your stories...' : showFreeText ? 'What would you like to write about?' : 'Your stories and ideas below'}
         </div>
       </div>
 
-      <div style={{ padding: '0 24px 40px', flex: 1 }}>
+      <div style={{ padding: '0 24px 40px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+
+        {/* In-progress story */}
+        {!loadingStories && inProgressStory && (
+          <div style={{ marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
+              Continue Writing 📝
+            </div>
+            <button
+              onClick={() => nav('/child/reading', { state: { storyId: inProgressStory.id, storyTitle: inProgressStory.title, mode: 'continue' } })}
+              style={{ background: 'white', border: '3px solid #A5D6A7', borderRadius: 24, padding: '20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.12)', width: '100%', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: 44 }}>🌳</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', marginBottom: 4 }}>
+                  {inProgressStory.title || 'Untitled Story'}
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956' }}>Pick up where you left off →</div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Completed stories grid */}
+        {!loadingStories && completedStories.length > 0 && (
+          <div style={{ marginBottom: 24, animation: 'fadeUp 0.35s ease 0.07s both' }}>
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
+              My Stories 📚{' '}
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#6A9956' }}>{completedStories.length} written</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {completedStories.map((story, i) => (
+                <div key={story.id} style={{ background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 3px 12px rgba(0,0,0,0.08)', animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
+                  <div style={{ aspectRatio: '2/3', background: CARD_COLORS[i % CARD_COLORS.length], display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 36 }}>✏️</span>
+                    {story.gems_earned > 0 && (
+                      <div style={{ background: '#FFD93D', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 800, color: '#1A1A2E' }}>⭐ {story.gems_earned}</div>
+                    )}
+                  </div>
+                  <div style={{ padding: '8px 10px 10px' }}>
+                    <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 12, fontWeight: 800, color: '#2D5016', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {story.title || 'Untitled Story'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Divider when stories exist */}
+        {!loadingStories && stories.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, animation: 'fadeUp 0.35s ease 0.14s both' }}>
+            <div style={{ flex: 1, height: 1.5, background: '#C8E6C9', borderRadius: 2 }} />
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#6A9956' }}>Write New Story ✏️</div>
+            <div style={{ flex: 1, height: 1.5, background: '#C8E6C9', borderRadius: 2 }} />
+          </div>
+        )}
+
+        {/* Writing section */}
         {showFreeText ? (
-          // Free text mode
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {moderationError ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '28px 20px', background: 'white', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.07)', animation: 'fadeUp 0.3s ease both' }}>
@@ -837,7 +845,6 @@ export default function StoriesScreen() {
             </button>
           </div>
         ) : (
-          // Idea grid mode
           <>
             {ideas.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -859,7 +866,6 @@ export default function StoriesScreen() {
                 Couldn't load ideas — try your own! ✏️
               </div>
             )}
-
             <button
               onClick={() => setShowFreeText(true)}
               style={{ background: 'none', border: '2.5px dashed #A5D6A7', borderRadius: 20, padding: '14px', width: '100%', marginTop: 16, fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}

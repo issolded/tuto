@@ -39,3 +39,38 @@ export async function getChildGems(childId) {
     return 0
   }
 }
+
+export async function getChildStories(childId) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories`)
+    const data = await res.json()
+    return data.stories || []
+  } catch (err) {
+    console.error('[getChildStories] error:', err.message)
+    return []
+  }
+}
+
+export async function saveChildStory(childId, storyData) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(storyData),
+    })
+    return res.json()
+  } catch (err) {
+    console.error('[saveChildStory] error:', err.message)
+    return {}
+  }
+}
+
+export async function saveSpellingErrors(childId, errors) {
+  try {
+    await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/spelling-errors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ errors }),
+    })
+  } catch {}
+}

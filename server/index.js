@@ -346,6 +346,34 @@ app.get('/api/children/:childId/gems', async (req, res) => {
   res.json({ gems })
 })
 
+app.get('/api/children/:childId/stories', async (req, res) => {
+  const { childId } = req.params
+  const { data: stories } = await supabase.from('stories').select('*').eq('child_id', childId).order('created_at', { ascending: false })
+  res.json({ stories: stories || [] })
+})
+
+app.post('/api/children/:childId/stories', async (req, res) => {
+  const { childId } = req.params
+  const { title, topic, transcribed_text, corrected_text, status, gems_earned } = req.body
+  const { data: story, error } = await supabase.from('stories')
+    .insert({ child_id: childId, title, topic, transcribed_text, corrected_text, status, gems_earned: gems_earned || 0 })
+    .select().single()
+  if (error) return res.status(500).json({ error: error.message })
+  if ((gems_earned || 0) > 0) {
+    await supabase.from('bt_ledger').insert({ child_id: childId, amount: gems_earned, reason: 'story' })
+  }
+  res.json({ story })
+})
+
+app.post('/api/children/:childId/spelling-errors', async (req, res) => {
+  const { childId } = req.params
+  const { errors } = req.body
+  if (errors?.length) {
+    await supabase.from('spelling_errors').insert(errors.map(e => ({ child_id: childId, ...e })))
+  }
+  res.json({ ok: true })
+})
+
 app.get('/api/whatsapp-status/:parentId', (req, res) => {
   res.json({ connected: isConnected(req.params.parentId) })
 })
