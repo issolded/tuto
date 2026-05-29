@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { supabase } from '../lib/supabase'
+import { supabase, getChildGems } from '../lib/supabase'
 
 const ACCENT = '#FF6B35'
 
@@ -43,14 +43,7 @@ export default function ChildHome() {
     if (!child?.id) { nav('/child', { replace: true }); return }
 
 
-    const fetchGems = async () => {
-      const { data } = await supabase
-        .from('bt_ledger')
-        .select('amount')
-        .eq('child_id', child.id)
-      setGems((data || []).reduce((sum, r) => sum + (r.amount || 0), 0))
-    }
-    fetchGems()
+    getChildGems(child.id).then(setGems)
 
     const channel = supabase
       .channel(`gems-${child.id}`)

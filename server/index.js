@@ -333,6 +333,19 @@ app.get('/api/family/:code/children', async (req, res) => {
   res.json({ children: children || [] })
 })
 
+app.get('/api/children/:childId/rewards', async (req, res) => {
+  const { childId } = req.params
+  const { data: rewards } = await supabase.from('rewards').select('*').eq('child_id', childId).order('bt_cost')
+  res.json({ rewards: rewards || [] })
+})
+
+app.get('/api/children/:childId/gems', async (req, res) => {
+  const { childId } = req.params
+  const { data: ledger } = await supabase.from('bt_ledger').select('amount').eq('child_id', childId)
+  const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+  res.json({ gems })
+})
+
 app.get('/api/whatsapp-status/:parentId', (req, res) => {
   res.json({ connected: isConnected(req.params.parentId) })
 })

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { getChildRewards, getChildGems } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 
 const ANIM = `
@@ -74,13 +74,11 @@ export default function GoalsScreen() {
   useEffect(() => {
     if (!child?.id) { setRewards([]); setGems(0); return }
     Promise.all([
-      supabase.from('rewards').select('*').eq('child_id', child.id).order('bt_cost'),
-      supabase.from('bt_ledger').select('amount').eq('child_id', child.id),
-    ]).then(([{ data: rewardData, error: rewardErr }, { data: ledgerData }]) => {
-      console.log('[GOALS] child.id:', child.id)
-      console.log('[GOALS] rewardData:', rewardData, 'error:', rewardErr)
-      setRewards(rewardData || [])
-      setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
+      getChildRewards(child.id),
+      getChildGems(child.id),
+    ]).then(([rewardData, gemCount]) => {
+      setRewards(rewardData)
+      setGems(gemCount)
     })
   }, [])
 
