@@ -3,6 +3,8 @@ import express from 'express'
 import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
 import { DateTime } from 'luxon'
+import axios from 'axios'
+import FormData from 'form-data'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, getTelegramChatId, setTelegramMessageHandler } from './telegram.js'
 
@@ -648,55 +650,50 @@ async function sendWhatsAppBusinessMessage(to, message) {
 }
 
 async function sendWhatsAppPhoto(phoneNumber, photoUrl, caption) {
-  // 1. Upload image URL to Meta media endpoint → get media_id
-  console.log(`[WA-PHOTO] Uploading image to Meta — url=${photoUrl}`)
-  const uploadRes = await fetch(
-    `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/media`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${whatsappToken}`,
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        type: 'image',
-        url: photoUrl,
-      }),
-    }
-  )
-  if (!uploadRes.ok) {
-    const err = await uploadRes.json().catch(() => ({}))
-    console.log('[WA] Error response:', JSON.stringify(err))
-    throw new Error(err.error?.message || `WhatsApp media upload error ${uploadRes.status}`)
-  }
-  const { id: mediaId } = await uploadRes.json()
-  console.log(`[WA-PHOTO] media_id=${mediaId}`)
+  // 1. Download image as buffer
+  console.log(`[WA-PHOTO] Downloading image — url=${photoUrl}`)
+  const imageResponse = await axios.get(photoUrl, { responseType: 'arraybuffer' })
+  const imageBuffer = Buffer.from(imageResponse.data)
+  console.log(`[WA-PHOTO] Downloaded ${imageBuffer.length} bytes`)
 
-  // 2. Send image message using media_id
-  const msgRes = await fetch(
-    `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${whatsappToken}`,
-      },
-      body: JSON.stringify({
+  // 2. Upload buffer to Meta as multipart/form-data → get media_id
+  const form = new FormData()
+  form.append('messaging_product', 'whatsapp')
+  form.append('type', 'image/jpeg')
+  form.append('file', imageBuffer, { filename: 'photo.jpg', contentType: 'image/jpeg' })
+
+  console.log(`[WA-PHOTO] Uploading to Meta media endpoint`)
+  let mediaId
+  try {
+    const uploadResponse = await axios.post(
+      `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/media`,
+      form,
+      { headers: { ...form.getHeaders(), Authorization: `Bearer ${whatsappToken}` } }
+    )
+    mediaId = uploadResponse.data.id
+    console.log(`[WA-PHOTO] media_id=${mediaId}`)
+  } catch (err) {
+    console.log('[WA] Error response:', JSON.stringify(err.response?.data))
+    throw new Error(err.response?.data?.error?.message || err.message)
+  }
+
+  // 3. Send image message using media_id
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
+      {
         messaging_product: 'whatsapp',
         to: phoneNumber,
         type: 'image',
         image: { id: mediaId, caption },
-      }),
-    }
-  )
-  if (!msgRes.ok) {
-    const err = await msgRes.json().catch(() => ({}))
-    console.log('[WA] Error response:', JSON.stringify(err))
-    throw new Error(err.error?.message || `WhatsApp send photo error ${msgRes.status}`)
+      },
+      { headers: { Authorization: `Bearer ${whatsappToken}` } }
+    )
+    console.log(`[WA-PHOTO] ✅ Photo sent to ${phoneNumber}`)
+  } catch (err) {
+    console.log('[WA] Error response:', JSON.stringify(err.response?.data))
+    throw new Error(err.response?.data?.error?.message || err.message)
   }
-  console.log(`[WA-PHOTO] ✅ Photo sent to ${phoneNumber}`)
-  return msgRes.json()
 }
 
 app.post('/api/verify-whatsapp', async (req, res) => {
