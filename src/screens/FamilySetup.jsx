@@ -149,7 +149,7 @@ export default function FamilySetup() {
         <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, animation: 'fadeUp 0.4s ease both' }}>
           <div style={{ fontSize: 64 }}>✅</div>
           <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2EC486', textAlign: 'center' }}>
-            Connected! ✅ Code: {localStorage.getItem('family_code')}
+            Connected! ✅
           </div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
             Now enter your PIN
