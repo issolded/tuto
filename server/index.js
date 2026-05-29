@@ -125,19 +125,38 @@ async function askGeminiWithContext(parentId, userMessage) {
 const awaitingNote = new Map()
 
 async function sendNotification(parentId, message) {
-  // 1. Try Telegram
-  try {
-    const chatId = await getTelegramChatId(parentId)
-    if (chatId) {
-      await sendTelegramMessage(chatId, message)
-      console.log(`[NOTIFY] Telegram → parent ${parentId}`)
+  const { data: parent } = await supabase
+    .from('parents')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone')
+    .eq('id', parentId)
+    .single()
+
+  const channel = parent?.notification_channel || 'none'
+  console.log(`[NOTIFY] parent=${parentId} channel="${channel}" telegram_chat_id=${parent?.telegram_chat_id ?? 'null'} whatsapp_phone=${parent?.whatsapp_phone ?? 'null'}`)
+
+  // ── Telegram ──────────────────────────────────────────────────────────────
+  if (channel === 'telegram' && parent?.telegram_chat_id) {
+    try {
+      await sendTelegramMessage(parent.telegram_chat_id, message)
+      console.log(`[NOTIFY] ✅ Sent via Telegram → parent ${parentId}`)
       return
+    } catch (err) {
+      console.error(`[NOTIFY] ❌ Telegram failed: ${err.message}`)
     }
-  } catch (err) {
-    console.error('[NOTIFY] Telegram error:', err.message)
   }
 
-  // 2. Try WhatsApp
+  // ── WhatsApp Business API ─────────────────────────────────────────────────
+  if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+    try {
+      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+      console.log(`[NOTIFY] ✅ Sent via WhatsApp Business → parent ${parentId}`)
+      return
+    } catch (err) {
+      console.error(`[NOTIFY] ❌ WhatsApp Business failed: ${err.message}`)
+    }
+  }
+
+  // ── Baileys fallback (pairing-code sessions) ──────────────────────────────
   if (isConnected(parentId)) {
     try {
       const { data: child } = await supabase
@@ -149,35 +168,57 @@ async function sendNotification(parentId, message) {
         .single()
       if (child?.parent_phone) {
         await sendMessage(parentId, child.parent_phone, message)
-        console.log(`[NOTIFY] WhatsApp → parent ${parentId}`)
+        console.log(`[NOTIFY] ✅ Sent via Baileys WhatsApp → parent ${parentId}`)
         return
       }
     } catch (err) {
-      console.error('[NOTIFY] WhatsApp error:', err.message)
+      console.error(`[NOTIFY] ❌ Baileys fallback failed: ${err.message}`)
     }
   }
 
-  console.log(`[NOTIFY] No channel for parent ${parentId} — message: ${message}`)
+  console.log(`[NOTIFY] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
 
 async function sendNotificationWithPhoto(parentId, message, photoUrl) {
-  // 1. Try Telegram with photo
-  try {
-    const chatId = await getTelegramChatId(parentId)
-    if (chatId) {
-      try {
-        await sendTelegramPhoto(chatId, photoUrl, message)
-      } catch {
-        await sendTelegramMessage(chatId, message)
-      }
-      console.log(`[NOTIFY] Telegram photo → parent ${parentId}`)
+  const { data: parent } = await supabase
+    .from('parents')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone')
+    .eq('id', parentId)
+    .single()
+
+  const channel = parent?.notification_channel || 'none'
+  console.log(`[NOTIFY-PHOTO] parent=${parentId} channel="${channel}" telegram_chat_id=${parent?.telegram_chat_id ?? 'null'} whatsapp_phone=${parent?.whatsapp_phone ?? 'null'}`)
+
+  // ── Telegram with photo ───────────────────────────────────────────────────
+  if (channel === 'telegram' && parent?.telegram_chat_id) {
+    try {
+      await sendTelegramPhoto(parent.telegram_chat_id, photoUrl, message)
+      console.log(`[NOTIFY-PHOTO] ✅ Sent photo via Telegram → parent ${parentId}`)
       return
+    } catch (err) {
+      console.error(`[NOTIFY-PHOTO] ❌ Telegram photo failed: ${err.message} — trying text`)
+      try {
+        await sendTelegramMessage(parent.telegram_chat_id, message)
+        console.log(`[NOTIFY-PHOTO] ✅ Sent text fallback via Telegram → parent ${parentId}`)
+        return
+      } catch (err2) {
+        console.error(`[NOTIFY-PHOTO] ❌ Telegram text fallback also failed: ${err2.message}`)
+      }
     }
-  } catch (err) {
-    console.error('[NOTIFY] Telegram photo error:', err.message)
   }
 
-  // 2. Try WhatsApp with photo
+  // ── WhatsApp Business API (text only — photo via caption not yet supported)
+  if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+    try {
+      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+      console.log(`[NOTIFY-PHOTO] ✅ Sent via WhatsApp Business (text) → parent ${parentId}`)
+      return
+    } catch (err) {
+      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp Business failed: ${err.message}`)
+    }
+  }
+
+  // ── Baileys fallback with photo ───────────────────────────────────────────
   if (isConnected(parentId)) {
     try {
       const { data: child } = await supabase
@@ -189,15 +230,15 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl) {
         .single()
       if (child?.parent_phone) {
         await sendMessage(parentId, child.parent_phone, message, photoUrl)
-        console.log(`[NOTIFY] WhatsApp photo → parent ${parentId}`)
+        console.log(`[NOTIFY-PHOTO] ✅ Sent photo via Baileys WhatsApp → parent ${parentId}`)
         return
       }
     } catch (err) {
-      console.error('[NOTIFY] WhatsApp photo error:', err.message)
+      console.error(`[NOTIFY-PHOTO] ❌ Baileys fallback failed: ${err.message}`)
     }
   }
 
-  console.log(`[NOTIFY] No channel for parent ${parentId} — message: ${message}`)
+  console.log(`[NOTIFY-PHOTO] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
 
 function setupConnectHandler() {
