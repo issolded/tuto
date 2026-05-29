@@ -190,7 +190,7 @@ export default function ParentOnboarding() {
   const [familyCode,   setFamilyCode]   = useState(null)
   const [addingReward,    setAddingReward]    = useState(false)
   const [editingLabelIdx, setEditingLabelIdx] = useState(null)
-  const [newReward,    setNewReward]    = useState({ emoji: '⭐', label: '', gems: 0 })
+  const [newReward,    setNewReward]    = useState({ emoji: '⭐', label: '', gems: '' })
   const [saving,       setSaving]       = useState(false)
   const [saveError,    setSaveError]    = useState('')
   const [user,         setUser]         = useState(null)
@@ -312,8 +312,8 @@ export default function ParentOnboarding() {
 
   const confirmAddReward = () => {
     if (!newReward.label.trim()) return
-    setRewards(prev => [...prev, { ...newReward }])
-    setNewReward({ emoji: '⭐', label: '', gems: 0 })
+    setRewards(prev => [...prev, { ...newReward, gems: parseInt(newReward.gems) || 0 }])
+    setNewReward({ emoji: '⭐', label: '', gems: '' })
     setAddingReward(false)
   }
 
@@ -782,7 +782,7 @@ export default function ParentOnboarding() {
             </div>
             <div>
               <FieldLabel>GEMS REQUIRED 💎</FieldLabel>
-              <Input value={newReward.gems} onChange={e => setNewReward(r => ({ ...r, gems: parseInt(e.target.value) || 0 }))} type="number" placeholder="30" />
+              <Input value={newReward.gems} onChange={e => setNewReward(r => ({ ...r, gems: e.target.value }))} type="number" placeholder="30" />
             </div>
             <BigBtn onClick={confirmAddReward} disabled={!newReward.label.trim()}>Add Reward</BigBtn>
             <GhostBtn onClick={() => setAddingReward(false)}>Cancel</GhostBtn>
