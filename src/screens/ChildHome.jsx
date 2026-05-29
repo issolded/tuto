@@ -39,6 +39,7 @@ export default function ChildHome() {
     .map(t => ({ ...t, gem: ts[t.type]?.gems ?? DEFAULT_TASK_GEMS[t.type] }))
 
   useEffect(() => {
+    if (!localStorage.getItem('family_code')) { nav('/setup', { replace: true }); return }
     if (!child?.id) { nav('/child', { replace: true }); return }
 
 

@@ -26,7 +26,7 @@ export default function ChildPin() {
 
   // Load children for this family on mount
   useEffect(() => {
-    if (!familyCode) { setFamilyChildren([]); return }
+    if (!familyCode) { nav('/setup', { replace: true }); return }
     getChildrenByFamilyCode(familyCode).then(children => {
       console.log('[ChildPin] family_code:', familyCode, '| children:', children)
       setFamilyChildren(children || [])

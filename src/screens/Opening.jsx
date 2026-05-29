@@ -19,7 +19,7 @@ export default function Opening() {
           </div>
           <span style={{ fontSize: 20, color: 'rgba(255,255,255,0.6)' }}>›</span>
         </button>
-        <button onClick={() => nav('/child')} style={{ background: '#FF6B35', border: 'none', borderRadius: 24, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 8px 32px rgba(255,107,53,0.4)', transition: 'transform 0.2s' }}>
+        <button onClick={() => nav(localStorage.getItem('family_code') ? '/child' : '/setup')} style={{ background: '#FF6B35', border: 'none', borderRadius: 24, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 8px 32px rgba(255,107,53,0.4)', transition: 'transform 0.2s' }}>
           <div style={{ width: 52, height: 52, background: 'rgba(255,255,255,0.2)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>⭐</div>
           <div style={{ flex: 1, textAlign: 'left' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'white' }}>Child Login</div>
