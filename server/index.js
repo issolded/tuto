@@ -207,14 +207,21 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl) {
     }
   }
 
-  // ── WhatsApp Business API (text only — photo via caption not yet supported)
+  // ── WhatsApp Business API with photo ─────────────────────────────────────
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
     try {
-      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
-      console.log(`[NOTIFY-PHOTO] ✅ Sent via WhatsApp Business (text) → parent ${parentId}`)
+      await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
+      console.log(`[NOTIFY-PHOTO] ✅ Sent photo via WhatsApp Business → parent ${parentId}`)
       return
     } catch (err) {
-      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp Business failed: ${err.message}`)
+      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp photo failed: ${err.message} — trying text fallback`)
+      try {
+        await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+        console.log(`[NOTIFY-PHOTO] ✅ Sent text fallback via WhatsApp Business → parent ${parentId}`)
+        return
+      } catch (err2) {
+        console.error(`[NOTIFY-PHOTO] ❌ WhatsApp text fallback also failed: ${err2.message}`)
+      }
     }
   }
 
@@ -637,6 +644,56 @@ async function sendWhatsAppBusinessMessage(to, message) {
     throw new Error(err.error?.message || `WhatsApp API error ${res.status}`)
   }
   return res.json()
+}
+
+async function sendWhatsAppPhoto(phoneNumber, photoUrl, caption) {
+  // 1. Upload image URL to Meta media endpoint → get media_id
+  console.log(`[WA-PHOTO] Uploading image to Meta — url=${photoUrl}`)
+  const uploadRes = await fetch(
+    `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/media`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${whatsappToken}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        type: 'image',
+        url: photoUrl,
+      }),
+    }
+  )
+  if (!uploadRes.ok) {
+    const err = await uploadRes.json().catch(() => ({}))
+    throw new Error(err.error?.message || `WhatsApp media upload error ${uploadRes.status}`)
+  }
+  const { id: mediaId } = await uploadRes.json()
+  console.log(`[WA-PHOTO] media_id=${mediaId}`)
+
+  // 2. Send image message using media_id
+  const msgRes = await fetch(
+    `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${whatsappToken}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: phoneNumber,
+        type: 'image',
+        image: { id: mediaId, caption },
+      }),
+    }
+  )
+  if (!msgRes.ok) {
+    const err = await msgRes.json().catch(() => ({}))
+    throw new Error(err.error?.message || `WhatsApp send photo error ${msgRes.status}`)
+  }
+  console.log(`[WA-PHOTO] ✅ Photo sent to ${phoneNumber}`)
+  return msgRes.json()
 }
 
 app.post('/api/verify-whatsapp', async (req, res) => {
