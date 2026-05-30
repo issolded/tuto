@@ -209,21 +209,14 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl) {
     }
   }
 
-  // ── WhatsApp Business API with photo ─────────────────────────────────────
+  // ── WhatsApp Business API — text only (photo URL embedded in message) ────
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
     try {
-      await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
-      console.log(`[NOTIFY-PHOTO] ✅ Sent photo via WhatsApp Business → parent ${parentId}`)
+      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+      console.log(`[NOTIFY-PHOTO] ✅ Sent text (with photo URL) via WhatsApp Business → parent ${parentId}`)
       return
     } catch (err) {
-      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp photo failed: ${err.message} — trying text fallback`)
-      try {
-        await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
-        console.log(`[NOTIFY-PHOTO] ✅ Sent text fallback via WhatsApp Business → parent ${parentId}`)
-        return
-      } catch (err2) {
-        console.error(`[NOTIFY-PHOTO] ❌ WhatsApp text fallback also failed: ${err2.message}`)
-      }
+      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp Business failed: ${err.message}`)
     }
   }
 
@@ -565,11 +558,12 @@ app.post('/api/notify-parent-chore', async (req, res) => {
     }
 
     const message =
-      `🏠 ${child.name} ev görevi gönderdi!\n\n` +
+      `🏠 ${child.name} ev görevi tamamladı!\n` +
       `📝 ${taskDescription || 'Ev görevi'}\n` +
-      `🤖 AI önerisi: ${gems} Gem\n` +
-      (childNote ? `💬 "${childNote}"\n` : '') +
-      `\n✅ Onaylamak için: 'evet' veya gem sayısı (örn: ${gems})\n❌ Reddetmek için: 'hayır'`
+      (childNote ? `💬 '${childNote}'\n` : '') +
+      `🤖 AI önerisi: +${gems} Gem\n\n` +
+      `Fotoğrafı görmek için: ${photoUrl}\n\n` +
+      `Sen ne dersin? (evet / hayır / kaç gem)`
 
     await sendNotificationWithPhoto(child.parent_id, message, photoUrl)
     res.json({ submissionId: submission.id })
