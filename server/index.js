@@ -293,28 +293,45 @@ async function handleMessage(parentId, replyCb, text) {
         .maybeSingle()
 
       if (latestChore) {
-        const lower = text.toLowerCase().trim()
-        const num = parseInt(text.trim(), 10)
-        const isApprove = ['evet', 'yes', 'onay', 'onayla', 'approve', 'ok', 'tamam', 'kabul'].some(k => lower === k)
-        const isReject  = ['hayır', 'hayir', 'no', 'reddet', 'reject', 'iptal', 'olmaz'].some(k => lower === k)
-        const isNumber  = !isNaN(num) && num > 0 && num <= 200
+        const trimmed = text.trim()
+        const lower   = trimmed.toLowerCase()
+        const words   = trimmed.split(/\s+/)
+        const isSentence = words.length > 2
 
-        if (isApprove || isNumber) {
-          const gems = isNumber ? num : (latestChore.suggested_gems ?? latestChore.gems_earned ?? 20)
-          const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
-          await supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', latestChore.id)
-          await supabase.from('bt_ledger').insert({ child_id: latestChore.child_id, amount: gems, reason: 'chore' })
-          awaitingNote.set(parentId, { subId: latestChore.id, childName, gems, approved: true })
-          await replyCb(`✅ Harika! ${childName} ${gems} Gem kazandı 🎉\n\n${childName} için bir not bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
-          return
-        }
+        // Cümle → Gemini'ye gönder, keyword kontrolü yapma
+        if (!isSentence) {
+          const APPROVE_KEYWORDS = ['evet', 'yes', 'tamam', 'ok', 'okay', 'onayla', 'onaylıyorum', 'approve']
+          const REJECT_KEYWORDS  = ['hayır', 'no', 'reddet', 'reddediyorum', 'reject', 'olmaz']
 
-        if (isReject) {
-          const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
-          await supabase.from('submissions').update({ status: 'rejected' }).eq('id', latestChore.id)
-          awaitingNote.set(parentId, { subId: latestChore.id, childName, gems: 0, approved: false })
-          await replyCb(`❌ ${childName}'in ev görevi reddedildi.\n\n${childName} için bir mesaj bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
-          return
+          const isApprove = APPROVE_KEYWORDS.includes(lower)
+          const isReject  = REJECT_KEYWORDS.includes(lower)
+
+          // Sayı tespiti: '20', '15 gem', '25 ver' → ilk tam sayıyı al
+          const numMatch  = trimmed.match(/\d+/)
+          const num       = numMatch ? parseInt(numMatch[0], 10) : NaN
+          const isNumber  = !isNaN(num) && num > 0 && num <= 200
+
+          console.log(`[MSG] chore check — lower="${lower}" isSentence=false isApprove=${isApprove} isReject=${isReject} isNumber=${isNumber} num=${num}`)
+
+          if (isApprove || isNumber) {
+            const gems = isNumber ? num : (latestChore.suggested_gems ?? latestChore.gems_earned ?? 20)
+            const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
+            await supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', latestChore.id)
+            await supabase.from('bt_ledger').insert({ child_id: latestChore.child_id, amount: gems, reason: 'chore' })
+            awaitingNote.set(parentId, { subId: latestChore.id, childName, gems, approved: true })
+            await replyCb(`✅ Harika! ${childName} ${gems} Gem kazandı 🎉\n\n${childName} için bir not bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
+            return
+          }
+
+          if (isReject) {
+            const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
+            await supabase.from('submissions').update({ status: 'rejected' }).eq('id', latestChore.id)
+            awaitingNote.set(parentId, { subId: latestChore.id, childName, gems: 0, approved: false })
+            await replyCb(`❌ ${childName}'in ev görevi reddedildi.\n\n${childName} için bir mesaj bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
+            return
+          }
+        } else {
+          console.log(`[MSG] chore check — "${trimmed}" is a sentence (${words.length} words) → skipping keyword match`)
         }
       }
     }
