@@ -4,18 +4,25 @@ import TutoMascot from '../components/TutoMascot'
 import { supabase } from '../lib/supabase'
 import { generateMathQuestions, evaluateMath } from '../lib/gemini'
 
+// ── Design tokens (6–8 skin) ────────────────────────────────────────────────
+const MATH      = '#5aa9e6'
+const MATH_DEEP = '#3d8fcf'
+const INK       = '#241f3a'
+const INK_SOFT  = '#8d83ad'
+const GREEN     = '#4cb685'
+const ORANGE    = '#f79433'
+const FRED      = "'Fredoka', sans-serif"
+const FLOW_BG   = 'linear-gradient(172deg,#EAF5FF 0%,#D2E9FB 100%)'
+
 const ANIM = `
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-10px); }
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-7px); }
 }
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.05); }
+@keyframes pop {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 @keyframes flashIn {
   0%   { opacity: 0; }
@@ -24,24 +31,30 @@ const ANIM = `
   100% { opacity: 0; }
 }
 @keyframes confettiFall {
-  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  0%   { transform: translateY(-14px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(640px) rotate(560deg); opacity: 0; }
 }
 @keyframes scaleIn {
   from { transform: scale(0.85); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.math-press:active { transform: scale(.96) !important; }
+.math-scroll { overflow-y: auto; }
+.math-scroll::-webkit-scrollbar { display: none; }
 `
 
 const CONFETTI = [
-  { color: '#FF6B35', left: '7%',  delay: '0s'    },
-  { color: '#FFD93D', left: '20%', delay: '0.10s' },
-  { color: '#2EC486', left: '34%', delay: '0.05s' },
-  { color: '#6C63FF', left: '48%', delay: '0.15s' },
-  { color: '#FF3B30', left: '62%', delay: '0.08s' },
-  { color: '#34C0EB', left: '76%', delay: '0.12s' },
-  { color: '#FFD93D', left: '88%', delay: '0.03s' },
-  { color: '#FF6B35', left: '95%', delay: '0.18s' },
+  { color: ORANGE,    left: '8%',  delay: '0s'    },
+  { color: '#FFD93D', left: '22%', delay: '0.10s' },
+  { color: GREEN,     left: '36%', delay: '0.05s' },
+  { color: MATH,      left: '50%', delay: '0.15s' },
+  { color: '#ef6b6b', left: '64%', delay: '0.08s' },
+  { color: MATH_DEEP, left: '78%', delay: '0.12s' },
+  { color: '#FFD93D', left: '90%', delay: '0.03s' },
 ]
 
 const LEVEL_DESC = {
@@ -95,16 +108,23 @@ function getScoreMsg(pct, age) {
 function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
   const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], ['⌫','0','✓']]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
       {ROWS.map((row, ri) => (
-        <div key={ri} style={{ display: 'flex', gap: 12 }}>
+        <div key={ri} style={{ display: 'flex', gap: 10 }}>
           {row.map(key => {
             const isSubmit = key === '✓'
             const isBack   = key === '⌫'
+            const bg = isSubmit ? GREEN : isBack ? ORANGE : '#2c2745'
+            const glow = isSubmit
+              ? 'rgba(76,182,133,.4)'
+              : isBack
+              ? 'rgba(247,148,51,.36)'
+              : 'rgba(44,39,69,.28)'
             return (
               <button
                 key={key}
                 disabled={disabled}
+                className="math-press"
                 onClick={() => {
                   if (disabled) return
                   if (isSubmit) onSubmit()
@@ -112,22 +132,15 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
                   else if (value.length < 4) onChange(v => v + key)
                 }}
                 style={{
-                  width: 82, height: 82, borderRadius: '50%', border: 'none',
-                  background: isSubmit ? '#2EC486' : isBack ? '#FFD93D' : '#1A1A2E',
-                  color: isBack ? '#1A1A2E' : 'white',
-                  fontSize: isSubmit || isBack ? 24 : 28,
-                  fontFamily: "'Baloo 2', cursive", fontWeight: 800,
+                  width: 70, height: 70, borderRadius: '50%', border: 'none',
+                  background: bg, color: '#fff',
+                  fontSize: isSubmit || isBack ? 24 : 27,
+                  fontFamily: FRED, fontWeight: 600,
                   cursor: disabled ? 'default' : 'pointer',
                   opacity: disabled ? 0.45 : 1,
-                  boxShadow: isSubmit
-                    ? '0 4px 16px rgba(46,196,134,0.45)'
-                    : isBack
-                    ? '0 4px 12px rgba(255,211,61,0.35)'
-                    : '0 4px 14px rgba(26,26,46,0.25)',
+                  boxShadow: `0 5px 14px ${glow}`,
                   transition: 'transform 0.1s, opacity 0.15s',
                 }}
-                onTouchStart={e => { if (!disabled) e.currentTarget.style.transform = 'scale(0.92)' }}
-                onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)' }}
               >{key}</button>
             )
           })}
@@ -158,8 +171,8 @@ export default function MathScreen() {
   const [evalResult,    setEvalResult]   = useState(null)
   const [leveledUp,     setLeveledUp]    = useState(false)
 
-  const fileRef      = useRef(null)
-  const flashTimer   = useRef(null)
+  const fileRef    = useRef(null)
+  const flashTimer = useRef(null)
 
   // Load level from last math_progress session
   useEffect(() => {
@@ -186,7 +199,6 @@ export default function MathScreen() {
     setStep('loading')
     try {
       const prevQs = []
-
       const result = await generateMathQuestions(age, effectiveLevel, prevQs)
       setQuestions(result.questions   || [])
       setCorrectAns(result.answers    || [])
@@ -202,8 +214,8 @@ export default function MathScreen() {
   // ── Screen mode: submit one answer ───────────────────────────────────────
   const submitScreenAnswer = () => {
     if (!input || flash) return
-    const userAns   = Number(input)
-    const isCorrect = userAns === correctAns[qIdx]
+    const userAns    = Number(input)
+    const isCorrect  = userAns === correctAns[qIdx]
     const newAnswers = [...userAnswers, userAns]
 
     setFlash({ correct: isCorrect, answer: correctAns[qIdx] })
@@ -302,16 +314,23 @@ export default function MathScreen() {
     }
   }
 
-  // ── Shared container style ────────────────────────────────────────────────
+  // ── Shared container ──────────────────────────────────────────────────────
   const wrap = {
-    background: '#EEF0FF', minHeight: '100vh', maxWidth: 430,
+    background: FLOW_BG, minHeight: '100vh', maxWidth: 430,
     margin: '0 auto', display: 'flex', flexDirection: 'column',
+    fontFamily: "'Nunito', sans-serif",
   }
 
   const BackBtn = ({ to }) => (
     <button
       onClick={() => to ? nav(to) : setStep('welcome')}
-      style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 18, cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        width: 42, height: 42, borderRadius: 14,
+        background: 'rgba(255,255,255,0.85)', border: 'none',
+        fontSize: 19, color: INK, fontWeight: 800,
+        cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.1)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
     >←</button>
   )
 
@@ -321,24 +340,35 @@ export default function MathScreen() {
   if (step === 'welcome') return (
     <div style={wrap}>
       <style>{ANIM}</style>
-      <div style={{ position: 'absolute', top: 52, left: 20, zIndex: 10 }}>
+      <div style={{ position: 'absolute', top: 42, left: 18, zIndex: 10 }}>
         <BackBtn to="/child/home" />
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 28px 40px', gap: 22, textAlign: 'center' }}>
-        <div style={{ animation: 'float 3s ease-in-out infinite' }}>
-          <TutoMascot size={160} expression="excited" />
-        </div>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 21, fontWeight: 800, color: '#2D2560', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: '80px 26px 40px', gap: 20, textAlign: 'center',
+      }}>
+        <TutoMascot size={150} expression="excited" color={MATH}
+          style={{ animation: 'float 3s ease-in-out infinite' }} />
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
           {getWelcomeMsg(age)}
         </div>
         {level !== null && (
-          <div style={{ background: 'rgba(108,99,255,0.13)', borderRadius: 14, padding: '8px 20px', fontSize: 13, fontWeight: 800, color: '#6C63FF' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            background: 'rgba(90,169,230,.16)', borderRadius: 14, padding: '8px 18px',
+            fontFamily: FRED, fontWeight: 600, fontSize: 14, color: MATH_DEEP,
+          }}>
             📊 {LEVEL_DESC[effectiveLevel] || 'Math Adventure'}
           </div>
         )}
         <button
+          className="math-press"
           onClick={() => setStep('mode')}
-          style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 20, padding: '18px 52px', fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 28px rgba(108,99,255,0.45)', animation: 'pulse 2s ease-in-out infinite', marginTop: 4 }}
+          style={{
+            background: MATH, color: 'white', border: 'none', borderRadius: 20,
+            padding: '17px 54px', fontFamily: FRED, fontSize: 20, fontWeight: 600,
+            cursor: 'pointer', boxShadow: '0 10px 28px rgba(61,143,207,.42)', marginTop: 4,
+          }}
         >Let's go! →</button>
       </div>
     </div>
@@ -350,37 +380,53 @@ export default function MathScreen() {
   if (step === 'mode') return (
     <div style={wrap}>
       <style>{ANIM}</style>
-      <div style={{ padding: '52px 24px 32px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-          <BackBtn />
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 900, color: '#2D2560' }}>
-            How do you want<br />to work today?
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '52px 20px 10px' }}>
+        <BackBtn />
+        <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: INK, letterSpacing: '-.3px' }}>
+          How do you want to work? 🤔
+        </span>
+      </div>
 
+      <div className="math-scroll" style={{ flex: 1, padding: '4px 22px 24px', display: 'flex', flexDirection: 'column', gap: 15 }}>
         {/* Paper */}
         <button
+          className="math-press"
           onClick={() => startLoading('paper')}
-          style={{ background: 'white', border: '3px solid #D8D0FF', borderRadius: 28, padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer', textAlign: 'left', boxShadow: '0 8px 32px rgba(108,99,255,0.12)', animation: 'fadeUp 0.3s ease both' }}
+          style={{
+            background: 'white', border: 'none', borderRadius: 26, padding: '24px 22px',
+            display: 'flex', flexDirection: 'column', gap: 9, cursor: 'pointer', textAlign: 'left',
+            boxShadow: '0 8px 26px rgba(60,120,200,.13)',
+          }}
         >
-          <span style={{ fontSize: 44 }}>✏️</span>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 900, color: '#2D2560' }}>On Paper</div>
-          <div style={{ display: 'inline-block', background: '#6C63FF', color: 'white', borderRadius: 10, padding: '4px 14px', fontSize: 13, fontWeight: 800, width: 'fit-content' }}>+30 Gems</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.5 }}>
+          <span style={{ fontSize: 42 }}>✏️</span>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>On Paper</div>
+          <div style={{
+            alignSelf: 'flex-start', background: MATH, color: '#fff',
+            borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+          }}>⭐ +30 Gems</div>
+          <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             We love pen and paper! Your brain grows every time you write! 🧠
           </div>
         </button>
 
         {/* Screen */}
         <button
+          className="math-press"
           onClick={() => startLoading('screen')}
-          style={{ background: 'white', border: '3px solid #D8D0FF', borderRadius: 28, padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer', textAlign: 'left', boxShadow: '0 8px 32px rgba(108,99,255,0.12)', animation: 'fadeUp 0.35s ease 0.05s both' }}
+          style={{
+            background: 'white', border: 'none', borderRadius: 26, padding: '24px 22px',
+            display: 'flex', flexDirection: 'column', gap: 9, cursor: 'pointer', textAlign: 'left',
+            boxShadow: '0 8px 26px rgba(60,120,200,.13)',
+          }}
         >
-          <span style={{ fontSize: 44 }}>📱</span>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 900, color: '#2D2560' }}>On Screen</div>
-          <div style={{ display: 'inline-block', background: '#2EC486', color: 'white', borderRadius: 10, padding: '4px 14px', fontSize: 13, fontWeight: 800, width: 'fit-content' }}>+20 Gems</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.5 }}>
-            Type your answers directly
+          <span style={{ fontSize: 42 }}>📱</span>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>On Screen</div>
+          <div style={{
+            alignSelf: 'flex-start', background: GREEN, color: '#fff',
+            borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+          }}>⭐ +20 Gems</div>
+          <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
+            Type your answers right here, one by one.
           </div>
         </button>
       </div>
@@ -393,12 +439,24 @@ export default function MathScreen() {
   if (step === 'loading' || step === 'evaluating') return (
     <div style={wrap}>
       <style>{ANIM}</style>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 40 }}>
-        <div style={{ animation: 'float 2s ease-in-out infinite' }}>
-          <TutoMascot size={140} expression="thinking" />
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 22, padding: 40,
+      }}>
+        <TutoMascot size={140} expression="thinking" color={MATH}
+          style={{ animation: 'float 2s ease-in-out infinite' }} />
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 20, color: INK, textAlign: 'center' }}>
+          {step === 'loading' ? 'Preparing your puzzles…' : 'Checking your work…'}
         </div>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2560', textAlign: 'center' }}>
-          {step === 'loading' ? 'Preparing your puzzles...' : 'Checking your work...'}
+        <div style={{ display: 'flex', gap: 7 }}>
+          {[0, 1, 2].map(i => (
+            <span key={i} style={{
+              width: 11, height: 11, borderRadius: '50%', background: MATH, display: 'inline-block',
+              opacity: 0.4 + i * 0.25,
+              animation: 'float 1s ease-in-out infinite',
+              animationDelay: `${i * 0.15}s`,
+            }} />
+          ))}
         </div>
       </div>
     </div>
@@ -408,25 +466,44 @@ export default function MathScreen() {
   // STEP: paper_questions
   // ─────────────────────────────────────────────────────────────────────────
   if (step === 'paper_questions') return (
-    <div style={wrap}>
+    <div style={{ ...wrap, overflow: 'hidden' }}>
       <style>{ANIM}</style>
 
-      <div style={{ background: '#6C63FF', padding: '52px 24px 24px', borderRadius: '0 0 28px 28px' }}>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 900, color: 'white' }}>My Math 🔢</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>
+      <div style={{ background: MATH, padding: '16px 22px 18px', borderRadius: '0 0 26px 26px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.22)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 17, color: '#fff', fontWeight: 800, cursor: 'pointer',
+          }}
+            onClick={() => setStep('mode')}
+          >←</div>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: '#fff' }}>My Math 🔢</div>
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)', marginTop: 6, marginLeft: 45 }}>
           Now solve these on paper! ✏️
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: '20px 20px 110px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="math-scroll" style={{ flex: 1, padding: '16px 18px 14px', display: 'flex', flexDirection: 'column', gap: 11 }}>
         {questions.map((q, i) => {
           const isWord = qTypes[i] === 'word' || q.length > 32
           return (
-            <div key={i} style={{ background: 'white', borderRadius: 20, padding: isWord ? '20px' : '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 14, boxShadow: '0 4px 16px rgba(108,99,255,0.10)', animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: 'white', flexShrink: 0, marginTop: isWord ? 2 : 0 }}>
+            <div key={i} style={{
+              background: 'white', borderRadius: 18, padding: isWord ? '16px 18px' : '14px 18px',
+              display: 'flex', alignItems: isWord ? 'flex-start' : 'center', gap: 13,
+              boxShadow: '0 4px 14px rgba(60,120,200,.10)',
+              animation: `fadeUp 0.35s ease ${i * 0.06}s both`,
+            }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: '50%', background: MATH, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FRED, fontWeight: 600, fontSize: 15, flexShrink: 0,
+                marginTop: isWord ? 2 : 0,
+              }}>
                 {i + 1}
               </div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: isWord ? 16 : 22, fontWeight: 800, color: '#2D2560', lineHeight: 1.55, flex: 1 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5, flex: 1 }}>
                 {q}
               </div>
             </div>
@@ -434,7 +511,7 @@ export default function MathScreen() {
         })}
       </div>
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', padding: '16px 24px 36px', borderTop: '1px solid #EEEEFA', zIndex: 100 }}>
+      <div style={{ flexShrink: 0, background: '#fff', padding: '14px 22px 22px', boxShadow: '0 -6px 18px rgba(40,30,70,.06)' }}>
         <input
           ref={fileRef}
           type="file"
@@ -443,8 +520,13 @@ export default function MathScreen() {
           onChange={e => { const f = e.target.files?.[0]; if (f) doPaperEval(f) }}
         />
         <button
+          className="math-press"
           onClick={() => fileRef.current?.click()}
-          style={{ width: '100%', background: '#6C63FF', color: 'white', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 28px rgba(108,99,255,0.4)' }}
+          style={{
+            width: '100%', background: MATH, color: 'white', border: 'none',
+            borderRadius: 18, padding: '16px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
+            cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)',
+          }}
         >
           I'm ready, Tuto! 📸
         </button>
@@ -461,45 +543,64 @@ export default function MathScreen() {
     const pct    = (qIdx / questions.length) * 100
 
     return (
-      <div style={wrap}>
+      <div style={{ ...wrap, overflow: 'hidden' }}>
         <style>{ANIM}</style>
 
         {/* Flash feedback overlay */}
         {flash && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: flash.correct ? 'rgba(46,196,134,0.93)' : 'rgba(255,107,53,0.93)', animation: 'flashIn 1.4s ease both' }}>
-            <div style={{ fontSize: 76 }}>{flash.correct ? '⭐' : '💪'}</div>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 900, color: 'white', textAlign: 'center', padding: '0 28px', lineHeight: 1.4 }}>
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+            background: flash.correct ? 'rgba(76,182,133,.94)' : 'rgba(247,148,51,.94)',
+            animation: 'flashIn 1.4s ease both',
+          }}>
+            <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 30, color: 'white', textAlign: 'center', padding: '0 28px', lineHeight: 1.4 }}>
               {flash.correct ? 'Yes! ⭐' : `Almost! The answer was ${flash.answer} 💪`}
             </div>
           </div>
         )}
 
         {/* Progress header */}
-        <div style={{ background: '#6C63FF', padding: '52px 20px 20px' }}>
+        <div style={{ background: MATH, padding: '16px 20px 18px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
+            <div
               onClick={() => nav('/child/home')}
-              style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-            >←</button>
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.3)', borderRadius: 8, height: 10, overflow: 'hidden' }}>
+              style={{
+                width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.22)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 17, color: '#fff', fontWeight: 800, cursor: 'pointer', flexShrink: 0,
+              }}
+            >←</div>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,.32)', borderRadius: 8, height: 10, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'white', borderRadius: 8, transition: 'width 0.5s ease' }} />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'rgba(255,255,255,0.9)', flexShrink: 0 }}>{qIdx + 1} / {questions.length}</div>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,.95)', flexShrink: 0 }}>
+              {qIdx + 1} / {questions.length}
+            </div>
           </div>
         </div>
 
         {/* Question + keyboard */}
-        <div style={{ flex: 1, padding: '20px 20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="math-scroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Question card */}
-          <div key={qIdx} style={{ background: 'white', borderRadius: 24, padding: isWord ? '28px 24px' : '28px 24px', textAlign: 'center', boxShadow: '0 8px 32px rgba(108,99,255,0.14)', animation: 'scaleIn 0.3s ease both', minHeight: isWord ? 120 : 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: isWord ? 18 : 32, fontWeight: 800, color: '#2D2560', lineHeight: 1.55 }}>
+          <div key={qIdx} style={{
+            background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
+            boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
+            minHeight: isWord ? 120 : 84, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : 32, color: INK, lineHeight: 1.55 }}>
               {q}
             </div>
           </div>
 
           {/* Answer display */}
-          <div style={{ background: 'white', borderRadius: 18, padding: '16px', textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', minHeight: 68, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: "'Baloo 2', cursive", fontSize: 40, fontWeight: 900, color: input ? '#6C63FF' : '#D0CFF0', letterSpacing: 6 }}>
+          <div style={{
+            background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
+            boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
               {input || '?'}
             </span>
           </div>
@@ -532,45 +633,61 @@ export default function MathScreen() {
         {leveledUp && (
           <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 50, overflow: 'hidden' }}>
             {CONFETTI.map((p, i) => (
-              <div key={i} style={{ position: 'absolute', left: p.left, top: '-16px', width: 12, height: 12, borderRadius: '50%', background: p.color, animation: `confettiFall 2.8s ease-out ${p.delay} forwards` }} />
+              <span key={i} style={{
+                position: 'absolute', left: p.left, top: '-14px',
+                width: 11, height: 11, borderRadius: '50%', background: p.color, display: 'inline-block',
+                animation: `confettiFall 2.6s ease-out ${p.delay} forwards`,
+              }} />
             ))}
           </div>
         )}
 
         {/* Header */}
-        <div style={{ background: '#6C63FF', padding: '52px 24px 32px', borderRadius: '0 0 36px 36px', textAlign: 'center' }}>
-          <div style={{ animation: 'float 3s ease-in-out infinite', display: 'inline-block' }}>
-            <TutoMascot size={120} expression="proud" />
-          </div>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white', marginTop: 14, lineHeight: 1.55, padding: '0 8px' }}>
+        <div style={{
+          background: MATH, padding: '18px 24px 26px', borderRadius: '0 0 32px 32px',
+          textAlign: 'center', flexShrink: 0,
+        }}>
+          <TutoMascot size={108} expression="proud" color="#fff"
+            style={{ animation: 'float 3s ease-in-out infinite', display: 'inline-block' }} />
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', marginTop: 6, lineHeight: 1.5, padding: '0 8px' }}>
             {evalResult.encouragement}
           </div>
         </div>
 
-        <div style={{ padding: '20px 20px 48px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="math-scroll" style={{ flex: 1, padding: '16px 18px 22px', display: 'flex', flexDirection: 'column', gap: 13 }}>
 
           {/* Score + gems card */}
-          <div style={{ background: 'white', borderRadius: 24, padding: '20px 24px', display: 'flex', gap: 12, alignItems: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', animation: 'fadeUp 0.4s ease both' }}>
+          <div style={{
+            background: 'white', borderRadius: 22, padding: '18px 22px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease both',
+          }}>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#A0A0C0', textTransform: 'uppercase', letterSpacing: 1 }}>Score</div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 44, fontWeight: 900, color: accuracy >= 80 ? '#2EC486' : accuracy >= 60 ? '#FFB347' : '#FF6B35', lineHeight: 1 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>Score</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: accuracy >= 80 ? GREEN : ORANGE, lineHeight: 1.05 }}>
                 {accuracy}%
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#7A7A9A', marginTop: 4 }}>{numCorrect} / {questions.length} correct</div>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>{numCorrect} / {questions.length} correct</div>
             </div>
-            <div style={{ width: 1, height: 60, background: '#F0F0F0' }} />
+            <div style={{ width: 1, height: 56, background: '#eee' }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#A0A0C0', textTransform: 'uppercase', letterSpacing: 1 }}>Earned</div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 44, fontWeight: 900, color: '#C8900A', lineHeight: 1 }}>+{evalResult.gems_earned}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#7A7A9A', marginTop: 4 }}>Gems 💎</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>Earned</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>+{evalResult.gems_earned}</div>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>Gems ⭐</div>
             </div>
           </div>
 
           {/* Level up banner */}
           {leveledUp && (
-            <div style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #2EC486 100%)', borderRadius: 20, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, animation: 'fadeUp 0.4s ease 0.08s both', boxShadow: '0 8px 28px rgba(108,99,255,0.4)' }}>
-              <span style={{ fontSize: 34 }}>🎉</span>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white' }}>
+            <div style={{
+              background: `linear-gradient(135deg,${MATH} 0%,${GREEN} 100%)`,
+              borderRadius: 18, padding: '15px 18px',
+              display: 'flex', alignItems: 'center', gap: 13,
+              animation: 'fadeUp 0.4s ease 0.08s both',
+              boxShadow: '0 8px 22px rgba(61,143,207,.32)',
+            }}>
+              <span style={{ fontSize: 30 }}>🎉</span>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: 'white' }}>
                 You unlocked a new level! 🎉
               </div>
             </div>
@@ -579,17 +696,22 @@ export default function MathScreen() {
           {/* Per-question results */}
           {results.length > 0 && (
             <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D2560', marginBottom: 8 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, margin: '2px 2px 8px' }}>
                 Your answers:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {results.map((r, i) => (
-                  <div key={i} style={{ background: 'white', borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, animation: `fadeUp 0.35s ease ${0.1 + i * 0.05}s both` }}>
-                    <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{r.correct ? '✅' : '🔄'}</span>
+                  <div key={i} style={{
+                    background: 'white', borderRadius: 15, padding: '11px 15px',
+                    display: 'flex', alignItems: 'flex-start', gap: 11,
+                    boxShadow: '0 3px 12px rgba(60,120,200,.07)',
+                    animation: `fadeUp 0.35s ease ${0.1 + i * 0.05}s both`,
+                  }}>
+                    <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{r.correct ? '✅' : '🔄'}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2560', lineHeight: 1.45 }}>{r.question}</div>
+                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}>{r.question}</div>
                       {!r.correct && (
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B35', marginTop: 4 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 3 }}>
                           The answer was {r.correct_answer} 💡
                         </div>
                       )}
@@ -601,8 +723,13 @@ export default function MathScreen() {
           )}
 
           <button
+            className="math-press"
             onClick={() => nav('/child/home')}
-            style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 28px rgba(108,99,255,0.4)', marginTop: 4 }}
+            style={{
+              background: MATH, color: 'white', border: 'none', borderRadius: 18,
+              padding: '16px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
+              cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', marginTop: 4,
+            }}
           >
             Done! 🏠
           </button>
@@ -616,7 +743,7 @@ export default function MathScreen() {
     <div style={wrap}>
       <style>{ANIM}</style>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <TutoMascot size={100} expression="default" />
+        <TutoMascot size={100} expression="default" color={MATH} />
       </div>
     </div>
   )
