@@ -22,11 +22,28 @@ const HOME_CSS = `
 const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, chore: 10 }
 
 const BASE_TASKS = [
-  { emoji: '📖', bg: '#E8E0FF', name: 'My Books',   route: '/child/library', type: 'reading' },
-  { emoji: '🔢', bg: '#D4EDFF', name: 'My Math',    route: '/child/math',    type: 'math'    },
-  { emoji: '✏️', bg: '#D4F5E0', name: 'My Stories', route: '/child/stories', type: 'writing' },
-  { emoji: '🏠', bg: '#FFE8D4', name: 'My House',   route: '/child/task',    type: 'chore'   },
+  { bg: '#E8E0FF', name: 'My Books',   route: '/child/library', type: 'reading' },
+  { bg: '#D4EDFF', name: 'My Math',    route: '/child/math',    type: 'math'    },
+  { bg: '#D4F5E0', name: 'My Stories', route: '/child/stories', type: 'writing' },
+  { bg: '#FFE8D4', name: 'My House',   route: '/child/task',    type: 'chore'   },
 ]
+
+const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', chore: '#f3a35a' }
+
+function TaskIcon({ type, c }) {
+  if (type === 'reading') return (
+    <svg width="60" height="60" viewBox="0 0 64 64" fill="none"><path d="M32 16 C26 12 18 12 12 15 L12 48 C18 45 26 45 32 49 C38 45 46 45 52 48 L52 15 C46 12 38 12 32 16 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M32 16 L32 49" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M18 24 H27 M18 31 H27 M37 24 H46 M37 31 H46" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  if (type === 'math') return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none"><rect x="12" y="12" width="40" height="40" rx="11" fill="#fff" stroke="#20201e" strokeWidth="4"/><path d="M22 24 H30 M26 20 V28" stroke={c} strokeWidth="3.6" strokeLinecap="round"/><path d="M35 24 H43" stroke={c} strokeWidth="3.6" strokeLinecap="round"/><circle cx="25" cy="40" r="2.4" fill={c}/><circle cx="31" cy="40" r="2.4" fill={c}/><path d="M36 37 L43 44 M43 37 L36 44" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  if (type === 'writing') return (
+    <svg width="56" height="56" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M16 48 L24 40" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M30 30 L40 40" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none"><path d="M14 30 L32 14 L50 30 L50 50 L14 50 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M10 32 L32 12 L54 32" stroke="#20201e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/><rect x="27" y="38" width="10" height="12" rx="1.5" fill={c}/></svg>
+  )
+}
 
 const NAV = [
   { id: 'home',    label: 'Home',    active: true,  route: '/child/home'    },
@@ -117,7 +134,7 @@ export default function ChildHome() {
                 boxShadow: '0 6px 16px rgba(40,30,70,.09)',
               }}>
               <div style={{ background: t.bg, height: 84, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 44, lineHeight: 1 }}>{t.emoji}</span>
+                <TaskIcon type={t.type} c={TASK_ACCENT[t.type]} />
               </div>
               <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '2px 0 0' }}>{t.name}</h3>
               <div style={{ display: 'flex', alignItems: 'center' }}>
