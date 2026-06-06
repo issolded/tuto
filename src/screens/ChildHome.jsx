@@ -3,13 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { supabase, getChildGems } from '../lib/supabase'
 
-const ACCENT = '#FF6B35'
+const ACCENT = '#f79433'
+const INK = '#241f3a'
+const INK_SOFT = '#8d83ad'
+const LILAC = '#e7ddf6'
+const FRED = "'Fredoka', sans-serif"
 
-const FLOAT_CSS = `
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-10px); }
-}
+const HOME_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+.tuto-card{ transition: transform .13s ease, box-shadow .13s ease; }
+.tuto-card:hover{ transform: translateY(-3px); box-shadow: 0 12px 22px rgba(40,30,70,.15); }
+.tuto-card:active{ transform: scale(.97); }
+.tuto-gempill{ transition: transform .12s ease; }
+.tuto-gempill:active{ transform: scale(.95); }
 `
 
 const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, chore: 10 }
@@ -22,11 +29,19 @@ const BASE_TASKS = [
 ]
 
 const NAV = [
-  { icon: '🏠', label: 'Home',    active: true,  route: '/child/home'    },
-  { icon: '📚', label: 'Library', active: false, route: '/child/library' },
-  { icon: '⭐', label: 'Gems',    active: false, route: '/child/gems'   },
-  { icon: '🏆', label: 'Goals',   active: false, route: '/child/goals'  },
+  { id: 'home',    label: 'Home',    active: true,  route: '/child/home'    },
+  { id: 'library', label: 'Library', active: false, route: '/child/library' },
+  { id: 'gems',    label: 'Gems',    active: false, route: '/child/gems'    },
+  { id: 'goals',   label: 'Goals',   active: false, route: '/child/goals'   },
 ]
+
+function NavIcon({ id, color }) {
+  const s = { width: 26, height: 26 }
+  if (id === 'home')    return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 10v9h12v-9" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  if (id === 'library') return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M5 5h6a2 2 0 012 2v12a2 2 0 00-2-2H5z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/><path d="M19 5h-6a2 2 0 00-2 2v12a2 2 0 012-2h6z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/></svg>
+  if (id === 'gems')    return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M12 4l2.4 5 5.6.6-4 4 1 5.4-5-2.8-5 2.8 1-5.4-4-4 5.6-.6z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/></svg>
+  return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M7 4h10v3a5 5 0 01-10 0z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/><path d="M7 5H4v2a3 3 0 003 3M17 5h3v2a3 3 0 01-3 3M9 16h6M10 16v4M14 16v4M8 20h8" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
 
 export default function ChildHome() {
   const nav = useNavigate()
@@ -42,7 +57,6 @@ export default function ChildHome() {
     if (!localStorage.getItem('family_code')) { nav('/setup', { replace: true }); return }
     if (!child?.id) { nav('/child', { replace: true }); return }
 
-
     getChildGems(child.id).then(setGems)
 
     const channel = supabase
@@ -56,142 +70,89 @@ export default function ChildHome() {
   }, [])
 
   return (
-    <div style={{ background: '#F8F8FF', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <style>{FLOAT_CSS}</style>
+    <div style={{
+      minHeight: '100vh', maxWidth: 430, margin: '0 auto',
+      background: LILAC, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      fontFamily: "'Nunito', sans-serif",
+    }}>
+      <style>{HOME_CSS}</style>
 
-      {/* ── Header ── */}
-      <div style={{
-        background: '#EDE8FF',
-        padding: '52px 20px 24px',
-        borderRadius: '0 0 32px 32px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        {/* Greeting + gems */}
-        <div>
-          <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginBottom: 4 }}>
-            Good morning ☀️
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '54px 22px 18px' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 13, color: INK_SOFT, marginBottom: 3 }}>Good morning ☀️</div>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 28, color: INK, lineHeight: 1.1, letterSpacing: '-.4px', whiteSpace: 'nowrap' }}>
+              Hello, {child?.name ?? 'Friend'}!
+            </div>
           </div>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: '#2D2560', lineHeight: 1.2, marginBottom: 14 }}>
-            Hello, {child?.name ?? 'Friend'}!
-          </div>
-          {/* Gem pill */}
-          <div
-            onClick={() => nav('/child/gems')}
+          <button className="tuto-gempill" onClick={() => nav('/child/gems')}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'white',
-              borderRadius: 20,
-              padding: '6px 14px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
-              cursor: 'pointer',
+              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#fff', border: 'none', borderRadius: 999, padding: '8px 14px',
+              boxShadow: '0 3px 10px rgba(40,30,70,.12)', cursor: 'pointer',
             }}>
-            <span style={{ fontSize: 17 }}>⭐</span>
-            <span style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: ACCENT }}>
-              {gems === null ? '...' : gems} Gems
+            <span style={{ fontSize: 16 }}>⭐</span>
+            <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: ACCENT }}>
+              {gems === null ? '…' : gems}
             </span>
-          </div>
-
+          </button>
         </div>
 
-        {/* Tuto mascot */}
-        <TutoMascot
-          size={140}
-          style={{ flexShrink: 0, animation: 'float 3s ease-in-out infinite', marginLeft: 8 }}
-        />
-      </div>
+        <div style={{ position: 'relative', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0 2px' }}>
+          <div style={{ position: 'absolute', width: 184, height: 184, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.95) 30%, rgba(255,255,255,0) 72%)' }} />
+          <TutoMascot size={150} style={{ position: 'relative', zIndex: 1, animation: 'float 3s ease-in-out infinite' }} />
+        </div>
 
-      {/* ── Content ── */}
-      <div style={{ padding: '24px 20px 80px', flex: 1 }}>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D2560', marginBottom: 16 }}>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '8px 2px 13px' }}>
           Ready to earn? 🌟
         </div>
 
-        {/* 2×2 task grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
           {TASKS.map((t, i) => (
-            <button
-              key={i}
-              onClick={() => nav(t.route, { state: t })}
+            <button key={i} className="tuto-card" onClick={() => nav(t.route, { state: t })}
               style={{
-                background: t.bg,
-                borderRadius: 24,
-                border: 'none',
-                padding: '20px 12px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                aspectRatio: '1',
-                transition: 'transform 0.15s ease',
-              }}
-              onTouchStart={e => e.currentTarget.style.transform = 'scale(0.96)'}
-              onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              <span style={{ fontSize: 48, lineHeight: 1 }}>{t.emoji}</span>
-              <span style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D2560', textAlign: 'center', lineHeight: 1.2 }}>
-                {t.name}
-              </span>
-              <span style={{
-                background: 'rgba(255,255,255,0.60)',
-                borderRadius: 10,
-                padding: '3px 10px',
-                fontFamily: "'Baloo 2', cursive",
-                fontSize: 12,
-                fontWeight: 800,
-                color: ACCENT,
+                background: '#fff', border: 'none', borderRadius: 22, padding: '12px 12px 13px',
+                display: 'flex', flexDirection: 'column', gap: 7, cursor: 'pointer', textAlign: 'left',
+                boxShadow: '0 6px 16px rgba(40,30,70,.09)',
               }}>
-                +{t.gem} Gems
-              </span>
+              <div style={{ background: t.bg, height: 84, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 44, lineHeight: 1 }}>{t.emoji}</span>
+              </div>
+              <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '2px 0 0' }}>{t.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: t.bg, borderRadius: 10, padding: '3px 10px',
+                  fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT,
+                }}>
+                  <span style={{ fontSize: 12 }}>⭐</span>+{t.gem}
+                </span>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Bottom Nav ── */}
-      <div style={{
-        background: 'white',
-        padding: '10px 4px 28px',
-        display: 'flex',
-        justifyContent: 'space-around',
-        borderTop: '1px solid #F0F0FA',
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
+      <nav style={{
+        flexShrink: 0, background: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '12px 14px 22px', display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+        boxShadow: '0 -6px 20px rgba(40,30,70,.07)',
       }}>
-        {NAV.map(({ icon, label, active, route }) => (
-          <button
-            key={label}
-            onClick={() => route && nav(route)}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              padding: '8px 14px',
-              borderRadius: 16,
-              background: active ? '#EDE8FF' : 'none',
-              border: 'none',
-              cursor: route ? 'pointer' : 'default',
-              minWidth: 60,
-            }}
-          >
-            <span style={{ fontSize: 22 }}>{icon}</span>
-            <span style={{
-              fontSize: 10,
-              fontWeight: 800,
-              color: active ? '#7C5CBF' : '#A0A0BC',
-              textTransform: 'uppercase',
-              letterSpacing: '0.3px',
-            }}>
-              {label}
-            </span>
-          </button>
-        ))}
-      </div>
+        {NAV.map(({ id, label, active, route }) => {
+          const color = active ? ACCENT : '#b6aecb'
+          return (
+            <button key={id} onClick={() => route && nav(route)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                background: 'none', border: 'none', cursor: route ? 'pointer' : 'default', padding: '2px 8px',
+              }}>
+              <NavIcon id={id} color={color} />
+              <span style={{ fontFamily: FRED, fontWeight: 500, fontSize: 12, color }}>{label}</span>
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }
