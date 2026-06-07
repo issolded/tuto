@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { PC, FONT, PCSS, TopBar, Btn, Field, GoogleMark } from '../lib/parentUI'
 
 export default function ParentSignup() {
   const nav = useNavigate()
@@ -9,6 +10,14 @@ export default function ParentSignup() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.id = 'pcss-signup'
+    el.textContent = PCSS
+    if (!document.getElementById('pcss-signup')) document.head.appendChild(el)
+    return () => { document.getElementById('pcss-signup')?.remove() }
+  }, [])
 
   const signup = async () => {
     setLoading(true); setError('')
@@ -32,40 +41,59 @@ export default function ParentSignup() {
   }
 
   return (
-    <div className="screen" style={{ background: 'white' }}>
-      <div style={{ background: '#2EC486', padding: '56px 28px 40px', borderRadius: '0 0 40px 40px' }}>
-        <button onClick={() => nav('/')} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', width: 40, height: 40, borderRadius: 12, fontSize: 18, color: 'white', cursor: 'pointer', marginBottom: 20 }}>←</button>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 30, fontWeight: 800, color: 'white', marginBottom: 4 }}>Create account 🌱</div>
-        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600 }}>Sign up for free, get started now</div>
-      </div>
-      <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div className="input-wrap">
-          <label>Full Name</label>
-          <input type="text" placeholder="Your Name" value={name} onChange={e => setName(e.target.value)} />
+    <div style={{
+      display: 'flex', flexDirection: 'column', minHeight: '100dvh',
+      background: PC.bg, fontFamily: FONT,
+    }}>
+      <TopBar onBack={() => nav('/')} />
+
+      <div style={{ flex: 1, padding: '8px 26px 48px', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 440, width: '100%', margin: '0 auto' }}>
+        {/* heading */}
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, letterSpacing: '-.5px', lineHeight: 1.15 }}>
+            Create your account 🌱
+          </div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, color: PC.inkSoft, marginTop: 6 }}>
+            Sign up for free, get started now
+          </div>
         </div>
-        <div className="input-wrap">
-          <label>Email</label>
-          <input type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+
+        <Field label="Full name">
+          <input className="tc-input" type="text" placeholder="Your Name" value={name} onChange={e => setName(e.target.value)} />
+        </Field>
+
+        <Field label="Email">
+          <input className="tc-input" type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+        </Field>
+
+        <Field label="Password">
+          <input className="tc-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+        </Field>
+
+        {error && (
+          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.danger }}>{error}</div>
+        )}
+
+        <Btn onClick={signup} disabled={loading}>
+          {loading ? 'Creating account…' : 'Create account'}
+        </Btn>
+
+        {/* divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, height: 1, background: PC.line }} />
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>or</span>
+          <div style={{ flex: 1, height: 1, background: PC.line }} />
         </div>
-        <div className="input-wrap">
-          <label>Password</label>
-          <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
-        </div>
-        {error && <div style={{ color: '#FF6B35', fontSize: 14, fontWeight: 600 }}>{error}</div>}
-        <button
-          className="btn btn-primary"
-          onClick={signup}
-          disabled={loading}
-          style={{ background: '#2EC486', borderColor: '#2EC486' }}
-        >
-          {loading ? 'Creating account...' : 'Sign Up'}
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#7A7A9A', fontSize: 13, fontWeight: 700 }}>
-          <div style={{ flex: 1, height: 1, background: '#E8E8F0' }} />veya<div style={{ flex: 1, height: 1, background: '#E8E8F0' }} />
-        </div>
-        <button className="btn btn-ghost" onClick={googleSignup}>🔵 Continue with Google</button>
-        <div style={{ textAlign: 'center', color: '#7A7A9A', fontSize: 14, fontWeight: 600 }}>
-          Already have an account? <span style={{ color: '#2EC486', fontWeight: 800, cursor: 'pointer' }} onClick={() => nav('/parent/login')}>Sign In</span>
+
+        <Btn variant="outline" onClick={googleSignup}>
+          <GoogleMark size={20} /> Continue with Google
+        </Btn>
+
+        <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft }}>
+          Already have an account?{' '}
+          <span style={{ color: PC.teal, fontWeight: 800, cursor: 'pointer' }} onClick={() => nav('/parent/login')}>
+            Sign in
+          </span>
         </div>
       </div>
     </div>

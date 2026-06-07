@@ -3,19 +3,23 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
+import {
+  PC, FONT, SHADOW, SHADOW_SM, PCSS,
+  TopBar, Btn, Card, Field, Toggle, Pill, Avatar, BottomSheet, Icon,
+} from '../lib/parentUI'
 
-const PRP = '#7C5CBF'
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 let _childrenCache = null
 
-function AddChildModal({ parentId, siblings = [], onClose, onSaved }) {
+// ── Add child bottom sheet ────────────────────────────────────────────────────
+function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [avatar, setAvatar] = useState(null)       // 'girl' | 'boy' | File
+  const [avatar, setAvatar] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
   const fileRef = useRef(null)
 
@@ -66,93 +70,88 @@ function AddChildModal({ parentId, siblings = [], onClose, onSaved }) {
     onSaved(data)
   }
 
-  const btnStyle = (active) => ({
-    width: 72, height: 72, borderRadius: '50%', border: `3px solid ${active ? PRP : '#E8E0FF'}`,
-    background: '#F5F0FF', fontSize: 30, cursor: 'pointer',
+  const avatarBtnStyle = (active) => ({
+    width: 68, height: 68, borderRadius: '50%',
+    border: `2.5px solid ${active ? PC.teal : PC.line}`,
+    background: active ? PC.tealBg : PC.field,
+    fontSize: 28, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden', padding: 0, transition: 'border-color 0.2s',
+    overflow: 'hidden', padding: 0, transition: 'border-color .18s',
   })
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,46,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '32px 32px 0 0', padding: '32px 28px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Handle */}
-        <div style={{ width: 40, height: 4, background: '#E8E8F0', borderRadius: 4, alignSelf: 'center', marginBottom: 4 }} />
+    <BottomSheet onClose={onClose}>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 21, color: PC.ink }}>Add a child 🧒</div>
 
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D2D2D' }}>Add Child 🧒</div>
-
-        {/* Avatar picker */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
-          <button style={btnStyle(avatar === 'girl')} onClick={() => { setAvatar('girl'); setAvatarPreview(null) }}>
-            👧
-          </button>
-          <button style={btnStyle(avatar === 'boy')} onClick={() => { setAvatar('boy'); setAvatarPreview(null) }}>
-            👦
-          </button>
-          <button style={btnStyle(avatar instanceof File)} onClick={() => fileRef.current?.click()}>
-            {avatarPreview
-              ? <img src={avatarPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : '📷'}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-        </div>
-
-        <div className="input-wrap">
-          <label>Child's Name</label>
-          <input type="text" placeholder="e.g. Emma" value={name} onChange={e => setName(e.target.value)} />
-        </div>
-
-        <div className="input-wrap">
-          <label>Age</label>
-          <input type="number" placeholder="8" min="1" max="18" value={age} onChange={e => setAge(e.target.value)} />
-        </div>
-
-        <div className="input-wrap">
-          <label>4-Digit PIN</label>
-          <input
-            type="password"
-            placeholder="••••"
-            maxLength={4}
-            inputMode="numeric"
-            value={pin}
-            onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          />
-        </div>
-
-        {error && <div style={{ color: '#FF6B35', fontSize: 14, fontWeight: 700 }}>{error}</div>}
-
-        <button className="btn btn-orange" onClick={save} disabled={loading}>
-          {loading ? 'Saving...' : 'Save'}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 18 }}>
+        <button className="tc-press" style={avatarBtnStyle(avatar === 'girl')} onClick={() => { setAvatar('girl'); setAvatarPreview(null) }}>👧</button>
+        <button className="tc-press" style={avatarBtnStyle(avatar === 'boy')}  onClick={() => { setAvatar('boy');  setAvatarPreview(null) }}>👦</button>
+        <button className="tc-press" style={avatarBtnStyle(avatar instanceof File)} onClick={() => fileRef.current?.click()}>
+          {avatarPreview
+            ? <img src={avatarPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <Icon name="camera" size={26} color={PC.inkSoft} />}
         </button>
-        <button className="btn btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
       </div>
-    </div>
+
+      <Field label="Child's name">
+        <input className="tc-input" type="text" placeholder="e.g. Emma" value={name}
+          onChange={e => { setName(e.target.value); setError('') }} />
+      </Field>
+
+      <Field label="Age">
+        <input className="tc-input" type="number" placeholder="8" min="1" max="18" value={age}
+          onChange={e => { setAge(e.target.value); setError('') }} />
+      </Field>
+
+      <Field label="4-digit PIN">
+        <input className="tc-input" type="password" placeholder="••••" maxLength={4} inputMode="numeric"
+          value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setError('') }}
+          style={{ letterSpacing: 6 }} />
+      </Field>
+
+      {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+
+      <Btn onClick={save} disabled={loading}>{loading ? 'Saving…' : 'Save'}</Btn>
+      <Btn variant="ghost" onClick={onClose} disabled={loading}>Cancel</Btn>
+    </BottomSheet>
   )
 }
 
-
-function ChildCard({ child, onClick }) {
-  const fallback = ['🧒', '👦', '👧', '🧑'][child.name.charCodeAt(0) % 4]
-  const isPhoto = child.avatar_url?.startsWith('http')
+// ── Child row ────────────────────────────────────────────────────────────────
+function ChildRow({ child, onClick }) {
   return (
-    <div
-      onClick={onClick}
-      style={{ background: 'white', borderRadius: 20, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.06)', cursor: 'pointer' }}
-    >
-      <div style={{ width: 52, height: 52, borderRadius: 16, background: '#FFF0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, overflow: 'hidden', flexShrink: 0 }}>
-        {isPhoto
-          ? <img src={child.avatar_url} alt={child.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : (child.avatar_url || fallback)}
+    <Card onClick={onClick} pad={16} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <Avatar child={child} size={52} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16.5, color: PC.ink }}>{child.name}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{child.age} years old</div>
+        {child.gems != null && (
+          <div style={{ marginTop: 7 }}>
+            <Pill bg={PC.amberBg} color={PC.amber}>⭐ {child.gems ?? 0}</Pill>
+          </div>
+        )}
       </div>
+      <Icon name="chevron" size={20} color={PC.inkFaint} />
+    </Card>
+  )
+}
+
+// ── Notification row ─────────────────────────────────────────────────────────
+function NotifRow({ icon, label, status, connected, action }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>{child.name}</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>{child.age} years old</div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{label}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: connected ? PC.green : PC.inkFaint, marginTop: 2 }}>{status}</div>
       </div>
-      <span style={{ fontSize: 18, color: '#C0C0D0' }}>›</span>
+      {action}
     </div>
   )
 }
 
+// ── Dashboard ────────────────────────────────────────────────────────────────
 export default function ParentDashboard() {
   const nav = useNavigate()
   const location = useLocation()
@@ -160,6 +159,7 @@ export default function ParentDashboard() {
   const [children, setChildren] = useState(_childrenCache || [])
   const [showModal, setShowModal] = useState(false)
   const [familyCode, setFamilyCode] = useState(null)
+  const [showQR, setShowQR] = useState(false)
   const [notifData, setNotifData] = useState({ telegramChatId: null, whatsappPhone: null, channel: null })
   const [showTelegramSetup, setShowTelegramSetup] = useState(false)
   const [showWaSetup, setShowWaSetup] = useState(false)
@@ -168,6 +168,14 @@ export default function ParentDashboard() {
   const [waVerifySent, setWaVerifySent] = useState(false)
   const [waError, setWaError] = useState('')
   const [telegramCodeCopied, setTelegramCodeCopied] = useState(false)
+
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.id = 'pcss-dashboard'
+    el.textContent = PCSS
+    if (!document.getElementById('pcss-dashboard')) document.head.appendChild(el)
+    return () => { document.getElementById('pcss-dashboard')?.remove() }
+  }, [])
 
   const updateChildren = (next) => {
     _childrenCache = next
@@ -236,171 +244,146 @@ export default function ParentDashboard() {
     setShowModal(false)
   }
 
-  const displayName = user?.user_metadata?.full_name || user?.email || 'Ebeveyn'
+  const displayName = user?.user_metadata?.full_name || user?.email || 'Parent'
 
   return (
-    <div className="screen" style={{ background: '#FFF8F0' }}>
-      {/* Header */}
-      <div style={{ background: '#FF6B35', padding: '56px 28px 36px', borderRadius: '0 0 40px 40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <div className="tc-scroll" style={{ flex: 1, padding: '8px 22px 32px' }}>
+
+        {/* greeting */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 2px 0' }}>
           <div>
-            <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Welcome 👋</div>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: 'white', lineHeight: 1.2 }}>{displayName}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.inkSoft }}>Welcome back 👋</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 26, color: PC.ink, letterSpacing: '-.5px', marginTop: 2 }}>{displayName}</div>
           </div>
-          <button
-            onClick={logout}
-            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 12, padding: '10px 16px', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'Nunito, sans-serif', whiteSpace: 'nowrap' }}
-          >
-            Sign Out
+          <button className="tc-press tc-tap" onClick={logout} aria-label="Sign out"
+            style={{ width: 46, height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: SHADOW_SM }}>
+            <Icon name="logout" size={21} color={PC.inkSoft} />
           </button>
         </div>
-      </div>
 
-      {/* Body */}
-      <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: '#2D2D2D' }}>My Children</div>
-          {children.length > 0 && (
-            <button
-              onClick={() => setShowModal(true)}
-              style={{ background: '#FF6B35', border: 'none', borderRadius: 12, padding: '8px 14px', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
-            >
-              + Add Child
-            </button>
-          )}
+        {/* summary strip */}
+        <Card pad={16} style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14, background: `linear-gradient(120deg, ${PC.teal}, ${PC.tealDeep})`, boxShadow: '0 16px 32px -14px rgba(63,183,172,.6)' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)' }}>Children</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: '#fff', lineHeight: 1.1, marginTop: 2 }}>{children.length}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: 'rgba(255,255,255,.85)', marginTop: 3 }}>
+              {children.length === 1 ? 'child registered' : 'children registered'}
+            </div>
+          </div>
+          <div style={{ width: 62, height: 62, borderRadius: 20, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="user" size={30} color="#fff" />
+          </div>
+        </Card>
+
+        {/* children section */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '24px 2px 12px' }}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>My children</div>
+          <button className="tc-press tc-tap" onClick={() => setShowModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, background: PC.tealBg, color: PC.tealDeep, border: 'none', borderRadius: 11, padding: '8px 13px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+            <Icon name="plus" size={16} color={PC.tealDeep} sw={2.4} /> Add
+          </button>
         </div>
 
         {children.length === 0 ? (
-          <>
-            <div style={{ background: 'white', borderRadius: 24, padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '2px dashed #FFD3C2' }}>
-              <div style={{ fontSize: 52 }}>🧒</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>No children added yet</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#7A7A9A', textAlign: 'center' }}>Add your child to start the learning journey.</div>
-            </div>
-            <button className="btn btn-orange" onClick={() => setShowModal(true)}>+ Add First Child</button>
-          </>
+          <Card pad={32} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, border: `2px dashed ${PC.line}`, boxShadow: 'none' }}>
+            <div style={{ fontSize: 46 }}>🧒</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>No children yet</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, textAlign: 'center' }}>Add your child to start the learning journey.</div>
+          </Card>
         ) : (
-          children.map(child => <ChildCard key={child.id} child={child} onClick={() => nav(`/parent/child/${child.id}`)} />)
-        )}
-
-        {/* Setup Child Device */}
-        {familyCode && (
-          <div style={{ background: 'white', borderRadius: 24, padding: '28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginTop: 8 }}>
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 24 }}>📱</span>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>Setup Child Device</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>Scan this QR code on your child's device</div>
-              </div>
-            </div>
-
-            <div style={{ background: '#FAFAFA', borderRadius: 16, padding: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <QRCodeSVG
-                value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
-                size={200}
-                bgColor="#FAFAFA"
-                fgColor="#1A1A2E"
-                level="M"
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ background: '#F5F0FF', borderRadius: 10, padding: '6px 14px' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: '#6C63FF', letterSpacing: 2 }}>
-                  {familyCode}
-                </span>
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#7A7A9A' }}>manual code</div>
-            </div>
-
-            {children.length > 1 && (
-              <p style={{ fontSize: 13, color: '#9999AA', fontStyle: 'italic', textAlign: 'center', marginTop: 8 }}>
-                "Scan this on any device. Each child signs in with their own PIN."
-              </p>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+            {children.map(child => <ChildRow key={child.id} child={child} onClick={() => nav(`/parent/child/${child.id}`)} />)}
           </div>
         )}
 
-        {/* Notifications */}
-        <div style={{ background: 'white', borderRadius: 24, padding: '24px', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>🔔 Notifications</div>
-
-          {/* Telegram row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 22, width: 28, textAlign: 'center' }}>✈️</span>
+        {/* device setup */}
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>Set up a device</div>
+        <Card pad={18}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="qr" size={23} color={PC.tealDeep} />
+            </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>Telegram</div>
-              <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: notifData.telegramChatId ? '#2EC486' : '#9999AA' }}>
-                {notifData.telegramChatId ? '✅ Connected' : 'Not connected'}
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>Child device</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>Scan a QR code to connect it</div>
+            </div>
+            <Btn full={false} variant={showQR ? 'soft' : 'outline'} onClick={() => setShowQR(v => !v)} style={{ padding: '10px 16px', fontSize: 14 }}>
+              {showQR ? 'Hide' : 'Show QR'}
+            </Btn>
+          </div>
+          {showQR && familyCode && (
+            <div className="tc-fade" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 16 }}>
+              <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: SHADOW_SM }}>
+                <QRCodeSVG
+                  value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
+                  size={186}
+                  bgColor="#ffffff"
+                  fgColor={PC.ink}
+                  level="M"
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: PC.tealBg, borderRadius: 10, padding: '6px 14px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PC.tealDeep, letterSpacing: 3 }}>{familyCode}</span>
+                </div>
+                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>manual code</span>
               </div>
             </div>
-            {!notifData.telegramChatId ? (
-              <button
-                onClick={() => setShowTelegramSetup(s => !s)}
-                style={{ background: '#F5F0FF', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 800, color: PRP, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
-              >
-                {showTelegramSetup ? 'Cancel' : '➕ Connect'}
-              </button>
-            ) : notifData.whatsappPhone ? (
-              <button
-                onClick={() => updateChannel('telegram')}
-                style={{ background: notifData.channel === 'telegram' ? PRP : '#F5F0FF', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 800, color: notifData.channel === 'telegram' ? 'white' : PRP, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
-              >
-                {notifData.channel === 'telegram' ? '★ Primary' : 'Set primary'}
-              </button>
-            ) : null}
-          </div>
+          )}
+        </Card>
 
-          {/* Telegram setup */}
+        {/* notifications */}
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>Notifications</div>
+        <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          {/* Telegram */}
+          <NotifRow
+            icon="✈️"
+            label="Telegram"
+            connected={!!notifData.telegramChatId}
+            status={notifData.telegramChatId ? 'Connected' : 'Not connected'}
+            action={!notifData.telegramChatId
+              ? <Btn full={false} variant="soft" onClick={() => setShowTelegramSetup(s => !s)} style={{ padding: '8px 13px', fontSize: 13 }}>{showTelegramSetup ? 'Cancel' : 'Connect'}</Btn>
+              : notifData.whatsappPhone
+                ? <button className="tc-press tc-tap" onClick={() => updateChannel('telegram')} style={{ background: notifData.channel === 'telegram' ? PC.teal : PC.tealBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'telegram' ? '#fff' : PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'telegram' ? '★ Primary' : 'Set primary'}</button>
+                : null}
+          />
+
           {showTelegramSetup && !notifData.telegramChatId && (
-            <div style={{ background: '#F5F0FF', borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#2D2560', lineHeight: 1.6 }}>
-                1. Open Telegram → message <span style={{ color: PRP, fontWeight: 900 }}>@TutoParentBot</span><br />
-                2. Send <strong>/start</strong>, then enter your family code:
+            <div className="tc-fade" style={{ background: PC.tealBg, borderRadius: 15, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: -6 }}>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.ink, lineHeight: 1.6 }}>
+                Message <b style={{ color: '#229ED9' }}>@TutoParentBot</b>, send <b>/start</b>, then paste your code:
               </div>
               {familyCode && (
-                <button
-                  onClick={() => { navigator.clipboard.writeText(familyCode); setTelegramCodeCopied(true); setTimeout(() => setTelegramCodeCopied(false), 2000) }}
-                  style={{ background: 'white', border: `2px solid ${telegramCodeCopied ? '#2EC486' : PRP}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s' }}
-                >
-                  <span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 900, color: '#2D2560', letterSpacing: 3 }}>{familyCode}</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: telegramCodeCopied ? '#2EC486' : PRP }}>{telegramCodeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                <button className="tc-press" onClick={() => { navigator.clipboard.writeText(familyCode); setTelegramCodeCopied(true); setTimeout(() => setTelegramCodeCopied(false), 2000) }}
+                  style={{ background: '#fff', border: `1.5px solid ${telegramCodeCopied ? PC.green : PC.teal}`, borderRadius: 13, padding: '12px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color .2s' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 800, color: PC.ink, letterSpacing: 3 }}>{familyCode}</span>
+                  <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: telegramCodeCopied ? PC.green : PC.tealDeep }}>{telegramCodeCopied ? '✅ Copied!' : '📋 Copy'}</span>
                 </button>
               )}
             </div>
           )}
 
-          {/* WhatsApp row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 22, width: 28, textAlign: 'center' }}>📱</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>WhatsApp</div>
-              <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: notifData.whatsappPhone ? '#2EC486' : '#9999AA' }}>
-                {notifData.whatsappPhone ? `✅ ${notifData.whatsappPhone}` : 'Not connected'}
-              </div>
-            </div>
-            {!notifData.whatsappPhone ? (
-              <button
-                onClick={() => { setShowWaSetup(s => !s); setWaVerifySent(false); setWaError('') }}
-                style={{ background: '#E8F8F0', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 800, color: '#1A7A4A', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
-              >
-                {showWaSetup ? 'Cancel' : '➕ Add number'}
-              </button>
-            ) : notifData.telegramChatId ? (
-              <button
-                onClick={() => updateChannel('whatsapp')}
-                style={{ background: notifData.channel === 'whatsapp' ? '#25D366' : '#E8F8F0', border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 800, color: notifData.channel === 'whatsapp' ? 'white' : '#1A7A4A', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
-              >
-                {notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}
-              </button>
-            ) : null}
-          </div>
+          <div style={{ height: 1, background: PC.line }} />
 
-          {/* WhatsApp setup */}
+          {/* WhatsApp */}
+          <NotifRow
+            icon="💬"
+            label="WhatsApp"
+            connected={!!notifData.whatsappPhone}
+            status={notifData.whatsappPhone ? notifData.whatsappPhone : 'Not connected'}
+            action={!notifData.whatsappPhone
+              ? <Btn full={false} variant="soft" onClick={() => { setShowWaSetup(s => !s); setWaVerifySent(false); setWaError('') }} style={{ padding: '8px 13px', fontSize: 13 }}>{showWaSetup ? 'Cancel' : 'Add number'}</Btn>
+              : notifData.telegramChatId
+                ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
+                : null}
+          />
+
           {showWaSetup && !notifData.whatsappPhone && (
-            <div style={{ background: '#E8F8F0', borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="tc-fade" style={{ background: PC.greenBg, borderRadius: 15, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: -6 }}>
               {waVerifySent ? (
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1A7A4A', textAlign: 'center' }}>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.green, textAlign: 'center' }}>
                   📲 Verification sent! Check your WhatsApp
                 </div>
               ) : (
@@ -410,9 +393,9 @@ export default function ParentDashboard() {
                     placeholder="+905XXXXXXXXX"
                     value={waPhone}
                     onChange={e => { setWaPhone(e.target.value); setWaError('') }}
-                    style={{ padding: '11px 14px', border: '2px solid #B8E8CC', borderRadius: 12, fontSize: 14, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none', boxSizing: 'border-box' }}
+                    className="tc-input"
                   />
-                  {waError && <div style={{ fontSize: 12, fontWeight: 700, color: '#CC0000' }}>{waError}</div>}
+                  {waError && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.danger }}>{waError}</div>}
                   <button
                     disabled={!waPhone.trim() || waSending}
                     onClick={async () => {
@@ -434,20 +417,19 @@ export default function ParentDashboard() {
                         setWaSending(false)
                       }
                     }}
-                    style={{ padding: '11px 16px', background: waSending || !waPhone.trim() ? '#B0C0B0' : '#25D366', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 800, color: 'white', cursor: waSending || !waPhone.trim() ? 'not-allowed' : 'pointer', fontFamily: 'Nunito, sans-serif' }}
-                  >
-                    {waSending ? 'Sending...' : 'Connect WhatsApp 📲'}
+                    className="tc-press"
+                    style={{ padding: '13px 16px', background: waSending || !waPhone.trim() ? PC.inkFaint : PC.green, border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 800, color: '#fff', cursor: waSending || !waPhone.trim() ? 'not-allowed' : 'pointer', fontFamily: FONT }}>
+                    {waSending ? 'Sending…' : 'Connect WhatsApp 📲'}
                   </button>
                 </>
               )}
             </div>
           )}
-        </div>
-
+        </Card>
       </div>
 
       {showModal && user && (
-        <AddChildModal
+        <AddChildSheet
           parentId={user.id}
           siblings={children}
           onClose={() => setShowModal(false)}

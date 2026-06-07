@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { PC, FONT, PCSS, TopBar, Btn, Field, GoogleMark } from '../lib/parentUI'
 
 export default function ParentLogin() {
   const nav = useNavigate()
@@ -8,6 +9,14 @@ export default function ParentLogin() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.id = 'pcss-login'
+    el.textContent = PCSS
+    if (!document.getElementById('pcss-login')) document.head.appendChild(el)
+    return () => { document.getElementById('pcss-login')?.remove() }
+  }, [])
 
   const login = async () => {
     setLoading(true); setError('')
@@ -21,31 +30,55 @@ export default function ParentLogin() {
   }
 
   return (
-    <div className="screen" style={{ background: 'white' }}>
-      <div style={{ background: '#4D96FF', padding: '56px 28px 40px', borderRadius: '0 0 40px 40px' }}>
-        <button onClick={() => nav('/')} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', width: 40, height: 40, borderRadius: 12, fontSize: 18, color: 'white', cursor: 'pointer', marginBottom: 20 }}>←</button>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 30, fontWeight: 800, color: 'white', marginBottom: 4 }}>Welcome back 👋</div>
-        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600 }}>Sign in to your account</div>
-      </div>
-      <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div className="input-wrap">
-          <label>Email</label>
-          <input type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+    <div style={{
+      display: 'flex', flexDirection: 'column', minHeight: '100dvh',
+      background: PC.bg, fontFamily: FONT,
+    }}>
+      <TopBar onBack={() => nav('/')} />
+
+      <div style={{ flex: 1, padding: '8px 26px 48px', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 440, width: '100%', margin: '0 auto' }}>
+        {/* heading */}
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, letterSpacing: '-.5px', lineHeight: 1.15 }}>
+            Welcome back 👋
+          </div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, color: PC.inkSoft, marginTop: 6 }}>
+            Sign in to your account
+          </div>
         </div>
-        <div className="input-wrap">
-          <label>Password</label>
-          <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+
+        <Field label="Email">
+          <input className="tc-input" type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+        </Field>
+
+        <Field label="Password">
+          <input className="tc-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+        </Field>
+
+        {error && (
+          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.danger }}>{error}</div>
+        )}
+
+        <Btn onClick={login} disabled={loading}>
+          {loading ? 'Signing in…' : 'Sign in'}
+        </Btn>
+
+        {/* divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, height: 1, background: PC.line }} />
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>or</span>
+          <div style={{ flex: 1, height: 1, background: PC.line }} />
         </div>
-        {error && <div style={{ color: '#FF6B35', fontSize: 14, fontWeight: 600 }}>{error}</div>}
-        <button className="btn btn-primary" onClick={login} disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#7A7A9A', fontSize: 13, fontWeight: 700 }}>
-          <div style={{ flex: 1, height: 1, background: '#E8E8F0' }} />veya<div style={{ flex: 1, height: 1, background: '#E8E8F0' }} />
-        </div>
-        <button className="btn btn-ghost" onClick={googleLogin}>🔵 Continue with Google</button>
-        <div style={{ textAlign: 'center', color: '#7A7A9A', fontSize: 14, fontWeight: 600 }}>
-          No account? <span style={{ color: '#4D96FF', fontWeight: 800, cursor: 'pointer' }} onClick={() => nav('/parent/signup')}>Sign up free</span>
+
+        <Btn variant="outline" onClick={googleLogin}>
+          <GoogleMark size={20} /> Continue with Google
+        </Btn>
+
+        <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft }}>
+          No account?{' '}
+          <span style={{ color: PC.teal, fontWeight: 800, cursor: 'pointer' }} onClick={() => nav('/parent/signup')}>
+            Sign up free
+          </span>
         </div>
       </div>
     </div>

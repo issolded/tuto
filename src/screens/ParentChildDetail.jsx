@@ -2,137 +2,77 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
-import TutoMascot from '../components/TutoMascot'
-
-
-const SLIDER_CSS = `
-.task-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 5px; outline: none; cursor: pointer; margin: 4px 0; }
-.task-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #FF6B35; cursor: pointer; box-shadow: 0 2px 8px rgba(255,107,53,0.4); border: 3px solid white; }
-.task-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #FF6B35; cursor: pointer; border: 3px solid white; }
-`
+import {
+  PC, FONT, SHADOW_SM, PCSS,
+  TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot,
+} from '../lib/parentUI'
 
 const TASK_LABELS = {
-  math:    { label: 'My Math',    emoji: '🔢' },
-  reading: { label: 'My Books',   emoji: '📚' },
-  writing: { label: 'My Stories', emoji: '✏️' },
-  chore:   { label: 'My House',   emoji: '🏠' },
-  story:   { label: 'My Stories', emoji: '📖' },
-  bonus:   { label: 'Bonus Gift', emoji: '🎁' },
+  math:    { label: 'My Math',    type: 'math' },
+  reading: { label: 'My Books',   type: 'reading' },
+  writing: { label: 'My Stories', type: 'writing' },
+  chore:   { label: 'My House',   type: 'chore' },
+  story:   { label: 'My Stories', type: 'writing' },
+  bonus:   { label: 'Bonus Gift', type: null },
 }
+
+const REWARD_EMOJIS = ['🎮','🍦','🎬','🧸','📱','🎁','🏖️','🎨','🚲','⚽','🎤','📚','🍕','🎡','🛹']
 
 function isToday(dateStr) {
   return new Date(dateStr).toDateString() === new Date().toDateString()
 }
 
-function Section({ title, children }) {
-  return (
-    <div>
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, color: '#2D2D2D', marginBottom: 10 }}>
-        {title}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function EmptyCard({ text }) {
-  return (
-    <div style={{ background: 'white', borderRadius: 14, padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#7A7A9A', textAlign: 'center' }}>
-      {text}
-    </div>
-  )
-}
-
+// ── Submission card ───────────────────────────────────────────────────────────
 function SubmissionCard({ sub, onApprove, onReject }) {
-  const meta = TASK_LABELS[sub.task_type] || { label: 'Task', emoji: '⭐' }
-  const isChore = sub.task_type === 'chore'
+  const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
   const displayGems = sub.gems_earned ?? sub.suggested_gems ?? 0
   const time = sub.created_at ? new Date(sub.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''
 
   return (
-    <div style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+    <Card pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <span style={{ fontSize: 24 }}>{meta.emoji}</span>
+        <div style={{
+          width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+          background: meta.type ? PC[meta.type + 'Bg'] : PC.amberBg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {meta.type
+            ? <TaskIcon type={meta.type} size={22} />
+            : <span style={{ fontSize: 20 }}>⭐</span>}
+        </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{meta.label}</div>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{meta.label}</div>
           {sub.task_description && (
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#5A4A3A', marginTop: 1 }}>{sub.task_description}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{sub.task_description}</div>
           )}
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', marginTop: 2 }}>{time}</div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 2 }}>{time}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#FF6B35' }}>+{displayGems} ⭐</div>
-          {isChore && sub.suggested_gems != null && (
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#9B8FC0' }}>🤖 AI öneri</div>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.amber }}>+{displayGems} ⭐</div>
+          {sub.task_type === 'chore' && sub.suggested_gems != null && (
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 10, color: PC.reading }}>🤖 AI suggested</div>
           )}
         </div>
       </div>
       {(sub.media_url || sub.photo_urls?.[0]) && (
-        <img
-          src={sub.media_url || sub.photo_urls[0]}
-          alt="submission"
-          style={{ width: '100%', borderRadius: 10, maxHeight: 200, objectFit: 'cover' }}
-        />
+        <img src={sub.media_url || sub.photo_urls[0]} alt="submission"
+          style={{ width: '100%', borderRadius: 12, maxHeight: 200, objectFit: 'cover' }} />
       )}
       {sub.child_note && (
-        <div style={{ background: '#F5F0FF', borderRadius: 12, padding: '10px 14px', fontSize: 13, fontWeight: 600, color: '#5A4090', lineHeight: 1.4 }}>
+        <div style={{ background: PC.readingBg, borderRadius: 12, padding: '10px 14px', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.reading, lineHeight: 1.4 }}>
           💬 {sub.child_note}
         </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          onClick={onApprove}
-          style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 12, background: '#2EC486', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
-        >✓ Approve</button>
-        <button
-          onClick={onReject}
-          style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 12, background: '#FF3B30', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
-        >✕ Reject</button>
+        <Btn onClick={onApprove} color={PC.green} style={{ flex: 1, padding: '11px', fontSize: 14 }}>✓ Approve</Btn>
+        <Btn onClick={onReject} variant="danger" style={{ flex: 1, padding: '11px', fontSize: 14 }}>✕ Reject</Btn>
       </div>
-    </div>
+    </Card>
   )
 }
 
-// ── Shared bottom-sheet wrapper ───────────────────────────────────────────────
-function ModalSheet({ onClose, children }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,46,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }}>
-      <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '32px 32px 0 0', padding: '28px 28px 44px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{ width: 40, height: 4, background: '#E8E8F0', borderRadius: 4, alignSelf: 'center', marginBottom: 4 }} />
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ── Compact PIN pad ───────────────────────────────────────────────────────────
-function PinPad({ value, onChange }) {
-  const add = d => { if (value.length < 4) onChange(value + d) }
-  const del = () => onChange(value.slice(0, -1))
-  const btn = { background: '#FFF0E8', border: 'none', borderRadius: 14, height: 58, fontSize: 20, fontWeight: 800, color: '#2D2D2D', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-      <div style={{ display: 'flex', gap: 14 }}>
-        {[0,1,2,3].map(i => (
-          <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: value.length > i ? '#FF6B35' : '#FFE8D4', transition: 'background 0.15s' }} />
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%', maxWidth: 240 }}>
-        {[1,2,3,4,5,6,7,8,9].map(n => (
-          <button key={n} onClick={() => add(String(n))} style={btn}>{n}</button>
-        ))}
-        <div />
-        <button onClick={() => add('0')} style={btn}>0</button>
-        <button onClick={del} style={{ ...btn, fontSize: 16, color: '#FF6B35' }}>⌫</button>
-      </div>
-    </div>
-  )
-}
-
-// ── Change PIN modal ──────────────────────────────────────────────────────────
-function ChangePinModal({ childId, parentId, onClose }) {
+// ── Change PIN sheet ──────────────────────────────────────────────────────────
+function ChangePinSheet({ childId, parentId, onClose }) {
   const [phase, setPhase] = useState('enter')
   const [pin, setPin]     = useState('')
   const [confirm, setConfirm] = useState('')
@@ -173,34 +113,34 @@ function ChangePinModal({ childId, parentId, onClose }) {
   }
 
   return (
-    <ModalSheet onClose={onClose}>
+    <BottomSheet onClose={onClose}>
       {done ? (
-        <div style={{ textAlign: 'center', fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2EC486', padding: '16px 0' }}>
+        <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.green, padding: '16px 0' }}>
           PIN updated! ✅
         </div>
       ) : (
         <>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2D2D' }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>
               {phase === 'enter' ? 'Enter new PIN 🔐' : 'Confirm PIN 🔁'}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', marginTop: 4 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 4 }}>
               {phase === 'enter' ? 'Choose a 4-digit PIN' : 'Enter the same PIN again'}
             </div>
           </div>
           {errMsg && (
-            <div style={{ background: '#FFE8E8', color: '#CC0000', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{errMsg}</div>
+            <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 12, padding: '10px 16px', fontFamily: FONT, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{errMsg}</div>
           )}
           <PinPad value={phase === 'enter' ? pin : confirm} onChange={handleInput} />
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#7A7A9A', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito, sans-serif', padding: '4px 0' }}>Cancel</button>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
         </>
       )}
-    </ModalSheet>
+    </BottomSheet>
   )
 }
 
-// ── Edit Child modal ──────────────────────────────────────────────────────────
-function EditChildModal({ child, onClose, onSaved }) {
+// ── Edit child sheet ──────────────────────────────────────────────────────────
+function EditChildSheet({ child, onClose, onSaved }) {
   const [name, setName] = useState(child.name)
   const [age,  setAge]  = useState(child.age)
   const [avatar, setAvatar] = useState(child.avatar_url || null)
@@ -243,68 +183,55 @@ function EditChildModal({ child, onClose, onSaved }) {
     onSaved({ ...child, name: name.trim(), age: +age, avatar_url })
   }
 
+  const isPhoto = avatar instanceof File || (typeof avatar === 'string' && avatar?.startsWith('http'))
   const abtn = (active) => ({
     width: 68, height: 68, borderRadius: '50%',
-    border: `3px solid ${active ? '#FF6B35' : '#FFE8D4'}`,
-    background: '#FFF0E8', fontSize: 28, cursor: 'pointer',
+    border: `2.5px solid ${active ? PC.teal : PC.line}`,
+    background: active ? PC.tealBg : PC.field,
+    fontSize: 28, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden', padding: 0, transition: 'border-color 0.2s',
+    overflow: 'hidden', padding: 0, transition: 'border-color .18s',
   })
-  const isPhoto = avatar instanceof File || (typeof avatar === 'string' && avatar?.startsWith('http'))
 
   return (
-    <ModalSheet onClose={onClose}>
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2D2D' }}>Edit Child ✏️</div>
+    <BottomSheet onClose={onClose}>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Edit child ✏️</div>
 
-      {/* Avatar picker */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
-        <button style={abtn(avatar === '👧')} onClick={() => { setAvatar('👧'); setPreview(null) }}>👧</button>
-        <button style={abtn(avatar === '👦')} onClick={() => { setAvatar('👦'); setPreview(null) }}>👦</button>
-        <button style={abtn(isPhoto)} onClick={() => fileRef.current?.click()}>
-          {preview ? <img src={preview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
+        <button className="tc-press" style={abtn(avatar === '👧')} onClick={() => { setAvatar('👧'); setPreview(null) }}>👧</button>
+        <button className="tc-press" style={abtn(avatar === '👦')} onClick={() => { setAvatar('👦'); setPreview(null) }}>👦</button>
+        <button className="tc-press" style={abtn(isPhoto)} onClick={() => fileRef.current?.click()}>
+          {preview ? <img src={preview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="camera" size={26} color={PC.inkSoft} />}
         </button>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
       </div>
 
-      {/* Name */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 6 }}>NAME</div>
-        <input type="text" value={name} onChange={e => setName(e.target.value)}
-          style={{ width: '100%', padding: '12px 16px', border: '2px solid #FFE8D4', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none', boxSizing: 'border-box' }} />
-      </div>
+      <Field label="Name">
+        <input className="tc-input" type="text" value={name} onChange={e => { setName(e.target.value); setError('') }} />
+      </Field>
 
-      {/* Age */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 6 }}>AGE</div>
-        <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '2px solid #FFE8D4', borderRadius: 14, padding: '8px 14px', gap: 12 }}>
-          <button onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 36, height: 36, borderRadius: 10, background: '#FFF0E8', border: 'none', fontSize: 20, fontWeight: 800, color: '#FF6B35', cursor: 'pointer' }}>−</button>
-          <div style={{ flex: 1, textAlign: 'center', fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 900, color: '#2D2D2D' }}>{age}</div>
-          <button onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 36, height: 36, borderRadius: 10, background: '#FFF0E8', border: 'none', fontSize: 20, fontWeight: 800, color: '#FF6B35', cursor: 'pointer' }}>+</button>
+      <Field label="Age">
+        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 16px', gap: 14 }}>
+          <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>−</button>
+          <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 32, color: PC.ink }}>{age}</div>
+          <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>+</button>
         </div>
-      </div>
+      </Field>
 
-      {error && <div style={{ color: '#FF6B35', fontSize: 13, fontWeight: 700 }}>{error}</div>}
-      <button onClick={save} disabled={saving}
-        style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 16, background: '#FF6B35', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer' }}>
-        {saving ? 'Saving...' : 'Save Changes'}
-      </button>
-      <button onClick={onClose}
-        style={{ width: '100%', padding: '10px', border: 'none', borderRadius: 16, background: 'none', color: '#7A7A9A', fontFamily: 'Nunito, sans-serif', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-        Cancel
-      </button>
-    </ModalSheet>
+      {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Btn>
+      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+    </BottomSheet>
   )
 }
 
-// ── Add / Edit Reward modal ───────────────────────────────────────────────────
-const REWARD_EMOJIS = ['🎮','🍦','🎬','🧸','📱','🎁','🏖️','🎨','🚲','⚽','🎤','📚','🍕','🎡','🛹']
-
-function AddRewardModal({ childId, onClose, onSaved }) {
-  const [icon,    setIcon]    = useState('🎁')
-  const [name,    setName]    = useState('')
-  const [btCost,  setBtCost]  = useState(50)
-  const [saving,  setSaving]  = useState(false)
-  const [error,   setError]   = useState('')
+// ── Add reward sheet ──────────────────────────────────────────────────────────
+function AddRewardSheet({ childId, onClose, onSaved }) {
+  const [icon,   setIcon]   = useState('🎁')
+  const [name,   setName]   = useState('')
+  const [btCost, setBtCost] = useState(50)
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState('')
 
   const save = async () => {
     if (!name.trim()) return setError('Give this goal a name.')
@@ -317,67 +244,47 @@ function AddRewardModal({ childId, onClose, onSaved }) {
   }
 
   const pct = ((btCost - 5) / (200 - 5)) * 100
-  const trackBg = `linear-gradient(to right, #FF6B35 ${pct}%, #FFE8D4 ${pct}%)`
+  const trackBg = `linear-gradient(to right, ${PC.amber} ${pct}%, ${PC.line} ${pct}%)`
 
   return (
-    <ModalSheet onClose={onClose}>
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2D2D' }}>Add Goal 🏆</div>
+    <BottomSheet onClose={onClose}>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Add goal 🏆</div>
 
-      {/* Emoji picker */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 8 }}>ICON</div>
+      <Field label="Icon">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {REWARD_EMOJIS.map(e => (
-            <button key={e} onClick={() => setIcon(e)}
-              style={{ width: 42, height: 42, borderRadius: 12, border: `2px solid ${icon === e ? '#FF6B35' : '#FFE8D4'}`, background: icon === e ? '#FFF0E8' : 'white', fontSize: 22, cursor: 'pointer' }}>
+            <button key={e} className="tc-press" onClick={() => setIcon(e)}
+              style={{ width: 42, height: 42, borderRadius: 12, border: `2px solid ${icon === e ? PC.teal : PC.line}`, background: icon === e ? PC.tealBg : '#fff', fontSize: 22, cursor: 'pointer' }}>
               {e}
             </button>
           ))}
         </div>
-      </div>
+      </Field>
 
-      {/* Name */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 6 }}>GOAL NAME</div>
-        <input
-          type="text" value={name} onChange={e => setName(e.target.value)}
-          placeholder="e.g. Roblox time, Ice cream…"
-          style={{ width: '100%', padding: '12px 16px', border: '2px solid #FFE8D4', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2D2D', outline: 'none', boxSizing: 'border-box' }}
-        />
-      </div>
+      <Field label="Goal name">
+        <input className="tc-input" type="text" value={name} onChange={e => { setName(e.target.value); setError('') }}
+          placeholder="e.g. Roblox time, Ice cream…" />
+      </Field>
 
-      {/* Gem cost slider */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#FF6B35', letterSpacing: '0.8px', marginBottom: 6 }}>
-          GEM COST — <span style={{ color: '#2D2D2D' }}>⭐ {btCost} gems</span>
-        </div>
-        <input
-          type="range" min={5} max={200} step={5} value={btCost}
+      <Field label={`Gem cost — ⭐ ${btCost} gems`}>
+        <input type="range" min={5} max={200} step={5} value={btCost}
           onChange={e => setBtCost(Number(e.target.value))}
-          className="task-slider" style={{ background: trackBg, width: '100%' }}
-        />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#C0C0C0' }}>5</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#C0C0C0' }}>200</span>
+          className="tc-slider" style={{ background: trackBg }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>5</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>200</span>
         </div>
-      </div>
+      </Field>
 
-      {error && <div style={{ color: '#FF6B35', fontSize: 13, fontWeight: 700 }}>{error}</div>}
-
-      <button onClick={save} disabled={saving}
-        style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 16, background: '#FF6B35', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer' }}>
-        {saving ? 'Saving...' : 'Add Goal'}
-      </button>
-      <button onClick={onClose}
-        style={{ width: '100%', padding: '10px', border: 'none', borderRadius: 16, background: 'none', color: '#7A7A9A', fontFamily: 'Nunito, sans-serif', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-        Cancel
-      </button>
-    </ModalSheet>
+      {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Add goal'}</Btn>
+      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+    </BottomSheet>
   )
 }
 
-// ── Remove Child modal ────────────────────────────────────────────────────────
-function RemoveConfirmModal({ child, onClose, onConfirm }) {
+// ── Remove confirm sheet ──────────────────────────────────────────────────────
+function RemoveSheet({ child, onClose, onConfirm }) {
   const [removing, setRemoving] = useState(false)
 
   const doRemove = async () => {
@@ -387,26 +294,23 @@ function RemoveConfirmModal({ child, onClose, onConfirm }) {
   }
 
   return (
-    <ModalSheet onClose={onClose}>
+    <BottomSheet onClose={onClose}>
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
         <div style={{ fontSize: 44 }}>⚠️</div>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2D2D' }}>Remove {child.name}?</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.6 }}>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Remove {child.name}?</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, lineHeight: 1.6 }}>
           This will permanently delete {child.name}'s profile, gems, and all activity. This cannot be undone.
         </div>
       </div>
-      <button onClick={doRemove} disabled={removing}
-        style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 16, background: '#FF3B30', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: removing ? 'not-allowed' : 'pointer' }}>
-        {removing ? 'Removing...' : `Yes, remove ${child.name}`}
-      </button>
-      <button onClick={onClose}
-        style={{ width: '100%', padding: '12px', border: 'none', borderRadius: 16, background: '#F5F5F5', color: '#7A7A9A', fontFamily: 'Nunito, sans-serif', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-        Cancel
-      </button>
-    </ModalSheet>
+      <Btn variant="danger" onClick={doRemove} disabled={removing}>
+        {removing ? 'Removing…' : `Yes, remove ${child.name}`}
+      </Btn>
+      <Btn variant="outline" onClick={onClose}>Cancel</Btn>
+    </BottomSheet>
   )
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function ParentChildDetail() {
   const { id } = useParams()
   const nav = useNavigate()
@@ -414,10 +318,19 @@ export default function ParentChildDetail() {
   const [gems, setGems] = useState(null)
   const [submissions, setSubmissions] = useState(null)
   const [rewards, setRewards] = useState(null)
+  const [justApproved, setJustApproved] = useState(false)
   const [showPinModal,    setShowPinModal]    = useState(false)
   const [showEditModal,   setShowEditModal]   = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [showAddReward,   setShowAddReward]   = useState(false)
+
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.id = 'pcss-child-detail'
+    el.textContent = PCSS
+    if (!document.getElementById('pcss-child-detail')) document.head.appendChild(el)
+    return () => { document.getElementById('pcss-child-detail')?.remove() }
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -440,13 +353,15 @@ export default function ParentChildDetail() {
   const todayDone = (submissions || []).filter(s => s.status === 'approved' && isToday(s.created_at))
 
   async function handleApprove(sub) {
-    const gems = sub.gems_earned ?? sub.suggested_gems ?? 30
+    const earnedGems = sub.gems_earned ?? sub.suggested_gems ?? 30
     await Promise.all([
-      supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', sub.id),
-      supabase.from('bt_ledger').insert({ child_id: id, amount: gems, reason: sub.task_type || 'task' }),
+      supabase.from('submissions').update({ status: 'approved', gems_earned: earnedGems }).eq('id', sub.id),
+      supabase.from('bt_ledger').insert({ child_id: id, amount: earnedGems, reason: sub.task_type || 'task' }),
     ])
-    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved', gems_earned: gems } : s))
-    setGems(prev => (prev ?? 0) + gems)
+    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved', gems_earned: earnedGems } : s))
+    setGems(prev => (prev ?? 0) + earnedGems)
+    setJustApproved(true)
+    setTimeout(() => setJustApproved(false), 2200)
   }
 
   async function handleReject(subId) {
@@ -455,166 +370,167 @@ export default function ParentChildDetail() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#FFF8F0' }}>
-      <TutoMascot size={100} />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: PC.bg }}>
+      <TutoMascot size={96} color={PC.teal} />
     </div>
   )
 
   return (
-    <div style={{ background: '#FFF8F0', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <style>{SLIDER_CSS}</style>
+    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
+      {justApproved && <Confetti n={16} />}
 
-      {/* Header */}
-      <div style={{ background: '#FF6B35', padding: '52px 24px 28px', borderRadius: '0 0 32px 32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-          <button
-            onClick={() => nav('/parent/dashboard', { state: { updatedChild: child } })}
-            style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-          >←</button>
+      <TopBar
+        title={child.name}
+        sub={`${child.age} years old`}
+        onBack={() => nav('/parent/dashboard', { state: { updatedChild: child } })}
+      />
+
+      <div className="tc-scroll" style={{ flex: 1, padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+        {/* profile card */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '4px 2px 0' }}>
+          <Avatar child={child} size={62} />
           <div>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 900, color: 'white', lineHeight: 1.1 }}>{child.name}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>{child.age} years old</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>{child.name}</div>
+            <div style={{ marginTop: 6 }}>
+              <Pill bg={PC.amberBg} color={PC.amber}>⭐ {gems} gems</Pill>
+            </div>
           </div>
         </div>
 
-        {/* Gem balance */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.25)', borderRadius: 20, padding: '8px 18px' }}>
-          <span style={{ fontSize: 20 }}>⭐</span>
-          <span style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white' }}>{gems} Gems</span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, padding: '24px 20px 32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-        {/* Pending approvals */}
-        <Section title={`⏳ Pending Approvals${pending.length > 0 ? ` (${pending.length})` : ''}`}>
-          {pending.length === 0 ? (
-            <EmptyCard text="No pending tasks — all caught up! ✅" />
-          ) : (
-            pending.map(sub => (
-              <SubmissionCard
-                key={sub.id}
-                sub={sub}
-                onApprove={() => handleApprove(sub)}
-                onReject={() => handleReject(sub.id)}
-              />
-            ))
-          )}
-        </Section>
-
-        {/* Today's completed tasks */}
-        <Section title="✅ Completed Today">
-          {todayDone.length === 0 ? (
-            <EmptyCard text="Nothing completed yet today." />
-          ) : (
-            todayDone.map(sub => {
-              const meta = TASK_LABELS[sub.task_type] || { label: 'Task', emoji: '⭐' }
-              return (
-                <div key={sub.id} style={{ background: 'white', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  <span style={{ fontSize: 22 }}>{meta.emoji}</span>
-                  <div style={{ flex: 1, fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{meta.label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#2EC486' }}>+{sub.gems_earned ?? 0} ⭐</div>
-                </div>
-              )
-            })
-          )}
-        </Section>
-
-        {/* Reward goals */}
+        {/* pending approvals */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, color: '#2D2D2D' }}>🏆 Reward Goals</div>
-            <button onClick={() => setShowAddReward(true)}
-              style={{ background: '#FF6B35', border: 'none', borderRadius: 10, padding: '6px 14px', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
-              + Add Goal
+          <SectionHead>
+            ⏳ Pending{pending.length > 0 ? ` (${pending.length})` : ''}
+          </SectionHead>
+          {pending.length === 0 ? (
+            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>
+              All caught up! ✅
+            </Card>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pending.map(sub => (
+                <SubmissionCard key={sub.id} sub={sub} onApprove={() => handleApprove(sub)} onReject={() => handleReject(sub.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* completed today */}
+        <div>
+          <SectionHead>✅ Completed today</SectionHead>
+          {todayDone.length === 0 ? (
+            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>Nothing completed yet today.</Card>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {todayDone.map(sub => {
+                const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
+                return (
+                  <Card key={sub.id} pad={12} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 11, background: meta.type ? PC[meta.type + 'Bg'] : PC.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {meta.type ? <TaskIcon type={meta.type} size={20} /> : <span style={{ fontSize: 18 }}>⭐</span>}
+                    </div>
+                    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{meta.label}</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.green }}>+{sub.gems_earned ?? 0} ⭐</div>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* reward goals */}
+        <div>
+          <SectionHead action={
+            <button className="tc-press tc-tap" onClick={() => setShowAddReward(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: PC.amberBg, color: PC.amber, border: 'none', borderRadius: 11, padding: '7px 12px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              <Icon name="plus" size={14} color={PC.amber} sw={2.4} /> Add
             </button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {rewards.length === 0 ? (
-              <EmptyCard text="No reward goals set yet." />
-            ) : (
-              rewards.map(r => {
+          }>🏆 Reward goals</SectionHead>
+
+          {rewards.length === 0 ? (
+            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>No reward goals set yet.</Card>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {rewards.map(r => {
                 const pct = r.bt_cost > 0 ? Math.min(100, Math.round((gems / r.bt_cost) * 100)) : 0
                 const ready = gems >= r.bt_cost
                 return (
-                  <div key={r.id} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                  <Card key={r.id} pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ fontSize: 26 }}>{r.icon}</span>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{r.name}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#C8900A' }}>⭐ {r.bt_cost} gems needed</div>
+                        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{r.name}</div>
+                        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.amber }}>⭐ {r.bt_cost} gems needed</div>
                       </div>
                       {ready && <span style={{ fontSize: 20 }}>🎉</span>}
-                      <button
-                        onClick={async () => {
-                          await supabase.from('rewards').delete().eq('id', r.id)
-                          setRewards(prev => prev.filter(x => x.id !== r.id))
-                        }}
-                        style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: '#C0C0C0', padding: 4 }}
-                      >🗑️</button>
+                      <button className="tc-press tc-tap" onClick={async () => { await supabase.from('rewards').delete().eq('id', r.id); setRewards(prev => prev.filter(x => x.id !== r.id)) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                        <Icon name="trash" size={18} color={PC.inkFaint} />
+                      </button>
                     </div>
-                    <div style={{ background: '#F5F0D0', borderRadius: 8, height: 8, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: ready ? '#2EC486' : 'linear-gradient(90deg, #FF6B35, #FFD93D)', borderRadius: 8, transition: 'width 0.6s ease' }} />
+                    <div style={{ background: PC.line, borderRadius: 8, height: 7, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: ready ? PC.green : `linear-gradient(90deg, ${PC.teal}, ${PC.peach})`, borderRadius: 8, transition: 'width .6s ease' }} />
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: ready ? '#2EC486' : '#7A7A9A' }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: ready ? PC.green : PC.inkSoft }}>
                       {ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
                     </div>
-                  </div>
+                  </Card>
                 )
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Settings group */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            { icon: '⚙️', label: 'Task Settings',  sub: 'Adjust gem amounts per task',  onClick: () => nav(`/parent/child/${id}/settings`) },
-            { icon: '✏️', label: 'Edit Child',      sub: 'Change name, age or avatar',   onClick: () => setShowEditModal(true) },
-            { icon: '🔐', label: 'Change PIN',      sub: 'Set a new 4-digit PIN',         onClick: () => setShowPinModal(true) },
-          ].map(({ icon, label, sub, onClick }) => (
-            <button key={label} onClick={onClick}
-              style={{ background: 'white', border: '2px solid #FFD3C2', borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', width: '100%' }}
-            >
-              <span style={{ fontSize: 22 }}>{icon}</span>
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D2D2D' }}>{label}</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#7A7A9A', marginTop: 2 }}>{sub}</div>
-              </div>
-              <span style={{ fontSize: 18, color: '#C0C0D0' }}>›</span>
-            </button>
-          ))}
+        {/* settings */}
+        <div>
+          <SectionHead>Settings</SectionHead>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { icon: 'gear',  label: 'Task settings',  sub: 'Adjust gem amounts per task', onClick: () => nav(`/parent/child/${id}/settings`) },
+              { icon: 'edit',  label: 'Edit child',      sub: 'Change name, age or avatar',  onClick: () => setShowEditModal(true) },
+              { icon: 'lock',  label: 'Change PIN',      sub: 'Set a new 4-digit PIN',        onClick: () => setShowPinModal(true) },
+            ].map(({ icon, label, sub, onClick }) => (
+              <Card key={label} onClick={onClick} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 13, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name={icon} size={21} color={PC.teal} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>{label}</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{sub}</div>
+                </div>
+                <Icon name="chevron" size={18} color={PC.inkFaint} />
+              </Card>
+            ))}
 
-          {/* Remove Child — separate, red */}
-          <button onClick={() => setShowRemoveModal(true)}
-            style={{ background: 'none', border: '2px solid #FFD0CC', borderRadius: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginTop: 4 }}
-          >
-            <span style={{ fontSize: 16 }}>🗑️</span>
-            <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: 14, fontWeight: 800, color: '#FF3B30' }}>Remove Child</span>
-          </button>
+            <button className="tc-press tc-tap" onClick={() => setShowRemoveModal(true)}
+              style={{ background: PC.dangerBg, border: 'none', borderRadius: 16, padding: '13px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginTop: 2 }}>
+              <Icon name="trash" size={18} color={PC.danger} />
+              <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.danger }}>Remove child</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {showPinModal && child && (
-        <ChangePinModal childId={id} parentId={child.parent_id} onClose={() => setShowPinModal(false)} />
+        <ChangePinSheet childId={id} parentId={child.parent_id} onClose={() => setShowPinModal(false)} />
       )}
       {showEditModal && child && (
-        <EditChildModal
+        <EditChildSheet
           child={child}
           onClose={() => setShowEditModal(false)}
           onSaved={(updated) => { setChild(updated); setShowEditModal(false) }}
         />
       )}
       {showRemoveModal && child && (
-        <RemoveConfirmModal
+        <RemoveSheet
           child={child}
           onClose={() => setShowRemoveModal(false)}
           onConfirm={() => nav('/parent/dashboard', { state: { removedId: child.id } })}
         />
       )}
       {showAddReward && (
-        <AddRewardModal
+        <AddRewardSheet
           childId={id}
           onClose={() => setShowAddReward(false)}
           onSaved={async () => {

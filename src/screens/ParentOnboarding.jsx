@@ -1,59 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import TutoMascot from '../components/TutoMascot'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
+import {
+  PC, FONT, SHADOW, SHADOW_SM, PCSS,
+  Btn, Card, Field, Toggle, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
+} from '../lib/parentUI'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
-
-const CSS = `
-@keyframes confettiFall {
-  0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }
-  100% { transform: translateY(260px) rotate(720deg); opacity: 0; }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-10px); }
-}
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.gem-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 5px;
-  border-radius: 5px;
-  outline: none;
-  cursor: pointer;
-  margin: 2px 0;
-}
-.gem-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #7C5CBF;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(124,92,191,0.45);
-  border: 3px solid white;
-}
-.gem-slider::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #7C5CBF;
-  cursor: pointer;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(124,92,191,0.45);
-}
-`
-
-const PRP  = '#7C5CBF'
-const LPRP = '#EDE8FF'
-const BG   = '#F8F5FF'
 
 const DEFAULT_REWARDS = [
   { emoji: '🎮', label: 'Roblox 30min', gems: 30,  lockTitle: true,  hint: '💡 30 mins of playtime' },
@@ -62,146 +17,73 @@ const DEFAULT_REWARDS = [
 ]
 
 const TASKS_META = [
-  { key: 'reading', emoji: '📚', label: 'My Books',   bg: '#E8E0FF' },
-  { key: 'math',    emoji: '🔢', label: 'My Math',    bg: '#D4EDFF' },
-  { key: 'writing', emoji: '✏️', label: 'My Stories', bg: '#D4F5E0' },
-  { key: 'chore',   emoji: '🏠', label: 'My House',   bg: '#FFE8D4' },
+  { key: 'reading', label: 'My Books' },
+  { key: 'math',    label: 'My Math' },
+  { key: 'writing', label: 'My Stories' },
+  { key: 'chore',   label: 'My House' },
 ]
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
-
+// ── Progress bar ──────────────────────────────────────────────────────────────
 function ProgressBar({ step, total = 10 }) {
   return (
     <div style={{ padding: '52px 24px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: '#9B8FC0', letterSpacing: '0.8px' }}>STEP {step} OF {total}</span>
-        <span style={{ fontSize: 11, fontWeight: 800, color: '#9B8FC0' }}>{Math.round(step / total * 100)}%</span>
+        <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint, letterSpacing: '.6px' }}>STEP {step} OF {total}</span>
+        <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint }}>{Math.round(step / total * 100)}%</span>
       </div>
-      <div style={{ height: 6, background: LPRP, borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ height: 6, background: PC.tealBg, borderRadius: 8, overflow: 'hidden' }}>
         <div style={{
-          height: '100%',
-          width: `${step / total * 100}%`,
-          background: `linear-gradient(90deg, #9B7FD4, ${PRP})`,
-          borderRadius: 8,
-          transition: 'width 0.45s cubic-bezier(0.34,1.56,0.64,1)',
+          height: '100%', width: `${step / total * 100}%`,
+          background: `linear-gradient(90deg, ${PC.teal}, ${PC.tealDeep})`,
+          borderRadius: 8, transition: 'width .45s cubic-bezier(.34,1.56,.64,1)',
         }} />
       </div>
     </div>
   )
 }
 
-function BigBtn({ children, onClick, disabled, outline, style = {} }) {
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      width: '100%', padding: '15px 24px',
-      background: outline ? 'transparent' : (disabled ? '#C8BDE0' : PRP),
-      color: outline ? PRP : 'white',
-      border: outline ? `2px solid ${PRP}` : 'none',
-      borderRadius: 20, fontSize: 16, fontWeight: 800,
-      fontFamily: 'Nunito, sans-serif',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      transition: 'opacity 0.2s',
-      ...style,
-    }}>{children}</button>
-  )
-}
-
-function GhostBtn({ children, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      background: 'none', border: 'none', color: '#9B8FC0',
-      fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '8px 0',
-      fontFamily: 'Nunito, sans-serif',
-    }}>{children}</button>
-  )
-}
-
-function FieldLabel({ children }) {
-  return <div style={{ fontSize: 11, fontWeight: 800, color: PRP, letterSpacing: '0.8px', marginBottom: 8 }}>{children}</div>
-}
-
-function Input({ value, onChange, placeholder, type = 'text', style = {} }) {
-  return (
-    <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
-      width: '100%', padding: '13px 18px',
-      border: '2px solid #E8E0FF', borderRadius: 16,
-      fontSize: 16, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2560',
-      background: 'white', outline: 'none', boxSizing: 'border-box', ...style,
-    }} />
-  )
-}
-
-// ─── PIN Pad ─────────────────────────────────────────────────────────────────
-
-function PinPad({ value, onChange }) {
-  const add = d => { if (value.length < 4) onChange(value + d) }
-  const del = () => onChange(value.slice(0, -1))
-  const btn = {
-    background: LPRP, border: 'none', borderRadius: 18, height: 64,
-    fontSize: 22, fontWeight: 800, color: '#2D2560', cursor: 'pointer',
-    fontFamily: 'Nunito, sans-serif',
-  }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-      <div style={{ display: 'flex', gap: 16 }}>
-        {[0,1,2,3].map(i => (
-          <div key={i} style={{
-            width: 18, height: 18, borderRadius: '50%',
-            background: value.length > i ? PRP : LPRP,
-            transition: 'background 0.2s, transform 0.15s',
-            transform: value.length > i ? 'scale(1.2)' : 'scale(1)',
-          }} />
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, width: '100%', maxWidth: 264 }}>
-        {[1,2,3,4,5,6,7,8,9].map(n => (
-          <button key={n} onClick={() => add(String(n))} style={btn}>{n}</button>
-        ))}
-        <div />
-        <button onClick={() => add('0')} style={btn}>0</button>
-        <button onClick={del} style={{ ...btn, fontSize: 18, color: PRP }}>⌫</button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
 export default function ParentOnboarding() {
   const nav = useNavigate()
 
-  const [step,         setStep]         = useState(1)
-  const [childName,    setChildName]    = useState('')
-  const [age,          setAge]          = useState(7)
-  const [tasks,        setTasks]        = useState({ reading: true, math: true, writing: true, chore: true })
-  const [rewards,      setRewards]      = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
-  const [whatsapp,     setWhatsapp]     = useState('')
-  const [notifChannel,    setNotifChannel]    = useState(null) // 'telegram' | 'whatsapp' | null
+  const [step,            setStep]            = useState(1)
+  const [childName,       setChildName]       = useState('')
+  const [age,             setAge]             = useState(7)
+  const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, chore: true })
+  const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
+  const [whatsapp,        setWhatsapp]        = useState('')
+  const [notifChannel,    setNotifChannel]    = useState(null)
   const [emailNotif,      setEmailNotif]      = useState(true)
   const [pushNotif,       setPushNotif]       = useState(true)
   const [codeCopied,      setCodeCopied]      = useState(false)
   const [waPhone,         setWaPhone]         = useState('')
   const [waSending,       setWaSending]       = useState(false)
-  const [waVerifySent,    setWaVerifySent]     = useState(false)
+  const [waVerifySent,    setWaVerifySent]    = useState(false)
   const [waError,         setWaError]         = useState('')
-  const [pin,          setPin]          = useState('')
-  const [pinConfirm,   setPinConfirm]   = useState('')
-  const [pinPhase,     setPinPhase]     = useState('enter')
-  const [pinError,     setPinError]     = useState('')
-  const [deviceMode,   setDeviceMode]   = useState(null) // 'separate' | 'same'
-  const [familyCode,   setFamilyCode]   = useState(null)
+  const [pin,             setPin]             = useState('')
+  const [pinConfirm,      setPinConfirm]      = useState('')
+  const [pinPhase,        setPinPhase]        = useState('enter')
+  const [pinError,        setPinError]        = useState('')
+  const [deviceMode,      setDeviceMode]      = useState(null)
+  const [familyCode,      setFamilyCode]      = useState(null)
   const [addingReward,    setAddingReward]    = useState(false)
   const [editingLabelIdx, setEditingLabelIdx] = useState(null)
-  const [newReward,    setNewReward]    = useState({ emoji: '⭐', label: '', gems: '' })
-  const [saving,       setSaving]       = useState(false)
-  const [saveError,    setSaveError]    = useState('')
-  const [user,         setUser]         = useState(null)
+  const [newReward,       setNewReward]       = useState({ emoji: '⭐', label: '', gems: '' })
+  const [saving,          setSaving]          = useState(false)
+  const [saveError,       setSaveError]       = useState('')
+  const [user,            setUser]            = useState(null)
+
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.id = 'pcss-onboarding'
+    el.textContent = PCSS
+    if (!document.getElementById('pcss-onboarding')) document.head.appendChild(el)
+    return () => { document.getElementById('pcss-onboarding')?.remove() }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [])
 
-  // Load/generate family_code when notification or QR step is reached
   useEffect(() => {
     if ((step !== 5 && step !== 10) || !user) return
     const load = async () => {
@@ -224,12 +106,10 @@ export default function ParentOnboarding() {
     if (step === 6 || step === 7) {
       setPinPhase('enter'); setPin(''); setPinConfirm(''); setPinError('')
     }
-    // Skip Roblox step going back from All Done if no Roblox reward
     if (step === 9 && !hasRobloxReward) { setStep(7); return }
     setStep(s => s - 1)
   }
 
-  // ── PIN entry logic ───────────────────────────────────────────────────────
   const handlePinInput = async val => {
     if (pinPhase === 'enter') {
       setPin(val)
@@ -251,15 +131,12 @@ export default function ParentOnboarding() {
           setTimeout(next, 300)
         } else {
           setPinError("PINs don't match — try again.")
-          setTimeout(() => {
-            setPin(''); setPinConfirm(''); setPinPhase('enter'); setPinError('')
-          }, 900)
+          setTimeout(() => { setPin(''); setPinConfirm(''); setPinPhase('enter'); setPinError('') }, 900)
         }
       }
     }
   }
 
-  // ── Save ─────────────────────────────────────────────────────────────────
   const handleFinish = async () => {
     if (saving) return
     setSaving(true); setSaveError('')
@@ -272,18 +149,16 @@ export default function ParentOnboarding() {
       if (!uid) throw new Error('Not logged in. Please sign in and try again.')
 
       const pin_hash = await hashPin(pin)
-      const insertData = { parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' }
       const { data: child, error: cErr } = await supabase
         .from('children')
-        .insert(insertData)
+        .insert({ parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' })
         .select()
         .single()
       if (cErr) throw cErr
 
       const active = rewards.filter(r => r.label.trim())
       if (active.length) {
-        const rewardsPayload = active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), bt_cost: r.gems }))
-        await supabase.from('rewards').insert(rewardsPayload)
+        await supabase.from('rewards').insert(active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), bt_cost: r.gems })))
       }
 
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -313,7 +188,6 @@ export default function ParentOnboarding() {
     }
   }
 
-  // ── Reward helpers ────────────────────────────────────────────────────────
   const updateReward = (i, field, val) =>
     setRewards(prev => prev.map((r, idx) => idx !== i ? r : {
       ...r, [field]: field === 'gems' ? (parseInt(val) || 0) : val,
@@ -328,358 +202,321 @@ export default function ParentOnboarding() {
 
   const showBack = step > 1 && step < 9
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <style>{CSS}</style>
+    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
 
       {step > 1 && <ProgressBar step={step} />}
 
       {showBack && (
-        <button onClick={back} style={{
-          alignSelf: 'flex-start', background: 'none', border: 'none',
-          fontSize: 24, color: '#9B8FC0', cursor: 'pointer', margin: '14px 20px 0', padding: '4px 8px',
-        }}>←</button>
+        <button className="tc-press tc-tap" onClick={back} style={{
+          alignSelf: 'flex-start', width: 42, height: 42, borderRadius: 14,
+          background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', cursor: 'pointer', margin: '14px 20px 0', boxShadow: SHADOW_SM,
+        }}>
+          <Icon name="back" size={20} color={PC.ink} />
+        </button>
       )}
 
-      <div style={{
-        flex: 1,
-        padding: step === 1 ? '0 24px 48px' : '18px 24px 48px',
+      <div className="tc-scroll" style={{
+        flex: 1, padding: step === 1 ? '0 24px 48px' : '18px 24px 48px',
         display: 'flex', flexDirection: 'column',
       }}>
 
-        {/* ── STEP 1: Welcome ──────────────────────────────────────────────── */}
+        {/* ── STEP 1: Welcome ──────────────────────────────────────────────────── */}
         {step === 1 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, textAlign: 'center', paddingTop: 48 }}>
-            <TutoMascot size={200} expression="excited" style={{ animation: 'float 3s ease-in-out infinite' }} />
-            <div style={{ animation: 'fadeUp 0.5s ease' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 32, fontWeight: 800, color: '#2D2560', lineHeight: 1.2 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, textAlign: 'center', paddingTop: 48, position: 'relative', overflow: 'hidden' }}>
+            <Confetti n={14} />
+            <div style={{ animation: 'tcFloat 3s ease-in-out infinite' }}>
+              <TutoMascot size={190} color={PC.teal} />
+            </div>
+            <div className="tc-up">
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 32, color: PC.ink, lineHeight: 1.2, letterSpacing: '-.5px' }}>
                 Welcome to Tuto! 🎉
               </div>
-              <div style={{ fontSize: 15, color: '#9B8FC0', fontWeight: 600, marginTop: 10, lineHeight: 1.6 }}>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, color: PC.inkSoft, marginTop: 10, lineHeight: 1.6 }}>
                 Let's set things up for your child.<br />Takes about 2 minutes.
               </div>
             </div>
-            <BigBtn onClick={next} style={{ maxWidth: 280, marginTop: 4 }}>Get Started →</BigBtn>
+            <Btn onClick={next} style={{ maxWidth: 280, marginTop: 4 }}>Get Started →</Btn>
           </div>
         )}
 
-        {/* ── STEP 2: Child Info ────────────────────────────────────────────── */}
+        {/* ── STEP 2: Child Info ────────────────────────────────────────────────── */}
         {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>
               Tell me about your child! 👶
             </div>
-            <div>
-              <FieldLabel>CHILD'S NAME</FieldLabel>
-              <Input value={childName} onChange={e => setChildName(e.target.value)} placeholder="e.g. Zeynep" />
-            </div>
-            <div>
-              <FieldLabel>AGE</FieldLabel>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '2px solid #E8E0FF', borderRadius: 16, padding: '10px 18px', gap: 16 }}>
-                <button onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 44, height: 44, borderRadius: 14, background: LPRP, border: 'none', fontSize: 24, fontWeight: 800, color: PRP, cursor: 'pointer' }}>−</button>
-                <div style={{ flex: 1, textAlign: 'center', fontFamily: "'Baloo 2', cursive", fontSize: 34, fontWeight: 900, color: '#2D2560' }}>{age}</div>
-                <button onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 44, height: 44, borderRadius: 14, background: LPRP, border: 'none', fontSize: 24, fontWeight: 800, color: PRP, cursor: 'pointer' }}>+</button>
+            <Field label="Child's name">
+              <input className="tc-input" value={childName} onChange={e => setChildName(e.target.value)} placeholder="e.g. Zeynep" />
+            </Field>
+            <Field label="Age">
+              <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 18px', gap: 16 }}>
+                <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>−</button>
+                <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 36, color: PC.ink }}>{age}</div>
+                <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>+</button>
               </div>
-            </div>
-            <BigBtn onClick={next} disabled={!childName.trim()}>Next →</BigBtn>
+            </Field>
+            <Btn onClick={next} disabled={!childName.trim()}>Next →</Btn>
           </div>
         )}
 
-        {/* ── STEP 3: Tasks ─────────────────────────────────────────────────── */}
+        {/* ── STEP 3: Tasks ────────────────────────────────────────────────────── */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>What will {childName} work on? 🌟</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Choose the activities that earn Gems. You can change these anytime.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>What will {childName} work on? 🌟</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Choose the activities that earn Gems. You can change these anytime.</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {TASKS_META.map(({ key, emoji, label, bg }) => (
-                <button key={key} onClick={() => setTasks(t => ({ ...t, [key]: !t[key] }))} style={{
-                  display: 'flex', alignItems: 'center', gap: 16,
-                  padding: '16px 20px',
-                  background: tasks[key] ? bg : 'white',
-                  border: `2px solid ${tasks[key] ? 'transparent' : '#E8E0FF'}`,
-                  borderRadius: 20, cursor: 'pointer', transition: 'all 0.18s', textAlign: 'left',
+              {TASKS_META.map(({ key, label }) => (
+                <button key={key} className="tc-press tc-tap" onClick={() => setTasks(t => ({ ...t, [key]: !t[key] }))} style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px',
+                  background: tasks[key] ? PC[key + 'Bg'] : '#fff',
+                  border: `1.5px solid ${tasks[key] ? PC[key] : PC.line}`,
+                  borderRadius: 20, cursor: 'pointer', transition: 'all .18s', textAlign: 'left',
                 }}>
-                  <span style={{ fontSize: 30 }}>{emoji}</span>
-                  <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>{label}</span>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: tasks[key] ? PC[key + 'Bg'] : PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <TaskIcon type={key} size={24} />
+                  </div>
+                  <span style={{ flex: 1, fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{label}</span>
                   <div style={{
-                    width: 28, height: 28, borderRadius: 8,
-                    background: tasks[key] ? PRP : '#E8E0FF',
+                    width: 26, height: 26, borderRadius: 8,
+                    background: tasks[key] ? PC.teal : PC.line,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.18s', flexShrink: 0,
+                    transition: 'background .18s', flexShrink: 0,
                   }}>
-                    {tasks[key] && <span style={{ color: 'white', fontSize: 14, fontWeight: 900 }}>✓</span>}
+                    {tasks[key] && <Icon name="check" size={14} color="#fff" sw={2.5} />}
                   </div>
                 </button>
               ))}
             </div>
-            <BigBtn onClick={next} disabled={!Object.values(tasks).some(Boolean)}>Next →</BigBtn>
+            <Btn onClick={next} disabled={!Object.values(tasks).some(Boolean)}>Next →</Btn>
           </div>
         )}
 
-        {/* ── STEP 4: Rewards ───────────────────────────────────────────────── */}
+        {/* ── STEP 4: Rewards ──────────────────────────────────────────────────── */}
         {step === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Set up {childName}'s rewards! 🎁</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>These are the things {childName} can spend Gems on. Adjust the Gems needed for each reward.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Set up {childName}'s rewards! 🎁</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Adjust the Gems needed for each reward.</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rewards.map((r, i) => {
                 const pct     = ((Math.min(Math.max(r.gems, 10), 1000) - 10) / 990) * 100
-                const trackBg = `linear-gradient(to right, ${PRP} ${pct}%, #E8E0FF ${pct}%)`
+                const trackBg = `linear-gradient(to right, ${PC.teal} ${pct}%, ${PC.line} ${pct}%)`
                 const isEditingLabel = editingLabelIdx === i
-                const canEditLabel   = !r.lockTitle
 
                 return (
-                  <div key={i} style={{ background: 'white', border: '2px solid #E8E0FF', borderRadius: 18, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-                    {/* Top row */}
+                  <Card key={i} pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {/* Emoji — always static for default rewards */}
                       <span style={{ fontSize: 22, flexShrink: 0, width: 28, textAlign: 'center' }}>{r.emoji}</span>
 
-                      {/* Label — fixed or click-to-edit */}
                       {r.lockTitle ? (
-                        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>{r.label}</span>
+                        <span style={{ flex: 1, fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.ink }}>{r.label}</span>
                       ) : isEditingLabel ? (
-                        <input
-                          autoFocus
-                          value={r.label}
-                          onChange={e => updateReward(i, 'label', e.target.value)}
-                          onBlur={() => setEditingLabelIdx(null)}
-                          onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
+                        <input autoFocus value={r.label} onChange={e => updateReward(i, 'label', e.target.value)}
+                          onBlur={() => setEditingLabelIdx(null)} onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
                           placeholder="e.g. Lego set, new game..."
-                          style={{ flex: 1, border: 'none', borderBottom: `2px solid ${PRP}`, outline: 'none', fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', background: 'transparent', minWidth: 0, paddingBottom: 2 }}
-                        />
+                          style={{ flex: 1, border: 'none', borderBottom: `2px solid ${PC.teal}`, outline: 'none', fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.ink, background: 'transparent', minWidth: 0, paddingBottom: 2 }} />
                       ) : (
-                        <span
-                          onClick={() => canEditLabel && setEditingLabelIdx(i)}
-                          style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#2D2560', fontFamily: 'Nunito, sans-serif', cursor: canEditLabel ? 'text' : 'default', borderBottom: canEditLabel ? '2px dashed #C8B8D8' : 'none', paddingBottom: canEditLabel ? 2 : 0 }}
-                        >{r.label || <span style={{ color: '#B0A0CC' }}>Tap to name…</span>}</span>
+                        <span onClick={() => !r.lockTitle && setEditingLabelIdx(i)}
+                          style={{ flex: 1, fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.ink, cursor: 'text', borderBottom: `2px dashed ${PC.line}`, paddingBottom: 2 }}>
+                          {r.label || <span style={{ color: PC.inkFaint }}>Tap to name…</span>}
+                        </span>
                       )}
 
-                      {/* Gem amount */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: LPRP, borderRadius: 12, padding: '5px 10px', flexShrink: 0 }}>
-                        <input
-                          type="number" value={r.gems}
-                          onChange={e => updateReward(i, 'gems', e.target.value)}
-                          style={{ width: 52, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, fontWeight: 800, color: PRP, fontFamily: 'Nunito, sans-serif', textAlign: 'right' }}
-                        />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: PC.tealBg, borderRadius: 12, padding: '5px 10px', flexShrink: 0 }}>
+                        <input type="number" value={r.gems} onChange={e => updateReward(i, 'gems', e.target.value)}
+                          style={{ width: 52, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.tealDeep, textAlign: 'right' }} />
                         <span style={{ fontSize: 14 }}>💎</span>
                       </div>
 
-                      {/* Delete */}
-                      <button onClick={() => setRewards(p => p.filter((_, idx) => idx !== i))}
-                        style={{ background: 'none', border: 'none', color: '#C8B8D8', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+                      <button className="tc-press tc-tap" onClick={() => setRewards(p => p.filter((_, idx) => idx !== i))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', flexShrink: 0 }}>
+                        <Icon name="close" size={18} color={PC.inkFaint} />
+                      </button>
                     </div>
 
-                    {/* Slider */}
-                    <input
-                      type="range" min={10} max={1000} step={10}
+                    <input type="range" min={10} max={1000} step={10}
                       value={Math.min(Math.max(r.gems, 10), 1000)}
                       onChange={e => updateReward(i, 'gems', e.target.value)}
-                      className="gem-slider"
-                      style={{ background: trackBg }}
-                    />
+                      className="tc-slider" style={{ background: trackBg }} />
 
-                    {/* Min / max + hint */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: -4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#B0A0CC' }}>10</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#B0A0CC' }}>1000</span>
+                      <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: PC.inkFaint }}>10</span>
+                      <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: PC.inkFaint }}>1000</span>
                     </div>
-                    {r.hint && (
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#9B8FC0', marginTop: 2 }}>{r.hint}</div>
-                    )}
-                  </div>
+                    {r.hint && <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkSoft }}>{r.hint}</div>}
+                  </Card>
                 )
               })}
             </div>
-            <button onClick={() => setAddingReward(true)} style={{
+
+            <button className="tc-press tc-tap" onClick={() => setAddingReward(true)} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              background: 'none', border: '2px dashed #C8B8D8', borderRadius: 18,
-              padding: '12px 16px', cursor: 'pointer', color: PRP,
-              fontSize: 14, fontWeight: 800, fontFamily: 'Nunito, sans-serif',
+              background: 'none', border: `2px dashed ${PC.line}`, borderRadius: 18,
+              padding: '12px 16px', cursor: 'pointer', color: PC.tealDeep,
+              fontFamily: FONT, fontSize: 14, fontWeight: 800,
             }}>+ Add reward</button>
-            <BigBtn onClick={next}>Next →</BigBtn>
+
+            <Btn onClick={next}>Next →</Btn>
           </div>
         )}
 
-        {/* ── STEP 5: Notification channel ─────────────────────────────────── */}
+        {/* ── STEP 5: Notifications ────────────────────────────────────────────── */}
         {step === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Stay connected 👨‍👩‍👧</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Choose how you want me to keep you informed about {childName || 'your child'}'s progress</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Stay connected 👨‍👩‍👧</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Choose how you want to be notified about {childName || 'your child'}'s progress</div>
             </div>
 
-            {/* Radio cards */}
             <div style={{ display: 'flex', gap: 12 }}>
               {/* Telegram */}
-              <button
-                onClick={() => setNotifChannel('telegram')}
-                style={{
-                  flex: 1, padding: '20px 12px',
-                  background: notifChannel === 'telegram' ? '#E3F2FD' : 'white',
-                  border: `2.5px solid ${notifChannel === 'telegram' ? '#229ED9' : '#E8E0FF'}`,
-                  borderRadius: 20, cursor: 'pointer', textAlign: 'center',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                  transition: 'all 0.18s',
-                }}
-              >
+              <button className="tc-press tc-tap" onClick={() => setNotifChannel('telegram')} style={{
+                flex: 1, padding: '20px 12px',
+                background: notifChannel === 'telegram' ? '#E3F2FD' : '#fff',
+                border: `2px solid ${notifChannel === 'telegram' ? '#229ED9' : PC.line}`,
+                borderRadius: 20, cursor: 'pointer', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                transition: 'all .18s',
+              }}>
                 <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram" style={{ width: 44, height: 44 }} />
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>Telegram</div>
+                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.ink }}>Telegram</div>
                 <div style={{
                   width: 20, height: 20, borderRadius: '50%',
-                  border: `2px solid ${notifChannel === 'telegram' ? '#229ED9' : '#C8B8D8'}`,
-                  background: notifChannel === 'telegram' ? '#229ED9' : 'white',
+                  border: `2px solid ${notifChannel === 'telegram' ? '#229ED9' : PC.line}`,
+                  background: notifChannel === 'telegram' ? '#229ED9' : '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.18s', flexShrink: 0,
+                  transition: 'all .18s',
                 }}>
-                  {notifChannel === 'telegram' && <span style={{ color: 'white', fontSize: 11, fontWeight: 900 }}>✓</span>}
+                  {notifChannel === 'telegram' && <Icon name="check" size={10} color="#fff" sw={3} />}
                 </div>
               </button>
 
               {/* WhatsApp */}
-              <button
-                onClick={() => { setNotifChannel('whatsapp'); setWaVerifySent(false); setWaError('') }}
-                style={{
-                  flex: 1, padding: '20px 12px',
-                  background: notifChannel === 'whatsapp' ? '#E8F8F0' : 'white',
-                  border: `2.5px solid ${notifChannel === 'whatsapp' ? '#25D366' : '#E8E0FF'}`,
-                  borderRadius: 20, cursor: 'pointer', textAlign: 'center',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                  transition: 'all 0.18s',
-                }}
-              >
+              <button className="tc-press tc-tap" onClick={() => { setNotifChannel('whatsapp'); setWaVerifySent(false); setWaError('') }} style={{
+                flex: 1, padding: '20px 12px',
+                background: notifChannel === 'whatsapp' ? PC.greenBg : '#fff',
+                border: `2px solid ${notifChannel === 'whatsapp' ? PC.green : PC.line}`,
+                borderRadius: 20, cursor: 'pointer', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                transition: 'all .18s',
+              }}>
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{ width: 44, height: 44 }} />
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>WhatsApp</div>
+                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.ink }}>WhatsApp</div>
                 <div style={{
                   width: 20, height: 20, borderRadius: '50%',
-                  border: `2px solid ${notifChannel === 'whatsapp' ? '#25D366' : '#C8B8D8'}`,
-                  background: notifChannel === 'whatsapp' ? '#25D366' : 'white',
+                  border: `2px solid ${notifChannel === 'whatsapp' ? PC.green : PC.line}`,
+                  background: notifChannel === 'whatsapp' ? PC.green : '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.18s', flexShrink: 0,
+                  transition: 'all .18s',
                 }}>
-                  {notifChannel === 'whatsapp' && <span style={{ color: 'white', fontSize: 11, fontWeight: 900 }}>✓</span>}
+                  {notifChannel === 'whatsapp' && <Icon name="check" size={10} color="#fff" sw={3} />}
                 </div>
               </button>
             </div>
 
             {/* Telegram detail */}
             {notifChannel === 'telegram' && (
-              <div style={{ background: 'white', border: '2px solid #229ED9', borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeUp 0.25s ease both' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2560', lineHeight: 1.6 }}>
-                  1. Open Telegram and message <span style={{ color: '#229ED9', fontWeight: 900 }}>@TutoParentBot</span><br />
+              <Card pad={20} className="tc-fade" style={{ border: `2px solid #229ED9` }}>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.ink, lineHeight: 1.6, marginBottom: 14 }}>
+                  1. Open Telegram and message <span style={{ color: '#229ED9', fontWeight: 800 }}>@TutoParentBot</span><br />
                   2. Send <strong>/start</strong>, then enter your family code:
                 </div>
                 {familyCode ? (
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
-                    style={{ background: '#E3F2FD', border: `2px solid ${codeCopied ? '#2EC486' : '#229ED9'}`, borderRadius: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s' }}
-                  >
-                    <span style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 900, color: '#2D2560', letterSpacing: 4 }}>{familyCode}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: codeCopied ? '#2EC486' : '#229ED9' }}>{codeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                  <button className="tc-press" onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
+                    style={{ background: '#E3F2FD', border: `1.5px solid ${codeCopied ? PC.green : '#229ED9'}`, borderRadius: 14, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: 26, fontWeight: 900, color: PC.ink, letterSpacing: 4 }}>{familyCode}</span>
+                    <span style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 800, color: codeCopied ? PC.green : '#229ED9' }}>{codeCopied ? '✅ Copied!' : '📋 Copy'}</span>
                   </button>
                 ) : (
-                  <div style={{ background: '#E3F2FD', borderRadius: 16, padding: '14px', textAlign: 'center', fontSize: 13, color: '#229ED9', fontWeight: 700 }}>Loading code…</div>
+                  <div style={{ background: '#E3F2FD', borderRadius: 14, padding: 14, textAlign: 'center', fontFamily: FONT, fontSize: 13, color: '#229ED9', fontWeight: 700 }}>Loading code…</div>
                 )}
-                <BigBtn onClick={next}>I've connected Telegram ✅</BigBtn>
-              </div>
+                <Btn onClick={next} style={{ marginTop: 14 }}>I've connected Telegram ✅</Btn>
+              </Card>
             )}
 
             {/* WhatsApp detail */}
             {notifChannel === 'whatsapp' && (
-              <div style={{ background: 'white', border: '2px solid #25D366', borderRadius: 22, padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp 0.25s ease both' }}>
+              <Card pad={20} className="tc-fade" style={{ border: `2px solid ${PC.green}` }}>
                 {waVerifySent ? (
                   <>
-                    <div style={{ textAlign: 'center', fontSize: 36 }}>📱</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A7A4A', textAlign: 'center', lineHeight: 1.7 }}>
-                      We just sent you a message on WhatsApp!<br />
-                      Check your WhatsApp and come back here.
+                    <div style={{ textAlign: 'center', fontSize: 36, marginBottom: 12 }}>📱</div>
+                    <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.green, textAlign: 'center', lineHeight: 1.7, marginBottom: 14 }}>
+                      We just sent you a message on WhatsApp!<br />Check your WhatsApp and come back here.
                     </div>
-                    <BigBtn onClick={next}>Yes, I got it! ✅</BigBtn>
+                    <Btn onClick={next}>Yes, I got it! ✅</Btn>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#2D2560' }}>Enter your WhatsApp number:</div>
-                    <input
-                      type="tel"
-                      placeholder="+905XXXXXXXXX"
-                      value={waPhone}
-                      onChange={e => { setWaPhone(e.target.value); setWaError('') }}
-                      style={{ padding: '12px 16px', border: '2px solid #D4F5E0', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2560', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                    {waError && <div style={{ fontSize: 12, fontWeight: 700, color: '#CC0000' }}>{waError}</div>}
-                    <BigBtn
-                      disabled={!waPhone.trim() || waSending}
-                      onClick={async () => {
-                        if (!user) return setWaError('Not logged in.')
-                        setWaSending(true); setWaError('')
-                        try {
-                          const res = await fetch(`${SERVER}/api/send-welcome-whatsapp`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phoneNumber: waPhone.trim(), childName: childName || 'your child', parentId: user.id }),
-                          })
-                          const data = await res.json()
-                          if (!res.ok) throw new Error(data.error || 'Server error')
-                          setWaVerifySent(true)
-                        } catch (e) {
-                          setWaError(e.message)
-                        } finally {
-                          setWaSending(false)
-                        }
-                      }}
-                    >
-                      {waSending ? 'Sending...' : 'Connect WhatsApp 📲'}
-                    </BigBtn>
+                    <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.ink, marginBottom: 10 }}>Enter your WhatsApp number:</div>
+                    <input className="tc-input" type="tel" placeholder="+905XXXXXXXXX" value={waPhone}
+                      onChange={e => { setWaPhone(e.target.value); setWaError('') }} style={{ marginBottom: waError ? 8 : 14 }} />
+                    {waError && <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.danger, marginBottom: 10 }}>{waError}</div>}
+                    <Btn disabled={!waPhone.trim() || waSending} onClick={async () => {
+                      if (!user) return setWaError('Not logged in.')
+                      setWaSending(true); setWaError('')
+                      try {
+                        const res = await fetch(`${SERVER}/api/send-welcome-whatsapp`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ phoneNumber: waPhone.trim(), childName: childName || 'your child', parentId: user.id }),
+                        })
+                        const data = await res.json()
+                        if (!res.ok) throw new Error(data.error || 'Server error')
+                        setWaVerifySent(true)
+                      } catch (e) {
+                        setWaError(e.message)
+                      } finally {
+                        setWaSending(false)
+                      }
+                    }}>{waSending ? 'Sending…' : 'Connect WhatsApp 📲'}</Btn>
                   </>
                 )}
-              </div>
+              </Card>
             )}
 
-            {/* Divider */}
-            <div style={{ height: 1, background: '#E8E0FF', borderRadius: 1 }} />
+            <div style={{ height: 1, background: PC.line }} />
 
             {/* Additional notifications */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#9B8FC0', letterSpacing: '0.8px' }}>ADDITIONAL NOTIFICATIONS</div>
+              <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint, letterSpacing: '.6px' }}>ADDITIONAL NOTIFICATIONS</div>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', background: 'white', borderRadius: 16, padding: '14px 18px', border: '2px solid #E8E0FF' }}>
-                <input type="checkbox" checked={emailNotif} onChange={e => setEmailNotif(e.target.checked)} style={{ width: 20, height: 20, cursor: 'pointer', accentColor: PRP }} />
+              <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <span style={{ fontSize: 22 }}>📧</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>Email notifications</span>
-              </label>
+                <span style={{ fontFamily: FONT, flex: 1, fontSize: 14, fontWeight: 700, color: PC.ink }}>Email notifications</span>
+                <Toggle on={emailNotif} onClick={() => setEmailNotif(v => !v)} />
+              </Card>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', background: 'white', borderRadius: 16, padding: '14px 18px', border: '2px solid #E8E0FF' }}>
-                <input type="checkbox" checked={pushNotif} onChange={e => setPushNotif(e.target.checked)} style={{ width: 20, height: 20, cursor: 'pointer', accentColor: PRP }} />
+              <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <span style={{ fontSize: 22 }}>🔔</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif' }}>Push notifications</span>
-              </label>
+                <span style={{ fontFamily: FONT, flex: 1, fontSize: 14, fontWeight: 700, color: PC.ink }}>Push notifications</span>
+                <Toggle on={pushNotif} onClick={() => setPushNotif(v => !v)} />
+              </Card>
             </div>
 
             {!notifChannel && (
-              <GhostBtn onClick={next}>Skip for now</GhostBtn>
+              <Btn variant="ghost" onClick={next}>Skip for now</Btn>
             )}
           </div>
         )}
 
-        {/* ── STEP 6: PIN ───────────────────────────────────────────────────── */}
+        {/* ── STEP 6: PIN ──────────────────────────────────────────────────────── */}
         {step === 6 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560' }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, letterSpacing: '-.3px' }}>
                 {pinPhase === 'enter' ? 'Create a PIN for your child 🔐' : 'Confirm the PIN 🔁'}
               </div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>
                 {pinPhase === 'enter' ? 'Your child will enter this to log in.' : 'Enter the same 4 digits again.'}
               </div>
             </div>
             {pinError && (
-              <div style={{ background: '#FFE8E8', color: '#CC0000', borderRadius: 14, padding: '10px 20px', fontSize: 13, fontWeight: 700, textAlign: 'center', width: '100%' }}>
+              <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 14, padding: '10px 20px', fontFamily: FONT, fontSize: 13, fontWeight: 700, textAlign: 'center', width: '100%' }}>
                 {pinError}
               </div>
             )}
@@ -687,147 +524,139 @@ export default function ParentOnboarding() {
           </div>
         )}
 
-        {/* ── STEP 7: Device Setup ─────────────────────────────────────────── */}
+        {/* ── STEP 7: Device Setup ─────────────────────────────────────────────── */}
         {step === 7 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>How will {childName} use Tuto? 📱</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>
+              How will {childName} use Tuto? 📱
             </div>
-            <button
-              onClick={() => { setDeviceMode('separate'); setStep(hasRobloxReward ? 8 : 9) }}
-              style={{
-                display: 'flex', alignItems: 'flex-start', gap: 16,
-                padding: '22px 20px', background: deviceMode === 'separate' ? LPRP : 'white',
-                border: `2px solid ${deviceMode === 'separate' ? PRP : '#E8E0FF'}`,
-                borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
-              }}
-            >
-              <span style={{ fontSize: 32, flexShrink: 0, marginTop: 2 }}>📱</span>
+
+            <button className="tc-press tc-tap" onClick={() => { setDeviceMode('separate'); setStep(hasRobloxReward ? 8 : 9) }} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 16, padding: '20px 18px',
+              background: deviceMode === 'separate' ? PC.tealBg : '#fff',
+              border: `2px solid ${deviceMode === 'separate' ? PC.teal : PC.line}`,
+              borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all .18s',
+            }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: deviceMode === 'separate' ? PC.teal : PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="phone" size={24} color={deviceMode === 'separate' ? '#fff' : PC.inkSoft} />
+              </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif', marginBottom: 4 }}>Separate device</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.5 }}>I'll scan a QR code to connect {childName}'s device</div>
+                <div style={{ fontFamily: FONT, fontSize: 16, fontWeight: 800, color: PC.ink, marginBottom: 4 }}>Separate device</div>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.5 }}>I'll scan a QR code to connect {childName}'s device</div>
               </div>
             </button>
-            <button
-              onClick={() => { setDeviceMode('same'); setStep(hasRobloxReward ? 8 : 9) }}
-              style={{
-                display: 'flex', alignItems: 'flex-start', gap: 16,
-                padding: '22px 20px', background: deviceMode === 'same' ? LPRP : 'white',
-                border: `2px solid ${deviceMode === 'same' ? PRP : '#E8E0FF'}`,
-                borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
-              }}
-            >
-              <span style={{ fontSize: 32, flexShrink: 0, marginTop: 2 }}>🔄</span>
+
+            <button className="tc-press tc-tap" onClick={() => { setDeviceMode('same'); setStep(hasRobloxReward ? 8 : 9) }} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 16, padding: '20px 18px',
+              background: deviceMode === 'same' ? PC.tealBg : '#fff',
+              border: `2px solid ${deviceMode === 'same' ? PC.teal : PC.line}`,
+              borderRadius: 22, cursor: 'pointer', textAlign: 'left', transition: 'all .18s',
+            }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: deviceMode === 'same' ? PC.teal : PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="swap" size={24} color={deviceMode === 'same' ? '#fff' : PC.inkSoft} />
+              </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2560', fontFamily: 'Nunito, sans-serif', marginBottom: 4 }}>Same device</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A7A9A', lineHeight: 1.5 }}>{childName} will switch to their profile from here</div>
+                <div style={{ fontFamily: FONT, fontSize: 16, fontWeight: 800, color: PC.ink, marginBottom: 4 }}>Same device</div>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.5 }}>{childName} will switch to their profile from here</div>
               </div>
             </button>
           </div>
         )}
 
-        {/* ── STEP 8: Roblox ───────────────────────────────────────────────── */}
+        {/* ── STEP 8: Roblox ───────────────────────────────────────────────────── */}
         {step === 8 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div style={{ fontSize: 64, textAlign: 'center', marginTop: 8 }}>🎮</div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Want me to open Roblox automatically?</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6, lineHeight: 1.5 }}>I'll add screen time when your child earns enough Gems.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 22, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Want me to open Roblox automatically?</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>I'll add screen time when your child earns enough Gems.</div>
             </div>
-            <div style={{ background: LPRP, borderRadius: 20, padding: '16px 18px', width: '100%' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: PRP, marginBottom: 4 }}>How it works</div>
-              <div style={{ fontSize: 13, color: '#7C5CBF', lineHeight: 1.5 }}>When your child spends Gems on "Roblox 30min", Tuto will automatically launch the app and start a countdown timer.</div>
-            </div>
+            <Card pad={16} style={{ background: PC.tealBg, width: '100%', boxShadow: 'none' }}>
+              <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 800, color: PC.tealDeep, marginBottom: 4 }}>How it works</div>
+              <div style={{ fontFamily: FONT, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5 }}>When your child spends Gems on "Roblox 30min", Tuto will automatically launch the app and start a countdown timer.</div>
+            </Card>
             <div style={{ width: '100%' }}>
-              <BigBtn outline disabled style={{ opacity: 0.4 }}>Yes, connect Roblox</BigBtn>
-              <div style={{ textAlign: 'center', fontSize: 11, color: '#C0B0D0', fontWeight: 600, marginTop: 6 }}>Coming soon</div>
+              <Btn variant="outline" disabled style={{ opacity: 0.4 }}>Yes, connect Roblox</Btn>
+              <div style={{ textAlign: 'center', fontFamily: FONT, fontSize: 11, color: PC.inkFaint, fontWeight: 600, marginTop: 6 }}>Coming soon</div>
             </div>
-            <GhostBtn onClick={next}>Skip for now</GhostBtn>
+            <Btn variant="ghost" onClick={next}>Skip for now</Btn>
           </div>
         )}
 
-        {/* ── STEP 9: All Done ─────────────────────────────────────────────── */}
+        {/* ── STEP 9: All Done ─────────────────────────────────────────────────── */}
         {step === 9 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, textAlign: 'center', position: 'relative', overflow: 'hidden', paddingTop: 48 }}>
-            {['#FF6B35','#FFD93D','#7C5CBF','#2EC486','#FF6B8B','#6BBFD4','#FFB5C8','#B5A0E8','#FF6B35','#2EC486','#FFD93D','#7C5CBF'].map((color, i) => (
-              <div key={i} style={{
-                position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: color,
-                left: `${4 + i * 8.5}%`, top: '-14px',
-                animation: `confettiFall ${1.1 + (i % 5) * 0.22}s ease-in ${i * 0.1}s infinite`,
-                pointerEvents: 'none',
-              }} />
-            ))}
-            <TutoMascot size={180} expression="excited" style={{ animation: 'float 3s ease-in-out infinite' }} />
-            <div style={{ animation: 'fadeUp 0.5s ease' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 30, fontWeight: 800, color: '#2D2560', lineHeight: 1.2 }}>All set! 🎉</div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: PRP, marginTop: 10 }}>
+            <Confetti n={16} />
+            <div style={{ animation: 'tcFloat 3s ease-in-out infinite' }}>
+              <TutoMascot size={180} color={PC.teal} />
+            </div>
+            <div className="tc-up">
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, lineHeight: 1.2, letterSpacing: '-.5px' }}>All set! 🎉</div>
+              <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 700, color: PC.teal, marginTop: 10 }}>
                 {childName || 'Your child'} is ready to start earning Gems!
               </div>
             </div>
             {saveError && (
-              <div style={{ background: '#FFE8E8', color: '#CC0000', borderRadius: 14, padding: '10px 20px', fontSize: 13, fontWeight: 700 }}>{saveError}</div>
+              <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 14, padding: '10px 20px', fontFamily: FONT, fontSize: 13, fontWeight: 700 }}>{saveError}</div>
             )}
-            <BigBtn onClick={handleFinish} disabled={saving} style={{ maxWidth: 280 }}>
-              {saving ? 'Saving...' : "Let's Go! 🚀"}
-            </BigBtn>
+            <Btn onClick={handleFinish} disabled={saving} style={{ maxWidth: 280 }}>
+              {saving ? 'Saving…' : "Let's Go! 🚀"}
+            </Btn>
           </div>
         )}
 
-        {/* ── STEP 10: QR Code (separate device only) ──────────────────────── */}
+        {/* ── STEP 10: QR Code ─────────────────────────────────────────────────── */}
         {step === 10 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D2560', lineHeight: 1.3 }}>Connect {childName}'s device 📲</div>
-              <div style={{ fontSize: 13, color: '#9B8FC0', fontWeight: 600, marginTop: 6 }}>Scan this on {childName}'s device to connect it</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Connect {childName}'s device 📲</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Scan this on {childName}'s device to connect it</div>
             </div>
             {familyCode ? (
-              <div style={{ background: 'white', borderRadius: 24, padding: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+              <div style={{ background: '#fff', borderRadius: 22, padding: 20, boxShadow: SHADOW }}>
                 <QRCodeSVG
                   value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
                   size={220}
                   bgColor="#FFFFFF"
-                  fgColor="#1A1A2E"
+                  fgColor={PC.ink}
                   level="M"
                 />
               </div>
             ) : (
-              <div style={{ width: 260, height: 260, background: LPRP, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: PRP }}>Loading…</div>
+              <div style={{ width: 260, height: 260, background: PC.tealBg, borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.tealDeep }}>Loading…</div>
               </div>
             )}
             {familyCode && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ background: LPRP, borderRadius: 10, padding: '6px 14px' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PRP, letterSpacing: 2 }}>{familyCode}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: PC.tealBg, borderRadius: 10, padding: '6px 14px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PC.tealDeep, letterSpacing: 2 }}>{familyCode}</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#9B8FC0' }}>manual code</div>
+                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>manual code</span>
               </div>
             )}
-            <BigBtn onClick={() => nav('/parent/dashboard')}>Go to Dashboard →</BigBtn>
+            <Btn onClick={() => nav('/parent/dashboard')}>Go to Dashboard →</Btn>
           </div>
         )}
       </div>
 
-      {/* ── Add reward bottom sheet ────────────────────────────────────────── */}
+      {/* ── Add reward sheet ──────────────────────────────────────────────────── */}
       {addingReward && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,46,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 300 }}>
-          <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '32px 32px 0 0', padding: '24px 24px 44px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ width: 40, height: 4, background: '#E8E0FF', borderRadius: 4, alignSelf: 'center', marginBottom: 4 }} />
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D2560' }}>Add a Reward 🎁</div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <input value={newReward.emoji} onChange={e => setNewReward(r => ({ ...r, emoji: e.target.value }))}
-                style={{ width: 52, padding: '12px 4px', border: '2px solid #E8E0FF', borderRadius: 14, fontSize: 24, textAlign: 'center', outline: 'none', background: LPRP }} />
-              <input value={newReward.label} onChange={e => setNewReward(r => ({ ...r, label: e.target.value }))} placeholder="Reward name"
-                style={{ flex: 1, padding: '12px 16px', border: '2px solid #E8E0FF', borderRadius: 14, fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D2560', outline: 'none' }} />
-            </div>
-            <div>
-              <FieldLabel>GEMS REQUIRED 💎</FieldLabel>
-              <Input value={newReward.gems} onChange={e => setNewReward(r => ({ ...r, gems: e.target.value }))} type="number" placeholder="30" />
-            </div>
-            <BigBtn onClick={confirmAddReward} disabled={!newReward.label.trim()}>Add Reward</BigBtn>
-            <GhostBtn onClick={() => setAddingReward(false)}>Cancel</GhostBtn>
+        <BottomSheet onClose={() => setAddingReward(false)}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Add a reward 🎁</div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <input value={newReward.emoji} onChange={e => setNewReward(r => ({ ...r, emoji: e.target.value }))}
+              style={{ width: 56, padding: '12px 4px', border: `1.5px solid ${PC.line}`, borderRadius: 14, fontSize: 24, textAlign: 'center', outline: 'none', background: PC.tealBg, fontFamily: FONT }} />
+            <input value={newReward.label} onChange={e => setNewReward(r => ({ ...r, label: e.target.value }))} placeholder="Reward name"
+              className="tc-input" style={{ flex: 1 }} />
           </div>
-        </div>
+          <Field label="Gems required 💎">
+            <input className="tc-input" type="number" placeholder="30" value={newReward.gems}
+              onChange={e => setNewReward(r => ({ ...r, gems: e.target.value }))} />
+          </Field>
+          <Btn onClick={confirmAddReward} disabled={!newReward.label.trim()}>Add reward</Btn>
+          <Btn variant="ghost" onClick={() => setAddingReward(false)}>Cancel</Btn>
+        </BottomSheet>
       )}
     </div>
   )
