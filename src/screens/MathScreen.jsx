@@ -152,7 +152,34 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
 
 // ── Help Panel ────────────────────────────────────────────────────────────────
 
-function HelpPanel({ question, questionType, onDone }) {
+function HelpPanel({ question, questionType, onDone, language }) {
+  const tr = language === 'tr'
+  const t = tr ? {
+    title:          'Hep beraber bakalım! 🧸',
+    countTab:       'Sayalım',
+    showTab:        'Göster',
+    tapInstruction: 'Kaç tanesini çıkartacaksın?',
+    countInstruction: 'Hepsini say!',
+    ready:          'Anladım, tekrar deniyorum! 💪',
+    nowCount:       'Şimdi kalanları say! 🔢',
+    writeIt:        'Kaç tane saydın? Klavyeye yaz! 🎉',
+    airTrace:       'Parmağınla havada çiz!',
+    whichNext:      'Hangi sayı geliyor?',
+    startLabel:     'başla',
+  } : {
+    title:          'Let\'s look together! 🧸',
+    countTab:       'Count',
+    showTab:        'Show',
+    tapInstruction: 'How many will you take away?',
+    countInstruction: 'Count them all!',
+    ready:          'Got it, let me try again! 💪',
+    nowCount:       'Now count what\'s left! 🔢',
+    writeIt:        'How many did you count? Type it in! 🎉',
+    airTrace:       'Draw it in the air!',
+    whichNext:      'Which number comes next?',
+    startLabel:     'start',
+  }
+
   const nums    = question.match(/\d+/g)?.map(Number) || []
   const isPlus  = question.includes('+')
   const isMinus = question.includes('-')
@@ -160,8 +187,9 @@ function HelpPanel({ question, questionType, onDone }) {
   const n1 = nums[1] ?? 0
   const bigNums = n0 > 12 || n1 > 12
 
-  const [activeTab, setActiveTab] = useState('count')
-  const [touched,   setTouched]   = useState(new Set())
+  const [activeTab,   setActiveTab]   = useState('count')
+  const [touched,     setTouched]     = useState(new Set())
+  const [touchedShow, setTouchedShow] = useState(new Set())
 
   const totalObjs   = isPlus ? n0 + n1 : 0
   const allTouched  = isPlus  && totalObjs > 0 && touched.size === totalObjs
@@ -170,12 +198,16 @@ function HelpPanel({ question, questionType, onDone }) {
   const toggle = (key) => {
     setTouched(prev => {
       const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        if (isMinus && next.size >= n1) return prev
-        next.add(key)
-      }
+      if (next.has(key)) { next.delete(key) }
+      else { if (isMinus && next.size >= n1) return prev; next.add(key) }
+      return next
+    })
+  }
+
+  const toggleShow = (key) => {
+    setTouchedShow(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
       return next
     })
   }
@@ -191,7 +223,7 @@ function HelpPanel({ question, questionType, onDone }) {
           fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK, textAlign: 'center', lineHeight: 1.65,
           background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
         }}>
-          Parmağınla havada çiz!<br />
+          {t.airTrace}<br />
           <span style={{ color: MATH_DEEP, fontSize: 22 }}>{question}</span>
         </div>
       </div>
@@ -201,7 +233,7 @@ function HelpPanel({ question, questionType, onDone }) {
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK_SOFT }}>
-          Hangi sayı geliyor?
+          {t.whichNext}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           {patternNums.map((n, i) => (
@@ -213,8 +245,7 @@ function HelpPanel({ question, questionType, onDone }) {
             }}>{n}</div>
           ))}
           <div style={{
-            width: 52, height: 52, borderRadius: 14,
-            border: `3px dashed ${ORANGE}`,
+            width: 52, height: 52, borderRadius: 14, border: `3px dashed ${ORANGE}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: FRED, fontWeight: 600, fontSize: 26, color: ORANGE,
           }}>?</div>
@@ -225,21 +256,16 @@ function HelpPanel({ question, questionType, onDone }) {
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, textAlign: 'center' }}>
-          Kaç tanesini çıkartacaksın?{' '}
+          {t.tapInstruction}{' '}
           <span style={{ color: ORANGE, fontSize: 20 }}>{n1}</span>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', maxWidth: 280 }}>
           {Array.from({ length: n0 }, (_, i) => (
-            <span
-              key={i}
-              onClick={() => toggle(i)}
-              style={{
-                fontSize: 34, cursor: 'pointer', userSelect: 'none',
-                textDecoration: touched.has(i) ? 'line-through' : 'none',
-                opacity: touched.has(i) ? 0.25 : 1,
-                transition: 'opacity 0.15s',
-              }}
-            >🍎</span>
+            <span key={i} onClick={() => toggle(i)} style={{
+              fontSize: 34, cursor: 'pointer', userSelect: 'none',
+              textDecoration: touched.has(i) ? 'line-through' : 'none',
+              opacity: touched.has(i) ? 0.25 : 1, transition: 'opacity 0.15s',
+            }}>🍎</span>
           ))}
         </div>
         {doneRemoval && (
@@ -247,9 +273,7 @@ function HelpPanel({ question, questionType, onDone }) {
             fontFamily: FRED, fontWeight: 600, fontSize: 16, color: GREEN,
             background: 'rgba(76,182,133,.12)', borderRadius: 12, padding: '8px 16px',
             textAlign: 'center', animation: 'pop 0.3s ease both',
-          }}>
-            Şimdi kalanları say! 🔢
-          </div>
+          }}>{t.nowCount}</div>
         )}
       </div>
     )
@@ -257,7 +281,7 @@ function HelpPanel({ question, questionType, onDone }) {
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK_SOFT }}>
-          Hepsini say!
+          {t.countInstruction}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', maxWidth: 280 }}>
           {Array.from({ length: n0 }, (_, i) => {
@@ -266,8 +290,7 @@ function HelpPanel({ question, questionType, onDone }) {
               <span key={k} onClick={() => toggle(k)} style={{
                 fontSize: 34, cursor: 'pointer', userSelect: 'none', display: 'inline-block',
                 filter: touched.has(k) ? 'brightness(1.5) drop-shadow(0 0 6px rgba(90,169,230,.9))' : 'none',
-                transform: touched.has(k) ? 'scale(1.18)' : 'scale(1)',
-                transition: 'all 0.15s',
+                transform: touched.has(k) ? 'scale(1.18)' : 'scale(1)', transition: 'all 0.15s',
               }}>🔵</span>
             )
           })}
@@ -277,8 +300,7 @@ function HelpPanel({ question, questionType, onDone }) {
               <span key={k} onClick={() => toggle(k)} style={{
                 fontSize: 34, cursor: 'pointer', userSelect: 'none', display: 'inline-block',
                 filter: touched.has(k) ? 'brightness(1.5) drop-shadow(0 0 6px rgba(247,148,51,.9))' : 'none',
-                transform: touched.has(k) ? 'scale(1.18)' : 'scale(1)',
-                transition: 'all 0.15s',
+                transform: touched.has(k) ? 'scale(1.18)' : 'scale(1)', transition: 'all 0.15s',
               }}>🟠</span>
             )
           })}
@@ -288,9 +310,7 @@ function HelpPanel({ question, questionType, onDone }) {
             fontFamily: FRED, fontWeight: 600, fontSize: 16, color: GREEN,
             background: 'rgba(76,182,133,.12)', borderRadius: 12, padding: '8px 16px',
             textAlign: 'center', animation: 'pop 0.3s ease both',
-          }}>
-            Kaç tane saydın? Klavyeye yaz! 🎉
-          </div>
+          }}>{t.writeIt}</div>
         )}
       </div>
     )
@@ -302,14 +322,14 @@ function HelpPanel({ question, questionType, onDone }) {
           fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK, textAlign: 'center', lineHeight: 1.65,
           background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
         }}>
-          Parmağınla havada çiz!<br />
+          {t.airTrace}<br />
           <span style={{ color: MATH_DEEP, fontSize: 20 }}>{question}</span>
         </div>
       </div>
     )
   }
 
-  // ── Göster content (bar model with ?) ────────────────────────────────────
+  // ── Göster content ────────────────────────────────────────────────────────
   let goster = (
     <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', padding: '20px 0' }}>
       {question}
@@ -317,36 +337,97 @@ function HelpPanel({ question, questionType, onDone }) {
   )
 
   if (nums.length >= 2 && n0 > 0) {
-    const svgW = 256, barH = 36, gap = 11, br = 9, svgH = barH * 2 + gap
-
     if (isPlus) {
       const total = n0 + n1
       if (total > 0) {
-        const p1W = Math.max(Math.round((n0 / total) * svgW), 22)
-        const p2W = svgW - p1W
-        goster = (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <svg width={svgW} height={svgH}>
-              <rect x={0} y={0} width={svgW} height={barH} rx={br} fill={GREEN} opacity={0.25} />
-              <rect x={0} y={0} width={svgW} height={barH} rx={br} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="6 3" />
-              <text x={svgW / 2} y={barH / 2 + 6} textAnchor="middle"
-                fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>
-              <rect x={0} y={barH + gap} width={p1W - 2} height={barH} rx={br} fill={MATH} />
-              {p1W > 26 && <text x={(p1W - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-                fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>}
-              <rect x={p1W + 2} y={barH + gap} width={p2W - 2} height={barH} rx={br} fill={ORANGE} />
-              {p2W > 26 && <text x={p1W + 2 + (p2W - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-                fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
-            </svg>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
-              <span style={{ color: MATH }}>{n0}</span>{' + '}
-              <span style={{ color: ORANGE }}>{n1}</span>{' = '}
-              <span style={{ color: GREEN, fontSize: 22 }}>?</span>
+        if (total <= 12) {
+          // Objects: tappable circles
+          goster = (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 280 }}>
+                {Array.from({ length: n0 }, (_, i) => {
+                  const k = `ga${i}`
+                  return (
+                    <div key={k} onClick={() => toggleShow(k)} style={{
+                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
+                      background: touchedShow.has(k) ? MATH : `${MATH}44`,
+                      border: `2px solid ${MATH}`,
+                      boxShadow: touchedShow.has(k) ? `0 0 10px ${MATH}99` : 'none',
+                      transition: 'all 0.15s',
+                    }} />
+                  )
+                })}
+                {Array.from({ length: n1 }, (_, i) => {
+                  const k = `gb${i}`
+                  return (
+                    <div key={k} onClick={() => toggleShow(k)} style={{
+                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
+                      background: touchedShow.has(k) ? ORANGE : `${ORANGE}44`,
+                      border: `2px solid ${ORANGE}`,
+                      boxShadow: touchedShow.has(k) ? `0 0 10px ${ORANGE}99` : 'none',
+                      transition: 'all 0.15s',
+                    }} />
+                  )
+                })}
+              </div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
+                <span style={{ color: MATH }}>{n0}</span>{' + '}
+                <span style={{ color: ORANGE }}>{n1}</span>{' = '}
+                <span style={{ color: GREEN, fontSize: 22 }}>?</span>
+              </div>
             </div>
-          </div>
-        )
+          )
+        } else {
+          // Number line SVG
+          const svgW = 256, svgH = 76
+          const lpad = 24, rpad = 24
+          const lineW = svgW - lpad - rpad
+          const lineY = 46
+          const scale = lineW / total
+          const x0    = lpad
+          const xN0   = lpad + n0 * scale
+          const xEnd  = lpad + total * scale
+          const arrowTip = xEnd
+          const arrowBase = arrowTip - 9
+          goster = (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <svg width={svgW} height={svgH}>
+                {/* Baseline */}
+                <line x1={x0} y1={lineY} x2={xEnd} y2={lineY} stroke="#c8c2e0" strokeWidth={2} />
+                {/* Tick at 0 */}
+                <line x1={x0} y1={lineY - 5} x2={x0} y2={lineY + 5} stroke="#c8c2e0" strokeWidth={2} />
+                <text x={x0} y={lineY + 17} textAnchor="middle"
+                  fill={INK_SOFT} fontFamily="Fredoka, sans-serif" fontSize="12">0</text>
+                {/* Dot at n0 */}
+                <circle cx={xN0} cy={lineY} r={7} fill={MATH} />
+                <text x={xN0} y={lineY - 13} textAnchor="middle"
+                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="11">{t.startLabel}</text>
+                <text x={xN0} y={lineY + 17} textAnchor="middle"
+                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{n0}</text>
+                {/* Arrow from n0 to end */}
+                <line x1={xN0 + 9} y1={lineY} x2={arrowBase} y2={lineY} stroke={ORANGE} strokeWidth={2.5} />
+                <polygon points={`${arrowTip},${lineY} ${arrowBase},${lineY - 5} ${arrowBase},${lineY + 5}`} fill={ORANGE} />
+                {/* +n1 label above arrow */}
+                <text x={(xN0 + xEnd) / 2} y={lineY - 14} textAnchor="middle"
+                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="13">+{n1}</text>
+                {/* "?" at end */}
+                <circle cx={xEnd} cy={lineY} r={8} fill={GREEN} opacity={0.2} />
+                <circle cx={xEnd} cy={lineY} r={8} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="4 2" />
+                <text x={xEnd} y={lineY + 5} textAnchor="middle"
+                  fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="14">?</text>
+              </svg>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
+                <span style={{ color: MATH }}>{n0}</span>{' + '}
+                <span style={{ color: ORANGE }}>{n1}</span>{' = '}
+                <span style={{ color: GREEN, fontSize: 22 }}>?</span>
+              </div>
+            </div>
+          )
+        }
       }
     } else if (isMinus) {
+      // Bar model for subtraction (unchanged)
+      const svgW = 256, barH = 36, gap = 11, br = 9, svgH = barH * 2 + gap
       const ratio = n0 > 0 ? n1 / n0 : 0.5
       const subW  = Math.max(Math.round(ratio * svgW), 22)
       const remW  = svgW - subW
@@ -384,12 +465,12 @@ function HelpPanel({ question, questionType, onDone }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <TutoMascot size={80} expression="thinking" color={MATH} />
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 19, color: INK, textAlign: 'center' }}>
-          Hep beraber bakalım! 🧸
+          {t.title}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 5, background: '#f0edf8', borderRadius: 13, padding: 4 }}>
-        {[{ id: 'count', label: 'Sayalım' }, { id: 'show', label: 'Göster' }].map(tab => (
+        {[{ id: 'count', label: t.countTab }, { id: 'show', label: t.showTab }].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -419,7 +500,7 @@ function HelpPanel({ question, questionType, onDone }) {
           cursor: 'pointer', boxShadow: '0 6px 18px rgba(61,143,207,.34)', width: '100%',
         }}
       >
-        Anladım, tekrar deniyorum! 💪
+        {t.ready}
       </button>
     </div>
   )
@@ -429,8 +510,9 @@ function HelpPanel({ question, questionType, onDone }) {
 
 export default function MathScreen() {
   const nav   = useNavigate()
-  const child = JSON.parse(localStorage.getItem('child') || 'null')
-  const age   = child?.age || 7
+  const child    = JSON.parse(localStorage.getItem('child') || 'null')
+  const age      = child?.age || 7
+  const language = child?.language || 'en'
 
   const [step,          setStep]         = useState('welcome')
   const [mode,          setMode]         = useState(null)        // 'paper' | 'screen'
@@ -873,6 +955,7 @@ export default function MathScreen() {
               question={q}
               questionType={qTypes[qIdx]}
               onDone={() => { setHelpVisible(false); setInput('') }}
+              language={language}
             />
           ) : (
             <>
