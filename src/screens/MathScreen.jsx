@@ -152,30 +152,227 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
 
 // ── Help Panel ────────────────────────────────────────────────────────────────
 
-function HelpPanel({ question, questionType, correctAnswer, onDone }) {
-  const nums = question.match(/\d+/g)?.map(Number) || []
-  const isAdd = question.includes('+')
-  const showCountTab = nums.length >= 2 && (nums[0] ?? 0) <= 12 && (nums[1] ?? 0) <= 12
+function HelpPanel({ question, questionType, onDone }) {
+  const nums    = question.match(/\d+/g)?.map(Number) || []
+  const isPlus  = question.includes('+')
+  const isMinus = question.includes('-')
+  const n0 = nums[0] ?? 0
+  const n1 = nums[1] ?? 0
+  const bigNums = n0 > 12 || n1 > 12
 
-  const tabList = [
-    ...(showCountTab ? [{ id: 'count', label: 'Sayalım' }] : []),
-    { id: 'show', label: 'Göster' },
-    { id: 'story', label: 'Hikaye' },
-  ]
-  const [activeTab, setActiveTab] = useState(tabList[0]?.id || 'show')
-  const [crossed, setCrossed] = useState(new Set())
+  const [activeTab, setActiveTab] = useState('count')
+  const [touched,   setTouched]   = useState(new Set())
 
-  const toggleCross = (i) => {
-    setCrossed(prev => {
+  const totalObjs   = isPlus ? n0 + n1 : 0
+  const allTouched  = isPlus  && totalObjs > 0 && touched.size === totalObjs
+  const doneRemoval = isMinus && n1 > 0 && touched.size === n1
+
+  const toggle = (key) => {
+    setTouched(prev => {
       const next = new Set(prev)
-      if (next.has(i)) next.delete(i)
-      else if (next.size < (nums[1] ?? 0)) next.add(i)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        if (isMinus && next.size >= n1) return prev
+        next.add(key)
+      }
       return next
     })
   }
 
-  const n0 = nums[0] ?? 0
-  const n1 = nums[1] ?? 0
+  // ── Sayalım content ──────────────────────────────────────────────────────
+  let sayalim
+
+  if (bigNums) {
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', padding: '8px 0' }}>
+        <span style={{ fontSize: 40 }}>✍️</span>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK, textAlign: 'center', lineHeight: 1.65,
+          background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
+        }}>
+          Parmağınla havada çiz!<br />
+          <span style={{ color: MATH_DEEP, fontSize: 22 }}>{question}</span>
+        </div>
+      </div>
+    )
+  } else if (questionType === 'pattern') {
+    const patternNums = nums.slice(0, -1)
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK_SOFT }}>
+          Hangi sayı geliyor?
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {patternNums.map((n, i) => (
+            <div key={i} style={{
+              width: 52, height: 52, borderRadius: 14, background: MATH, color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: FRED, fontWeight: 600, fontSize: 22,
+              boxShadow: '0 4px 12px rgba(90,169,230,.35)',
+            }}>{n}</div>
+          ))}
+          <div style={{
+            width: 52, height: 52, borderRadius: 14,
+            border: `3px dashed ${ORANGE}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FRED, fontWeight: 600, fontSize: 26, color: ORANGE,
+          }}>?</div>
+        </div>
+      </div>
+    )
+  } else if (isMinus) {
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, textAlign: 'center' }}>
+          Kaç tanesini çıkartacaksın?{' '}
+          <span style={{ color: ORANGE, fontSize: 20 }}>{n1}</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', maxWidth: 280 }}>
+          {Array.from({ length: n0 }, (_, i) => (
+            <span
+              key={i}
+              onClick={() => toggle(i)}
+              style={{
+                fontSize: 34, cursor: 'pointer', userSelect: 'none',
+                textDecoration: touched.has(i) ? 'line-through' : 'none',
+                opacity: touched.has(i) ? 0.25 : 1,
+                transition: 'opacity 0.15s',
+              }}
+            >🍎</span>
+          ))}
+        </div>
+        {doneRemoval && (
+          <div style={{
+            fontFamily: FRED, fontWeight: 600, fontSize: 16, color: GREEN,
+            background: 'rgba(76,182,133,.12)', borderRadius: 12, padding: '8px 16px',
+            textAlign: 'center', animation: 'pop 0.3s ease both',
+          }}>
+            Şimdi kalanları say! 🔢
+          </div>
+        )}
+      </div>
+    )
+  } else if (isPlus) {
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK_SOFT }}>
+          Hepsini say!
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', maxWidth: 280 }}>
+          {Array.from({ length: n0 }, (_, i) => {
+            const k = `a${i}`
+            return (
+              <span key={k} onClick={() => toggle(k)} style={{
+                fontSize: 34, cursor: 'pointer', userSelect: 'none', display: 'inline-block',
+                filter: touched.has(k) ? 'brightness(1.5) drop-shadow(0 0 6px rgba(90,169,230,.9))' : 'none',
+                transform: touched.has(k) ? 'scale(1.18)' : 'scale(1)',
+                transition: 'all 0.15s',
+              }}>🔵</span>
+            )
+          })}
+          {Array.from({ length: n1 }, (_, i) => {
+            const k = `b${i}`
+            return (
+              <span key={k} onClick={() => toggle(k)} style={{
+                fontSize: 34, cursor: 'pointer', userSelect: 'none', display: 'inline-block',
+                filter: touched.has(k) ? 'brightness(1.5) drop-shadow(0 0 6px rgba(247,148,51,.9))' : 'none',
+                transform: touched.has(k) ? 'scale(1.18)' : 'scale(1)',
+                transition: 'all 0.15s',
+              }}>🟠</span>
+            )
+          })}
+        </div>
+        {allTouched && (
+          <div style={{
+            fontFamily: FRED, fontWeight: 600, fontSize: 16, color: GREEN,
+            background: 'rgba(76,182,133,.12)', borderRadius: 12, padding: '8px 16px',
+            textAlign: 'center', animation: 'pop 0.3s ease both',
+          }}>
+            Kaç tane saydın? Klavyeye yaz! 🎉
+          </div>
+        )}
+      </div>
+    )
+  } else {
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+        <span style={{ fontSize: 40 }}>✍️</span>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK, textAlign: 'center', lineHeight: 1.65,
+          background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
+        }}>
+          Parmağınla havada çiz!<br />
+          <span style={{ color: MATH_DEEP, fontSize: 20 }}>{question}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Göster content (bar model with ?) ────────────────────────────────────
+  let goster = (
+    <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', padding: '20px 0' }}>
+      {question}
+    </div>
+  )
+
+  if (nums.length >= 2 && n0 > 0) {
+    const svgW = 256, barH = 36, gap = 11, br = 9, svgH = barH * 2 + gap
+
+    if (isPlus) {
+      const total = n0 + n1
+      if (total > 0) {
+        const p1W = Math.max(Math.round((n0 / total) * svgW), 22)
+        const p2W = svgW - p1W
+        goster = (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <svg width={svgW} height={svgH}>
+              <rect x={0} y={0} width={svgW} height={barH} rx={br} fill={GREEN} opacity={0.25} />
+              <rect x={0} y={0} width={svgW} height={barH} rx={br} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="6 3" />
+              <text x={svgW / 2} y={barH / 2 + 6} textAnchor="middle"
+                fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>
+              <rect x={0} y={barH + gap} width={p1W - 2} height={barH} rx={br} fill={MATH} />
+              {p1W > 26 && <text x={(p1W - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
+                fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>}
+              <rect x={p1W + 2} y={barH + gap} width={p2W - 2} height={barH} rx={br} fill={ORANGE} />
+              {p2W > 26 && <text x={p1W + 2 + (p2W - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
+                fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+            </svg>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
+              <span style={{ color: MATH }}>{n0}</span>{' + '}
+              <span style={{ color: ORANGE }}>{n1}</span>{' = '}
+              <span style={{ color: GREEN, fontSize: 22 }}>?</span>
+            </div>
+          </div>
+        )
+      }
+    } else if (isMinus) {
+      const ratio = n0 > 0 ? n1 / n0 : 0.5
+      const subW  = Math.max(Math.round(ratio * svgW), 22)
+      const remW  = svgW - subW
+      goster = (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <svg width={svgW} height={svgH}>
+            <rect x={0} y={0} width={svgW} height={barH} rx={br} fill={MATH} />
+            <text x={svgW / 2} y={barH / 2 + 6} textAnchor="middle"
+              fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>
+            <rect x={0} y={barH + gap} width={subW - 2} height={barH} rx={br} fill={ORANGE} />
+            {subW > 26 && <text x={(subW - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
+              fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+            {remW > 4 && <rect x={subW + 2} y={barH + gap} width={remW - 2} height={barH} rx={br} fill={GREEN} opacity={0.25} />}
+            {remW > 4 && <rect x={subW + 2} y={barH + gap} width={remW - 2} height={barH} rx={br} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="6 3" />}
+            {remW > 26 && <text x={subW + 2 + (remW - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
+              fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>}
+          </svg>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
+            <span style={{ color: MATH }}>{n0}</span>{' − '}
+            <span style={{ color: ORANGE }}>{n1}</span>{' = '}
+            <span style={{ color: GREEN, fontSize: 22 }}>?</span>
+          </div>
+        </div>
+      )
+    }
+  }
 
   return (
     <div style={{
@@ -184,7 +381,6 @@ function HelpPanel({ question, questionType, correctAnswer, onDone }) {
       display: 'flex', flexDirection: 'column', gap: 12,
       animation: 'scaleIn 0.3s ease both',
     }}>
-      {/* Header */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <TutoMascot size={80} expression="thinking" color={MATH} />
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 19, color: INK, textAlign: 'center' }}>
@@ -192,9 +388,8 @@ function HelpPanel({ question, questionType, correctAnswer, onDone }) {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 5, background: '#f0edf8', borderRadius: 13, padding: 4 }}>
-        {tabList.map(tab => (
+        {[{ id: 'count', label: 'Sayalım' }, { id: 'show', label: 'Göster' }].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -206,149 +401,15 @@ function HelpPanel({ question, questionType, correctAnswer, onDone }) {
               boxShadow: activeTab === tab.id ? '0 2px 8px rgba(0,0,0,.10)' : 'none',
               transition: 'all 0.15s',
             }}
-          >
-            {tab.label}
-          </button>
+          >{tab.label}</button>
         ))}
       </div>
 
-      {/* Tab content */}
-      <div style={{ minHeight: 130 }}>
-
-        {/* Sayalım */}
-        {activeTab === 'count' && (
-          isAdd ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: 280 }}>
-                {Array.from({ length: n0 }, (_, i) => (
-                  <span key={i} style={{ fontSize: 36 }}>🔵</span>
-                ))}
-              </div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: INK }}>+</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: 280 }}>
-                {Array.from({ length: n1 }, (_, i) => (
-                  <span key={i} style={{ fontSize: 36 }}>🟠</span>
-                ))}
-              </div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: INK }}>=</div>
-              <div style={{ background: GREEN, color: 'white', borderRadius: 14, padding: '8px 22px', fontFamily: FRED, fontWeight: 600, fontSize: 28 }}>
-                {n0 + n1}
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
-              <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 13, color: INK_SOFT, textAlign: 'center' }}>
-                Çıkarmak için üstlerine dokun 👇
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: 280 }}>
-                {Array.from({ length: n0 }, (_, i) => (
-                  <span
-                    key={i}
-                    onClick={() => toggleCross(i)}
-                    style={{
-                      fontSize: 36, cursor: 'pointer', userSelect: 'none',
-                      textDecoration: crossed.has(i) ? 'line-through' : 'none',
-                      opacity: crossed.has(i) ? 0.35 : 1,
-                      transition: 'opacity 0.15s',
-                    }}
-                  >🍎</span>
-                ))}
-              </div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK }}>
-                Kalan:{' '}
-                <span style={{ color: GREEN, fontSize: 28 }}>{n0 - crossed.size}</span>
-              </div>
-            </div>
-          )
-        )}
-
-        {/* Göster – bar model SVG */}
-        {activeTab === 'show' && nums.length >= 2 && n0 > 0 && (() => {
-          const svgW = 256
-          const barH = 36
-          const gap  = 11
-          const br   = 9
-          const svgH = barH * 2 + gap
-          if (isAdd) {
-            const total = n0 + n1
-            if (!total) return null
-            const p1W = Math.max(Math.round((n0 / total) * svgW), 22)
-            const p2W = svgW - p1W
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                <svg width={svgW} height={svgH}>
-                  <rect x={0} y={0} width={svgW} height={barH} rx={br} fill={GREEN} />
-                  <text x={svgW / 2} y={barH / 2 + 6} textAnchor="middle"
-                    fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{total}</text>
-                  <rect x={0} y={barH + gap} width={p1W - 2} height={barH} rx={br} fill={MATH} />
-                  {p1W > 26 && <text x={(p1W - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-                    fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>}
-                  <rect x={p1W + 2} y={barH + gap} width={p2W - 2} height={barH} rx={br} fill={ORANGE} />
-                  {p2W > 26 && <text x={p1W + 2 + (p2W - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-                    fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
-                </svg>
-                <div style={{ display: 'flex', gap: 8, fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK }}>
-                  <span style={{ color: MATH }}>■ {n0}</span><span>+</span>
-                  <span style={{ color: ORANGE }}>■ {n1}</span><span>=</span>
-                  <span style={{ color: GREEN }}>■ {n0 + n1}</span>
-                </div>
-              </div>
-            )
-          }
-          const result = Math.max(n0 - n1, 0)
-          const rW = Math.round((result / n0) * svgW)
-          const sW = svgW - rW
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-              <svg width={svgW} height={svgH}>
-                <rect x={0} y={0} width={svgW} height={barH} rx={br} fill={MATH} />
-                <text x={svgW / 2} y={barH / 2 + 6} textAnchor="middle"
-                  fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>
-                {rW > 4 && <rect x={0} y={barH + gap} width={rW - 2} height={barH} rx={br} fill={GREEN} />}
-                {rW > 26 && <text x={(rW - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-                  fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{result}</text>}
-                {sW > 4 && <rect x={rW + 2} y={barH + gap} width={sW - 2} height={barH} rx={br} fill={ORANGE} />}
-                {sW > 26 && <text x={rW + 2 + (sW - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-                  fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">−{n1}</text>}
-              </svg>
-              <div style={{ display: 'flex', gap: 8, fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK }}>
-                <span style={{ color: MATH }}>■ {n0}</span><span>−</span>
-                <span style={{ color: ORANGE }}>■ {n1}</span><span>=</span>
-                <span style={{ color: GREEN }}>■ {result}</span>
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* Hikaye */}
-        {activeTab === 'story' && (() => {
-          const emoji  = isAdd ? '🍪' : '🎈'
-          const parts  = question.split(/(\d+)/)
-          const ending = isAdd ? `Toplam kaç ${emoji} var?` : 'Kaç tane kaldı? 🤔'
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
-              <span style={{ fontSize: 44 }}>{emoji}</span>
-              <div style={{
-                fontFamily: FRED, fontWeight: 500, fontSize: 17, color: INK,
-                textAlign: 'center', lineHeight: 1.7,
-                background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
-              }}>
-                {parts.map((part, i) =>
-                  /^\d+$/.test(part)
-                    ? <strong key={i} style={{ color: MATH_DEEP, fontSize: 21 }}>{part}</strong>
-                    : part
-                )}
-              </div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK_SOFT, textAlign: 'center' }}>
-                {ending}
-              </div>
-            </div>
-          )
-        })()}
-
+      <div style={{ minHeight: 140 }}>
+        {activeTab === 'count' && sayalim}
+        {activeTab === 'show'  && goster}
       </div>
 
-      {/* Done button */}
       <button
         className="math-press"
         onClick={onDone}
@@ -358,7 +419,7 @@ function HelpPanel({ question, questionType, correctAnswer, onDone }) {
           cursor: 'pointer', boxShadow: '0 6px 18px rgba(61,143,207,.34)', width: '100%',
         }}
       >
-        Tekrar dene! 💪
+        Anladım, tekrar deniyorum! 💪
       </button>
     </div>
   )
@@ -438,7 +499,6 @@ export default function MathScreen() {
       setHelpVisible(true)
       setHelpUsed(true)
       setInput('')
-      setFlash({ correct: false, answer: correctAns[qIdx], helpMode: true })
       return
     }
 
@@ -472,7 +532,7 @@ export default function MathScreen() {
       child_answer: finalAnswers[i],
       correct: finalAnswers[i] === correctAns[i],
     }))
-    const baseGems  = child?.task_settings?.math?.gems ?? 30
+    const baseGems   = child?.task_settings?.math?.gems ?? 20
     const gemsEarned = helpUsed ? Math.round(baseGems * 0.67) : baseGems
     const evalData = {
       results, score: accuracy, accuracy, level_change: levelChange,
@@ -772,7 +832,7 @@ export default function MathScreen() {
         <style>{ANIM}</style>
 
         {/* Flash feedback overlay */}
-        {flash && !flash.helpMode && (
+        {flash && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 300,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
@@ -808,43 +868,44 @@ export default function MathScreen() {
 
         {/* Question + keyboard */}
         <div className="math-scroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Question card */}
-          <div key={qIdx} style={{
-            background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
-            boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
-            minHeight: isWord ? 120 : 84, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : 32, color: INK, lineHeight: 1.55 }}>
-              {q}
-            </div>
-          </div>
-
-          {/* Answer display */}
-          <div style={{
-            background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
-            boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
-              {input || '?'}
-            </span>
-          </div>
-
-          {/* Keyboard or HelpPanel */}
           {helpVisible ? (
             <HelpPanel
               question={q}
               questionType={qTypes[qIdx]}
-              correctAnswer={correctAns[qIdx]}
-              onDone={() => { setHelpVisible(false); setInput(''); setFlash(null) }}
+              onDone={() => { setHelpVisible(false); setInput('') }}
             />
           ) : (
-            <NumberKeyboard
-              value={input}
-              onChange={setInput}
-              onSubmit={submitScreenAnswer}
-              disabled={!!flash}
-            />
+            <>
+              {/* Question card */}
+              <div key={qIdx} style={{
+                background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
+                boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
+                minHeight: isWord ? 120 : 84, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : 32, color: INK, lineHeight: 1.55 }}>
+                  {q}
+                </div>
+              </div>
+
+              {/* Answer display */}
+              <div style={{
+                background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
+                boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
+                  {input || '?'}
+                </span>
+              </div>
+
+              {/* Keyboard */}
+              <NumberKeyboard
+                value={input}
+                onChange={setInput}
+                onSubmit={submitScreenAnswer}
+                disabled={!!flash}
+              />
+            </>
           )}
         </div>
       </div>
