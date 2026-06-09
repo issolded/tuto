@@ -212,19 +212,26 @@ function HelpPanel({ question, questionType, onDone, language }) {
 
   if (questionType === 'pattern') {
     const patternNums = nums.slice(0, -1)
+    const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK_SOFT }}>
           {t.whichNext}
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
           {patternNums.map((n, i) => (
-            <div key={i} style={{
-              width: 52, height: 52, borderRadius: 14, background: MATH, color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: FRED, fontWeight: 600, fontSize: 22,
-              boxShadow: '0 4px 12px rgba(90,169,230,.35)',
-            }}>{n}</div>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14, background: MATH, color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FRED, fontWeight: 600, fontSize: 22,
+                boxShadow: '0 4px 12px rgba(90,169,230,.35)',
+              }}>{n}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: ORANGE, lineHeight: 1 }}>+{diff}</span>
+                <span style={{ fontSize: 15, color: INK_SOFT, lineHeight: 1 }}>→</span>
+              </div>
+            </div>
           ))}
           <div style={{
             width: 52, height: 52, borderRadius: 14, border: `3px dashed ${ORANGE}`,
@@ -308,7 +315,51 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const _svgW = 260, _barH = 36, _gap = 10, _br = 9
   let goster
 
-  if (isPlus && n0 > 0 && n1 > 0) {
+  if (questionType === 'pattern') {
+    const patternNums = nums.slice(0, -1)
+    const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
+    const allPts = [...patternNums, null]   // null = ?
+    const nlW = 280, nlH = 82
+    const lpad = 22, rpad = 22
+    const step = allPts.length > 1 ? (nlW - lpad - rpad) / (allPts.length - 1) : 0
+    const lineY = 55, arcH = 20, dotR = 7
+    goster = (
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <svg width={nlW} height={nlH}>
+          <line x1={lpad} y1={lineY} x2={nlW - rpad} y2={lineY} stroke="#c8c2e0" strokeWidth={2} />
+          {allPts.slice(0, -1).map((_, i) => {
+            const x1 = lpad + i * step, x2 = lpad + (i + 1) * step, mx = (x1 + x2) / 2
+            return (
+              <g key={i}>
+                <path d={`M ${x1} ${lineY} Q ${mx} ${lineY - arcH} ${x2} ${lineY}`}
+                  fill="none" stroke={ORANGE} strokeWidth={2} />
+                <text x={mx} y={lineY - arcH - 4} textAnchor="middle"
+                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">+{diff}</text>
+              </g>
+            )
+          })}
+          {allPts.map((val, i) => {
+            const cx = lpad + i * step
+            const isLast = i === allPts.length - 1
+            return isLast ? (
+              <g key={i}>
+                <circle cx={cx} cy={lineY} r={dotR} fill={GREEN} opacity={0.18} />
+                <circle cx={cx} cy={lineY} r={dotR} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="4 2" />
+                <text x={cx} y={lineY + 4} textAnchor="middle"
+                  fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="11">?</text>
+              </g>
+            ) : (
+              <g key={i}>
+                <circle cx={cx} cy={lineY} r={dotR} fill={MATH} />
+                <text x={cx} y={lineY + 19} textAnchor="middle"
+                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{val}</text>
+              </g>
+            )
+          })}
+        </svg>
+      </div>
+    )
+  } else if (isPlus && n0 > 0 && n1 > 0) {
     const total  = n0 + n1
     const blueW  = Math.round((n0 / total) * _svgW)
     const orangeW = _svgW - blueW
