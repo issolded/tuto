@@ -190,8 +190,12 @@ function HelpPanel({ question, questionType, onDone, language }) {
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
-  const [activeTab, setActiveTab] = useState('count')
-  const [touched,   setTouched]   = useState(new Set())
+  const [activeTab,    setActiveTab]    = useState('count')
+  const [touched,      setTouched]      = useState(new Set())
+  const [activeArrow,  setActiveArrow]  = useState(null)
+  const [arrowInput,   setArrowInput]   = useState('')
+  const [solvedArrows, setSolvedArrows] = useState({})
+  const [tutoBubble,   setTutoBubble]   = useState(null)
 
   useEffect(() => { if (bigNums) setActiveTab('show') }, [])
 
@@ -211,34 +215,133 @@ function HelpPanel({ question, questionType, onDone, language }) {
   let sayalim
 
   if (questionType === 'pattern') {
-    const patternNums = nums
     const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
+    const arrowCount = nums.length
+    const allArrowsSolved = Object.keys(solvedArrows).length === arrowCount
+
+    const handleArrowTap = (i) => {
+      if (solvedArrows[i] !== undefined) return
+      const from = nums[i]
+      const toNum = nums[i + 1]
+      const toDisplay = toNum !== undefined ? toNum : '?'
+      setActiveArrow(i)
+      setArrowInput('')
+      setTutoBubble(tr
+        ? `${from}'den ${toDisplay}'ye kaç adım?`
+        : `${from} to ${toDisplay} — how many steps?`)
+    }
+
+    const confirmArrow = (i, input) => {
+      const from = nums[i]
+      const toNum = nums[i + 1]
+      const expected = toNum !== undefined ? toNum - from : diff
+      if (Number(input) === expected) {
+        const newSolved = { ...solvedArrows, [i]: expected }
+        setSolvedArrows(newSolved)
+        setActiveArrow(null)
+        setArrowInput('')
+        if (Object.keys(newSolved).length === arrowCount) {
+          setTutoBubble(tr
+            ? `${nums[nums.length - 1]}'dan sonra ne gelir? Şimdi yaz! 💪`
+            : `So what comes after ${nums[nums.length - 1]}? Type it in! 💪`)
+        } else {
+          const nextTo = nums[i + 2]
+          setTutoBubble(tr
+            ? (nextTo !== undefined
+                ? `Evet! +${expected}. Peki ${toNum}'den ${nextTo}'ye?`
+                : `Evet! +${expected}. O zaman ${nums[nums.length - 1]}'dan sonra ne gelir?`)
+            : (nextTo !== undefined
+                ? `Yes! +${expected}. Now ${toNum} to ${nextTo}?`
+                : `Yes! +${expected}. So what comes after ${nums[nums.length - 1]}?`))
+        }
+      } else {
+        const toDisplay = toNum !== undefined ? toNum : '?'
+        setTutoBubble(tr
+          ? `Tekrar dene! ${from}'den ${toDisplay}'ye say 🔢`
+          : `Try again! Count from ${from} to ${toDisplay} 🔢`)
+        setArrowInput('')
+      }
+    }
+
     sayalim = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK_SOFT }}>
-          {t.whichNext}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {tutoBubble || t.whichNext}
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
-          {patternNums.map((n, i) => (
+          {nums.map((n, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{
-                width: 52, height: 52, borderRadius: 14, background: MATH, color: 'white',
+                width: 48, height: 48, borderRadius: 14, background: MATH, color: 'white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: FRED, fontWeight: 600, fontSize: 22,
+                fontFamily: FRED, fontWeight: 600, fontSize: 20,
                 boxShadow: '0 4px 12px rgba(90,169,230,.35)',
               }}>{n}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-                <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: ORANGE, lineHeight: 1 }}>+{diff}</span>
-                <span style={{ fontSize: 15, color: INK_SOFT, lineHeight: 1 }}>→</span>
+              <div
+                onClick={() => handleArrowTap(i)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0,
+                  cursor: solvedArrows[i] !== undefined ? 'default' : 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <span style={{
+                  fontFamily: FRED, fontWeight: 700, fontSize: 11, lineHeight: 1,
+                  color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE,
+                }}>
+                  {solvedArrows[i] !== undefined ? `+${solvedArrows[i]}` : '?'}
+                </span>
+                <span style={{
+                  fontSize: 15, lineHeight: 1,
+                  color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : INK_SOFT,
+                }}>→</span>
               </div>
             </div>
           ))}
           <div style={{
-            width: 52, height: 52, borderRadius: 14, border: `3px dashed ${ORANGE}`,
+            width: 48, height: 48, borderRadius: 14,
+            border: `3px dashed ${allArrowsSolved ? GREEN : ORANGE}`,
+            background: allArrowsSolved ? `${GREEN}15` : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: FRED, fontWeight: 600, fontSize: 26, color: ORANGE,
+            fontFamily: FRED, fontWeight: 600, fontSize: 26, color: allArrowsSolved ? GREEN : ORANGE,
           }}>?</div>
         </div>
+
+        {activeArrow !== null && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
+            <div style={{
+              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
+              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
+            }}>
+              {arrowInput || '?'}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
+              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
+                <button
+                  key={k}
+                  className="math-press"
+                  onClick={() => {
+                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
+                    if (k === '✓') { if (arrowInput) confirmArrow(activeArrow, arrowInput); return }
+                    if (arrowInput.length < 2) setArrowInput(v => v + k)
+                  }}
+                  style={{
+                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36,
+                    borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
+                    color: k === '✓' || k === '⌫' ? 'white' : INK,
+                  }}
+                >{k}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   } else if (isMinus) {
@@ -418,7 +521,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
 
   const showDoneBtn = activeTab === 'show'
     || bigNums
-    || questionType === 'pattern'
+    || (questionType === 'pattern' && Object.keys(solvedArrows).length === nums.length)
     || (!isPlus && !isMinus)
     || (isMinus && doneRemoval)
     || (isPlus && allTouched)
