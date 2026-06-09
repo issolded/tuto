@@ -163,7 +163,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
     ready:          'Anladım, tekrar deniyorum! 💪',
     nowCount:       'Şimdi kalanları say! 🔢',
     airTrace:       'Parmağınla havada çiz!',
-    whichNext:      'Hangi sayı geliyor?',
+    whichNext:      'Hangi sayı geliyor sence?',
     startLabel:     'başla',
   } : {
     title:          'Let\'s look together! 🧸',
@@ -174,7 +174,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
     ready:          'Got it, let me try again! 💪',
     nowCount:       'Now count what\'s left! 🔢',
     airTrace:       'Draw it in the air!',
-    whichNext:      'Which number comes next?',
+    whichNext:      'What number comes next?',
     startLabel:     'start',
   }
 
@@ -189,6 +189,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const [touched,     setTouched]     = useState(new Set())
   const [touchedShow, setTouchedShow] = useState(new Set())
 
+  const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
 
   const toggle = (key) => {
@@ -260,7 +261,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
             <span key={i} onClick={() => toggle(i)} style={{
               fontSize: 34, cursor: 'pointer', userSelect: 'none',
               textDecoration: touched.has(i) ? 'line-through' : 'none',
-              opacity: touched.has(i) ? 0.25 : 1, transition: 'opacity 0.15s',
+              opacity: touched.has(i) ? 0.4 : 1, transition: 'opacity 0.15s',
             }}>🍎</span>
           ))}
         </div>
@@ -444,6 +445,13 @@ function HelpPanel({ question, questionType, onDone, language }) {
     }
   }
 
+  const showDoneBtn = activeTab === 'show'
+    || bigNums
+    || questionType === 'pattern'
+    || (!isPlus && !isMinus)
+    || (isMinus && doneRemoval)
+    || (isPlus && allTouched)
+
   return (
     <div style={{
       background: 'white', borderRadius: 22, padding: '18px 16px 14px',
@@ -480,17 +488,20 @@ function HelpPanel({ question, questionType, onDone, language }) {
         {activeTab === 'show'  && goster}
       </div>
 
-      <button
-        className="math-press"
-        onClick={onDone}
-        style={{
-          background: MATH, color: 'white', border: 'none', borderRadius: 16,
-          padding: '14px 22px', fontFamily: FRED, fontSize: 17, fontWeight: 600,
-          cursor: 'pointer', boxShadow: '0 6px 18px rgba(61,143,207,.34)', width: '100%',
-        }}
-      >
-        {t.ready}
-      </button>
+      {showDoneBtn && (
+        <button
+          className="math-press"
+          onClick={onDone}
+          style={{
+            background: MATH, color: 'white', border: 'none', borderRadius: 16,
+            padding: '14px 22px', fontFamily: FRED, fontSize: 17, fontWeight: 600,
+            cursor: 'pointer', boxShadow: '0 6px 18px rgba(61,143,207,.34)', width: '100%',
+            animation: 'pop 0.25s ease both',
+          }}
+        >
+          {t.ready}
+        </button>
+      )}
     </div>
   )
 }
