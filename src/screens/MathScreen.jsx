@@ -211,7 +211,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
   let sayalim
 
   if (questionType === 'pattern') {
-    const patternNums = nums.slice(0, -1)
+    const patternNums = nums
     const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
@@ -316,9 +316,8 @@ function HelpPanel({ question, questionType, onDone, language }) {
   let goster
 
   if (questionType === 'pattern') {
-    const patternNums = nums.slice(0, -1)
     const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
-    const allPts = [...patternNums, null]   // null = ?
+    const allPts = [...nums, null]   // null = ?
     const nlW = 280, nlH = 82
     const lpad = 22, rpad = 22
     const step = allPts.length > 1 ? (nlW - lpad - rpad) / (allPts.length - 1) : 0
