@@ -162,7 +162,6 @@ function HelpPanel({ question, questionType, onDone, language }) {
     countInstruction: 'Hepsini say!',
     ready:          'Anladım, tekrar deniyorum! 💪',
     nowCount:       'Şimdi kalanları say! 🔢',
-    writeIt:        'Kaç tane saydın? Klavyeye yaz! 🎉',
     airTrace:       'Parmağınla havada çiz!',
     whichNext:      'Hangi sayı geliyor?',
     startLabel:     'başla',
@@ -174,7 +173,6 @@ function HelpPanel({ question, questionType, onDone, language }) {
     countInstruction: 'Count them all!',
     ready:          'Got it, let me try again! 💪',
     nowCount:       'Now count what\'s left! 🔢',
-    writeIt:        'How many did you count? Type it in! 🎉',
     airTrace:       'Draw it in the air!',
     whichNext:      'Which number comes next?',
     startLabel:     'start',
@@ -191,8 +189,6 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const [touched,     setTouched]     = useState(new Set())
   const [touchedShow, setTouchedShow] = useState(new Set())
 
-  const totalObjs   = isPlus ? n0 + n1 : 0
-  const allTouched  = isPlus  && totalObjs > 0 && touched.size === totalObjs
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
 
   const toggle = (key) => {
@@ -305,13 +301,6 @@ function HelpPanel({ question, questionType, onDone, language }) {
             )
           })}
         </div>
-        {allTouched && (
-          <div style={{
-            fontFamily: FRED, fontWeight: 600, fontSize: 16, color: GREEN,
-            background: 'rgba(76,182,133,.12)', borderRadius: 12, padding: '8px 16px',
-            textAlign: 'center', animation: 'pop 0.3s ease both',
-          }}>{t.writeIt}</div>
-        )}
       </div>
     )
   } else {
