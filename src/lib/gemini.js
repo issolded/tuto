@@ -303,7 +303,8 @@ export async function generateMathQuestions(age, level, previousQuestions = [], 
   const prompt = `Generate 5 math questions for a ${age} year old at level ${clampedLevel} (${levelDesc}).
 Mix question types: symbolic equations, word problems, and patterns.
 Make them fun, relatable and age-appropriate. Use names, animals, food, toys in word problems.
-IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.${topicContext}${avoidClause}
+IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.
+For pattern questions, only show the number sequence with a blank. Do NOT include descriptions like 'Count by 3s' or 'Skip count by 2s' in the question. Example: '2, 4, 6, 8, __?' not 'Count by 2s: 2, 4, 6, 8, __?'${topicContext}${avoidClause}
 Return JSON only:
 {
   "questions": ["5 + 3 = ?", "Sara has 8 apples and eats 3. How many does she have left?", "2, 4, 6, __ what comes next?"],
