@@ -183,11 +183,10 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const isMinus = question.includes('-')
   const n0 = nums[0] ?? 0
   const n1 = nums[1] ?? 0
-  const bigNums = n0 > 12 || n1 > 12
+  const bigNums = n0 > 10 || n1 > 10
 
-  const [activeTab,   setActiveTab]   = useState('count')
-  const [touched,     setTouched]     = useState(new Set())
-  const [touchedShow, setTouchedShow] = useState(new Set())
+  const [activeTab, setActiveTab] = useState('count')
+  const [touched,   setTouched]   = useState(new Set())
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -197,14 +196,6 @@ function HelpPanel({ question, questionType, onDone, language }) {
       const next = new Set(prev)
       if (next.has(key)) { next.delete(key) }
       else { if (isMinus && next.size >= n1) return prev; next.add(key) }
-      return next
-    })
-  }
-
-  const toggleShow = (key) => {
-    setTouchedShow(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key); else next.add(key)
       return next
     })
   }
@@ -320,129 +311,65 @@ function HelpPanel({ question, questionType, onDone, language }) {
   }
 
   // ── Göster content ────────────────────────────────────────────────────────
-  let goster = (
-    <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', padding: '20px 0' }}>
-      {question}
-    </div>
-  )
+  const _svgW = 260, _barH = 36, _gap = 10, _br = 9
+  let goster
 
-  if (nums.length >= 2 && n0 > 0) {
-    if (isPlus) {
-      const total = n0 + n1
-      if (total > 0) {
-        if (total <= 12) {
-          // Objects: tappable circles
-          goster = (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 280 }}>
-                {Array.from({ length: n0 }, (_, i) => {
-                  const k = `ga${i}`
-                  return (
-                    <div key={k} onClick={() => toggleShow(k)} style={{
-                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
-                      background: touchedShow.has(k) ? MATH : `${MATH}44`,
-                      border: `2px solid ${MATH}`,
-                      boxShadow: touchedShow.has(k) ? `0 0 10px ${MATH}99` : 'none',
-                      transition: 'all 0.15s',
-                    }} />
-                  )
-                })}
-                {Array.from({ length: n1 }, (_, i) => {
-                  const k = `gb${i}`
-                  return (
-                    <div key={k} onClick={() => toggleShow(k)} style={{
-                      width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
-                      background: touchedShow.has(k) ? ORANGE : `${ORANGE}44`,
-                      border: `2px solid ${ORANGE}`,
-                      boxShadow: touchedShow.has(k) ? `0 0 10px ${ORANGE}99` : 'none',
-                      transition: 'all 0.15s',
-                    }} />
-                  )
-                })}
-              </div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
-                <span style={{ color: MATH }}>{n0}</span>{' + '}
-                <span style={{ color: ORANGE }}>{n1}</span>{' = '}
-                <span style={{ color: GREEN, fontSize: 22 }}>?</span>
-              </div>
-            </div>
-          )
-        } else {
-          // Number line SVG
-          const svgW = 256, svgH = 76
-          const lpad = 24, rpad = 24
-          const lineW = svgW - lpad - rpad
-          const lineY = 46
-          const scale = lineW / total
-          const x0    = lpad
-          const xN0   = lpad + n0 * scale
-          const xEnd  = lpad + total * scale
-          const arrowTip = xEnd
-          const arrowBase = arrowTip - 9
-          goster = (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <svg width={svgW} height={svgH}>
-                {/* Baseline */}
-                <line x1={x0} y1={lineY} x2={xEnd} y2={lineY} stroke="#c8c2e0" strokeWidth={2} />
-                {/* Tick at 0 */}
-                <line x1={x0} y1={lineY - 5} x2={x0} y2={lineY + 5} stroke="#c8c2e0" strokeWidth={2} />
-                <text x={x0} y={lineY + 17} textAnchor="middle"
-                  fill={INK_SOFT} fontFamily="Fredoka, sans-serif" fontSize="12">0</text>
-                {/* Dot at n0 */}
-                <circle cx={xN0} cy={lineY} r={7} fill={MATH} />
-                <text x={xN0} y={lineY - 13} textAnchor="middle"
-                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="11">{t.startLabel}</text>
-                <text x={xN0} y={lineY + 17} textAnchor="middle"
-                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{n0}</text>
-                {/* Arrow from n0 to end */}
-                <line x1={xN0 + 9} y1={lineY} x2={arrowBase} y2={lineY} stroke={ORANGE} strokeWidth={2.5} />
-                <polygon points={`${arrowTip},${lineY} ${arrowBase},${lineY - 5} ${arrowBase},${lineY + 5}`} fill={ORANGE} />
-                {/* +n1 label above arrow */}
-                <text x={(xN0 + xEnd) / 2} y={lineY - 14} textAnchor="middle"
-                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="13">+{n1}</text>
-                {/* "?" at end */}
-                <circle cx={xEnd} cy={lineY} r={8} fill={GREEN} opacity={0.2} />
-                <circle cx={xEnd} cy={lineY} r={8} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="4 2" />
-                <text x={xEnd} y={lineY + 5} textAnchor="middle"
-                  fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="14">?</text>
-              </svg>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
-                <span style={{ color: MATH }}>{n0}</span>{' + '}
-                <span style={{ color: ORANGE }}>{n1}</span>{' = '}
-                <span style={{ color: GREEN, fontSize: 22 }}>?</span>
-              </div>
-            </div>
-          )
-        }
-      }
-    } else if (isMinus) {
-      // Bar model for subtraction (unchanged)
-      const svgW = 256, barH = 36, gap = 11, br = 9, svgH = barH * 2 + gap
-      const ratio = n0 > 0 ? n1 / n0 : 0.5
-      const subW  = Math.max(Math.round(ratio * svgW), 22)
-      const remW  = svgW - subW
-      goster = (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <svg width={svgW} height={svgH}>
-            <rect x={0} y={0} width={svgW} height={barH} rx={br} fill={MATH} />
-            <text x={svgW / 2} y={barH / 2 + 6} textAnchor="middle"
-              fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>
-            <rect x={0} y={barH + gap} width={subW - 2} height={barH} rx={br} fill={ORANGE} />
-            {subW > 26 && <text x={(subW - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-              fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
-            {remW > 4 && <rect x={subW + 2} y={barH + gap} width={remW - 2} height={barH} rx={br} fill={GREEN} opacity={0.25} />}
-            {remW > 4 && <rect x={subW + 2} y={barH + gap} width={remW - 2} height={barH} rx={br} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="6 3" />}
-            {remW > 26 && <text x={subW + 2 + (remW - 2) / 2} y={barH + gap + barH / 2 + 6} textAnchor="middle"
-              fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>}
-          </svg>
-          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
-            <span style={{ color: MATH }}>{n0}</span>{' − '}
-            <span style={{ color: ORANGE }}>{n1}</span>{' = '}
-            <span style={{ color: GREEN, fontSize: 22 }}>?</span>
-          </div>
+  if (isPlus && n0 > 0 && n1 > 0) {
+    const total  = n0 + n1
+    const blueW  = Math.round((n0 / total) * _svgW)
+    const orangeW = _svgW - blueW
+    goster = (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <svg width={_svgW} height={_barH * 2 + _gap}>
+          <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill={`${GREEN}22`} />
+          <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill="none" stroke={GREEN} strokeWidth={2.5} strokeDasharray="6 3" />
+          <text x={_svgW / 2} y={_barH / 2 + 6} textAnchor="middle"
+            fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>
+          <rect x={0} y={_barH + _gap} width={blueW - 1} height={_barH} rx={_br} fill={MATH} />
+          {blueW > 28 && <text x={(blueW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
+            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>}
+          <rect x={blueW + 1} y={_barH + _gap} width={orangeW - 1} height={_barH} rx={_br} fill={ORANGE} />
+          {orangeW > 28 && <text x={blueW + 1 + (orangeW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
+            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+        </svg>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
+          <span style={{ color: MATH }}>{n0}</span>{' + '}
+          <span style={{ color: ORANGE }}>{n1}</span>{' = '}
+          <span style={{ color: GREEN, fontSize: 22 }}>?</span>
         </div>
-      )
-    }
+      </div>
+    )
+  } else if (isMinus && n0 > 0) {
+    const total   = n0 + n1
+    const orangeW = total > 0 ? Math.round((n1 / total) * _svgW) : Math.round(_svgW * 0.5)
+    const greenW  = _svgW - orangeW
+    goster = (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <svg width={_svgW} height={_barH * 2 + _gap}>
+          <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill={MATH} />
+          <text x={_svgW / 2} y={_barH / 2 + 6} textAnchor="middle"
+            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>
+          <rect x={0} y={_barH + _gap} width={orangeW - 1} height={_barH} rx={_br} fill={ORANGE} />
+          {orangeW > 28 && <text x={(orangeW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
+            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+          {greenW > 4 && <rect x={orangeW + 1} y={_barH + _gap} width={greenW - 1} height={_barH} rx={_br} fill={`${GREEN}22`} />}
+          {greenW > 4 && <rect x={orangeW + 1} y={_barH + _gap} width={greenW - 1} height={_barH} rx={_br} fill="none" stroke={GREEN} strokeWidth={2.5} strokeDasharray="6 3" />}
+          {greenW > 28 && <text x={orangeW + 1 + (greenW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
+            fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>}
+        </svg>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
+          <span style={{ color: MATH }}>{n0}</span>{' − '}
+          <span style={{ color: ORANGE }}>{n1}</span>{' = '}
+          <span style={{ color: GREEN, fontSize: 22 }}>?</span>
+        </div>
+      </div>
+    )
+  } else {
+    goster = (
+      <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', padding: '20px 0' }}>
+        {question}
+      </div>
+    )
   }
 
   const showDoneBtn = activeTab === 'show'
