@@ -179,11 +179,16 @@ function HelpPanel({ question, questionType, onDone, language }) {
   }
 
   const nums    = question.match(/\d+/g)?.map(Number) || []
-  const isPlus  = question.includes('+')
-  const isMinus = question.includes('-')
   const n0 = nums[0] ?? 0
   const n1 = nums[1] ?? 0
-  const bigNums = n0 > 10 || n1 > 10
+
+  const isWordAdd   = questionType === 'word' && /gives?|more|adds?|total|together|gets?/i.test(question)
+  const isWordMinus = questionType === 'word' && /takes?|away|left|eats?|loses?|fewer|gives away/i.test(question)
+
+  const isPlus  = question.includes('+') || isWordAdd
+  const isMinus = question.includes('-') || isWordMinus
+
+  const bigNums = (n0 > 10 || n1 > 10) || (questionType === 'word' && !isPlus && !isMinus)
 
   const [activeTab, setActiveTab] = useState('count')
   const [touched,   setTouched]   = useState(new Set())
