@@ -188,10 +188,12 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const isPlus  = question.includes('+') || isWordAdd
   const isMinus = question.includes('-') || isWordMinus
 
-  const bigNums = (n0 > 10 || n1 > 10) || (questionType === 'word' && !isPlus && !isMinus)
+  const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
   const [activeTab, setActiveTab] = useState('count')
   const [touched,   setTouched]   = useState(new Set())
+
+  useEffect(() => { if (bigNums) setActiveTab('show') }, [])
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -208,20 +210,7 @@ function HelpPanel({ question, questionType, onDone, language }) {
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (bigNums) {
-    sayalim = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', padding: '8px 0' }}>
-        <span style={{ fontSize: 40 }}>✍️</span>
-        <div style={{
-          fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK, textAlign: 'center', lineHeight: 1.65,
-          background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
-        }}>
-          {t.airTrace}<br />
-          <span style={{ color: MATH_DEEP, fontSize: 22 }}>{question}</span>
-        </div>
-      </div>
-    )
-  } else if (questionType === 'pattern') {
+  if (questionType === 'pattern') {
     const patternNums = nums.slice(0, -1)
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
