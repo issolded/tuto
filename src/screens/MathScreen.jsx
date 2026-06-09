@@ -864,7 +864,7 @@ export default function MathScreen() {
         <div style={{ background: MATH, padding: '16px 20px 18px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
-              onClick={() => nav('/child/home')}
+              onClick={() => helpVisible ? setHelpVisible(false) : nav('/child/home')}
               style={{
                 width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.22)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
