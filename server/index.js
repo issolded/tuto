@@ -13,7 +13,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-const GEMINI_API_KEY = 'AIzaSyDHMBb9SbxkPJKSqNWB7vgRYJ8yiT8Cq5Q'
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
 async function classifyIntent(text) {
@@ -513,6 +513,38 @@ app.get('/api/children/:childId/gems', async (req, res) => {
   const { data: ledger } = await supabase.from('bt_ledger').select('amount').eq('child_id', childId)
   const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
   res.json({ gems })
+})
+
+app.get('/api/children/:childId/story-ideas', async (req, res) => {
+  try {
+    const { childId } = req.params
+    const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+    const { data: child } = await supabase.from('children').select('age').eq('id', childId).single()
+    const age = child?.age || 7
+    const band = age <= 7 ? '5-7' : age <= 10 ? '8-10' : '11+'
+
+    const [{ data: pool }, { data: written }] = await Promise.all([
+      supabase.from('story_ideas').select('emoji, title, topic, description').eq('age_band', band).eq('status', 'active').eq('scope', 'global'),
+      supabase.from('stories').select('topic').eq('child_id', childId),
+    ])
+
+    const usedNorms = new Set((written || []).map(r => norm(r.topic)))
+    const fresh = (pool || []).filter(r => !usedNorms.has(norm(r.topic)))
+
+    const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(v => v[1])
+    let ideas = shuffle(fresh).slice(0, 4)
+
+    if (ideas.length < 4 && (pool || []).length > 0) {
+      const used = new Set(ideas.map(r => norm(r.topic)))
+      const extras = shuffle((pool || []).filter(r => !used.has(norm(r.topic))))
+      ideas = [...ideas, ...extras].slice(0, 4)
+    }
+
+    res.json({ ideas })
+  } catch {
+    res.json({ ideas: [] })
+  }
 })
 
 app.get('/api/children/:childId/stories', async (req, res) => {

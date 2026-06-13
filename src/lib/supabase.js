@@ -40,6 +40,16 @@ export async function getChildGems(childId) {
   }
 }
 
+export async function getStoryIdeas(childId) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/story-ideas`)
+    const data = await res.json()
+    return data.ideas || []
+  } catch {
+    return []
+  }
+}
+
 export async function getChildStories(childId) {
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories`)
