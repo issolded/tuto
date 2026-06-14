@@ -72,6 +72,37 @@ function buildSpellingHTML(text, errors, states, activeError) {
 
 const CARD_COLORS = ['#E8F5E9', '#E3F2FD', '#FFF8E1', '#FCE4EC']
 const BG = 'linear-gradient(180deg, #E8F5E9 0%, #F1F8E9 100%)'
+const BG_YOUNG = '#e3f3ea'
+
+// Dolch Pre-Primer through Grade 3 + common Fry words (~210 words).
+// Used to filter spelling corrections shown to ≤10 — only show words the
+// child is expected to know at this level (sight-word standard).
+const SIGHT_WORDS = new Set([
+  'a','and','away','big','blue','can','come','down','find','for','funny','go',
+  'help','here','i','in','is','it','jump','little','look','make','me','my',
+  'not','one','play','red','run','said','see','the','three','to','two','up',
+  'we','where','yellow','you',
+  'all','am','are','at','ate','be','black','brown','but','came','did','do',
+  'eat','four','get','good','have','he','into','like','must','new','no','now',
+  'on','our','out','please','pretty','ran','ride','saw','say','she','so','soon',
+  'that','there','they','this','too','under','want','was','well','went','what',
+  'white','who','will','with','yes',
+  'after','again','an','any','ask','as','by','could','every','fly','from','give',
+  'going','had','has','her','him','his','how','just','know','let','live','may',
+  'of','old','once','open','over','put','round','some','stop','take','thank',
+  'them','then','think','walk','were','when',
+  'always','around','because','been','before','best','both','buy','call','cold',
+  'does','fast','first','five','found','gave','goes','green','its','made',
+  'many','off','or','pull','read','right','sing','sit','sleep','tell','their',
+  'these','those','upon','us','use','very','wash','which','why','wish','work',
+  'would','write','your',
+  'about','better','bring','carry','clean','cut','done','draw','drink','eight',
+  'fall','far','full','got','grow','hold','hot','hurt','if','keep','kind',
+  'laugh','light','long','much','myself','never','only','own','pick','seven',
+  'shall','show','six','small','start','ten','today','together','try','warm',
+  'each','other','more','number','way','people','water','day','time',
+  'part','place','year','back','most','hand','high','move',
+])
 
 function BackBtn({ onClick }) {
   return (
@@ -108,6 +139,12 @@ export default function StoriesScreen() {
   const editableTextRef = useRef('')
   const [checkingTitle, setCheckingTitle] = useState(false)
   const [titleSuggestion, setTitleSuggestion] = useState(null)
+
+  // gentle-check state (≤10 flow only)
+  const [gentleQueue, setGentleQueue] = useState([]) // [{origIdx, wrong, correct}]
+  const [gentleIdx, setGentleIdx] = useState(0)
+  const [gentleApproved, setGentleApproved] = useState(new Set())
+  const [gentleAck, setGentleAck] = useState(null) // 'yes' | 'no' | null
 
   const handleTitleNext = async () => {
     if (!storyTitle.trim() || checkingTitle) return
@@ -159,6 +196,61 @@ export default function StoriesScreen() {
     }
     setStep('corrected')
   }
+
+  // ── ≤10 gentle-check helpers ───────────────────────────────────────────────
+
+  const finishYoung = async (approvedSet) => {
+    const baseText = evalResult?.transcribed_text || ''
+    const errors = evalResult?.spelling_errors || []
+    const stateArr = errors.map((_, i) => approvedSet.has(i) ? 'fixed' : 'pending')
+    const corrected = buildCorrectedText(baseText, errors, stateArr)
+    if (child?.id) {
+      const { story } = await saveChildStory(child.id, {
+        title: displayTitle, topic: chosenIdea?.topic || '',
+        transcribed_text: baseText, corrected_text: corrected,
+        status: 'completed', gems_earned: evalResult?.gems_earned || 0,
+      })
+      if (story) setStories(prev => [story, ...prev])
+    }
+    setGentleAck(null)
+    setStep('done')
+  }
+
+  const handleGentleResponse = (yes) => {
+    const newApproved = new Set(gentleApproved)
+    if (yes) newApproved.add(gentleQueue[gentleIdx].origIdx)
+    setGentleAck(yes ? 'yes' : 'no')
+    setTimeout(() => {
+      if (gentleIdx + 1 < gentleQueue.length) {
+        setGentleApproved(newApproved)
+        setGentleIdx(prev => prev + 1)
+        setGentleAck(null)
+      } else {
+        finishYoung(newApproved)
+      }
+    }, 800)
+  }
+
+  const startGentleCheck = () => {
+    const age = Number(child?.age) || 7
+    const errors = evalResult?.spelling_errors || []
+    const cap = age <= 7 ? 2 : 4
+    const queue = errors
+      .map((e, i) => ({ origIdx: i, wrong: e.wrong, correct: e.correct }))
+      .filter(({ correct }) => SIGHT_WORDS.has(correct.toLowerCase()))
+      .slice(0, cap)
+    if (queue.length === 0) {
+      finishYoung(new Set())
+      return
+    }
+    setGentleQueue(queue)
+    setGentleIdx(0)
+    setGentleApproved(new Set())
+    setGentleAck(null)
+    setStep('gentle-check')
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
 
   const finishStory = async (status) => {
     const baseText = editableTextRef.current || evalResult?.transcribed_text || ''
@@ -429,8 +521,11 @@ export default function StoriesScreen() {
               ← Go back and try again
             </button>
           ) : (
-            <button onClick={() => setStep('spelling')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
-              Let's look at your story! →
+            <button
+              onClick={() => Number(child?.age) <= 10 ? startGentleCheck() : setStep('spelling')}
+              style={{ width: '100%', marginTop: 24, background: '#4cb685', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+            >
+              {Number(child?.age) <= 10 ? 'Awesome! Let\'s go! 🌟' : 'Let\'s look at your story! →'}
             </button>
           )}
         </div>
@@ -543,10 +638,78 @@ export default function StoriesScreen() {
     )
   }
 
+  // ── STEP: GENTLE-CHECK (≤10 only) ────────────────────────────────────────
+  if (step === 'gentle-check') {
+    const current = gentleQueue[gentleIdx]
+    return (
+      <div style={{ background: BG_YOUNG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px' }}>
+        <style>{ANIM}</style>
+        <TutoMascot size={150} expression="excited" style={{ animation: 'fadeUp 0.4s ease both' }} />
+
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 18, marginBottom: 4 }}>
+          {gentleQueue.map((_, i) => (
+            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i <= gentleIdx ? '#4cb685' : 'rgba(76,182,133,0.25)', transition: 'background 0.3s' }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#4cb685', marginBottom: 16, letterSpacing: 0.5 }}>
+          {gentleIdx + 1} of {gentleQueue.length}
+        </div>
+
+        {/* Speech balloon */}
+        <div style={{ background: 'white', borderRadius: 36, padding: '28px 24px', width: '100%', boxShadow: '0 8px 32px rgba(76,182,133,0.15)', textAlign: 'center', boxSizing: 'border-box', animation: 'fadeUp 0.35s ease 0.1s both', position: 'relative' }}>
+          {/* balloon tail */}
+          <div style={{ position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '14px solid transparent', borderRight: '14px solid transparent', borderBottom: '20px solid white' }} />
+          {gentleAck ? (
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2f9e6b', lineHeight: 1.5, padding: '8px 0', animation: 'fadeUp 0.2s ease both' }}>
+              {gentleAck === 'yes' ? 'Got it, thanks! ✨' : 'Okay, your story your way! 😊'}
+            </div>
+          ) : (
+            <>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 700, color: '#6A9956', marginBottom: 18 }}>
+                Just so I understand your story —<br />can you help me?
+              </div>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#20201e', marginBottom: 6 }}>
+                You wrote <span style={{ color: '#f79433' }}>"{current?.wrong}"</span>
+              </div>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#20201e' }}>
+                Did you mean <span style={{ color: '#2f9e6b' }}>"{current?.correct}"</span>?
+              </div>
+            </>
+          )}
+        </div>
+
+        {!gentleAck && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', marginTop: 20, animation: 'fadeUp 0.35s ease 0.15s both' }}>
+            <button
+              onClick={() => handleGentleResponse(true)}
+              style={{ background: '#4cb685', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)' }}
+            >
+              ✅ Yes, that's it!
+            </button>
+            <button
+              onClick={() => handleGentleResponse(false)}
+              style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
+            >
+              No, I meant "{current?.wrong}"
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // ── STEP: DONE ────────────────────────────────────────────────────────────
   if (step === 'done') {
+    const isYoung = Number(child?.age) <= 10
+    const gems = evalResult?.gems_earned ?? 0
+    const resetState = () => {
+      setStep('idle'); setChosenIdea(null); setStoryTitle(''); setPhotos([])
+      setEvalResult(null); setSpellingState([]); setActiveError(null)
+      setGentleQueue([]); setGentleIdx(0); setGentleApproved(new Set()); setGentleAck(null)
+    }
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: isYoung ? BG_YOUNG : BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', position: 'relative', overflow: 'hidden' }}>
         <style>{ANIM}</style>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {CONFETTI_COLORS.map((c, i) => (
@@ -554,26 +717,20 @@ export default function StoriesScreen() {
           ))}
         </div>
         <TutoMascot size={180} expression="proud" style={{ animation: 'fadeUp 0.4s ease both' }} />
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 34, fontWeight: 900, color: '#2D5016', marginTop: 20, animation: 'fadeUp 0.4s ease 0.1s both' }}>
-          Amazing! 🎉
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 34, fontWeight: 900, color: isYoung ? '#2f9e6b' : '#2D5016', marginTop: 20, textAlign: 'center', lineHeight: 1.2, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+          {isYoung ? 'Amazing writing! 🎉' : 'Amazing! 🎉'}
         </div>
-        <div style={{ background: 'white', borderRadius: 28, padding: '20px 40px', marginTop: 20, boxShadow: '0 6px 24px rgba(46,196,134,0.20)', animation: 'fadeUp 0.4s ease 0.15s both', textAlign: 'center' }}>
-          <div style={{ fontSize: 52, fontWeight: 900, fontFamily: "'Baloo 2', cursive", color: '#FF6B35', lineHeight: 1 }}>
-            +{evalResult?.gems_earned ?? 0}
+        <div style={{ background: 'white', borderRadius: isYoung ? 36 : 28, padding: '24px 44px', marginTop: 20, boxShadow: '0 8px 32px rgba(76,182,133,0.20)', animation: 'fadeUp 0.4s ease 0.15s both', textAlign: 'center' }}>
+          <div style={{ fontSize: 56, fontWeight: 900, fontFamily: "'Baloo 2', cursive", color: '#f79433', lineHeight: 1 }}>
+            +{gems}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#6A9956', marginTop: 4 }}>Gems earned! ⭐</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: isYoung ? '#4cb685' : '#6A9956', marginTop: 6 }}>
+            {isYoung ? `You earned ${gems} gems for your story! ⭐` : 'Gems earned! ⭐'}
+          </div>
         </div>
         <button
-          onClick={() => {
-            setStep('idle')
-            setChosenIdea(null)
-            setStoryTitle('')
-            setPhotos([])
-            setEvalResult(null)
-            setSpellingState([])
-            setActiveError(null)
-          }}
-          style={{ marginTop: 32, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+          onClick={resetState}
+          style={{ marginTop: 32, background: isYoung ? '#4cb685' : '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
         >
           Back to My Stories
         </button>
