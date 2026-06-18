@@ -21,6 +21,9 @@ const ANIM = `
   0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 `
 
 const CONFETTI_COLORS = ['#FF6B35','#FFD93D','#2EC486','#7C5CBF','#4ECDC4','#FF8CC8','#A8E6CF','#FFB347']
@@ -122,6 +125,7 @@ export default function StoriesScreen() {
   const [loadingStories, setLoadingStories] = useState(true)
   const [stories, setStories] = useState([])
   const [ideas, setIdeas] = useState([])
+  const [ideasLoading, setIdeasLoading] = useState(true)
   const [selectedIdea, setSelectedIdea] = useState(null)
   const [showFreeText, setShowFreeText] = useState(false)
   const [freeText, setFreeText] = useState('')
@@ -267,14 +271,16 @@ export default function StoriesScreen() {
   }
 
   useEffect(() => {
-    if (!child?.id) { setLoadingStories(false); return }
-    Promise.all([
-      getChildStories(child.id),
-      getStoryIdeas(child.id),
-    ]).then(([storiesData, ideasData]) => {
+    if (!child?.id) { setLoadingStories(false); setIdeasLoading(false); return }
+    getChildStories(child.id).then(storiesData => {
       setStories(storiesData)
-      setIdeas(ideasData)
       setLoadingStories(false)
+    })
+    getStoryIdeas(child.id).then(ideasData => {
+      setIdeas(ideasData)
+      setIdeasLoading(false)
+    }).catch(() => {
+      setIdeasLoading(false)
     })
   }, [])
 
@@ -855,7 +861,11 @@ export default function StoriesScreen() {
           </div>
         ) : (
           <>
-            {ideas.length > 0 ? (
+            {ideasLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                <div style={{ width: 28, height: 28, border: '3px solid #C8E6C9', borderTopColor: '#2EC486', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            ) : ideas.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {ideas.map((idea, i) => (
                   <button
