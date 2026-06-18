@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tuto — My Math journey (6–8 skin)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#241f3a; --ink-soft:#8d83ad;
+    --stage:#ececec;
+    --lilac:#e7ddf6;
+    --math:#5aa9e6; --math-deep:#3d8fcf; --math-bg:#D4EDFF;
+    --orange:#f79433;
+    --green:#4cb685; --green-deep:#37a06f;
+    --inactive:#b6aecb;
+    --fred:'Fredoka',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:'Nunito',sans-serif;
+    background:var(--stage);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding:40px 0 80px;
+  }
+  .page-head{ text-align:center; padding:0 24px; max-width:680px; margin:0 auto; }
+  .page-head h1{ font-family:var(--fred); font-weight:600; font-size:28px; margin:0; letter-spacing:-.4px; color:#20201e; }
+  .page-head p{ font-weight:700; font-size:14px; color:#9a948c; margin:10px 0 0; line-height:1.55; }
+  .page-head .crumb{ font-family:var(--fred); font-weight:600; font-size:13px; color:var(--math-deep); background:#fff; display:inline-block; padding:5px 14px; border-radius:999px; box-shadow:0 2px 8px rgba(40,30,70,.08); margin-bottom:18px; }
+
+  .rail{
+    display:flex; flex-wrap:wrap; justify-content:center;
+    gap:46px 38px; padding:54px 32px 0; max-width:1700px; margin:0 auto;
+  }
+  .frame{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .frame .cap{ display:flex; align-items:center; gap:9px; }
+  .frame .cap .num{
+    width:24px; height:24px; border-radius:50%; background:var(--math); color:#fff;
+    font-family:var(--fred); font-weight:600; font-size:13px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .frame .cap .txt{ font-family:var(--fred); font-weight:500; font-size:15px; color:#6f6a64; }
+
+  .phone{
+    width:330px; height:716px; border-radius:50px; border:10px solid #fff;
+    overflow:hidden; position:relative; display:flex; flex-direction:column;
+    box-shadow:0 30px 60px -22px rgba(40,30,70,.4), 0 8px 20px rgba(0,0,0,.07);
+  }
+  .statusbar{
+    flex:0 0 auto; height:30px; display:flex; align-items:center; justify-content:space-between;
+    padding:8px 24px 0; font-weight:800; font-size:13px; color:var(--ink); z-index:6; position:relative;
+  }
+  .statusbar .dots{ display:flex; gap:4px; align-items:center; }
+  .statusbar .dots i{ width:6px; height:6px; border-radius:50%; background:var(--ink); opacity:.55; }
+  .statusbar .batt{ width:22px; height:11px; border:2px solid var(--ink); border-radius:3px; position:relative; opacity:.55; }
+  .statusbar .batt::after{ content:""; position:absolute; right:-4px; top:3px; width:2px; height:5px; background:var(--ink); border-radius:0 2px 2px 0; }
+  .statusbar .batt::before{ content:""; position:absolute; left:1.5px; top:1.5px; bottom:1.5px; width:11px; background:var(--ink); border-radius:1px; }
+
+  .scene{ flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+  .scroll{ flex:1; min-height:0; overflow:hidden; }
+  .scroll::-webkit-scrollbar{ display:none; }
+</style>
+</head>
+<body>
+
+  <div class="page-head">
+    <div class="crumb">Level 2 · My Math</div>
+    <h1>My Math — the journey, in the 6–8 skin</h1>
+    <p>Tapping the <strong>My&nbsp;Math</strong> tile opens the math loop: Tuto greets you at your current <em>level</em>, you choose <strong>paper</strong> (snap a photo) or <strong>screen</strong> (tap answers), solve five puzzles, and earn gems — leveling up at 80%+. Same logic as <code>MathScreen</code>, re-skinned chunky-cute. Mock data.</p>
+  </div>
+
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="tuto-mascot.jsx"></script>
+  <script type="text/babel" src="my-math-journey.jsx"></script>
+
+  <script type="text/babel">
+    ReactDOM.createRoot(document.getElementById('root')).render(<MyMathJourney/>);
+  </script>
+</body>
+</html>

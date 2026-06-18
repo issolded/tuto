@@ -555,15 +555,40 @@ app.get('/api/children/:childId/stories', async (req, res) => {
 
 app.post('/api/children/:childId/stories', async (req, res) => {
   const { childId } = req.params
-  const { title, topic, transcribed_text, corrected_text, status, gems_earned } = req.body
-  const { data: story, error } = await supabase.from('stories')
-    .insert({ child_id: childId, title, topic, transcribed_text, corrected_text, status, gems_earned: gems_earned || 0 })
-    .select().single()
-  if (error) return res.status(500).json({ error: error.message })
-  if ((gems_earned || 0) > 0) {
-    await supabase.from('bt_ledger').insert({ child_id: childId, amount: gems_earned, reason: 'story' })
+  const { storyId, title, topic, transcribed_text, corrected_text, status, gems_earned } = req.body
+  try {
+    let story, prevStatus
+
+    if (storyId) {
+      // Fetch existing status before update (don't trust client on gem eligibility)
+      const { data: existing } = await supabase.from('stories').select('status').eq('id', storyId).single()
+      prevStatus = existing?.status
+      const { data: updated, error } = await supabase.from('stories')
+        .update({ title, transcribed_text, corrected_text, status })
+        .eq('id', storyId)
+        .select().single()
+      if (error) return res.status(500).json({ error: error.message })
+      story = updated
+    } else {
+      prevStatus = null
+      const { data: inserted, error } = await supabase.from('stories')
+        .insert({ child_id: childId, title, topic, transcribed_text, corrected_text, status, gems_earned: gems_earned || 0 })
+        .select().single()
+      if (error) return res.status(500).json({ error: error.message })
+      story = inserted
+    }
+
+    // Gem awarded only on first-ever completion (prev was not completed)
+    const firstCompletion = status === 'completed' && prevStatus !== 'completed'
+    const gemsAwarded = firstCompletion ? (gems_earned || 0) : 0
+    if (gemsAwarded > 0) {
+      await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
+    }
+
+    res.json({ story, gems_awarded: gemsAwarded })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-  res.json({ story })
 })
 
 app.get('/api/submissions/:id', async (req, res) => {

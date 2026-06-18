@@ -68,10 +68,10 @@ function useLongPress(onLongPress, ms = 600) {
 
 // ─── Story card ────────────────────────────────────────────────────────────────
 
-function StoryCard({ story, index }) {
+function StoryCard({ story, index, onTap }) {
   const bg = STORY_BG_COLORS[index % STORY_BG_COLORS.length]
   return (
-    <div style={{ background: 'white', borderRadius: 20, boxShadow: '0 4px 18px rgba(0,0,0,0.09)', overflow: 'hidden' }}>
+    <div onClick={onTap} style={{ background: 'white', borderRadius: 20, boxShadow: '0 4px 18px rgba(0,0,0,0.09)', overflow: 'hidden', cursor: 'pointer' }}>
       <div style={{ position: 'relative', aspectRatio: '2/3', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 }}>
         <span style={{ fontSize: 40 }}>✏️</span>
         {story.status === 'in_progress' && (
@@ -197,7 +197,7 @@ export default function LibraryScreen() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {stories.map((story, i) => (
-                <StoryCard key={story.id} story={story} index={i} />
+                <StoryCard key={story.id} story={story} index={i} onTap={() => nav('/child/stories', { state: { story } })} />
               ))}
             </div>
           )}

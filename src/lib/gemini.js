@@ -214,38 +214,53 @@ export async function evaluateTask(file, taskType, age, language = 'en') {
   ])
 }
 
-export async function evaluateStory(photos, topic, age, language = 'en') {
-  const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
-  const prompt = `You are reading a creative story written by a ${n}-year-old child on the topic: "${topic}".
-Transcribe and evaluate the handwritten text in the photo(s). Return JSON only, no other text:
+export async function transcribeStory(photos, language = 'en') {
+  const prompt = `You are an expert at reading young children's handwriting. First read the WHOLE page and understand the story the child is telling — its meaning and flow. THEN, for each part, infer the word the child most likely INTENDED, using sentence and story context.
+Example: "once a pola time" → the child means "once upon a time".
+Produce a clean, readable version of the story in correct, age-appropriate words.
+- Use context to resolve unclear handwriting; don't transcribe meaningless letter fragments — infer the intended real word.
+- IGNORE drawings, speech bubbles, labels, and crossed-out words.
+- Read in natural order: top to bottom, left to right. Multiple photos are sequential pages — join them in order.
+- NEVER output offensive or nonsense strings.
+Return JSON only:
 {
-  "word_count": number,
-  "has_profanity": boolean,
-  "too_short": boolean,
-  "encouragement": "short warm message max 2 sentences in ${lang}",
-  "transcribed_text": "full text exactly as written by child",
-  "spelling_errors": [{ "wrong": "misspelled word as written", "correct": "correct spelling", "index": 0 }],
-  "gems_earned": number
+  "transcribed_text": string,
+  "uncertain_words": [{ "word": string, "index": number }]
 }
-Rules:
-- too_short: true if word_count < 15
-- encouragement: always positive and warm, age-appropriate for a ${n}-year-old, in ${lang}, never mention evaluation or checking
-- spelling_errors: only genuine spelling mistakes; do not flag creative or intentional stylistic choices; index = 0-based occurrence if the same wrong word appears multiple times
-- has_profanity: true if any profanity or inappropriate language is present
-- gems_earned: 10 minimum, up to 50 based on word_count and quality
-Be thorough with spelling errors. Common mistakes to catch:
-- wrong homophones (off/of, their/there, to/too)
-- missing or extra letters (bumms→bumps, weres→were)
-- run-together or split words (danc er→dancer, in to→into)
-- wrong capitalization mid-sentence
-Flag ALL spelling and grammar errors you see.`
+uncertain_words = the few words you had to GUESS or were least sure about, so we can confirm them with the child. Keep this list short (max 4–5 entries). "index" is the 0-based word position in transcribed_text (split by whitespace).`
   const parts = [{ text: prompt }]
   for (const photo of photos) {
     const base64 = await fileToBase64(photo)
     parts.push({ inline_data: { mime_type: photo.type, data: base64 } })
   }
   return callGemini(parts)
+}
+
+export async function evaluateStory(transcribedText, topic, age, language = 'en') {
+  const n = Number(age) || 7
+  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const prompt = `You are evaluating a creative story written by a ${n}-year-old child on the topic: "${topic}".
+The story text is:
+"""
+${transcribedText}
+"""
+Return JSON only, no other text:
+{
+  "word_count": number,
+  "has_profanity": boolean,
+  "too_short": boolean,
+  "encouragement": "short warm message max 2 sentences in ${lang}",
+  "spelling_errors": [{ "wrong": "misspelled word as written", "correct": "correct spelling", "index": 0 }],
+  "gems_earned": number
+}
+Rules:
+- word_count: count words in the text above
+- too_short: true if word_count < 15
+- encouragement: always positive and warm, age-appropriate for a ${n}-year-old, in ${lang}, never mention evaluation or checking
+- has_profanity: true if any profanity or inappropriate language is present
+- gems_earned: 10 minimum, up to 50 based on word_count and quality; independent of spelling
+- spelling_errors: for the 11+ path only — flag unambiguous misspellings in the text with a single clear correction. Empty array is fine; when in doubt, omit.`
+  return callGemini([{ text: prompt }])
 }
 
 export async function checkTitleSpelling(title) {
