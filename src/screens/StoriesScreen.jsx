@@ -230,7 +230,10 @@ export default function StoriesScreen() {
     setCoverUploading(true)
     try {
       const path = `${child.id}/covers/${Date.now()}.jpg`
-      await supabase.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
+      const { error } = await supabase.storage
+        .from('submissions')
+        .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false })
+      if (error) throw new Error(error.message)
       const url = supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl
       setCoverImageUrl(url)
     } catch (err) {
@@ -924,6 +927,7 @@ export default function StoriesScreen() {
             ref={coverFileRef}
             type="file"
             accept="image/*"
+            capture="environment"
             style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverPhoto(f); e.target.value = '' }}
           />
