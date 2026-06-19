@@ -871,47 +871,47 @@ export default function StoriesScreen() {
 
           {/* Book cover preview */}
           <div
-            onClick={() => !coverUploading && coverFileRef.current?.click()}
             style={{
               width: 200, height: 300, borderRadius: 12, background: coverColor,
-              position: 'relative', overflow: 'hidden', cursor: 'pointer',
+              position: 'relative', cursor: 'default',
               boxShadow: '4px 6px 24px rgba(0,0,0,0.18), inset -6px 0 10px rgba(0,0,0,0.07)',
-              flexShrink: 0,
+              flexShrink: 0, display: 'flex', flexDirection: 'column',
             }}
           >
             {/* Spine shadow */}
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, background: 'rgba(0,0,0,0.09)', zIndex: 1 }} />
-
-            {/* Drawing */}
-            {coverImageUrl && (
-              <img src={coverImageUrl} alt="cover drawing" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
-            )}
-
-            {/* Upload loading */}
-            {coverUploading && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.55)', zIndex: 4 }}>
-                <div style={{ width: 28, height: 28, border: '3px solid #C8E6C9', borderTopColor: '#2EC486', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              </div>
-            )}
-
-            {/* Tap-to-draw hint when empty */}
-            {!coverImageUrl && !coverUploading && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 2 }}>
-                <span style={{ fontSize: 28 }}>🎨</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(45,80,22,0.5)', textAlign: 'center', padding: '0 14px', lineHeight: 1.4 }}>Tap to draw your cover</span>
-              </div>
-            )}
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, background: 'rgba(0,0,0,0.09)', zIndex: 1, borderRadius: '12px 0 0 12px' }} />
 
             {/* Title */}
-            <div style={{ position: 'absolute', top: 0, left: 10, right: 0, padding: '12px 10px 6px', zIndex: 3, background: coverImageUrl ? 'linear-gradient(to bottom, rgba(255,255,255,0.72) 0%, transparent 100%)' : 'none' }}>
+            <div style={{ padding: '14px 14px 8px 18px', flexShrink: 0, zIndex: 2 }}>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.25 }}>
                 {displayTitle}
               </div>
             </div>
 
+            {/* Image panel — tap here to pick photo */}
+            <div
+              onClick={() => !coverUploading && coverFileRef.current?.click()}
+              style={{ flex: 1, margin: '0 10px', borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, position: 'relative' }}
+            >
+              {coverImageUrl && (
+                <img src={coverImageUrl} alt="cover drawing" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              )}
+              {coverUploading && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.55)' }}>
+                  <div style={{ width: 28, height: 28, border: '3px solid #C8E6C9', borderTopColor: '#2EC486', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                </div>
+              )}
+              {!coverImageUrl && !coverUploading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 28 }}>🎨</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(45,80,22,0.5)', textAlign: 'center', padding: '0 10px', lineHeight: 1.4 }}>Tap to add a photo</span>
+                </div>
+              )}
+            </div>
+
             {/* Byline */}
-            <div style={{ position: 'absolute', bottom: 10, left: 10, right: 0, textAlign: 'center', zIndex: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(26,46,10,0.65)', background: coverImageUrl ? 'rgba(255,255,255,0.5)' : 'none', padding: '1px 6px', borderRadius: 6 }}>
+            <div style={{ padding: '7px 14px 12px', textAlign: 'center', zIndex: 2, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(26,46,10,0.65)' }}>
                 by {child?.name ?? 'You'}
               </span>
             </div>
