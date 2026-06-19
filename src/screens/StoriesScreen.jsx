@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { supabase, getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors } from '../lib/supabase'
+import { getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors, uploadStoryCover } from '../lib/supabase'
 import { validateStoryInput, transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
 
@@ -229,12 +229,7 @@ export default function StoriesScreen() {
     if (!file || !child?.id) return
     setCoverUploading(true)
     try {
-      const path = `${child.id}/covers/${Date.now()}.jpg`
-      const { error } = await supabase.storage
-        .from('submissions')
-        .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false })
-      if (error) throw new Error(error.message)
-      const url = supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl
+      const url = await uploadStoryCover(child.id, file)
       setCoverImageUrl(url)
     } catch (err) {
       console.error('[cover upload]', err.message)

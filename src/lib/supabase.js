@@ -72,6 +72,27 @@ export async function saveChildStory(childId, storyData) {
   return data
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result.split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+export async function uploadStoryCover(childId, file) {
+  const imageBase64 = await fileToBase64(file)
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories/cover`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg' }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data.cover_url
+}
+
 export async function saveSpellingErrors(childId, errors) {
   try {
     await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/spelling-errors`, {

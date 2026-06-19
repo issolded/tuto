@@ -655,6 +655,25 @@ app.post('/api/notify-parent-chore', async (req, res) => {
   }
 })
 
+app.post('/api/children/:childId/stories/cover', async (req, res) => {
+  const { childId } = req.params
+  const { imageBase64, mimeType } = req.body
+  if (!imageBase64) return res.status(400).json({ error: 'imageBase64 required' })
+  try {
+    const buffer = Buffer.from(imageBase64, 'base64')
+    const ext = (mimeType || '').includes('png') ? 'png' : 'jpg'
+    const path = `${childId}/covers/${Date.now()}.${ext}`
+    const { error } = await supabase.storage
+      .from('submissions')
+      .upload(path, buffer, { contentType: mimeType || 'image/jpeg', upsert: false })
+    if (error) return res.status(500).json({ error: error.message })
+    const cover_url = supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl
+    res.json({ cover_url })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/children/:childId/spelling-errors', async (req, res) => {
   const { childId } = req.params
   const { errors } = req.body
