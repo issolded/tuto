@@ -62,17 +62,14 @@ export async function getChildStories(childId) {
 }
 
 export async function saveChildStory(childId, storyData) {
-  try {
-    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(storyData),
-    })
-    return res.json()
-  } catch (err) {
-    console.error('[saveChildStory] error:', err.message)
-    return {}
-  }
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(storyData),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data
 }
 
 export async function saveSpellingErrors(childId, errors) {

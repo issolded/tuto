@@ -151,6 +151,7 @@ export default function StoriesScreen() {
   // editing an existing story (from LibraryScreen)
   const [storyId, setStoryId] = useState(null)
   const [editingCompleted, setEditingCompleted] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
   const handleTitleNext = async () => {
     if (!storyTitle.trim() || checkingTitle) return
@@ -236,15 +237,22 @@ export default function StoriesScreen() {
     // Save exactly what the editor contains — child's own writing preserved.
     const editorText = editorRef.current?.innerText || editableTextRef.current || evalResult?.transcribed_text || ''
     const savedText = buildCorrectedText(editorText, youngErrors, spellingState)
+    setSaveError(null)
     if (child?.id) {
-      const saved = await saveChildStory(child.id, {
-        storyId,
-        title: displayTitle, topic: chosenIdea?.topic || '',
-        transcribed_text: editorText, corrected_text: savedText,
-        status, gems_earned: evalResult?.gems_earned || 0,
-      })
-      if (saved.story) setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
-      if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
+      try {
+        const saved = await saveChildStory(child.id, {
+          storyId,
+          title: displayTitle, topic: chosenIdea?.topic || '',
+          transcribed_text: editorText, corrected_text: savedText,
+          status, gems_earned: evalResult?.gems_earned || 0,
+        })
+        if (saved.story) setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+        if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
+      } catch (err) {
+        console.error('[finishYoungEditor] save failed:', err.message)
+        setSaveError(err.message)
+        return
+      }
     }
     if (status === 'in_progress' || editingCompleted) {
       nav('/child/library')
@@ -258,15 +266,22 @@ export default function StoriesScreen() {
   const finishStory = async (status) => {
     const baseText = editableTextRef.current || evalResult?.transcribed_text || ''
     const corrected = buildCorrectedText(baseText, evalResult?.spelling_errors || [], spellingState)
+    setSaveError(null)
     if (child?.id) {
-      const saved = await saveChildStory(child.id, {
-        storyId,
-        title: displayTitle, topic: chosenIdea?.topic || '',
-        transcribed_text: baseText, corrected_text: corrected,
-        status, gems_earned: evalResult?.gems_earned || 0,
-      })
-      if (saved.story) setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
-      if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
+      try {
+        const saved = await saveChildStory(child.id, {
+          storyId,
+          title: displayTitle, topic: chosenIdea?.topic || '',
+          transcribed_text: baseText, corrected_text: corrected,
+          status, gems_earned: evalResult?.gems_earned || 0,
+        })
+        if (saved.story) setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+        if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
+      } catch (err) {
+        console.error('[finishStory] save failed:', err.message)
+        setSaveError(err.message)
+        return
+      }
     }
     if (status === 'in_progress' || editingCompleted) {
       nav('/child/library')
@@ -651,6 +666,11 @@ export default function StoriesScreen() {
           <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 24, animation: 'fadeUp 0.35s ease 0.12s both' }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#2D2D2D', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{corrected}</div>
           </div>
+          {saveError && (
+            <div style={{ background: '#FFF0F0', border: '2px solid #FF6B6B', borderRadius: 16, padding: '12px 16px', marginBottom: 8, fontSize: 13, fontWeight: 700, color: '#CC0000' }}>
+              ⚠️ Couldn't save — please try again. ({saveError})
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.16s both' }}>
             <button onClick={() => finishStory('completed')} style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}>
               {editingCompleted ? '💾 Save changes' : '🏆 My story is finished!'}
@@ -748,6 +768,11 @@ export default function StoriesScreen() {
             </div>
           </div>
 
+          {saveError && (
+            <div style={{ background: '#FFF0F0', border: '2px solid #FF6B6B', borderRadius: 16, padding: '12px 16px', marginBottom: 8, fontSize: 13, fontWeight: 700, color: '#CC0000' }}>
+              ⚠️ Couldn't save — please try again. ({saveError})
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.18s both' }}>
             <button
               onClick={() => finishYoungEditor('completed')}
