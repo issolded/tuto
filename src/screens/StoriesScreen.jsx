@@ -653,11 +653,13 @@ export default function StoriesScreen() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.16s both' }}>
             <button onClick={() => finishStory('completed')} style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}>
-              🏆 My story is finished!
+              {editingCompleted ? '💾 Save changes' : '🏆 My story is finished!'}
             </button>
-            <button onClick={() => finishStory('in_progress')} style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}>
-              📝 I'll finish this book later
-            </button>
+            {!editingCompleted && (
+              <button onClick={() => finishStory('in_progress')} style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}>
+                📝 I'll finish this book later
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -751,14 +753,16 @@ export default function StoriesScreen() {
               onClick={() => finishYoungEditor('completed')}
               style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
             >
-              That's my story! 🌟
+              {editingCompleted ? '💾 Save changes' : 'That\'s my story! 🌟'}
             </button>
-            <button
-              onClick={() => finishYoungEditor('in_progress')}
-              style={{ width: '100%', background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
-            >
-              📝 I'll finish this book later
-            </button>
+            {!editingCompleted && (
+              <button
+                onClick={() => finishYoungEditor('in_progress')}
+                style={{ width: '100%', background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
+              >
+                📝 I'll finish this book later
+              </button>
+            )}
           </div>
         </div>
 
