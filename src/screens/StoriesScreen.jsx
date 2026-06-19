@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors } from '../lib/supabase'
+import { supabase, getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors } from '../lib/supabase'
 import { validateStoryInput, transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
 
@@ -76,6 +76,7 @@ function buildSpellingHTML(text, errors, states, activeError) {
 const CARD_COLORS = ['#E8F5E9', '#E3F2FD', '#FFF8E1', '#FCE4EC']
 const BG = 'linear-gradient(180deg, #E8F5E9 0%, #F1F8E9 100%)'
 const BG_YOUNG = '#e3f3ea'
+const COVER_COLORS = ['#B5EAD7','#C5DFFF','#FFD4E8','#FFF3A3','#D9CCFF','#FFDFB5','#B5EEE8','#FFD4D4']
 
 // Dolch Pre-Primer through Grade 3 + common Fry words (~210 words).
 // Used to filter spelling corrections shown to ≤10 — only show words the
@@ -153,6 +154,12 @@ export default function StoriesScreen() {
   const [editingCompleted, setEditingCompleted] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
+  // cover composition
+  const coverFileRef = useRef(null)
+  const [coverColor, setCoverColor] = useState(COVER_COLORS[0])
+  const [coverImageUrl, setCoverImageUrl] = useState(null)
+  const [coverUploading, setCoverUploading] = useState(false)
+
   const handleTitleNext = async () => {
     if (!storyTitle.trim() || checkingTitle) return
     setCheckingTitle(true)
@@ -217,6 +224,21 @@ export default function StoriesScreen() {
     setStep('corrected')
   }
 
+  // ── Cover photo upload ────────────────────────────────────────────────────
+  const handleCoverPhoto = async (file) => {
+    if (!file || !child?.id) return
+    setCoverUploading(true)
+    try {
+      const path = `${child.id}/covers/${Date.now()}.jpg`
+      await supabase.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
+      const url = supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl
+      setCoverImageUrl(url)
+    } catch (err) {
+      console.error('[cover upload]', err.message)
+    }
+    setCoverUploading(false)
+  }
+
   // ── ≤10 gentle editor helpers ─────────────────────────────────────────────
 
   const startGentleEditor = () => {
@@ -246,7 +268,10 @@ export default function StoriesScreen() {
           transcribed_text: editorText, corrected_text: savedText,
           status, gems_earned: evalResult?.gems_earned || 0,
         })
-        if (saved.story) setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+        if (saved.story) {
+          setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+          if (!storyId) setStoryId(saved.story.id)
+        }
         if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
       } catch (err) {
         console.error('[finishYoungEditor] save failed:', err.message)
@@ -275,7 +300,10 @@ export default function StoriesScreen() {
           transcribed_text: baseText, corrected_text: corrected,
           status, gems_earned: evalResult?.gems_earned || 0,
         })
-        if (saved.story) setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+        if (saved.story) {
+          setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+          if (!storyId) setStoryId(saved.story.id)
+        }
         if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
       } catch (err) {
         console.error('[finishStory] save failed:', err.message)
@@ -820,6 +848,123 @@ export default function StoriesScreen() {
     )
   }
 
+  // ── STEP: COVER ───────────────────────────────────────────────────────────
+  if (step === 'cover') {
+    const saveCover = async () => {
+      if (child?.id && storyId) {
+        try {
+          await saveChildStory(child.id, { storyId, cover_url: coverImageUrl || null, cover_color: coverColor })
+        } catch (err) {
+          console.error('[saveCover]', err.message)
+        }
+      }
+      nav('/child/library')
+    }
+
+    return (
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <style>{ANIM}</style>
+        <div style={{ padding: '52px 24px 16px', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D5016' }}>Design your cover! 🎨</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginTop: 4 }}>Pick a colour, then tap the cover to add your drawing</div>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 20 }}>
+
+          {/* Book cover preview */}
+          <div
+            onClick={() => !coverUploading && coverFileRef.current?.click()}
+            style={{
+              width: 200, height: 300, borderRadius: 12, background: coverColor,
+              position: 'relative', overflow: 'hidden', cursor: 'pointer',
+              boxShadow: '4px 6px 24px rgba(0,0,0,0.18), inset -6px 0 10px rgba(0,0,0,0.07)',
+              flexShrink: 0,
+            }}
+          >
+            {/* Spine shadow */}
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, background: 'rgba(0,0,0,0.09)', zIndex: 1 }} />
+
+            {/* Drawing */}
+            {coverImageUrl && (
+              <img src={coverImageUrl} alt="cover drawing" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+            )}
+
+            {/* Upload loading */}
+            {coverUploading && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.55)', zIndex: 4 }}>
+                <div style={{ width: 28, height: 28, border: '3px solid #C8E6C9', borderTopColor: '#2EC486', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            )}
+
+            {/* Tap-to-draw hint when empty */}
+            {!coverImageUrl && !coverUploading && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 2 }}>
+                <span style={{ fontSize: 28 }}>🎨</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(45,80,22,0.5)', textAlign: 'center', padding: '0 14px', lineHeight: 1.4 }}>Tap to draw your cover</span>
+              </div>
+            )}
+
+            {/* Title */}
+            <div style={{ position: 'absolute', top: 0, left: 10, right: 0, padding: '12px 10px 6px', zIndex: 3, background: coverImageUrl ? 'linear-gradient(to bottom, rgba(255,255,255,0.72) 0%, transparent 100%)' : 'none' }}>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.25 }}>
+                {displayTitle}
+              </div>
+            </div>
+
+            {/* Byline */}
+            <div style={{ position: 'absolute', bottom: 10, left: 10, right: 0, textAlign: 'center', zIndex: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(26,46,10,0.65)', background: coverImageUrl ? 'rgba(255,255,255,0.5)' : 'none', padding: '1px 6px', borderRadius: 6 }}>
+                by {child?.name ?? 'You'}
+              </span>
+            </div>
+          </div>
+
+          {/* Hidden file input */}
+          <input
+            ref={coverFileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverPhoto(f); e.target.value = '' }}
+          />
+
+          {/* Color swatches */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {COVER_COLORS.map(c => (
+              <button
+                key={c}
+                onClick={() => setCoverColor(c)}
+                style={{
+                  width: 34, height: 34, borderRadius: '50%', background: c,
+                  border: 'none', cursor: 'pointer',
+                  boxShadow: coverColor === c ? `0 0 0 3px white, 0 0 0 5px ${c}` : '0 2px 6px rgba(0,0,0,0.13)',
+                  transform: coverColor === c ? 'scale(1.18)' : 'scale(1)',
+                  transition: 'all 0.15s ease',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* CTAs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+            <button
+              onClick={saveCover}
+              style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
+            >
+              📚 Done, save my cover!
+            </button>
+            <button
+              onClick={() => nav('/child/library')}
+              style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Skip for now →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── STEP: DONE ────────────────────────────────────────────────────────────
   if (step === 'done') {
     const isYoung = Number(child?.age) <= 10
@@ -828,6 +973,7 @@ export default function StoriesScreen() {
       setStep('idle'); setChosenIdea(null); setStoryTitle(''); setPhotos([])
       setEvalResult(null); setSpellingState([]); setActiveError(null)
       setYoungErrors([]); setStoryId(null); setEditingCompleted(false)
+      setCoverColor(COVER_COLORS[0]); setCoverImageUrl(null)
       nav('/child/library')
     }
     return (
@@ -851,8 +997,14 @@ export default function StoriesScreen() {
           </div>
         </div>
         <button
-          onClick={resetState}
+          onClick={() => setStep('cover')}
           style={{ marginTop: 32, background: isYoung ? '#4cb685' : '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+        >
+          🎨 Design your cover!
+        </button>
+        <button
+          onClick={resetState}
+          style={{ marginTop: 10, background: 'none', border: 'none', color: isYoung ? '#4cb685' : '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', animation: 'fadeUp 0.4s ease 0.25s both' }}
         >
           Back to My Stories
         </button>

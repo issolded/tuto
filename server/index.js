@@ -555,7 +555,7 @@ app.get('/api/children/:childId/stories', async (req, res) => {
 
 app.post('/api/children/:childId/stories', async (req, res) => {
   const { childId } = req.params
-  const { storyId, title, topic, transcribed_text, corrected_text, status, gems_earned } = req.body
+  const { storyId, title, topic, transcribed_text, corrected_text, status, gems_earned, cover_url, cover_color } = req.body
   try {
     let story, prevStatus
 
@@ -563,8 +563,16 @@ app.post('/api/children/:childId/stories', async (req, res) => {
       // Fetch existing status before update (don't trust client on gem eligibility)
       const { data: existing } = await supabase.from('stories').select('status').eq('id', storyId).single()
       prevStatus = existing?.status
+      // Only update fields that were explicitly provided
+      const fields = {}
+      if (title !== undefined) fields.title = title
+      if (transcribed_text !== undefined) fields.transcribed_text = transcribed_text
+      if (corrected_text !== undefined) fields.corrected_text = corrected_text
+      if (status !== undefined) fields.status = status
+      if (cover_url !== undefined) fields.cover_url = cover_url
+      if (cover_color !== undefined) fields.cover_color = cover_color
       const { data: updated, error } = await supabase.from('stories')
-        .update({ title, transcribed_text, corrected_text, status })
+        .update(fields)
         .eq('id', storyId)
         .select().single()
       if (error) return res.status(500).json({ error: error.message })

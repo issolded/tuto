@@ -68,23 +68,46 @@ function useLongPress(onLongPress, ms = 600) {
 
 // ─── Story card ────────────────────────────────────────────────────────────────
 
-function StoryCard({ story, index, onTap }) {
-  const bg = STORY_BG_COLORS[index % STORY_BG_COLORS.length]
+function StoryCard({ story, index, childName, onTap }) {
+  const bg = story.cover_color || STORY_BG_COLORS[index % STORY_BG_COLORS.length]
+  const hasImage = !!story.cover_url
   return (
     <div onClick={onTap} style={{ background: 'white', borderRadius: 20, boxShadow: '0 4px 18px rgba(0,0,0,0.09)', overflow: 'hidden', cursor: 'pointer' }}>
-      <div style={{ position: 'relative', aspectRatio: '2/3', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 }}>
-        <span style={{ fontSize: 40 }}>✏️</span>
+      <div style={{ position: 'relative', aspectRatio: '2/3', background: bg, overflow: 'hidden', boxShadow: 'inset -4px 0 8px rgba(0,0,0,0.06)' }}>
+        {/* Spine */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'rgba(0,0,0,0.07)', zIndex: 1 }} />
+
+        {/* Cover drawing */}
+        {hasImage && (
+          <img src={story.cover_url} alt="cover" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+        )}
+
+        {/* Placeholder when no image */}
+        {!hasImage && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, zIndex: 0 }}>✏️</div>
+        )}
+
+        {/* Title */}
+        <div style={{ position: 'absolute', top: 0, left: 6, right: 0, padding: '9px 8px 5px', zIndex: 2, background: hasImage ? 'linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, transparent 100%)' : 'none' }}>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 11, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {story.title || 'Untitled Story'}
+          </div>
+        </div>
+
+        {/* Byline */}
+        {childName && (
+          <div style={{ position: 'absolute', bottom: 6, left: 6, right: 0, textAlign: 'center', zIndex: 2 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(26,46,10,0.55)', background: hasImage ? 'rgba(255,255,255,0.45)' : 'none', padding: '1px 5px', borderRadius: 5 }}>by {childName}</span>
+          </div>
+        )}
+
+        {/* Badges */}
         {story.status === 'in_progress' && (
-          <div style={{ background: '#FF6B35', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 800, color: 'white' }}>In Progress</div>
+          <div style={{ position: 'absolute', top: 5, right: 5, background: '#FF6B35', borderRadius: 6, padding: '2px 6px', fontSize: 9, fontWeight: 800, color: 'white', zIndex: 3 }}>In Progress</div>
         )}
         {story.gems_earned > 0 && story.status !== 'in_progress' && (
-          <div style={{ background: '#FFD93D', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 800, color: '#1A1A2E' }}>⭐ {story.gems_earned}</div>
+          <div style={{ position: 'absolute', top: 5, right: 5, background: '#FFD93D', borderRadius: 6, padding: '2px 6px', fontSize: 9, fontWeight: 800, color: '#1A1A2E', zIndex: 3 }}>⭐ {story.gems_earned}</div>
         )}
-      </div>
-      <div style={{ padding: '9px 10px 11px' }}>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-          {story.title || 'Untitled Story'}
-        </div>
       </div>
     </div>
   )
@@ -197,7 +220,7 @@ export default function LibraryScreen() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {stories.map((story, i) => (
-                <StoryCard key={story.id} story={story} index={i} onTap={() => nav('/child/stories', { state: { story } })} />
+                <StoryCard key={story.id} story={story} index={i} childName={child?.name} onTap={() => nav('/child/stories', { state: { story } })} />
               ))}
             </div>
           )}
