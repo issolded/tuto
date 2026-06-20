@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getChildRewards, getChildGems } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
+import BottomNav from '../components/BottomNav'
 
 const ANIM = `
 @keyframes fadeUp {
@@ -58,15 +58,7 @@ function RewardCard({ reward, currentGems, index }) {
   )
 }
 
-const NAV = [
-  { icon: '🏠', label: 'Home',    route: '/child/home'    },
-  { icon: '📚', label: 'Library', route: '/child/library' },
-  { icon: '⭐', label: 'Gems',    route: '/child/gems'   },
-  { icon: '🏆', label: 'Goals',   route: '/child/goals'  },
-]
-
 export default function GoalsScreen() {
-  const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [rewards, setRewards] = useState(null)
   const [gems, setGems] = useState(null)
@@ -118,24 +110,7 @@ export default function GoalsScreen() {
         )}
       </div>
 
-      {/* Bottom nav */}
-      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        {NAV.map(({ icon, label, route }) => {
-          const active = label === 'Goals'
-          return (
-            <button
-              key={label}
-              onClick={() => route && nav(route)}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 14px', borderRadius: 16, background: active ? '#FFF0A0' : 'none', border: 'none', cursor: route ? 'pointer' : 'default', minWidth: 60 }}
-            >
-              <span style={{ fontSize: 22 }}>{icon}</span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: active ? '#C8900A' : '#A0A0BC', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                {label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <BottomNav active="goals" fixed />
     </div>
   )
 }

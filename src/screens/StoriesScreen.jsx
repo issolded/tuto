@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors, uploadStoryCover } from '../lib/supabase'
+import { getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
 import { validateStoryInput, transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
+import StoryCover from '../components/StoryCover'
+import BookOpenTransition from '../components/BookOpenTransition'
+import FlippingBook from '../components/FlippingBook'
 
 
 function getTutoMessage(age) {
@@ -108,6 +111,24 @@ const SIGHT_WORDS = new Set([
   'part','place','year','back','most','hand','high','move',
 ])
 
+function ConfirmDeleteStoryModal({ onConfirm, onCancel, deleting }) {
+  return (
+    <div onClick={e => { e.stopPropagation(); !deleting && onCancel() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 28, padding: '32px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>🗑️</div>
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', marginBottom: 8 }}>Delete this story?</div>
+        <div style={{ fontSize: 14, color: '#6A9956', fontWeight: 600, marginBottom: 28, lineHeight: 1.5 }}>This can't be undone.</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onCancel} disabled={deleting} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0FFF4', color: '#2D5016', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onConfirm} disabled={deleting} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)', opacity: deleting ? 0.6 : 1 }}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function BackBtn({ onClick }) {
   return (
     <button
@@ -149,10 +170,19 @@ export default function StoriesScreen() {
   // filtered errors shown highlighted in the ≤10 gentle editor
   const [youngErrors, setYoungErrors] = useState([])
 
-  // editing an existing story (from LibraryScreen)
+  // editing an existing story (from LibraryScreen / My Stories)
   const [storyId, setStoryId] = useState(null)
   const [editingCompleted, setEditingCompleted] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editOrigin, setEditOrigin] = useState('/child/library')
+  const [confirmDeleteStory, setConfirmDeleteStory] = useState(false)
+  const [deletingStory, setDeletingStory] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
+  const [opening, setOpening] = useState(null) // { story, fallbackColor } — book-open transition before entering the editor
+
+  // where this whole screen was entered from (Home or Library) — drives the idle-screen back button
+  const listOrigin = location.state?.from || '/child/home'
 
   // cover composition
   const coverFileRef = useRef(null)
@@ -328,10 +358,11 @@ export default function StoriesScreen() {
     }).catch(() => setIdeasLoading(false))
   }, [])
 
-  // Load an existing story for editing (navigated from LibraryScreen)
-  useEffect(() => {
-    const story = location.state?.story
+  // Open an existing story for editing (navigated from LibraryScreen, or tapped in My Stories)
+  const openStoryForEdit = (story, origin) => {
     if (!story) return
+    setIsEditMode(true)
+    setEditOrigin(origin || '/child/library')
     const text = story.corrected_text || story.transcribed_text || ''
     setStoryId(story.id)
     setStoryTitle(story.title || '')
@@ -343,7 +374,41 @@ export default function StoriesScreen() {
     setYoungErrors([])
     const age = Number(child?.age) || 7
     setStep(age <= 10 ? 'gentle-spelling' : 'spelling')
+  }
+
+  // Load an existing story for editing when navigated here from LibraryScreen
+  useEffect(() => {
+    const story = location.state?.story
+    if (!story) return
+    openStoryForEdit(story, location.state?.from)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Exit edit mode back to wherever the story was opened from. When the origin is this
+  // same screen (My Stories), nav() alone won't remount/reset us — reset locally too.
+  const exitEditMode = () => {
+    setStep('idle')
+    setIsEditMode(false)
+    setStoryId(null)
+    setEditingCompleted(false)
+    setChosenIdea(null)
+    setStoryTitle('')
+    if (editOrigin && editOrigin !== '/child/stories') nav(editOrigin)
+  }
+
+  const handleDeleteStory = async () => {
+    if (!storyId || !child?.id) return
+    setDeletingStory(true)
+    setDeleteError(null)
+    try {
+      await deleteChildStory(child.id, storyId)
+      setStories(prev => prev.filter(s => s.id !== storyId))
+      setConfirmDeleteStory(false)
+      exitEditMode()
+    } catch (err) {
+      setDeleteError(err.message)
+    }
+    setDeletingStory(false)
+  }
 
   const confirmIdea = (idea) => {
     setChosenIdea(idea)
@@ -544,15 +609,8 @@ export default function StoriesScreen() {
   // ── STEP: EVALUATING ──────────────────────────────────────────────────────
   if (step === 'evaluating') {
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '40px 28px' }}>
-        <style>{ANIM}</style>
-        <TutoMascot size={160} expression="thinking" style={{ animation: 'fadeUp 0.4s ease both' }} />
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', textAlign: 'center', animation: 'fadeUp 0.4s ease 0.1s both' }}>
-          Reading your story... ✨
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', textAlign: 'center', animation: 'fadeUp 0.4s ease 0.2s both' }}>
-          Just a moment!
-        </div>
+      <div style={{ background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px' }}>
+        <FlippingBook />
       </div>
     )
   }
@@ -607,12 +665,21 @@ export default function StoriesScreen() {
       <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
-          <BackBtn onClick={() => setStep('encourage')} />
+          <BackBtn onClick={() => isEditMode ? exitEditMode() : setStep('encourage')} />
         </div>
         <div style={{ flex: 1, padding: '0 24px 48px' }}>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
-            Your story! 📖
-          </div>
+          {isEditMode ? (
+            <input
+              value={storyTitle}
+              onChange={e => setStoryTitle(e.target.value)}
+              placeholder={displayTitle}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', marginBottom: 8, border: '2px solid #A5D6A7', borderRadius: 14, padding: '8px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
+            />
+          ) : (
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
+              Your story! 📖
+            </div>
+          )}
           <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both' }}>
             {errors.length > 0
               ? <>Tap the <span style={{ color: '#FF6B35', fontWeight: 800 }}>orange words</span> to fix spelling, or edit directly if something looks wrong ✏️</>
@@ -636,9 +703,19 @@ export default function StoriesScreen() {
               style={{ outline: 'none', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: 15, fontWeight: 600, color: '#2D2D2D', minHeight: 80 }}
             />
           </div>
+          {deleteError && (
+            <div style={{ background: '#FFF0F0', border: '2px solid #FF6B6B', borderRadius: 16, padding: '12px 16px', marginBottom: 8, fontSize: 13, fontWeight: 700, color: '#CC0000' }}>
+              ⚠️ Couldn't delete — please try again. ({deleteError})
+            </div>
+          )}
           <button onClick={goToCorrections} style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.35s ease 0.15s both' }}>
             Looks good! →
           </button>
+          {isEditMode && (
+            <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '12px 8px' }}>
+              🗑️ Delete this story
+            </button>
+          )}
         </div>
 
         {/* Spelling popup */}
@@ -666,6 +743,13 @@ export default function StoriesScreen() {
             </div>
           </div>
         )}
+        {confirmDeleteStory && (
+          <ConfirmDeleteStoryModal
+            deleting={deletingStory}
+            onConfirm={handleDeleteStory}
+            onCancel={() => setConfirmDeleteStory(false)}
+          />
+        )}
       </div>
     )
   }
@@ -680,9 +764,18 @@ export default function StoriesScreen() {
           <BackBtn onClick={() => setStep('spelling')} />
         </div>
         <div style={{ flex: 1, padding: '0 24px 48px' }}>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, animation: 'fadeUp 0.35s ease both' }}>
-            {displayTitle}
-          </div>
+          {isEditMode ? (
+            <input
+              value={storyTitle}
+              onChange={e => setStoryTitle(e.target.value)}
+              placeholder={displayTitle}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, border: '2px solid #A5D6A7', borderRadius: 14, padding: '8px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
+            />
+          ) : (
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, animation: 'fadeUp 0.35s ease both' }}>
+              {displayTitle}
+            </div>
+          )}
           <div style={{ background: 'white', borderRadius: 24, padding: '16px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <TutoMascot size={64} expression="excited" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: 14, fontWeight: 700, color: '#2D5016', lineHeight: 1.7, paddingTop: 8 }}>
@@ -697,6 +790,11 @@ export default function StoriesScreen() {
               ⚠️ Couldn't save — please try again. ({saveError})
             </div>
           )}
+          {deleteError && (
+            <div style={{ background: '#FFF0F0', border: '2px solid #FF6B6B', borderRadius: 16, padding: '12px 16px', marginBottom: 8, fontSize: 13, fontWeight: 700, color: '#CC0000' }}>
+              ⚠️ Couldn't delete — please try again. ({deleteError})
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.16s both' }}>
             <button onClick={() => finishStory('completed')} style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}>
               {editingCompleted ? '💾 Save changes' : '🏆 My story is finished!'}
@@ -706,8 +804,20 @@ export default function StoriesScreen() {
                 📝 I'll finish this book later
               </button>
             )}
+            {isEditMode && (
+              <button onClick={() => setConfirmDeleteStory(true)} style={{ background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
+                🗑️ Delete this story
+              </button>
+            )}
           </div>
         </div>
+        {confirmDeleteStory && (
+          <ConfirmDeleteStoryModal
+            deleting={deletingStory}
+            onConfirm={handleDeleteStory}
+            onCancel={() => setConfirmDeleteStory(false)}
+          />
+        )}
       </div>
     )
   }
@@ -722,17 +832,27 @@ export default function StoriesScreen() {
           .story-title-book { font-family: 'Fredoka One', 'Baloo 2', cursive !important; }
         `}</style>
         <div style={{ padding: '56px 24px 0' }}>
-          <BackBtn onClick={() => setStep('encourage')} />
+          <BackBtn onClick={() => isEditMode ? exitEditMode() : setStep('encourage')} />
         </div>
         <div style={{ flex: 1, padding: '0 24px 48px' }}>
 
           {/* Book-style title */}
-          <div
-            className="story-title-book"
-            style={{ fontSize: 26, fontWeight: 400, color: '#2f9e6b', marginBottom: 6, lineHeight: 1.2, animation: 'fadeUp 0.35s ease both' }}
-          >
-            {displayTitle}
-          </div>
+          {isEditMode ? (
+            <input
+              value={storyTitle}
+              onChange={e => setStoryTitle(e.target.value)}
+              placeholder={displayTitle}
+              className="story-title-book"
+              style={{ width: '100%', boxSizing: 'border-box', fontSize: 20, fontWeight: 400, color: '#2f9e6b', marginBottom: 6, border: '2px solid #b2dfcc', borderRadius: 14, padding: '6px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
+            />
+          ) : (
+            <div
+              className="story-title-book"
+              style={{ fontSize: 26, fontWeight: 400, color: '#2f9e6b', marginBottom: 6, lineHeight: 1.2, animation: 'fadeUp 0.35s ease both' }}
+            >
+              {displayTitle}
+            </div>
+          )}
 
           {/* Subtle hint */}
           <div style={{ fontSize: 12, fontWeight: 600, color: '#6dbf94', marginBottom: 14, animation: 'fadeUp 0.35s ease 0.06s both' }}>
@@ -799,6 +919,11 @@ export default function StoriesScreen() {
               ⚠️ Couldn't save — please try again. ({saveError})
             </div>
           )}
+          {deleteError && (
+            <div style={{ background: '#FFF0F0', border: '2px solid #FF6B6B', borderRadius: 16, padding: '12px 16px', marginBottom: 8, fontSize: 13, fontWeight: 700, color: '#CC0000' }}>
+              ⚠️ Couldn't delete — please try again. ({deleteError})
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.18s both' }}>
             <button
               onClick={() => finishYoungEditor('completed')}
@@ -812,6 +937,11 @@ export default function StoriesScreen() {
                 style={{ width: '100%', background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
               >
                 📝 I'll finish this book later
+              </button>
+            )}
+            {isEditMode && (
+              <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
+                🗑️ Delete this story
               </button>
             )}
           </div>
@@ -841,6 +971,13 @@ export default function StoriesScreen() {
               </div>
             </div>
           </div>
+        )}
+        {confirmDeleteStory && (
+          <ConfirmDeleteStoryModal
+            deleting={deletingStory}
+            onConfirm={handleDeleteStory}
+            onCancel={() => setConfirmDeleteStory(false)}
+          />
         )}
       </div>
     )
@@ -1020,7 +1157,7 @@ export default function StoriesScreen() {
       <style>{ANIM}</style>
 
       <div style={{ padding: '56px 24px 20px' }}>
-        <BackBtn onClick={() => nav('/child/library')} />
+        <BackBtn onClick={() => nav(listOrigin)} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
           {child?.name ?? 'Friend'}, the Creative Writer ✏️
         </div>
@@ -1061,18 +1198,8 @@ export default function StoriesScreen() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {completedStories.map((story, i) => (
-                <div key={story.id} style={{ background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 3px 12px rgba(0,0,0,0.08)', animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
-                  <div style={{ aspectRatio: '2/3', background: CARD_COLORS[i % CARD_COLORS.length], display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 36 }}>✏️</span>
-                    {story.gems_earned > 0 && (
-                      <div style={{ background: '#FFD93D', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 800, color: '#1A1A2E' }}>⭐ {story.gems_earned}</div>
-                    )}
-                  </div>
-                  <div style={{ padding: '8px 10px 10px' }}>
-                    <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 12, fontWeight: 800, color: '#2D5016', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {story.title || 'Untitled Story'}
-                    </div>
-                  </div>
+                <div key={story.id} style={{ animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
+                  <StoryCover story={story} fallbackColor={CARD_COLORS[i % CARD_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: CARD_COLORS[i % CARD_COLORS.length] })} />
                 </div>
               ))}
             </div>
@@ -1189,6 +1316,17 @@ export default function StoriesScreen() {
             </button>
           </div>
         </div>
+      )}
+
+      {opening && (
+        <BookOpenTransition
+          key={opening.story.id}
+          story={opening.story}
+          childName={child?.name}
+          fallbackColor={opening.fallbackColor}
+          onClose={() => setOpening(null)}
+          onEdit={() => { openStoryForEdit(opening.story, '/child/stories'); setOpening(null) }}
+        />
       )}
     </div>
   )

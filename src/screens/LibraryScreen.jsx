@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
+import StoryCover from '../components/StoryCover'
+import BottomNav from '../components/BottomNav'
+import BookOpenTransition from '../components/BookOpenTransition'
 import { supabase, getChildStories } from '../lib/supabase'
 
 const ACCENT = '#FF6B35'
-
-const NAV = [
-  { icon: '🏠', label: 'Home',    route: '/child/home'    },
-  { icon: '📚', label: 'Library', route: '/child/library' },
-  { icon: '⭐', label: 'Gems',    route: '/child/gems'   },
-  { icon: '🏆', label: 'Goals',   route: '/child/goals'  },
-]
 
 const ANIM_CSS = `
 @keyframes jiggle {
@@ -66,50 +62,6 @@ function useLongPress(onLongPress, ms = 600) {
   }
 }
 
-// ─── Story card ────────────────────────────────────────────────────────────────
-
-function StoryCard({ story, index, childName, onTap }) {
-  const bg = story.cover_color || STORY_BG_COLORS[index % STORY_BG_COLORS.length]
-  const hasImage = !!story.cover_url
-  return (
-    <div onClick={onTap} style={{ background: bg, borderRadius: 20, boxShadow: '0 4px 18px rgba(0,0,0,0.09)', overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column', aspectRatio: '2/3', position: 'relative' }}>
-      {/* Spine */}
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'rgba(0,0,0,0.07)', zIndex: 1 }} />
-
-      {/* Badges */}
-      {story.status === 'in_progress' && (
-        <div style={{ position: 'absolute', top: 5, right: 5, background: '#FF6B35', borderRadius: 6, padding: '2px 6px', fontSize: 9, fontWeight: 800, color: 'white', zIndex: 3 }}>In Progress</div>
-      )}
-      {story.gems_earned > 0 && story.status !== 'in_progress' && (
-        <div style={{ position: 'absolute', top: 5, right: 5, background: '#FFD93D', borderRadius: 6, padding: '2px 6px', fontSize: 9, fontWeight: 800, color: '#1A1A2E', zIndex: 3 }}>⭐ {story.gems_earned}</div>
-      )}
-
-      {/* Title */}
-      <div style={{ padding: '10px 14px 6px 14px', zIndex: 2, flexShrink: 0 }}>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 11, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {story.title || 'Untitled Story'}
-        </div>
-      </div>
-
-      {/* Image panel */}
-      <div style={{ flex: 1, margin: '0 8px', borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-        {hasImage ? (
-          <img src={story.cover_url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        ) : (
-          <span style={{ fontSize: 28 }}>✏️</span>
-        )}
-      </div>
-
-      {/* Byline */}
-      {childName && (
-        <div style={{ padding: '5px 14px 9px', textAlign: 'center', zIndex: 2, flexShrink: 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(26,46,10,0.55)' }}>by {childName}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function LibraryScreen() {
@@ -123,6 +75,7 @@ export default function LibraryScreen() {
   const [deletingId, setDeletingId]     = useState(null)
   const [completingId, setCompletingId] = useState(null)
   const [celebrationTitle, setCelebrationTitle] = useState(null)
+  const [opening, setOpening] = useState(null) // { story, fallbackColor } — book-open transition before entering the editor
 
   useEffect(() => {
     if (!child?.id) { setBooks([]); setStories([]); return }
@@ -194,7 +147,7 @@ export default function LibraryScreen() {
               📖 Books by {child?.name ?? 'You'}
             </div>
             <button
-              onClick={e => { e.stopPropagation(); nav('/child/stories') }}
+              onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
               style={{ background: '#E8E0FF', color: '#6C63FF', border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Baloo 2', cursive" }}
             >
               ✏️ Write
@@ -208,7 +161,7 @@ export default function LibraryScreen() {
               <div style={{ fontSize: 36, marginBottom: 8 }}>✏️</div>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No stories yet!</div>
               <button
-                onClick={e => { e.stopPropagation(); nav('/child/stories') }}
+                onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
                 style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
                 Write your first story →
@@ -217,7 +170,7 @@ export default function LibraryScreen() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {stories.map((story, i) => (
-                <StoryCard key={story.id} story={story} index={i} childName={child?.name} onTap={() => nav('/child/stories', { state: { story } })} />
+                <StoryCover key={story.id} story={story} fallbackColor={STORY_BG_COLORS[i % STORY_BG_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: STORY_BG_COLORS[i % STORY_BG_COLORS.length] })} />
               ))}
             </div>
           )}
@@ -322,24 +275,18 @@ export default function LibraryScreen() {
         />
       )}
 
-      {/* Bottom nav */}
-      <div style={{ background: 'white', padding: '10px 4px 28px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #F0F0E0', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        {NAV.map(({ icon, label, route }) => {
-          const active = label === 'Library'
-          return (
-            <button
-              key={label}
-              onClick={() => route && nav(route)}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 14px', borderRadius: 16, background: active ? '#FFE8D4' : 'none', border: 'none', cursor: route ? 'pointer' : 'default', minWidth: 60 }}
-            >
-              <span style={{ fontSize: 22 }}>{icon}</span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: active ? '#FF6B35' : '#A0A0BC', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                {label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <BottomNav active="library" fixed />
+
+      {opening && (
+        <BookOpenTransition
+          key={opening.story.id}
+          story={opening.story}
+          childName={child?.name}
+          fallbackColor={opening.fallbackColor}
+          onClose={() => setOpening(null)}
+          onEdit={() => nav('/child/stories', { state: { story: opening.story, from: '/child/library' } })}
+        />
+      )}
     </div>
   )
 }

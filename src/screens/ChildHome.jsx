@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
+import BottomNav from '../components/BottomNav'
 import { supabase, getChildGems } from '../lib/supabase'
 
 const ACCENT = '#f79433'
@@ -45,20 +46,6 @@ function TaskIcon({ type, c }) {
   )
 }
 
-const NAV = [
-  { id: 'home',    label: 'Home',    active: true,  route: '/child/home'    },
-  { id: 'library', label: 'Library', active: false, route: '/child/library' },
-  { id: 'gems',    label: 'Gems',    active: false, route: '/child/gems'    },
-  { id: 'goals',   label: 'Goals',   active: false, route: '/child/goals'   },
-]
-
-function NavIcon({ id, color }) {
-  const s = { width: 26, height: 26 }
-  if (id === 'home')    return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 10v9h12v-9" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  if (id === 'library') return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M5 5h6a2 2 0 012 2v12a2 2 0 00-2-2H5z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/><path d="M19 5h-6a2 2 0 00-2 2v12a2 2 0 012-2h6z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/></svg>
-  if (id === 'gems')    return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M12 4l2.4 5 5.6.6-4 4 1 5.4-5-2.8-5 2.8 1-5.4-4-4 5.6-.6z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/></svg>
-  return <svg style={s} viewBox="0 0 24 24" fill="none"><path d="M7 4h10v3a5 5 0 01-10 0z" stroke={color} strokeWidth="2.2" strokeLinejoin="round"/><path d="M7 5H4v2a3 3 0 003 3M17 5h3v2a3 3 0 01-3 3M9 16h6M10 16v4M14 16v4M8 20h8" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-}
 
 export default function ChildHome() {
   const nav = useNavigate()
@@ -127,7 +114,7 @@ export default function ChildHome() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
           {TASKS.map((t, i) => (
-            <button key={i} className="tuto-card" onClick={() => nav(t.route, { state: t })}
+            <button key={i} className="tuto-card" onClick={() => nav(t.route, { state: { ...t, from: '/child/home' } })}
               style={{
                 background: '#fff', border: 'none', borderRadius: 22, padding: '12px 12px 13px',
                 display: 'flex', flexDirection: 'column', gap: 7, cursor: 'pointer', textAlign: 'left',
@@ -151,25 +138,7 @@ export default function ChildHome() {
         </div>
       </div>
 
-      <nav style={{
-        flexShrink: 0, background: '#fff', borderRadius: '24px 24px 0 0',
-        padding: '12px 14px 22px', display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        boxShadow: '0 -6px 20px rgba(40,30,70,.07)',
-      }}>
-        {NAV.map(({ id, label, active, route }) => {
-          const color = active ? ACCENT : '#b6aecb'
-          return (
-            <button key={id} onClick={() => route && nav(route)}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                background: 'none', border: 'none', cursor: route ? 'pointer' : 'default', padding: '2px 8px',
-              }}>
-              <NavIcon id={id} color={color} />
-              <span style={{ fontFamily: FRED, fontWeight: 500, fontSize: 12, color }}>{label}</span>
-            </button>
-          )
-        })}
-      </nav>
+      <BottomNav active="home" />
     </div>
   )
 }

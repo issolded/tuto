@@ -72,6 +72,15 @@ export async function saveChildStory(childId, storyData) {
   return data
 }
 
+export async function deleteChildStory(childId, storyId) {
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories/${encodeURIComponent(storyId)}`, {
+    method: 'DELETE',
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data
+}
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

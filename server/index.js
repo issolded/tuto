@@ -599,6 +599,13 @@ app.post('/api/children/:childId/stories', async (req, res) => {
   }
 })
 
+app.delete('/api/children/:childId/stories/:storyId', async (req, res) => {
+  const { childId, storyId } = req.params
+  const { error } = await supabase.from('stories').delete().eq('id', storyId).eq('child_id', childId)
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ ok: true })
+})
+
 app.get('/api/submissions/:id', async (req, res) => {
   const { id } = req.params
   const { data, error } = await supabase
