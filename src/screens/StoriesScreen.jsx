@@ -149,7 +149,6 @@ export default function StoriesScreen() {
   const [ideasLoading, setIdeasLoading] = useState(true)
   const [stories, setStories] = useState([])
   const [ideas, setIdeas] = useState([])
-  const [ideasLoading, setIdeasLoading] = useState(true)
   const [selectedIdea, setSelectedIdea] = useState(null)
   const [showFreeText, setShowFreeText] = useState(false)
   const [freeText, setFreeText] = useState('')
