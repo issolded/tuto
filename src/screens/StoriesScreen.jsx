@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getChildStories, getStoryIdeas, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
-import { validateStoryInput, transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
+import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
+import { transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
+import BookShelfGrid from '../components/BookShelfGrid'
 import BookOpenTransition from '../components/BookOpenTransition'
 import FlippingBook from '../components/FlippingBook'
 
@@ -146,14 +147,7 @@ export default function StoriesScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
 
   const [loadingStories, setLoadingStories] = useState(true)
-  const [ideasLoading, setIdeasLoading] = useState(true)
   const [stories, setStories] = useState([])
-  const [ideas, setIdeas] = useState([])
-  const [selectedIdea, setSelectedIdea] = useState(null)
-  const [showFreeText, setShowFreeText] = useState(false)
-  const [freeText, setFreeText] = useState('')
-  const [moderating, setModerating] = useState(false)
-  const [moderationError, setModerationError] = useState(false)
   const [step, setStep] = useState('idle') // 'idle' | 'title' | 'write'
   const [chosenIdea, setChosenIdea] = useState(null)
   const [storyTitle, setStoryTitle] = useState('')
@@ -180,6 +174,7 @@ export default function StoriesScreen() {
   const [deletingStory, setDeletingStory] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
   const [opening, setOpening] = useState(null) // { story, fallbackColor } — book-open transition before entering the editor
+  const [coverReturnStep, setCoverReturnStep] = useState(null) // editor step to go back to when cover was opened mid-edit
 
   // where this whole screen was entered from (Home or Library) — drives the idle-screen back button
   const listOrigin = location.state?.from || '/child/home'
@@ -347,15 +342,11 @@ export default function StoriesScreen() {
   }
 
   useEffect(() => {
-    if (!child?.id) { setLoadingStories(false); setIdeasLoading(false); return }
+    if (!child?.id) { setLoadingStories(false); return }
     getChildStories(child.id).then(storiesData => {
       setStories(storiesData)
       setLoadingStories(false)
     }).catch(() => setLoadingStories(false))
-    getStoryIdeas(child.id).then(ideasData => {
-      setIdeas(ideasData)
-      setIdeasLoading(false)
-    }).catch(() => setIdeasLoading(false))
   }, [])
 
   // Open an existing story for editing (navigated from LibraryScreen, or tapped in My Stories)
@@ -372,6 +363,8 @@ export default function StoriesScreen() {
     editableTextRef.current = text
     setSpellingState([])
     setYoungErrors([])
+    setCoverColor(story.cover_color || COVER_COLORS[0])
+    setCoverImageUrl(story.cover_url || null)
     const age = Number(child?.age) || 7
     setStep(age <= 10 ? 'gentle-spelling' : 'spelling')
   }
@@ -410,35 +403,10 @@ export default function StoriesScreen() {
     setDeletingStory(false)
   }
 
-  const confirmIdea = (idea) => {
-    setChosenIdea(idea)
-    setSelectedIdea(null)
+  const startNewStory = () => {
+    setChosenIdea(null)
     setStoryTitle('')
     setStep('title')
-  }
-
-  const submitFreeText = async () => {
-    if (!freeText.trim()) return
-    setModerating(true)
-    setModerationError(false)
-    try {
-      const result = await validateStoryInput(freeText.trim(), child?.age || 7, 'en')
-      if (result.ok) {
-        setChosenIdea({ emoji: '✏️', title: freeText.trim(), topic: freeText.trim() })
-        setStoryTitle('')
-        setStep('title')
-        return
-      }
-      setFreeText('')
-      setModerationError(true)
-      setTimeout(() => setModerationError(false), 3500)
-    } catch {
-      setChosenIdea({ emoji: '✏️', title: freeText.trim(), topic: freeText.trim() })
-      setStoryTitle('')
-      setStep('title')
-      return
-    }
-    setModerating(false)
   }
 
   const displayTitle = storyTitle.trim() || `${child?.name ?? 'Your'}'s Untitled Story ✨`
@@ -712,9 +680,14 @@ export default function StoriesScreen() {
             Looks good! →
           </button>
           {isEditMode && (
-            <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '12px 8px' }}>
-              🗑️ Delete this story
-            </button>
+            <>
+              <button onClick={() => { setCoverReturnStep('spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', marginTop: 10, fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
+                🎨 Edit cover
+              </button>
+              <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '12px 8px' }}>
+                🗑️ Delete this story
+              </button>
+            </>
           )}
         </div>
 
@@ -805,9 +778,14 @@ export default function StoriesScreen() {
               </button>
             )}
             {isEditMode && (
-              <button onClick={() => setConfirmDeleteStory(true)} style={{ background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
-                🗑️ Delete this story
-              </button>
+              <>
+                <button onClick={() => { setCoverReturnStep('corrected'); setStep('cover') }} style={{ background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
+                  🎨 Edit cover
+                </button>
+                <button onClick={() => setConfirmDeleteStory(true)} style={{ background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
+                  🗑️ Delete this story
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -940,9 +918,14 @@ export default function StoriesScreen() {
               </button>
             )}
             {isEditMode && (
-              <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
-                🗑️ Delete this story
-              </button>
+              <>
+                <button onClick={() => { setCoverReturnStep('gentle-spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
+                  🎨 Edit cover
+                </button>
+                <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
+                  🗑️ Delete this story
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -985,21 +968,29 @@ export default function StoriesScreen() {
 
   // ── STEP: COVER ───────────────────────────────────────────────────────────
   if (step === 'cover') {
+    const finishCover = () => { isEditMode ? exitEditMode() : nav('/child/library') }
+
     const saveCover = async () => {
       if (child?.id && storyId) {
         try {
-          await saveChildStory(child.id, { storyId, cover_url: coverImageUrl || null, cover_color: coverColor })
+          const saved = await saveChildStory(child.id, { storyId, cover_url: coverImageUrl || null, cover_color: coverColor })
+          if (saved.story) setStories(prev => prev.map(s => s.id === storyId ? saved.story : s))
         } catch (err) {
           console.error('[saveCover]', err.message)
         }
       }
-      nav('/child/library')
+      finishCover()
     }
 
     return (
       <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
-        <div style={{ padding: '52px 24px 16px', textAlign: 'center' }}>
+        {coverReturnStep && (
+          <div style={{ padding: '56px 24px 0' }}>
+            <BackBtn onClick={() => { setStep(coverReturnStep); setCoverReturnStep(null) }} />
+          </div>
+        )}
+        <div style={{ padding: coverReturnStep ? '12px 24px 16px' : '52px 24px 16px', textAlign: 'center' }}>
           <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D5016' }}>Design your cover! 🎨</div>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginTop: 4 }}>Pick a colour, then tap the cover to add your drawing</div>
         </div>
@@ -1090,7 +1081,7 @@ export default function StoriesScreen() {
               📚 Done, save my cover!
             </button>
             <button
-              onClick={() => nav('/child/library')}
+              onClick={finishCover}
               style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
             >
               Skip for now →
@@ -1162,7 +1153,7 @@ export default function StoriesScreen() {
           {child?.name ?? 'Friend'}, the Creative Writer ✏️
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', marginTop: 6 }}>
-          {loadingStories ? 'Loading your stories...' : showFreeText ? 'What would you like to write about?' : 'Your stories and ideas below'}
+          {loadingStories ? 'Loading your stories...' : 'Ready to write something new?'}
         </div>
       </div>
 
@@ -1175,7 +1166,7 @@ export default function StoriesScreen() {
               Continue Writing 📝
             </div>
             <button
-              onClick={() => nav('/child/reading', { state: { storyId: inProgressStory.id, storyTitle: inProgressStory.title, mode: 'continue' } })}
+              onClick={() => openStoryForEdit(inProgressStory, '/child/stories')}
               style={{ background: 'white', border: '3px solid #A5D6A7', borderRadius: 24, padding: '20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.12)', width: '100%', textAlign: 'left' }}
             >
               <span style={{ fontSize: 44 }}>🌳</span>
@@ -1196,127 +1187,27 @@ export default function StoriesScreen() {
               My Stories 📚{' '}
               <span style={{ fontSize: 12, fontWeight: 600, color: '#6A9956' }}>{completedStories.length} written</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {completedStories.map((story, i) => (
+            <BookShelfGrid
+              items={completedStories}
+              renderItem={(story, i) => (
                 <div key={story.id} style={{ animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
                   <StoryCover story={story} fallbackColor={CARD_COLORS[i % CARD_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: CARD_COLORS[i % CARD_COLORS.length] })} />
                 </div>
-              ))}
-            </div>
+              )}
+            />
           </div>
         )}
 
-        {/* Divider when stories exist */}
-        {!loadingStories && stories.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, animation: 'fadeUp 0.35s ease 0.14s both' }}>
-            <div style={{ flex: 1, height: 1.5, background: '#C8E6C9', borderRadius: 2 }} />
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#6A9956' }}>Write New Story ✏️</div>
-            <div style={{ flex: 1, height: 1.5, background: '#C8E6C9', borderRadius: 2 }} />
-          </div>
-        )}
-
-        {/* Writing section */}
-        {showFreeText ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {moderationError ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '28px 20px', background: 'white', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.07)', animation: 'fadeUp 0.3s ease both' }}>
-                <TutoMascot size={120} expression="default" />
-                <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', textAlign: 'center' }}>
-                  Hmm, let's try something a bit different! 😊
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', textAlign: 'center', lineHeight: 1.6 }}>
-                  How about a story about animals, adventures, or magic?
-                </div>
-              </div>
-            ) : (
-              <>
-                <textarea
-                  value={freeText}
-                  onChange={e => setFreeText(e.target.value)}
-                  placeholder="e.g. A dragon who is afraid of fire..."
-                  rows={5}
-                  style={{ width: '100%', borderRadius: 20, border: '2.5px solid #A5D6A7', padding: '16px', fontSize: 15, fontFamily: 'Nunito, sans-serif', fontWeight: 600, color: '#2D5016', background: 'white', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6 }}
-                />
-                <button
-                  onClick={submitFreeText}
-                  disabled={moderating || !freeText.trim()}
-                  style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white', cursor: freeText.trim() && !moderating ? 'pointer' : 'default', opacity: freeText.trim() ? 1 : 0.5, boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
-                >
-                  {moderating ? 'Checking... ✨' : "Let's Go! 🚀"}
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => { setShowFreeText(false); setFreeText(''); setModerationError(false) }}
-              style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textAlign: 'left' }}
-            >
-              ← Back to ideas
-            </button>
-          </div>
-        ) : (
-          <>
-            {ideasLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px 0' }}>
-                <div style={{ width: 32, height: 32, border: '3px solid #C8E6C9', borderTopColor: '#2EC486', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              </div>
-            ) : ideas.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {ideas.map((idea, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedIdea(idea)}
-                    style={{ background: CARD_COLORS[i % CARD_COLORS.length], borderRadius: 24, border: '2.5px solid transparent', padding: '20px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', aspectRatio: '1', textAlign: 'center', animation: `fadeUp 0.4s ease ${i * 0.08}s both` }}
-                    onTouchStart={e => e.currentTarget.style.transform = 'scale(0.95)'}
-                    onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    <span style={{ fontSize: 42, lineHeight: 1 }}>{idea.emoji}</span>
-                    <span style={{ fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#2D5016', lineHeight: 1.3 }}>{idea.title}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#6A9956', fontSize: 15, fontWeight: 600 }}>
-                Couldn't load ideas — try your own! ✏️
-              </div>
-            )}
-            <button
-              onClick={() => setShowFreeText(true)}
-              style={{ background: 'none', border: '2.5px dashed #A5D6A7', borderRadius: 20, padding: '14px', width: '100%', marginTop: 16, fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
-            >
-              ✏️ Or write your own idea
-            </button>
-          </>
+        {/* Start a new story — straight to title, no idea-picking detour */}
+        {!loadingStories && (
+          <button
+            onClick={startNewStory}
+            style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', width: '100%', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.35s ease 0.14s both' }}
+          >
+            ✏️ Write New Story
+          </button>
         )}
       </div>
-
-      {/* Topic modal */}
-      {selectedIdea && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(45,80,22,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '32px 32px 0 0', padding: '32px 28px 48px', display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeUp 0.3s ease both' }}>
-            <div style={{ width: 40, height: 4, background: '#E8E8F0', borderRadius: 4, alignSelf: 'center' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
-              <span style={{ fontSize: 64 }}>{selectedIdea.emoji}</span>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', lineHeight: 1.3 }}>
-                {child?.name ?? 'Your'}'s story about{' '}
-                <span style={{ color: '#2EC486' }}>{selectedIdea.topic}</span>
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', lineHeight: 1.7 }}>{selectedIdea.description}</div>
-            </div>
-            <button
-              onClick={() => confirmIdea(selectedIdea)}
-              style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
-            >
-              Yes, let's write this! ✅
-            </button>
-            <button
-              onClick={() => setSelectedIdea(null)}
-              style={{ background: '#F0FFF4', border: 'none', borderRadius: 20, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
-            >
-              No, show me others 🔄
-            </button>
-          </div>
-        </div>
-      )}
 
       {opening && (
         <BookOpenTransition

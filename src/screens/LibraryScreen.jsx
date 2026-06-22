@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
+import BookShelfGrid from '../components/BookShelfGrid'
 import BottomNav from '../components/BottomNav'
 import BookOpenTransition from '../components/BookOpenTransition'
 import { supabase, getChildStories } from '../lib/supabase'
@@ -168,11 +169,12 @@ export default function LibraryScreen() {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {stories.map((story, i) => (
+            <BookShelfGrid
+              items={stories}
+              renderItem={(story, i) => (
                 <StoryCover key={story.id} story={story} fallbackColor={STORY_BG_COLORS[i % STORY_BG_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: STORY_BG_COLORS[i % STORY_BG_COLORS.length] })} />
-              ))}
-            </div>
+              )}
+            />
           )}
         </div>
 

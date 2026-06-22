@@ -17,6 +17,7 @@ import LibraryScreen from './screens/LibraryScreen'
 import ParentOnboarding from './screens/ParentOnboarding'
 import ParentChildDetail from './screens/ParentChildDetail'
 import MathScreen from './screens/MathScreen'
+import MathLab from './screens/MathLab'
 import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<TaskFlow />} />
         <Route path="/child/math" element={<MathScreen />} />
+        <Route path="/math-lab" element={<MathLab />} />
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />

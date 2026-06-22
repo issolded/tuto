@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { supabase } from '../lib/supabase'
 import { generateMathQuestions, evaluateMath } from '../lib/gemini'
+import { generateProblem } from '../lib/mathTemplates'
 
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
@@ -63,6 +64,35 @@ const LEVEL_DESC = {
   7: 'Add & Subtract ×100', 8: 'Multiplication ×2 ×5 ×10', 9: 'Fractions',
   10: 'Division',           11: 'Geometry',              12: 'Measurement',
   13: 'Multiplication Tables', 14: 'Multi-step Problems', 15: 'Fractions & Decimals',
+}
+
+// Levels whose LEVEL_DESC maps cleanly onto a mathTemplates.js topic use the deterministic
+// template engine instead of an LLM call. Anything else (counting, generic word problems,
+// fractions, division, geometry, measurement, multi-step) has no template yet, so it keeps
+// going through the old generateMathQuestions() path untouched — easy to extend later by
+// just adding a case here once a matching template exists.
+function templateTopicForLevel(level) {
+  const desc = LEVEL_DESC[level] || ''
+  if (/^Addition/.test(desc)) return 'addition'
+  if (/^Subtraction/.test(desc)) return 'subtraction'
+  if (/Multiplication/.test(desc)) return 'multiplication-word'
+  if (/Fraction/i.test(desc)) return 'fraction-of-number'
+  return null
+}
+
+// Mirrors HelpPanel's own isPlus/isMinus/pattern detection — used to decide, before
+// HelpPanel ever renders, whether showing help would actually show something. Keeps the
+// auto-help-on-wrong-answer trigger from popping up an empty "draw it in the air" panel
+// for topics (old LLM path, no template) that have no real helper.
+function hasRealHelp(question, questionType, templateTopic, hintSteps) {
+  if (templateTopic) {
+    if (templateTopic === 'addition' || templateTopic === 'subtraction') return true
+    return (hintSteps?.length ?? 0) > 0
+  }
+  if (questionType === 'pattern') return true
+  const isWordAdd   = questionType === 'word' && /gives?|more|adds?|total|together|gets?/i.test(question)
+  const isWordMinus = questionType === 'word' && /takes?|away|left|eats?|loses?|fewer|gives away/i.test(question)
+  return question.includes('+') || question.includes('-') || isWordAdd || isWordMinus
 }
 
 function getStartingLevel(age) {
@@ -150,9 +180,47 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
   )
 }
 
+// ── Step hints (template-engine problems with no dedicated visual yet) ────────
+// Gradual reveal — nudge, then half, then the full worked step — built straight from
+// the template's own hint_steps, never a separate hand-written explanation.
+
+function StepHints({ question, hintSteps, revealed, onReveal, showMore, moreHint }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+      <div style={{
+        fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, textAlign: 'center', lineHeight: 1.5,
+        background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '12px 16px', width: '100%',
+      }}>
+        {question}
+      </div>
+      {hintSteps.slice(0, revealed).map((h, i) => (
+        <div key={i} style={{
+          fontFamily: FRED, fontWeight: 500, fontSize: 14, color: INK_SOFT, textAlign: 'center',
+          background: '#f0edf8', borderRadius: 12, padding: '10px 14px', width: '100%',
+          animation: 'pop 0.25s ease both',
+        }}>
+          {h}
+        </div>
+      ))}
+      {revealed < hintSteps.length && (
+        <button
+          className="math-press"
+          onClick={onReveal}
+          style={{
+            background: MATH, color: 'white', border: 'none', borderRadius: 14,
+            padding: '10px 20px', fontFamily: FRED, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+          }}
+        >
+          {revealed === 0 ? showMore : moreHint}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Help Panel ────────────────────────────────────────────────────────────────
 
-function HelpPanel({ question, questionType, onDone, language }) {
+function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, onHelpUsed, language }) {
   const tr = language === 'tr'
   const t = tr ? {
     title:          'Hep beraber bakalım! 🧸',
@@ -165,6 +233,8 @@ function HelpPanel({ question, questionType, onDone, language }) {
     airTrace:       'Parmağınla havada çiz!',
     whichNext:      'Hangi sayı geliyor sence?',
     startLabel:     'başla',
+    showHint:       'İpucu göster',
+    moreHint:       'Daha fazla ipucu',
   } : {
     title:          'Let\'s look together! 🧸',
     countTab:       'Count',
@@ -176,6 +246,8 @@ function HelpPanel({ question, questionType, onDone, language }) {
     airTrace:       'Draw it in the air!',
     whichNext:      'What number comes next?',
     startLabel:     'start',
+    showHint:       'Show help',
+    moreHint:       'More help',
   }
 
   const nums    = question.match(/\d+/g)?.map(Number) || []
@@ -185,8 +257,13 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const isWordAdd   = questionType === 'word' && /gives?|more|adds?|total|together|gets?/i.test(question)
   const isWordMinus = questionType === 'word' && /takes?|away|left|eats?|loses?|fewer|gives away/i.test(question)
 
-  const isPlus  = question.includes('+') || isWordAdd
-  const isMinus = question.includes('-') || isWordMinus
+  // Problems sourced from the template engine (mathTemplates.js) know their own topic —
+  // use that directly instead of guessing from question text/regex, so e.g. a
+  // multiplication word problem that happens to contain "total" never gets misread as
+  // addition. Old LLM-sourced questions (templateTopic undefined) keep the regex guess.
+  const isPlus  = templateTopic ? templateTopic === 'addition'    : (question.includes('+') || isWordAdd)
+  const isMinus = templateTopic ? templateTopic === 'subtraction' : (question.includes('-') || isWordMinus)
+  const hasStepHints = !isPlus && !isMinus && questionType !== 'pattern' && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -196,8 +273,14 @@ function HelpPanel({ question, questionType, onDone, language }) {
   const [arrowInput,   setArrowInput]   = useState('')
   const [solvedArrows, setSolvedArrows] = useState({})
   const [tutoBubble,   setTutoBubble]   = useState(null)
+  const [hintsRevealed, setHintsRevealed] = useState(0) // gradual reveal: nudge → half → full
 
   useEffect(() => { if (bigNums) setActiveTab('show') }, [])
+
+  // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
+  // panel already showed it, no extra click needed, so it counts as "used" on mount.
+  // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
+  useEffect(() => { if (isPlus || isMinus || questionType === 'pattern') onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -399,6 +482,10 @@ function HelpPanel({ question, questionType, onDone, language }) {
         </div>
       </div>
     )
+  } else if (hasStepHints) {
+    sayalim = (
+      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
+    )
   } else {
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
@@ -511,6 +598,10 @@ function HelpPanel({ question, questionType, onDone, language }) {
         </div>
       </div>
     )
+  } else if (hasStepHints) {
+    goster = (
+      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
+    )
   } else {
     goster = (
       <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', padding: '20px 0' }}>
@@ -540,26 +631,35 @@ function HelpPanel({ question, questionType, onDone, language }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 5, background: '#f0edf8', borderRadius: 13, padding: 4 }}>
-        {[{ id: 'count', label: t.countTab }, { id: 'show', label: t.showTab }].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              flex: 1, padding: '7px 4px', border: 'none', borderRadius: 9,
-              fontFamily: FRED, fontWeight: 600, fontSize: 13, cursor: 'pointer',
-              background: activeTab === tab.id ? 'white' : 'transparent',
-              color: activeTab === tab.id ? MATH_DEEP : INK_SOFT,
-              boxShadow: activeTab === tab.id ? '0 2px 8px rgba(0,0,0,.10)' : 'none',
-              transition: 'all 0.15s',
-            }}
-          >{tab.label}</button>
-        ))}
-      </div>
+      {/* Count/Show only when the two tabs actually differ — for step-hint problems
+          (no dedicated visual yet) both tabs render the same content, so a tab switcher
+          would just be a confusing no-op toggle; show a single panel instead. */}
+      {!hasStepHints && (
+        <div style={{ display: 'flex', gap: 5, background: '#f0edf8', borderRadius: 13, padding: 4 }}>
+          {[{ id: 'count', label: t.countTab }, { id: 'show', label: t.showTab }].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: 1, padding: '7px 4px', border: 'none', borderRadius: 9,
+                fontFamily: FRED, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                background: activeTab === tab.id ? 'white' : 'transparent',
+                color: activeTab === tab.id ? MATH_DEEP : INK_SOFT,
+                boxShadow: activeTab === tab.id ? '0 2px 8px rgba(0,0,0,.10)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >{tab.label}</button>
+          ))}
+        </div>
+      )}
 
       <div style={{ minHeight: 140 }}>
-        {activeTab === 'count' && sayalim}
-        {activeTab === 'show'  && goster}
+        {hasStepHints ? sayalim : (
+          <>
+            {activeTab === 'count' && sayalim}
+            {activeTab === 'show'  && goster}
+          </>
+        )}
       </div>
 
       {showDoneBtn && (
@@ -603,6 +703,8 @@ export default function MathScreen() {
   const [leveledUp,     setLeveledUp]    = useState(false)
   const [helpUsed,      setHelpUsed]     = useState(false)
   const [helpVisible,   setHelpVisible]  = useState(false)
+  const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
+  const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
@@ -630,6 +732,29 @@ export default function MathScreen() {
   const startLoading = async (selectedMode) => {
     setMode(selectedMode)
     setStep('loading')
+    setHelpUsedQs(new Set())
+
+    const templateTopic = templateTopicForLevel(effectiveLevel)
+    if (templateTopic) {
+      // Deterministic path: no LLM call, no network — pure code templates. Track operand
+      // pairs across the batch so the same (a,b) — and therefore the same answer — never
+      // repeats, even if only the name/object in the wording changed.
+      const usedOperands = new Set()
+      const problems = Array.from({ length: 5 }, () => {
+        const p = generateProblem(templateTopic, effectiveLevel, usedOperands)
+        usedOperands.add(p.operandKey)
+        return p
+      })
+      setQuestions(problems.map(p => p.question_text))
+      setCorrectAns(problems.map(p => p.correct_answer))
+      setQTypes(problems.map(() => null))
+      setTopic(templateTopic)
+      setTemplateProblems(problems)
+      setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
+      return
+    }
+
+    setTemplateProblems([])
     try {
       const prevQs = []
       const result = await generateMathQuestions(age, effectiveLevel, prevQs)
@@ -647,11 +772,13 @@ export default function MathScreen() {
   // ── Screen mode: submit one answer ───────────────────────────────────────
   const submitScreenAnswer = () => {
     if (!input || flash) return
-    const userAns    = Number(input)
-    const isCorrect  = userAns === correctAns[qIdx]
+    const userAns    = Number(String(input).trim())
+    const isCorrect  = userAns === Number(correctAns[qIdx])
     const newAnswers = [...userAnswers, userAns]
 
-    if (!isCorrect && Number(age) <= 8) {
+    const tProblem = templateProblems[qIdx]
+    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps)
+    if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
       setInput('')
@@ -675,7 +802,7 @@ export default function MathScreen() {
   // ── Screen mode: evaluate locally ────────────────────────────────────────
   const doScreenEval = async (finalAnswers) => {
     setStep('evaluating')
-    const numCorrect = finalAnswers.filter((a, i) => a === correctAns[i]).length
+    const numCorrect = finalAnswers.filter((a, i) => Number(a) === Number(correctAns[i])).length
     const accuracy   = Math.round((numCorrect / questions.length) * 100)
 
     let levelChange = 'same'
@@ -686,7 +813,7 @@ export default function MathScreen() {
     const results = questions.map((q, i) => ({
       question: q, correct_answer: correctAns[i],
       child_answer: finalAnswers[i],
-      correct: finalAnswers[i] === correctAns[i],
+      correct: Number(finalAnswers[i]) === Number(correctAns[i]),
     }))
     const baseGems   = child?.task_settings?.math?.gems ?? 20
     const gemsEarned = helpUsed ? Math.round(baseGems * 0.67) : baseGems
@@ -742,6 +869,7 @@ export default function MathScreen() {
         gemini_notes: evalData.gemini_notes || null,
         next_session: evalData.next_session || null,
         level_change: evalData.level_change || 'same',
+        help_used: helpUsedQs.size, // distinct questions where in-app help was actually opened/used (0..5); data only, doesn't affect gems/level
       })
       if ((evalData.gems_earned || 0) > 0) {
         await supabase.from('bt_ledger').insert({
@@ -1028,7 +1156,10 @@ export default function MathScreen() {
             <HelpPanel
               question={q}
               questionType={qTypes[qIdx]}
+              templateTopic={templateProblems[qIdx]?.topic}
+              hintSteps={templateProblems[qIdx]?.hint_steps}
               onDone={() => { setHelpVisible(false); setInput('') }}
+              onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}
             />
           ) : (
@@ -1162,8 +1293,11 @@ export default function MathScreen() {
                     <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{r.correct ? '✅' : '🔄'}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}>{r.question}</div>
+                      <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
+                        Your answer: {r.child_answer ?? '—'}
+                      </div>
                       {!r.correct && (
-                        <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 3 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 2 }}>
                           The answer was {r.correct_answer} 💡
                         </div>
                       )}
