@@ -171,6 +171,38 @@ function fractionOfNumberTemplate(level) {
   }
 }
 
+// ─── Division word problem ──────────────────────────────────────────────────
+// b is the group count (2-5); a is always a multiple of b so the share is a whole
+// number — no remainders to reason about at this level.
+
+const DIV_NAMES = ['Mia', 'Leo', 'Sam', 'Ada', 'Theo', 'Noah', 'Zoe', 'Iris']
+const DIV_ITEMS = ['candies', 'stickers', 'cookies', 'marbles', 'balloons', 'crayons', 'pencils', 'stamps']
+const DIV_WHO = ['friends', 'classmates', 'kids', 'teammates']
+
+function divisionWordTemplate(level) {
+  const b = pick([2, 3, 4, 5])
+  const multiplier = randInt(2, 6)
+  const a = b * multiplier
+  const correct_answer = a / b
+  const name = pick(DIV_NAMES)
+  const items = pick(DIV_ITEMS)
+  const who = pick(DIV_WHO)
+
+  return {
+    topic: 'division-word',
+    level,
+    question_text: `${name} has ${a} ${items}. Shared equally among ${b} ${who}. How many each?`,
+    format: 'numeric',
+    correct_answer,
+    operandKey: pairKey(a, b),
+    // Stops at method, never states the final share — the child does that last step.
+    hint_steps: [
+      `${a} shared into ${b} equal groups.`,
+      `Split ${a} into ${b} groups: ${a} ÷ ${b}.`,
+    ],
+  }
+}
+
 // ─── Registry ───────────────────────────────────────────────────────────────
 
 const REGISTRY = {
@@ -178,6 +210,7 @@ const REGISTRY = {
   subtraction: subtractionTemplate,
   'multiplication-word': multiplicationWordTemplate,
   'fraction-of-number': fractionOfNumberTemplate,
+  'division-word': divisionWordTemplate,
 }
 
 export const TOPICS = Object.keys(REGISTRY)

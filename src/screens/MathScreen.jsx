@@ -77,6 +77,7 @@ function templateTopicForLevel(level) {
   if (/^Subtraction/.test(desc)) return 'subtraction'
   if (/Multiplication/.test(desc)) return 'multiplication-word'
   if (/Fraction/i.test(desc)) return 'fraction-of-number'
+  if (/division|divis|share|equal groups?/i.test(desc)) return 'division-word'
   return null
 }
 
@@ -230,7 +231,6 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
     countInstruction: 'Hepsini say!',
     ready:          'Anladım, tekrar deniyorum! 💪',
     nowCount:       'Şimdi kalanları say! 🔢',
-    airTrace:       'Parmağınla havada çiz!',
     whichNext:      'Hangi sayı geliyor sence?',
     startLabel:     'başla',
     showHint:       'İpucu göster',
@@ -243,7 +243,6 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
     countInstruction: 'Count them all!',
     ready:          'Got it, let me try again! 💪',
     nowCount:       'Now count what\'s left! 🔢',
-    airTrace:       'Draw it in the air!',
     whichNext:      'What number comes next?',
     startLabel:     'start',
     showHint:       'Show help',
@@ -487,18 +486,11 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
       <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
     )
   } else {
-    sayalim = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-        <span style={{ fontSize: 40 }}>✍️</span>
-        <div style={{
-          fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK, textAlign: 'center', lineHeight: 1.65,
-          background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '14px 18px', width: '100%',
-        }}>
-          {t.airTrace}<br />
-          <span style={{ color: MATH_DEEP, fontSize: 20 }}>{question}</span>
-        </div>
-      </div>
-    )
+    // Unreachable in practice — HelpPanel only mounts when hasRealHelp() (MathScreen)
+    // is true, which is exactly isPlus || isMinus || pattern || hasStepHints. Kept as a
+    // defensive no-render instead of the old "draw it in the air" filler, which showed
+    // no real help and could imply the wrong operation.
+    sayalim = null
   }
 
   // ── Göster content ────────────────────────────────────────────────────────
@@ -603,11 +595,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
       <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
     )
   } else {
-    goster = (
-      <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', padding: '20px 0' }}>
-        {question}
-      </div>
-    )
+    // Unreachable in practice — see the matching note on the `sayalim` fallback above.
+    goster = null
   }
 
   const showDoneBtn = activeTab === 'show'
