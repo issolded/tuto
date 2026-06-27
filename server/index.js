@@ -610,7 +610,7 @@ const CONTRIBUTION_CATEGORIES = ['self_care', 'household', 'family', 'outside']
 
 app.post('/api/contributions', async (req, res) => {
   try {
-    const { child_id, label, category, source } = req.body
+    const { child_id, label, category, source, photo_url } = req.body
 
     if (!child_id) return res.status(400).json({ error: 'child_id required' })
     if (source !== 'card' && source !== 'free_text') return res.status(400).json({ error: 'invalid source' })
@@ -622,6 +622,8 @@ app.post('/api/contributions', async (req, res) => {
     let resolvedCategory = category
     if (source === 'free_text' && !resolvedCategory) resolvedCategory = 'outside'
     if (!CONTRIBUTION_CATEGORIES.includes(resolvedCategory)) return res.status(400).json({ error: 'invalid category' })
+
+    const resolvedPhotoUrl = typeof photo_url === 'string' && photo_url ? photo_url : null
 
     // TODO: verify child belongs to authenticated parent's family
     const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', child_id).maybeSingle()
@@ -640,14 +642,20 @@ app.post('/api/contributions', async (req, res) => {
         approved_by: null,
         approved_at: null,
         period: DateTime.utc().toFormat('yyyy-MM'),
+        photo_url: resolvedPhotoUrl,
       })
-      .select('id, label, category, source, status, created_at')
+      .select('id, label, category, source, status, created_at, photo_url')
       .single()
 
     if (error) return res.status(500).json({ error: error.message })
 
     try {
-      await sendNotification(child.parent_id, `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`)
+      const message = `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
+      if (resolvedPhotoUrl) {
+        await sendNotificationWithPhoto(child.parent_id, message, resolvedPhotoUrl)
+      } else {
+        await sendNotification(child.parent_id, message)
+      }
     } catch (err) {
       console.error(`[CONTRIBUTIONS] notification failed: ${err.message}`)
     }
@@ -670,7 +678,7 @@ app.get('/api/contributions', async (req, res) => {
 
     let query = supabase
       .from('contribution_log')
-      .select('id, label, category, source, status, created_at')
+      .select('id, label, category, source, status, created_at, photo_url')
       .eq('child_id', child_id)
       .order('created_at', { ascending: false })
 
