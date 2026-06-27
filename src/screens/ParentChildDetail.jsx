@@ -71,6 +71,29 @@ function SubmissionCard({ sub, onApprove, onReject }) {
   )
 }
 
+// ── Contribution diary card ────────────────────────────────────────────────────
+const CONTRIBUTION_DOT_COLORS = {
+  self_care: PC.peach,
+  household: PC.green,
+  family:    PC.teal,
+  outside:   PC.amber,
+}
+
+function ContributionCard({ c, onApprove, onReject }) {
+  return (
+    <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <span style={{ width: 9, height: 9, borderRadius: '50%', background: CONTRIBUTION_DOT_COLORS[c.category] || PC.green, flexShrink: 0 }} />
+      <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 14, color: PC.ink }}>{c.label}</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button className="tc-press tc-tap" onClick={onApprove}
+          style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '8px 12px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
+        <button className="tc-press tc-tap" onClick={onReject}
+          style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '8px 12px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
+      </div>
+    </Card>
+  )
+}
+
 // ── Change PIN sheet ──────────────────────────────────────────────────────────
 function ChangePinSheet({ childId, parentId, onClose }) {
   const [phase, setPhase] = useState('enter')
@@ -317,6 +340,7 @@ export default function ParentChildDetail() {
   const [child, setChild] = useState(null)
   const [gems, setGems] = useState(null)
   const [submissions, setSubmissions] = useState(null)
+  const [contributions, setContributions] = useState(null)
   const [rewards, setRewards] = useState(null)
   const [justApproved, setJustApproved] = useState(false)
   const [showPinModal,    setShowPinModal]    = useState(false)
@@ -339,18 +363,21 @@ export default function ParentChildDetail() {
       supabase.from('bt_ledger').select('amount').eq('child_id', id),
       supabase.from('submissions').select('*').eq('child_id', id).order('created_at', { ascending: false }),
       supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost'),
-    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }]) => {
+      fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions?child_id=${id}&scope=month`).then(r => r.json()),
+    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
       setSubmissions(subData || [])
       setRewards(rewardData || [])
+      setContributions(contribData?.contributions || [])
     })
   }, [id])
 
-  const loading = !child || gems === null || submissions === null || rewards === null
+  const loading = !child || gems === null || submissions === null || rewards === null || contributions === null
 
   const pending   = (submissions || []).filter(s => s.status === 'pending')
   const todayDone = (submissions || []).filter(s => s.status === 'approved' && isToday(s.created_at))
+  const pendingContributions = (contributions || []).filter(c => c.status === 'pending')
 
   async function handleApprove(sub) {
     const earnedGems = sub.gems_earned ?? sub.suggested_gems ?? 30
@@ -367,6 +394,21 @@ export default function ParentChildDetail() {
   async function handleReject(subId) {
     await supabase.from('submissions').update({ status: 'rejected' }).eq('id', subId)
     setSubmissions(prev => prev.map(s => s.id === subId ? { ...s, status: 'rejected' } : s))
+  }
+
+  // Diary approvals never touch bt_ledger — gems for contributions are
+  // computed separately in the end-of-month review, by design.
+  async function handleApproveContribution(c) {
+    await fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions/${c.id}/approve`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parent_id: child.parent_id }),
+    })
+    setContributions(prev => prev.map(x => x.id === c.id ? { ...x, status: 'approved' } : x))
+  }
+
+  async function handleRejectContribution(c) {
+    await fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions/${c.id}/reject`, { method: 'POST' })
+    setContributions(prev => prev.map(x => x.id === c.id ? { ...x, status: 'rejected' } : x))
   }
 
   if (loading) return (
@@ -411,6 +453,24 @@ export default function ParentChildDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pending.map(sub => (
                 <SubmissionCard key={sub.id} sub={sub} onApprove={() => handleApprove(sub)} onReject={() => handleReject(sub.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* diary contributions */}
+        <div>
+          <SectionHead>
+            🌱 Ev katkıları{pendingContributions.length > 0 ? ` (${pendingContributions.length})` : ''}
+          </SectionHead>
+          {pendingContributions.length === 0 ? (
+            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>
+              Bekleyen katkı yok.
+            </Card>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingContributions.map(c => (
+                <ContributionCard key={c.id} c={c} onApprove={() => handleApproveContribution(c)} onReject={() => handleRejectContribution(c)} />
               ))}
             </div>
           )}
