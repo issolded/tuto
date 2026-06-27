@@ -624,7 +624,7 @@ app.post('/api/contributions', async (req, res) => {
     if (!CONTRIBUTION_CATEGORIES.includes(resolvedCategory)) return res.status(400).json({ error: 'invalid category' })
 
     // TODO: verify child belongs to authenticated parent's family
-    const { data: child } = await supabase.from('children').select('id').eq('id', child_id).maybeSingle()
+    const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
     // TODO: free_text moderation before this enters any LLM summary
@@ -645,6 +645,13 @@ app.post('/api/contributions', async (req, res) => {
       .single()
 
     if (error) return res.status(500).json({ error: error.message })
+
+    try {
+      await sendNotification(child.parent_id, `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`)
+    } catch (err) {
+      console.error(`[CONTRIBUTIONS] notification failed: ${err.message}`)
+    }
+
     res.status(201).json(inserted)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -679,6 +686,55 @@ app.get('/api/contributions', async (req, res) => {
     const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json({ contributions: data || [] })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Single deterministic approval path — no gem write here. Gems are computed
+// separately in the end-of-month review, by pedagogical design.
+app.post('/api/contributions/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { parent_id } = req.body
+
+    const { data: existing } = await supabase.from('contribution_log').select('id').eq('id', id).maybeSingle()
+    if (!existing) return res.status(404).json({ error: 'contribution not found' })
+
+    const { data: updated, error } = await supabase
+      .from('contribution_log')
+      .update({
+        status: 'approved',
+        approved_at: DateTime.utc().toISO(),
+        approved_by: parent_id || null,
+      })
+      .eq('id', id)
+      .select('id, label, category, source, status, created_at')
+      .single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.json(updated)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/contributions/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const { data: existing } = await supabase.from('contribution_log').select('id').eq('id', id).maybeSingle()
+    if (!existing) return res.status(404).json({ error: 'contribution not found' })
+
+    const { data: updated, error } = await supabase
+      .from('contribution_log')
+      .update({ status: 'rejected' })
+      .eq('id', id)
+      .select('id, label, category, source, status, created_at')
+      .single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.json(updated)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
