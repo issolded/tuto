@@ -37,7 +37,7 @@ async function classifyIntent(text) {
 
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
-    supabase.from('parents').select('timezone').eq('id', parentId).single(),
+    supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
     supabase.from('children').select('id, name, age, task_settings').eq('parent_id', parentId),
   ])
   if (!children?.length) return []
@@ -46,6 +46,7 @@ async function getParentContext(parentId) {
   const userNow = DateTime.now().setZone(tz)
   const todayStart = userNow.startOf('day').toUTC().toISO()
   const todayEnd   = userNow.endOf('day').toUTC().toISO()
+  const parentPrefs = parentRow?.prefs ?? null
 
   return Promise.all(children.map(async child => {
     const [
@@ -55,6 +56,7 @@ async function getParentContext(parentId) {
       { data: ledger },
       { data: stories },
       { data: books },
+      { data: pendingContribs },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -62,12 +64,14 @@ async function getParentContext(parentId) {
       supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
+      supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
     ])
 
     const sub = submissions || []
     const math = mathProgress || []
     const led = ledger || []
     const today = todaySubs || []
+    const pendingContributions = pendingContribs || []
 
     return {
       name: child.name,
@@ -79,6 +83,8 @@ async function getParentContext(parentId) {
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
+      pendingContributions: pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`,
+      parentPrefs,
     }
   }))
 }
