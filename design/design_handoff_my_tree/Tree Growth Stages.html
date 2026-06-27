@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tuto — Tree growth over 30 days</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#241f3a; --ink-soft:#8d83ad;
+    --stage:#ececec;
+    --green:#4cb685; --green-deep:#37a06f; --green-bg:#DCF2E7;
+    --leaf:#6BBF59; --leaf-deep:#4FA84A; --bark:#A9744F;
+    --fred:'Fredoka',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{ font-family:'Nunito',sans-serif; background:var(--stage); -webkit-font-smoothing:antialiased; min-height:100vh; padding:46px 24px 80px; }
+  .head{ text-align:center; max-width:760px; margin:0 auto 6px; }
+  .head .crumb{ font-family:var(--fred); font-weight:600; font-size:13px; color:var(--green-deep); background:#fff; display:inline-block; padding:5px 14px; border-radius:999px; box-shadow:0 2px 8px rgba(40,30,70,.08); margin-bottom:18px; }
+  .head h1{ font-family:var(--fred); font-weight:600; font-size:27px; margin:0; letter-spacing:-.4px; color:#20201e; }
+  .head p{ font-weight:700; font-size:14px; color:#9a948c; margin:11px auto 0; line-height:1.6; max-width:660px; }
+
+  .card{ max-width:1180px; margin:40px auto 0; background:#fff; border-radius:30px; padding:38px 30px 30px; box-shadow:0 20px 50px -24px rgba(40,55,40,.34), 0 6px 16px rgba(0,0,0,.05); }
+  .strip{ position:relative; display:flex; justify-content:space-between; gap:14px; }
+  /* the soil baseline running through every stage */
+  .strip::before{ content:""; position:absolute; left:3%; right:3%; bottom:150px; height:14px; border-radius:999px;
+    background:linear-gradient(90deg,#e7d8c4,#cdeed8 18%,#b4e4c5); opacity:.7; z-index:0; }
+  .stage{ position:relative; z-index:1; flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .stage .art{ height:172px; display:flex; align-items:flex-end; justify-content:center; }
+  .stage .lvl{ font-family:var(--fred); font-weight:600; font-size:18px; color:var(--ink); margin-top:6px; }
+  .stage .when{ display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:11px; color:var(--green-deep); background:var(--green-bg); padding:5px 11px; border-radius:999px; margin-top:8px; }
+  .stage .leaves{ font-weight:800; font-size:12px; color:var(--ink-soft); margin-top:8px; }
+  .stage .note{ font-weight:700; font-size:12px; color:#9a948c; line-height:1.4; margin-top:7px; max-width:170px; }
+
+  .rules{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; max-width:1000px; margin:30px auto 0; }
+  .rule{ display:flex; gap:10px; align-items:flex-start; background:#fff; border-radius:16px; padding:13px 16px; box-shadow:0 3px 12px rgba(0,0,0,.06); max-width:300px; }
+  .rule .ic{ width:30px; height:30px; border-radius:9px; background:var(--green-bg); flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .rule .t{ font-weight:700; font-size:12.5px; color:#6a655d; line-height:1.45; }
+  .rule .t b{ color:var(--ink); font-weight:800; }
+  .targets{ display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+  .targets .tg{ font-family:var(--fred); font-weight:500; font-size:13px; color:var(--green-deep); background:var(--green-bg); padding:7px 14px; border-radius:999px; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="crumb">My Tree · growth model</div>
+    <h1>How the tree grows across a month</h1>
+    <p>Growth follows <strong>approved leaves</strong>, not the calendar — action is rewarded, missed days never shrink the tree. A soft daily cap keeps it growing all month instead of maxing out in one big day. Four silhouettes mark the milestones; the size eases up continuously in between, so every single leaf is felt.</p>
+  </div>
+
+  <div class="card">
+    <div id="strip" class="strip"></div>
+    <div class="targets">
+      <span class="tg">🌳 Full tree — Ages 6–8: 12 leaves</span>
+      <span class="tg">Ages 9–11: 18 leaves</span>
+      <span class="tg">Ages 12–15: 24 leaves</span>
+    </div>
+    <div class="rules">
+      <div class="rule"><span class="ic">🍃</span><span class="t"><b>Leaves, not days.</b> One approved contribution = one leaf. The plant grows from what the child does.</span></div>
+      <div class="rule"><span class="ic">⏳</span><span class="t"><b>Soft daily cap (~2/day).</b> Extra entries still log &amp; celebrate, but growth paces out over the 30 days.</span></div>
+      <div class="rule"><span class="ic">🌸</span><span class="t"><b>Past full, it blooms.</b> Contributions beyond the target turn to blossom — then the tree joins the forest at month-end.</span></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="tree-art.jsx"></script>
+  <script type="text/babel">
+    const STAGES = [
+      { lvl:'Sprout',     when:'Day 1',      leaves:1,  bloom:false, note:'First contribution — a shoot breaks the soil.' },
+      { lvl:'Sapling',    when:'~Day 8',     leaves:4,  bloom:false, note:'A slim trunk and the first few leaves.' },
+      { lvl:'Young tree', when:'~Day 16',    leaves:8,  bloom:false, note:'The canopy starts to fill in.' },
+      { lvl:'Full tree',  when:'~Day 24',    leaves:12, bloom:false, note:'Monthly goal reached 🎉' },
+      { lvl:'In bloom',   when:'Month-end',  leaves:12, bloom:true,  note:'Extra help blossoms — then joins the forest.' },
+    ];
+    function Strip(){
+      return (
+        <React.Fragment>
+          {STAGES.map((s,i)=>(
+            <div className="stage" key={i}>
+              <div className="art"><TreeArt size={158} fruits={s.leaves} target={12} bloom={s.bloom} /></div>
+              <div className="lvl">{s.lvl}</div>
+              <div className="when">🗓 {s.when}</div>
+              <div className="leaves">{s.leaves} {s.leaves===1?'leaf':'leaves'}</div>
+              <div className="note">{s.note}</div>
+            </div>
+          ))}
+        </React.Fragment>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('strip')).render(<Strip/>);
+  </script>
+</body>
+</html>
