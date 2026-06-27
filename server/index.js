@@ -16,25 +16,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
-async function classifyIntent(text) {
-  const res = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text:
-        `Classify this parent message intent. Return JSON only:\n` +
-        `{"intent":"approve"|"reject"|"auto_approve"|"manual_approve"|"other","confidence":0-1}\n` +
-        `Message: '${text.replace(/'/g, "\\'")}'`
-      }] }],
-      generationConfig: { response_mime_type: 'application/json' },
-    }),
-  })
-  if (!res.ok) return { intent: 'other', confidence: 0 }
-  const data = await res.json()
-  try { return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}') }
-  catch { return { intent: 'other', confidence: 0 } }
-}
-
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
@@ -128,9 +109,6 @@ async function askGeminiWithContext(parentId, userMessage) {
   const data = await res.json()
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
 }
-
-// parentId → { subId, childName, gems, approved, replyCb }
-const awaitingNote = new Map()
 
 async function sendNotification(parentId, message) {
   const { data: parent } = await supabase
@@ -264,140 +242,163 @@ function setupConnectHandler() {
   })
 }
 
+// ── Contribution diary tools (function-calling) ───────────────────────────────
+const CONTRIBUTION_TOOLS = [{
+  functionDeclarations: [
+    {
+      name: 'approve_contribution',
+      description:
+        'Approve a pending household contribution diary entry. Only call this when the parent clearly expresses ' +
+        'intent to approve ONE SPECIFIC contribution from the pending list. If more than one contribution is ' +
+        'pending and it is unclear which one the parent means, do NOT call this — ask the parent to clarify first.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          contribution_id: { type: 'STRING', description: 'The exact id of the contribution to approve, taken from the pending contributions list in context.' },
+          note: { type: 'STRING', description: 'Optional note from the parent to pass along to the child.' },
+        },
+        required: ['contribution_id'],
+      },
+    },
+    {
+      name: 'reject_contribution',
+      description:
+        'Reject a pending household contribution diary entry. Only call this when the parent clearly expresses ' +
+        'intent to reject ONE SPECIFIC contribution from the pending list. If more than one contribution is ' +
+        'pending and it is unclear which one the parent means, do NOT call this — ask the parent to clarify first.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          contribution_id: { type: 'STRING', description: 'The exact id of the contribution to reject, taken from the pending contributions list in context.' },
+          note: { type: 'STRING', description: 'Optional note from the parent to pass along to the child.' },
+        },
+        required: ['contribution_id'],
+      },
+    },
+  ],
+}]
+
+async function approveContributionTool(contributionId, parentId) {
+  const { data: updated, error } = await supabase
+    .from('contribution_log')
+    .update({ status: 'approved', approved_at: DateTime.utc().toISO(), approved_by: parentId || null })
+    .eq('id', contributionId)
+    .select('id, label, child_id, status')
+    .single()
+  if (error || !updated) return { success: false, error: error?.message || 'contribution not found' }
+  return { success: true, id: updated.id, label: updated.label, status: updated.status }
+}
+
+async function rejectContributionTool(contributionId) {
+  const { data: updated, error } = await supabase
+    .from('contribution_log')
+    .update({ status: 'rejected' })
+    .eq('id', contributionId)
+    .select('id, label, child_id, status')
+    .single()
+  if (error || !updated) return { success: false, error: error?.message || 'contribution not found' }
+  return { success: true, id: updated.id, label: updated.label, status: updated.status }
+}
+
 async function handleMessage(parentId, replyCb, text) {
   console.log(`[MSG] parent=${parentId} → "${text}"`)
   try {
-    // ── 1. Multi-turn: parent is writing a note after approve/reject ──────
-    if (awaitingNote.has(parentId)) {
-      const { subId, childName, gems, approved } = awaitingNote.get(parentId)
-      awaitingNote.delete(parentId)
-      const lower = text.toLowerCase().trim()
-      const skip = ['geç', 'gec', 'skip', 'hayir', 'hayır', 'yok', 'no'].includes(lower)
-      if (!skip && text.trim()) {
-        await supabase.from('submissions').update({ parent_note: text.trim() }).eq('id', subId)
-      }
-      await replyCb(approved
-        ? `✅ ${childName}'in ev görevi onaylandı! ${gems} Gem kazandı 🎉${skip ? '' : ' Notun iletildi.'}`
-        : `Tamam, anladım.${skip ? '' : ' Notun iletildi.'}`)
+    const [familyData, { data: parentRow }] = await Promise.all([
+      getParentContext(parentId),
+      supabase.from('parents').select('timezone').eq('id', parentId).single(),
+    ])
+    const tz = parentRow?.timezone || 'UTC'
+    const userNow = DateTime.now().setZone(tz)
+    const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
+
+    const pendingList = familyData.flatMap(c =>
+      Array.isArray(c.pendingContributions)
+        ? c.pendingContributions.map(p => ({ id: p.id, label: p.label, category: p.category, child: c.name }))
+        : []
+    )
+
+    const systemPrompt =
+      `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
+      `Current local time for parent: ${localTimeStr}\n` +
+      `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
+      `Pending household contributions awaiting approval (use the exact "id" when calling a tool):\n` +
+      `${pendingList.length ? JSON.stringify(pendingList, null, 2) : 'None pending.'}\n\n` +
+      `Tool usage rules:\n` +
+      `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
+      `Approving simply adds a leaf to the child's tree.\n` +
+      `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
+      `added to their tree instead.\n` +
+      `- Only call approve_contribution or reject_contribution when the parent clearly states approve/reject ` +
+      `intent for ONE SPECIFIC contribution.\n` +
+      `- If more than one contribution is pending and it is unclear which one the parent means, do NOT call a ` +
+      `tool — ask which one they mean first, in the same language as the parent's message.\n\n` +
+      `General guidelines:\n` +
+      `- Respond in the SAME LANGUAGE as the parent's message\n` +
+      `- Be conversational and warm, like a trusted friend who knows the kids\n` +
+      `- Reference specific data when relevant (e.g. "Ada earned 30 gems yesterday!")\n` +
+      `- Keep responses concise — max 3-4 sentences for simple questions\n\n` +
+      `CRITICAL: Only report facts from the data provided.\n` +
+      `If the data is empty or null, say so honestly.\n` +
+      `NEVER invent or assume activity that is not in the data.\n` +
+      `If a field is empty, say the child hasn't done that yet.`
+
+    const contents = [{ role: 'user', parts: [{ text }] }]
+
+    const firstRes = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        tools: CONTRIBUTION_TOOLS,
+      }),
+    })
+    if (!firstRes.ok) {
+      const err = await firstRes.json().catch(() => ({}))
+      throw new Error(err.error?.message || `Gemini API error ${firstRes.status}`)
+    }
+    const firstData = await firstRes.json()
+    const parts = firstData.candidates?.[0]?.content?.parts || []
+    const fnCallPart = parts.find(p => p.functionCall)
+
+    if (!fnCallPart) {
+      const reply = parts.map(p => p.text || '').join('').trim() || 'Üzgünüm, anlayamadım.'
+      await replyCb(reply)
+      console.log(`[MSG] Reply sent to parent ${parentId}`)
       return
     }
 
-    // ── 2. Fetch children once ─────────────────────────────────────────────
-    const { data: children } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
-    const childIds = (children || []).map(c => c.id)
-
-    // ── 3. Keyword/number check for pending chore submissions ─────────────
-    if (childIds.length > 0) {
-      const { data: latestChore } = await supabase
-        .from('submissions')
-        .select('id, child_id, suggested_gems, gems_earned')
-        .in('child_id', childIds)
-        .eq('status', 'pending')
-        .eq('task_type', 'chore')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (latestChore) {
-        const trimmed = text.trim()
-        const lower   = trimmed.toLowerCase()
-        const words   = trimmed.split(/\s+/)
-        const isSentence = words.length > 2
-
-        // Cümle → Gemini'ye gönder, keyword kontrolü yapma
-        if (!isSentence) {
-          const APPROVE_KEYWORDS = ['evet', 'yes', 'tamam', 'ok', 'okay', 'onayla', 'onaylıyorum', 'approve']
-          const REJECT_KEYWORDS  = ['hayır', 'no', 'reddet', 'reddediyorum', 'reject', 'olmaz']
-
-          const isApprove = APPROVE_KEYWORDS.includes(lower)
-          const isReject  = REJECT_KEYWORDS.includes(lower)
-
-          // Sayı tespiti: '20', '15 gem', '25 ver' → ilk tam sayıyı al
-          const numMatch  = trimmed.match(/\d+/)
-          const num       = numMatch ? parseInt(numMatch[0], 10) : NaN
-          const isNumber  = !isNaN(num) && num > 0 && num <= 200
-
-          console.log(`[MSG] chore check — lower="${lower}" isSentence=false isApprove=${isApprove} isReject=${isReject} isNumber=${isNumber} num=${num}`)
-
-          if (isApprove || isNumber) {
-            const gems = isNumber ? num : (latestChore.suggested_gems ?? latestChore.gems_earned ?? 20)
-            const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
-            await supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', latestChore.id)
-            await supabase.from('bt_ledger').insert({ child_id: latestChore.child_id, amount: gems, reason: 'chore' })
-            awaitingNote.set(parentId, { subId: latestChore.id, childName, gems, approved: true })
-            await replyCb(`✅ Harika! ${childName} ${gems} Gem kazandı 🎉\n\n${childName} için bir not bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
-            return
-          }
-
-          if (isReject) {
-            const childName = children.find(c => c.id === latestChore.child_id)?.name || ''
-            await supabase.from('submissions').update({ status: 'rejected' }).eq('id', latestChore.id)
-            awaitingNote.set(parentId, { subId: latestChore.id, childName, gems: 0, approved: false })
-            await replyCb(`❌ ${childName}'in ev görevi reddedildi.\n\n${childName} için bir mesaj bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
-            return
-          }
-        } else {
-          console.log(`[MSG] chore check — "${trimmed}" is a sentence (${words.length} words) → skipping keyword match`)
-        }
-      }
+    const { name, args } = fnCallPart.functionCall
+    let toolResult
+    if (name === 'approve_contribution') {
+      toolResult = await approveContributionTool(args.contribution_id, parentId)
+    } else if (name === 'reject_contribution') {
+      toolResult = await rejectContributionTool(args.contribution_id)
+    } else {
+      toolResult = { success: false, error: `unknown tool ${name}` }
     }
+    console.log(`[MSG] Tool "${name}" → ${JSON.stringify(toolResult)}`)
 
-    // ── 4. Gemini intent classify for non-chore tasks ─────────────────────
-    const { intent } = await classifyIntent(text)
-    console.log(`[MSG] Intent: ${intent}`)
-
-    if (intent === 'approve' || intent === 'reject') {
-      const { data: latest } = await supabase
-        .from('submissions').select('id, task_type, child_id, suggested_gems, gems_earned')
-        .in('child_id', childIds).eq('status', 'pending')
-        .order('created_at', { ascending: false }).limit(1)
-        .maybeSingle()
-
-      if (!latest) {
-        const reply = await askGeminiWithContext(parentId, text)
-        await replyCb(reply)
-        return
-      }
-
-      const gems = latest.suggested_gems ?? latest.gems_earned ?? 30
-      const childName = children?.find(c => c.id === latest.child_id)?.name || ''
-      const label = TASK_LABELS[latest.task_type] || latest.task_type
-
-      if (intent === 'approve') {
-        await supabase.from('submissions').update({ status: 'approved', gems_earned: gems }).eq('id', latest.id)
-        await supabase.from('bt_ledger').insert({ child_id: latest.child_id, amount: gems, reason: latest.task_type })
-        if (latest.task_type === 'chore') {
-          awaitingNote.set(parentId, { subId: latest.id, childName, gems, approved: true })
-          await replyCb(`✅ ${childName}'in ev görevi onaylandı! ${gems} Gem kazandı 🎉\n\n${childName} için bir not bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
-        } else {
-          await replyCb(`✅ ${childName}'in ${label} görevi onaylandı! ${gems} Gem kazandı 🎉`)
-        }
-      } else {
-        await supabase.from('submissions').update({ status: 'rejected' }).eq('id', latest.id)
-        if (latest.task_type === 'chore') {
-          awaitingNote.set(parentId, { subId: latest.id, childName, gems: 0, approved: false })
-          await replyCb(`❌ ${childName}'in ev görevi reddedildi.\n\n${childName} için bir mesaj bırakmak ister misiniz? Geçmek için 'geç' yazın.`)
-        } else {
-          await replyCb(`❌ ${childName}'in ${label} görevi reddedildi.`)
-        }
-      }
-      return
+    const secondRes = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [
+          ...contents,
+          { role: 'model', parts: [{ functionCall: fnCallPart.functionCall }] },
+          { role: 'user', parts: [{ functionResponse: { name, response: toolResult } }] },
+        ],
+        tools: CONTRIBUTION_TOOLS,
+      }),
+    })
+    if (!secondRes.ok) {
+      const err = await secondRes.json().catch(() => ({}))
+      throw new Error(err.error?.message || `Gemini API error ${secondRes.status}`)
     }
-
-    if (intent === 'auto_approve' || intent === 'manual_approve') {
-      const val = intent === 'auto_approve'
-      for (const c of children || []) {
-        await supabase.from('children').update({ auto_approve_chore: val }).eq('id', c.id)
-      }
-      await replyCb(val
-        ? 'Tamam! Artık ev görevlerini otomatik onaylayacağım 🤖'
-        : 'Tamam! Ev görevleri artık manuel onaylanacak.')
-      return
-    }
-
-    // ── 5. Default: full family context → Gemini ─────────────────────────
-    const reply = await askGeminiWithContext(parentId, text)
-    await replyCb(reply)
+    const secondData = await secondRes.json()
+    const finalText = secondData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim()
+    await replyCb(finalText || 'Tamamlandı.')
     console.log(`[MSG] Reply sent to parent ${parentId}`)
   } catch (err) {
     console.error('[MSG] Message handling error:', err.message)
