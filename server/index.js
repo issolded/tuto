@@ -606,6 +606,84 @@ app.delete('/api/children/:childId/stories/:storyId', async (req, res) => {
   res.json({ ok: true })
 })
 
+const CONTRIBUTION_CATEGORIES = ['self_care', 'household', 'family', 'outside']
+
+app.post('/api/contributions', async (req, res) => {
+  try {
+    const { child_id, label, category, source } = req.body
+
+    if (!child_id) return res.status(400).json({ error: 'child_id required' })
+    if (source !== 'card' && source !== 'free_text') return res.status(400).json({ error: 'invalid source' })
+
+    const trimmedLabel = (label || '').trim()
+    if (!trimmedLabel) return res.status(400).json({ error: 'label required' })
+    if (trimmedLabel.length > 200) return res.status(400).json({ error: 'label too long' })
+
+    let resolvedCategory = category
+    if (source === 'free_text' && !resolvedCategory) resolvedCategory = 'outside'
+    if (!CONTRIBUTION_CATEGORIES.includes(resolvedCategory)) return res.status(400).json({ error: 'invalid category' })
+
+    // TODO: verify child belongs to authenticated parent's family
+    const { data: child } = await supabase.from('children').select('id').eq('id', child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    // TODO: free_text moderation before this enters any LLM summary
+
+    const { data: inserted, error } = await supabase
+      .from('contribution_log')
+      .insert({
+        child_id,
+        label: trimmedLabel,
+        category: resolvedCategory,
+        source,
+        status: 'pending',
+        approved_by: null,
+        approved_at: null,
+        period: DateTime.utc().toFormat('yyyy-MM'),
+      })
+      .select('id, label, category, source, status, created_at')
+      .single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.status(201).json(inserted)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/contributions', async (req, res) => {
+  try {
+    const { child_id, period, scope } = req.query
+    if (!child_id) return res.status(400).json({ error: 'child_id required' })
+
+    const { data: child } = await supabase.from('children').select('id').eq('id', child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const effectiveScope = scope === 'today' ? 'today' : 'month'
+
+    let query = supabase
+      .from('contribution_log')
+      .select('id, label, category, source, status, created_at')
+      .eq('child_id', child_id)
+      .order('created_at', { ascending: false })
+
+    if (effectiveScope === 'today') {
+      const todayStart = DateTime.utc().startOf('day').toISO()
+      const todayEnd = DateTime.utc().endOf('day').toISO()
+      query = query.gte('created_at', todayStart).lte('created_at', todayEnd)
+    } else {
+      const effectivePeriod = period || DateTime.utc().toFormat('yyyy-MM')
+      query = query.eq('period', effectivePeriod)
+    }
+
+    const { data, error } = await query
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ contributions: data || [] })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/submissions/:id', async (req, res) => {
   const { id } = req.params
   const { data, error } = await supabase
