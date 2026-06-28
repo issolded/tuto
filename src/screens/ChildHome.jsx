@@ -26,7 +26,7 @@ const BASE_TASKS = [
   { bg: '#E8E0FF', name: 'My Books',   route: '/child/library', type: 'reading' },
   { bg: '#D4EDFF', name: 'My Math',    route: '/child/math',    type: 'math'    },
   { bg: '#D4F5E0', name: 'My Stories', route: '/child/stories', type: 'writing' },
-  { bg: '#FFE8D4', name: 'My House',   route: '/child/task',    type: 'chore'   },
+  { bg: '#FFE8D4', name: 'My Tree',    route: '/child/task',    type: 'chore'   },
 ]
 
 const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', chore: '#f3a35a' }
@@ -40,6 +40,16 @@ function TaskIcon({ type, c }) {
   )
   if (type === 'writing') return (
     <svg width="56" height="56" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M16 48 L24 40" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M30 30 L40 40" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  if (type === 'chore') return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
+      <rect x="29" y="42" width="6" height="14" rx="2" fill="#A9744F" stroke="#20201e" strokeWidth="3"/>
+      <path d="M16 36 C12 26 20 18 32 20 C44 18 52 26 48 36 C52 42 46 48 38 46 C34 50 30 50 26 46 C18 48 12 42 16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
+      <circle cx="25" cy="30" r="3.4" fill={c}/>
+      <circle cx="34" cy="26" r="3.4" fill={c}/>
+      <circle cx="40" cy="34" r="3.4" fill={c}/>
+      <circle cx="29" cy="38" r="3.4" fill={c}/>
+    </svg>
   )
   return (
     <svg width="58" height="58" viewBox="0 0 64 64" fill="none"><path d="M14 30 L32 14 L50 30 L50 50 L14 50 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M10 32 L32 12 L54 32" stroke="#20201e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/><rect x="27" y="38" width="10" height="12" rx="1.5" fill={c}/></svg>
