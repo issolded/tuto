@@ -359,13 +359,22 @@ async function handleMessage(parentId, replyCb, text) {
         : []
     )
 
+    const pendingBlock =
+      `ŞU AN ONAY BEKLEYEN KATKILAR (toplam ${pendingList.length}):\n` +
+      (pendingList.length
+        ? pendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n')
+        : 'Şu anda onay bekleyen katkı yok.')
+
     const systemPrompt =
+      `${pendingBlock}\n\n` +
+      `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
+      `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
+      `o zaman bekleyen olmadığını söyle.\n\n` +
       `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
       `Current local time for parent: ${localTimeStr}\n` +
       `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
-      `Pending household contributions awaiting approval (use the exact "id" when calling a tool):\n` +
-      `${pendingList.length ? JSON.stringify(pendingList, null, 2) : 'None pending.'}\n\n` +
       `Tool usage rules:\n` +
+      `- Use the exact "id" from the pending contributions list above when calling a tool.\n` +
       `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
       `Approving simply adds a leaf to the child's tree.\n` +
       `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
