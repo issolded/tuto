@@ -107,11 +107,13 @@ function SugCard({ catKey, onAdd, wide }) {
   )
 }
 
-function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemovePhoto, uploading }) {
+function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemovePhoto, uploading, submitting }) {
   const [text, setText] = useState('')
   const fileRef = useRef()
+  const busy = submitting || uploading
 
   const submit = () => {
+    if (busy) return
     const trimmed = text.trim()
     if (!trimmed) return
     onSubmit(trimmed)
@@ -124,32 +126,38 @@ function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemo
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 9, background: prominent ? '#fff' : '#FFFDF7',
           border: `1.5px ${prominent ? 'solid' : 'dashed'} ${prominent ? '#E0E6E1' : '#E7DABF'}`, borderRadius: 14, padding: '11px 13px',
+          opacity: busy ? 0.7 : 1,
         }}>
           <span style={{ fontSize: 15 }}>✏️</span>
           <input
             value={text}
+            disabled={busy}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submit() }}
             placeholder={prominent ? 'What did you do to help?' : 'Did something else? Write it here'}
             style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: '#4a3f2e' }}
           />
-          <button onClick={() => fileRef.current?.click()} title="Add a photo (optional)"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.6, flexShrink: 0 }}>📷</button>
+          <button onClick={() => fileRef.current?.click()} disabled={busy} title="Add a photo (optional)"
+            style={{ background: 'none', border: 'none', cursor: busy ? 'default' : 'pointer', fontSize: 16, opacity: 0.6, flexShrink: 0 }}>📷</button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) onAttachPhoto(f) }} />
         </div>
         {prominent && (
-          <button onClick={submit} disabled={!text.trim()} style={{
+          <button onClick={submit} disabled={!text.trim() || busy} style={{
             width: 48, height: 48, borderRadius: 14, border: 'none', background: '#2f8f6b', color: '#fff', fontSize: 20, flexShrink: 0,
-            cursor: text.trim() ? 'pointer' : 'default', opacity: text.trim() ? 1 : 0.5, boxShadow: '0 8px 18px rgba(47,143,107,.34)',
+            cursor: text.trim() && !busy ? 'pointer' : 'default', opacity: text.trim() && !busy ? 1 : 0.5, boxShadow: '0 8px 18px rgba(47,143,107,.34)',
           }}>↑</button>
         )}
       </div>
       {!prominent && text && (
-        <button onClick={submit} style={{ alignSelf: 'flex-end', border: 'none', background: '#4cb685', color: '#fff', borderRadius: 12, padding: '7px 16px', fontFamily: "'Baloo 2', cursive", fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+        <button onClick={submit} disabled={busy} style={{
+          alignSelf: 'flex-end', border: 'none', background: '#4cb685', color: '#fff', borderRadius: 12, padding: '7px 16px',
+          fontFamily: "'Baloo 2', cursive", fontWeight: 700, fontSize: 13, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+        }}>
           Add ✓
         </button>
       )}
+      {submitting && <div style={{ fontSize: 11, fontWeight: 700, color: '#9B8FC0' }}>Sending…</div>}
       {uploading && <div style={{ fontSize: 11, fontWeight: 700, color: '#9B8FC0' }}>Uploading photo…</div>}
       {photoUrl && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, fontWeight: 700, color: '#37a06f' }}>
@@ -355,6 +363,8 @@ export default function MyTree() {
   const [entries, setEntries] = useState([])
   const [approvedMonth, setApprovedMonth] = useState(0)
   const [loadError, setLoadError] = useState(false)
+  const [moderationError, setModerationError] = useState(false)
+  const [submittingFreeText, setSubmittingFreeText] = useState(false)
   const [micro, setMicro] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -407,10 +417,12 @@ export default function MyTree() {
     microTimer.current = setTimeout(() => setMicro(false), 3400)
   }
 
-  async function addEntry(category, label, source) {
+  // Cards are pre-defined, safe labels — no moderation, so the optimistic
+  // pending row can appear instantly and is always trustworthy.
+  async function addCardEntry(category, label, source) {
     const optimisticId = `opt-${Date.now()}`
     const usedPhoto = photoUrl
-    setEntries(prev => [{ id: optimisticId, category: category || 'outside', label, status: 'pending', fresh: true }, ...prev])
+    setEntries(prev => [{ id: optimisticId, category, label, status: 'pending', fresh: true }, ...prev])
     showMicro()
     setPhotoUrl(null)
 
@@ -430,8 +442,42 @@ export default function MyTree() {
     }
   }
 
-  const handleAddCard = (catKey) => addEntry(catKey, CATS[catKey].label, 'card')
-  const handleAddFreeText = (text) => addEntry(undefined, text, 'free_text')
+  // Free text goes through server-side moderation, so it must NOT appear as a
+  // pending row until the backend has actually accepted it — otherwise a
+  // rejected entry flashes "waiting for approval" before disappearing.
+  async function addFreeTextEntry(label) {
+    const usedPhoto = photoUrl
+    setSubmittingFreeText(true)
+    setPhotoUrl(null)
+    try {
+      const res = await fetch(`${SERVER}/api/contributions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ child_id: child.id, label, source: 'free_text', photo_url: usedPhoto || undefined }),
+      })
+      if (res.status === 400) {
+        const body = await res.json().catch(() => ({}))
+        if (body.error === 'inappropriate') {
+          setModerationError(true)
+          setTimeout(() => setModerationError(false), 3500)
+          return
+        }
+        throw new Error(body.error || 'request failed')
+      }
+      if (!res.ok) throw new Error('request failed')
+      const saved = await res.json()
+      setEntries(prev => [{ ...saved, fresh: true }, ...prev])
+      showMicro()
+    } catch {
+      setLoadError(true)
+      setTimeout(() => setLoadError(false), 3000)
+    } finally {
+      setSubmittingFreeText(false)
+    }
+  }
+
+  const handleAddCard = (catKey) => addCardEntry(catKey, CATS[catKey].label, 'card')
+  const handleAddFreeText = (text) => addFreeTextEntry(text)
 
   const handleAttachPhoto = async (file) => {
     setUploadingPhoto(true)
@@ -460,6 +506,7 @@ export default function MyTree() {
       onSubmit={handleAddFreeText}
       photoUrl={photoUrl}
       uploading={uploadingPhoto}
+      submitting={submittingFreeText}
       onAttachPhoto={handleAttachPhoto}
       onRemovePhoto={() => setPhotoUrl(null)}
     />
@@ -471,6 +518,11 @@ export default function MyTree() {
       {loadError && (
         <div style={{ position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FFF0EE', color: '#D63030', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12.5, padding: '8px 16px', borderRadius: 12, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
           ⚠️ Couldn't reach the server — try again in a bit.
+        </div>
+      )}
+      {moderationError && (
+        <div style={{ position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FFF6E2', color: '#9B6E1A', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12.5, padding: '8px 16px', borderRadius: 12, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
+          Couldn't add that — try writing something else.
         </div>
       )}
       {band === 'young' && (
