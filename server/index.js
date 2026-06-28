@@ -275,7 +275,9 @@ const CONTRIBUTION_TOOLS = [{
       description:
         'Approve a pending household contribution diary entry. Only call this when the parent clearly expresses ' +
         'intent to approve ONE SPECIFIC contribution from the pending list. If more than one contribution is ' +
-        'pending and it is unclear which one the parent means, do NOT call this — ask the parent to clarify first.',
+        'pending and it is unclear which one the parent means, do NOT call this — ask the parent to clarify first. ' +
+        'If the parent wants to approve multiple contributions (e.g. "both", "approve all of them"), make a ' +
+        'SEPARATE approve_contribution call for each contribution.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -384,40 +386,44 @@ async function handleMessage(parentId, replyCb, text) {
         : []
     )
 
-    const pendingBlock =
-      `ŞU AN ONAY BEKLEYEN KATKILAR (toplam ${pendingList.length}):\n` +
-      (pendingList.length
-        ? pendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n')
-        : 'Şu anda onay bekleyen katkı yok.')
+    function buildSystemPrompt(currentPendingList) {
+      const pendingBlock =
+        `ŞU AN ONAY BEKLEYEN KATKILAR (toplam ${currentPendingList.length}):\n` +
+        (currentPendingList.length
+          ? currentPendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n')
+          : 'Şu anda onay bekleyen katkı yok.')
 
-    const systemPrompt =
-      `${pendingBlock}\n\n` +
-      `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
-      `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
-      `o zaman bekleyen olmadığını söyle.\n\n` +
-      `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
-      `Current local time for parent: ${localTimeStr}\n` +
-      `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
-      `Tool usage rules:\n` +
-      `- Use the exact "id" from the pending contributions list above when calling a tool.\n` +
-      `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
-      `Approving simply adds a leaf to the child's tree.\n` +
-      `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
-      `added to their tree instead.\n` +
-      `- Only call approve_contribution or reject_contribution when the parent clearly states approve/reject ` +
-      `intent for ONE SPECIFIC contribution.\n` +
-      `- If more than one contribution is pending and it is unclear which one the parent means, do NOT call a ` +
-      `tool — ask which one they mean first, in the same language as the parent's message.\n\n` +
-      `General guidelines:\n` +
-      `- Respond in the SAME LANGUAGE as the parent's message\n` +
-      `- Be conversational and warm, like a trusted friend who knows the kids\n` +
-      `- Reference specific data when relevant (e.g. "Ada earned 30 gems yesterday!")\n` +
-      `- Keep responses concise — max 3-4 sentences for simple questions\n\n` +
-      `CRITICAL: Only report facts from the data provided.\n` +
-      `If the data is empty or null, say so honestly.\n` +
-      `NEVER invent or assume activity that is not in the data.\n` +
-      `If a field is empty, say the child hasn't done that yet.`
+      return (
+        `${pendingBlock}\n\n` +
+        `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
+        `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
+        `o zaman bekleyen olmadığını söyle.\n\n` +
+        `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
+        `Current local time for parent: ${localTimeStr}\n` +
+        `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
+        `Tool usage rules:\n` +
+        `- Use the exact "id" from the pending contributions list above when calling a tool.\n` +
+        `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
+        `Approving simply adds a leaf to the child's tree.\n` +
+        `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
+        `added to their tree instead.\n` +
+        `- Only call approve_contribution or reject_contribution when the parent clearly states approve/reject ` +
+        `intent for ONE SPECIFIC contribution.\n` +
+        `- If more than one contribution is pending and it is unclear which one the parent means, do NOT call a ` +
+        `tool — ask which one they mean first, in the same language as the parent's message.\n\n` +
+        `General guidelines:\n` +
+        `- Respond in the SAME LANGUAGE as the parent's message\n` +
+        `- Be conversational and warm, like a trusted friend who knows the kids\n` +
+        `- Reference specific data when relevant (e.g. "Ada earned 30 gems yesterday!")\n` +
+        `- Keep responses concise — max 3-4 sentences for simple questions\n\n` +
+        `CRITICAL: Only report facts from the data provided.\n` +
+        `If the data is empty or null, say so honestly.\n` +
+        `NEVER invent or assume activity that is not in the data.\n` +
+        `If a field is empty, say the child hasn't done that yet.`
+      )
+    }
 
+    const systemPrompt = buildSystemPrompt(pendingList)
     const contents = [...historyContents, { role: 'user', parts: [{ text }] }]
 
     const firstRes = await fetch(GEMINI_URL, {
@@ -435,9 +441,9 @@ async function handleMessage(parentId, replyCb, text) {
     }
     const firstData = await firstRes.json()
     const parts = firstData.candidates?.[0]?.content?.parts || []
-    const fnCallPart = parts.find(p => p.functionCall)
+    const fnCallParts = parts.filter(p => p.functionCall)
 
-    if (!fnCallPart) {
+    if (fnCallParts.length === 0) {
       const reply = parts.map(p => p.text || '').join('').trim() || 'Üzgünüm, anlayamadım.'
       await logMessage(parentId, 'tuto', reply)
       await replyCb(reply)
@@ -445,26 +451,36 @@ async function handleMessage(parentId, replyCb, text) {
       return
     }
 
-    const { name, args } = fnCallPart.functionCall
-    let toolResult
-    if (name === 'approve_contribution') {
-      toolResult = await approveContributionTool(args.contribution_id, parentId)
-    } else if (name === 'reject_contribution') {
-      toolResult = await rejectContributionTool(args.contribution_id)
-    } else {
-      toolResult = { success: false, error: `unknown tool ${name}` }
+    const toolResults = []
+    for (const part of fnCallParts) {
+      const { name, args } = part.functionCall
+      let toolResult
+      if (name === 'approve_contribution') {
+        toolResult = await approveContributionTool(args.contribution_id, parentId)
+      } else if (name === 'reject_contribution') {
+        toolResult = await rejectContributionTool(args.contribution_id)
+      } else {
+        toolResult = { success: false, error: `unknown tool ${name}` }
+      }
+      console.log(`[MSG] Tool "${name}"(${args.contribution_id}) → ${JSON.stringify(toolResult)}`)
+      toolResults.push({ name, contributionId: args.contribution_id, result: toolResult })
     }
-    console.log(`[MSG] Tool "${name}" → ${JSON.stringify(toolResult)}`)
+
+    // Refresh the pending list so the second call doesn't contradict itself —
+    // a just-approved/rejected contribution must no longer show as pending.
+    const processedIds = new Set(toolResults.filter(t => t.result.success).map(t => t.contributionId))
+    const refreshedPendingList = pendingList.filter(p => !processedIds.has(p.id))
+    const refreshedSystemPrompt = buildSystemPrompt(refreshedPendingList)
 
     const secondRes = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
+        system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
         contents: [
           ...contents,
-          { role: 'model', parts: [{ functionCall: fnCallPart.functionCall }] },
-          { role: 'user', parts: [{ functionResponse: { name, response: toolResult } }] },
+          { role: 'model', parts: fnCallParts.map(p => ({ functionCall: p.functionCall })) },
+          { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
         ],
         tools: CONTRIBUTION_TOOLS,
       }),
