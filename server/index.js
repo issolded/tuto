@@ -300,9 +300,51 @@ async function rejectContributionTool(contributionId) {
   return { success: true, id: updated.id, label: updated.label, status: updated.status }
 }
 
+async function fetchConversationHistory(parentId) {
+  try {
+    const since = DateTime.utc().minus({ hours: 48 }).toISO()
+    const { data: recent } = await supabase
+      .from('messages')
+      .select('role, content, created_at')
+      .eq('parent_id', parentId)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+
+    let rows = recent || []
+    if (rows.length < 10) {
+      const { data: lastTen } = await supabase
+        .from('messages')
+        .select('role, content, created_at')
+        .eq('parent_id', parentId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      rows = lastTen || []
+    }
+
+    return rows
+      .slice()
+      .reverse()
+      .map(m => ({ role: m.role === 'tuto' ? 'model' : 'user', parts: [{ text: m.content }] }))
+  } catch (err) {
+    console.error(`[MSG] history fetch failed: ${err.message}`)
+    return []
+  }
+}
+
+async function logMessage(parentId, role, content) {
+  try {
+    await supabase.from('messages').insert({ parent_id: parentId, role, content })
+  } catch (err) {
+    console.error(`[MSG] log failed (role=${role}): ${err.message}`)
+  }
+}
+
 async function handleMessage(parentId, replyCb, text) {
   console.log(`[MSG] parent=${parentId} → "${text}"`)
   try {
+    const historyContents = await fetchConversationHistory(parentId)
+    await logMessage(parentId, 'parent', text)
+
     const [familyData, { data: parentRow }] = await Promise.all([
       getParentContext(parentId),
       supabase.from('parents').select('timezone').eq('id', parentId).single(),
@@ -342,7 +384,7 @@ async function handleMessage(parentId, replyCb, text) {
       `NEVER invent or assume activity that is not in the data.\n` +
       `If a field is empty, say the child hasn't done that yet.`
 
-    const contents = [{ role: 'user', parts: [{ text }] }]
+    const contents = [...historyContents, { role: 'user', parts: [{ text }] }]
 
     const firstRes = await fetch(GEMINI_URL, {
       method: 'POST',
@@ -363,6 +405,7 @@ async function handleMessage(parentId, replyCb, text) {
 
     if (!fnCallPart) {
       const reply = parts.map(p => p.text || '').join('').trim() || 'Üzgünüm, anlayamadım.'
+      await logMessage(parentId, 'tuto', reply)
       await replyCb(reply)
       console.log(`[MSG] Reply sent to parent ${parentId}`)
       return
@@ -397,8 +440,9 @@ async function handleMessage(parentId, replyCb, text) {
       throw new Error(err.error?.message || `Gemini API error ${secondRes.status}`)
     }
     const secondData = await secondRes.json()
-    const finalText = secondData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim()
-    await replyCb(finalText || 'Tamamlandı.')
+    const finalText = secondData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || 'Tamamlandı.'
+    await logMessage(parentId, 'tuto', finalText)
+    await replyCb(finalText)
     console.log(`[MSG] Reply sent to parent ${parentId}`)
   } catch (err) {
     console.error('[MSG] Message handling error:', err.message)
