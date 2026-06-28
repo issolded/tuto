@@ -710,10 +710,10 @@ app.delete('/api/children/:childId/stories/:storyId', async (req, res) => {
 const CONTRIBUTION_CATEGORIES = ['self_care', 'household', 'family', 'outside']
 
 const DEFAULT_CONTRIBUTION_CARDS = [
-  { category: 'self_care', label: 'I made my bed',      icon: '🛏️', color: '#5aa9e6', sort_order: 0 },
-  { category: 'household', label: 'I set the table',     icon: '🍽️', color: '#e89a39', sort_order: 1 },
-  { category: 'family',    label: 'I helped my sibling',  icon: '🤝', color: '#ef7d9d', sort_order: 2 },
-  { category: 'outside',   label: 'I helped outside',     icon: '🌿', color: '#54b487', sort_order: 3 },
+  { category: 'self_care', label: 'I made my bed',     icon: '🛏️', color: '#5aa9e6', sort_order: 0 },
+  { category: 'household', label: 'I set the table',    icon: '🍽️', color: '#e89a39', sort_order: 1 },
+  { category: 'household', label: 'I helped tidy up',   icon: '🧹', color: '#e89a39', sort_order: 2 },
+  { category: 'outside',   label: 'I helped outside',   icon: '🌿', color: '#54b487', sort_order: 3 },
 ]
 
 app.get('/api/cards', async (req, res) => {
