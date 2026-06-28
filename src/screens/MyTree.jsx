@@ -354,8 +354,6 @@ export default function MyTree() {
   const [showIntro, setShowIntro] = useState(() => band === 'young' && !localStorage.getItem(`myTreeIntroSeen_${child?.id}`))
   const [entries, setEntries] = useState([])
   const [approvedMonth, setApprovedMonth] = useState(0)
-  const [totalMonth, setTotalMonth] = useState(0)
-  const [sessionGrowth, setSessionGrowth] = useState(0)
   const [loadError, setLoadError] = useState(false)
   const [micro, setMicro] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(null)
@@ -373,7 +371,6 @@ export default function MyTree() {
       setEntries(todayData?.contributions || [])
       const monthList = monthData?.contributions || []
       setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
-      setTotalMonth(monthList.length)
     }).catch(() => {
       if (!cancelled) setLoadError(true)
     })
@@ -387,8 +384,8 @@ export default function MyTree() {
 
   const usedToday = new Set(entries.map(e => e.category))
   const remaining = ALL.filter(k => !usedToday.has(k))
-  const fruits = approvedMonth + sessionGrowth
-  const monthCount = totalMonth + sessionGrowth
+  const fruits = approvedMonth
+  const monthCount = approvedMonth
 
   const showMicro = () => {
     setMicro(true)
@@ -400,7 +397,6 @@ export default function MyTree() {
     const optimisticId = `opt-${Date.now()}`
     const usedPhoto = photoUrl
     setEntries(prev => [{ id: optimisticId, category: category || 'outside', label, status: 'pending', fresh: true }, ...prev])
-    setSessionGrowth(g => g + 1)
     showMicro()
     setPhotoUrl(null)
 
@@ -415,7 +411,6 @@ export default function MyTree() {
       setEntries(prev => prev.map(e => e.id === optimisticId ? { ...saved, fresh: true } : e))
     } catch {
       setEntries(prev => prev.filter(e => e.id !== optimisticId))
-      setSessionGrowth(g => Math.max(0, g - 1))
       setLoadError(true)
       setTimeout(() => setLoadError(false), 3000)
     }
