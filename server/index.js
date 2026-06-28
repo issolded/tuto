@@ -310,15 +310,22 @@ const CONTRIBUTION_TOOLS = [{
         'when the parent clearly asks to add a new card/option for a child — not for logging a one-off ' +
         'contribution. Pick the child_id from the children list in context; if the parent has only one child and ' +
         'doesn\'t name them, use that child. If there are multiple children and it is unclear which one the ' +
-        'parent means, do NOT call this — ask which child first. Choose the category that best fits the label\'s ' +
-        'meaning. Only fall back to "household" if it genuinely fits none of the others well — it is a last ' +
-        'resort, not a default preference.',
+        'parent means, do NOT call this — ask which child first.\n' +
+        'Decide the category yourself from the label\'s meaning — do NOT ask the parent which category to use, ' +
+        'even if you have to guess. Only ask the parent something (and skip calling this tool) if the action ' +
+        'itself is genuinely ambiguous (e.g. you can\'t tell what they even mean). "household" is a last-resort ' +
+        'fallback for when the action truly fits none of the others — never ask the parent to pick a category.\n' +
+        'Keep the label to the bare action only — strip out frequency/schedule words the parent adds ("her gün", ' +
+        '"hem sabah hem akşam", "günde iki kez", "every day", "twice a day"). E.g. parent says "diş fırçalama hem ' +
+        'sabah hem akşam ekle" → label should be just "diş fırçalama" (tooth brushing), not the schedule part. ' +
+        'There is no recurrence/frequency system yet, so that information is simply dropped — the card itself ' +
+        'stays a single short action.',
       parameters: {
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child this card belongs to, taken from the children list in context.' },
-          label: { type: 'STRING', description: 'The card text, in the parent\'s words (e.g. "I walked the dog").' },
-          category: { type: 'STRING', description: 'One of: self_care, household, family, outside.' },
+          label: { type: 'STRING', description: 'The bare action only, in the parent\'s words, with any frequency/schedule phrasing removed (e.g. "I walked the dog", not "I walked the dog every morning").' },
+          category: { type: 'STRING', description: 'One of: self_care, household, family, outside. Chosen by you from the label\'s meaning — never ask the parent for this.' },
         },
         required: ['child_id', 'label', 'category'],
       },
@@ -488,7 +495,12 @@ async function handleMessage(parentId, replyCb, text) {
         `tool — ask which one they mean first, in the same language as the parent's message.\n` +
         `- For add_card: if the parent doesn't name a child and there is only one child, use that child. If ` +
         `there are multiple children and it's unclear which one they mean, do NOT call add_card — ask which ` +
-        `child first, in the same language as the parent's message.\n\n` +
+        `child first, in the same language as the parent's message.\n` +
+        `- For add_card: pick the category yourself, silently — never ask the parent which category to use. ` +
+        `Only skip the tool call to ask a question if the action itself is unclear.\n` +
+        `- For add_card: strip frequency/schedule wording from the label ("her gün", "hem sabah hem akşam", ` +
+        `"günde iki kez", "every day", "twice a day", etc.) — keep only the bare action. There is no ` +
+        `recurrence system yet, so that part of what the parent said is simply dropped, not stored.\n\n` +
         `General guidelines:\n` +
         `- Respond in the SAME LANGUAGE as the parent's message\n` +
         `- Be conversational and warm, like a trusted friend who knows the kids\n` +
