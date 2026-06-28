@@ -110,6 +110,31 @@ async function askGeminiWithContext(parentId, userMessage) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
 }
 
+async function moderateContributionText(text, age) {
+  const n = Number(age) || 7
+  const prompt =
+    `You are a content moderator for a children's educational app. A ${n}-year-old child wrote this about a ` +
+    `way they helped: "${text}". Determine if it is appropriate and safe for a children's app — no profanity, ` +
+    `violence, adult themes, or inappropriate content. Return JSON only: { "ok": boolean, "reason": string }`
+
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { response_mime_type: 'application/json' },
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message || `Gemini API error ${res.status}`)
+  }
+  const data = await res.json()
+  const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+  if (typeof parsed.ok !== 'boolean') throw new Error('malformed moderation response')
+  return parsed
+}
+
 async function sendNotification(parentId, message) {
   const { data: parent } = await supabase
     .from('parents')
@@ -686,10 +711,20 @@ app.post('/api/contributions', async (req, res) => {
     const resolvedPhotoUrl = typeof photo_url === 'string' && photo_url ? photo_url : null
 
     // TODO: verify child belongs to authenticated parent's family
-    const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', child_id).maybeSingle()
+    const { data: child } = await supabase.from('children').select('id, name, age, parent_id').eq('id', child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
-    // TODO: free_text moderation before this enters any LLM summary
+    if (source === 'free_text') {
+      try {
+        const moderation = await moderateContributionText(trimmedLabel, child.age)
+        if (!moderation.ok) {
+          return res.status(400).json({ error: 'inappropriate', reason: moderation.reason })
+        }
+      } catch (err) {
+        console.error(`[CONTRIBUTIONS] moderation failed: ${err.message}`)
+        return res.status(503).json({ error: 'Şu an kaydedemedik, tekrar dener misin?' })
+      }
+    }
 
     const { data: inserted, error } = await supabase
       .from('contribution_log')

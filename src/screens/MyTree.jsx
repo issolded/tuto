@@ -370,7 +370,7 @@ export default function MyTree() {
         fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=month`).then(r => r.json()),
       ]).then(([todayData, monthData]) => {
         if (cancelled) return
-        setEntries(todayData?.contributions || [])
+        setEntries((todayData?.contributions || []).filter(c => c.status !== 'rejected'))
         const monthList = monthData?.contributions || []
         setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
       }).catch(() => {
