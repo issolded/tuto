@@ -709,6 +709,56 @@ app.delete('/api/children/:childId/stories/:storyId', async (req, res) => {
 
 const CONTRIBUTION_CATEGORIES = ['self_care', 'household', 'family', 'outside']
 
+const DEFAULT_CONTRIBUTION_CARDS = [
+  { category: 'self_care', label: 'I made my bed',      icon: '🛏️', color: '#5aa9e6', sort_order: 0 },
+  { category: 'household', label: 'I set the table',     icon: '🍽️', color: '#e89a39', sort_order: 1 },
+  { category: 'family',    label: 'I helped my sibling',  icon: '🤝', color: '#ef7d9d', sort_order: 2 },
+  { category: 'outside',   label: 'I helped outside',     icon: '🌿', color: '#54b487', sort_order: 3 },
+]
+
+app.get('/api/cards', async (req, res) => {
+  try {
+    const { child_id } = req.query
+    if (!child_id) return res.status(400).json({ error: 'child_id required' })
+
+    const { data: child } = await supabase.from('children').select('id').eq('id', child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const fetchActiveCards = () => supabase
+      .from('contribution_cards')
+      .select('id, label, category, icon, color')
+      .eq('child_id', child_id)
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+
+    let { data: cards } = await fetchActiveCards()
+
+    if (!cards || cards.length === 0) {
+      // Lazy seed: insert the 4 defaults for this child the first time they're
+      // requested. Idempotent against a race — if another request seeded
+      // first, this insert violates nothing fatal; we just refetch after.
+      const { data: anyExisting } = await supabase
+        .from('contribution_cards')
+        .select('id')
+        .eq('child_id', child_id)
+        .limit(1)
+
+      if (!anyExisting || anyExisting.length === 0) {
+        await supabase.from('contribution_cards').insert(
+          DEFAULT_CONTRIBUTION_CARDS.map(c => ({ ...c, child_id, active: true }))
+        )
+      }
+
+      const refetched = await fetchActiveCards()
+      cards = refetched.data
+    }
+
+    res.json({ cards: cards || [] })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/contributions', async (req, res) => {
   try {
     const { child_id, label, category, source, photo_url } = req.body

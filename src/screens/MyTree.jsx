@@ -6,13 +6,15 @@ import { TreeArt, Sprig } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
+// Category → visual theme only (color/bg/fallback icon). The actual list of
+// cards a child sees comes from the backend (contribution_cards table) —
+// see the `cards` state in MyTree below.
 const CATS = {
-  self_care: { color: '#5aa9e6', bg: '#E4F1FC', icon: '🛏️', label: 'I made my bed',      short: 'Made my bed' },
-  household: { color: '#e89a39', bg: '#FBEFD8', icon: '🍽️', label: 'I set the table',     short: 'Set the table' },
-  family:    { color: '#ef7d9d', bg: '#FBE4EC', icon: '🤝', label: 'I helped my sibling', short: 'Helped my sibling' },
-  outside:   { color: '#54b487', bg: '#DEF2E7', icon: '🌿', label: 'I helped outside',    short: 'Helped outside' },
+  self_care: { color: '#5aa9e6', bg: '#E4F1FC', icon: '🛏️' },
+  household: { color: '#e89a39', bg: '#FBEFD8', icon: '🍽️' },
+  family:    { color: '#ef7d9d', bg: '#FBE4EC', icon: '🤝' },
+  outside:   { color: '#54b487', bg: '#DEF2E7', icon: '🌿' },
 }
-const ALL = Object.keys(CATS)
 
 const GOAL_BY_BAND = { young: 12, mid: 18, mature: 24 }
 
@@ -91,17 +93,17 @@ function MatureRow({ category, label, status, fresh }) {
   )
 }
 
-function SugCard({ catKey, onAdd, wide }) {
-  const C = CATS[catKey]
+function SugCard({ card, onAdd, wide }) {
+  const bg = CATS[card.category]?.bg || '#FBEFD8'
   return (
-    <button onClick={() => onAdd(catKey)} style={{
+    <button onClick={() => onAdd(card)} style={{
       display: 'flex', alignItems: 'center', gap: wide ? 10 : 6, flexDirection: wide ? 'row' : 'column',
       width: wide ? '100%' : undefined, justifyContent: wide ? 'flex-start' : 'center',
       background: '#FFFDF7', border: '1.5px solid #E7DABF', borderRadius: 15, padding: wide ? '12px 14px' : '14px 8px',
       cursor: 'pointer', textAlign: wide ? 'left' : 'center',
     }}>
-      <span style={{ width: 32, height: 32, borderRadius: 11, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{C.icon}</span>
-      <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: wide ? 13.5 : 12.5, color: '#4a3f2e', flex: wide ? 1 : undefined }}>{C.label}</span>
+      <span style={{ width: 32, height: 32, borderRadius: 11, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{card.icon}</span>
+      <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: wide ? 13.5 : 12.5, color: '#4a3f2e', flex: wide ? 1 : undefined }}>{card.label}</span>
       {wide && <span style={{ color: '#37a06f', fontSize: 17, fontWeight: 600 }}>+</span>}
     </button>
   )
@@ -253,7 +255,7 @@ function BandYoung({ entries, fruits, remaining, onAdd, composer, nav }) {
             <div style={{ paddingTop: 12 }}>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13, color: '#7a6a4c', marginBottom: 8 }}>Did you help today? Tap one 👇</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-                {remaining.map(k => <SugCard key={k} catKey={k} onAdd={onAdd} />)}
+                {remaining.map(card => <SugCard key={card.id} card={card} onAdd={onAdd} />)}
               </div>
               {remaining.length === 0 && (
                 <div style={{ textAlign: 'center', fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13, color: '#9B8FC0', padding: '10px 0 2px' }}>Wonderful day! 🌟</div>
@@ -300,7 +302,7 @@ function BandMid({ entries, fruits, remaining, onAdd, composer, nav, monthCount 
             <div style={{ paddingTop: 12 }}>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13, color: '#7a6a4c', marginBottom: 8 }}>Add to today</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {remaining.map(k => <SugCard key={k} catKey={k} onAdd={onAdd} wide />)}
+                {remaining.map(card => <SugCard key={card.id} card={card} onAdd={onAdd} wide />)}
                 {remaining.length === 0 && (
                   <div style={{ textAlign: 'center', fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13, color: '#9B8FC0', padding: '4px 0' }}>All caught up — nice work! 🌟</div>
                 )}
@@ -334,12 +336,12 @@ function BandMature({ entries, monthCount, remaining, onAdd, composer, nav }) {
         <div style={{ padding: '4px 0 14px' }}>{composer}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingBottom: 18 }}>
           <span style={{ fontWeight: 800, fontSize: 11, color: '#6c7c72' }}>Quick add</span>
-          {remaining.map(k => (
-            <button key={k} onClick={() => onAdd(k)} style={{
+          {remaining.map(card => (
+            <button key={card.id} onClick={() => onAdd(card)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', border: '1.5px solid #E0E6E1',
               borderRadius: 999, padding: '7px 12px', cursor: 'pointer', fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 12.5, color: '#27332c',
             }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: CATS[k].color }} />{CATS[k].short}
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: card.color || CATS[card.category]?.color }} />{card.label}
             </button>
           ))}
           {remaining.length === 0 && <span style={{ fontWeight: 700, fontSize: 12, color: '#6c7c72' }}>— all added today</span>}
@@ -361,6 +363,7 @@ export default function MyTree() {
 
   const [showIntro, setShowIntro] = useState(() => band === 'young' && !localStorage.getItem(`myTreeIntroSeen_${child?.id}`))
   const [entries, setEntries] = useState([])
+  const [cards, setCards] = useState([])
   const [approvedMonth, setApprovedMonth] = useState(0)
   const [loadError, setLoadError] = useState(false)
   const [moderationError, setModerationError] = useState(false)
@@ -401,13 +404,25 @@ export default function MyTree() {
     }
   }, [child?.id])
 
+  useEffect(() => {
+    if (!child?.id) return
+    let cancelled = false
+    fetch(`${SERVER}/api/cards?child_id=${child.id}`)
+      .then(r => r.json())
+      .then(data => { if (!cancelled) setCards(data?.cards || []) })
+      .catch(() => { if (!cancelled) setLoadError(true) })
+    return () => { cancelled = true }
+  }, [child?.id])
+
   if (!child?.id) {
     nav('/child/home')
     return null
   }
 
-  const usedToday = new Set(entries.map(e => e.category))
-  const remaining = ALL.filter(k => !usedToday.has(k))
+  // Track "used today" by card identity (category+label), not category alone —
+  // multiple cards can share a category, and using one must not hide the others.
+  const usedTodayKeys = new Set(entries.map(e => `${e.category}::${e.label}`))
+  const remaining = cards.filter(c => !usedTodayKeys.has(`${c.category}::${c.label}`))
   const fruits = approvedMonth
   const monthCount = approvedMonth
 
@@ -476,7 +491,7 @@ export default function MyTree() {
     }
   }
 
-  const handleAddCard = (catKey) => addCardEntry(catKey, CATS[catKey].label, 'card')
+  const handleAddCard = (card) => addCardEntry(card.category, card.label, 'card')
   const handleAddFreeText = (text) => addFreeTextEntry(text)
 
   const handleAttachPhoto = async (file) => {
