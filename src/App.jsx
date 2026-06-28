@@ -8,7 +8,7 @@ import ParentSignup from './screens/ParentSignup'
 import ParentDashboard from './screens/ParentDashboard'
 import ChildPin from './screens/ChildPin'
 import ChildHome from './screens/ChildHome'
-import TaskFlow from './screens/TaskFlow'
+import MyTree from './screens/MyTree'
 import ReadingFlow from './screens/ReadingFlow'
 import StoriesScreen from './screens/StoriesScreen'
 import GoalsScreen from './screens/GoalsScreen'
@@ -55,7 +55,7 @@ export default function App() {
         <Route path="/setup" element={<FamilySetup />} />
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/home" element={<ChildHome />} />
-        <Route path="/child/task" element={<TaskFlow />} />
+        <Route path="/child/task" element={<MyTree />} />
         <Route path="/child/math" element={<MathScreen />} />
         <Route path="/math-lab" element={<MathLab />} />
         <Route path="/child/stories" element={<StoriesScreen />} />
