@@ -302,6 +302,27 @@ const CONTRIBUTION_TOOLS = [{
         required: ['contribution_id'],
       },
     },
+    {
+      name: 'add_card',
+      description:
+        'Add a new permanent contribution card for a child, so it shows up as a tappable suggestion in their ' +
+        'diary going forward (e.g. parent says "Ada\'nın kartlarına \'köpeği gezdirdim\' ekle"). Only call this ' +
+        'when the parent clearly asks to add a new card/option for a child — not for logging a one-off ' +
+        'contribution. Pick the child_id from the children list in context; if the parent has only one child and ' +
+        'doesn\'t name them, use that child. If there are multiple children and it is unclear which one the ' +
+        'parent means, do NOT call this — ask which child first. Choose the category that best fits the label\'s ' +
+        'meaning. Only fall back to "household" if it genuinely fits none of the others well — it is a last ' +
+        'resort, not a default preference.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child this card belongs to, taken from the children list in context.' },
+          label: { type: 'STRING', description: 'The card text, in the parent\'s words (e.g. "I walked the dog").' },
+          category: { type: 'STRING', description: 'One of: self_care, household, family, outside.' },
+        },
+        required: ['child_id', 'label', 'category'],
+      },
+    },
   ],
 }]
 
@@ -325,6 +346,49 @@ async function rejectContributionTool(contributionId) {
     .single()
   if (error || !updated) return { success: false, error: error?.message || 'contribution not found' }
   return { success: true, id: updated.id, label: updated.label, status: updated.status }
+}
+
+const CARD_CATEGORY_THEME = {
+  self_care: { icon: '🛏️', color: '#5aa9e6' },
+  household: { icon: '🍽️', color: '#e89a39' },
+  family:    { icon: '🤝', color: '#ef7d9d' },
+  outside:   { icon: '🌿', color: '#54b487' },
+}
+
+async function addCardTool(childId, label, category) {
+  const trimmedLabel = (label || '').trim()
+  if (!trimmedLabel) return { success: false, error: 'label required' }
+
+  const { data: child } = await supabase.from('children').select('id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+
+  const resolvedCategory = Object.keys(CARD_CATEGORY_THEME).includes(category) ? category : 'household'
+  const theme = CARD_CATEGORY_THEME[resolvedCategory]
+
+  const { data: maxRow } = await supabase
+    .from('contribution_cards')
+    .select('sort_order')
+    .eq('child_id', childId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const nextSortOrder = (maxRow?.sort_order ?? -1) + 1
+
+  const { data: inserted, error } = await supabase
+    .from('contribution_cards')
+    .insert({
+      child_id: childId,
+      label: trimmedLabel,
+      category: resolvedCategory,
+      icon: theme.icon,
+      color: theme.color,
+      sort_order: nextSortOrder,
+      active: true,
+    })
+    .select('id, label, category')
+    .single()
+  if (error || !inserted) return { success: false, error: error?.message || 'insert failed' }
+  return { success: true, id: inserted.id, label: inserted.label, category: inserted.category }
 }
 
 async function fetchConversationHistory(parentId) {
@@ -372,13 +436,21 @@ async function handleMessage(parentId, replyCb, text) {
     const historyContents = await fetchConversationHistory(parentId)
     await logMessage(parentId, 'parent', text)
 
-    const [familyData, { data: parentRow }] = await Promise.all([
+    const [familyData, { data: parentRow }, { data: childrenRows }] = await Promise.all([
       getParentContext(parentId),
       supabase.from('parents').select('timezone').eq('id', parentId).single(),
+      supabase.from('children').select('id, name').eq('parent_id', parentId),
     ])
     const tz = parentRow?.timezone || 'UTC'
     const userNow = DateTime.now().setZone(tz)
     const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
+
+    const children = childrenRows || []
+    const childrenBlock =
+      `AİLENİN ÇOCUKLARI (add_card için child_id'yi buradan al):\n` +
+      (children.length
+        ? children.map(c => `- id=${c.id}: ${c.name}`).join('\n')
+        : 'Kayıtlı çocuk yok.')
 
     const pendingList = familyData.flatMap(c =>
       Array.isArray(c.pendingContributions)
@@ -394,6 +466,7 @@ async function handleMessage(parentId, replyCb, text) {
           : 'Şu anda onay bekleyen katkı yok.')
 
       return (
+        `${childrenBlock}\n\n` +
         `${pendingBlock}\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
@@ -402,7 +475,9 @@ async function handleMessage(parentId, replyCb, text) {
         `Current local time for parent: ${localTimeStr}\n` +
         `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
         `Tool usage rules:\n` +
-        `- Use the exact "id" from the pending contributions list above when calling a tool.\n` +
+        `- Use the exact "id" from the pending contributions list above when calling approve_contribution or ` +
+        `reject_contribution.\n` +
+        `- Use the exact "id" from the children list above when calling add_card.\n` +
         `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
         `Approving simply adds a leaf to the child's tree.\n` +
         `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
@@ -410,7 +485,10 @@ async function handleMessage(parentId, replyCb, text) {
         `- Only call approve_contribution or reject_contribution when the parent clearly states approve/reject ` +
         `intent for ONE SPECIFIC contribution.\n` +
         `- If more than one contribution is pending and it is unclear which one the parent means, do NOT call a ` +
-        `tool — ask which one they mean first, in the same language as the parent's message.\n\n` +
+        `tool — ask which one they mean first, in the same language as the parent's message.\n` +
+        `- For add_card: if the parent doesn't name a child and there is only one child, use that child. If ` +
+        `there are multiple children and it's unclear which one they mean, do NOT call add_card — ask which ` +
+        `child first, in the same language as the parent's message.\n\n` +
         `General guidelines:\n` +
         `- Respond in the SAME LANGUAGE as the parent's message\n` +
         `- Be conversational and warm, like a trusted friend who knows the kids\n` +
@@ -459,10 +537,12 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await approveContributionTool(args.contribution_id, parentId)
       } else if (name === 'reject_contribution') {
         toolResult = await rejectContributionTool(args.contribution_id)
+      } else if (name === 'add_card') {
+        toolResult = await addCardTool(args.child_id, args.label, args.category)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
-      console.log(`[MSG] Tool "${name}"(${args.contribution_id}) → ${JSON.stringify(toolResult)}`)
+      console.log(`[MSG] Tool "${name}"(${JSON.stringify(args)}) → ${JSON.stringify(toolResult)}`)
       toolResults.push({ name, contributionId: args.contribution_id, result: toolResult })
     }
 
