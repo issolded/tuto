@@ -363,18 +363,32 @@ export default function MyTree() {
   useEffect(() => {
     if (!child?.id) return
     let cancelled = false
-    Promise.all([
-      fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=today`).then(r => r.json()),
-      fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=month`).then(r => r.json()),
-    ]).then(([todayData, monthData]) => {
-      if (cancelled) return
-      setEntries(todayData?.contributions || [])
-      const monthList = monthData?.contributions || []
-      setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
-    }).catch(() => {
-      if (!cancelled) setLoadError(true)
-    })
-    return () => { cancelled = true }
+
+    const fetchContributions = () => {
+      Promise.all([
+        fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=today`).then(r => r.json()),
+        fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=month`).then(r => r.json()),
+      ]).then(([todayData, monthData]) => {
+        if (cancelled) return
+        setEntries(todayData?.contributions || [])
+        const monthList = monthData?.contributions || []
+        setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
+      }).catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+    }
+
+    fetchContributions()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchContributions()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [child?.id])
 
   if (!child?.id) {
