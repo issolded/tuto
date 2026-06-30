@@ -897,10 +897,10 @@ app.post('/api/children/:childId/stories', async (req, res) => {
               `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`
             )
           } else if (screening?.appropriateness === 'inappropriate') {
-            // Inappropriate language — quiet heads-up
+            // Inappropriate language — neutral share, no judgment
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı, içinde uygunsuz olabilecek bir dil var. Göz atmanda fayda olabilir.\n\n${storyText}`
+              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}`
             )
           }
           // concerning/serious: silent — draft screen (Point 1) already notified
