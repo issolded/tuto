@@ -884,7 +884,13 @@ app.post('/api/children/:childId/stories', async (req, res) => {
           try { screening = await screenChildInput(storyText, child.age ?? 7) } catch { /* skip */ }
 
           const cl = screening?.concern_level
-          if (cl === 'none' || cl === 'mild' || !screening) {
+          if (!screening) {
+            // Screening failed — unknown safety status, stay calm (fail-closed)
+            await sendNotification(
+              child.parent_id,
+              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}`
+            )
+          } else if (cl === 'none' || cl === 'mild') {
             // Clean story — joyful share
             await sendNotification(
               child.parent_id,
