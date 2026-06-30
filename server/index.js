@@ -1001,6 +1001,71 @@ app.post('/api/contributions/:id/reject', async (req, res) => {
   }
 })
 
+app.get('/api/tree', async (req, res) => {
+  try {
+    const { child_id } = req.query
+    if (!child_id) return res.json({ today: 0, todayContributions: [], monthForest: [], monthTreeCount: 0 })
+
+    const { data: child } = await supabase
+      .from('children')
+      .select('parent_id')
+      .eq('id', child_id)
+      .single()
+
+    const { data: parentRow } = await supabase
+      .from('parents')
+      .select('timezone')
+      .eq('id', child?.parent_id)
+      .single()
+
+    const tz = parentRow?.timezone || 'UTC'
+    const now = DateTime.now().setZone(tz)
+
+    const todayStart = now.startOf('day').toUTC().toISO()
+    const todayEnd   = now.endOf('day').toUTC().toISO()
+    const monthStart = now.startOf('month').toUTC().toISO()
+
+    const { data: logs } = await supabase
+      .from('contribution_log')
+      .select('created_at, label, category')
+      .eq('child_id', child_id)
+      .eq('status', 'approved')
+      .gte('created_at', monthStart)
+      .lte('created_at', todayEnd)
+
+    const entries = logs || []
+
+    const countByDate = {}
+    const todayLocalStr = now.toFormat('yyyy-MM-dd')
+    const todayItems = []
+
+    for (const entry of entries) {
+      const localDate = DateTime.fromISO(entry.created_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
+      countByDate[localDate] = (countByDate[localDate] || 0) + 1
+      if (localDate === todayLocalStr) {
+        todayItems.push({ label: entry.label, category: entry.category })
+      }
+    }
+
+    const today = countByDate[todayLocalStr] || 0
+
+    const monthForest = []
+    let cursor = now.startOf('month')
+    const todayDay = now.startOf('day')
+    while (cursor <= todayDay) {
+      const dateStr = cursor.toFormat('yyyy-MM-dd')
+      monthForest.push({ date: dateStr, count: countByDate[dateStr] || 0 })
+      cursor = cursor.plus({ days: 1 })
+    }
+
+    const monthTreeCount = monthForest.filter(d => d.count > 0).length
+
+    res.json({ today, todayContributions: todayItems, monthForest, monthTreeCount })
+  } catch {
+    res.json({ today: 0, todayContributions: [], monthForest: [], monthTreeCount: 0 })
+  }
+})
+
 app.get('/api/submissions/:id', async (req, res) => {
   const { id } = req.params
   const { data, error } = await supabase
