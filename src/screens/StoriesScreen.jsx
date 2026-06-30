@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
 import { transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
+
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
@@ -228,6 +230,16 @@ export default function StoriesScreen() {
     try {
       const { transcribed_text, uncertain_words } = await transcribeStory(photos, 'en')
       if (!transcribed_text) throw new Error('transcription empty')
+
+      // Fire-and-forget safety screen — never blocks the child's flow
+      if (child?.id) {
+        fetch(`${SERVER}/api/screen-story-draft`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ child_id: child.id, transcribed_text }),
+        }).catch(() => {})
+      }
+
       const evalData = await evaluateStory(transcribed_text, chosenIdea?.topic || '', child?.age || 7, 'en')
       const result = { ...evalData, transcribed_text, uncertain_words: uncertain_words || [] }
       setEvalResult(result)

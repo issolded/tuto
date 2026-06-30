@@ -794,6 +794,39 @@ app.get('/api/children/:childId/story-ideas', async (req, res) => {
   }
 })
 
+app.post('/api/screen-story-draft', async (req, res) => {
+  // Fire-and-forget safety screen called right after OCR — never blocks the child's flow.
+  try {
+    const { child_id, transcribed_text } = req.body
+    if (!child_id || !transcribed_text) return res.json({ ok: true })
+
+    const { data: child } = await supabase
+      .from('children').select('age, name, parent_id').eq('id', child_id).maybeSingle()
+    if (!child) return res.json({ ok: true })
+
+    let screening
+    try {
+      screening = await screenChildInput(transcribed_text, child.age)
+    } catch {
+      return res.json({ ok: true })
+    }
+
+    if (screening.concern_level === 'concerning' || screening.concern_level === 'serious') {
+      try {
+        await sendNotification(
+          child.parent_id,
+          `${child.name} bir şeyler yazıyor. Bir göz atmanda fayda olabilir.\n\n${transcribed_text}`
+        )
+      } catch (err) {
+        console.error(`[SCREEN-DRAFT] notify failed: ${err.message}`)
+      }
+    }
+  } catch (err) {
+    console.error(`[SCREEN-DRAFT] unexpected error: ${err.message}`)
+  }
+  res.json({ ok: true })
+})
+
 app.get('/api/children/:childId/stories', async (req, res) => {
   const { childId } = req.params
   const { data: stories } = await supabase.from('stories').select('*').eq('child_id', childId).order('created_at', { ascending: false })
@@ -838,6 +871,37 @@ app.post('/api/children/:childId/stories', async (req, res) => {
     const gemsAwarded = firstCompletion ? (gems_earned || 0) : 0
     if (gemsAwarded > 0) {
       await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
+    }
+
+    // Parent notification — insert only (no notification on edits/updates)
+    if (!storyId) {
+      try {
+        const { data: child } = await supabase
+          .from('children').select('name, parent_id').eq('id', childId).maybeSingle()
+        if (child) {
+          const storyText = corrected_text || transcribed_text || ''
+          let screening
+          try { screening = await screenChildInput(storyText, child.age ?? 7) } catch { /* skip */ }
+
+          const cl = screening?.concern_level
+          if (cl === 'none' || cl === 'mild' || !screening) {
+            // Clean story — joyful share
+            await sendNotification(
+              child.parent_id,
+              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`
+            )
+          } else if (screening?.appropriateness === 'inappropriate') {
+            // Inappropriate language — quiet heads-up
+            await sendNotification(
+              child.parent_id,
+              `${child.name} bir hikaye yazdı, içinde uygunsuz olabilecek bir dil var. Göz atmanda fayda olabilir.\n\n${storyText}`
+            )
+          }
+          // concerning/serious: silent — draft screen (Point 1) already notified
+        }
+      } catch (err) {
+        console.error(`[STORIES] notification failed: ${err.message}`)
+      }
     }
 
     res.json({ story, gems_awarded: gemsAwarded })
