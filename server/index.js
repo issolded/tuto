@@ -1181,29 +1181,45 @@ app.get('/api/tree', async (req, res) => {
     const todayEnd   = now.endOf('day').toUTC().toISO()
     const monthStart = now.startOf('month').toUTC().toISO()
 
-    const { data: logs } = await supabase
-      .from('contribution_log')
-      .select('created_at, label, category')
-      .eq('child_id', child_id)
-      .eq('status', 'approved')
-      .gte('created_at', monthStart)
-      .lte('created_at', todayEnd)
-
-    const entries = logs || []
+    // Two separate queries:
+    // 1. Month approved-only → drives tree growth counts and forest
+    // 2. Today all-status (no rejected) → drives the diary list with full fields
+    const [{ data: monthLogs }, { data: todayAllLogs }] = await Promise.all([
+      supabase
+        .from('contribution_log')
+        .select('created_at')
+        .eq('child_id', child_id)
+        .eq('status', 'approved')
+        .gte('created_at', monthStart)
+        .lte('created_at', todayEnd),
+      supabase
+        .from('contribution_log')
+        .select('id, label, category, status, created_at, photo_url')
+        .eq('child_id', child_id)
+        .neq('status', 'rejected')
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
+        .order('created_at', { ascending: false }),
+    ])
 
     const countByDate = {}
     const todayLocalStr = now.toFormat('yyyy-MM-dd')
-    const todayItems = []
 
-    for (const entry of entries) {
+    for (const entry of (monthLogs || [])) {
       const localDate = DateTime.fromISO(entry.created_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
       countByDate[localDate] = (countByDate[localDate] || 0) + 1
-      if (localDate === todayLocalStr) {
-        todayItems.push({ label: entry.label, category: entry.category })
-      }
     }
 
     const today = countByDate[todayLocalStr] || 0
+
+    // Full today list (pending + approved) for the diary — status field included
+    const todayItems = (todayAllLogs || []).map(e => ({
+      id: e.id,
+      label: e.label,
+      category: e.category,
+      status: e.status,
+      photo_url: e.photo_url ?? null,
+    }))
 
     const monthForest = []
     let cursor = now.startOf('month')

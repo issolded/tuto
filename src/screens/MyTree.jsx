@@ -448,12 +448,14 @@ export default function MyTree() {
 
     const fetchContributions = () => {
       Promise.all([
-        fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=today`).then(r => r.json()),
+        // scope=month still needed for mature band's total-approved-count badge
         fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=month`).then(r => r.json()),
+        // /api/tree is the single source of truth for today's count, forest, and diary list
         fetch(`${SERVER}/api/tree?child_id=${child.id}`).then(r => r.json()),
-      ]).then(([todayData, monthData, treeResp]) => {
+      ]).then(([monthData, treeResp]) => {
         if (cancelled) return
-        setEntries((todayData?.contributions || []).filter(c => c.status !== 'rejected'))
+        // entries (today's diary list) now come from /api/tree — timezone-correct, pending+approved
+        setEntries(treeResp?.todayContributions ?? [])
         const monthList = monthData?.contributions || []
         setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
         setTreeData({
