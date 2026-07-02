@@ -17,6 +17,8 @@ const CATS = {
 }
 
 const GOAL_BY_BAND = { young: 12, mid: 18, mature: 24 }
+// Daily tree: tree reaches full size at this many contributions in a single day
+const DAY_FULL = 4
 
 function bandFor(age) {
   if (age == null) return 'young'
@@ -193,6 +195,64 @@ function BackButton({ onClick, dark }) {
   )
 }
 
+// ── forest strip (6-11 bands) ───────────────────────────────────────────────────
+
+function ForestStrip({ monthForest, monthTreeCount }) {
+  const [tooltip, setTooltip] = useState(null)
+  // days this month that have at least one contribution
+  const plantedDays = (monthForest || []).filter(d => d.count > 0)
+
+  if (!plantedDays.length && monthTreeCount === 0) {
+    return (
+      <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#9B8FC0', padding: '8px 0 4px' }}>
+        🌱 Yardım etmek ağacını büyütür
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ paddingBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8 }}>
+        <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>Bu ay</span>
+        <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '4px 10px', borderRadius: 999 }}>
+          🌳 {monthTreeCount} ağaç
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+        {plantedDays.map(d => {
+          const isOpen = tooltip === d.date
+          // friendly date label: day number
+          const dayNum = d.date.slice(8)
+          return (
+            <div key={d.date} style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setTooltip(isOpen ? null : d.date)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+              >
+                <TreeArt size={36} fruits={DAY_FULL} target={DAY_FULL} style={{ display: 'block' }} />
+                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 9, color: '#7a6a4c' }}>{dayNum}</span>
+              </button>
+              {isOpen && (
+                <div style={{
+                  position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
+                  background: '#fff', borderRadius: 10, padding: '6px 10px', boxShadow: '0 6px 18px rgba(0,0,0,.16)',
+                  fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#4a3f2e',
+                  whiteSpace: 'nowrap', zIndex: 20,
+                }}>
+                  {d.date} · {d.count} katkı
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11.5, color: '#9B8FC0', paddingTop: 6 }}>
+        🌱 Yardım etmek ağacını büyütür
+      </div>
+    </div>
+  )
+}
+
 // ── intro (6-8 only, shown once) ────────────────────────────────────────────────
 
 function Intro({ onContinue }) {
@@ -230,7 +290,7 @@ function Intro({ onContinue }) {
 
 // ── 6-8 · "My Tree" (primary) ───────────────────────────────────────────────────
 
-function BandYoung({ entries, fruits, remaining, onAdd, composer, nav }) {
+function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav }) {
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
@@ -239,12 +299,12 @@ function BandYoung({ entries, fruits, remaining, onAdd, composer, nav }) {
         <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🦊</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 6 }}>
-        <TreeArt size={186} fruits={fruits} target={GOAL_BY_BAND.young} />
+        <TreeArt size={186} fruits={todayCount} target={DAY_FULL} />
         <div style={{ marginTop: -6, fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12.5, color: '#37a06f', background: 'rgba(76,182,133,.15)', padding: '6px 14px', borderRadius: 999 }}>
-          🌱 {fruits} {fruits === 1 ? 'leaf' : 'leaves'} this month
+          🌱 {todayCount} {todayCount === 1 ? 'katkı' : 'katkı'} bugün
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, padding: '12px 16px 90px', display: 'flex' }}>
+      <div style={{ flex: 1, minHeight: 0, padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
             <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#37a06f' }}>Today</span>
@@ -264,6 +324,9 @@ function BandYoung({ entries, fruits, remaining, onAdd, composer, nav }) {
             </div>
           </div>
         </div>
+        <div style={{ padding: '4px 4px 8px' }}>
+          <ForestStrip monthForest={monthForest} monthTreeCount={monthTreeCount} />
+        </div>
       </div>
     </div>
   )
@@ -271,27 +334,26 @@ function BandYoung({ entries, fruits, remaining, onAdd, composer, nav }) {
 
 // ── 9-11 · intermediate ─────────────────────────────────────────────────────────
 
-function BandMid({ entries, fruits, remaining, onAdd, composer, nav, monthCount }) {
-  const goal = GOAL_BY_BAND.mid
+function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav }) {
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 20, color: '#37a06f' }}>My Tree 🌳</div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#2f8f6b', background: 'rgba(76,182,133,.16)', padding: '6px 12px', borderRadius: 999 }}>
-          {monthCount} this month
+          🌳 {monthTreeCount} this month
         </div>
       </div>
       <div style={{ margin: '6px 16px 4px', padding: '12px 14px', background: 'rgba(255,255,255,.66)', border: '1.5px solid rgba(255,255,255,.9)', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 6px 18px rgba(40,70,55,.08)' }}>
-        <TreeArt size={92} fruits={fruits} target={goal} />
+        <TreeArt size={92} fruits={todayCount} target={DAY_FULL} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#241f3a', marginBottom: 9 }}>{fruits} leaves grown</div>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#241f3a', marginBottom: 9 }}>{todayCount} katkı bugün</div>
           <div style={{ height: 9, borderRadius: 999, background: 'rgba(55,160,111,.18)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, (fruits / goal) * 100)}%`, borderRadius: 999, background: 'linear-gradient(90deg,#6BBF59,#4cb685)', transition: 'width .5s ease' }} />
+            <div style={{ height: '100%', width: `${Math.min(100, (todayCount / DAY_FULL) * 100)}%`, borderRadius: 999, background: 'linear-gradient(90deg,#6BBF59,#4cb685)', transition: 'width .5s ease' }} />
           </div>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, padding: '10px 16px 90px', display: 'flex' }}>
+      <div style={{ flex: 1, minHeight: 0, padding: '10px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
             <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#37a06f' }}>Today</span>
@@ -310,6 +372,9 @@ function BandMid({ entries, fruits, remaining, onAdd, composer, nav, monthCount 
               <div style={{ marginTop: 10 }}>{composer}</div>
             </div>
           </div>
+        </div>
+        <div style={{ padding: '0 4px 6px' }}>
+          <ForestStrip monthForest={monthForest} monthTreeCount={monthTreeCount} />
         </div>
       </div>
     </div>
@@ -365,6 +430,7 @@ export default function MyTree() {
   const [entries, setEntries] = useState([])
   const [cards, setCards] = useState([])
   const [approvedMonth, setApprovedMonth] = useState(0)
+  const [treeData, setTreeData] = useState({ today: 0, monthForest: [], monthTreeCount: 0 })
   const [loadError, setLoadError] = useState(false)
   const [moderationError, setModerationError] = useState(false)
   const [submittingFreeText, setSubmittingFreeText] = useState(false)
@@ -381,11 +447,17 @@ export default function MyTree() {
       Promise.all([
         fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=today`).then(r => r.json()),
         fetch(`${SERVER}/api/contributions?child_id=${child.id}&scope=month`).then(r => r.json()),
-      ]).then(([todayData, monthData]) => {
+        fetch(`${SERVER}/api/tree?child_id=${child.id}`).then(r => r.json()),
+      ]).then(([todayData, monthData, treeResp]) => {
         if (cancelled) return
         setEntries((todayData?.contributions || []).filter(c => c.status !== 'rejected'))
         const monthList = monthData?.contributions || []
         setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
+        setTreeData({
+          today: treeResp?.today ?? 0,
+          monthForest: treeResp?.monthForest ?? [],
+          monthTreeCount: treeResp?.monthTreeCount ?? 0,
+        })
       }).catch(() => {
         if (!cancelled) setLoadError(true)
       })
@@ -423,8 +495,8 @@ export default function MyTree() {
   // multiple cards can share a category, and using one must not hide the others.
   const usedTodayKeys = new Set(entries.map(e => `${e.category}::${e.label}`))
   const remaining = cards.filter(c => !usedTodayKeys.has(`${c.category}::${c.label}`))
-  const fruits = approvedMonth
-  const monthCount = approvedMonth
+  const fruits = approvedMonth      // still used by BandMature monthCount
+  const monthCount = approvedMonth  // BandMature only (12-15 — unchanged)
 
   const showMicro = () => {
     setMicro(true)
@@ -541,10 +613,10 @@ export default function MyTree() {
         </div>
       )}
       {band === 'young' && (
-        <BandYoung entries={entries} fruits={fruits} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
+        <BandYoung entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
       )}
       {band === 'mid' && (
-        <BandMid entries={entries} fruits={fruits} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} monthCount={monthCount} />
+        <BandMid entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
       )}
       {band === 'mature' && (
         <BandMature entries={entries} monthCount={monthCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />

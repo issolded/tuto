@@ -37,7 +37,10 @@ export function TreeArt({ size = 200, fruits = 0, target = 12, bloom = false, st
     transform: `translate(100px,184px) scale(${scale}) translate(-100px,-184px)`,
     transition: 'transform .7s cubic-bezier(.22,1,.36,1)',
   }
-  const sprout = fruits <= 1
+  // sprout only when zero contributions — today=1 already shows a small sapling
+  const sprout = fruits === 0
+  // bloom (flowers) kicks in automatically once all 8 fruit slots are filled
+  const showBloom = bloom || n >= SLOTS.length
   return (
     <svg width={size} height={size} viewBox="0 0 200 200" fill="none" style={style}>
       <ellipse cx="100" cy="184" rx="74" ry="15" fill="#cdeed8" />
@@ -59,7 +62,7 @@ export function TreeArt({ size = 200, fruits = 0, target = 12, bloom = false, st
               <circle cx={s.x - 2.4} cy={s.y - 2.6} r="2" fill="#fff" opacity=".55" />
             </g>
           ))}
-          {bloom && [[96, 64], [122, 86], [70, 92], [110, 112], [82, 110]].map((p, i) => (
+          {showBloom && [[96, 64], [122, 86], [70, 92], [110, 112], [82, 110]].map((p, i) => (
             <g key={'b' + i}>
               <circle cx={p[0]} cy={p[1]} r="5.4" fill="#f6a6c4" stroke={INK} strokeWidth="2.4" />
               <circle cx={p[0]} cy={p[1]} r="1.8" fill="#ffe08a" />
