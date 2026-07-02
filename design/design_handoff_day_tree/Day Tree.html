@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tuto — Day Tree concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#241f3a; --ink-soft:#8d83ad;
+    --stage:#ececec;
+    --green:#4cb685; --green-deep:#37a06f; --green-bg:#DCF2E7;
+    --leaf:#6BBF59; --leaf-deep:#4FA84A; --bark:#A9744F;
+    --c-self:#5aa9e6; --c-self-bg:#E4F1FC;
+    --c-house:#e89a39; --c-house-bg:#FBEFD8;
+    --c-family:#ef7d9d; --c-family-bg:#FBE4EC;
+    --c-outside:#54b487; --c-outside-bg:#DEF2E7;
+    --cream:#FBF5E7; --cream-2:#F6EFDD; --paper-ink:#4a3f2e; --paper-soft:#a2906e; --rule-soft:#EFE6D2;
+    --fred:'Fredoka',sans-serif; --serif:'Cormorant Garamond',Georgia,serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{ font-family:'Nunito',sans-serif; background:var(--stage); -webkit-font-smoothing:antialiased; min-height:100vh; padding:42px 0 90px; }
+  .page-head{ text-align:center; padding:0 24px; max-width:760px; margin:0 auto; }
+  .page-head .crumb{ font-family:var(--fred); font-weight:600; font-size:13px; color:var(--green-deep); background:#fff; display:inline-block; padding:5px 14px; border-radius:999px; box-shadow:0 2px 8px rgba(40,30,70,.08); margin-bottom:18px; }
+  .page-head h1{ font-family:var(--fred); font-weight:600; font-size:27px; margin:0; letter-spacing:-.4px; color:#20201e; }
+  .page-head p{ font-weight:700; font-size:14px; color:#9a948c; margin:11px auto 0; line-height:1.6; max-width:680px; }
+  .page-head b{ color:var(--green-deep); }
+
+  .rail{ display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start; gap:48px 40px; padding:52px 32px 0; max-width:1200px; margin:0 auto; }
+  .frame{ display:flex; flex-direction:column; align-items:center; gap:15px; }
+  .frame .cap{ display:flex; align-items:center; gap:9px; }
+  .frame .cap .num{ min-width:24px; height:24px; padding:0 9px; border-radius:999px; background:var(--green); color:#fff; font-family:var(--fred); font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:center; }
+  .frame .cap .txt{ font-family:var(--fred); font-weight:500; font-size:15px; color:#6f6a64; }
+
+  .phone{ width:340px; height:734px; border-radius:52px; border:11px solid #fff; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow:0 32px 62px -22px rgba(40,55,40,.42), 0 8px 20px rgba(0,0,0,.08); }
+  .statusbar{ flex:0 0 auto; height:30px; display:flex; align-items:center; justify-content:space-between; padding:8px 26px 0; font-weight:800; font-size:13px; z-index:6; position:relative; }
+  .statusbar .dots{ display:flex; gap:4px; align-items:center; }
+  .statusbar .dots i{ width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.5; }
+  .statusbar .batt{ width:22px; height:11px; border:2px solid currentColor; border-radius:3px; position:relative; opacity:.55; }
+  .statusbar .batt::after{ content:""; position:absolute; right:-4px; top:3px; width:2px; height:5px; background:currentColor; border-radius:0 2px 2px 0; }
+  .statusbar .batt::before{ content:""; position:absolute; left:1.5px; top:1.5px; bottom:1.5px; width:11px; background:currentColor; border-radius:1px; }
+  .screen{ flex:1; min-height:0; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+  .hd{ flex:0 0 auto; padding:10px 22px 6px; display:flex; align-items:center; justify-content:space-between; }
+  .hd .ttl{ font-family:var(--fred); font-weight:600; letter-spacing:-.3px; display:flex; align-items:center; gap:8px; }
+  .avatar{ width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex:0 0 auto; }
+  .scroll{ flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; }
+  .scroll::-webkit-scrollbar{ display:none; }
+
+  .paper{ position:relative; border-radius:14px; overflow:hidden; background:radial-gradient(125% 90% at 50% 0%, #FFFCF3 0%, var(--cream) 48%, var(--cream-2) 100%); box-shadow:0 16px 36px -16px rgba(70,55,30,.30), 0 3px 10px rgba(0,0,0,.05); }
+  .ptab{ display:flex; align-items:baseline; gap:9px; padding:14px 20px 9px; border-bottom:1.5px solid var(--rule-soft); }
+  .ptab .tlbl{ font-family:var(--fred); font-weight:600; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--green-deep); }
+  .ptab .tdate{ font-family:var(--serif); font-style:italic; font-weight:600; font-size:18px; color:var(--paper-ink); margin-left:auto; }
+  .sugwrap{ padding:12px 16px 8px; }
+  .sugwrap .lbl{ font-weight:800; font-size:11px; color:var(--paper-soft); padding:0 4px 9px; }
+  .sugrid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .scard{ display:flex; align-items:center; gap:9px; text-align:left; background:#FFFDF7; border:1.5px solid var(--rule-soft); border-radius:15px; padding:11px; cursor:pointer; font-family:var(--fred); font-weight:500; transition:transform .12s ease, box-shadow .15s ease; color:#5e5036; }
+  .scard:hover{ transform:translateY(-2px); box-shadow:0 6px 14px rgba(70,55,30,.12); }
+  .scard:active{ transform:scale(.97); }
+  .scard .ic{ width:30px; height:30px; border-radius:9px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .scard .ct{ font-size:12px; line-height:1.15; }
+
+  /* forest strip */
+  .forest{ display:flex; align-items:flex-end; gap:2px; padding:6px 14px 4px; overflow-x:auto; }
+  .forest::-webkit-scrollbar{ display:none; }
+  .fday{ display:flex; flex-direction:column; align-items:center; gap:3px; flex:0 0 auto; }
+  .fday .dnum{ font-weight:800; font-size:9px; color:var(--ink-soft); }
+  .fday.today .dnum{ color:var(--green-deep); }
+  .fday.today{ position:relative; }
+
+  @keyframes orn-pop-k{ 0%{transform:scale(0)} 65%{transform:scale(1.25)} 100%{transform:scale(1)} }
+  .orn-pop{ animation:orn-pop-k .4s cubic-bezier(.2,.9,.3,1.3) both; }
+  @keyframes orn-fly-k{ 0%,100%{transform:translate(0,0) rotate(-3deg)} 50%{transform:translate(2px,-5px) rotate(3deg)} }
+  .orn-fly{ animation:orn-fly-k 2.6s ease-in-out infinite; }
+  @keyframes tt-pop{ 0%{transform:scale(.7);opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+  .fresh-row{ animation:tt-pop .42s cubic-bezier(.2,.9,.3,1.2) both; }
+
+  .micro{ position:absolute; left:16px; right:16px; bottom:16px; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background:#fff; border-radius:18px; box-shadow:0 14px 34px -8px rgba(45,80,40,.32), 0 3px 10px rgba(0,0,0,.07); transform:translateY(150%); opacity:0; transition:transform .42s cubic-bezier(.2,.9,.3,1.2), opacity .3s ease; }
+  .micro.show{ transform:translateY(0); opacity:1; }
+  .micro .mtx{ font-family:var(--fred); font-weight:500; font-size:13px; color:var(--ink); line-height:1.3; }
+
+  .legend{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; max-width:340px; }
+  .legend .n{ background:#fff; border-radius:12px; padding:7px 11px; box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:700; font-size:11px; color:#6a655d; line-height:1.35; display:flex; gap:7px; align-items:flex-start; max-width:158px; }
+  .legend .n i{ width:8px; height:8px; border-radius:50%; margin-top:4px; flex:0 0 auto; }
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <div class="crumb">Concept · Day tree → month forest</div>
+    <h1>One tree a day, a forest by month's end</h1>
+    <p>Each day grows <b>its own tree</b>: a morning sprout that fills out with every contribution. Once a day's tree is full, extra help doesn't vanish — it adds <b>fruit, then blossom, then butterflies</b>, so the 8th task of the day still makes a visible change. At day's end the tree is planted into the <b>month forest</b> — nothing is ever lost, and the long arc is the forest filling up. Tap the cards to watch today's tree grow past full.</p>
+  </div>
+
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="tuto-mascot.jsx"></script>
+  <script type="text/babel" src="tree-art.jsx"></script>
+  <script type="text/babel" src="forest-archive.jsx"></script>
+  <script type="text/babel" src="day-tree.jsx"></script>
+  <script type="text/babel">
+    ReactDOM.createRoot(document.getElementById('root')).render(<DayTreeConcept/>);
+  </script>
+</body>
+</html>
