@@ -298,14 +298,20 @@ function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 23, color: '#37a06f' }}>My Tree 🌳</div>
         <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🦊</div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 6 }}>
+      {/* Tree block */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 4 }}>
         <TreeArt size={186} fruits={todayCount} target={DAY_FULL} />
         <div style={{ marginTop: -6, fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12.5, color: '#37a06f', background: 'rgba(76,182,133,.15)', padding: '6px 14px', borderRadius: 999 }}>
-          🌱 {todayCount} {todayCount === 1 ? 'katkı' : 'katkı'} bugün
+          🌱 {todayCount} {todayCount === 1 ? 'leaf' : 'leaves'} today
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
+      {/* Forest strip — between tree and diary, always visible */}
+      <div style={{ padding: '8px 16px 4px' }}>
+        <ForestStrip monthForest={monthForest} monthTreeCount={monthTreeCount} />
+      </div>
+      {/* Diary paper — flex:1 fills remaining space, scrolls internally */}
+      <div style={{ flex: 1, minHeight: 0, padding: '4px 16px 24px' }}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
             <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#37a06f' }}>Today</span>
             <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: 17, color: '#4a3f2e' }}>{TODAY_LABEL}</span>
@@ -324,9 +330,6 @@ function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining
             </div>
           </div>
         </div>
-        <div style={{ padding: '4px 4px 8px' }}>
-          <ForestStrip monthForest={monthForest} monthTreeCount={monthTreeCount} />
-        </div>
       </div>
     </div>
   )
@@ -340,21 +343,24 @@ function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 20, color: '#37a06f' }}>My Tree 🌳</div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#2f8f6b', background: 'rgba(76,182,133,.16)', padding: '6px 12px', borderRadius: 999 }}>
-          🌳 {monthTreeCount} this month
-        </div>
       </div>
+      {/* Tree progress strip */}
       <div style={{ margin: '6px 16px 4px', padding: '12px 14px', background: 'rgba(255,255,255,.66)', border: '1.5px solid rgba(255,255,255,.9)', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 6px 18px rgba(40,70,55,.08)' }}>
         <TreeArt size={92} fruits={todayCount} target={DAY_FULL} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#241f3a', marginBottom: 9 }}>{todayCount} katkı bugün</div>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#241f3a', marginBottom: 9 }}>{todayCount} {todayCount === 1 ? 'leaf' : 'leaves'} today</div>
           <div style={{ height: 9, borderRadius: 999, background: 'rgba(55,160,111,.18)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${Math.min(100, (todayCount / DAY_FULL) * 100)}%`, borderRadius: 999, background: 'linear-gradient(90deg,#6BBF59,#4cb685)', transition: 'width .5s ease' }} />
           </div>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, padding: '10px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
+      {/* Forest strip — between tree strip and diary, always visible */}
+      <div style={{ padding: '8px 16px 4px' }}>
+        <ForestStrip monthForest={monthForest} monthTreeCount={monthTreeCount} />
+      </div>
+      {/* Diary paper */}
+      <div style={{ flex: 1, minHeight: 0, padding: '4px 16px 24px' }}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
             <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#37a06f' }}>Today</span>
             <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: 17, color: '#4a3f2e' }}>{TODAY_LABEL}</span>
@@ -372,9 +378,6 @@ function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, 
               <div style={{ marginTop: 10 }}>{composer}</div>
             </div>
           </div>
-        </div>
-        <div style={{ padding: '0 4px 6px' }}>
-          <ForestStrip monthForest={monthForest} monthTreeCount={monthTreeCount} />
         </div>
       </div>
     </div>
