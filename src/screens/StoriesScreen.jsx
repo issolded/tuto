@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
 import { transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
+
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
@@ -168,6 +170,7 @@ export default function StoriesScreen() {
   const [storyId, setStoryId] = useState(null)
   const [editingCompleted, setEditingCompleted] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [saving, setSaving] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editOrigin, setEditOrigin] = useState('/child/library')
   const [confirmDeleteStory, setConfirmDeleteStory] = useState(false)
@@ -228,6 +231,16 @@ export default function StoriesScreen() {
     try {
       const { transcribed_text, uncertain_words } = await transcribeStory(photos, 'en')
       if (!transcribed_text) throw new Error('transcription empty')
+
+      // Fire-and-forget safety screen — never blocks the child's flow
+      if (child?.id) {
+        fetch(`${SERVER}/api/screen-story-draft`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ child_id: child.id, transcribed_text }),
+        }).catch(() => {})
+      }
+
       const evalData = await evaluateStory(transcribed_text, chosenIdea?.topic || '', child?.age || 7, 'en')
       const result = { ...evalData, transcribed_text, uncertain_words: uncertain_words || [] }
       setEvalResult(result)
@@ -279,33 +292,39 @@ export default function StoriesScreen() {
   }
 
   const finishYoungEditor = async (status = 'completed') => {
-    // Save exactly what the editor contains — child's own writing preserved.
-    const editorText = editorRef.current?.innerText || editableTextRef.current || evalResult?.transcribed_text || ''
-    const savedText = buildCorrectedText(editorText, youngErrors, spellingState)
-    setSaveError(null)
-    if (child?.id) {
-      try {
-        const saved = await saveChildStory(child.id, {
-          storyId,
-          title: displayTitle, topic: chosenIdea?.topic || '',
-          transcribed_text: editorText, corrected_text: savedText,
-          status, gems_earned: evalResult?.gems_earned || 0,
-        })
-        if (saved.story) {
-          setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
-          if (!storyId) setStoryId(saved.story.id)
+    if (saving) return
+    setSaving(true)
+    try {
+      // Save exactly what the editor contains — child's own writing preserved.
+      const editorText = editorRef.current?.innerText || editableTextRef.current || evalResult?.transcribed_text || ''
+      const savedText = buildCorrectedText(editorText, youngErrors, spellingState)
+      setSaveError(null)
+      if (child?.id) {
+        try {
+          const saved = await saveChildStory(child.id, {
+            storyId,
+            title: displayTitle, topic: chosenIdea?.topic || '',
+            transcribed_text: editorText, corrected_text: savedText,
+            status, gems_earned: evalResult?.gems_earned || 0,
+          })
+          if (saved.story) {
+            setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+            if (!storyId) setStoryId(saved.story.id)
+          }
+          if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
+        } catch (err) {
+          console.error('[finishYoungEditor] save failed:', err.message)
+          setSaveError(err.message)
+          return
         }
-        if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
-      } catch (err) {
-        console.error('[finishYoungEditor] save failed:', err.message)
-        setSaveError(err.message)
-        return
       }
-    }
-    if (status === 'in_progress' || editingCompleted) {
-      nav('/child/library')
-    } else {
-      setStep('done')
+      if (status === 'in_progress' || editingCompleted) {
+        nav('/child/library')
+      } else {
+        setStep('done')
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -905,9 +924,13 @@ export default function StoriesScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.18s both' }}>
             <button
               onClick={() => finishYoungEditor('completed')}
-              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
+              disabled={saving}
+              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: saving ? 'default' : 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', opacity: saving ? 0.75 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
             >
-              {editingCompleted ? '💾 Save changes' : 'That\'s my story! 🌟'}
+              {saving && (
+                <div style={{ width: 18, height: 18, border: '3px solid rgba(255,255,255,0.45)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              )}
+              {saving ? 'Saving...' : (editingCompleted ? '💾 Save changes' : 'That\'s my story! 🌟')}
             </button>
             {!editingCompleted && (
               <button

@@ -110,12 +110,25 @@ async function askGeminiWithContext(parentId, userMessage) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
 }
 
-async function moderateContributionText(text, age) {
+async function _geminiScreenCall(text, age) {
   const n = Number(age) || 7
   const prompt =
-    `You are a content moderator for a children's educational app. A ${n}-year-old child wrote this about a ` +
-    `way they helped: "${text}". Determine if it is appropriate and safe for a children's app — no profanity, ` +
-    `violence, adult themes, or inappropriate content. Return JSON only: { "ok": boolean, "reason": string }`
+    `You are a child-safety classifier for a children's educational app. ` +
+    `A ${n}-year-old child wrote this text about something they did or are feeling: "${text.replace(/"/g, '\\"')}"\n\n` +
+    `Classify on TWO independent axes and return JSON only:\n` +
+    `{\n` +
+    `  "appropriateness": "ok" | "inappropriate",\n` +
+    `  "concern_level": "none" | "mild" | "concerning" | "serious",\n` +
+    `  "reason": "<short explanation>"\n` +
+    `}\n\n` +
+    `appropriateness: "inappropriate" if the text contains profanity, explicit content, violence, or adult themes. Otherwise "ok".\n` +
+    `concern_level rules:\n` +
+    `  - "none": no emotional or safety concern.\n` +
+    `  - "mild": temporary/normal emotion (sad, bored, angry) with no distress signals.\n` +
+    `  - "concerning": repeated or intense distress, loneliness, feeling unloved/worthless, persistent fear.\n` +
+    `  - "serious": any hint of self-harm, harm to others, abuse, or a genuine safety signal.\n` +
+    `The two axes are INDEPENDENT. A text can be appropriate but concerning, or inappropriate but not concerning.\n` +
+    `"serious" should only be used when there is a real, unambiguous signal — not for hyperbolic child language like "I want to kill this homework".`
 
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
@@ -131,8 +144,49 @@ async function moderateContributionText(text, age) {
   }
   const data = await res.json()
   const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
-  if (typeof parsed.ok !== 'boolean') throw new Error('malformed moderation response')
+  if (!['ok', 'inappropriate'].includes(parsed.appropriateness)) throw new Error('malformed screen response')
+  if (!['none', 'mild', 'concerning', 'serious'].includes(parsed.concern_level)) throw new Error('malformed screen response')
   return parsed
+}
+
+async function _geminiConfirmSerious(text, age) {
+  const n = Number(age) || 7
+  const prompt =
+    `You are a second-opinion child-safety reviewer. A first classifier flagged this text from a ${n}-year-old as ` +
+    `a SERIOUS safety signal: "${text.replace(/"/g, '\\"')}"\n\n` +
+    `Is this truly a serious safety signal (self-harm, harm to others, abuse), or is it most likely hyperbolic ` +
+    `child language, frustration, or play? Return JSON only:\n` +
+    `{ "confirmed_serious": boolean, "reason": "<short explanation>" }`
+
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { response_mime_type: 'application/json' },
+    }),
+  })
+  if (!res.ok) return { confirmed_serious: true } // fail-closed on confirm step
+  const data = await res.json()
+  const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+  return parsed
+}
+
+async function screenChildInput(text, age) {
+  const result = await _geminiScreenCall(text, age)
+
+  if (result.concern_level === 'serious') {
+    try {
+      const confirm = await _geminiConfirmSerious(text, age)
+      if (!confirm.confirmed_serious) {
+        result.concern_level = 'concerning'
+      }
+    } catch {
+      // fail-closed: keep serious
+    }
+  }
+
+  return result
 }
 
 async function sendNotification(parentId, message) {
@@ -740,6 +794,39 @@ app.get('/api/children/:childId/story-ideas', async (req, res) => {
   }
 })
 
+app.post('/api/screen-story-draft', async (req, res) => {
+  // Fire-and-forget safety screen called right after OCR — never blocks the child's flow.
+  try {
+    const { child_id, transcribed_text } = req.body
+    if (!child_id || !transcribed_text) return res.json({ ok: true })
+
+    const { data: child } = await supabase
+      .from('children').select('age, name, parent_id').eq('id', child_id).maybeSingle()
+    if (!child) return res.json({ ok: true })
+
+    let screening
+    try {
+      screening = await screenChildInput(transcribed_text, child.age)
+    } catch {
+      return res.json({ ok: true })
+    }
+
+    if (screening.concern_level === 'concerning' || screening.concern_level === 'serious') {
+      try {
+        await sendNotification(
+          child.parent_id,
+          `${child.name} bir şeyler yazıyor. Bir göz atmanda fayda olabilir.\n\n${transcribed_text}`
+        )
+      } catch (err) {
+        console.error(`[SCREEN-DRAFT] notify failed: ${err.message}`)
+      }
+    }
+  } catch (err) {
+    console.error(`[SCREEN-DRAFT] unexpected error: ${err.message}`)
+  }
+  res.json({ ok: true })
+})
+
 app.get('/api/children/:childId/stories', async (req, res) => {
   const { childId } = req.params
   const { data: stories } = await supabase.from('stories').select('*').eq('child_id', childId).order('created_at', { ascending: false })
@@ -784,6 +871,43 @@ app.post('/api/children/:childId/stories', async (req, res) => {
     const gemsAwarded = firstCompletion ? (gems_earned || 0) : 0
     if (gemsAwarded > 0) {
       await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
+    }
+
+    // Parent notification — insert only (no notification on edits/updates)
+    if (!storyId) {
+      try {
+        const { data: child } = await supabase
+          .from('children').select('name, parent_id').eq('id', childId).maybeSingle()
+        if (child) {
+          const storyText = corrected_text || transcribed_text || ''
+          let screening
+          try { screening = await screenChildInput(storyText, child.age ?? 7) } catch { /* skip */ }
+
+          const cl = screening?.concern_level
+          if (!screening) {
+            // Screening failed — unknown safety status, stay calm (fail-closed)
+            await sendNotification(
+              child.parent_id,
+              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}`
+            )
+          } else if (cl === 'none' || cl === 'mild') {
+            // Clean story — joyful share
+            await sendNotification(
+              child.parent_id,
+              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`
+            )
+          } else if (screening?.appropriateness === 'inappropriate') {
+            // Inappropriate language — neutral share, no judgment
+            await sendNotification(
+              child.parent_id,
+              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}`
+            )
+          }
+          // concerning/serious: silent — draft screen (Point 1) already notified
+        }
+      } catch (err) {
+        console.error(`[STORIES] notification failed: ${err.message}`)
+      }
     }
 
     res.json({ story, gems_awarded: gemsAwarded })
@@ -873,14 +997,46 @@ app.post('/api/contributions', async (req, res) => {
     if (!child) return res.status(404).json({ error: 'child not found' })
 
     if (source === 'free_text') {
+      let screening
       try {
-        const moderation = await moderateContributionText(trimmedLabel, child.age)
-        if (!moderation.ok) {
-          return res.status(400).json({ error: 'inappropriate', reason: moderation.reason })
-        }
+        screening = await screenChildInput(trimmedLabel, child.age)
       } catch (err) {
-        console.error(`[CONTRIBUTIONS] moderation failed: ${err.message}`)
+        console.error(`[CONTRIBUTIONS] screening failed: ${err.message}`)
         return res.status(503).json({ error: 'Şu an kaydedemedik, tekrar dener misin?' })
+      }
+
+      // ── Inappropriate content: block ──────────────────────────────────────
+      if (screening.appropriateness === 'inappropriate') {
+        console.log(`[SCREEN] inappropriate block child=${child_id}`)
+        return res.status(400).json({ error: 'inappropriate', reason: screening.reason })
+      }
+
+      // ── Concerning or serious: notify parent, skip contribution flow ───────
+      if (screening.concern_level === 'concerning' || screening.concern_level === 'serious') {
+        const isSerious = screening.concern_level === 'serious'
+        console.log(`[SCREEN] concern_level=${screening.concern_level} child=${child_id}`)
+        try {
+          const parentMsg = isSerious
+            ? `${child.name} şöyle bir şey paylaştı: "${trimmedLabel}". Onunla konuşmak iyi gelebilir.`
+            : `${child.name} şöyle bir şey paylaştı: "${trimmedLabel}". Onunla konuşmak iyi gelebilir.`
+          await sendNotification(child.parent_id, parentMsg)
+        } catch (err) {
+          console.error(`[SCREEN] concern notification failed: ${err.message}`)
+        }
+
+        const n = Number(child.age) || 7
+        const childAck = n <= 8 ? 'Paylaştığın için teşekkürler. 💚' : 'Paylaştığın için teşekkürler.'
+        return res.status(200).json({ concern: true, message: childAck })
+      }
+
+      // ── Mild: continue normal flow, log for pattern tracking ─────────────
+      if (screening.concern_level === 'mild') {
+        // TODO: aggregate mild entries for pattern detection (threshold not yet implemented)
+        await supabase.from('contribution_mild_log').insert({
+          child_id,
+          label: trimmedLabel,
+          reason: screening.reason,
+        }).then(() => {}).catch(err => console.error(`[SCREEN] mild log failed: ${err.message}`))
       }
     }
 
@@ -998,6 +1154,71 @@ app.post('/api/contributions/:id/reject', async (req, res) => {
     res.json(updated)
   } catch (err) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/tree', async (req, res) => {
+  try {
+    const { child_id } = req.query
+    if (!child_id) return res.json({ today: 0, todayContributions: [], monthForest: [], monthTreeCount: 0 })
+
+    const { data: child } = await supabase
+      .from('children')
+      .select('parent_id')
+      .eq('id', child_id)
+      .single()
+
+    const { data: parentRow } = await supabase
+      .from('parents')
+      .select('timezone')
+      .eq('id', child?.parent_id)
+      .single()
+
+    const tz = parentRow?.timezone || 'UTC'
+    const now = DateTime.now().setZone(tz)
+
+    const todayStart = now.startOf('day').toUTC().toISO()
+    const todayEnd   = now.endOf('day').toUTC().toISO()
+    const monthStart = now.startOf('month').toUTC().toISO()
+
+    const { data: logs } = await supabase
+      .from('contribution_log')
+      .select('created_at, label, category')
+      .eq('child_id', child_id)
+      .eq('status', 'approved')
+      .gte('created_at', monthStart)
+      .lte('created_at', todayEnd)
+
+    const entries = logs || []
+
+    const countByDate = {}
+    const todayLocalStr = now.toFormat('yyyy-MM-dd')
+    const todayItems = []
+
+    for (const entry of entries) {
+      const localDate = DateTime.fromISO(entry.created_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
+      countByDate[localDate] = (countByDate[localDate] || 0) + 1
+      if (localDate === todayLocalStr) {
+        todayItems.push({ label: entry.label, category: entry.category })
+      }
+    }
+
+    const today = countByDate[todayLocalStr] || 0
+
+    const monthForest = []
+    let cursor = now.startOf('month')
+    const todayDay = now.startOf('day')
+    while (cursor <= todayDay) {
+      const dateStr = cursor.toFormat('yyyy-MM-dd')
+      monthForest.push({ date: dateStr, count: countByDate[dateStr] || 0 })
+      cursor = cursor.plus({ days: 1 })
+    }
+
+    const monthTreeCount = monthForest.filter(d => d.count > 0).length
+
+    res.json({ today, todayContributions: todayItems, monthForest, monthTreeCount })
+  } catch {
+    res.json({ today: 0, todayContributions: [], monthForest: [], monthTreeCount: 0 })
   }
 })
 
