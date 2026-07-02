@@ -1238,6 +1238,70 @@ app.get('/api/tree', async (req, res) => {
   }
 })
 
+app.get('/api/tree/archive', async (req, res) => {
+  try {
+    const { child_id } = req.query
+    if (!child_id) return res.json({ allTimeTrees: 0, months: [], years: [] })
+
+    const { data: child } = await supabase
+      .from('children').select('parent_id').eq('id', child_id).single()
+
+    const { data: parentRow } = await supabase
+      .from('parents').select('timezone').eq('id', child?.parent_id).single()
+
+    const tz = parentRow?.timezone || 'UTC'
+    const now = DateTime.now().setZone(tz)
+    const currentYearMonth = `${now.year}-${String(now.month).padStart(2, '0')}`
+
+    const { data: logs } = await supabase
+      .from('contribution_log')
+      .select('created_at')
+      .eq('child_id', child_id)
+      .eq('status', 'approved')
+
+    // Group into local (year, month, day) keys using parent timezone
+    const daySet = new Set()    // 'YYYY-MM-DD' — for allTimeTrees distinct-day count
+    const monthMap = {}         // 'YYYY-MM' → { days: Set<string>, contributions: int }
+    const yearMap = {}          // 'YYYY'    → Set<'YYYY-MM-DD'>
+
+    for (const row of (logs || [])) {
+      const local = DateTime.fromISO(row.created_at, { zone: 'utc' }).setZone(tz)
+      const dayKey   = local.toFormat('yyyy-MM-dd')
+      const monthKey = local.toFormat('yyyy-MM')
+      const yearKey  = String(local.year)
+
+      daySet.add(dayKey)
+
+      if (!monthMap[monthKey]) monthMap[monthKey] = { days: new Set(), contributions: 0 }
+      monthMap[monthKey].days.add(dayKey)
+      monthMap[monthKey].contributions++
+
+      if (!yearMap[yearKey]) yearMap[yearKey] = new Set()
+      yearMap[yearKey].add(dayKey)
+    }
+
+    const allTimeTrees = daySet.size
+
+    // months: past months only (exclude current), non-empty, newest first
+    const months = Object.entries(monthMap)
+      .filter(([key]) => key < currentYearMonth)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, { days, contributions }]) => {
+        const [year, month] = key.split('-').map(Number)
+        return { year, month, trees: days.size, contributions }
+      })
+
+    // years: newest first
+    const years = Object.entries(yearMap)
+      .sort(([a], [b]) => Number(b) - Number(a))
+      .map(([yearStr, daySetYear]) => ({ year: Number(yearStr), trees: daySetYear.size }))
+
+    res.json({ allTimeTrees, months, years })
+  } catch {
+    res.json({ allTimeTrees: 0, months: [], years: [] })
+  }
+})
+
 app.get('/api/submissions/:id', async (req, res) => {
   const { id } = req.params
   const { data, error } = await supabase
