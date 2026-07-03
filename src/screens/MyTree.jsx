@@ -253,6 +253,110 @@ function ForestStrip({ monthForest, monthTreeCount }) {
   )
 }
 
+// ── forest archive overlay (fox → past months/years, 6-11 bands) ───────────────
+
+function monthLabel(year, month) {
+  const raw = new Date(year, month - 1, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
+function ArchiveMonthCard({ month, isOpen, onToggle }) {
+  const days = Array.isArray(month.contributions) ? month.contributions.filter(d => (d.count ?? 0) > 0) : []
+  return (
+    <div onClick={onToggle} style={{
+      background: '#fff', borderRadius: 16, padding: '12px 14px', marginBottom: 9, cursor: 'pointer',
+      boxShadow: '0 3px 12px rgba(40,55,40,.07)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#4a3f2e' }}>{monthLabel(month.year, month.month)}</span>
+        <span style={{ marginLeft: 'auto', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '3px 10px', borderRadius: 999 }}>
+          🌳 {month.trees}
+        </span>
+      </div>
+      {isOpen && days.length > 0 && (
+        <div style={{ marginTop: 10, padding: '10px 8px 6px', background: 'linear-gradient(180deg,#F4FAF0,#E8F4E6)', borderRadius: 12, display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 2 }}>
+          {days.map((d, i) => <TreeArt key={d.date || i} size={22} fruits={d.count} target={DAY_FULL} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ArchiveYearRow({ year }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,.7)', borderRadius: 16, padding: '13px 15px', marginBottom: 9 }}>
+      <TreeArt size={30} fruits={DAY_FULL} target={DAY_FULL} />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#4a3f2e' }}>{year.year}</div>
+        <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12, color: '#37a06f' }}>{year.trees} ağaç yetiştirdin 🌳</div>
+      </div>
+    </div>
+  )
+}
+
+function ForestArchive({ open, onClose, data, loading, error }) {
+  const [openMonthKey, setOpenMonthKey] = useState(null)
+  const months = data?.months || []
+  const years = data?.years || []
+  const allTime = data?.allTimeTrees ?? 0
+  const empty = !loading && !error && months.length === 0 && years.length === 0
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', justifyContent: 'center', pointerEvents: open ? 'auto' : 'none' }}>
+      <div style={{
+        width: '100%', maxWidth: 430, height: '100%',
+        background: 'linear-gradient(180deg,#F2F8EE 0%,#E3F1E4 100%)',
+        display: 'flex', flexDirection: 'column',
+        transform: open ? 'translateY(0)' : 'translateY(101%)',
+        transition: 'transform .46s cubic-bezier(.3,.9,.3,1)',
+      }}>
+        <div style={{ flex: '0 0 auto', padding: '18px 18px 10px', position: 'relative' }}>
+          <button onClick={onClose} title="Bugüne dön" style={{ position: 'absolute', top: 18, right: 18, width: 34, height: 34, borderRadius: 12, border: 'none', cursor: 'pointer', background: '#fff', color: '#37a06f', fontSize: 16, boxShadow: '0 2px 8px rgba(40,60,40,.12)' }}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 42 }}>
+            <span style={{ fontSize: 24 }}>🦊</span>
+            <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 14, color: '#4a3f2e', lineHeight: 1.3 }}>Tilki büyüttüğün ormanı takip ediyor</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
+            <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 36, color: '#37a06f', letterSpacing: '-1px' }}>{allTime}</span>
+            <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5, color: '#7a6a4c' }}>ağaç yetiştirdin 🌳</span>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 16px 24px' }}>
+          {loading && (
+            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>Ormanlar yükleniyor…</div>
+          )}
+          {!loading && error && (
+            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>Ormanlar şu an yüklenemedi. Biraz sonra tekrar dene 🦊</div>
+          )}
+          {empty && (
+            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>Henüz geçmiş bir orman yok — bu ay büyümeye devam et! 🌱</div>
+          )}
+          {months.length > 0 && (
+            <div style={{ paddingTop: 4 }}>
+              {months.map(m => {
+                const key = `${m.year}-${m.month}`
+                return <ArchiveMonthCard key={key} month={m} isOpen={openMonthKey === key} onToggle={() => setOpenMonthKey(k => k === key ? null : key)} />
+              })}
+            </div>
+          )}
+          {years.length > 0 && (
+            <>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 13, color: '#7a6a4c', padding: '12px 2px 8px' }}>Önceki yıllar</div>
+              {years.map(y => <ArchiveYearRow key={y.year} year={y} />)}
+            </>
+          )}
+          {!empty && !loading && !error && (
+            <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11.5, color: '#9B8FC0', padding: '10px 20px 0', lineHeight: 1.5 }}>
+              Tilki büyüttüğün her ormanı saklıyor 🦊🌲
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── intro (6-8 only, shown once) ────────────────────────────────────────────────
 
 function Intro({ onContinue }) {
@@ -290,13 +394,13 @@ function Intro({ onContinue }) {
 
 // ── 6-8 · "My Tree" (primary) ───────────────────────────────────────────────────
 
-function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav }) {
+function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 23, color: '#37a06f' }}>My Tree 🌳</div>
-        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🦊</div>
+        <button onClick={onOpenArchive} title="Geçmiş ormanlar" style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer' }}>🦊</button>
       </div>
       {/* Tree block */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 4 }}>
@@ -337,12 +441,13 @@ function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining
 
 // ── 9-11 · intermediate ─────────────────────────────────────────────────────────
 
-function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav }) {
+function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 20, color: '#37a06f' }}>My Tree 🌳</div>
+        <button onClick={onOpenArchive} title="Geçmiş ormanlar" style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}>🦊</button>
       </div>
       {/* Tree progress strip */}
       <div style={{ margin: '6px 16px 4px', padding: '12px 14px', background: 'rgba(255,255,255,.66)', border: '1.5px solid rgba(255,255,255,.9)', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 6px 18px rgba(40,70,55,.08)' }}>
@@ -440,6 +545,10 @@ export default function MyTree() {
   const [micro, setMicro] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [showArchive, setShowArchive] = useState(false)
+  const [archiveData, setArchiveData] = useState(null)
+  const [archiveLoading, setArchiveLoading] = useState(false)
+  const [archiveError, setArchiveError] = useState(false)
   const microTimer = useRef()
 
   useEffect(() => {
@@ -583,6 +692,17 @@ export default function MyTree() {
     }
   }
 
+  const openArchive = () => {
+    setShowArchive(true)
+    setArchiveLoading(true)
+    setArchiveError(false)
+    fetch(`${SERVER}/api/tree/archive?child_id=${child.id}`)
+      .then(r => r.json())
+      .then(data => setArchiveData(data))
+      .catch(() => setArchiveError(true))
+      .finally(() => setArchiveLoading(false))
+  }
+
   if (showIntro) {
     return (
       <Intro onContinue={() => {
@@ -618,15 +738,18 @@ export default function MyTree() {
         </div>
       )}
       {band === 'young' && (
-        <BandYoung entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
+        <BandYoung entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
       )}
       {band === 'mid' && (
-        <BandMid entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
+        <BandMid entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
       )}
       {band === 'mature' && (
         <BandMature entries={entries} monthCount={monthCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
       )}
       <Micro show={micro} msg={MICRO_COPY[band]} />
+      {band !== 'mature' && (
+        <ForestArchive open={showArchive} onClose={() => setShowArchive(false)} data={archiveData} loading={archiveLoading} error={archiveError} />
+      )}
     </>
   )
 }
