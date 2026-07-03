@@ -35,6 +35,26 @@ const MICRO_COPY = {
 
 const TODAY_LABEL = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 
+// Groups a flat list into per-local-day buckets, preserving the newest-first
+// order the backend already sorted them in. Items without a `date` (freshly
+// added, optimistic or just-saved) are assumed to belong to today.
+function groupEntriesByDate(entries, todayDate) {
+  const groups = []
+  for (const e of entries) {
+    const key = e.date || todayDate
+    let g = groups.find(g => g.date === key)
+    if (!g) { g = { date: key, isToday: key === todayDate, items: [] }; groups.push(g) }
+    g.items.push(e)
+  }
+  return groups
+}
+
+// "3 Temmuz" style label for a past day's group header (yyyy-MM-dd, local).
+function formatPastDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+}
+
 async function uploadDiaryPhoto(file, childId) {
   const path = `${childId ?? 'anonymous'}/diary-${Date.now()}.jpg`
   const { error } = await supabase.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
@@ -68,6 +88,27 @@ function EntryRow({ category, label, status, fresh }) {
       }}>
         {status === 'approved' ? '✓' : '◷'}
       </div>
+    </div>
+  )
+}
+
+function DiaryDateHeader({ isToday, dateStr }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
+      <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: isToday ? '#37a06f' : '#b9892f' }}>
+        {isToday ? 'Today' : 'Waiting'}
+      </span>
+      <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: isToday ? 17 : 15, color: '#4a3f2e' }}>
+        {isToday ? TODAY_LABEL : formatPastDate(dateStr)}
+      </span>
+    </div>
+  )
+}
+
+function MatureDateHeader({ isToday, dateStr }) {
+  return (
+    <div style={{ fontWeight: 800, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#6c7c72', paddingTop: 10, paddingBottom: 4 }}>
+      {isToday ? 'Today' : formatPastDate(dateStr)}
     </div>
   )
 }
@@ -394,7 +435,7 @@ function Intro({ onContinue }) {
 
 // ── 6-8 · "My Tree" (primary) ───────────────────────────────────────────────────
 
-function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
+function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
@@ -416,12 +457,13 @@ function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining
       {/* Diary paper — flex:1 fills remaining space, scrolls internally */}
       <div style={{ flex: 1, minHeight: 0, padding: '4px 16px 24px' }}>
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
-            <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#37a06f' }}>Today</span>
-            <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: 17, color: '#4a3f2e' }}>{TODAY_LABEL}</span>
-          </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-            {entries.map(e => <EntryRow key={e.id} {...e} />)}
+            {groups.map(g => (
+              <div key={g.date}>
+                <DiaryDateHeader isToday={g.isToday} dateStr={g.date} />
+                {g.items.map(e => <EntryRow key={e.id} {...e} />)}
+              </div>
+            ))}
             <div style={{ paddingTop: 12 }}>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13, color: '#7a6a4c', marginBottom: 8 }}>Did you help today? Tap one 👇</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
@@ -441,7 +483,7 @@ function BandYoung({ entries, todayCount, monthForest, monthTreeCount, remaining
 
 // ── 9-11 · intermediate ─────────────────────────────────────────────────────────
 
-function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
+function BandMid({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
@@ -466,12 +508,13 @@ function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, 
       {/* Diary paper */}
       <div style={{ flex: 1, minHeight: 0, padding: '4px 16px 24px' }}>
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, background: 'radial-gradient(120% 100% at 30% 0%, #FFFCF3, #FBF5E7 55%, #F6EFDD)', boxShadow: 'inset 4px 0 10px -8px rgba(0,0,0,.12)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
-            <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#37a06f' }}>Today</span>
-            <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: 17, color: '#4a3f2e' }}>{TODAY_LABEL}</span>
-          </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-            {entries.map(e => <EntryRow key={e.id} {...e} />)}
+            {groups.map(g => (
+              <div key={g.date}>
+                <DiaryDateHeader isToday={g.isToday} dateStr={g.date} />
+                {g.items.map(e => <EntryRow key={e.id} {...e} />)}
+              </div>
+            ))}
             <div style={{ paddingTop: 12 }}>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13, color: '#7a6a4c', marginBottom: 8 }}>Add to today</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -491,7 +534,7 @@ function BandMid({ entries, todayCount, monthForest, monthTreeCount, remaining, 
 
 // ── 12-15 · "My Part" (mature) ──────────────────────────────────────────────────
 
-function BandMature({ entries, monthCount, remaining, onAdd, composer, nav }) {
+function BandMature({ groups, monthCount, remaining, onAdd, composer, nav }) {
   return (
     <div style={{ background: 'linear-gradient(180deg,#F5F7F4 0%,#EAEFEA 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 8px' }}>
@@ -519,9 +562,13 @@ function BandMature({ entries, monthCount, remaining, onAdd, composer, nav }) {
           ))}
           {remaining.length === 0 && <span style={{ fontWeight: 700, fontSize: 12, color: '#6c7c72' }}>— all added today</span>}
         </div>
-        <div style={{ fontWeight: 800, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#6c7c72', paddingBottom: 4 }}>Today</div>
-        {entries.length === 0 && <div style={{ fontSize: 13, fontWeight: 600, color: '#6c7c72', padding: '6px 0' }}>Nothing logged yet today.</div>}
-        {entries.map(e => <MatureRow key={e.id} {...e} />)}
+        {groups.length === 0 && <div style={{ fontSize: 13, fontWeight: 600, color: '#6c7c72', padding: '6px 0' }}>Nothing logged yet today.</div>}
+        {groups.map(g => (
+          <div key={g.date}>
+            <MatureDateHeader isToday={g.isToday} dateStr={g.date} />
+            {g.items.map(e => <MatureRow key={e.id} {...e} />)}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -538,7 +585,7 @@ export default function MyTree() {
   const [entries, setEntries] = useState([])
   const [cards, setCards] = useState([])
   const [approvedMonth, setApprovedMonth] = useState(0)
-  const [treeData, setTreeData] = useState({ today: 0, monthForest: [], monthTreeCount: 0 })
+  const [treeData, setTreeData] = useState({ today: 0, monthForest: [], monthTreeCount: 0, todayDate: null })
   const [loadError, setLoadError] = useState(false)
   const [moderationError, setModerationError] = useState(false)
   const [submittingFreeText, setSubmittingFreeText] = useState(false)
@@ -563,14 +610,16 @@ export default function MyTree() {
         fetch(`${SERVER}/api/tree?child_id=${child.id}`).then(r => r.json()),
       ]).then(([monthData, treeResp]) => {
         if (cancelled) return
-        // entries (today's diary list) now come from /api/tree — timezone-correct, pending+approved
-        setEntries(treeResp?.todayContributions ?? [])
+        // listItems (diary list) now come from /api/tree — every open pending
+        // (any date) + today's approved, each tagged with its own local day.
+        setEntries(treeResp?.listItems ?? [])
         const monthList = monthData?.contributions || []
         setApprovedMonth(monthList.filter(c => c.status === 'approved').length)
         setTreeData({
           today: treeResp?.today ?? 0,
           monthForest: treeResp?.monthForest ?? [],
           monthTreeCount: treeResp?.monthTreeCount ?? 0,
+          todayDate: treeResp?.todayDate ?? null,
         })
       }).catch(() => {
         if (!cancelled) setLoadError(true)
@@ -605,9 +654,16 @@ export default function MyTree() {
     return null
   }
 
+  // entries now spans every open pending (any date) plus today's approved —
+  // group by local day so old pendings show under their own date, not today's.
+  const groups = groupEntriesByDate(entries, treeData.todayDate)
+  const todayItems = groups.find(g => g.isToday)?.items ?? []
+
   // Track "used today" by card identity (category+label), not category alone —
   // multiple cards can share a category, and using one must not hide the others.
-  const usedTodayKeys = new Set(entries.map(e => `${e.category}::${e.label}`))
+  // Scoped to today's items only: an old pending from a past day must not hide
+  // a card the child hasn't used yet today.
+  const usedTodayKeys = new Set(todayItems.map(e => `${e.category}::${e.label}`))
   const remaining = cards.filter(c => !usedTodayKeys.has(`${c.category}::${c.label}`))
   const fruits = approvedMonth      // still used by BandMature monthCount
   const monthCount = approvedMonth  // BandMature only (12-15 — unchanged)
@@ -738,13 +794,13 @@ export default function MyTree() {
         </div>
       )}
       {band === 'young' && (
-        <BandYoung entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
+        <BandYoung groups={groups} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
       )}
       {band === 'mid' && (
-        <BandMid entries={entries} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
+        <BandMid groups={groups} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
       )}
       {band === 'mature' && (
-        <BandMature entries={entries} monthCount={monthCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
+        <BandMature groups={groups} monthCount={monthCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
       )}
       <Micro show={micro} msg={MICRO_COPY[band]} />
       {band !== 'mature' && (

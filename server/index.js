@@ -1160,7 +1160,7 @@ app.post('/api/contributions/:id/reject', async (req, res) => {
 app.get('/api/tree', async (req, res) => {
   try {
     const { child_id } = req.query
-    if (!child_id) return res.json({ today: 0, todayContributions: [], monthForest: [], monthTreeCount: 0 })
+    if (!child_id) return res.json({ today: 0, listItems: [], monthForest: [], monthTreeCount: 0, todayDate: null })
 
     const { data: child } = await supabase
       .from('children')
@@ -1181,10 +1181,11 @@ app.get('/api/tree', async (req, res) => {
     const todayEnd   = now.endOf('day').toUTC().toISO()
     const monthStart = now.startOf('month').toUTC().toISO()
 
-    // Two separate queries:
-    // 1. Month approved-only → drives tree growth counts and forest
-    // 2. Today all-status (no rejected) → drives the diary list with full fields
-    const [{ data: monthLogs }, { data: todayAllLogs }] = await Promise.all([
+    // Three separate queries:
+    // 1. Month approved-only → drives tree growth counts and forest (unchanged)
+    // 2. ALL pending, any date → stays in the diary list until approved/rejected
+    // 3. Today's approved-only → the "Bugün" part of the diary list
+    const [{ data: monthLogs }, { data: pendingLogs }, { data: todayApprovedLogs }] = await Promise.all([
       supabase
         .from('contribution_log')
         .select('created_at')
@@ -1196,10 +1197,14 @@ app.get('/api/tree', async (req, res) => {
         .from('contribution_log')
         .select('id, label, category, status, created_at, photo_url')
         .eq('child_id', child_id)
-        .neq('status', 'rejected')
+        .eq('status', 'pending'),
+      supabase
+        .from('contribution_log')
+        .select('id, label, category, status, created_at, photo_url')
+        .eq('child_id', child_id)
+        .eq('status', 'approved')
         .gte('created_at', todayStart)
-        .lte('created_at', todayEnd)
-        .order('created_at', { ascending: false }),
+        .lte('created_at', todayEnd),
     ])
 
     const countByDate = {}
@@ -1212,14 +1217,20 @@ app.get('/api/tree', async (req, res) => {
 
     const today = countByDate[todayLocalStr] || 0
 
-    // Full today list (pending + approved) for the diary — status field included
-    const todayItems = (todayAllLogs || []).map(e => ({
-      id: e.id,
-      label: e.label,
-      category: e.category,
-      status: e.status,
-      photo_url: e.photo_url ?? null,
-    }))
+    // Diary list: every pending contribution (any date, until approved/rejected)
+    // plus today's approved ones — each tagged with its own local day so an
+    // old pending never masquerades as "today".
+    const listItems = [...(pendingLogs || []), ...(todayApprovedLogs || [])]
+      .map(e => ({
+        id: e.id,
+        label: e.label,
+        category: e.category,
+        status: e.status,
+        photo_url: e.photo_url ?? null,
+        created_at: e.created_at,
+        date: DateTime.fromISO(e.created_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd'),
+      }))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
 
     const monthForest = []
     let cursor = now.startOf('month')
@@ -1232,9 +1243,9 @@ app.get('/api/tree', async (req, res) => {
 
     const monthTreeCount = monthForest.filter(d => d.count > 0).length
 
-    res.json({ today, todayContributions: todayItems, monthForest, monthTreeCount })
+    res.json({ today, listItems, monthForest, monthTreeCount, todayDate: todayLocalStr })
   } catch {
-    res.json({ today: 0, todayContributions: [], monthForest: [], monthTreeCount: 0 })
+    res.json({ today: 0, listItems: [], monthForest: [], monthTreeCount: 0, todayDate: null })
   }
 })
 
