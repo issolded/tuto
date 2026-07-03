@@ -33,7 +33,7 @@ const MICRO_COPY = {
   mature: 'Logged — your parent will confirm it.',
 }
 
-const TODAY_LABEL = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+const TODAY_LABEL = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
 // Groups a flat list into per-local-day buckets, preserving the newest-first
 // order the backend already sorted them in. Items without a `date` (freshly
@@ -49,10 +49,10 @@ function groupEntriesByDate(entries, todayDate) {
   return groups
 }
 
-// "3 Temmuz" style label for a past day's group header (yyyy-MM-dd, local).
+// "June 29" style label for a past day's group header (yyyy-MM-dd, local).
 function formatPastDate(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
 }
 
 async function uploadDiaryPhoto(file, childId) {
