@@ -1080,10 +1080,37 @@ app.get('/api/contributions', async (req, res) => {
     const { child_id, period, scope } = req.query
     if (!child_id) return res.status(400).json({ error: 'child_id required' })
 
-    const { data: child } = await supabase.from('children').select('id').eq('id', child_id).maybeSingle()
+    const { data: child } = await supabase.from('children').select('id, parent_id').eq('id', child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
-    const effectiveScope = scope === 'today' ? 'today' : 'month'
+    const effectiveScope = scope === 'today' ? 'today' : scope === 'pending' ? 'pending' : 'month'
+
+    // Pending contributions never expire off the parent's queue just because
+    // the month rolled over — `period` is fixed at insert time (UTC month),
+    // so a month-scoped query silently drops last month's open pendings.
+    // This scope ignores period entirely and returns every open pending.
+    if (effectiveScope === 'pending') {
+      const { data: parentRow } = await supabase
+        .from('parents')
+        .select('timezone')
+        .eq('id', child.parent_id)
+        .single()
+      const tz = parentRow?.timezone || 'UTC'
+
+      const { data, error } = await supabase
+        .from('contribution_log')
+        .select('id, label, category, source, status, created_at, photo_url')
+        .eq('child_id', child_id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+      if (error) return res.status(500).json({ error: error.message })
+
+      const contributions = (data || []).map(c => ({
+        ...c,
+        date: DateTime.fromISO(c.created_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd'),
+      }))
+      return res.json({ contributions, todayDate: DateTime.now().setZone(tz).toFormat('yyyy-MM-dd') })
+    }
 
     let query = supabase
       .from('contribution_log')

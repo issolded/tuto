@@ -22,6 +22,27 @@ function isToday(dateStr) {
   return new Date(dateStr).toDateString() === new Date().toDateString()
 }
 
+// Groups a flat pending list into per-local-day buckets (newest day first —
+// items already arrive created_at-desc from the backend). Consistent with
+// the child-facing MyTree diary grouping, so parent, child, and Telegram all
+// agree on what "today" vs. an older pending means.
+function groupByDate(items, todayDate) {
+  const groups = []
+  for (const c of items) {
+    const key = c.date || todayDate
+    let g = groups.find(g => g.date === key)
+    if (!g) { g = { date: key, isToday: key === todayDate, items: [] }; groups.push(g) }
+    g.items.push(c)
+  }
+  return groups
+}
+
+// "June 29" style label for a past day's group header (yyyy-MM-dd, local).
+function formatGroupDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
+}
+
 // ── Submission card ───────────────────────────────────────────────────────────
 function SubmissionCard({ sub, onApprove, onReject }) {
   const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
@@ -77,6 +98,14 @@ const CONTRIBUTION_DOT_COLORS = {
   household: PC.green,
   family:    PC.teal,
   outside:   PC.amber,
+}
+
+function ContributionDateHeader({ isToday, dateStr }) {
+  return (
+    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', color: PC.inkFaint, padding: '2px 2px' }}>
+      {isToday ? 'Today' : formatGroupDate(dateStr)}
+    </div>
+  )
 }
 
 function ContributionCard({ c, onApprove, onReject }) {
@@ -341,6 +370,7 @@ export default function ParentChildDetail() {
   const [gems, setGems] = useState(null)
   const [submissions, setSubmissions] = useState(null)
   const [contributions, setContributions] = useState(null)
+  const [contributionsTodayDate, setContributionsTodayDate] = useState(null)
   const [rewards, setRewards] = useState(null)
   const [justApproved, setJustApproved] = useState(false)
   const [showPinModal,    setShowPinModal]    = useState(false)
@@ -363,13 +393,18 @@ export default function ParentChildDetail() {
       supabase.from('bt_ledger').select('amount').eq('child_id', id),
       supabase.from('submissions').select('*').eq('child_id', id).order('created_at', { ascending: false }),
       supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost'),
-      fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions?child_id=${id}&scope=month`).then(r => r.json()),
+      // scope=pending ignores period/month entirely — a pending contribution
+      // must stay visible here until approved/rejected, no matter which
+      // month it was logged in (see server/index.js for why scope=month
+      // would silently drop it once the month rolls over).
+      fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions?child_id=${id}&scope=pending`).then(r => r.json()),
     ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
       setSubmissions(subData || [])
       setRewards(rewardData || [])
       setContributions(contribData?.contributions || [])
+      setContributionsTodayDate(contribData?.todayDate ?? null)
     })
   }, [id])
 
@@ -377,7 +412,11 @@ export default function ParentChildDetail() {
 
   const pending   = (submissions || []).filter(s => s.status === 'pending')
   const todayDone = (submissions || []).filter(s => s.status === 'approved' && isToday(s.created_at))
+  // Backend scopes the fetch to status='pending', but approve/reject flip
+  // status optimistically in local state — still need this filter so an
+  // item disappears from the list the moment it's actioned.
   const pendingContributions = (contributions || []).filter(c => c.status === 'pending')
+  const pendingContributionGroups = groupByDate(pendingContributions, contributionsTodayDate)
 
   async function handleApprove(sub) {
     const earnedGems = sub.gems_earned ?? sub.suggested_gems ?? 30
@@ -458,19 +497,24 @@ export default function ParentChildDetail() {
           )}
         </div>
 
-        {/* diary contributions */}
+        {/* diary contributions — every open pending, any month, grouped by day */}
         <div>
           <SectionHead>
             🌱 Ev katkıları{pendingContributions.length > 0 ? ` (${pendingContributions.length})` : ''}
           </SectionHead>
-          {pendingContributions.length === 0 ? (
+          {pendingContributionGroups.length === 0 ? (
             <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>
               Bekleyen katkı yok.
             </Card>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pendingContributions.map(c => (
-                <ContributionCard key={c.id} c={c} onApprove={() => handleApproveContribution(c)} onReject={() => handleRejectContribution(c)} />
+              {pendingContributionGroups.map(g => (
+                <div key={g.date} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <ContributionDateHeader isToday={g.isToday} dateStr={g.date} />
+                  {g.items.map(c => (
+                    <ContributionCard key={c.id} c={c} onApprove={() => handleApproveContribution(c)} onReject={() => handleRejectContribution(c)} />
+                  ))}
+                </div>
               ))}
             </div>
           )}
