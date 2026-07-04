@@ -238,16 +238,29 @@ function BackButton({ onClick, dark }) {
 
 // ── forest strip (6-11 bands) ───────────────────────────────────────────────────
 
-// "4 Temmuz" style label for the forest strip's tap tooltip (yyyy-MM-dd, local).
+// "July 4" style label for the forest strip's tap tooltip (yyyy-MM-dd, local).
 function formatStripDate(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
 }
 
 function ForestStrip({ monthForest, monthTreeCount }) {
   const [tooltip, setTooltip] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState({ left: 0, top: 0 })
+  const containerRef = useRef(null)
   // days this month that have at least one contribution
   const plantedDays = (monthForest || []).filter(d => d.count > 0)
+
+  // Close on any tap outside a forest-day button — including taps elsewhere
+  // in this same strip (header, badge, footer copy).
+  useEffect(() => {
+    if (!tooltip) return
+    const handlePointerDown = (e) => {
+      if (!e.target.closest('[data-forest-day]')) setTooltip(null)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [tooltip])
 
   if (!plantedDays.length && monthTreeCount === 0) {
     return (
@@ -259,12 +272,23 @@ function ForestStrip({ monthForest, monthTreeCount }) {
 
   const selected = plantedDays.find(d => d.date === tooltip)
 
+  function handleDayClick(e, date) {
+    if (tooltip === date) { setTooltip(null); return }
+    const containerRect = containerRef.current.getBoundingClientRect()
+    const btnRect = e.currentTarget.getBoundingClientRect()
+    setTooltipPos({
+      left: btnRect.left - containerRect.left + btnRect.width / 2,
+      top: btnRect.top - containerRect.top,
+    })
+    setTooltip(date)
+  }
+
   return (
     // position:relative here (not on the scrolling row below) so the tooltip
     // is a sibling of the scroll row, not a descendant clipped by it — the
     // row's overflowX:'auto' implicitly makes its overflowY 'auto' too,
     // which was clipping a tooltip that popped up *inside* the row.
-    <div style={{ paddingBottom: 6, position: 'relative' }}>
+    <div ref={containerRef} style={{ paddingBottom: 6, position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8 }}>
         <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>Bu ay</span>
         <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '4px 10px', borderRadius: 999 }}>
@@ -272,13 +296,15 @@ function ForestStrip({ monthForest, monthTreeCount }) {
         </span>
       </div>
       {selected && (
+        // anchored to the tapped tree's own position (measured at click time),
+        // not a fixed corner — sits directly above whichever day was tapped.
         <div style={{
-          position: 'absolute', top: 26, right: 0, zIndex: 30,
+          position: 'absolute', left: tooltipPos.left, top: tooltipPos.top - 8, transform: 'translate(-50%, -100%)', zIndex: 30,
           background: '#fff', borderRadius: 10, padding: '6px 10px', boxShadow: '0 6px 18px rgba(0,0,0,.16)',
           fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#4a3f2e',
           whiteSpace: 'nowrap',
         }}>
-          {formatStripDate(selected.date)} · {selected.count} katkı
+          {formatStripDate(selected.date)} · {selected.count} {selected.count === 1 ? 'contribution' : 'contributions'}
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
@@ -289,7 +315,8 @@ function ForestStrip({ monthForest, monthTreeCount }) {
           return (
             <button
               key={d.date}
-              onClick={() => setTooltip(isOpen ? null : d.date)}
+              data-forest-day
+              onClick={(e) => handleDayClick(e, d.date)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 8,
