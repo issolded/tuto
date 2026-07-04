@@ -238,6 +238,12 @@ function BackButton({ onClick, dark }) {
 
 // ── forest strip (6-11 bands) ───────────────────────────────────────────────────
 
+// "4 Temmuz" style label for the forest strip's tap tooltip (yyyy-MM-dd, local).
+function formatStripDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+}
+
 function ForestStrip({ monthForest, monthTreeCount }) {
   const [tooltip, setTooltip] = useState(null)
   // days this month that have at least one contribution
@@ -251,39 +257,48 @@ function ForestStrip({ monthForest, monthTreeCount }) {
     )
   }
 
+  const selected = plantedDays.find(d => d.date === tooltip)
+
   return (
-    <div style={{ paddingBottom: 6 }}>
+    // position:relative here (not on the scrolling row below) so the tooltip
+    // is a sibling of the scroll row, not a descendant clipped by it — the
+    // row's overflowX:'auto' implicitly makes its overflowY 'auto' too,
+    // which was clipping a tooltip that popped up *inside* the row.
+    <div style={{ paddingBottom: 6, position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8 }}>
         <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>Bu ay</span>
         <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '4px 10px', borderRadius: 999 }}>
           🌳 {monthTreeCount} ağaç
         </span>
       </div>
+      {selected && (
+        <div style={{
+          position: 'absolute', top: 26, right: 0, zIndex: 30,
+          background: '#fff', borderRadius: 10, padding: '6px 10px', boxShadow: '0 6px 18px rgba(0,0,0,.16)',
+          fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#4a3f2e',
+          whiteSpace: 'nowrap',
+        }}>
+          {formatStripDate(selected.date)} · {selected.count} katkı
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
         {plantedDays.map(d => {
           const isOpen = tooltip === d.date
           // friendly date label: day number
           const dayNum = d.date.slice(8)
           return (
-            <div key={d.date} style={{ position: 'relative', flexShrink: 0 }}>
-              <button
-                onClick={() => setTooltip(isOpen ? null : d.date)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
-              >
-                <TreeArt size={36} fruits={DAY_FULL} target={DAY_FULL} style={{ display: 'block' }} />
-                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 9, color: '#7a6a4c' }}>{dayNum}</span>
-              </button>
-              {isOpen && (
-                <div style={{
-                  position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
-                  background: '#fff', borderRadius: 10, padding: '6px 10px', boxShadow: '0 6px 18px rgba(0,0,0,.16)',
-                  fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#4a3f2e',
-                  whiteSpace: 'nowrap', zIndex: 20,
-                }}>
-                  {d.date} · {d.count} katkı
-                </div>
-              )}
-            </div>
+            <button
+              key={d.date}
+              onClick={() => setTooltip(isOpen ? null : d.date)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 8,
+                outline: isOpen ? '2px solid #4cb685' : 'none', outlineOffset: 1,
+              }}
+            >
+              <TreeArt size={36} fruits={DAY_FULL} target={DAY_FULL} style={{ display: 'block' }} />
+              <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 9, color: '#7a6a4c' }}>{dayNum}</span>
+            </button>
           )
         })}
       </div>
