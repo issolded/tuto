@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
@@ -246,8 +246,12 @@ function formatStripDate(dateStr) {
 
 function ForestStrip({ monthForest, monthTreeCount }) {
   const [tooltip, setTooltip] = useState(null)
-  const [tooltipPos, setTooltipPos] = useState({ left: 0, top: 0 })
+  const [anchor, setAnchor] = useState({ left: 0, top: 0 })
+  // { date, left } once the tooltip's real width is measured and clamped to
+  // the strip's bounds — null/stale-date means "not measured for this tooltip yet"
+  const [measured, setMeasured] = useState(null)
   const containerRef = useRef(null)
+  const tooltipRef = useRef(null)
   // days this month that have at least one contribution
   const plantedDays = (monthForest || []).filter(d => d.count > 0)
 
@@ -262,6 +266,20 @@ function ForestStrip({ monthForest, monthTreeCount }) {
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [tooltip])
 
+  // Clamp the tooltip inside the strip's own width so it never spills past
+  // the edge of the app's content area (looked like a torn/split frame when
+  // a tree near the left edge centered a wide tooltip half off-screen).
+  // Runs before paint, so the un-clamped position is never visible.
+  useLayoutEffect(() => {
+    if (!tooltip || !tooltipRef.current || !containerRef.current) return
+    const PAD = 6
+    const tooltipWidth = tooltipRef.current.offsetWidth
+    const containerWidth = containerRef.current.offsetWidth
+    const desired = anchor.left - tooltipWidth / 2
+    const clamped = Math.min(Math.max(desired, PAD), containerWidth - tooltipWidth - PAD)
+    setMeasured({ date: tooltip, left: clamped })
+  }, [tooltip, anchor])
+
   if (!plantedDays.length && monthTreeCount === 0) {
     return (
       <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#9B8FC0', padding: '8px 0 4px' }}>
@@ -271,12 +289,13 @@ function ForestStrip({ monthForest, monthTreeCount }) {
   }
 
   const selected = plantedDays.find(d => d.date === tooltip)
+  const isMeasured = measured?.date === tooltip
 
   function handleDayClick(e, date) {
     if (tooltip === date) { setTooltip(null); return }
     const containerRect = containerRef.current.getBoundingClientRect()
     const btnRect = e.currentTarget.getBoundingClientRect()
-    setTooltipPos({
+    setAnchor({
       left: btnRect.left - containerRect.left + btnRect.width / 2,
       top: btnRect.top - containerRect.top,
     })
@@ -297,14 +316,20 @@ function ForestStrip({ monthForest, monthTreeCount }) {
       </div>
       {selected && (
         // anchored to the tapped tree's own position (measured at click time),
-        // not a fixed corner — sits directly above whichever day was tapped.
-        <div style={{
-          position: 'absolute', left: tooltipPos.left, top: tooltipPos.top - 8, transform: 'translate(-50%, -100%)', zIndex: 30,
-          background: '#fff', borderRadius: 10, padding: '6px 10px', boxShadow: '0 6px 18px rgba(0,0,0,.16)',
-          fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#4a3f2e',
-          whiteSpace: 'nowrap',
+        // then clamped to the strip's bounds once its real width is known.
+        <div ref={tooltipRef} style={{
+          position: 'absolute',
+          left: isMeasured ? measured.left : anchor.left,
+          top: anchor.top - 8,
+          transform: isMeasured ? 'translateY(-100%)' : 'translate(-50%, -100%)',
+          visibility: isMeasured ? 'visible' : 'hidden',
+          zIndex: 30,
+          background: '#fff', borderRadius: 10, padding: '6px 12px', boxShadow: '0 6px 18px rgba(0,0,0,.16)',
+          fontFamily: 'Nunito, sans-serif', color: '#4a3f2e', whiteSpace: 'nowrap',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
         }}>
-          {formatStripDate(selected.date)} · {selected.count} {selected.count === 1 ? 'contribution' : 'contributions'}
+          <span style={{ fontWeight: 700, fontSize: 11 }}>{formatStripDate(selected.date)}</span>
+          <span style={{ fontWeight: 800, fontSize: 10.5, color: '#37a06f' }}>{selected.count} {selected.count === 1 ? 'contribution' : 'contributions'}</span>
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
