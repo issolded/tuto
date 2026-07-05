@@ -37,7 +37,7 @@ async function getParentContext(parentId) {
       { data: ledger },
       { data: stories },
       { data: books },
-      { data: pendingContribs },
+      { data: pendingContribs, error: pendingError },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -54,6 +54,11 @@ async function getParentContext(parentId) {
     const today = todaySubs || []
     const pendingContributions = pendingContribs || []
 
+    // A failed read here must NEVER be reported as "no pending contributions" —
+    // that's a false negative a parent could act on (or rather, not act on).
+    // Surface the failure explicitly instead of silently coercing it to [].
+    if (pendingError) console.error(`[CONTEXT] pending contributions read failed for child=${child.id}: ${pendingError.message}`)
+
     return {
       name: child.name,
       age: child.age,
@@ -64,7 +69,10 @@ async function getParentContext(parentId) {
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
-      pendingContributions: pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`,
+      pendingContributions: pendingError
+        ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
+        : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
+      pendingCheckFailed: !!pendingError,
       parentPrefs,
     }
   }))
@@ -562,13 +570,20 @@ async function handleMessage(parentId, replyCb, text) {
         ? c.pendingContributions.map(p => ({ id: p.id, label: p.label, category: p.category, child: c.name }))
         : []
     )
+    // If the pending read failed for any child, the list above is NOT "empty" —
+    // it's unknown. Must not let the deterministic block claim "nothing pending"
+    // in that case, since that's a false negative the parent could act on.
+    const pendingCheckFailed = familyData.some(c => c.pendingCheckFailed)
 
     function buildSystemPrompt(currentPendingList) {
-      const pendingBlock =
-        `ŞU AN ONAY BEKLEYEN KATKILAR (toplam ${currentPendingList.length}):\n` +
-        (currentPendingList.length
-          ? currentPendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n')
-          : 'Şu anda onay bekleyen katkı yok.')
+      const pendingBlock = pendingCheckFailed
+        ? `ŞU AN ONAY BEKLEYEN KATKILAR: bu bilgi şu anda okunamadı (geçici bir hata oluştu).\n` +
+          `- Onay bekleyenler hakkında KESİN bir şey söyleme — ne "yok" de ne bir sayı ver. Parent'a şu anda ` +
+          `kontrol edemediğini söyle, birazdan tekrar sormasını iste.`
+        : `ŞU AN ONAY BEKLEYEN KATKILAR (toplam ${currentPendingList.length}):\n` +
+          (currentPendingList.length
+            ? currentPendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n')
+            : 'Şu anda onay bekleyen katkı yok.')
 
       return (
         `${childrenBlock}\n\n` +
