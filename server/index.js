@@ -327,11 +327,13 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'approve_contribution',
       description:
-        'Approve a pending household contribution diary entry. Only call this when the parent clearly expresses ' +
-        'intent to approve ONE SPECIFIC contribution from the pending list. If more than one contribution is ' +
-        'pending and it is unclear which one the parent means, do NOT call this — ask the parent to clarify first. ' +
-        'If the parent wants to approve multiple contributions (e.g. "both", "approve all of them"), make a ' +
-        'SEPARATE approve_contribution call for each contribution.',
+        'Approve ONE SPECIFIC pending household contribution diary entry, by its exact id. Only call this when ' +
+        'the parent clearly expresses intent to approve a single named/described contribution from the pending ' +
+        'list. If more than one contribution is pending and it is unclear which one the parent means, do NOT call ' +
+        'this — ask the parent to clarify first. If the parent wants to approve ALL of a child\'s pending ' +
+        'contributions at once (e.g. "hepsini onayla", "approve all", "ikisini de onayla", "approve both"), use ' +
+        'approve_all_pending instead — do NOT call this repeatedly to cover multiple contributions; copying long ' +
+        'ids by hand for each one is unreliable and can silently fail partway through.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -339,6 +341,21 @@ const CONTRIBUTION_TOOLS = [{
           note: { type: 'STRING', description: 'Optional note from the parent to pass along to the child.' },
         },
         required: ['contribution_id'],
+      },
+    },
+    {
+      name: 'approve_all_pending',
+      description:
+        'Ebeveyn bir çocuğun TÜM onay bekleyen katkılarını onaylamak isterse (örn. "hepsini onayla", "approve ' +
+        'all", "ikisini de onayla") bunu kullan. Tek tek contribution_id vermeye gerek yok — bu araç o çocuğun ' +
+        'tüm pending katkılarını tek işlemde onaylar. Sadece belirli/tek bir katkı onaylanmak isteniyorsa bunun ' +
+        'yerine approve_contribution kullan.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child whose pending contributions should all be approved, taken from the children list in context.' },
+        },
+        required: ['child_id'],
       },
     },
     {
@@ -396,6 +413,33 @@ async function approveContributionTool(contributionId, parentId) {
     .single()
   if (error || !updated) return { success: false, error: error?.message || 'contribution not found' }
   return { success: true, id: updated.id, label: updated.label, status: updated.status }
+}
+
+// Approves every pending contribution for a child in one deterministic
+// update — no per-id copying by the LLM, so a long list can't partially
+// fail from a mis-copied UUID the way repeated approve_contribution calls did.
+async function approveAllPendingTool(childId, parentId) {
+  const { data: child } = await supabase.from('children').select('id, name').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+
+  const { data: updated, error } = await supabase
+    .from('contribution_log')
+    .update({ status: 'approved', approved_at: DateTime.utc().toISO(), approved_by: parentId || null })
+    .eq('child_id', childId)
+    .eq('status', 'pending')
+    .select('id, label')
+
+  if (error) return { success: false, error: error.message }
+  if (!updated?.length) return { success: false, error: `${child.name} has no contributions awaiting approval` }
+
+  return {
+    success: true,
+    childId: child.id,
+    childName: child.name,
+    count: updated.length,
+    labels: updated.map(u => u.label),
+    approvedIds: updated.map(u => u.id),
+  }
 }
 
 async function rejectContributionTool(contributionId) {
@@ -538,15 +582,19 @@ async function handleMessage(parentId, replyCb, text) {
         `Tool usage rules:\n` +
         `- Use the exact "id" from the pending contributions list above when calling approve_contribution or ` +
         `reject_contribution.\n` +
-        `- Use the exact "id" from the children list above when calling add_card.\n` +
+        `- Use the exact "id" from the children list above when calling add_card or approve_all_pending.\n` +
         `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
         `Approving simply adds a leaf to the child's tree.\n` +
         `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
         `added to their tree instead.\n` +
+        `- If the parent wants ALL of a child's pending contributions approved at once ("hepsini onayla", ` +
+        `"approve all", "ikisini de onayla"), call approve_all_pending ONCE with that child's id — never call ` +
+        `approve_contribution multiple times to cover a bulk request.\n` +
         `- Only call approve_contribution or reject_contribution when the parent clearly states approve/reject ` +
-        `intent for ONE SPECIFIC contribution.\n` +
-        `- If more than one contribution is pending and it is unclear which one the parent means, do NOT call a ` +
-        `tool — ask which one they mean first, in the same language as the parent's message.\n` +
+        `intent for ONE SPECIFIC contribution (not a bulk "all" request).\n` +
+        `- If more than one contribution is pending, the parent isn't asking to approve all of them, and it is ` +
+        `unclear which one they mean, do NOT call a tool — ask which one they mean first, in the same language ` +
+        `as the parent's message.\n` +
         `- For add_card: if the parent doesn't name a child and there is only one child, use that child. If ` +
         `there are multiple children and it's unclear which one they mean, do NOT call add_card — ask which ` +
         `child first, in the same language as the parent's message.\n` +
@@ -601,6 +649,8 @@ async function handleMessage(parentId, replyCb, text) {
       let toolResult
       if (name === 'approve_contribution') {
         toolResult = await approveContributionTool(args.contribution_id, parentId)
+      } else if (name === 'approve_all_pending') {
+        toolResult = await approveAllPendingTool(args.child_id, parentId)
       } else if (name === 'reject_contribution') {
         toolResult = await rejectContributionTool(args.contribution_id)
       } else if (name === 'add_card') {
@@ -614,7 +664,11 @@ async function handleMessage(parentId, replyCb, text) {
 
     // Refresh the pending list so the second call doesn't contradict itself —
     // a just-approved/rejected contribution must no longer show as pending.
-    const processedIds = new Set(toolResults.filter(t => t.result.success).map(t => t.contributionId))
+    // approve_all_pending has no single contributionId — it reports the whole
+    // batch via result.approvedIds instead.
+    const processedIds = new Set(
+      toolResults.filter(t => t.result.success).flatMap(t => t.result.approvedIds ?? (t.contributionId ? [t.contributionId] : []))
+    )
     const refreshedPendingList = pendingList.filter(p => !processedIds.has(p.id))
     const refreshedSystemPrompt = buildSystemPrompt(refreshedPendingList)
 
