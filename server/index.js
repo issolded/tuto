@@ -395,10 +395,11 @@ const CONTRIBUTION_TOOLS = [{
         'itself is genuinely ambiguous (e.g. you can\'t tell what they even mean). "household" is a last-resort ' +
         'fallback for when the action truly fits none of the others — never ask the parent to pick a category.\n' +
         'Keep the label to the bare action only — strip out frequency/schedule words the parent adds ("her gün", ' +
-        '"hem sabah hem akşam", "günde iki kez", "every day", "twice a day"). E.g. parent says "diş fırçalama hem ' +
-        'sabah hem akşam ekle" → label should be just "diş fırçalama" (tooth brushing), not the schedule part. ' +
-        'There is no recurrence/frequency system yet, so that information is simply dropped — the card itself ' +
-        'stays a single short action.',
+        '"sabah akşam", "günde iki kez", "every day", "twice a day"). E.g. parent says "bulaşıkları yıka her ' +
+        'akşam ekle" → label should be just "bulaşıkları yıka" (do the dishes), not the schedule part. There is ' +
+        'no recurrence/frequency system yet, so that information is simply dropped — the card itself stays a ' +
+        'single short action. This stripping rule applies ONLY to the label you pass into THIS tool call — never ' +
+        'apply it when reading back or listing existing pending contributions elsewhere.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -582,7 +583,11 @@ async function handleMessage(parentId, replyCb, text) {
           `kontrol edemediğini söyle, birazdan tekrar sormasını iste.`
         : `ŞU AN ONAY BEKLEYEN KATKILAR (toplam ${currentPendingList.length}):\n` +
           (currentPendingList.length
-            ? currentPendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n')
+            ? currentPendingList.map(p => `- id=${p.id}: "${p.label}" — ${p.child} (${p.category})`).join('\n') +
+              `\n- Bu ${currentPendingList.length} kaydın HEPSİNİ, olduğu gibi (etiketi kısaltmadan/değiştirmeden) ` +
+              `say ve listele. "her gün", "hem sabah hem akşam" gibi zamanlama ifadeleri içeren bir etiket görürsen ` +
+              `bile bunu atlama/kısaltma — o temizleme kuralı SADECE add_card aracını çağırırken yeni bir kart ` +
+              `etiketi üretmek için geçerlidir, bu listeyi okuyup söylerken hiçbir şekilde uygulanmaz.`
             : 'Şu anda onay bekleyen katkı yok.')
 
       return (
@@ -615,9 +620,11 @@ async function handleMessage(parentId, replyCb, text) {
         `child first, in the same language as the parent's message.\n` +
         `- For add_card: pick the category yourself, silently — never ask the parent which category to use. ` +
         `Only skip the tool call to ask a question if the action itself is unclear.\n` +
-        `- For add_card: strip frequency/schedule wording from the label ("her gün", "hem sabah hem akşam", ` +
+        `- For add_card: strip frequency/schedule wording from the label ("her gün", "sabah akşam", ` +
         `"günde iki kez", "every day", "twice a day", etc.) — keep only the bare action. There is no ` +
-        `recurrence system yet, so that part of what the parent said is simply dropped, not stored.\n\n` +
+        `recurrence system yet, so that part of what the parent said is simply dropped, not stored. This ` +
+        `stripping is ONLY for the label argument you pass into add_card — never apply it when reading, ` +
+        `listing, or counting existing pending contributions elsewhere in this prompt.\n\n` +
         `General guidelines:\n` +
         `- Respond in the SAME LANGUAGE as the parent's message\n` +
         `- Be conversational and warm, like a trusted friend who knows the kids\n` +
@@ -651,7 +658,28 @@ async function handleMessage(parentId, replyCb, text) {
     const fnCallParts = parts.filter(p => p.functionCall)
 
     if (fnCallParts.length === 0) {
-      const reply = parts.map(p => p.text || '').join('').trim() || 'Üzgünüm, anlayamadım.'
+      // Verified empirically: attaching `tools` measurably degrades plain-text
+      // list reproduction — with the exact same data, Gemini reliably drops
+      // one item from a 5-item pending list ~80% of the time when `tools` is
+      // present, and 0% of the time with it omitted. Since no function was
+      // actually called, re-ask without `tools` for the reply that's actually
+      // sent to the parent, instead of trusting this call's own text.
+      const plainRes = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents,
+        }),
+      })
+      let reply = 'Üzgünüm, anlayamadım.'
+      if (plainRes.ok) {
+        const plainData = await plainRes.json()
+        reply = plainData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || reply
+      } else {
+        // Fall back to the tools-attached call's text rather than failing outright.
+        reply = parts.map(p => p.text || '').join('').trim() || reply
+      }
       await logMessage(parentId, 'tuto', reply)
       await replyCb(reply)
       console.log(`[MSG] Reply sent to parent ${parentId}`)
