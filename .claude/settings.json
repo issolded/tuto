@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "git pull --ff-only 2>&1 || true",
+            "statusMessage": "Arkadaşının son değişiklikleri çekiliyor (git pull)…"
+          }
+        ]
+      }
+    ]
+  }
+}
