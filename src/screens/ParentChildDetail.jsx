@@ -7,6 +7,8 @@ import {
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot,
 } from '../lib/parentUI'
 
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+
 const TASK_LABELS = {
   math:    { label: 'My Math',    type: 'math' },
   reading: { label: 'My Books',   type: 'reading' },
@@ -397,7 +399,7 @@ export default function ParentChildDetail() {
       // must stay visible here until approved/rejected, no matter which
       // month it was logged in (see server/index.js for why scope=month
       // would silently drop it once the month rolls over).
-      fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions?child_id=${id}&scope=pending`).then(r => r.json()),
+      fetch(`${SERVER}/api/contributions?child_id=${id}&scope=pending`).then(r => r.json()),
     ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
@@ -438,7 +440,7 @@ export default function ParentChildDetail() {
   // Diary approvals never touch bt_ledger — gems for contributions are
   // computed separately in the end-of-month review, by design.
   async function handleApproveContribution(c) {
-    await fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions/${c.id}/approve`, {
+    await fetch(`${SERVER}/api/contributions/${c.id}/approve`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ parent_id: child.parent_id }),
     })
@@ -446,7 +448,7 @@ export default function ParentChildDetail() {
   }
 
   async function handleRejectContribution(c) {
-    await fetch(`${import.meta.env.VITE_SERVER_URL}/api/contributions/${c.id}/reject`, { method: 'POST' })
+    await fetch(`${SERVER}/api/contributions/${c.id}/reject`, { method: 'POST' })
     setContributions(prev => prev.map(x => x.id === c.id ? { ...x, status: 'rejected' } : x))
   }
 
