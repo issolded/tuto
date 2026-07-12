@@ -12,8 +12,10 @@ const MSG = {
   try_again:      "I couldn't see the cover clearly... try better lighting? 📸",
 }
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`
+// Gemini calls go through the backend — the API key must never ship in the
+// client bundle (see src/lib/gemini.js for why).
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+const API_URL = `${SERVER}/api/gemini/generate`
 
 // ─── Gemini helpers ───────────────────────────────────────────────────────────
 
@@ -31,7 +33,7 @@ async function geminiJSON(parts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts }],
+      parts,
       generationConfig: { response_mime_type: 'application/json' },
     }),
   })

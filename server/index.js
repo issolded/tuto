@@ -837,6 +837,33 @@ app.use(express.json({ limit: '15mb' }))
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
+// Proxies Gemini calls from the frontend — GEMINI_API_KEY must never ship in
+// the client bundle (it did before this, got scraped/flagged as leaked by
+// Google, and both frontend and backend Gemini access broke as a result).
+// Frontend still builds prompts and parses responses; this is a pure
+// pass-through with the key attached server-side only.
+app.post('/api/gemini/generate', async (req, res) => {
+  try {
+    const { parts, generationConfig } = req.body
+    if (!Array.isArray(parts) || parts.length === 0) {
+      return res.status(400).json({ error: 'parts required' })
+    }
+    const geminiRes = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: generationConfig || { response_mime_type: 'application/json' },
+      }),
+    })
+    const data = await geminiRes.json()
+    if (!geminiRes.ok) return res.status(geminiRes.status).json(data)
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/family/:code/children', async (req, res) => {
   const code = req.params.code?.trim().toUpperCase()
   if (!code) return res.status(400).json({ error: 'code required' })

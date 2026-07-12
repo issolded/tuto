@@ -103,8 +103,11 @@ export { BRITISH_CURRICULUM }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`
+// Gemini calls go through the backend now — the API key must never ship in
+// the client bundle (it did before, got scraped and flagged as leaked by
+// Google, which broke Gemini access everywhere, frontend and backend alike).
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+const API_URL = `${SERVER}/api/gemini/generate`
 
 function langInstruction(language) {
   return language === 'tr'
@@ -191,7 +194,7 @@ async function callGemini(parts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts }],
+      parts,
       generationConfig: { response_mime_type: 'application/json' },
     }),
   })
