@@ -794,11 +794,12 @@ function setupMessageListener() {
   setMessageHandler((parentId, phone, text) =>
     handleMessage(parentId, msg => sendMessage(parentId, phone, msg), text)
   )
-  setTelegramMessageHandler(async (parentId, chatId, text) => {
-    // Early "typing…" as soon as the message comes in, before the (slower)
-    // Gemini call even starts — sendTelegramMessage below covers the actual
-    // reply with its own typing+humanize delay.
-    await sendTelegramTyping(chatId).catch(() => {})
+  setTelegramMessageHandler((parentId, chatId, text) => {
+    // A real person reads the message and pauses before typing — so the
+    // typing indicator itself is delayed ~1s, but that delay must not push
+    // back when Gemini starts thinking. Fire-and-forget: the timeout and
+    // handleMessage run in parallel, not sequentially.
+    setTimeout(() => sendTelegramTyping(chatId).catch(() => {}), 800 + Math.random() * 700)
     return handleMessage(parentId, msg => sendTelegramMessage(chatId, msg), text)
   })
   console.log('Message listeners started (WhatsApp + Telegram).')
