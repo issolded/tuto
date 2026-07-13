@@ -68,8 +68,8 @@ async function fetchGeminiOnce(body) {
 }
 
 const GEMINI_FALLBACK_REPLY = {
-  tr: 'Şu an biraz yoğunum, bir dakika sonra tekrar yazar mısın? 🙏',
-  en: "I'm a bit busy right now — could you try again in a minute? 🙏",
+  tr: 'Şu an yapay zeka platformumdaki bir teknik sorun nedeniyle mesajla yanıt veremiyorum. Bunu çözene kadar tüm ayarlara ve onaylara Tuto uygulaması üzerinden erişebilirsiniz.',
+  en: "I'm currently unable to reply due to a technical issue with my AI platform. Until this is resolved, you can access all settings and approvals through the Tuto app.",
 }
 
 async function getParentContext(parentId) {
