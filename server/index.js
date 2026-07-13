@@ -16,6 +16,62 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
+// Transient-only: 503/429/"overloaded"/"high demand" get retried, everything
+// else (400 bad prompt, etc.) throws immediately — a real bug shouldn't repeat 3x.
+function isRetryableGeminiError(err) {
+  if (err?.status === 503 || err?.status === 429) return true
+  return /overloaded|high demand|unavailable|rate.?limit|resource_exhausted/i.test(err?.message || '')
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+const GEMINI_RETRY_DELAYS_MS = [500, 1500, 4000]
+
+// Runs `fn` (one attempt at a Gemini call) with retry-on-transient-failure:
+// up to 3 retries (4 attempts total) with exponential backoff + jitter.
+// Non-retryable errors propagate immediately without waiting.
+async function callGeminiWithRetry(fn) {
+  let lastErr
+  for (let i = 0; i <= GEMINI_RETRY_DELAYS_MS.length; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (i === GEMINI_RETRY_DELAYS_MS.length || !isRetryableGeminiError(err)) throw err
+      const base = GEMINI_RETRY_DELAYS_MS[i]
+      const delay = base + Math.random() * base * 0.2
+      console.warn(`[MSG] Gemini transient error, retry ${i + 1}/${GEMINI_RETRY_DELAYS_MS.length} in ${Math.round(delay)}ms: ${err.message}`)
+      await sleep(delay)
+    }
+  }
+  throw lastErr
+}
+
+// One attempt at a Gemini call — resolves with parsed JSON, or throws an
+// Error with `.status` set to the HTTP status so callGeminiWithRetry can
+// tell a transient failure from a real one.
+async function fetchGeminiOnce(body) {
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}))
+    const err = new Error(errBody.error?.message || `Gemini API error ${res.status}`)
+    err.status = res.status
+    throw err
+  }
+  return res.json()
+}
+
+const GEMINI_FALLBACK_REPLY = {
+  tr: 'Şu an biraz yoğunum, bir dakika sonra tekrar yazar mısın? 🙏',
+  en: "I'm a bit busy right now — could you try again in a minute? 🙏",
+}
+
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
@@ -546,15 +602,20 @@ async function logMessage(parentId, role, content) {
 
 async function handleMessage(parentId, replyCb, text) {
   console.log(`[MSG] parent=${parentId} → "${text}"`)
+  // Declared here (not inside try) so the catch block can still send a
+  // localized fallback reply if we made it far enough to know the parent's
+  // language before something failed.
+  let language = 'tr'
   try {
     const historyContents = await fetchConversationHistory(parentId)
     await logMessage(parentId, 'parent', text)
 
     const [familyData, { data: parentRow }, { data: childrenRows }] = await Promise.all([
       getParentContext(parentId),
-      supabase.from('parents').select('timezone').eq('id', parentId).single(),
+      supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
       supabase.from('children').select('id, name').eq('parent_id', parentId),
     ])
+    language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
     const tz = parentRow?.timezone || 'UTC'
     const userNow = DateTime.now().setZone(tz)
     const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
@@ -640,20 +701,11 @@ async function handleMessage(parentId, replyCb, text) {
     const systemPrompt = buildSystemPrompt(pendingList)
     const contents = [...historyContents, { role: 'user', parts: [{ text }] }]
 
-    const firstRes = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        tools: CONTRIBUTION_TOOLS,
-      }),
-    })
-    if (!firstRes.ok) {
-      const err = await firstRes.json().catch(() => ({}))
-      throw new Error(err.error?.message || `Gemini API error ${firstRes.status}`)
-    }
-    const firstData = await firstRes.json()
+    const firstData = await callGeminiWithRetry(() => fetchGeminiOnce({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      tools: CONTRIBUTION_TOOLS,
+    }))
     const parts = firstData.candidates?.[0]?.content?.parts || []
     const fnCallParts = parts.filter(p => p.functionCall)
 
@@ -664,19 +716,14 @@ async function handleMessage(parentId, replyCb, text) {
       // present, and 0% of the time with it omitted. Since no function was
       // actually called, re-ask without `tools` for the reply that's actually
       // sent to the parent, instead of trusting this call's own text.
-      const plainRes = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let reply = 'Üzgünüm, anlayamadım.'
+      try {
+        const plainData = await callGeminiWithRetry(() => fetchGeminiOnce({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents,
-        }),
-      })
-      let reply = 'Üzgünüm, anlayamadım.'
-      if (plainRes.ok) {
-        const plainData = await plainRes.json()
+        }))
         reply = plainData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || reply
-      } else {
+      } catch {
         // Fall back to the tools-attached call's text rather than failing outright.
         reply = parts.map(p => p.text || '').join('').trim() || reply
       }
@@ -715,30 +762,31 @@ async function handleMessage(parentId, replyCb, text) {
     const refreshedPendingList = pendingList.filter(p => !processedIds.has(p.id))
     const refreshedSystemPrompt = buildSystemPrompt(refreshedPendingList)
 
-    const secondRes = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
-        contents: [
-          ...contents,
-          { role: 'model', parts: fnCallParts.map(p => ({ functionCall: p.functionCall })) },
-          { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
-        ],
-        tools: CONTRIBUTION_TOOLS,
-      }),
-    })
-    if (!secondRes.ok) {
-      const err = await secondRes.json().catch(() => ({}))
-      throw new Error(err.error?.message || `Gemini API error ${secondRes.status}`)
-    }
-    const secondData = await secondRes.json()
+    const secondData = await callGeminiWithRetry(() => fetchGeminiOnce({
+      system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
+      contents: [
+        ...contents,
+        { role: 'model', parts: fnCallParts.map(p => ({ functionCall: p.functionCall })) },
+        { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
+      ],
+      tools: CONTRIBUTION_TOOLS,
+    }))
     const finalText = secondData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || 'Tamamlandı.'
     await logMessage(parentId, 'tuto', finalText)
     await replyCb(finalText)
     console.log(`[MSG] Reply sent to parent ${parentId}`)
   } catch (err) {
     console.error('[MSG] Message handling error:', err.message)
+    // Every Gemini call above already retried transient failures — if we're
+    // here, it's exhausted or something else broke. Either way the parent
+    // must never get silence: send a fixed, human fallback without calling
+    // Gemini again.
+    try {
+      await logMessage(parentId, 'tuto', GEMINI_FALLBACK_REPLY[language])
+      await replyCb(GEMINI_FALLBACK_REPLY[language])
+    } catch (replyErr) {
+      console.error('[MSG] Fallback reply also failed:', replyErr.message)
+    }
   }
 }
 
