@@ -1,5 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api'
 import { createClient } from '@supabase/supabase-js'
+import { humanizeDelay } from './humanize.js'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -87,7 +88,17 @@ export function startTelegramBot() {
 
 export async function sendTelegramMessage(chatId, message) {
   if (!bot) throw new Error('Telegram bot not started')
+  await bot.sendChatAction(String(chatId), 'typing')
+  await new Promise(r => setTimeout(r, humanizeDelay(message)))
   await bot.sendMessage(String(chatId), message)
+}
+
+// Early "typing…" ping for the moment a message comes in, before the reply
+// (and its own typing+delay in sendTelegramMessage) is ready — Telegram's
+// typing indicator fades after ~5s, so this just covers the "thinking" gap.
+export async function sendTelegramTyping(chatId) {
+  if (!bot) return
+  await bot.sendChatAction(String(chatId), 'typing')
 }
 
 export async function sendTelegramPhoto(chatId, photoUrl, caption) {

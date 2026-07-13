@@ -6,7 +6,7 @@ import { DateTime } from 'luxon'
 import axios from 'axios'
 import FormData from 'form-data'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
-import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, getTelegramChatId, setTelegramMessageHandler } from './telegram.js'
+import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -794,9 +794,13 @@ function setupMessageListener() {
   setMessageHandler((parentId, phone, text) =>
     handleMessage(parentId, msg => sendMessage(parentId, phone, msg), text)
   )
-  setTelegramMessageHandler((parentId, chatId, text) =>
-    handleMessage(parentId, msg => sendTelegramMessage(chatId, msg), text)
-  )
+  setTelegramMessageHandler(async (parentId, chatId, text) => {
+    // Early "typing…" as soon as the message comes in, before the (slower)
+    // Gemini call even starts — sendTelegramMessage below covers the actual
+    // reply with its own typing+humanize delay.
+    await sendTelegramTyping(chatId).catch(() => {})
+    return handleMessage(parentId, msg => sendTelegramMessage(chatId, msg), text)
+  })
   console.log('Message listeners started (WhatsApp + Telegram).')
 }
 
