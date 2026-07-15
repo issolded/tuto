@@ -766,7 +766,15 @@ async function handleMessage(parentId, replyCb, text) {
       system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
       contents: [
         ...contents,
-        { role: 'model', parts: fnCallParts.map(p => ({ functionCall: p.functionCall })) },
+        // Echo the model's own content object verbatim — Gemini 3.x requires
+        // each functionCall part's thoughtSignature to round-trip unchanged.
+        // Rebuilding { functionCall: { name, args } } by hand (the old code)
+        // drops it and gets a 400 "missing thought_signature". Only the
+        // FIRST functionCall part carries a signature in a parallel call;
+        // that's expected — pass the parts through as-is, don't invent one.
+        firstData.candidates[0].content,
+        // All functionResponses grouped into one user turn, same order as
+        // the functionCall parts above — required order is FC1(+sig),FC2,...,FR1,FR2,...
         { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
       ],
       tools: CONTRIBUTION_TOOLS,
