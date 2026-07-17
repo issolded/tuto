@@ -13,7 +13,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // the upload fails with "new row violates row-level security policy". This
 // client never carries a session, so child uploads always go as anon.
 const storageClient = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
+  // persistSession:false → never loads the parent's persisted session; a
+  // distinct storageKey keeps it off the shared auth-token key entirely (no
+  // "Multiple GoTrueClient instances… same storage key" collision).
+  auth: { persistSession: false, autoRefreshToken: false, storageKey: 'tuto-anon-upload' },
 })
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
