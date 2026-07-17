@@ -1834,9 +1834,18 @@ const HOMEWORK_MAX_PHOTOS = 15
 
 app.post('/api/children/:childId/homework', async (req, res) => {
   const { childId } = req.params
-  const { photos } = req.body
-  if (!Array.isArray(photos) || photos.length === 0) return res.status(400).json({ error: 'photos required' })
-  if (photos.length > HOMEWORK_MAX_PHOTOS) return res.status(400).json({ error: `en fazla ${HOMEWORK_MAX_PHOTOS} fotoğraf gönderilebilir` })
+  const { paths } = req.body
+  // Client uploads the images straight to Storage (like chore) and sends only
+  // the paths — so the request body stays tiny no matter how many pages, and
+  // the ORIGINAL bytes (with EXIF) live on the server side to read.
+  if (!Array.isArray(paths) || paths.length === 0) return res.status(400).json({ error: 'paths required' })
+  if (paths.length > HOMEWORK_MAX_PHOTOS) return res.status(400).json({ error: `en fazla ${HOMEWORK_MAX_PHOTOS} fotoğraf gönderilebilir` })
+  // Constrain to this child's own homework folder — a client can't point the
+  // submission at some other object in the bucket.
+  const prefix = `${childId}/homework/`
+  if (!paths.every(p => typeof p === 'string' && p.startsWith(prefix))) {
+    return res.status(400).json({ error: 'invalid path' })
+  }
 
   try {
     const { data: child } = await supabase
@@ -1850,17 +1859,19 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const tone = typeof prefs.tone === 'string' && prefs.tone ? prefs.tone : null
     const tz = parentRow?.timezone || 'UTC'
 
-    // 1. Decode buffers. Read EXIF DateTimeOriginal from the FIRST photo's
-    //    ORIGINAL bytes — this must happen before any resize (which strips EXIF).
-    //    Screenshots carry no EXIF; null is expected and fine. CODE (not Gemini)
-    //    decides photo_taken_at.
-    const decoded = photos.map(p => {
-      const b64 = typeof p?.imageBase64 === 'string' && p.imageBase64.includes(',')
-        ? p.imageBase64.split(',')[1]
-        : p?.imageBase64
-      return { buffer: Buffer.from(b64 || '', 'base64'), mimeType: p?.mimeType || 'image/jpeg' }
-    })
-    if (decoded.some(d => d.buffer.length === 0)) return res.status(400).json({ error: 'invalid image data' })
+    // 1. Download the ORIGINAL bytes from Storage (service role). Read EXIF
+    //    DateTimeOriginal from the FIRST photo — the client never resized, so
+    //    EXIF is intact. Screenshots carry no EXIF; null is expected and fine.
+    //    CODE (not Gemini, not the client) decides photo_taken_at.
+    const decoded = []
+    for (const path of paths) {
+      const { data: blob, error: dlErr } = await supabase.storage.from('submissions').download(path)
+      if (dlErr || !blob) return res.status(400).json({ error: `could not read ${path}` })
+      const buffer = Buffer.from(await blob.arrayBuffer())
+      if (buffer.length === 0) return res.status(400).json({ error: 'empty image' })
+      const mimeType = blob.type && blob.type.startsWith('image/') ? blob.type : (path.endsWith('.png') ? 'image/png' : 'image/jpeg')
+      decoded.push({ buffer, mimeType })
+    }
 
     let photoTakenAt = null
     try {
@@ -1870,17 +1881,9 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       }
     } catch { /* no EXIF (e.g. screenshot) — leave null */ }
 
-    // 2. Upload every page to Supabase Storage.
-    const photoUrls = []
-    for (let i = 0; i < decoded.length; i++) {
-      const ext = decoded[i].mimeType.includes('png') ? 'png' : 'jpg'
-      const path = `${childId}/homework/${Date.now()}-${i}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('submissions')
-        .upload(path, decoded[i].buffer, { contentType: decoded[i].mimeType, upsert: false })
-      if (upErr) return res.status(500).json({ error: upErr.message })
-      photoUrls.push(supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl)
-    }
+    // 2. Public URLs for the already-uploaded pages (used in the submission row
+    //    and the parent album).
+    const photoUrls = paths.map(p => supabase.storage.from('submissions').getPublicUrl(p).data.publicUrl)
 
     // 3. Gemini observation — server-side only. On failure we still record the
     //    submission and notify the parent (observation stays null).
