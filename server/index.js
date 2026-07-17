@@ -8,7 +8,7 @@ import FormData from 'form-data'
 import exifr from 'exifr'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramMediaGroup, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
-import { homeworkObservationPrompt, validateObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
+import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -1885,20 +1885,30 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     //    and the parent album).
     const photoUrls = paths.map(p => supabase.storage.from('submissions').getPublicUrl(p).data.publicUrl)
 
-    // 3. Gemini observation — server-side only. On failure we still record the
-    //    submission and notify the parent (observation stays null).
+    // 3. Gemini observation — server-side only. gemini-3.5-flash intermittently
+    //    emits invalid JSON even with response_mime_type set (typically an
+    //    unescaped double-quote inside a text field), so a bad parse gets ONE
+    //    fresh regeneration before we give up — a re-roll almost always yields
+    //    valid JSON. On total failure we still record the submission and notify
+    //    the parent (observation stays null). callGeminiWithRetry covers the
+    //    HTTP-transient axis; this loop covers the parse-validity axis.
     let observation = null
     try {
       const parts = [
         { text: homeworkObservationPrompt(language) },
         ...decoded.map(d => ({ inline_data: { mime_type: d.mimeType, data: d.buffer.toString('base64') } })),
       ]
-      const data = await callGeminiWithRetry(() => fetchGeminiOnce({
-        contents: [{ parts }],
-        generationConfig: { response_mime_type: 'application/json' },
-      }))
-      const raw = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
-      observation = validateObservation(raw)
+      for (let attempt = 0; attempt < 2 && !observation; attempt++) {
+        const data = await callGeminiWithRetry(() => fetchGeminiOnce({
+          contents: [{ parts }],
+          generationConfig: { response_mime_type: 'application/json' },
+        }))
+        try {
+          observation = parseObservation(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+        } catch (parseErr) {
+          console.warn(`[HOMEWORK] observation parse attempt ${attempt + 1} failed: ${parseErr.message}`)
+        }
+      }
     } catch (err) {
       console.error(`[HOMEWORK] observation failed: ${err.message}`)
     }

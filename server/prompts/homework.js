@@ -43,8 +43,22 @@ export function homeworkObservationPrompt(language) {
     `Hata yoksa null.\n` +
     `- looks_like_homework false ise diğer alanları doldurma.\n` +
     `- Birden fazla sayfa verildiyse hepsini birlikte değerlendir; observations bunları kapsayabilir.\n` +
+    `- Metin alanlarının İÇİNDE çift tırnak (") KULLANMA — bir ifadeyi alıntılaman gerekirse tek tırnak (') kullan. ` +
+    `Çıktı her koşulda geçerli JSON olmalı.\n` +
     `- Tüm metin alanları ${lang} dilinde.`
   )
+}
+
+// gemini-3.5-flash intermittently wraps the JSON in a code fence or appends
+// trailing prose/a duplicate object AFTER the closing brace (observed ~2/3 of
+// the time), which plain JSON.parse rejects. Slice out the outermost {...} and
+// parse that — deterministic, no extra API call. Throws if there's no object.
+export function parseObservation(text) {
+  const s = String(text || '')
+  const start = s.indexOf('{')
+  const end = s.lastIndexOf('}')
+  if (start === -1 || end === -1 || end < start) throw new Error('no JSON object in response')
+  return validateObservation(JSON.parse(s.slice(start, end + 1)))
 }
 
 // Whitelist + coerce Gemini's JSON into a shape the rest of the pipeline can
