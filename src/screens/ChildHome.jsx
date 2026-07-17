@@ -56,6 +56,19 @@ function TaskIcon({ type, c }) {
   )
 }
 
+// Homework tile icon — worksheet sheet + camera badge (see design handoff).
+function HomeworkIcon() {
+  return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
+      <rect x="14" y="8" width="30" height="40" rx="5" fill="#fff" stroke="#20201e" strokeWidth="4"/>
+      <path d="M21 20h16M21 28h16M21 36h10" stroke="#f79433" strokeWidth="3.4" strokeLinecap="round"/>
+      <rect x="34" y="34" width="22" height="17" rx="4" fill="#f79433" stroke="#20201e" strokeWidth="4"/>
+      <circle cx="45" cy="43" r="4.5" fill="#fff" stroke="#20201e" strokeWidth="3"/>
+      <path d="M40 34l1.6-3h6.8L50 34" stroke="#20201e" strokeWidth="3.4" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 
 export default function ChildHome() {
   const nav = useNavigate()
@@ -145,6 +158,20 @@ export default function ChildHome() {
               </div>
             </button>
           ))}
+
+          {/* My Homework — full-width, no reward pill (reward is pending/parent-set) */}
+          <button className="tuto-card" onClick={() => nav('/child/homework')}
+            style={{
+              gridColumn: '1 / -1',
+              background: '#fff', border: 'none', borderRadius: 22, padding: 12,
+              display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
+              cursor: 'pointer', textAlign: 'left', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
+            }}>
+            <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#FFF1CF', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <HomeworkIcon />
+            </div>
+            <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Homework</h3>
+          </button>
         </div>
       </div>
 

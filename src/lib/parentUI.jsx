@@ -25,6 +25,7 @@ export const PC = {
   math:     '#5aa9e6', mathBg:    '#E2F0FB',
   writing:  '#6cc28a', writingBg: '#E4F4EA',
   chore:    '#f3a35a', choreBg:   '#FCEEDF',
+  homework: '#e0a93b', homeworkBg: '#FBF1D6',
 }
 
 export const FONT = "'Plus Jakarta Sans', sans-serif"
@@ -101,7 +102,7 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
 
 export function TaskIcon({ type, size = 24, color }) {
   const c = color || PC[type] || PC.teal
-  const map = { reading: 'book', math: 'calc', writing: 'pencil', chore: 'house' }
+  const map = { reading: 'book', math: 'calc', writing: 'pencil', chore: 'house', homework: 'camera' }
   return <Icon name={map[type] || 'book'} size={size} color={c} sw={2.1} />
 }
 

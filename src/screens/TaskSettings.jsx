@@ -8,6 +8,7 @@ const TASKS = [
   { key: 'math',    label: 'My Math' },
   { key: 'writing', label: 'My Stories' },
   { key: 'chore',   label: 'My House' },
+  { key: 'homework', label: 'My Homework' },
 ]
 
 const DEFAULT_SETTINGS = {
@@ -15,6 +16,7 @@ const DEFAULT_SETTINGS = {
   math:    { active: true, gems: 30 },
   writing: { active: true, gems: 30 },
   chore:   { active: true, gems: 10 },
+  homework: { active: true, gems: 25 },
 }
 
 export default function TaskSettings() {

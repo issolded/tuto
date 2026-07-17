@@ -102,6 +102,26 @@ export async function uploadStoryCover(childId, file) {
   return data.cover_url
 }
 
+// Uploads homework photos (1..15) as base64 and creates a PENDING submission
+// server-side. Modeled on uploadStoryCover — the client only sends images; the
+// server does EXIF/Gemini/screening/gems. No gem math here by design.
+export async function submitHomework(childId, files) {
+  const photos = await Promise.all(
+    files.map(async (file) => ({
+      imageBase64: await fileToBase64(file),
+      mimeType: file.type || 'image/jpeg',
+    }))
+  )
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/homework`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ photos }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data
+}
+
 export async function saveSpellingErrors(childId, errors) {
   try {
     await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/spelling-errors`, {

@@ -5,8 +5,15 @@ import { createClient } from '@supabase/supabase-js'
 import { DateTime } from 'luxon'
 import axios from 'axios'
 import FormData from 'form-data'
+import exifr from 'exifr'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
-import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
+import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramMediaGroup, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
+import { homeworkObservationPrompt, validateObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
+
+// Default homework reward when a child's task_settings has no homework entry
+// yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
+// only — gems_earned is never taken from the client.
+const HOMEWORK_DEFAULT_GEMS = 25
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -94,6 +101,7 @@ async function getParentContext(parentId) {
       { data: stories },
       { data: books },
       { data: pendingContribs, error: pendingError },
+      { data: pendingSubs },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -102,6 +110,9 @@ async function getParentContext(parentId) {
       supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
+      // Pending submissions (homework/chore) awaiting a parent reply — WITH ids
+      // so the parent can approve/reject by free text ("onayla", "25 gem yeter").
+      supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
     ])
 
     const sub = submissions || []
@@ -129,6 +140,14 @@ async function getParentContext(parentId) {
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
         : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
       pendingCheckFailed: !!pendingError,
+      pendingSubmissions: (pendingSubs || []).map(s => ({
+        id: s.id,
+        task_type: s.task_type,
+        description: s.task_description || (s.task_type === 'homework' ? 'Ödev' : s.task_type),
+        suggested_gems: s.suggested_gems ?? null,
+        photo_taken_at: s.photo_taken_at ?? null,
+        created_at: s.created_at,
+      })),
       parentPrefs,
     }
   }))
@@ -370,6 +389,39 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl) {
   console.log(`[NOTIFY-PHOTO] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
 
+// Multi-photo variant for homework (up to 15 pages). Telegram gets a native
+// album; WhatsApp/Baileys have no album primitive here, so they fall back to
+// the first photo + caption (parent still sees the homework arrived and can
+// open the app). The notification must NEVER be lost — every path degrades to
+// text rather than throwing.
+async function sendNotificationWithPhotos(parentId, message, photoUrls) {
+  const urls = (photoUrls || []).filter(Boolean)
+  if (urls.length <= 1) return sendNotificationWithPhoto(parentId, message, urls[0] || null)
+
+  const { data: parent } = await supabase
+    .from('parents')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone')
+    .eq('id', parentId)
+    .single()
+
+  const channel = parent?.notification_channel || 'none'
+  console.log(`[NOTIFY-PHOTOS] parent=${parentId} channel="${channel}" photos=${urls.length}`)
+
+  if (channel === 'telegram' && parent?.telegram_chat_id) {
+    try {
+      await sendTelegramMediaGroup(parent.telegram_chat_id, urls, message)
+      console.log(`[NOTIFY-PHOTOS] ✅ Sent album (${urls.length}) via Telegram → parent ${parentId}`)
+      return
+    } catch (err) {
+      console.error(`[NOTIFY-PHOTOS] ❌ Telegram album failed: ${err.message} — trying single photo`)
+    }
+  }
+
+  // Any other channel, or a failed album: fall back to the single-photo path
+  // (which itself falls back to text if the photo send fails).
+  await sendNotificationWithPhoto(parentId, message, urls[0])
+}
+
 function setupConnectHandler() {
   setConnectHandler(async (parentId, phoneNumber) => {
     console.log(`[WA] First connect for parent ${parentId} — sending welcome message`)
@@ -466,8 +518,138 @@ const CONTRIBUTION_TOOLS = [{
         required: ['child_id', 'label', 'category'],
       },
     },
+    {
+      name: 'approve_submission',
+      description:
+        'Approve ONE SPECIFIC pending submission (a homework or a chore the child photographed), by its exact id ' +
+        'from the "pending submissions" list in context. Call this when the parent clearly approves it in free ' +
+        'text ("onayla", "evet", "tamam 25 gem", "harika, onaylıyorum"). ' +
+        'gems is OPTIONAL: pass it ONLY if the parent named an amount ("25 gem yeter", "give 10"). If the parent ' +
+        'just approves without a number, DO NOT pass gems — the server uses the configured reward. ' +
+        'If MORE THAN ONE submission is pending and it is unclear which one the parent means, do NOT call this — ' +
+        'ask which one first, in the parent\'s language. Never invent an id.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          submission_id: { type: 'STRING', description: 'The exact id of the submission to approve, taken from the pending submissions list in context.' },
+          gems: { type: 'NUMBER', description: 'Optional gem amount, ONLY if the parent explicitly stated one. Omit otherwise.' },
+          note: { type: 'STRING', description: 'Optional note from the parent to pass along to the child.' },
+        },
+        required: ['submission_id'],
+      },
+    },
+    {
+      name: 'reject_submission',
+      description:
+        'Reject a pending submission (homework or chore) by its exact id from the "pending submissions" list, when ' +
+        'the parent clearly declines it ("hayır", "eksik kalmış", "olmamış, tekrar yapsın"). No gems are awarded. ' +
+        'If more than one submission is pending and it is unclear which one the parent means, do NOT call this — ' +
+        'ask which one first, in the parent\'s language.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          submission_id: { type: 'STRING', description: 'The exact id of the submission to reject, taken from the pending submissions list in context.' },
+          note: { type: 'STRING', description: 'Optional note from the parent to pass along to the child.' },
+        },
+        required: ['submission_id'],
+      },
+    },
   ],
 }]
+
+// Approve a pending homework/chore submission from a parent's free-text reply.
+// Every rule here is DETERMINISTIC — the LLM only picks the id and (maybe) an
+// amount; code decides authorization, double-approval, the reward value, the
+// clamp, and the single ledger write.
+async function approveSubmissionTool(submissionId, parentId, gems) {
+  const { data: sub } = await supabase
+    .from('submissions')
+    .select('id, child_id, task_type, status, suggested_gems')
+    .eq('id', submissionId)
+    .maybeSingle()
+  if (!sub) return { success: false, error: 'submission not found' }
+
+  // Rule 1 — authorization: the submission's child must belong to THIS parent.
+  const { data: child } = await supabase
+    .from('children')
+    .select('id, name, parent_id, task_settings')
+    .eq('id', sub.child_id)
+    .maybeSingle()
+  if (!child || child.parent_id !== parentId) {
+    return { success: false, error: 'not authorized for this submission' }
+  }
+
+  // Rule 2 — no double approval.
+  if (sub.status !== 'pending') {
+    return { success: false, error: `already ${sub.status}` }
+  }
+
+  // Rules 3 & 4 — the reward value. Configured amount comes from the child's
+  // task_settings[type].gems (server-side, never the client), homework
+  // defaulting to HOMEWORK_DEFAULT_GEMS. If the parent named an amount, clamp
+  // it to [0, configured * 2] so an LLM-relayed number can't blow up the ledger.
+  const ts = child.task_settings || {}
+  const configured = ts[sub.task_type]?.gems ?? (sub.task_type === 'homework' ? HOMEWORK_DEFAULT_GEMS : (sub.suggested_gems ?? HOMEWORK_DEFAULT_GEMS))
+
+  let awarded
+  if (gems === undefined || gems === null || Number.isNaN(Number(gems))) {
+    awarded = configured
+  } else {
+    awarded = Math.max(0, Math.min(Number(gems), configured * 2))
+  }
+  awarded = Math.round(awarded)
+
+  // Rule 5 — single ledger path, identical to the dashboard approve button:
+  // flip status + write gems_earned, then one bt_ledger insert (reason=type).
+  const { error: updErr } = await supabase
+    .from('submissions')
+    .update({ status: 'approved', gems_earned: awarded })
+    .eq('id', sub.id)
+    .eq('status', 'pending') // guard against a concurrent approval racing us
+  if (updErr) return { success: false, error: updErr.message }
+
+  if (awarded > 0) {
+    const { error: ledErr } = await supabase
+      .from('bt_ledger')
+      .insert({ child_id: sub.child_id, amount: awarded, reason: sub.task_type || 'task' })
+    if (ledErr) {
+      console.error(`[SUBMISSION] ledger insert failed for ${sub.id}: ${ledErr.message}`)
+      return { success: false, error: 'reward could not be recorded' }
+    }
+  }
+
+  return { success: true, id: sub.id, childName: child.name, taskType: sub.task_type, gems: awarded }
+}
+
+async function rejectSubmissionTool(submissionId, parentId) {
+  const { data: sub } = await supabase
+    .from('submissions')
+    .select('id, child_id, status')
+    .eq('id', submissionId)
+    .maybeSingle()
+  if (!sub) return { success: false, error: 'submission not found' }
+
+  const { data: child } = await supabase
+    .from('children')
+    .select('id, name, parent_id')
+    .eq('id', sub.child_id)
+    .maybeSingle()
+  if (!child || child.parent_id !== parentId) {
+    return { success: false, error: 'not authorized for this submission' }
+  }
+  if (sub.status !== 'pending') {
+    return { success: false, error: `already ${sub.status}` }
+  }
+
+  const { error } = await supabase
+    .from('submissions')
+    .update({ status: 'rejected' })
+    .eq('id', sub.id)
+    .eq('status', 'pending')
+  if (error) return { success: false, error: error.message }
+
+  return { success: true, id: sub.id, childName: child.name }
+}
 
 async function approveContributionTool(contributionId, parentId) {
   const { data: updated, error } = await supabase
@@ -637,7 +819,23 @@ async function handleMessage(parentId, replyCb, text) {
     // in that case, since that's a false negative the parent could act on.
     const pendingCheckFailed = familyData.some(c => c.pendingCheckFailed)
 
-    function buildSystemPrompt(currentPendingList) {
+    // Pending homework/chore submissions with ids — so a free-text "onayla"
+    // can be routed to approve_submission for the right one.
+    const nowLocalDate = userNow.toFormat('yyyy-MM-dd')
+    const pendingSubsList = familyData.flatMap(c =>
+      (c.pendingSubmissions || []).map(s => ({
+        id: s.id,
+        child: c.name,
+        taskType: s.task_type,
+        description: s.description,
+        suggestedGems: s.suggested_gems,
+        stale: s.photo_taken_at
+          ? DateTime.fromISO(s.photo_taken_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd') !== nowLocalDate
+          : false,
+      }))
+    )
+
+    function buildSystemPrompt(currentPendingList, currentPendingSubs = pendingSubsList) {
       const pendingBlock = pendingCheckFailed
         ? `ŞU AN ONAY BEKLEYEN KATKILAR: bu bilgi şu anda okunamadı (geçici bir hata oluştu).\n` +
           `- Onay bekleyenler hakkında KESİN bir şey söyleme — ne "yok" de ne bir sayı ver. Parent'a şu anda ` +
@@ -651,9 +849,25 @@ async function handleMessage(parentId, replyCb, text) {
               `etiketi üretmek için geçerlidir, bu listeyi okuyup söylerken hiçbir şekilde uygulanmaz.`
             : 'Şu anda onay bekleyen katkı yok.')
 
+      const subsBlock =
+        `ŞU AN ONAY BEKLEYEN GÖNDERİLER (ödev/ev görevi fotoğrafı, toplam ${currentPendingSubs.length}):\n` +
+        (currentPendingSubs.length
+          ? currentPendingSubs.map(s => {
+              const kind = s.taskType === 'homework' ? 'ödev' : s.taskType === 'chore' ? 'ev görevi' : s.taskType
+              const gemHint = s.suggestedGems != null ? `, önerilen ödül ${s.suggestedGems} gem` : ''
+              const staleHint = s.stale ? ', (fotoğraf bugün çekilmemiş görünüyor)' : ''
+              return `- id=${s.id}: ${kind} — ${s.child}: "${s.description}"${gemHint}${staleHint}`
+            }).join('\n') +
+            `\n- Ebeveyn bunlardan birini onaylarsa approve_submission'ı, reddederse reject_submission'ı ` +
+            `yukarıdaki EXACT id ile çağır. Ebeveyn bir gem sayısı söylediyse (örn. "25 gem yeter") onu gems ` +
+            `parametresine geçir; söylemediyse gems'i BOŞ bırak (sunucu ayarlı ödülü kullanır). Birden fazla ` +
+            `bekleyen gönderi varsa ve hangisi olduğu belirsizse, tahmin etme — ebeveynin diliyle hangisi diye sor.`
+          : 'Şu anda onay bekleyen gönderi yok.')
+
       return (
         `${childrenBlock}\n\n` +
         `${pendingBlock}\n\n` +
+        `${subsBlock}\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
@@ -745,11 +959,15 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectContributionTool(args.contribution_id)
       } else if (name === 'add_card') {
         toolResult = await addCardTool(args.child_id, args.label, args.category)
+      } else if (name === 'approve_submission') {
+        toolResult = await approveSubmissionTool(args.submission_id, parentId, args.gems)
+      } else if (name === 'reject_submission') {
+        toolResult = await rejectSubmissionTool(args.submission_id, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
       console.log(`[MSG] Tool "${name}"(${JSON.stringify(args)}) → ${JSON.stringify(toolResult)}`)
-      toolResults.push({ name, contributionId: args.contribution_id, result: toolResult })
+      toolResults.push({ name, contributionId: args.contribution_id, submissionId: args.submission_id, result: toolResult })
     }
 
     // Refresh the pending list so the second call doesn't contradict itself —
@@ -760,7 +978,13 @@ async function handleMessage(parentId, replyCb, text) {
       toolResults.filter(t => t.result.success).flatMap(t => t.result.approvedIds ?? (t.contributionId ? [t.contributionId] : []))
     )
     const refreshedPendingList = pendingList.filter(p => !processedIds.has(p.id))
-    const refreshedSystemPrompt = buildSystemPrompt(refreshedPendingList)
+    // Same idea for submissions: an approved/rejected one must not still show
+    // as pending in the second call's context.
+    const processedSubIds = new Set(
+      toolResults.filter(t => t.result.success && t.submissionId).map(t => t.submissionId)
+    )
+    const refreshedPendingSubs = pendingSubsList.filter(s => !processedSubIds.has(s.id))
+    const refreshedSystemPrompt = buildSystemPrompt(refreshedPendingList, refreshedPendingSubs)
 
     const secondData = await callGeminiWithRetry(() => fetchGeminiOnce({
       system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
@@ -830,8 +1054,9 @@ async function startSubmissionListener() {
         const submission = payload.new
         console.log('Yeni submission!', JSON.stringify(submission, null, 2))
 
-        // Chore submissions are handled by /api/notify-parent-chore
-        if (submission.task_type === 'chore') return
+        // Chore and homework submissions are notified by their own endpoints
+        // (with the photo + AI observation), not by this generic text path.
+        if (submission.task_type === 'chore' || submission.task_type === 'homework') return
 
         try {
           const { data: child, error } = await supabase
@@ -1597,6 +1822,183 @@ app.post('/api/children/:childId/stories/cover', async (req, res) => {
     res.json({ cover_url })
   } catch (err) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Homework module ───────────────────────────────────────────────────────────
+// Child photographs finished homework (up to 15 pages). EVERYTHING AI/gem
+// related is server-side: EXIF, storage upload, Gemini observation, safety
+// screen, submission write (pending, NO gems), parent notification. The client
+// only uploads images and shows "it arrived" — gems_earned is never client-set.
+const HOMEWORK_MAX_PHOTOS = 15
+
+app.post('/api/children/:childId/homework', async (req, res) => {
+  const { childId } = req.params
+  const { photos } = req.body
+  if (!Array.isArray(photos) || photos.length === 0) return res.status(400).json({ error: 'photos required' })
+  if (photos.length > HOMEWORK_MAX_PHOTOS) return res.status(400).json({ error: `en fazla ${HOMEWORK_MAX_PHOTOS} fotoğraf gönderilebilir` })
+
+  try {
+    const { data: child } = await supabase
+      .from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const { data: parentRow } = await supabase
+      .from('parents').select('prefs, timezone').eq('id', child.parent_id).maybeSingle()
+    const prefs = parentRow?.prefs || {}
+    const language = prefs.language === 'en' ? 'en' : 'tr'
+    const tone = typeof prefs.tone === 'string' && prefs.tone ? prefs.tone : null
+    const tz = parentRow?.timezone || 'UTC'
+
+    // 1. Decode buffers. Read EXIF DateTimeOriginal from the FIRST photo's
+    //    ORIGINAL bytes — this must happen before any resize (which strips EXIF).
+    //    Screenshots carry no EXIF; null is expected and fine. CODE (not Gemini)
+    //    decides photo_taken_at.
+    const decoded = photos.map(p => {
+      const b64 = typeof p?.imageBase64 === 'string' && p.imageBase64.includes(',')
+        ? p.imageBase64.split(',')[1]
+        : p?.imageBase64
+      return { buffer: Buffer.from(b64 || '', 'base64'), mimeType: p?.mimeType || 'image/jpeg' }
+    })
+    if (decoded.some(d => d.buffer.length === 0)) return res.status(400).json({ error: 'invalid image data' })
+
+    let photoTakenAt = null
+    try {
+      const exif = await exifr.parse(decoded[0].buffer, ['DateTimeOriginal'])
+      if (exif?.DateTimeOriginal instanceof Date && !Number.isNaN(exif.DateTimeOriginal.getTime())) {
+        photoTakenAt = exif.DateTimeOriginal.toISOString()
+      }
+    } catch { /* no EXIF (e.g. screenshot) — leave null */ }
+
+    // 2. Upload every page to Supabase Storage.
+    const photoUrls = []
+    for (let i = 0; i < decoded.length; i++) {
+      const ext = decoded[i].mimeType.includes('png') ? 'png' : 'jpg'
+      const path = `${childId}/homework/${Date.now()}-${i}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('submissions')
+        .upload(path, decoded[i].buffer, { contentType: decoded[i].mimeType, upsert: false })
+      if (upErr) return res.status(500).json({ error: upErr.message })
+      photoUrls.push(supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl)
+    }
+
+    // 3. Gemini observation — server-side only. On failure we still record the
+    //    submission and notify the parent (observation stays null).
+    let observation = null
+    try {
+      const parts = [
+        { text: homeworkObservationPrompt(language) },
+        ...decoded.map(d => ({ inline_data: { mime_type: d.mimeType, data: d.buffer.toString('base64') } })),
+      ]
+      const data = await callGeminiWithRetry(() => fetchGeminiOnce({
+        contents: [{ parts }],
+        generationConfig: { response_mime_type: 'application/json' },
+      }))
+      const raw = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+      observation = validateObservation(raw)
+    } catch (err) {
+      console.error(`[HOMEWORK] observation failed: ${err.message}`)
+    }
+
+    // 4. Safety screen over what Gemini read on the page. Inappropriate → do NOT
+    //    store the submission, alert the parent separately. Screen failure →
+    //    proceed (homework is low-risk; don't lose it over a screening hiccup).
+    if (observation?.looks_like_homework) {
+      const screenText = [observation.subject_guess, observation.blanks_noted, ...(observation.observations || [])]
+        .filter(Boolean).join('. ')
+      if (screenText) {
+        let screening
+        try { screening = await screenChildInput(screenText, child.age ?? 7) } catch { /* proceed */ }
+        if (screening?.appropriateness === 'inappropriate') {
+          console.log(`[HOMEWORK] inappropriate content child=${childId} — submission skipped`)
+          try {
+            await sendNotification(child.parent_id,
+              `${child.name} bir ödev fotoğrafı gönderdi ama içeriğine bir göz atmanda fayda olabilir.`)
+          } catch { /* best-effort */ }
+          return res.json({ ok: true })
+        }
+        if (screening?.concern_level === 'concerning' || screening?.concern_level === 'serious') {
+          try {
+            await sendNotification(child.parent_id,
+              `${child.name} bir ödev gönderdi. Sayfada dikkat çekebilecek bir şey olabilir, bir göz atmanda fayda var.`)
+          } catch { /* best-effort */ }
+        }
+      }
+    }
+
+    // 5. Store submission — pending, NO gems. suggested_gems is the SERVER-read
+    //    configured reward (task_settings.homework.gems, default 25) so the
+    //    dashboard/approval path has a number to work with.
+    const hwGems = child.task_settings?.homework?.gems ?? HOMEWORK_DEFAULT_GEMS
+    const { data: submission, error: subErr } = await supabase
+      .from('submissions')
+      .insert({
+        child_id: childId,
+        task_type: 'homework',
+        status: 'pending',
+        photo_urls: photoUrls,
+        media_url: photoUrls[0],
+        task_description: observation?.subject_guess || 'Ödev',
+        suggested_gems: hwGems,
+        gems_earned: null,
+        photo_taken_at: photoTakenAt,
+      })
+      .select('id').single()
+    if (subErr) {
+      console.error(`[HOMEWORK] submission insert failed: ${subErr.message}`)
+      return res.status(500).json({ error: subErr.message })
+    }
+
+    // Child is done waiting the moment the homework is safely recorded — the
+    // parent notification (another Gemini call for the caption) runs in the
+    // background so the kid's "it arrived" screen isn't gated on it.
+    res.json({ ok: true, submissionId: submission.id })
+
+    // 6. Parent notification (background). Gemini writes the caption honoring
+    //    tone+language; CODE filters low-confidence errors out first and adds
+    //    the stale-photo sentence. Notification must never be lost → fallback.
+    ;(async () => {
+      let staleNote = ''
+      if (photoTakenAt) {
+        const takenLocal = DateTime.fromISO(photoTakenAt, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
+        const todayLocal = DateTime.now().setZone(tz).toFormat('yyyy-MM-dd')
+        if (takenLocal !== todayLocal) {
+          staleNote = language === 'en'
+            ? "This photo doesn't look like it was taken today."
+            : 'Bu fotoğraf bugün çekilmiş görünmüyor.'
+        }
+      }
+
+      let caption
+      try {
+        const filtered = observation?.looks_like_homework ? filterForParent(observation) : null
+        if (!filtered) {
+          caption = fallbackCaption({ childName: child.name, language, staleNote })
+        } else {
+          const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
+            contents: [{ parts: [{ text: homeworkCaptionPrompt({
+              filteredObservation: filtered, childName: child.name, tone, language,
+              photoCount: photoUrls.length, staleNote,
+            }) }] }],
+          }))
+          caption = capData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim()
+          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote })
+        }
+      } catch (err) {
+        console.error(`[HOMEWORK] caption failed: ${err.message}`)
+        caption = fallbackCaption({ childName: child.name, language, staleNote })
+      }
+      if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
+
+      try {
+        await sendNotificationWithPhotos(child.parent_id, caption, photoUrls)
+      } catch (err) {
+        console.error(`[HOMEWORK] notification failed: ${err.message}`)
+      }
+    })().catch(err => console.error(`[HOMEWORK] background notify error: ${err.message}`))
+  } catch (err) {
+    console.error(`[HOMEWORK] error: ${err.message}`)
+    if (!res.headersSent) res.status(500).json({ error: err.message })
   }
 })
 

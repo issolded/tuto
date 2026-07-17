@@ -106,6 +106,30 @@ export async function sendTelegramPhoto(chatId, photoUrl, caption) {
   await bot.sendPhoto(String(chatId), photoUrl, { caption })
 }
 
+// Sends multiple photos as native Telegram albums. Media groups cap at 10
+// items, so >10 photos are split into chunks; the caption rides only the FIRST
+// item of the FIRST album (Telegram shows it under the whole first group).
+// A single photo falls back to sendPhoto so callers don't special-case counts.
+export async function sendTelegramMediaGroup(chatId, photoUrls, caption) {
+  if (!bot) throw new Error('Telegram bot not started')
+  const urls = (photoUrls || []).filter(Boolean)
+  if (urls.length === 0) throw new Error('no photos')
+  if (urls.length === 1) return bot.sendPhoto(String(chatId), urls[0], { caption })
+
+  const chunks = []
+  for (let i = 0; i < urls.length; i += 10) chunks.push(urls.slice(i, i + 10))
+
+  for (let c = 0; c < chunks.length; c++) {
+    const media = chunks[c].map((url, i) => ({
+      type: 'photo',
+      media: url,
+      // Caption only on the very first photo of the very first album.
+      ...(c === 0 && i === 0 && caption ? { caption } : {}),
+    }))
+    await bot.sendMediaGroup(String(chatId), media)
+  }
+}
+
 export async function getTelegramChatId(parentId) {
   // Check in-memory cache first
   for (const [cid, pid] of chatToParent.entries()) {
