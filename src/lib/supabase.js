@@ -146,6 +146,20 @@ export async function submitHomework(childId, files) {
   return data
 }
 
+// Answers the "did you do this homework today?" question the server asks when
+// the photo had no readable date. Releases the held parent notification.
+export async function confirmHomeworkDate(submissionId, doneToday) {
+  try {
+    await fetch(`${SERVER}/api/homework/${encodeURIComponent(submissionId)}/confirm-date`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ doneToday }),
+    })
+  } catch (err) {
+    console.error('[confirmHomeworkDate] error:', err.message)
+  }
+}
+
 // Recent homework submissions (last 7 days), newest first, for the child-side
 // "This week" history list. Rows: { id, date (ISO), pages, status }.
 export async function getHomeworkSubmissions(childId) {

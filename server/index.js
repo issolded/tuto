@@ -1834,6 +1834,12 @@ app.post('/api/children/:childId/stories/cover', async (req, res) => {
 // only uploads images and shows "it arrived" — gems_earned is never client-set.
 const HOMEWORK_MAX_PHOTOS = 15
 
+// Homework submissions whose parent notification is held pending a child's
+// "did you do this today?" answer (only when the photo has no readable date).
+// submissionId → { deliver(doneToday), timer }. In-memory is fine: the backend
+// is a single long-running process (same pattern as the WhatsApp/TG maps).
+const pendingHomeworkNotify = new Map()
+
 app.post('/api/children/:childId/homework', async (req, res) => {
   const { childId } = req.params
   const { paths } = req.body
@@ -1964,44 +1970,54 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       return res.status(500).json({ error: subErr.message })
     }
 
-    // Child is done waiting the moment the homework is safely recorded — the
-    // parent notification (another Gemini call for the caption) runs in the
-    // background so the kid's "it arrived" screen isn't gated on it.
-    res.json({ ok: true, submissionId: submission.id })
+    // Can we vouch for the photo being from today? EXIF present + today =
+    // confident (no question). EXIF present + other day = we already know it's
+    // stale (note below). EXIF absent (screenshot / downloaded image) = we
+    // genuinely can't tell, so we ask the CHILD before notifying the parent.
+    const takenLocal = photoTakenAt ? DateTime.fromISO(photoTakenAt, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd') : null
+    const todayLocal = DateTime.now().setZone(tz).toFormat('yyyy-MM-dd')
+    const needsDateConfirm = photoTakenAt == null
 
-    // 6. Parent notification (background). Gemini writes the caption honoring
-    //    tone+language; CODE filters low-confidence errors out first and adds
-    //    the stale-photo sentence. Notification must never be lost → fallback.
-    ;(async () => {
-      let staleNote = ''
-      if (photoTakenAt) {
-        const takenLocal = DateTime.fromISO(photoTakenAt, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
-        const todayLocal = DateTime.now().setZone(tz).toFormat('yyyy-MM-dd')
-        if (takenLocal !== todayLocal) {
-          staleNote = language === 'en'
-            ? "This photo doesn't look like it was taken today."
-            : 'Bu fotoğraf bugün çekilmiş görünmüyor.'
-        }
+    // 6. Parent notification. Gemini writes the caption honoring tone+language;
+    //    CODE filters low-confidence errors out and supplies the date sentence.
+    //    Runs immediately when the date is known, or after the child answers
+    //    when it isn't. Notification must never be lost → every branch falls back.
+    async function deliverHomeworkNotification(doneToday) {
+      let dateNote = ''
+      if (photoTakenAt && takenLocal !== todayLocal) {
+        dateNote = language === 'en'
+          ? "This photo doesn't look like it was taken today."
+          : 'Bu fotoğraf bugün çekilmiş görünmüyor.'
+      } else if (!photoTakenAt) {
+        // Couldn't read the date — relay the child's own answer, hedged. Name as
+        // subject (no case suffix) so it reads right for any Turkish name.
+        if (doneToday === true) dateNote = language === 'en'
+          ? `I couldn't confirm the photo's date, but ${child.name} said they did this homework today — I could be wrong.`
+          : `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yaptığını söyledi. Yine de yanılıyor olabilirim.`
+        else if (doneToday === false) dateNote = language === 'en'
+          ? `I couldn't confirm the photo's date; ${child.name} said they did not do this homework today.`
+          : `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yapmadığını söyledi.`
+        // doneToday undefined (child never answered) → no date sentence
       }
 
       let caption
       try {
         const filtered = observation?.looks_like_homework ? filterForParent(observation) : null
         if (!filtered) {
-          caption = fallbackCaption({ childName: child.name, language, staleNote })
+          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
         } else {
           const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
             contents: [{ parts: [{ text: homeworkCaptionPrompt({
               filteredObservation: filtered, childName: child.name, tone, language,
-              photoCount: photoUrls.length, staleNote,
+              photoCount: photoUrls.length, staleNote: dateNote,
             }) }] }],
           }))
           caption = capData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim()
-          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote })
+          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
         }
       } catch (err) {
         console.error(`[HOMEWORK] caption failed: ${err.message}`)
-        caption = fallbackCaption({ childName: child.name, language, staleNote })
+        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
       }
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
@@ -2010,11 +2026,46 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       } catch (err) {
         console.error(`[HOMEWORK] notification failed: ${err.message}`)
       }
-    })().catch(err => console.error(`[HOMEWORK] background notify error: ${err.message}`))
+    }
+
+    // Child stops waiting the moment the homework is safely recorded.
+    res.json({ ok: true, submissionId: submission.id, needsDateConfirm })
+
+    if (needsDateConfirm) {
+      // Hold the notification until the child answers "did you do this today?".
+      // Safety net: if they never answer (closed the app), send anyway after a
+      // grace period so the parent is never left without a notification.
+      const timer = setTimeout(() => {
+        if (pendingHomeworkNotify.has(submission.id)) {
+          pendingHomeworkNotify.delete(submission.id)
+          deliverHomeworkNotification(undefined).catch(err => console.error(`[HOMEWORK] deferred notify error: ${err.message}`))
+        }
+      }, 90_000)
+      pendingHomeworkNotify.set(submission.id, { deliver: deliverHomeworkNotification, timer })
+    } else {
+      deliverHomeworkNotification(undefined).catch(err => console.error(`[HOMEWORK] background notify error: ${err.message}`))
+    }
   } catch (err) {
     console.error(`[HOMEWORK] error: ${err.message}`)
     if (!res.headersSent) res.status(500).json({ error: err.message })
   }
+})
+
+// Child's answer to "did you do this homework today?" — asked only when the
+// photo carried no readable date. Releases the held parent notification with
+// the child's confirmation woven in. Idempotent: if the safety-net timer
+// already fired (or it's an unknown id), this is a no-op.
+app.post('/api/homework/:submissionId/confirm-date', async (req, res) => {
+  const { submissionId } = req.params
+  const { doneToday } = req.body
+  const entry = pendingHomeworkNotify.get(submissionId)
+  if (entry) {
+    clearTimeout(entry.timer)
+    pendingHomeworkNotify.delete(submissionId)
+    entry.deliver(typeof doneToday === 'boolean' ? doneToday : undefined)
+      .catch(err => console.error(`[HOMEWORK] confirm-date notify error: ${err.message}`))
+  }
+  res.json({ ok: true })
 })
 
 // Child-side homework history (last 7 days), newest first. Powers the "This

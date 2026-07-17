@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { submitHomework, getHomeworkSubmissions } from '../lib/supabase'
+import { submitHomework, getHomeworkSubmissions, confirmHomeworkDate } from '../lib/supabase'
 
 // "My Homework" — child photographs finished homework (up to 15 pages) and
 // sends it. The child ONLY ever sees "it arrived"; Tuto's observations,
@@ -71,6 +71,8 @@ export default function HomeworkScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [submissions, setSubmissions] = useState([]) // { id, date, pages, status }
+  const [phase, setPhase] = useState('idle') // 'idle' | 'checking' | 'confirm'
+  const [confirmId, setConfirmId] = useState(null) // submissionId awaiting the date question
 
   useEffect(() => {
     if (!child?.id) { nav('/child', { replace: true }); return }
@@ -102,19 +104,37 @@ export default function HomeworkScreen() {
     if (!photos.length || submitting) return
     setSubmitting(true)
     setError(null)
+    setPhase('checking') // full-screen "Tuto is looking at your homework" overlay
     // Optimistically prepend a "checking" row so the just-sent homework shows
     // in the history immediately (server records it as pending after review).
     const optimistic = { id: `temp-${Date.now()}`, date: new Date().toISOString(), pages: photos.length, status: 'checking' }
     setSubmissions(prev => [optimistic, ...prev])
     try {
-      await submitHomework(child.id, photos.map(p => p.file))
-      setScreen('sent')
+      const res = await submitHomework(child.id, photos.map(p => p.file))
+      if (res?.needsDateConfirm && res?.submissionId) {
+        // Server couldn't read the photo's date — ask the child before it
+        // notifies the parent.
+        setConfirmId(res.submissionId)
+        setPhase('confirm')
+      } else {
+        setPhase('idle')
+        setScreen('sent')
+      }
     } catch (err) {
       setSubmissions(prev => prev.filter(r => r.id !== optimistic.id))
+      setPhase('idle')
       setError(err.message || 'Gönderilemedi, tekrar dener misin?')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function answerDateConfirm(doneToday) {
+    const id = confirmId
+    setConfirmId(null)
+    setPhase('idle')
+    setScreen('sent')
+    if (id) confirmHomeworkDate(id, doneToday) // fire-and-forget; server notifies the parent
   }
 
   function done() {
@@ -252,12 +272,56 @@ export default function HomeworkScreen() {
           {submitting ? 'Sending…' : 'Send to Tuto'}
         </button>
       </div>
+
+      {/* Checking overlay — makes Tuto's work visible while it reviews */}
+      {phase === 'checking' && (
+        <div style={{ ...overlay, background: 'rgba(212,228,251,0.97)' }}>
+          <TutoMascot size={150} expression="thinking" color="#74acef" style={{ animation: 'hw-float 3s ease-in-out infinite' }} />
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: INK, marginTop: 18 }}>
+            Tuto is looking at your homework…
+          </div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15, color: INK_SOFT, marginTop: 6 }}>
+            One sec 👀
+          </div>
+        </div>
+      )}
+
+      {/* Date-confirm overlay — only when the photo had no readable date */}
+      {phase === 'confirm' && (
+        <div style={{ ...overlay, background: 'rgba(32,32,45,0.45)' }}>
+          <div style={{ background: '#fff', borderRadius: 26, padding: '26px 22px', width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 20px 50px rgba(30,40,70,.28)' }}>
+            <TutoMascot size={92} expression="thinking" color="#74acef" />
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 20, color: INK, marginTop: 12, textAlign: 'center', lineHeight: 1.25 }}>
+              {child?.name ? `${child.name}, did you do this homework today?` : 'Did you do this homework today?'}
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 20, width: '100%' }}>
+              <button onClick={() => answerDateConfirm(true)} style={confirmBtn(true)}>Yes, today</button>
+              <button onClick={() => answerDateConfirm(false)} style={confirmBtn(false)}>No</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
+const overlay = {
+  position: 'absolute', inset: 0, zIndex: 50,
+  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  padding: '0 30px', textAlign: 'center',
+}
+
+function confirmBtn(primary) {
+  return {
+    flex: 1, border: 'none', borderRadius: 16, padding: 14,
+    fontFamily: FRED, fontWeight: 600, fontSize: 16, cursor: 'pointer',
+    background: primary ? ORANGE : '#efeaf6', color: primary ? '#fff' : INK,
+  }
+}
+
 function wrap(bg) {
   return {
+    position: 'relative', // confines the checking/confirm overlays to the phone frame
     minHeight: '100vh', maxWidth: 430, margin: '0 auto',
     background: bg, display: 'flex', flexDirection: 'column', overflow: 'hidden',
     fontFamily: "'Nunito', sans-serif",
