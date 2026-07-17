@@ -12,7 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // 'submissions' bucket's INSERT policy is granted to the anon role only — so
 // the upload fails with "new row violates row-level security policy". This
 // client never carries a session, so child uploads always go as anon.
-const storageClient = createClient(supabaseUrl, supabaseAnonKey, {
+export const storageClient = createClient(supabaseUrl, supabaseAnonKey, {
   // persistSession:false → never loads the parent's persisted session; a
   // distinct storageKey keeps it off the shared auth-token key entirely (no
   // "Multiple GoTrueClient instances… same storage key" collision).

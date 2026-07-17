@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { evaluateTask, generateTask, evaluateChore } from '../lib/gemini'
-import { supabase } from '../lib/supabase'
+import { supabase, storageClient } from '../lib/supabase'
 
 const ACCENT = '#FF6B35'
 const CHORE_ACCENT = '#FF8C42'
@@ -30,11 +30,14 @@ async function addToLedger(childId, amount, reason) {
 
 async function uploadPhoto(file, childId) {
   const path = `${childId ?? 'anonymous'}/${Date.now()}.jpg`
-  const { error } = await supabase.storage
+  // storageClient (session-less) so a parent login on the same device doesn't
+  // turn this child upload into role=authenticated and trip the anon-only
+  // bucket policy ("new row violates row-level security policy").
+  const { error } = await storageClient.storage
     .from('submissions')
     .upload(path, file, { contentType: file.type, upsert: false })
   if (error) throw error
-  const { data } = supabase.storage.from('submissions').getPublicUrl(path)
+  const { data } = storageClient.storage.from('submissions').getPublicUrl(path)
   return data.publicUrl
 }
 

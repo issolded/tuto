@@ -878,10 +878,12 @@ async function handleMessage(parentId, replyCb, text) {
         `- Use the exact "id" from the pending contributions list above when calling approve_contribution or ` +
         `reject_contribution.\n` +
         `- Use the exact "id" from the children list above when calling add_card or approve_all_pending.\n` +
-        `- Approving a contribution does NOT award gems. Gems are tallied separately in the end-of-month review. ` +
-        `Approving simply adds a leaf to the child's tree.\n` +
-        `- NEVER tell the parent the child "earned gems" for a contribution approval — talk about a leaf being ` +
-        `added to their tree instead.\n` +
+        `- Approving a CONTRIBUTION (a diary / contribution_log entry) does NOT award gems. Gems for contributions ` +
+        `are tallied separately in the end-of-month review; approving one simply adds a leaf to the child's tree. ` +
+        `For a CONTRIBUTION approval, never say the child "earned gems" — talk about a leaf added to their tree.\n` +
+        `- A SUBMISSION approval is the OPPOSITE: approve_submission (a homework or chore) awards gems IMMEDIATELY. ` +
+        `When it succeeds, its result gives you the exact gem amount — tell the parent how many gems the child ` +
+        `earned. Do NOT use tree/leaf language for a submission; that framing is only for contributions.\n` +
         `- If the parent wants ALL of a child's pending contributions approved at once ("hepsini onayla", ` +
         `"approve all", "ikisini de onayla"), call approve_all_pending ONCE with that child's id — never call ` +
         `approve_contribution multiple times to cover a bulk request.\n` +
