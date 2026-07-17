@@ -5,6 +5,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Session-less client for CHILD-side Storage uploads. The child is anonymous
+// (family-code, not Supabase auth), but the shared `supabase` singleton above
+// persists a parent session when a parent has logged in on the same device.
+// That parent JWT turns the request into role=authenticated, and the
+// 'submissions' bucket's INSERT policy is granted to the anon role only — so
+// the upload fails with "new row violates row-level security policy". This
+// client never carries a session, so child uploads always go as anon.
+const storageClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+})
+
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 export async function getChildrenByFamilyCode(familyCode) {
@@ -115,7 +126,7 @@ export async function submitHomework(childId, files) {
     const file = files[i]
     const ext = (file.type || '').includes('png') ? 'png' : 'jpg'
     const path = `${cid}/homework/${Date.now()}-${i}.${ext}`
-    const { error } = await supabase.storage
+    const { error } = await storageClient.storage
       .from('submissions')
       .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false })
     if (error) throw error
@@ -130,6 +141,19 @@ export async function submitHomework(childId, files) {
   const data = await res.json()
   if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
   return data
+}
+
+// Recent homework submissions (last 7 days), newest first, for the child-side
+// "This week" history list. Rows: { id, date (ISO), pages, status }.
+export async function getHomeworkSubmissions(childId) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/homework`)
+    const data = await res.json()
+    return data.submissions || []
+  } catch (err) {
+    console.error('[getHomeworkSubmissions] error:', err.message)
+    return []
+  }
 }
 
 export async function saveSpellingErrors(childId, errors) {

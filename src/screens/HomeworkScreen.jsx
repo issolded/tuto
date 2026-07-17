@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { submitHomework } from '../lib/supabase'
+import { submitHomework, getHomeworkSubmissions } from '../lib/supabase'
 
 // "My Homework" — child photographs finished homework (up to 15 pages) and
 // sends it. The child ONLY ever sees "it arrived"; Tuto's observations,
@@ -37,6 +37,31 @@ function CameraIcon({ size = 20, color = '#fff' }) {
   )
 }
 
+// Same document icon on every history row (design: not a subject icon).
+function DocIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 64 64" fill="none">
+      <rect x="16" y="8" width="32" height="48" rx="4" fill="#fff" stroke={INK} strokeWidth="3.6" />
+      <path d="M23 22h18M23 32h18M23 42h11" stroke="#9a94a8" strokeWidth="3.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// 6–8 skin status pills. 'checking' is client-only (optimistic, while Tuto
+// reviews); persisted rows are pending → approved. Rejected rows are not shown
+// to the child.
+const HW_STATUS = {
+  checking: { label: '👀 Checking', bg: '#dcecfb', color: '#3f7fd0' },
+  pending:  { label: '⏳ Waiting',  bg: '#fdeecf', color: '#c8830f' },
+  approved: { label: '✅ Done',     bg: '#dcf3e2', color: '#2f9e63' },
+}
+
+function histDate(iso) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) // "16 Jul"
+}
+
 export default function HomeworkScreen() {
   const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
@@ -45,9 +70,11 @@ export default function HomeworkScreen() {
   const [screen, setScreen] = useState('upload') // 'upload' | 'sent'
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [submissions, setSubmissions] = useState([]) // { id, date, pages, status }
 
   useEffect(() => {
     if (!child?.id) { nav('/child', { replace: true }); return }
+    getHomeworkSubmissions(child.id).then(setSubmissions)
   }, [])
 
   // Revoke object URLs on unmount to avoid leaking blob previews.
@@ -75,10 +102,15 @@ export default function HomeworkScreen() {
     if (!photos.length || submitting) return
     setSubmitting(true)
     setError(null)
+    // Optimistically prepend a "checking" row so the just-sent homework shows
+    // in the history immediately (server records it as pending after review).
+    const optimistic = { id: `temp-${Date.now()}`, date: new Date().toISOString(), pages: photos.length, status: 'checking' }
+    setSubmissions(prev => [optimistic, ...prev])
     try {
       await submitHomework(child.id, photos.map(p => p.file))
       setScreen('sent')
     } catch (err) {
+      setSubmissions(prev => prev.filter(r => r.id !== optimistic.id))
       setError(err.message || 'Gönderilemedi, tekrar dener misin?')
     } finally {
       setSubmitting(false)
@@ -180,6 +212,38 @@ export default function HomeworkScreen() {
             {error}
           </div>
         )}
+
+        {/* This week — recent homework submissions (last 7 days) */}
+        {(() => {
+          const rows = submissions.filter(s => HW_STATUS[s.status]) // hides rejected from the child
+          if (!rows.length) return null
+          return (
+            <div style={{ marginTop: 22 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, margin: '0 2px 11px', display: 'flex', alignItems: 'center', gap: 7 }}>
+                📅 This week
+              </div>
+              {rows.map(row => {
+                const st = HW_STATUS[row.status]
+                return (
+                  <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#fff', borderRadius: 18, padding: '9px 12px', boxShadow: '0 4px 12px rgba(40,30,70,.08)', marginBottom: 9 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 12, background: '#efe9f8', flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <DocIcon />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.15 }}>{histDate(row.date)}</div>
+                      <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: INK_SOFT, marginTop: 1 }}>
+                        {row.pages} {row.pages === 1 ? 'photo' : 'photos'}
+                      </div>
+                    </div>
+                    <span style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: 999, padding: '5px 10px', fontFamily: FRED, fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', background: st.bg, color: st.color }}>
+                      {st.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
       </div>
 
       {/* footer */}

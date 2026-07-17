@@ -2015,6 +2015,33 @@ app.post('/api/children/:childId/homework', async (req, res) => {
   }
 })
 
+// Child-side homework history (last 7 days), newest first. Powers the "This
+// week" list on the upload screen. 'checking' is a client-only optimistic
+// state; persisted rows are pending/approved/rejected.
+app.get('/api/children/:childId/homework', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const since = DateTime.utc().minus({ days: 7 }).toISO()
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('id, status, photo_urls, media_url, created_at')
+      .eq('child_id', childId)
+      .eq('task_type', 'homework')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+    if (error) return res.status(500).json({ error: error.message })
+    const submissions = (data || []).map(s => ({
+      id: s.id,
+      date: s.created_at,
+      pages: Array.isArray(s.photo_urls) && s.photo_urls.length ? s.photo_urls.length : (s.media_url ? 1 : 0),
+      status: s.status,
+    }))
+    res.json({ submissions })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/children/:childId/spelling-errors', async (req, res) => {
   const { childId } = req.params
   const { errors } = req.body
