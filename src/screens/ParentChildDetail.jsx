@@ -46,7 +46,7 @@ function formatGroupDate(dateStr) {
 }
 
 // ── Submission card ───────────────────────────────────────────────────────────
-function SubmissionCard({ sub, onApprove, onReject, onOpenPhoto }) {
+function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) {
   const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
   const displayGems = sub.gems_earned ?? sub.suggested_gems ?? 0
   const time = sub.created_at ? new Date(sub.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -78,8 +78,8 @@ function SubmissionCard({ sub, onApprove, onReject, onOpenPhoto }) {
         </div>
       </div>
       {(() => {
-        // Homework can carry up to 15 pages — show them all, not just the first.
-        const photos = sub.photo_urls?.length ? sub.photo_urls : (sub.media_url ? [sub.media_url] : [])
+        // Photos arrive as short-lived signed URLs (private bucket), fetched by
+        // the parent screen. Homework can carry up to 15 pages — show them all.
         if (!photos.length) return null
         if (photos.length === 1) {
           return (
@@ -434,6 +434,7 @@ export default function ParentChildDetail() {
   const [rewards, setRewards] = useState(null)
   const [justApproved, setJustApproved] = useState(false)
   const [lightbox, setLightbox] = useState(null) // { urls, index } — full-size photo viewer
+  const [photoMap, setPhotoMap] = useState({})   // submissionId → signed URLs
   const [showPinModal,    setShowPinModal]    = useState(false)
   const [showEditModal,   setShowEditModal]   = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
@@ -468,6 +469,33 @@ export default function ParentChildDetail() {
       setContributionsTodayDate(contribData?.todayDate ?? null)
     })
   }, [id])
+
+  // The photo bucket is private, so images can't be rendered from the stored
+  // value — ask the server for signed URLs (it verifies this parent owns the
+  // child before minting them).
+  useEffect(() => {
+    const withPhotos = (submissions || []).filter(s => s.photo_urls?.length || s.media_url)
+    if (!withPhotos.length) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
+      const entries = await Promise.all(withPhotos.map(async s => {
+        try {
+          const r = await fetch(`${SERVER}/api/submissions/${s.id}/photos`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const j = await r.json()
+          return [s.id, j.photos || []]
+        } catch {
+          return [s.id, []]
+        }
+      }))
+      if (!cancelled) setPhotoMap(Object.fromEntries(entries))
+    })()
+    return () => { cancelled = true }
+  }, [submissions])
 
   const loading = !child || gems === null || submissions === null || rewards === null || contributions === null
 
@@ -560,7 +588,8 @@ export default function ParentChildDetail() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pending.map(sub => (
-                <SubmissionCard key={sub.id} sub={sub} onApprove={() => handleApprove(sub)} onReject={() => handleReject(sub.id)}
+                <SubmissionCard key={sub.id} sub={sub} photos={photoMap[sub.id] || []}
+                  onApprove={() => handleApprove(sub)} onReject={() => handleReject(sub.id)}
                   onOpenPhoto={(urls, index) => setLightbox({ urls, index })} />
               ))}
             </div>

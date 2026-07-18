@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { evaluateTask, generateTask, evaluateChore } from '../lib/gemini'
-import { supabase, storageClient } from '../lib/supabase'
+import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
 
 const ACCENT = '#FF6B35'
 const CHORE_ACCENT = '#FF8C42'
@@ -28,17 +28,18 @@ async function addToLedger(childId, amount, reason) {
   await supabase.from('bt_ledger').insert({ child_id: childId, amount, reason })
 }
 
+// Returns the storage PATH (not a URL): the bucket is private, so readers get a
+// short-lived signed URL minted server-side instead of a permanent public link.
 async function uploadPhoto(file, childId) {
   const path = `${childId ?? 'anonymous'}/${Date.now()}.jpg`
   // storageClient (session-less) so a parent login on the same device doesn't
   // turn this child upload into role=authenticated and trip the anon-only
   // bucket policy ("new row violates row-level security policy").
   const { error } = await storageClient.storage
-    .from('submissions')
+    .from(PHOTO_BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false })
   if (error) throw error
-  const { data } = storageClient.storage.from('submissions').getPublicUrl(path)
-  return data.publicUrl
+  return path
 }
 
 async function saveSubmission(childId, taskType, result, photoUrl) {

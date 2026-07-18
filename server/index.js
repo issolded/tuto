@@ -11,6 +11,7 @@ import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramM
 import crypto from 'crypto'
 import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
 import { imageSafetyPrompt, parseImageSafety } from './prompts/imageSafety.js'
+import { purgeOldPhotos } from './jobs/purgeOldPhotos.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -311,6 +312,52 @@ function storagePathFromPublicUrl(url) {
   return i === -1 ? null : decodeURIComponent(String(url).slice(i + marker.length))
 }
 
+// Child photos of real homework / real rooms live in a PRIVATE bucket and are
+// only ever readable through a short-lived signed URL. The old public
+// 'submissions' bucket stays as-is for story covers (AI cover art, shown
+// directly by the unauthenticated child app) and for legacy rows.
+const PHOTO_BUCKET = 'submission-photos'
+
+// New rows store a storage PATH; legacy rows store a full public URL. Anything
+// starting with http is legacy public and returned untouched; everything else
+// is signed against the private bucket.
+async function signedUrlFor(pathOrUrl, expiresIn = 3600) {
+  const v = String(pathOrUrl || '')
+  if (!v) return null
+  if (/^https?:\/\//i.test(v)) return v // legacy public URL
+  let { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(v, expiresIn)
+  if (error) {
+    // Transitional: a path written before the private bucket existed.
+    ;({ data, error } = await supabase.storage.from('submissions').createSignedUrl(v, expiresIn))
+  }
+  if (error) {
+    console.error(`[STORAGE] could not sign ${v}: ${error.message}`)
+    return null
+  }
+  return data.signedUrl
+}
+
+async function signedUrlsFor(list, expiresIn = 3600) {
+  const out = await Promise.all((list || []).map(v => signedUrlFor(v, expiresIn)))
+  return out.filter(Boolean)
+}
+
+// Reads a stored photo's bytes for server-side work (safety screen, EXIF),
+// handling both new private-bucket paths and legacy public URLs.
+async function readStoredPhoto(pathOrUrl) {
+  const v = String(pathOrUrl || '')
+  if (/^https?:\/\//i.test(v)) {
+    const legacyPath = storagePathFromPublicUrl(v)
+    if (!legacyPath) throw new Error('unrecognized photo location')
+    const { data, error } = await supabase.storage.from('submissions').download(legacyPath)
+    if (error || !data) throw new Error(error?.message || 'download failed')
+    return Buffer.from(await data.arrayBuffer())
+  }
+  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).download(v)
+  if (error || !data) throw new Error(error?.message || 'download failed')
+  return Buffer.from(await data.arrayBuffer())
+}
+
 async function sendNotification(parentId, message) {
   const { data: parent } = await supabase
     .from('parents')
@@ -367,6 +414,10 @@ async function sendNotification(parentId, message) {
 }
 
 async function sendNotificationWithPhoto(parentId, message, photoUrl) {
+  // Sign at the boundary: the messaging platform fetches the image once, so a
+  // short TTL is plenty and no long-lived public link ever leaves the server.
+  photoUrl = (await signedUrlFor(photoUrl, 900)) || photoUrl
+
   const { data: parent } = await supabase
     .from('parents')
     .select('notification_channel, telegram_chat_id, whatsapp_phone')
@@ -434,8 +485,11 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl) {
 // open the app). The notification must NEVER be lost — every path degrades to
 // text rather than throwing.
 async function sendNotificationWithPhotos(parentId, message, photoUrls) {
-  const urls = (photoUrls || []).filter(Boolean)
-  if (urls.length <= 1) return sendNotificationWithPhoto(parentId, message, urls[0] || null)
+  const raw = (photoUrls || []).filter(Boolean)
+  if (raw.length <= 1) return sendNotificationWithPhoto(parentId, message, raw[0] || null)
+  // Short-lived signed URLs — Telegram fetches and re-hosts them immediately.
+  const urls = await signedUrlsFor(raw, 900)
+  if (!urls.length) return sendNotification(parentId, message)
 
   const { data: parent } = await supabase
     .from('parents')
@@ -1853,6 +1907,35 @@ app.get('/api/submissions/:id', async (req, res) => {
   res.json(data)
 })
 
+// Signed, expiring URLs for a submission's photos. The bucket is private, so
+// this is the only way the dashboard can render them — and it verifies the
+// caller's Supabase JWT and that the submission belongs to THEIR child, so a
+// submission id alone is not enough to see a child's photos.
+app.get('/api/submissions/:id/photos', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: sub } = await supabase
+      .from('submissions').select('id, child_id, photo_urls, media_url').eq('id', req.params.id).maybeSingle()
+    if (!sub) return res.status(404).json({ error: 'not found' })
+
+    const { data: child } = await supabase
+      .from('children').select('parent_id').eq('id', sub.child_id).maybeSingle()
+    // parents.id IS the auth user id (see ParentSignup), so this is the check.
+    if (!child || child.parent_id !== userId) return res.status(403).json({ error: 'forbidden' })
+
+    const stored = sub.photo_urls?.length ? sub.photo_urls : (sub.media_url ? [sub.media_url] : [])
+    res.json({ photos: await signedUrlsFor(stored, 3600) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/notify-parent-chore', async (req, res) => {
   const { childId, photoUrl, taskDescription, suggestedGems, qualityScore, childNote } = req.body
   if (!childId) return res.status(400).json({ error: 'childId required' })
@@ -1872,14 +1955,15 @@ app.post('/api/notify-parent-chore', async (req, res) => {
 
       let image = null
       try {
-        const imgRes = await axios.get(photoUrl, { responseType: 'arraybuffer' })
-        const ct = imgRes.headers['content-type']
+        // photoUrl is a private-bucket PATH for new clients (legacy rows may
+        // still be a public URL — readStoredPhoto handles both).
+        const buffer = await readStoredPhoto(photoUrl)
         image = {
-          buffer: Buffer.from(imgRes.data),
-          mimeType: typeof ct === 'string' && ct.startsWith('image/') ? ct : 'image/jpeg',
+          buffer,
+          mimeType: String(photoUrl).endsWith('.png') ? 'image/png' : 'image/jpeg',
         }
       } catch (err) {
-        console.error(`[CHORE] could not download photo for safety screen: ${err.message}`)
+        console.error(`[CHORE] could not read photo for safety screen: ${err.message}`)
       }
 
       // Unreadable photo → treat as unverified, block (fail closed).
@@ -1889,8 +1973,9 @@ app.post('/api/notify-parent-chore', async (req, res) => {
 
       if (!safety.appropriate) {
         console.log(`[CHORE] inappropriate image child=${childId} — blocked (${safety.reason})`)
-        const path = storagePathFromPublicUrl(photoUrl)
-        if (path) await supabase.storage.from('submissions').remove([path]).then(() => {}, () => {})
+        const legacyPath = storagePathFromPublicUrl(photoUrl)
+        if (legacyPath) await supabase.storage.from('submissions').remove([legacyPath]).then(() => {}, () => {})
+        else await supabase.storage.from(PHOTO_BUCKET).remove([photoUrl]).then(() => {}, () => {})
         try {
           await sendNotification(child.parent_id, language === 'en'
             ? `${child.name} tried to send something as a chore photo that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
@@ -2004,7 +2089,13 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     //    CODE (not Gemini, not the client) decides photo_taken_at.
     const decoded = []
     for (const path of paths) {
-      const { data: blob, error: dlErr } = await supabase.storage.from('submissions').download(path)
+      // Prefer the private bucket; fall back to the legacy public one so a
+      // still-cached older client (uploading to 'submissions') keeps working
+      // through the transition.
+      let { data: blob, error: dlErr } = await supabase.storage.from(PHOTO_BUCKET).download(path)
+      if (dlErr || !blob) {
+        ({ data: blob, error: dlErr } = await supabase.storage.from('submissions').download(path))
+      }
       if (dlErr || !blob) return res.status(400).json({ error: `could not read ${path}` })
       const buffer = Buffer.from(await blob.arrayBuffer())
       if (buffer.length === 0) return res.status(400).json({ error: 'empty image' })
@@ -2020,12 +2111,12 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       }
     } catch { /* no EXIF (e.g. screenshot) — leave null */ }
 
-    // 2. Public URLs for the already-uploaded pages (used in the submission row
-    //    and the parent album).
-    const photoUrls = paths.map(p => supabase.storage.from('submissions').getPublicUrl(p).data.publicUrl)
+    // 2. Store the storage PATHS, not public URLs — the bucket is private, so
+    //    readers get a short-lived signed URL instead (signedUrlFor).
+    const photoUrls = paths
 
     // Any rejection below must not leave the uploaded bytes sitting in Storage.
-    const discardUploads = () => supabase.storage.from('submissions').remove(paths).then(() => {}, () => {})
+    const discardUploads = () => supabase.storage.from(PHOTO_BUCKET).remove(paths).then(() => {}, () => {})
 
     // 2.5 Duplicate guard — the same image must not be submitted (and rewarded)
     //     twice. Byte-exact sha256 per page catches a re-sent file.
@@ -2541,6 +2632,10 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
+  // Photo retention — homework/chore images are deleted once past the window
+  // (PHOTO_RETENTION_DAYS, default 60). Runs at boot and daily thereafter.
+  purgeOldPhotos().catch(err => console.error(`[PURGE] ${err.message}`))
+  setInterval(() => purgeOldPhotos().catch(err => console.error(`[PURGE] ${err.message}`)), 24 * 60 * 60 * 1000)
   startTelegramBot()
   await restoreSessions()
   await startSubmissionListener()

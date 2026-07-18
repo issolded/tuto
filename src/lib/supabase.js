@@ -21,6 +21,12 @@ export const storageClient = createClient(supabaseUrl, supabaseAnonKey, {
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
+// Private bucket for real photos of a child's homework / room. Readable only
+// via short-lived signed URLs minted server-side. Story covers stay in the
+// public 'submissions' bucket (AI cover art, rendered by the child app which
+// has no Supabase session).
+export const PHOTO_BUCKET = 'submission-photos'
+
 export async function getChildrenByFamilyCode(familyCode) {
   try {
     const res = await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/children`)
@@ -130,7 +136,7 @@ export async function submitHomework(childId, files) {
     const ext = (file.type || '').includes('png') ? 'png' : 'jpg'
     const path = `${cid}/homework/${Date.now()}-${i}.${ext}`
     const { error } = await storageClient.storage
-      .from('submissions')
+      .from(PHOTO_BUCKET)
       .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false })
     if (error) throw error
     paths.push(path)
