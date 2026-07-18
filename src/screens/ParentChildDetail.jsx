@@ -46,7 +46,7 @@ function formatGroupDate(dateStr) {
 }
 
 // ── Submission card ───────────────────────────────────────────────────────────
-function SubmissionCard({ sub, onApprove, onReject }) {
+function SubmissionCard({ sub, onApprove, onReject, onOpenPhoto }) {
   const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
   const displayGems = sub.gems_earned ?? sub.suggested_gems ?? 0
   const time = sub.created_at ? new Date(sub.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -77,10 +77,30 @@ function SubmissionCard({ sub, onApprove, onReject }) {
           )}
         </div>
       </div>
-      {(sub.media_url || sub.photo_urls?.[0]) && (
-        <img src={sub.media_url || sub.photo_urls[0]} alt="submission"
-          style={{ width: '100%', borderRadius: 12, maxHeight: 200, objectFit: 'cover' }} />
-      )}
+      {(() => {
+        // Homework can carry up to 15 pages — show them all, not just the first.
+        const photos = sub.photo_urls?.length ? sub.photo_urls : (sub.media_url ? [sub.media_url] : [])
+        if (!photos.length) return null
+        if (photos.length === 1) {
+          return (
+            <img src={photos[0]} alt="submission" onClick={() => onOpenPhoto?.(photos, 0)}
+              style={{ width: '100%', borderRadius: 12, maxHeight: 200, objectFit: 'cover', cursor: 'zoom-in' }} />
+          )
+        }
+        return (
+          <div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {photos.map((url, i) => (
+                <img key={url} src={url} alt={`page ${i + 1}`} onClick={() => onOpenPhoto?.(photos, i)}
+                  style={{ width: 96, height: 96, flex: '0 0 auto', borderRadius: 12, objectFit: 'cover', cursor: 'zoom-in' }} />
+              ))}
+            </div>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 4 }}>
+              {photos.length} pages · tap to enlarge
+            </div>
+          </div>
+        )
+      })()}
       {sub.child_note && (
         <div style={{ background: PC.readingBg, borderRadius: 12, padding: '10px 14px', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.reading, lineHeight: 1.4 }}>
           💬 {sub.child_note}
@@ -91,6 +111,44 @@ function SubmissionCard({ sub, onApprove, onReject }) {
         <Btn onClick={onReject} variant="danger" style={{ flex: 1, padding: '11px', fontSize: 14 }}>✕ Reject</Btn>
       </div>
     </Card>
+  )
+}
+
+// ── Full-size photo viewer ────────────────────────────────────────────────────
+// Tap a submission photo to see the original (the card only shows a cropped
+// thumbnail). Arrows page through multi-page homework.
+function PhotoLightbox({ urls, index, onClose, onIndex }) {
+  const many = urls.length > 1
+  const navBtn = {
+    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+    width: 44, height: 44, borderRadius: '50%', border: 'none', cursor: 'pointer',
+    background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 26, lineHeight: 1,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(12,14,20,.93)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <img src={urls[index]} alt={`photo ${index + 1}`} onClick={e => e.stopPropagation()}
+        style={{ maxWidth: '100%', maxHeight: '82vh', objectFit: 'contain', borderRadius: 12 }} />
+      <button onClick={onClose} aria-label="Close" style={{
+        position: 'absolute', top: 14, right: 14, width: 40, height: 40, borderRadius: '50%',
+        border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 18,
+      }}>✕</button>
+      {many && (
+        <>
+          <button aria-label="Previous" onClick={e => { e.stopPropagation(); onIndex((index - 1 + urls.length) % urls.length) }}
+            style={{ ...navBtn, left: 10 }}>‹</button>
+          <button aria-label="Next" onClick={e => { e.stopPropagation(); onIndex((index + 1) % urls.length) }}
+            style={{ ...navBtn, right: 10 }}>›</button>
+          <div style={{
+            position: 'absolute', bottom: 22, left: 0, right: 0, textAlign: 'center',
+            fontFamily: FONT, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)',
+          }}>{index + 1} / {urls.length}</div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -375,6 +433,7 @@ export default function ParentChildDetail() {
   const [contributionsTodayDate, setContributionsTodayDate] = useState(null)
   const [rewards, setRewards] = useState(null)
   const [justApproved, setJustApproved] = useState(false)
+  const [lightbox, setLightbox] = useState(null) // { urls, index } — full-size photo viewer
   const [showPinModal,    setShowPinModal]    = useState(false)
   const [showEditModal,   setShowEditModal]   = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
@@ -461,6 +520,14 @@ export default function ParentChildDetail() {
   return (
     <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
       {justApproved && <Confetti n={16} />}
+      {lightbox && (
+        <PhotoLightbox
+          urls={lightbox.urls}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onIndex={i => setLightbox(lb => ({ ...lb, index: i }))}
+        />
+      )}
 
       <TopBar
         title={child.name}
@@ -493,7 +560,8 @@ export default function ParentChildDetail() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pending.map(sub => (
-                <SubmissionCard key={sub.id} sub={sub} onApprove={() => handleApprove(sub)} onReject={() => handleReject(sub.id)} />
+                <SubmissionCard key={sub.id} sub={sub} onApprove={() => handleApprove(sub)} onReject={() => handleReject(sub.id)}
+                  onOpenPhoto={(urls, index) => setLightbox({ urls, index })} />
               ))}
             </div>
           )}

@@ -114,7 +114,7 @@ async function getParentContext(parentId) {
       supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
       // Pending submissions (homework/chore) awaiting a parent reply — WITH ids
       // so the parent can approve/reject by free text ("onayla", "25 gem yeter").
-      supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
+      supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at, photo_urls, media_url').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
     ])
 
     const sub = submissions || []
@@ -142,14 +142,21 @@ async function getParentContext(parentId) {
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
         : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
       pendingCheckFailed: !!pendingError,
-      pendingSubmissions: (pendingSubs || []).map(s => ({
-        id: s.id,
-        task_type: s.task_type,
-        description: s.task_description || (s.task_type === 'homework' ? 'Ödev' : s.task_type),
-        suggested_gems: s.suggested_gems ?? null,
-        photo_taken_at: s.photo_taken_at ?? null,
-        created_at: s.created_at,
-      })),
+      pendingSubmissions: (pendingSubs || []).map(s => {
+        // Photo count MUST be in context: without it the model confidently told
+        // a parent the homework was "saved without any photo" while the photos
+        // were sitting right there in the dashboard.
+        const urls = (s.photo_urls?.length ? s.photo_urls : (s.media_url ? [s.media_url] : []))
+        return {
+          id: s.id,
+          task_type: s.task_type,
+          description: s.task_description || (s.task_type === 'homework' ? 'Ödev' : s.task_type),
+          suggested_gems: s.suggested_gems ?? null,
+          photo_taken_at: s.photo_taken_at ?? null,
+          created_at: s.created_at,
+          photoCount: urls.length,
+        }
+      }),
       parentPrefs,
     }
   }))
@@ -571,6 +578,23 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'send_submission_photos',
+      description:
+        'Send the parent the actual PHOTO(S) of a submission (homework or chore) here in the chat, by its exact id ' +
+        'from the "pending submissions" list. Call this whenever the parent asks to see the photos ' +
+        '("görselleri var mı", "fotoğrafı gönder", "show me the photo", "can I see it"). The pending list tells you ' +
+        'how many photos each submission has (photoCount) — if photoCount is 0 there is genuinely no photo, ' +
+        'otherwise NEVER tell the parent there is no photo. If several submissions are pending and it is unclear ' +
+        'which one they mean, ask first.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          submission_id: { type: 'STRING', description: 'The exact id of the submission whose photos to send, from the pending submissions list.' },
+        },
+        required: ['submission_id'],
+      },
+    },
+    {
       name: 'reject_submission',
       description:
         'Reject a pending submission (homework or chore) by its exact id from the "pending submissions" list, when ' +
@@ -651,6 +675,34 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
   }
 
   return { success: true, id: sub.id, childName: child.name, taskType: sub.task_type, gems: awarded }
+}
+
+// Re-sends a submission's photos into the chat on request. Ownership is checked
+// in code — a parent can only ever pull their own child's photos.
+async function sendSubmissionPhotosTool(submissionId, parentId) {
+  const { data: sub } = await supabase
+    .from('submissions')
+    .select('id, child_id, task_type, photo_urls, media_url')
+    .eq('id', submissionId)
+    .maybeSingle()
+  if (!sub) return { success: false, error: 'submission not found' }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', sub.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) {
+    return { success: false, error: 'not authorized for this submission' }
+  }
+
+  const urls = sub.photo_urls?.length ? sub.photo_urls : (sub.media_url ? [sub.media_url] : [])
+  if (!urls.length) return { success: false, error: 'this submission genuinely has no photo' }
+
+  try {
+    await sendNotificationWithPhotos(parentId, '', urls)
+  } catch (err) {
+    console.error(`[SUBMISSION] photo resend failed: ${err.message}`)
+    return { success: false, error: 'could not send the photos right now' }
+  }
+  return { success: true, id: sub.id, childName: child.name, photoCount: urls.length, alreadySent: true }
 }
 
 async function rejectSubmissionTool(submissionId, parentId) {
@@ -888,12 +940,16 @@ async function handleMessage(parentId, replyCb, text) {
               const kind = s.taskType === 'homework' ? 'ödev' : s.taskType === 'chore' ? 'ev görevi' : s.taskType
               const gemHint = s.suggestedGems != null ? `, önerilen ödül ${s.suggestedGems} gem` : ''
               const staleHint = s.stale ? ', (fotoğraf bugün çekilmemiş görünüyor)' : ''
-              return `- id=${s.id}: ${kind} — ${s.child}: "${s.description}"${gemHint}${staleHint}`
+              const photoHint = s.photoCount > 0 ? `, ${s.photoCount} fotoğraf var` : ', fotoğrafı yok'
+              return `- id=${s.id}: ${kind} — ${s.child}: "${s.description}"${gemHint}${photoHint}${staleHint}`
             }).join('\n') +
             `\n- Ebeveyn bunlardan birini onaylarsa approve_submission'ı, reddederse reject_submission'ı ` +
             `yukarıdaki EXACT id ile çağır. Ebeveyn bir gem sayısı söylediyse (örn. "25 gem yeter") onu gems ` +
             `parametresine geçir; söylemediyse gems'i BOŞ bırak (sunucu ayarlı ödülü kullanır). Birden fazla ` +
-            `bekleyen gönderi varsa ve hangisi olduğu belirsizse, tahmin etme — ebeveynin diliyle hangisi diye sor.`
+            `bekleyen gönderi varsa ve hangisi olduğu belirsizse, tahmin etme — ebeveynin diliyle hangisi diye sor.\n` +
+            `- Her gönderinin kaç fotoğrafı olduğu yukarıda yazıyor. Ebeveyn görselleri sorarsa ("görseli var mı", ` +
+            `"fotoğrafı gönder") send_submission_photos'u o id ile çağır. Bir gönderi için "fotoğrafı yok" ` +
+            `yazmıyorsa ASLA "görsel bulunmuyor / fotoğrafsız kaydedilmiş" deme — fotoğraflar sistemde duruyor.`
           : 'Şu anda onay bekleyen gönderi yok.')
 
       return (
@@ -997,6 +1053,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await approveSubmissionTool(args.submission_id, parentId, args.gems)
       } else if (name === 'reject_submission') {
         toolResult = await rejectSubmissionTool(args.submission_id, parentId)
+      } else if (name === 'send_submission_photos') {
+        toolResult = await sendSubmissionPhotosTool(args.submission_id, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
