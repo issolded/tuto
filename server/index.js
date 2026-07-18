@@ -115,7 +115,7 @@ async function getParentContext(parentId) {
       supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
       // Pending submissions (homework/chore) awaiting a parent reply — WITH ids
       // so the parent can approve/reject by free text ("onayla", "25 gem yeter").
-      supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at, photo_urls, media_url').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
+      supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at, photo_urls, media_url, status').eq('child_id', child.id).in('status', ['pending', 'blocked']).order('created_at', { ascending: false }),
     ])
 
     const sub = submissions || []
@@ -151,6 +151,7 @@ async function getParentContext(parentId) {
         return {
           id: s.id,
           task_type: s.task_type,
+          status: s.status,
           description: s.task_description || (s.task_type === 'homework' ? 'Ödev' : s.task_type),
           suggested_gems: s.suggested_gems ?? null,
           photo_taken_at: s.photo_taken_at ?? null,
@@ -960,18 +961,24 @@ async function handleMessage(parentId, replyCb, text) {
     // Pending homework/chore submissions with ids — so a free-text "onayla"
     // can be routed to approve_submission for the right one.
     const nowLocalDate = userNow.toFormat('yyyy-MM-dd')
-    const pendingSubsList = familyData.flatMap(c =>
+    const allSubsList = familyData.flatMap(c =>
       (c.pendingSubmissions || []).map(s => ({
         id: s.id,
         child: c.name,
         taskType: s.task_type,
+        status: s.status,
         description: s.description,
         suggestedGems: s.suggested_gems,
+        photoCount: s.photoCount,
         stale: s.photo_taken_at
           ? DateTime.fromISO(s.photo_taken_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd') !== nowLocalDate
           : false,
       }))
     )
+    const pendingSubsList = allSubsList.filter(s => s.status !== 'blocked')
+    // Images the safety screen withheld. NOT awaiting approval, but the parent
+    // must be able to see them on request — the classifier can be wrong.
+    const heldSubsList = allSubsList.filter(s => s.status === 'blocked')
 
     function buildSystemPrompt(currentPendingList, currentPendingSubs = pendingSubsList) {
       const pendingBlock = pendingCheckFailed
@@ -1006,10 +1013,19 @@ async function handleMessage(parentId, replyCb, text) {
             `yazmıyorsa ASLA "görsel bulunmuyor / fotoğrafsız kaydedilmiş" deme — fotoğraflar sistemde duruyor.`
           : 'Şu anda onay bekleyen gönderi yok.')
 
+      const heldBlock = heldSubsList.length
+        ? `\n\nGÜVENLİK TARAMASININ İLETMEDİĞİ GÖRSELLER (toplam ${heldSubsList.length}):\n` +
+          heldSubsList.map(s => `- id=${s.id}: ${s.child}, ${s.photoCount} fotoğraf`).join('\n') +
+          `\n- Bunlar otomatik iletilmedi ama SİLİNMEDİ; sistemde duruyor. Ebeveyn "ne göndermiş", "göster", ` +
+          `"görebilir miyim" derse send_submission_photos'u bu id ile çağır ve göster. Ebeveyn çocuğun velisi; ` +
+          `görme hakkı var ve tarama yanılmış olabilir — asla "gösteremem / elimde yok" deme.\n` +
+          `- Bunlar onay bekleyen gönderi DEĞİL; onay listesinde sayma, approve_submission ile onaylamaya çalışma.`
+        : ''
+
       return (
         `${childrenBlock}\n\n` +
         `${pendingBlock}\n\n` +
-        `${subsBlock}\n\n` +
+        `${subsBlock}${heldBlock}\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
@@ -2141,16 +2157,36 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const safety = await screenImageSafety({ images: decoded, kind: 'homework', language })
 
     if (!safety.appropriate) {
-      console.log(`[HOMEWORK] inappropriate image child=${childId} — blocked (reason: ${safety.reason})`)
-      await discardUploads()
+      console.log(`[HOMEWORK] withheld image child=${childId} (reason: ${safety.reason})`)
+      // KEEP the image and record it as 'blocked' — out of the approval queue,
+      // but retrievable. The classifier can be wrong (a kid's ghost story got
+      // flagged for "blood"), and telling a parent "something was inappropriate"
+      // with no way to look leaves them helpless. They can ask to see it.
+      const heldRow = {
+        child_id: childId,
+        task_type: 'homework',
+        status: 'blocked',
+        photo_urls: photoUrls,
+        photo_hashes: hashes,
+        media_url: photoUrls[0],
+        task_description: 'İncelenmeyi bekleyen görsel',
+        gems_earned: null,
+      }
+      let { error: heldErr } = await supabase.from('submissions').insert(heldRow)
+      if (heldErr && /photo_hashes/i.test(heldErr.message || '')) {
+        const { photo_hashes, ...withoutHashes } = heldRow
+        ;({ error: heldErr } = await supabase.from('submissions').insert(withoutHashes))
+      }
+      if (heldErr) console.error(`[HOMEWORK] held-row insert failed: ${heldErr.message}`)
+
       try {
         await sendNotification(child.parent_id, language === 'en'
-          ? `${child.name} tried to send something as homework that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
-          : `${child.name} ödev olarak uygun olmayan bir görsel göndermeye çalıştı. Görseli paylaşmıyorum ama haberin olsun istedim.`)
+          ? `${child.name} sent something as homework that I hesitated to forward automatically — I may well be wrong. I've kept it: just say "show me" and I'll send it here so you can decide for yourself.`
+          : `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`)
       } catch (err) {
-        console.error(`[HOMEWORK] inappropriate alert failed: ${err.message}`)
+        console.error(`[HOMEWORK] withheld alert failed: ${err.message}`)
       }
-      return res.status(400).json({ error: "I can't send this one. Can you take a photo of your homework?" })
+      return res.status(400).json({ error: "I couldn't send this one. Can you take a photo of your homework page?" })
     }
 
     // 3. Gemini observation — server-side only. gemini-3.5-flash intermittently
