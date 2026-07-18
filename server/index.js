@@ -8,7 +8,8 @@ import FormData from 'form-data'
 import exifr from 'exifr'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramMediaGroup, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
-import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
+import crypto from 'crypto'
+import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption, homeworkSafetyPrompt, parseSafety } from './prompts/homework.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -1893,6 +1894,58 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     //    and the parent album).
     const photoUrls = paths.map(p => supabase.storage.from('submissions').getPublicUrl(p).data.publicUrl)
 
+    // Any rejection below must not leave the uploaded bytes sitting in Storage.
+    const discardUploads = () => supabase.storage.from('submissions').remove(paths).then(() => {}, () => {})
+
+    // 2.5 Duplicate guard — the same image must not be submitted (and rewarded)
+    //     twice. Byte-exact sha256 per page catches a re-sent file.
+    const hashes = decoded.map(d => crypto.createHash('sha256').update(d.buffer).digest('hex'))
+    const { data: priorSubs, error: priorErr } = await supabase
+      .from('submissions')
+      .select('photo_hashes')
+      .eq('child_id', childId)
+      .eq('task_type', 'homework')
+    if (priorErr) console.error(`[HOMEWORK] duplicate lookup failed: ${priorErr.message}`)
+    const seenHashes = new Set((priorSubs || []).flatMap(s => s.photo_hashes || []))
+    if (hashes.some(h => seenHashes.has(h))) {
+      console.log(`[HOMEWORK] duplicate photo child=${childId} — rejected`)
+      await discardUploads()
+      return res.status(409).json({ error: 'You already sent this one 🌱 Try a photo of your new homework!' })
+    }
+
+    // 2.6 Image safety gate — looks at the PICTURE. The text screener further
+    //     down only ever sees Gemini's written description, which is empty for a
+    //     non-homework image, so an inappropriate photo used to reach the parent
+    //     untouched. Fails CLOSED: any error, refusal or uncertainty blocks it.
+    let safety
+    try {
+      const safetyParts = [
+        { text: homeworkSafetyPrompt(language) },
+        ...decoded.map(d => ({ inline_data: { mime_type: d.mimeType, data: d.buffer.toString('base64') } })),
+      ]
+      const sData = await callGeminiWithRetry(() => fetchGeminiOnce({
+        contents: [{ parts: safetyParts }],
+        generationConfig: { response_mime_type: 'application/json' },
+      }))
+      safety = parseSafety(sData.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+    } catch (err) {
+      console.error(`[HOMEWORK] safety check failed (failing closed): ${err.message}`)
+      safety = { appropriate: false, is_homework_like: false, reason: 'safety check failed' }
+    }
+
+    if (!safety.appropriate) {
+      console.log(`[HOMEWORK] inappropriate image child=${childId} — blocked (reason: ${safety.reason})`)
+      await discardUploads()
+      try {
+        await sendNotification(child.parent_id, language === 'en'
+          ? `${child.name} tried to send something as homework that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
+          : `${child.name} ödev olarak uygun olmayan bir görsel göndermeye çalıştı. Görseli paylaşmıyorum ama haberin olsun istedim.`)
+      } catch (err) {
+        console.error(`[HOMEWORK] inappropriate alert failed: ${err.message}`)
+      }
+      return res.status(400).json({ error: "I can't send this one. Can you take a photo of your homework?" })
+    }
+
     // 3. Gemini observation — server-side only. gemini-3.5-flash intermittently
     //    emits invalid JSON even with response_mime_type set (typically an
     //    unescaped double-quote inside a text field), so a bad parse gets ONE
@@ -1919,6 +1972,15 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       }
     } catch (err) {
       console.error(`[HOMEWORK] observation failed: ${err.message}`)
+    }
+
+    // 3.5 Not homework at all — the safety pass and the observation both say so.
+    //     Don't file it or bother the parent; ask the child to retake. Requiring
+    //     BOTH to agree keeps a misread page from blocking real homework.
+    if (!safety.is_homework_like && !observation?.looks_like_homework) {
+      console.log(`[HOMEWORK] not homework child=${childId} — rejected`)
+      await discardUploads()
+      return res.status(400).json({ error: "This doesn't look like homework. Try a photo of your homework page!" })
     }
 
     // 4. Safety screen over what Gemini read on the page. Inappropriate → do NOT
@@ -1951,20 +2013,30 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     //    configured reward (task_settings.homework.gems, default 25) so the
     //    dashboard/approval path has a number to work with.
     const hwGems = child.task_settings?.homework?.gems ?? HOMEWORK_DEFAULT_GEMS
-    const { data: submission, error: subErr } = await supabase
-      .from('submissions')
-      .insert({
-        child_id: childId,
-        task_type: 'homework',
-        status: 'pending',
-        photo_urls: photoUrls,
-        media_url: photoUrls[0],
-        task_description: observation?.subject_guess || 'Ödev',
-        suggested_gems: hwGems,
-        gems_earned: null,
-        photo_taken_at: photoTakenAt,
-      })
-      .select('id').single()
+    const submissionRow = {
+      child_id: childId,
+      task_type: 'homework',
+      status: 'pending',
+      photo_urls: photoUrls,
+      photo_hashes: hashes,
+      media_url: photoUrls[0],
+      task_description: observation?.subject_guess || 'Ödev',
+      suggested_gems: hwGems,
+      gems_earned: null,
+      photo_taken_at: photoTakenAt,
+    }
+    let { data: submission, error: subErr } = await supabase
+      .from('submissions').insert(submissionRow).select('id').single()
+
+    // If the dedup column hasn't been migrated yet, don't take homework down
+    // over it — store without hashes and shout in the logs. Dedup starts
+    // working the moment the column exists.
+    if (subErr && /photo_hashes/i.test(subErr.message || '')) {
+      console.warn('[HOMEWORK] photo_hashes column missing — RUN THE MIGRATION; storing without dedup for now')
+      const { photo_hashes, ...withoutHashes } = submissionRow
+      ;({ data: submission, error: subErr } = await supabase
+        .from('submissions').insert(withoutHashes).select('id').single())
+    }
     if (subErr) {
       console.error(`[HOMEWORK] submission insert failed: ${subErr.message}`)
       return res.status(500).json({ error: subErr.message })

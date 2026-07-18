@@ -10,6 +10,42 @@ function languageName(language) {
   return language === 'en' ? 'English' : 'Turkish'
 }
 
+// ── 0. Image safety screen ────────────────────────────────────────────────────
+// Runs BEFORE the observation, on the IMAGE itself. The text screener
+// (screenChildInput) only ever sees Gemini's written description, which is
+// empty for a non-homework image — so an inappropriate photo sailed straight
+// through to the parent. This looks at the picture and fails closed.
+export function homeworkSafetyPrompt(language) {
+  const lang = languageName(language)
+  return (
+    `Bir çocuk, "ödevim" diyerek bu görsel(ler)i bir çocuk eğitim uygulamasına yükledi. ` +
+    `Sen bir çocuk-güvenliği görsel sınıflandırıcısısın. Görsel(ler)i değerlendir.\n\n` +
+    `Yalnızca şu JSON'u döndür, başka hiçbir şey yazma:\n` +
+    `{ "appropriate": boolean, "is_homework_like": boolean, "reason": string }\n\n` +
+    `Kurallar:\n` +
+    `- appropriate=false: çıplaklık, cinsel/erotik içerik, iç çamaşırı/mayo ya da bedene odaklanan görseller, ` +
+    `şiddet, kan, uyuşturucu/alkol, yetişkin teması veya bir çocuk uygulamasına uygun olmayan herhangi bir şey varsa.\n` +
+    `- is_homework_like=true: kâğıt ödev, defter sayfası, çalışma kâğıdı, ders kitabı sayfası, tahta fotoğrafı ya da ` +
+    `ekran görüntüsü gibi bir okul çalışmasıysa. Selfie, kedi fotoğrafı, oyun ekranı, rastgele bir görsel ise false.\n` +
+    `- EMİN DEĞİLSEN appropriate=false döndür — güvenli tarafta kal. Bu bir çocuk uygulaması.\n` +
+    `- reason: tek kısa cümle, ${lang} dilinde.`
+  )
+}
+
+export function parseSafety(text) {
+  const s = String(text || '')
+  const start = s.indexOf('{')
+  const end = s.lastIndexOf('}')
+  if (start === -1 || end === -1 || end < start) throw new Error('no JSON object in safety response')
+  const raw = JSON.parse(s.slice(start, end + 1))
+  if (typeof raw.appropriate !== 'boolean') throw new Error('malformed safety response')
+  return {
+    appropriate: raw.appropriate,
+    is_homework_like: raw.is_homework_like === true,
+    reason: typeof raw.reason === 'string' ? raw.reason : '',
+  }
+}
+
 // ── 1. Observation prompt ─────────────────────────────────────────────────────
 // The model is told it may be wrong and that the parent sees the photo next to
 // its words — so overstating gets caught. Observe, don't grade.
