@@ -9,7 +9,8 @@ import exifr from 'exifr'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramMediaGroup, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
 import crypto from 'crypto'
-import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption, homeworkSafetyPrompt, parseSafety } from './prompts/homework.js'
+import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
+import { imageSafetyPrompt, parseImageSafety } from './prompts/imageSafety.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -271,6 +272,36 @@ async function screenChildInput(text, age) {
   }
 
   return result
+}
+
+// The single server-side image safety gate for every child photo upload
+// (homework + chore). screenChildInput above only classifies TEXT — it never
+// sees the picture — so this is what actually stops an inappropriate image.
+// FAILS CLOSED: any transport error, model refusal or malformed response
+// returns "not appropriate" so the caller blocks rather than forwards.
+async function screenImageSafety({ images, kind, language }) {
+  try {
+    const parts = [
+      { text: imageSafetyPrompt({ kind, language }) },
+      ...images.map(i => ({ inline_data: { mime_type: i.mimeType, data: i.buffer.toString('base64') } })),
+    ]
+    const data = await callGeminiWithRetry(() => fetchGeminiOnce({
+      contents: [{ parts }],
+      generationConfig: { response_mime_type: 'application/json' },
+    }))
+    return parseImageSafety(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+  } catch (err) {
+    console.error(`[SAFETY] ${kind} image screen failed (failing closed): ${err.message}`)
+    return { appropriate: false, matchesTask: false, reason: 'safety check failed' }
+  }
+}
+
+// 'https://…/storage/v1/object/public/submissions/<path>' → '<path>', so a
+// blocked upload can be deleted from Storage instead of lingering there.
+function storagePathFromPublicUrl(url) {
+  const marker = '/storage/v1/object/public/submissions/'
+  const i = String(url || '').indexOf(marker)
+  return i === -1 ? null : decodeURIComponent(String(url).slice(i + marker.length))
 }
 
 async function sendNotification(parentId, message) {
@@ -1772,6 +1803,47 @@ app.post('/api/notify-parent-chore', async (req, res) => {
       .from('children').select('name, parent_id').eq('id', childId).single()
     if (!child) return res.status(404).json({ error: 'Child not found' })
 
+    // Server-side safety gate. The client-side evaluateChore() check is UX only
+    // — it runs in the browser and its catch block assumes appropriate:true on
+    // any error (fails OPEN), and this endpoint previously validated nothing.
+    // Same gate the homework flow uses, so the two can't diverge.
+    if (photoUrl) {
+      const { data: parentRow } = await supabase
+        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+
+      let image = null
+      try {
+        const imgRes = await axios.get(photoUrl, { responseType: 'arraybuffer' })
+        const ct = imgRes.headers['content-type']
+        image = {
+          buffer: Buffer.from(imgRes.data),
+          mimeType: typeof ct === 'string' && ct.startsWith('image/') ? ct : 'image/jpeg',
+        }
+      } catch (err) {
+        console.error(`[CHORE] could not download photo for safety screen: ${err.message}`)
+      }
+
+      // Unreadable photo → treat as unverified, block (fail closed).
+      const safety = image
+        ? await screenImageSafety({ images: [image], kind: 'chore', language })
+        : { appropriate: false, matchesTask: false, reason: 'photo could not be read' }
+
+      if (!safety.appropriate) {
+        console.log(`[CHORE] inappropriate image child=${childId} — blocked (${safety.reason})`)
+        const path = storagePathFromPublicUrl(photoUrl)
+        if (path) await supabase.storage.from('submissions').remove([path]).then(() => {}, () => {})
+        try {
+          await sendNotification(child.parent_id, language === 'en'
+            ? `${child.name} tried to send something as a chore photo that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
+            : `${child.name} ev görevi olarak uygun olmayan bir görsel göndermeye çalıştı. Görseli paylaşmıyorum ama haberin olsun istedim.`)
+        } catch (err) {
+          console.error(`[CHORE] inappropriate alert failed: ${err.message}`)
+        }
+        return res.status(400).json({ error: 'Bu fotoğrafı gönderemedim. Ev görevinin fotoğrafını çeker misin?' })
+      }
+    }
+
     const gems = suggestedGems || 20
     const { data: submission, error: subErr } = await supabase
       .from('submissions')
@@ -1917,21 +1989,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     //     down only ever sees Gemini's written description, which is empty for a
     //     non-homework image, so an inappropriate photo used to reach the parent
     //     untouched. Fails CLOSED: any error, refusal or uncertainty blocks it.
-    let safety
-    try {
-      const safetyParts = [
-        { text: homeworkSafetyPrompt(language) },
-        ...decoded.map(d => ({ inline_data: { mime_type: d.mimeType, data: d.buffer.toString('base64') } })),
-      ]
-      const sData = await callGeminiWithRetry(() => fetchGeminiOnce({
-        contents: [{ parts: safetyParts }],
-        generationConfig: { response_mime_type: 'application/json' },
-      }))
-      safety = parseSafety(sData.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
-    } catch (err) {
-      console.error(`[HOMEWORK] safety check failed (failing closed): ${err.message}`)
-      safety = { appropriate: false, is_homework_like: false, reason: 'safety check failed' }
-    }
+    const safety = await screenImageSafety({ images: decoded, kind: 'homework', language })
 
     if (!safety.appropriate) {
       console.log(`[HOMEWORK] inappropriate image child=${childId} — blocked (reason: ${safety.reason})`)
@@ -1977,7 +2035,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     // 3.5 Not homework at all — the safety pass and the observation both say so.
     //     Don't file it or bother the parent; ask the child to retake. Requiring
     //     BOTH to agree keeps a misread page from blocking real homework.
-    if (!safety.is_homework_like && !observation?.looks_like_homework) {
+    if (!safety.matchesTask && !observation?.looks_like_homework) {
       console.log(`[HOMEWORK] not homework child=${childId} — rejected`)
       await discardUploads()
       return res.status(400).json({ error: "This doesn't look like homework. Try a photo of your homework page!" })
