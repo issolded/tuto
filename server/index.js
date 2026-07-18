@@ -2288,7 +2288,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
           const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
             contents: [{ parts: [{ text: homeworkCaptionPrompt({
               filteredObservation: filtered, childName: child.name, tone, language,
-              photoCount: photoUrls.length, staleNote: dateNote,
+              photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems,
             }) }] }],
           }))
           caption = capData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim()

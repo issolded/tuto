@@ -117,7 +117,7 @@ export function filterForParent(obs) {
 // come from prefs. `staleNote` is a pre-built sentence about the photo date
 // (or '') — CODE decides whether the photo is old, the model just includes the
 // sentence verbatim if given.
-export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote }) {
+export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems }) {
   const lang = languageName(language)
   const toneLine = tone
     ? `Ebeveynin tercih ettiği ton: "${tone}". Bu tona uy.\n`
@@ -140,16 +140,24 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
     `Kurallar:\n` +
     `- Sadece mesaj metnini yaz. Başlık, JSON, tırnak, madde işareti yok.\n` +
     `- En fazla 3-4 cümle.\n` +
-    `- Buton, onay linki, "evet/hayır yaz" gibi mekanik yönerge KOYMA — ebeveyn zaten sana serbestçe yazabilir.\n` +
+    `- MESAJI MUTLAKA ebeveynin kararını isteyen doğal bir soruyla bitir. Ödül, ebeveyn onaylayana kadar ` +
+    `askıda bekliyor — ebeveyn bir karar beklendiğini anlamazsa gönderi askıda kalır ve çocuk ödülünü hiç almaz. ` +
+    `Gerçek bir insanın soracağı gibi sor: "Onaylıyor muyuz?", "Sence de hak etmiş mi?" gibi.` +
+    (gems ? ` Onaylanırsa ${gems} gem ekleneceğini de doğal biçimde belirtebilirsin.` : '') + `\n` +
+    `- Ama buton, onay linki, "evet/hayır yaz", "1'e bas" gibi MEKANİK yönerge koyma — ebeveyn sana zaten ` +
+    `serbest metinle cevap yazabiliyor. Soru bir insanın sorusu gibi olsun, bir formun değil.\n` +
     `- Tüm metin ${lang} dilinde.`
   )
 }
 
 // Last-resort caption if the caption-writing Gemini call fails. The
 // notification must NEVER be lost, so this is deterministic and dependency-free.
+// Ends with the approval question too — the reward stays pending until the
+// parent decides, so no path may leave that unasked.
 export function fallbackCaption({ childName, language, staleNote }) {
   const base = language === 'en'
     ? `${childName} just sent a photo of their homework. 🌱 Take a look whenever you can.`
     : `${childName} az önce ödevinin fotoğrafını gönderdi. 🌱 Fırsatın olduğunda bir göz atabilirsin.`
-  return staleNote ? `${base} ${staleNote}` : base
+  const ask = language === 'en' ? 'Shall we approve it?' : 'Onaylıyor muyuz?'
+  return [base, staleNote, ask].filter(Boolean).join(' ')
 }
