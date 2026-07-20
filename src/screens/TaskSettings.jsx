@@ -9,7 +9,12 @@ const TASKS = [
   { key: 'writing', label: 'My Stories' },
   { key: 'chore',   label: 'My House' },
   { key: 'homework', label: 'My Homework' },
+  { key: 'drawing', label: 'My Drawings' },
 ]
+
+// My Drawings rewards instantly, with no approval step — so it is the one task
+// with a daily cap. The cap is enforced on the SERVER; this is just the dial.
+const CAPPED_TASKS = { drawing: { min: 1, max: 10 } }
 
 const DEFAULT_SETTINGS = {
   reading: { active: true, gems: 30 },
@@ -17,6 +22,14 @@ const DEFAULT_SETTINGS = {
   writing: { active: true, gems: 30 },
   chore:   { active: true, gems: 10 },
   homework: { active: true, gems: 25 },
+  drawing: { active: true, gems: 20, daily_cap: 2 },
+}
+
+function capBtn(PC) {
+  return {
+    width: 30, height: 30, borderRadius: 10, border: `1.5px solid ${PC.line}`, background: '#fff',
+    cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.inkSoft, lineHeight: 1,
+  }
 }
 
 export default function TaskSettings() {
@@ -64,6 +77,12 @@ export default function TaskSettings() {
 
   const setGems = (key, gems) => {
     const next = { ...settings, [key]: { ...settings[key], gems } }
+    setSettings(next)
+    persist(next)
+  }
+
+  const setDailyCap = (key, daily_cap) => {
+    const next = { ...settings, [key]: { ...settings[key], daily_cap } }
     setSettings(next)
     persist(next)
   }
@@ -124,6 +143,29 @@ export default function TaskSettings() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                     <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>5</span>
                     <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>100</span>
+                  </div>
+                </div>
+              )}
+
+              {/* daily cap — only for tasks that reward without approval */}
+              {s.active && CAPPED_TASKS[key] && (
+                <div style={{ marginTop: 14, borderTop: `1px solid ${PC.line}`, paddingTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>Rewarded per day</div>
+                      <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 2 }}>
+                        Extra drawings are still saved, just without gems.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button onClick={() => setDailyCap(key, Math.max(CAPPED_TASKS[key].min, (s.daily_cap ?? 2) - 1))}
+                        style={capBtn(PC)}>−</button>
+                      <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: accent, minWidth: 18, textAlign: 'center' }}>
+                        {s.daily_cap ?? 2}
+                      </span>
+                      <button onClick={() => setDailyCap(key, Math.min(CAPPED_TASKS[key].max, (s.daily_cap ?? 2) + 1))}
+                        style={capBtn(PC)}>+</button>
+                    </div>
                   </div>
                 </div>
               )}

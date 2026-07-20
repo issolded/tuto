@@ -8,7 +8,7 @@ import FormData from 'form-data'
 import exifr from 'exifr'
 import { connectParent, sendMessage, setMessageHandler, setConnectHandler, restoreSessions, isConnected, disconnectParent } from './whatsapp.js'
 import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramMediaGroup, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
-import crypto from 'crypto'
+import crypto, { randomUUID } from 'crypto'
 import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
 import { imageSafetyPrompt, parseImageSafety } from './prompts/imageSafety.js'
 import { purgeOldPhotos } from './jobs/purgeOldPhotos.js'
@@ -105,6 +105,8 @@ async function getParentContext(parentId) {
       { data: books },
       { data: pendingContribs, error: pendingError },
       { data: pendingSubs },
+      treeState,
+      { data: pendingPaintings },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -116,6 +118,15 @@ async function getParentContext(parentId) {
       // Pending submissions (homework/chore) awaiting a parent reply — WITH ids
       // so the parent can approve/reject by free text ("onayla", "25 gem yeter").
       supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at, photo_urls, media_url, status').eq('child_id', child.id).in('status', ['pending', 'blocked']).order('created_at', { ascending: false }),
+      // The tree is its own thing — a kindness diary, not a function of gems or
+      // math level. Without it in context the model answered "how is the tree?"
+      // by improvising from gems/level/stories, which is a different subject.
+      getTreeState(child.id, tz).catch(() => null),
+      supabase.from('paintings')
+        .select('id, drawing_id, created_at')
+        .eq('child_id', child.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
     ])
 
     const sub = submissions || []
@@ -143,6 +154,27 @@ async function getParentContext(parentId) {
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
         : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
       pendingCheckFailed: !!pendingError,
+      // Drawings wait for the parent too, but they are NOT submissions — a
+      // different table and different approve/reject tools.
+      pendingDrawings: (pendingPaintings || []).map(p => ({
+        id: p.id,
+        what: p.drawing_id || 'kendi çizimi',
+        created_at: p.created_at,
+      })),
+      tree: treeState
+        ? {
+            leavesToday: treeState.today,
+            leavesForAFullTreeToday: treeState.dayFull,
+            todaysTreeFullyGrown: treeState.todayComplete,
+            treesThisMonth: treeState.monthTreeCount,
+            daysElapsedThisMonth: treeState.monthDaysElapsed,
+            leavesThisMonth: treeState.monthLeafCount,
+            month: treeState.monthName,
+            recentLeaves: treeState.recentLeaves.length
+              ? treeState.recentLeaves
+              : `${child.name} has no approved contributions this month yet`,
+          }
+        : `${child.name}'s tree could not be read right now (temporary error) — tell the parent you couldn't check it, do NOT guess`,
       pendingSubmissions: (pendingSubs || []).map(s => {
         // Photo count MUST be in context: without it the model confidently told
         // a parent the homework was "saved without any photo" while the photos
@@ -319,20 +351,30 @@ function storagePathFromPublicUrl(url) {
 // directly by the unauthenticated child app) and for legacy rows.
 const PHOTO_BUCKET = 'submission-photos'
 
+// Photos of the child's own drawings. Private, and — unlike the homework and
+// chore buckets — written ONLY by the service role from this file. There is no
+// client upload policy on it at all. Declared next to PHOTO_BUCKET because
+// signedUrlFor() below has to be told which of the two a path belongs to.
+const PAINTING_BUCKET = 'paintings'
+
 // New rows store a storage PATH; legacy rows store a full public URL. Anything
 // starting with http is legacy public and returned untouched; everything else
 // is signed against the private bucket.
-async function signedUrlFor(pathOrUrl, expiresIn = 3600) {
+// `bucket` matters: a path only signs against the bucket it actually lives in.
+// Drawing photos live in PAINTING_BUCKET, and signing them against the homework
+// bucket silently returned null — which made the Telegram photo fall back to a
+// text-only message and left the library and dashboard blank.
+async function signedUrlFor(pathOrUrl, expiresIn = 3600, bucket = PHOTO_BUCKET) {
   const v = String(pathOrUrl || '')
   if (!v) return null
   if (/^https?:\/\//i.test(v)) return v // legacy public URL
-  let { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(v, expiresIn)
-  if (error) {
+  let { data, error } = await supabase.storage.from(bucket).createSignedUrl(v, expiresIn)
+  if (error && bucket === PHOTO_BUCKET) {
     // Transitional: a path written before the private bucket existed.
     ;({ data, error } = await supabase.storage.from('submissions').createSignedUrl(v, expiresIn))
   }
   if (error) {
-    console.error(`[STORAGE] could not sign ${v}: ${error.message}`)
+    console.error(`[STORAGE] could not sign ${v} in ${bucket}: ${error.message}`)
     return null
   }
   return data.signedUrl
@@ -414,10 +456,10 @@ async function sendNotification(parentId, message) {
   console.log(`[NOTIFY] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
 
-async function sendNotificationWithPhoto(parentId, message, photoUrl) {
+async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = PHOTO_BUCKET) {
   // Sign at the boundary: the messaging platform fetches the image once, so a
   // short TTL is plenty and no long-lived public link ever leaves the server.
-  photoUrl = (await signedUrlFor(photoUrl, 900)) || photoUrl
+  photoUrl = (await signedUrlFor(photoUrl, 900, bucket)) || photoUrl
 
   const { data: parent } = await supabase
     .from('parents')
@@ -581,6 +623,36 @@ const CONTRIBUTION_TOOLS = [{
           note: { type: 'STRING', description: 'Optional note from the parent to pass along to the child.' },
         },
         required: ['contribution_id'],
+      },
+    },
+    {
+      name: 'approve_drawing',
+      description:
+        'Approve ONE SPECIFIC pending drawing (a picture the child drew and photographed), by its exact id from ' +
+        'the "pending drawings" list in context. Call this when the parent approves it in free text ("onayla", ' +
+        '"evet", "harika, onaylıyorum"). A drawing is NOT a submission and NOT a contribution — do not use ' +
+        'approve_submission or approve_contribution for it. The reward amount is decided by the server (there is ' +
+        'a daily cap), so there is no gems parameter here. If more than one drawing is pending and it is unclear ' +
+        'which one the parent means, do NOT call this — ask which one first. Never invent an id.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          painting_id: { type: 'STRING', description: 'The exact id of the drawing to approve, taken from the pending drawings list in context.' },
+        },
+        required: ['painting_id'],
+      },
+    },
+    {
+      name: 'reject_drawing',
+      description:
+        'Reject a pending drawing. The picture stays in the child\'s library, it just earns nothing. Only call ' +
+        'this when the parent clearly rejects ONE SPECIFIC drawing from the pending drawings list.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          painting_id: { type: 'STRING', description: 'The exact id of the drawing to reject, taken from the pending drawings list in context.' },
+        },
+        required: ['painting_id'],
       },
     },
     {
@@ -1026,12 +1098,37 @@ async function handleMessage(parentId, replyCb, text) {
         `${childrenBlock}\n\n` +
         `${pendingBlock}\n\n` +
         `${subsBlock}${heldBlock}\n\n` +
+        `ŞU AN ONAY BEKLEYEN ÇİZİMLER:\n` +
+        (familyData.flatMap(c => (Array.isArray(c.pendingDrawings) ? c.pendingDrawings.map(d => ({ ...d, child: c.name })) : [])).length
+          ? familyData.flatMap(c => (Array.isArray(c.pendingDrawings) ? c.pendingDrawings.map(d => ({ ...d, child: c.name })) : []))
+              .map(d => `- id=${d.id}: ${d.child} — "${d.what}" çizimi`).join('\n') +
+            `\n- Ebeveyn bunlardan birini onaylarsa approve_drawing'i, reddederse reject_drawing'i yukarıdaki ` +
+            `EXACT id ile çağır. Çizim ödülünün miktarını SEN belirlemezsin — sunucu karar verir ve günlük bir ` +
+            `üst sınır uygular; bu yüzden gems parametresi yok. Onay sonucunda dönen gem sayısını ebeveyne söyle. ` +
+            `Sonuç capped=true dönerse, çizim onaylandı ama günlük çizim ödülü dolduğu için gem eklenmedi — ` +
+            `bunu açıkça söyle, "gem kazandı" deme.`
+          : 'Şu anda onay bekleyen çizim yok.') + `\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
         `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
         `Current local time for parent: ${localTimeStr}\n` +
         `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
+        `The tree ("ağaç"):\n` +
+        `- Each child's "tree" field above is the WHOLE answer to any tree question. The tree is a kindness / ` +
+        `good-deeds diary: every approved contribution grows one leaf, a day's tree is fully grown at ` +
+        `leavesForAFullTreeToday leaves, and a new tree starts each day (treesThisMonth = days this month with ` +
+        `at least one leaf).\n` +
+        `- The tree has NOTHING to do with gems, math level, stories or books. When the parent asks about the ` +
+        `tree, answer ONLY from the tree field — never substitute gem totals, math level or story counts, and ` +
+        `never present those as "how the tree is doing". Those are separate subjects; mention them only if the ` +
+        `parent asks about them.\n` +
+        `- Be concrete: say how many leaves today (out of leavesForAFullTreeToday), how many trees this month ` +
+        `out of daysElapsedThisMonth days, and name a couple of actual deeds from recentLeaves. That is what ` +
+        `makes it clear you are looking at the real tree.\n` +
+        `- If the tree field is a text message instead of an object, it means the read failed — say you couldn't ` +
+        `check the tree right now, do NOT invent a state.\n` +
+        `- Pending contributions are NOT leaves yet; they grow a leaf only when approved.\n\n` +
         `Tool usage rules:\n` +
         `- Use the exact "id" from the pending contributions list above when calling approve_contribution or ` +
         `reject_contribution.\n` +
@@ -1125,6 +1222,10 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectSubmissionTool(args.submission_id, parentId)
       } else if (name === 'send_submission_photos') {
         toolResult = await sendSubmissionPhotosTool(args.submission_id, parentId)
+      } else if (name === 'approve_drawing') {
+        toolResult = await approvePaintingById(args.painting_id, parentId)
+      } else if (name === 'reject_drawing') {
+        toolResult = await rejectPaintingById(args.painting_id, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
@@ -1290,12 +1391,60 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 // Google, and both frontend and backend Gemini access broke as a result).
 // Frontend still builds prompts and parses responses; this is a pure
 // pass-through with the key attached server-side only.
+// The Gemini key lives only here — but an unauthenticated relay is just as bad
+// as a leaked key: anyone who finds this URL can burn the quota (the key was
+// already flagged as leaked once). Children have no Supabase session, so the
+// gate is: the caller must name a real child, and each child gets a budget.
+const CHILD_LIMIT = 40          // calls per child
+const IP_LIMIT = 120            // calls per IP (a family shares one)
+const RATE_WINDOW_MS = 10 * 60 * 1000
+const rateHits = new Map()      // key → timestamps[]
+const knownChildren = new Map() // childId → expiry, so we don't hit the DB every call
+
+function overLimit(key, limit) {
+  const now = Date.now()
+  const hits = (rateHits.get(key) || []).filter(t => now - t < RATE_WINDOW_MS)
+  hits.push(now)
+  rateHits.set(key, hits)
+  return hits.length > limit
+}
+
+async function childExists(childId) {
+  const cached = knownChildren.get(childId)
+  if (cached && cached > Date.now()) return true
+  const { data } = await supabase.from('children').select('id').eq('id', childId).maybeSingle()
+  if (!data) return false
+  knownChildren.set(childId, Date.now() + 30 * 60 * 1000)
+  return true
+}
+
+// Both maps grow with traffic; drop stale entries so a long-running dyno
+// doesn't leak memory.
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, hits] of rateHits) {
+    const live = hits.filter(t => now - t < RATE_WINDOW_MS)
+    if (live.length) rateHits.set(k, live); else rateHits.delete(k)
+  }
+  for (const [k, exp] of knownChildren) if (exp <= now) knownChildren.delete(k)
+}, RATE_WINDOW_MS).unref()
+
 app.post('/api/gemini/generate', async (req, res) => {
   try {
-    const { parts, generationConfig } = req.body
+    const { parts, generationConfig, childId } = req.body
     if (!Array.isArray(parts) || parts.length === 0) {
       return res.status(400).json({ error: 'parts required' })
     }
+
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!childId || !UUID.test(childId)) return res.status(401).json({ error: 'unauthorized' })
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip
+    if (overLimit(`ip:${ip}`, IP_LIMIT)) return res.status(429).json({ error: 'rate limited' })
+    if (overLimit(`child:${childId}`, CHILD_LIMIT)) return res.status(429).json({ error: 'rate limited' })
+
+    if (!(await childExists(childId))) return res.status(401).json({ error: 'unauthorized' })
+
     const geminiRes = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1512,12 +1661,23 @@ app.get('/api/cards', async (req, res) => {
     const { data: child } = await supabase.from('children').select('id').eq('id', child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
-    const fetchActiveCards = () => supabase
-      .from('contribution_cards')
-      .select('id, label, category, icon, color')
-      .eq('child_id', child_id)
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
+    // photo_ok is newer than this endpoint. If the migration hasn't been run
+    // yet, selecting it errors and would leave the child with NO cards at all,
+    // so fall back to the older column set rather than breaking the screen.
+    const CARD_COLS = 'id, label, category, icon, color'
+    const fetchActiveCards = async () => {
+      const q = cols => supabase
+        .from('contribution_cards')
+        .select(cols)
+        .eq('child_id', child_id)
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+
+      const withFlag = await q(`${CARD_COLS}, photo_ok`)
+      if (!withFlag.error) return withFlag
+      console.warn(`[CARDS] photo_ok unavailable (${withFlag.error.message}) — run the photo_ok migration`)
+      return q(CARD_COLS)
+    }
 
     let { data: cards } = await fetchActiveCards()
 
@@ -1547,6 +1707,50 @@ app.get('/api/cards', async (req, res) => {
   }
 })
 
+// Screens a diary photo through the shared image gate. Returns null when the
+// photo may be forwarded, or a child-facing message when it must not be.
+// Mirrors the chore path: fails CLOSED (unreadable photo → blocked), deletes
+// the rejected upload, and tells the parent that something was held back.
+async function screenContributionPhoto(photoPath, child) {
+  const { data: parentRow } = await supabase
+    .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+
+  let image = null
+  try {
+    const buffer = await readStoredPhoto(photoPath)
+    image = { buffer, mimeType: String(photoPath).endsWith('.png') ? 'image/png' : 'image/jpeg' }
+  } catch (err) {
+    console.error(`[CONTRIBUTIONS] could not read photo for safety screen: ${err.message}`)
+  }
+
+  // 'chore' is the right frame here: both are a child photographing their home.
+  const safety = image
+    ? await screenImageSafety({ images: [image], kind: 'chore', language })
+    : { appropriate: false, reason: 'photo could not be read' }
+
+  // matchesTask is deliberately ignored — a diary label like "I helped outside"
+  // is not a task the photo has to depict. Only appropriateness gates it.
+  if (safety.appropriate) return null
+
+  console.log(`[CONTRIBUTIONS] inappropriate image child=${child.id} — blocked (${safety.reason})`)
+  const legacyPath = storagePathFromPublicUrl(photoPath)
+  if (legacyPath) await supabase.storage.from('submissions').remove([legacyPath]).then(() => {}, () => {})
+  else await supabase.storage.from(PHOTO_BUCKET).remove([photoPath]).then(() => {}, () => {})
+
+  try {
+    await sendNotification(child.parent_id, language === 'en'
+      ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
+      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmıyorum ama haberin olsun istedim.`)
+  } catch (err) {
+    console.error(`[CONTRIBUTIONS] inappropriate alert failed: ${err.message}`)
+  }
+
+  return language === 'en'
+    ? "I couldn't send that photo. Want to take another one?"
+    : 'Bu fotoğrafı gönderemedim. Başka bir tane çeker misin?'
+}
+
 app.post('/api/contributions', async (req, res) => {
   try {
     const { child_id, label, category, source, photo_url } = req.body
@@ -1567,6 +1771,14 @@ app.post('/api/contributions', async (req, res) => {
     // TODO: verify child belongs to authenticated parent's family
     const { data: child } = await supabase.from('children').select('id, name, age, parent_id').eq('id', child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
+
+    // A diary photo is forwarded straight to the parent's Telegram, so it goes
+    // through the SAME image gate as homework and chore photos. It used to skip
+    // it entirely: the label was screened, the picture attached to it was not.
+    if (resolvedPhotoUrl) {
+      const blocked = await screenContributionPhoto(resolvedPhotoUrl, child)
+      if (blocked) return res.status(400).json({ error: 'photo_rejected', message: blocked })
+    }
 
     if (source === 'free_text') {
       let screening
@@ -1642,6 +1854,56 @@ app.post('/api/contributions', async (req, res) => {
     }
 
     res.status(201).json(inserted)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Attach a photo to a contribution that was already logged. Card taps stay a
+// single tap — the photo is offered AFTER the entry exists, so it stays truly
+// optional. Same image gate as the create path; a rejected photo leaves the
+// contribution itself untouched.
+app.post('/api/contributions/:id/photo', async (req, res) => {
+  try {
+    const { photo_url } = req.body
+    if (typeof photo_url !== 'string' || !photo_url) return res.status(400).json({ error: 'photo_url required' })
+
+    const { data: contribution } = await supabase
+      .from('contribution_log')
+      .select('id, child_id, label, status, photo_url')
+      .eq('id', req.params.id)
+      .maybeSingle()
+    if (!contribution) return res.status(404).json({ error: 'not found' })
+    if (contribution.photo_url) return res.status(409).json({ error: 'already has a photo' })
+
+    const { data: child } = await supabase
+      .from('children').select('id, name, age, parent_id').eq('id', contribution.child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const blocked = await screenContributionPhoto(photo_url, child)
+    if (blocked) return res.status(400).json({ error: 'photo_rejected', message: blocked })
+
+    const { data: updated, error } = await supabase
+      .from('contribution_log')
+      .update({ photo_url })
+      .eq('id', contribution.id)
+      .select('id, label, category, source, status, created_at, photo_url')
+      .single()
+    if (error) return res.status(500).json({ error: error.message })
+
+    // The parent already got the "added a contribution" message when the entry
+    // was created, so this is a follow-up rather than a repeat.
+    try {
+      await sendNotificationWithPhoto(
+        child.parent_id,
+        `📷 ${child.name} "${contribution.label}" katkısına bir fotoğraf ekledi.`,
+        photo_url,
+      )
+    } catch (err) {
+      console.error(`[CONTRIBUTIONS] photo notification failed: ${err.message}`)
+    }
+
+    res.json(updated)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -1756,42 +2018,88 @@ app.post('/api/contributions/:id/reject', async (req, res) => {
   }
 })
 
+// A day's tree reaches full size at this many approved contributions.
+// Mirrors DAY_FULL in src/screens/MyTree.jsx — keep the two in step.
+const DAY_FULL = 4
+
+// The single source of truth for "how is the tree doing". The child screen, the
+// parent dashboard and the Telegram agent all read the tree through here, so a
+// parent asking Tuto gets the same numbers the two screens draw.
+async function getTreeState(childId, tz) {
+  const now = DateTime.now().setZone(tz)
+  const todayEnd   = now.endOf('day').toUTC().toISO()
+  const monthStart = now.startOf('month').toUTC().toISO()
+
+  const { data: monthLogs } = await supabase
+    .from('contribution_log')
+    .select('label, category, created_at')
+    .eq('child_id', childId)
+    .eq('status', 'approved')
+    .gte('created_at', monthStart)
+    .lte('created_at', todayEnd)
+    .order('created_at', { ascending: false })
+
+  const localDay = ts => DateTime.fromISO(ts, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
+  const countByDate = {}
+  for (const entry of (monthLogs || [])) {
+    const d = localDay(entry.created_at)
+    countByDate[d] = (countByDate[d] || 0) + 1
+  }
+
+  const todayLocalStr = now.toFormat('yyyy-MM-dd')
+  const monthForest = []
+  let cursor = now.startOf('month')
+  const todayDay = now.startOf('day')
+  while (cursor <= todayDay) {
+    const dateStr = cursor.toFormat('yyyy-MM-dd')
+    monthForest.push({ date: dateStr, count: countByDate[dateStr] || 0 })
+    cursor = cursor.plus({ days: 1 })
+  }
+
+  const today = countByDate[todayLocalStr] || 0
+  return {
+    today,
+    dayFull: DAY_FULL,
+    todayComplete: today >= DAY_FULL,
+    monthForest,
+    monthTreeCount: monthForest.filter(d => d.count > 0).length,
+    monthDaysElapsed: monthForest.length,
+    monthLeafCount: (monthLogs || []).length,
+    monthName: now.toFormat('LLLL yyyy'),
+    todayDate: todayLocalStr,
+    // What the leaves actually WERE — without this the agent can only report
+    // numbers, and a parent asking about the tree wants the deeds.
+    recentLeaves: (monthLogs || []).slice(0, 8).map(e => ({
+      label: e.label, category: e.category, date: localDay(e.created_at),
+    })),
+    countByDate,
+  }
+}
+
+async function tzForChild(childId) {
+  const { data: child } = await supabase
+    .from('children').select('parent_id').eq('id', childId).single()
+  const { data: parentRow } = await supabase
+    .from('parents').select('timezone').eq('id', child?.parent_id).single()
+  return parentRow?.timezone || 'UTC'
+}
+
 app.get('/api/tree', async (req, res) => {
   try {
     const { child_id } = req.query
     if (!child_id) return res.json({ today: 0, listItems: [], monthForest: [], monthTreeCount: 0, todayDate: null })
 
-    const { data: child } = await supabase
-      .from('children')
-      .select('parent_id')
-      .eq('id', child_id)
-      .single()
-
-    const { data: parentRow } = await supabase
-      .from('parents')
-      .select('timezone')
-      .eq('id', child?.parent_id)
-      .single()
-
-    const tz = parentRow?.timezone || 'UTC'
+    const tz = await tzForChild(child_id)
     const now = DateTime.now().setZone(tz)
-
     const todayStart = now.startOf('day').toUTC().toISO()
     const todayEnd   = now.endOf('day').toUTC().toISO()
-    const monthStart = now.startOf('month').toUTC().toISO()
 
-    // Three separate queries:
-    // 1. Month approved-only → drives tree growth counts and forest (unchanged)
-    // 2. ALL pending, any date → stays in the diary list until approved/rejected
-    // 3. Today's approved-only → the "Bugün" part of the diary list
-    const [{ data: monthLogs }, { data: pendingLogs }, { data: todayApprovedLogs }] = await Promise.all([
-      supabase
-        .from('contribution_log')
-        .select('created_at')
-        .eq('child_id', child_id)
-        .eq('status', 'approved')
-        .gte('created_at', monthStart)
-        .lte('created_at', todayEnd),
+    // Tree growth (approved, month-wide) comes from the shared helper; the
+    // diary list is this endpoint's own concern:
+    // - ALL pending, any date → stays in the list until approved/rejected
+    // - today's approved → the "Bugün" part of the list
+    const [tree, { data: pendingLogs }, { data: todayApprovedLogs }] = await Promise.all([
+      getTreeState(child_id, tz),
       supabase
         .from('contribution_log')
         .select('id, label, category, status, created_at, photo_url')
@@ -1806,19 +2114,8 @@ app.get('/api/tree', async (req, res) => {
         .lte('created_at', todayEnd),
     ])
 
-    const countByDate = {}
-    const todayLocalStr = now.toFormat('yyyy-MM-dd')
-
-    for (const entry of (monthLogs || [])) {
-      const localDate = DateTime.fromISO(entry.created_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd')
-      countByDate[localDate] = (countByDate[localDate] || 0) + 1
-    }
-
-    const today = countByDate[todayLocalStr] || 0
-
-    // Diary list: every pending contribution (any date, until approved/rejected)
-    // plus today's approved ones — each tagged with its own local day so an
-    // old pending never masquerades as "today".
+    // Each item is tagged with its own local day so an old pending never
+    // masquerades as "today".
     const listItems = [...(pendingLogs || []), ...(todayApprovedLogs || [])]
       .map(e => ({
         id: e.id,
@@ -1831,18 +2128,15 @@ app.get('/api/tree', async (req, res) => {
       }))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
 
-    const monthForest = []
-    let cursor = now.startOf('month')
-    const todayDay = now.startOf('day')
-    while (cursor <= todayDay) {
-      const dateStr = cursor.toFormat('yyyy-MM-dd')
-      monthForest.push({ date: dateStr, count: countByDate[dateStr] || 0 })
-      cursor = cursor.plus({ days: 1 })
-    }
-
-    const monthTreeCount = monthForest.filter(d => d.count > 0).length
-
-    res.json({ today, listItems, monthForest, monthTreeCount, todayDate: todayLocalStr })
+    res.json({
+      today: tree.today,
+      listItems,
+      monthForest: tree.monthForest,
+      monthTreeCount: tree.monthTreeCount,
+      todayDate: tree.todayDate,
+      dayFull: tree.dayFull,
+      monthLeafCount: tree.monthLeafCount,
+    })
   } catch {
     res.json({ today: 0, listItems: [], monthForest: [], monthTreeCount: 0, todayDate: null })
   }
@@ -1947,6 +2241,34 @@ app.get('/api/submissions/:id/photos', async (req, res) => {
 
     const stored = sub.photo_urls?.length ? sub.photo_urls : (sub.media_url ? [sub.media_url] : [])
     res.json({ photos: await signedUrlsFor(stored, 3600) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Signed URL for a contribution's photo. Same private bucket and same
+// ownership check as the submission photos — the parent approves contributions
+// in the dashboard, so they need to see the photo there, not only on Telegram.
+app.get('/api/contributions/:id/photo', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: contribution } = await supabase
+      .from('contribution_log').select('id, child_id, photo_url').eq('id', req.params.id).maybeSingle()
+    if (!contribution) return res.status(404).json({ error: 'not found' })
+    if (!contribution.photo_url) return res.json({ photo: null })
+
+    const { data: child } = await supabase
+      .from('children').select('parent_id').eq('id', contribution.child_id).maybeSingle()
+    // parents.id IS the auth user id, so this is the check.
+    if (!child || child.parent_id !== userId) return res.status(403).json({ error: 'forbidden' })
+
+    res.json({ photo: await signedUrlFor(contribution.photo_url, 3600) })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -2405,6 +2727,366 @@ app.get('/api/children/:childId/homework', async (req, res) => {
       status: s.status,
     }))
     res.json({ submissions })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ─── My Drawings ─────────────────────────────────────────────────────────────
+// Guided-step drawing: the child follows sketch panels, photographs the result
+// and is rewarded IMMEDIATELY (no parent approval, unlike homework).
+//
+// Because there is no approval step, the server is the only thing standing
+// between a child and unlimited gems — so the reward amount is decided HERE and
+// the client's opinion of it is never read. A free-draw upload is a photo of
+// anything at all, so the same daily cap covers it.
+
+const DRAWING_DEFAULTS = { gems: 20, dailyCap: 2 }
+
+// Parent-tunable per child via children.task_settings.drawing.
+function drawingSettings(taskSettings) {
+  const s = taskSettings?.drawing || {}
+  const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : DRAWING_DEFAULTS.gems
+  const cap = Number.isFinite(s.daily_cap) ? Math.max(0, Math.min(50, Math.trunc(s.daily_cap))) : DRAWING_DEFAULTS.dailyCap
+  return { gems, dailyCap: cap, active: s.active !== false }
+}
+
+// How many rewarded drawings this child already has today, in THEIR timezone.
+// Counted by approved_at, not created_at: gems move at approval, so a drawing
+// made yesterday and approved today spends today's allowance.
+async function rewardedDrawingsToday(childId, tz) {
+  const now = DateTime.now().setZone(tz)
+  const { data, error } = await supabase
+    .from('paintings')
+    .select('id')
+    .eq('child_id', childId)
+    .gt('reward_amount', 0)
+    .gte('approved_at', now.startOf('day').toUTC().toISO())
+    .lte('approved_at', now.endOf('day').toUTC().toISO())
+  // Fail CLOSED: if we can't count, don't hand out gems.
+  if (error) { console.error(`[DRAWING] cap check failed: ${error.message}`); return null }
+  return (data || []).length
+}
+
+// The catalogue. Panel URLs are derived from the path, never stored.
+app.get('/api/drawings', async (req, res) => {
+  try {
+    const ageGroup = typeof req.query.age_group === 'string' ? req.query.age_group : '6-8'
+    const { data, error } = await supabase
+      .from('drawings')
+      .select('id, age_group, name_tr, name_en, category, step_count')
+      .eq('age_group', ageGroup)
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ drawings: data || [], ageGroup })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// The child finished a drawing. The IMAGE BYTES come through here — not
+// straight to Storage from the browser.
+//
+// The first cut had the client upload to the bucket itself, which needed an
+// anon INSERT policy on storage.objects. That policy was the hole: child ids
+// are discoverable (GET /api/family/:code/children), so anyone with a family
+// code could write arbitrary files into a child's folder and then have them
+// forwarded to the parent. Here the service role is the only writer, and
+// nothing is stored until it has passed the shared image gate.
+app.post('/api/children/:childId/paintings', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const { photo_base64, mime_type, drawing_id, age_group } = req.body
+
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!UUID.test(childId)) return res.status(400).json({ error: 'invalid child id' })
+
+    if (typeof photo_base64 !== 'string' || !photo_base64) {
+      return res.status(400).json({ error: 'photo required' })
+    }
+
+    // Uploading is expensive (safety screen + storage), so it gets the same
+    // kind of budget as the Gemini proxy.
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip
+    if (overLimit(`paint-ip:${ip}`, 40) || overLimit(`paint-child:${childId}`, 20)) {
+      return res.status(429).json({ error: 'rate limited' })
+    }
+
+    const { data: child } = await supabase
+      .from('children')
+      .select('id, name, age, parent_id, task_settings')
+      .eq('id', childId)
+      .maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    let buffer
+    try {
+      buffer = Buffer.from(photo_base64, 'base64')
+    } catch {
+      return res.status(400).json({ error: 'invalid photo' })
+    }
+    if (!buffer?.length || buffer.length > 8 * 1024 * 1024) {
+      return res.status(400).json({ error: 'invalid photo' })
+    }
+
+    const contentType = mime_type === 'image/png' ? 'image/png'
+      : mime_type === 'image/webp' ? 'image/webp'
+      : 'image/jpeg'
+
+    // Screen BEFORE storing — a rejected image never reaches the bucket, so
+    // there is nothing to clean up and nothing to leak.
+    const { data: parentRow } = await supabase
+      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+    const safety = await screenImageSafety({
+      images: [{ buffer, mimeType: contentType }], kind: 'drawing', language,
+    })
+    if (!safety.appropriate) {
+      console.log(`[DRAWING] inappropriate image child=${childId} — blocked (${safety.reason})`)
+      try {
+        await sendNotification(child.parent_id, language === 'en'
+          ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save or forward it, but I wanted you to know.`
+          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Kaydetmedim ve paylaşmadım ama haberin olsun istedim.`)
+      } catch (err) {
+        console.error(`[DRAWING] inappropriate alert failed: ${err.message}`)
+      }
+      return res.status(400).json({
+        error: 'photo_rejected',
+        message: language === 'en'
+          ? "I couldn't save that photo. Want to take another one?"
+          : 'Bu fotoğrafı kaydedemedim. Başka bir tane çeker misin?',
+      })
+    }
+
+    // Service-role write into the private bucket. The path is built here, so it
+    // cannot point at another child's folder.
+    const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'
+    const photo_path = `${childId}/${randomUUID()}.${ext}`
+    const { error: upErr } = await supabase.storage
+      .from(PAINTING_BUCKET)
+      .upload(photo_path, buffer, { contentType, upsert: false })
+    if (upErr) {
+      console.error(`[DRAWING] upload failed for child=${childId}: ${upErr.message}`)
+      return res.status(500).json({ error: 'could not save the photo' })
+    }
+
+    // A drawing_id must exist in the catalogue; anything else is free-draw.
+    let resolvedDrawing = null
+    if (drawing_id) {
+      const { data: d } = await supabase
+        .from('drawings')
+        .select('id, age_group, name_tr, name_en, step_count')
+        .eq('id', drawing_id)
+        .eq('age_group', age_group || '6-8')
+        .maybeSingle()
+      resolvedDrawing = d || null
+    }
+
+    // The drawing lands PENDING. No gems here — not even a provisional entry:
+    // the amount is decided when the parent approves, so there is nothing for a
+    // client to influence at upload time.
+    const { data: painting, error: insErr } = await supabase
+      .from('paintings')
+      .insert({
+        child_id: childId,
+        drawing_id: resolvedDrawing?.id ?? null,
+        age_group: resolvedDrawing?.age_group ?? (age_group || null),
+        photo_path,
+        status: 'pending',
+        reward_amount: 0,
+      })
+      .select('id, drawing_id, age_group, photo_path, status, reward_amount, created_at')
+      .single()
+    if (insErr) return res.status(500).json({ error: insErr.message })
+
+    // Passive transparency plus the ask: the parent sees the photo AND is told
+    // it is waiting on them. Same boundary-signing as homework — the URL is
+    // short-lived and Telegram re-hosts the image immediately.
+    try {
+      const what = resolvedDrawing ? `"${resolvedDrawing.name_tr}" çizimini` : 'kendi çizimini'
+      await sendNotificationWithPhoto(
+        child.parent_id,
+        `🎨 ${child.name} ${what} bitirdi ve fotoğrafını ekledi.\n\n` +
+        `Onaylarsan ödülü ekleyeyim — "onayla" diyebilir ya da panelden bakabilirsin.`,
+        photo_path,
+        PAINTING_BUCKET,
+      )
+    } catch (err) {
+      console.error(`[DRAWING] parent notification failed: ${err.message}`)
+    }
+
+    res.status(201).json({
+      painting: { ...painting, photo: await signedUrlFor(photo_path, 3600, PAINTING_BUCKET) },
+      status: 'pending',
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Decides and pays out a drawing's reward. This is the ONLY place a drawing
+// writes to bt_ledger, and it runs only after the caller is proven to be the
+// child's parent. The amount comes from settings, never from the request.
+async function approvePaintingById(paintingId, parentId) {
+  const { data: painting } = await supabase
+    .from('paintings')
+    .select('id, child_id, drawing_id, status, photo_path')
+    .eq('id', paintingId)
+    .maybeSingle()
+  if (!painting) return { success: false, error: 'not found' }
+  if (painting.status !== 'pending') return { success: false, error: `already ${painting.status}` }
+
+  const { data: child } = await supabase
+    .from('children')
+    .select('id, name, parent_id, task_settings')
+    .eq('id', painting.child_id)
+    .maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const settings = drawingSettings(child.task_settings)
+  const tz = await tzForChild(child.id)
+  const rewardedToday = await rewardedDrawingsToday(child.id, tz)
+
+  // The cap is applied at APPROVAL time, because that is when gems move. Fails
+  // closed: if the count can't be read, approve the drawing but pay nothing.
+  let awarded = 0
+  let capped = false
+  if (!settings.active || rewardedToday === null || rewardedToday >= settings.dailyCap) {
+    capped = true
+  } else {
+    awarded = settings.gems
+  }
+
+  const { error: updErr } = await supabase
+    .from('paintings')
+    .update({ status: 'approved', reward_amount: awarded, approved_at: new Date().toISOString() })
+    .eq('id', painting.id)
+    .eq('status', 'pending')  // guard against a concurrent approval racing us
+  if (updErr) return { success: false, error: updErr.message }
+
+  if (awarded > 0) {
+    const { error: ledErr } = await supabase
+      .from('bt_ledger')
+      .insert({ child_id: child.id, amount: awarded, reason: 'drawing' })
+    if (ledErr) {
+      console.error(`[DRAWING] ledger insert failed for ${painting.id}: ${ledErr.message}`)
+      await supabase.from('paintings').update({ reward_amount: 0 }).eq('id', painting.id)
+      return { success: false, error: 'reward could not be recorded' }
+    }
+  }
+
+  return { success: true, id: painting.id, childName: child.name, gems: awarded, capped }
+}
+
+async function rejectPaintingById(paintingId, parentId) {
+  const { data: painting } = await supabase
+    .from('paintings')
+    .select('id, child_id, status')
+    .eq('id', paintingId)
+    .maybeSingle()
+  if (!painting) return { success: false, error: 'not found' }
+  if (painting.status !== 'pending') return { success: false, error: `already ${painting.status}` }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', painting.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  // Rejected drawings stay in the library — the child keeps the picture, it
+  // just doesn't earn. Nothing is deleted.
+  const { error } = await supabase
+    .from('paintings')
+    .update({ status: 'rejected', reward_amount: 0 })
+    .eq('id', painting.id)
+    .eq('status', 'pending')
+  if (error) return { success: false, error: error.message }
+  return { success: true, id: painting.id, childName: child.name }
+}
+
+// Dashboard approve/reject. Parent JWT + ownership, both checked inside.
+async function paintingActionRoute(req, res, action) {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const result = await action(req.params.id, userId)
+    if (!result.success) {
+      const code = result.error === 'forbidden' ? 403 : result.error === 'not found' ? 404 : 400
+      return res.status(code).json({ error: result.error })
+    }
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+app.post('/api/paintings/:id/approve', (req, res) => paintingActionRoute(req, res, approvePaintingById))
+app.post('/api/paintings/:id/reject', (req, res) => paintingActionRoute(req, res, rejectPaintingById))
+
+// The child's own library. The photos are in a private bucket with no client
+// read policy, so the server signs each one; the child app has no session and
+// could not read them any other way.
+app.get('/api/children/:childId/paintings', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const { data, error } = await supabase
+      .from('paintings')
+      .select('id, drawing_id, age_group, photo_path, status, reward_amount, created_at')
+      .eq('child_id', childId)
+      .order('created_at', { ascending: false })
+      .limit(60)
+    if (error) return res.status(500).json({ error: error.message })
+
+    const paintings = await Promise.all((data || []).map(async p => ({
+      id: p.id,
+      drawing_id: p.drawing_id,
+      age_group: p.age_group,
+      status: p.status,
+      reward_amount: p.reward_amount,
+      created_at: p.created_at,
+      photo: await signedUrlFor(p.photo_path, 3600, PAINTING_BUCKET),
+    })))
+    res.json({ paintings })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Parent-side view of a child's paintings. Unlike the child route this proves
+// WHO is asking — parent JWT plus ownership of that child.
+app.get('/api/parent/children/:childId/paintings', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: child } = await supabase
+      .from('children').select('id, parent_id').eq('id', req.params.childId).maybeSingle()
+    // parents.id IS the auth user id, so this is the check.
+    if (!child || child.parent_id !== userId) return res.status(403).json({ error: 'forbidden' })
+
+    const { data } = await supabase
+      .from('paintings')
+      .select('id, drawing_id, photo_path, status, reward_amount, created_at')
+      .eq('child_id', child.id)
+      .order('created_at', { ascending: false })
+      .limit(60)
+
+    const paintings = await Promise.all((data || []).map(async p => ({
+      id: p.id,
+      drawing_id: p.drawing_id,
+      status: p.status,
+      reward_amount: p.reward_amount,
+      created_at: p.created_at,
+      photo: await signedUrlFor(p.photo_path, 3600, PAINTING_BUCKET),
+    })))
+    res.json({ paintings })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

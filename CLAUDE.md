@@ -70,7 +70,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Uygulama sırasında 2. adım; henüz başlanmadı.
 - [ ] Problem 3: ebeveyn mesajla story konusu ekler — function calling aracı
       (add_story_ideas), Telegram katmanı gelince.
-- [ ] Güvenlik: frontend bundle'ında VITE_GEMINI_API_KEY açığı — Gemini'yi backend'e proxy'le.
+- [x] Güvenlik: VITE_GEMINI_API_KEY açığı kapandı — Gemini `/api/gemini/generate`'e proxy'lendi,
+      ölü env değişkeni silindi, proxy'ye child-id + rate limit kapısı kondu. Kalan: çocuğun
+      Supabase session'ı yok, o yüzden kapı "gerçek child UUID + kota" seviyesinde; tam auth
+      çocuk session'ı ister.
 - [ ] Stories generator otomasyonu: job hazır (jobs/generateStoryIdeas.js) ama henüz
       zamanlanmadı. Şimdilik elle `node jobs/generateStoryIdeas.js`. Otomatikleştirince
       ya Railway ayrı cron servisi ya da in-process node-cron (job'ı exit etmeyen

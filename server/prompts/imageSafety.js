@@ -17,6 +17,10 @@ const KIND = {
     claim: 'yaptığım ev görevi',
     expected: 'toplanmış oda, yıkanmış bulaşık, kurulmuş sofra, süpürülmüş zemin gibi tamamlanmış bir ev işini gösteren fotoğraf',
   },
+  drawing: {
+    claim: 'kendi çizdiğim resim',
+    expected: 'kâğıda kalemle/boyayla yapılmış bir çocuk çizimi ya da resim',
+  },
 }
 
 export function imageSafetyPrompt({ kind, language }) {

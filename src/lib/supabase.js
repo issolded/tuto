@@ -27,6 +27,104 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 // has no Supabase session).
 export const PHOTO_BUCKET = 'submission-photos'
 
+// There is deliberately no painting-bucket constant here: the client never
+// touches that bucket. Drawing photos go through the server, which screens them
+// and writes with the service role (see submitPainting below).
+
+// Generic guided-step sketches. Public on purpose: no child data, and a public
+// bucket means CDN caching and stable URLs with no signing per panel.
+export const DRAWINGS_BUCKET = 'drawings'
+
+// Panel URLs are DERIVED, never stored in the database — id + age group + step
+// number is all it takes.
+export function drawingStepUrl(drawingId, ageGroup, step) {
+  const n = String(step).padStart(2, '0')
+  return `${supabaseUrl}/storage/v1/object/public/${DRAWINGS_BUCKET}/${drawingId}/${ageGroup}/step-${n}.webp`
+}
+
+// The guided-drawing catalogue for an age band.
+export async function getDrawings(ageGroup) {
+  try {
+    const res = await fetch(`${SERVER}/api/drawings?age_group=${encodeURIComponent(ageGroup)}`)
+    const data = await res.json()
+    return data.drawings || []
+  } catch (err) {
+    console.error('[getDrawings] error:', err.message)
+    return []
+  }
+}
+
+// Shrinks a camera photo before it goes over the wire. A raw phone capture is
+// several MB; a drawing on paper needs none of that resolution.
+async function downscale(file, maxEdge = 1600, quality = 0.85) {
+  const bitmap = await createImageBitmap(file)
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
+  const w = Math.round(bitmap.width * scale)
+  const h = Math.round(bitmap.height * scale)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
+  bitmap.close?.()
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality))
+  return blob || file
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+// Sends the finished-drawing photo THROUGH the backend.
+//
+// The bytes deliberately do not go straight to Storage the way homework and
+// chore photos do. That route needs an anon insert policy on the bucket, and
+// child ids are discoverable — so anyone with a family code could drop files
+// into a child's folder. Here the server is the only writer, and it screens the
+// image before storing it. It is one photo, so the round trip is cheap.
+//
+// Note what is NOT sent: any gem or XP amount. The reward is the server's
+// decision (it also applies the daily cap) — the client only reports the event
+// and renders whatever the server says it awarded.
+export async function submitPainting(childId, file, { drawingId = null, ageGroup = null } = {}) {
+  let payload
+  try {
+    payload = await downscale(file)
+  } catch {
+    payload = file   // canvas unavailable — send the original
+  }
+
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/paintings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      photo_base64: await blobToBase64(payload),
+      mime_type: payload.type || 'image/jpeg',
+      drawing_id: drawingId,
+      age_group: ageGroup,
+    }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.message || data?.error || `Server error ${res.status}`)
+  return data   // { painting, awarded, capped, dailyCap }
+}
+
+// The child's saved paintings, newest first, with freshly signed photo URLs.
+export async function getPaintings(childId) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/paintings`)
+    const data = await res.json()
+    return data.paintings || []
+  } catch (err) {
+    console.error('[getPaintings] error:', err.message)
+    return []
+  }
+}
+
 export async function getChildrenByFamilyCode(familyCode) {
   try {
     const res = await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/children`)

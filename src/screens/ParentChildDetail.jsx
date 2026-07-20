@@ -6,6 +6,7 @@ import {
   PC, FONT, SHADOW_SM, PCSS,
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot,
 } from '../lib/parentUI'
+import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -114,6 +115,109 @@ function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) 
   )
 }
 
+// ── Drawings ──────────────────────────────────────────────────────────────────
+// My Drawings rewards instantly with no approval, so there is nothing here for
+// the parent to action — this is the transparency half: whatever the child
+// photographed, the parent can see. Photos arrive as signed URLs from the
+// server (the bucket is private and has no client read policy).
+function PaintingsCard({ paintings, name, onOpenPhoto, onApprove, onReject }) {
+  if (!paintings?.length) return null
+  const pending = paintings.filter(p => p.status === 'pending')
+  const settled = paintings.filter(p => p.status !== 'pending')
+  const urls = paintings.map(p => p.photo).filter(Boolean)
+
+  return (
+    <div>
+      <SectionHead>
+        🎨 {name}'in çizimleri{pending.length > 0 ? ` — ${pending.length} onay bekliyor` : ''}
+      </SectionHead>
+
+      {/* Pending ones get the full photo and the decision, because approving is
+          what actually pays the reward. */}
+      {pending.map(p => (
+        <Card key={p.id} pad={12} style={{ marginBottom: 10 }}>
+          {p.photo && (
+            <img src={p.photo} alt="" onClick={() => onOpenPhoto([p.photo], 0)}
+              style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, cursor: 'pointer', display: 'block' }} />
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+            <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink }}>
+              {p.drawing_id || 'Kendi çizimi'}
+            </div>
+            <button className="tc-press tc-tap" onClick={() => onApprove(p)}
+              style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '8px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
+            <button className="tc-press tc-tap" onClick={() => onReject(p)}
+              style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '8px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
+          </div>
+        </Card>
+      ))}
+
+      {settled.length > 0 && (
+        <Card pad={12}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            {settled.slice(0, 9).map(p => (
+              <button key={p.id} onClick={() => onOpenPhoto(urls, urls.indexOf(p.photo))}
+                style={{ border: 'none', padding: 0, background: 'none', cursor: p.photo ? 'pointer' : 'default' }}>
+                {p.photo
+                  ? <img src={p.photo} alt="" loading="lazy"
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, display: 'block', opacity: p.status === 'rejected' ? .45 : 1 }} />
+                  : <div style={{ width: '100%', aspectRatio: '1', borderRadius: 10, background: PC.line }} />}
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 10.5, marginTop: 3, color: p.reward_amount > 0 ? PC.amber : PC.inkFaint }}>
+                  {p.status === 'rejected' ? 'Reddedildi' : p.reward_amount > 0 ? `⭐ +${p.reward_amount}` : 'Onaylandı'}
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ── Tree state ────────────────────────────────────────────────────────────────
+// The parent had no way to see the tree at all — it only existed on the child's
+// screen, so "how is the tree doing?" could only be asked of Tuto. Reads the
+// same /api/tree the child does, so all three surfaces agree.
+function TreeCard({ tree, name }) {
+  if (!tree) return null
+  const dayFull = tree.dayFull || 4
+  const today = tree.today || 0
+  const days = (tree.monthForest || []).length
+  const trees = tree.monthTreeCount || 0
+
+  return (
+    <div>
+      <SectionHead>🌳 {name}'in ağacı</SectionHead>
+      <Card pad={14}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <TreeArt size={78} fruits={today} target={dayFull} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>
+              {today >= dayFull
+                ? 'Bugünün ağacı tamamlandı 🎉'
+                : `Bugün ${today}/${dayFull} yaprak`}
+            </div>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkSoft, marginTop: 4 }}>
+              Bu ay {days} günün {trees} gününde ağaç yetişti
+            </div>
+            {/* a leaf grows only on approval — say so where the pending list is */}
+            <div style={{ marginTop: 8 }}>
+              <Pill bg={PC.greenBg} color={PC.green}>🌱 {tree.monthLeafCount ?? 0} yaprak bu ay</Pill>
+            </div>
+          </div>
+        </div>
+        {days > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 12 }}>
+            {tree.monthForest.map(d => (
+              <TreeArt key={d.date} size={20} fruits={d.count} target={dayFull} />
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 // ── Full-size photo viewer ────────────────────────────────────────────────────
 // Tap a submission photo to see the original (the card only shows a cropped
 // thumbnail). Arrows page through multi-page homework.
@@ -168,17 +272,25 @@ function ContributionDateHeader({ isToday, dateStr }) {
   )
 }
 
-function ContributionCard({ c, onApprove, onReject }) {
+function ContributionCard({ c, photo, onApprove, onReject, onOpenPhoto }) {
   return (
-    <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ width: 9, height: 9, borderRadius: '50%', background: CONTRIBUTION_DOT_COLORS[c.category] || PC.green, flexShrink: 0 }} />
-      <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 14, color: PC.ink }}>{c.label}</div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button className="tc-press tc-tap" onClick={onApprove}
-          style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '8px 12px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
-        <button className="tc-press tc-tap" onClick={onReject}
-          style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '8px 12px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
+    <Card pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ width: 9, height: 9, borderRadius: '50%', background: CONTRIBUTION_DOT_COLORS[c.category] || PC.green, flexShrink: 0 }} />
+        <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 14, color: PC.ink }}>{c.label}</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="tc-press tc-tap" onClick={onApprove}
+            style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '8px 12px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
+          <button className="tc-press tc-tap" onClick={onReject}
+            style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '8px 12px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
+        </div>
       </div>
+      {/* The child can attach a photo — the parent decides with it in front of
+          them, instead of having to go find it on Telegram. */}
+      {photo && (
+        <img src={photo} alt="" onClick={() => onOpenPhoto([photo], 0)}
+          style={{ width: '100%', maxHeight: 190, objectFit: 'cover', borderRadius: 12, cursor: 'pointer' }} />
+      )}
     </Card>
   )
 }
@@ -431,6 +543,9 @@ export default function ParentChildDetail() {
   const [submissions, setSubmissions] = useState(null)
   const [contributions, setContributions] = useState(null)
   const [contributionsTodayDate, setContributionsTodayDate] = useState(null)
+  const [tree, setTree] = useState(null)
+  const [contributionPhotos, setContributionPhotos] = useState({}) // contributionId → signed URL
+  const [paintings, setPaintings] = useState([])
   const [rewards, setRewards] = useState(null)
   const [justApproved, setJustApproved] = useState(false)
   const [lightbox, setLightbox] = useState(null) // { urls, index } — full-size photo viewer
@@ -460,13 +575,17 @@ export default function ParentChildDetail() {
       // month it was logged in (see server/index.js for why scope=month
       // would silently drop it once the month rolls over).
       fetch(`${SERVER}/api/contributions?child_id=${id}&scope=pending`).then(r => r.json()),
-    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData]) => {
+      // Same /api/tree the child's MyTree screen reads, so the parent sees the
+      // tree the child sees (and the same numbers Tuto quotes on Telegram).
+      fetch(`${SERVER}/api/tree?child_id=${id}`).then(r => r.json()).catch(() => null),
+    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData, treeResp]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
       setSubmissions(subData || [])
       setRewards(rewardData || [])
       setContributions(contribData?.contributions || [])
       setContributionsTodayDate(contribData?.todayDate ?? null)
+      setTree(treeResp)
     })
   }, [id])
 
@@ -497,6 +616,52 @@ export default function ParentChildDetail() {
     return () => { cancelled = true }
   }, [submissions])
 
+  // Drawings: signed URLs, minted only after the server checks this parent owns
+  // the child. Separate from the main load because it needs the auth token.
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
+      try {
+        const r = await fetch(`${SERVER}/api/parent/children/${id}/paintings`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const j = await r.json()
+        if (!cancelled) setPaintings(j.paintings || [])
+      } catch { /* the card just stays hidden */ }
+    })()
+    return () => { cancelled = true }
+  }, [id])
+
+  // Contribution photos live in the private bucket too — same signed-URL dance
+  // as the submission photos above.
+  useEffect(() => {
+    const withPhotos = (contributions || []).filter(c => c.photo_url)
+    if (!withPhotos.length) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
+      const entries = await Promise.all(withPhotos.map(async c => {
+        try {
+          const r = await fetch(`${SERVER}/api/contributions/${c.id}/photo`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const j = await r.json()
+          return [c.id, j.photo || null]
+        } catch {
+          return [c.id, null]
+        }
+      }))
+      if (!cancelled) setContributionPhotos(Object.fromEntries(entries.filter(([, v]) => v)))
+    })()
+    return () => { cancelled = true }
+  }, [contributions])
+
   const loading = !child || gems === null || submissions === null || rewards === null || contributions === null
 
   const pending   = (submissions || []).filter(s => s.status === 'pending')
@@ -526,6 +691,30 @@ export default function ParentChildDetail() {
 
   // Diary approvals never touch bt_ledger — gems for contributions are
   // computed separately in the end-of-month review, by design.
+  // Drawings: the gem amount is the server's call (it also applies the daily
+  // cap), so nothing about the reward is sent from here — just the decision.
+  async function paintingDecision(p, verb) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) return
+    const optimistic = verb === 'approve' ? 'approved' : 'rejected'
+    setPaintings(prev => prev.map(x => x.id === p.id ? { ...x, status: optimistic } : x))
+    try {
+      const r = await fetch(`${SERVER}/api/paintings/${p.id}/${verb}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'failed')
+      // Show what the server actually awarded, not what we assumed.
+      setPaintings(prev => prev.map(x => x.id === p.id ? { ...x, status: optimistic, reward_amount: j.gems ?? 0 } : x))
+    } catch {
+      setPaintings(prev => prev.map(x => x.id === p.id ? { ...x, status: 'pending' } : x))
+    }
+  }
+  const handleApprovePainting = (p) => paintingDecision(p, 'approve')
+  const handleRejectPainting  = (p) => paintingDecision(p, 'reject')
+
   async function handleApproveContribution(c) {
     await fetch(`${SERVER}/api/contributions/${c.id}/approve`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -596,6 +785,14 @@ export default function ParentChildDetail() {
           )}
         </div>
 
+        {/* drawings the child photographed — passive transparency, no approval */}
+        <PaintingsCard paintings={paintings} name={child.name}
+          onOpenPhoto={(urls, index) => setLightbox({ urls, index })}
+          onApprove={handleApprovePainting} onReject={handleRejectPainting} />
+
+        {/* the tree the child actually sees — same /api/tree numbers */}
+        <TreeCard tree={tree} name={child.name} />
+
         {/* diary contributions — every open pending, any month, grouped by day */}
         <div>
           <SectionHead>
@@ -611,7 +808,9 @@ export default function ParentChildDetail() {
                 <div key={g.date} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <ContributionDateHeader isToday={g.isToday} dateStr={g.date} />
                   {g.items.map(c => (
-                    <ContributionCard key={c.id} c={c} onApprove={() => handleApproveContribution(c)} onReject={() => handleRejectContribution(c)} />
+                    <ContributionCard key={c.id} c={c} photo={contributionPhotos[c.id]}
+                      onApprove={() => handleApproveContribution(c)} onReject={() => handleRejectContribution(c)}
+                      onOpenPhoto={(urls, index) => setLightbox({ urls, index })} />
                   ))}
                 </div>
               ))}

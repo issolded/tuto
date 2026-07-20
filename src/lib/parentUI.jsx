@@ -102,7 +102,7 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
 
 export function TaskIcon({ type, size = 24, color }) {
   const c = color || PC[type] || PC.teal
-  const map = { reading: 'book', math: 'calc', writing: 'pencil', chore: 'house', homework: 'camera' }
+  const map = { reading: 'book', math: 'calc', writing: 'pencil', chore: 'house', homework: 'camera', drawing: 'pencil' }
   return <Icon name={map[type] || 'book'} size={size} color={c} sw={2.1} />
 }
 

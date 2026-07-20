@@ -21,6 +21,7 @@ import MathLab from './screens/MathLab'
 import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 import HomeworkScreen from './screens/HomeworkScreen'
+import DrawingsScreen from './screens/DrawingsScreen'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/math-lab" element={<MathLab />} />
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
+        <Route path="/child/drawings" element={<DrawingsScreen />} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />
         <Route path="/child/reading" element={<ReadingFlow />} />

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import { TreeArt, Sprig } from '../components/TreeArt'
 
@@ -55,18 +55,26 @@ function formatPastDate(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
 }
 
+// Diary photos are photos of a child's home and room — same sensitivity as a
+// chore photo, so they follow the same route: uploaded DIRECTLY to the PRIVATE
+// bucket, and only the storage PATH is sent on. They used to go to the public
+// 'submissions' bucket via getPublicUrl, which left them world-readable.
+// The server reads the path back, screens the image, and deletes it on block.
 async function uploadDiaryPhoto(file, childId) {
-  const path = `${childId ?? 'anonymous'}/diary-${Date.now()}.jpg`
-  const { error } = await supabase.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
+  const ext = (file.type || '').includes('png') ? 'png' : 'jpg'
+  const path = `${childId ?? 'anonymous'}/diary/${Date.now()}.${ext}`
+  const { error } = await storageClient.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false })
   if (error) throw error
-  const { data } = supabase.storage.from('submissions').getPublicUrl(path)
-  return data.publicUrl
+  return path
 }
 
 // ── shared pieces ──────────────────────────────────────────────────────────────
 
-function EntryRow({ category, label, status, fresh }) {
+function EntryRow({ category, label, status, fresh, photoUrl, canAddPhoto, onAttachPhoto, attaching }) {
   const C = CATS[category] || CATS.outside
+  const fileRef = useRef()
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px',
@@ -79,6 +87,22 @@ function EntryRow({ category, label, status, fresh }) {
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11.5, color: status === 'approved' ? '#37a06f' : '#b9892f' }}>
           {status === 'approved' ? '✓ Approved' : '◷ Waiting for approval'}
         </div>
+        {/* Offered only after the entry exists, so adding a card stays one tap
+            and the photo is genuinely optional. */}
+        {photoUrl ? (
+          <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#8a7f6a', marginTop: 2 }}>📷 Photo added</div>
+        ) : canAddPhoto && (
+          <>
+            <button onClick={() => fileRef.current?.click()} disabled={attaching} style={{
+              marginTop: 3, border: 'none', background: 'none', padding: 0, cursor: attaching ? 'default' : 'pointer',
+              fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11, color: attaching ? '#b3a894' : '#37a06f',
+            }}>
+              {attaching ? 'Sending photo…' : '📷 Add a photo'}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) onAttachPhoto(f); e.target.value = '' }} />
+          </>
+        )}
       </div>
       <div style={{
         width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
@@ -87,6 +111,77 @@ function EntryRow({ category, label, status, fresh }) {
         boxShadow: status === 'approved' ? '0 4px 10px rgba(76,182,133,.4)' : 'none',
       }}>
         {status === 'approved' ? '✓' : '◷'}
+      </div>
+    </div>
+  )
+}
+
+// Tapping a card that allows a photo opens this first, so the child is ASKED
+// rather than having to notice a small button on the row afterwards. Adding
+// without a photo is one tap from here, so the photo stays optional.
+function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
+  const [file, setFile] = useState(null)
+  const [preview, setPreview] = useState(null)
+  const fileRef = useRef()
+
+  useEffect(() => {
+    if (!file) { setPreview(null); return }
+    const url = URL.createObjectURL(file)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  if (!card) return null
+  const C = CATS[card.category] || CATS.outside
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(40,45,35,.38)' }}>
+      <div style={{
+        width: '100%', maxWidth: 430, background: '#FFFDF7',
+        borderRadius: '22px 22px 0 0', padding: '20px 18px calc(20px + env(safe-area-inset-bottom))',
+        animation: 'ttPop .3s cubic-bezier(.2,.9,.3,1.2) both',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 13, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{card.icon || C.icon}</span>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 17, color: '#4a3f2e' }}>{card.label}</div>
+        </div>
+
+        <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8a7f6a', marginTop: 14 }}>
+          Want to show a photo? It's up to you.
+        </div>
+
+        {preview ? (
+          <div style={{ position: 'relative', marginTop: 10 }}>
+            <img src={preview} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 14 }} />
+            <button onClick={() => setFile(null)} disabled={busy} style={{
+              position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', border: 'none',
+              background: 'rgba(30,30,25,.66)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer',
+            }}>✕</button>
+          </div>
+        ) : (
+          <button onClick={() => fileRef.current?.click()} disabled={busy} style={{
+            width: '100%', marginTop: 10, padding: '16px', borderRadius: 15,
+            border: '2.5px dashed #C9BDA0', background: '#FFF9EC', cursor: busy ? 'default' : 'pointer',
+            fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#8a7f6a',
+          }}>📷 Take a photo</button>
+        )}
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f); e.target.value = '' }} />
+
+        <div style={{ display: 'flex', gap: 9, marginTop: 16 }}>
+          <button onClick={onCancel} disabled={busy} style={{
+            padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E7DABF', background: '#fff',
+            fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 13.5, color: '#8a7f6a', cursor: busy ? 'default' : 'pointer',
+          }}>Cancel</button>
+          <button onClick={() => onAdd(file)} disabled={busy} style={{
+            flex: 1, padding: '13px 16px', borderRadius: 14, border: 'none',
+            background: busy ? '#A9CFB9' : '#37a06f', color: '#fff',
+            fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 16, cursor: busy ? 'default' : 'pointer',
+            boxShadow: busy ? 'none' : '0 5px 14px rgba(55,160,111,.36)',
+          }}>
+            {busy ? 'Sending…' : file ? 'Add with photo' : 'Add without a photo'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -655,6 +750,10 @@ export default function MyTree() {
   const [treeData, setTreeData] = useState({ today: 0, monthForest: [], monthTreeCount: 0, todayDate: null })
   const [loadError, setLoadError] = useState(false)
   const [moderationError, setModerationError] = useState(false)
+  const [photoError, setPhotoError] = useState(null)
+  const [attachingPhotoId, setAttachingPhotoId] = useState(null)
+  const [photoCard, setPhotoCard] = useState(null)  // card awaiting the photo sheet
+  const [sheetBusy, setSheetBusy] = useState(false)
   const [submittingFreeText, setSubmittingFreeText] = useState(false)
   const [micro, setMicro] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(null)
@@ -723,8 +822,26 @@ export default function MyTree() {
 
   // entries now spans every open pending (any date) plus today's approved —
   // group by local day so old pendings show under their own date, not today's.
-  const groups = groupEntriesByDate(entries, treeData.todayDate)
-  const todayItems = groups.find(g => g.isToday)?.items ?? []
+  const rawGroups = groupEntriesByDate(entries, treeData.todayDate)
+  const todayItems = rawGroups.find(g => g.isToday)?.items ?? []
+
+  // Which entries may be photographed. Driven by the card's photo_ok flag, so
+  // "I made my bed" can be shown off and "diş fırçalama" is never asked for.
+  // Free-text entries match no card — they get the composer's own camera.
+  const photoOkKeys = new Set(
+    cards.filter(c => c.photo_ok !== false).map(c => `${c.category}::${c.label}`),
+  )
+  // Bind the per-row photo handlers here so the age-band components can keep
+  // spreading the entry straight into EntryRow.
+  const groups = rawGroups.map(g => ({
+    ...g,
+    items: g.items.map(e => ({
+      ...e,
+      canAddPhoto: !e.photo_url && !String(e.id).startsWith('opt-') && photoOkKeys.has(`${e.category}::${e.label}`),
+      attaching: attachingPhotoId === e.id,
+      onAttachPhoto: file => attachEntryPhoto(e.id, file),
+    })),
+  }))
 
   // Track "used today" by card identity (category+label), not category alone —
   // multiple cards can share a category, and using one must not hide the others.
@@ -743,9 +860,9 @@ export default function MyTree() {
 
   // Cards are pre-defined, safe labels — no moderation, so the optimistic
   // pending row can appear instantly and is always trustworthy.
-  async function addCardEntry(category, label, source) {
+  async function addCardEntry(category, label, source, photoPath) {
     const optimisticId = `opt-${Date.now()}`
-    const usedPhoto = photoUrl
+    const usedPhoto = photoPath || photoUrl
     setEntries(prev => [{ id: optimisticId, category, label, status: 'pending', fresh: true }, ...prev])
     showMicro()
     setPhotoUrl(null)
@@ -756,6 +873,18 @@ export default function MyTree() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ child_id: child.id, label, category, source, photo_url: usedPhoto || undefined }),
       })
+      // The photo can be rejected by the image gate even though the card label
+      // is safe — roll the optimistic row back and say why.
+      if (res.status === 400) {
+        const body = await res.json().catch(() => ({}))
+        if (body.error === 'photo_rejected') {
+          setEntries(prev => prev.filter(e => e.id !== optimisticId))
+          setPhotoError(body.message || "Couldn't send that photo.")
+          setTimeout(() => setPhotoError(null), 4000)
+          return
+        }
+        throw new Error(body.error || 'request failed')
+      }
       if (!res.ok) throw new Error('request failed')
       const saved = await res.json()
       setEntries(prev => prev.map(e => e.id === optimisticId ? { ...saved, fresh: true } : e))
@@ -786,6 +915,11 @@ export default function MyTree() {
           setTimeout(() => setModerationError(false), 3500)
           return
         }
+        if (body.error === 'photo_rejected') {
+          setPhotoError(body.message || "Couldn't send that photo.")
+          setTimeout(() => setPhotoError(null), 4000)
+          return
+        }
         throw new Error(body.error || 'request failed')
       }
       if (!res.ok) throw new Error('request failed')
@@ -800,7 +934,62 @@ export default function MyTree() {
     }
   }
 
-  const handleAddCard = (card) => addCardEntry(card.category, card.label, 'card')
+  // Photo added AFTER the entry was logged (the "📷 Add a photo" row button).
+  async function attachEntryPhoto(entryId, file) {
+    setAttachingPhotoId(entryId)
+    try {
+      const path = await uploadDiaryPhoto(file, child.id)
+      const res = await fetch(`${SERVER}/api/contributions/${entryId}/photo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo_url: path }),
+      })
+      if (res.status === 400) {
+        const body = await res.json().catch(() => ({}))
+        setPhotoError(body.message || "Couldn't send that photo.")
+        setTimeout(() => setPhotoError(null), 4000)
+        return
+      }
+      if (!res.ok) throw new Error('request failed')
+      const saved = await res.json()
+      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, photo_url: saved.photo_url } : e))
+    } catch {
+      setLoadError(true)
+      setTimeout(() => setLoadError(false), 3000)
+    } finally {
+      setAttachingPhotoId(null)
+    }
+  }
+
+  // A card that allows a photo asks first; the rest go straight in, as before.
+  const handleAddCard = (card) => {
+    if (card.photo_ok !== false) { setPhotoCard(card); return }
+    addCardEntry(card.category, card.label, 'card')
+  }
+
+  // "Add" from the sheet — with or without a photo.
+  async function addCardFromSheet(file) {
+    const card = photoCard
+    if (!card) return
+    setSheetBusy(true)
+    try {
+      let path = null
+      if (file) {
+        try {
+          path = await uploadDiaryPhoto(file, child.id)
+        } catch {
+          // Upload failed — don't silently drop the whole contribution, log it
+          // without the photo and let the row's button offer a retry.
+          setPhotoError("Couldn't send that photo — added without it.")
+          setTimeout(() => setPhotoError(null), 4000)
+        }
+      }
+      setPhotoCard(null)
+      await addCardEntry(card.category, card.label, 'card', path)
+    } finally {
+      setSheetBusy(false)
+    }
+  }
   const handleAddFreeText = (text) => addFreeTextEntry(text)
 
   const handleAttachPhoto = async (file) => {
@@ -860,6 +1049,11 @@ export default function MyTree() {
           Couldn't add that — try writing something else.
         </div>
       )}
+      {photoError && (
+        <div style={{ position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FFF6E2', color: '#9B6E1A', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12.5, padding: '8px 16px', borderRadius: 12, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
+          {photoError}
+        </div>
+      )}
       {band === 'young' && (
         <BandYoung groups={groups} todayCount={treeData.today} monthForest={treeData.monthForest} monthTreeCount={treeData.monthTreeCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} onOpenArchive={openArchive} />
       )}
@@ -870,6 +1064,9 @@ export default function MyTree() {
         <BandMature groups={groups} monthCount={monthCount} remaining={remaining} onAdd={handleAddCard} composer={composer} nav={nav} />
       )}
       <Micro show={micro} msg={MICRO_COPY[band]} />
+      {/* every band adds cards, so the photo sheet is not band-scoped */}
+      <CardPhotoSheet card={photoCard} busy={sheetBusy}
+        onCancel={() => { if (!sheetBusy) setPhotoCard(null) }} onAdd={addCardFromSheet} />
       {band !== 'mature' && (
         <ForestArchive open={showArchive} onClose={() => setShowArchive(false)} data={archiveData} loading={archiveLoading} error={archiveError} />
       )}

@@ -189,12 +189,21 @@ function parseJSON(text) {
   return JSON.parse(cleaned)
 }
 
+// The proxy needs to know WHICH child is calling: it only relays for a real
+// child id, and rate limits per child. The child has no Supabase session, so
+// localStorage('child') — set at PIN login — is the only identity we have.
+export function currentChildId() {
+  try { return JSON.parse(localStorage.getItem('child') || 'null')?.id || null }
+  catch { return null }
+}
+
 async function callGemini(parts) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       parts,
+      childId: currentChildId(),
       generationConfig: { response_mime_type: 'application/json' },
     }),
   })

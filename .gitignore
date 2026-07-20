@@ -30,3 +30,13 @@ server/auth_info
 *.njsproj
 *.sln
 *.sw?
+.env.local
+
+# Drawing working files: the .webp panels are the source of truth (they are what
+# gets uploaded to Storage); the .png siblings are intermediate exports.
+drawings/**/*.png
+drawings/**/_source/
+
+# Zips handed over during asset work — not part of the project.
+tuto*.zip
+tuto drawings/

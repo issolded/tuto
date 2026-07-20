@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import BottomNav from '../components/BottomNav'
-import { supabase, getChildGems } from '../lib/supabase'
+import { supabase, getChildGems, drawingStepUrl } from '../lib/supabase'
 
 const ACCENT = '#f79433'
 const INK = '#241f3a'
@@ -57,6 +57,26 @@ function TaskIcon({ type, c }) {
 }
 
 // Homework tile icon — worksheet sheet + camera badge (see design handoff).
+// The tile art is the age band's drawing character, not a generic icon — see
+// heroArt() in the design prototype. For 6-8 that character IS the finished cat
+// sketch, so it comes from the same Storage panels the guided steps use.
+// The 9-11 (otter) and 12-15 (anime) sets don't exist yet; until they do those
+// bands fall back to the prototype's pencil glyph.
+function DrawingsIcon({ age }) {
+  if (age == null || age <= 8) {
+    return <img src={drawingStepUrl('cat', '6-8', 8)} alt=""
+      style={{ width: 66, height: 66, objectFit: 'contain' }} />
+  }
+  return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
+      <path d="M14 50 L18 38 L44 12 L52 20 L26 46 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
+      <path d="M40 16 L48 24" stroke="#20201e" strokeWidth="4"/>
+      <path d="M14 50 L20 48" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/>
+      <path d="M12 56 q6 -4 12 0" stroke="#20201e" strokeWidth="3.4" strokeLinecap="round" fill="none"/>
+    </svg>
+  )
+}
+
 function HomeworkIcon() {
   return (
     <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
@@ -171,6 +191,21 @@ export default function ChildHome() {
               <HomeworkIcon />
             </div>
             <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Homework</h3>
+          </button>
+
+          {/* My Drawings — same full-width shape as My Homework. No reward pill:
+              the amount is decided server-side and capped per day. */}
+          <button className="tuto-card" onClick={() => nav('/child/drawings')}
+            style={{
+              gridColumn: '1 / -1',
+              background: '#fff', border: 'none', borderRadius: 22, padding: 12,
+              display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
+              cursor: 'pointer', textAlign: 'left', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
+            }}>
+            <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#EFE3FF', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <DrawingsIcon age={child?.age} />
+            </div>
+            <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Drawings</h3>
           </button>
         </div>
       </div>

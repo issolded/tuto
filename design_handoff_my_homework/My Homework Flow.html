@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tuto — My Homework flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --stage:#ececec; --ink:#20201e;
+    --orange:#f79433; --orange-deep:#ef851f;
+    --purple:#a98ce6; --green:#79cf86; --blue:#74acef; --yellow:#f5d35f; --pink:#f08bb0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:'Nunito',sans-serif;color:var(--ink);background:var(--stage);-webkit-font-smoothing:antialiased;padding:0 0 70px;}
+  .head{padding:40px 52px 4px;max-width:1000px;}
+  .head h1{font-family:'Fredoka';font-weight:600;font-size:32px;margin:0;letter-spacing:-.5px;}
+  .head p{font-size:16px;color:#6f6a64;max-width:780px;line-height:1.5;margin:9px 0 0;}
+  .head p b{color:var(--ink);}
+  .head .note{font-size:13.5px;color:#9a948c;margin-top:8px;}
+
+  .rail{display:flex;gap:52px;padding:34px 52px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;}
+  .frame{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .frame .lab{font-family:'Fredoka';font-weight:500;font-size:15px;color:#6f6a64;background:#fff;padding:6px 16px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+
+  .phone{width:360px;height:762px;border-radius:52px;border:11px solid #fff;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 30px 60px -20px rgba(40,30,70,.35),0 8px 20px rgba(0,0,0,.08);}
+  .statusbar{flex:0 0 auto;height:30px;display:flex;align-items:center;justify-content:space-between;padding:7px 26px 0;font-weight:800;font-size:13px;}
+  .statusbar .dots{display:flex;gap:4px;align-items:center;}
+  .statusbar .dots i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;}
+  .statusbar .batt{width:22px;height:11px;border:2px solid currentColor;border-radius:3px;position:relative;opacity:.6;}
+  .statusbar .batt::after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:5px;background:currentColor;border-radius:0 2px 2px 0;}
+  .statusbar .batt::before{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:11px;background:currentColor;border-radius:1px;}
+
+  /* screen switching */
+  .screen{display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;}
+  .phone[data-state="home"]   .screen[data-screen="home"],
+  .phone[data-state="upload"] .screen[data-screen="upload"],
+  .phone[data-state="sent"]   .screen[data-screen="sent"]{display:flex;}
+  .scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;}
+  .scroll::-webkit-scrollbar{width:0;}
+
+  .photo-ph{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.05) 0 7px,transparent 7px 14px);}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+  .pop{animation:pop .32s cubic-bezier(.3,1.4,.5,1) both;}
+
+  /* ============================================================= 6–8 */
+  .s68{background:#e7ddf6;color:var(--ink);font-family:'Nunito';}
+  .s68 .body{padding:6px 22px 0;display:flex;flex-direction:column;height:100%;overflow:hidden;}
+  .s68 .greet{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-top:8px;}
+  .s68 .greet .hi{font-weight:800;font-size:13px;color:#8d83ad;margin-bottom:3px;}
+  .s68 .greet h2{font-family:'Fredoka';font-weight:600;font-size:26px;margin:0;line-height:1.1;letter-spacing:-.4px;}
+  .s68 .streak{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;background:#fff;border-radius:999px;padding:8px 14px;font-family:'Fredoka';font-weight:600;font-size:17px;color:var(--orange);box-shadow:0 3px 10px rgba(40,30,70,.12);}
+  .s68 .hero{position:relative;height:150px;display:flex;align-items:center;justify-content:center;margin:2px 0;}
+  .s68 .hero .glow{position:absolute;width:168px;height:168px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95) 30%,rgba(255,255,255,0) 72%);}
+  .s68 .hero svg{position:relative;z-index:1;}
+  .s68 .section-l{font-family:'Fredoka';font-weight:600;font-size:18px;margin:2px 2px 12px;}
+  .s68 .grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding-bottom:16px;}
+  .s68 .card{background:#fff;border:none;border-radius:22px;padding:12px 12px 13px;display:flex;flex-direction:column;gap:7px;cursor:pointer;text-align:left;box-shadow:0 6px 16px rgba(40,30,70,.09);transition:transform .12s,box-shadow .12s;font-family:'Nunito';}
+  .s68 .card:hover{transform:translateY(-3px);box-shadow:0 12px 22px rgba(40,30,70,.14);}
+  .s68 .card:active{transform:scale(.97);}
+  .s68 .card .pic{height:82px;border-radius:16px;display:flex;align-items:center;justify-content:center;}
+  .s68 .card h3{font-family:'Fredoka';font-weight:600;font-size:18px;margin:2px 0 0;}
+  .s68 .card .gem{display:inline-flex;align-items:center;gap:4px;border-radius:10px;padding:3px 10px;font-family:'Fredoka';font-weight:600;font-size:13px;color:var(--orange);width:max-content;}
+  .s68 .card.wide{grid-column:1 / -1;flex-direction:row;align-items:center;gap:14px;}
+  .s68 .card.wide .pic{width:82px;flex:0 0 auto;}
+  .s68 .card.wide .txt{display:flex;flex-direction:column;gap:5px;}
+  .s68 .card.wide .sub{font-weight:700;font-size:12.5px;color:#8d83ad;}
+  .s68 .newbadge{font-family:'Fredoka';font-weight:600;font-size:11px;color:#fff;background:var(--orange);border-radius:999px;padding:2px 9px;}
+
+  /* 6-8 upload / sent */
+  .s68.sky{background:#d4e4fb;}
+  .s68.mint{background:#d4eed9;}
+  .s68 .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 2px;}
+  .s68 .iconbtn{width:42px;height:42px;border-radius:50%;background:#fff;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(40,30,70,.10);cursor:pointer;}
+  .s68 .ttl{font-family:'Fredoka';font-weight:600;font-size:17px;}
+  .s68 .prompt{display:flex;align-items:center;gap:12px;background:#fff;border-radius:20px;padding:13px 16px;box-shadow:0 6px 16px rgba(40,30,70,.10);margin-top:12px;}
+  .s68 .prompt .pa{width:42px;height:42px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:0 4px 10px rgba(239,133,31,.4);}
+  .s68 .prompt span{font-family:'Fredoka';font-weight:500;font-size:16px;line-height:1.3;}
+  .s68 .photogrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+  .s68 .addtile{border:3px dashed #c4bdd0;background:rgba(255,255,255,.45);border-radius:20px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;color:#8d7fb0;font-family:'Fredoka';font-weight:600;font-size:14px;transition:transform .12s,border-color .12s;}
+  .s68 .addtile:hover{border-color:var(--orange);transform:translateY(-2px);}
+  .s68 .thumb{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:#eadff9;border:3px solid #fff;box-shadow:0 5px 14px rgba(40,30,70,.10);}
+  .s68 .thumb .doc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .s68 .thumb .rm{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(32,32,30,.72);border:none;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .s68 .footer{flex:0 0 auto;padding:14px 22px 22px;}
+  .s68 .cta{width:100%;background:var(--orange);color:#fff;border:none;border-radius:20px;padding:17px;font-family:'Fredoka';font-weight:600;font-size:20px;box-shadow:0 8px 18px rgba(239,133,31,.45);cursor:pointer;transition:transform .1s;}
+  .s68 .cta:active{transform:translateY(2px);}
+  .s68 .cta:disabled{background:#d7cfe6;color:#fff;box-shadow:none;cursor:not-allowed;}
+  .s68 .count{text-align:center;font-family:'Fredoka';font-weight:500;font-size:13px;color:#8d83ad;margin-top:10px;}
+  /* 6-8 sent */
+  .s68 .sent-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 26px;text-align:center;}
+  .s68 .sent-illo{position:relative;height:200px;display:flex;align-items:center;justify-content:center;}
+  .s68 .sent-wrap h2{font-family:'Fredoka';font-weight:600;font-size:30px;margin:6px 0 8px;}
+  .s68 .sent-wrap p{font-weight:700;font-size:16px;color:#5f5872;line-height:1.5;margin:0;max-width:250px;}
+  .s68 .pendpill{display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:11px 18px;margin-top:20px;box-shadow:0 6px 16px rgba(40,30,70,.12);font-family:'Fredoka';font-weight:600;font-size:15px;}
+  .s68 .pendpill .st{width:24px;height:24px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;}
+
+  /* ============================================================= 9–11 */
+  .s911{background:#f6f4fb;color:var(--ink);font-family:'Nunito';}
+  .s911 .pad{padding:6px 20px 18px;display:flex;flex-direction:column;gap:14px;}
+  .s911 .me{display:flex;align-items:center;gap:11px;padding-top:8px;}
+  .s911 .me .ava{width:50px;height:50px;border-radius:50%;background:#e7ddf6;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;box-shadow:0 4px 0 rgba(32,32,30,.12);}
+  .s911 .me .who{flex:1;}
+  .s911 .me .who .n{font-family:'Fredoka';font-weight:600;font-size:19px;line-height:1.1;}
+  .s911 .me .who .lv{font-weight:700;font-size:13px;color:#6f6a64;}
+  .s911 .chip{display:inline-flex;align-items:center;gap:5px;background:#fff;border-radius:999px;padding:7px 12px;font-family:'Fredoka';font-weight:600;font-size:15px;box-shadow:0 3px 9px rgba(40,30,70,.08);}
+  .s911 .sect{display:flex;align-items:baseline;justify-content:space-between;}
+  .s911 .sect h2{font-family:'Fredoka';font-weight:600;font-size:18px;margin:0;}
+  .s911 .sect a{font-family:'Fredoka';font-weight:500;font-size:13.5px;color:#6f6a64;text-decoration:none;}
+  .s911 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .s911 .sub{position:relative;background:#fff;border:3px solid var(--ink);border-radius:22px;padding:13px;box-shadow:0 6px 0 rgba(32,32,30,.08);cursor:pointer;transition:transform .1s;text-align:left;font-family:'Nunito';}
+  .s911 .sub:hover{transform:translateY(-2px);}
+  .s911 .sub:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(32,32,30,.08);}
+  .s911 .sub .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .s911 .ic{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--ink);}
+  .s911 .sub h3{font-family:'Fredoka';font-weight:600;font-size:18px;margin:11px 0 0;}
+  .s911 .rw{display:inline-flex;align-items:center;gap:4px;font-family:'Fredoka';font-weight:600;font-size:13px;color:#b7720f;margin-top:2px;}
+  .s911 .newtag{font-family:'Fredoka';font-weight:600;font-size:11px;background:var(--ink);color:#fff;border-radius:999px;padding:3px 9px;}
+  .s911 .sub.wide{grid-column:1 / -1;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#e7ddf6,#dcd0f3);}
+  .s911 .sub.wide .ic{background:#fff;}
+  .s911 .sub.wide .info h3{margin:0;}
+  .s911 .sub.wide .info .d{font-weight:700;font-size:12.5px;color:#5f5872;margin-top:3px;max-width:170px;line-height:1.3;}
+  .s911 .sub.wide .go{margin-left:auto;background:var(--orange);color:#fff;font-family:'Fredoka';font-weight:600;font-size:14px;border:2.5px solid var(--ink);border-radius:999px;padding:8px 15px;box-shadow:0 4px 0 rgba(32,32,30,.25);}
+
+  .s911 .topbar{display:flex;align-items:center;gap:12px;padding-top:8px;}
+  .s911 .iconbtn{width:40px;height:40px;border-radius:50%;background:#fff;border:2.5px solid var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .s911 .topbar .t{font-family:'Fredoka';font-weight:600;font-size:19px;}
+  .s911 .instr{background:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:13px 15px;font-weight:700;font-size:14px;color:#4f4a5e;line-height:1.4;box-shadow:0 5px 0 rgba(32,32,30,.07);}
+  .s911 .instr b{color:var(--ink);}
+  .s911 .photogrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .s911 .addtile{border:3px dashed #b9afd4;background:#fff;border-radius:18px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;color:#8d7fb0;font-family:'Fredoka';font-weight:600;font-size:14px;transition:transform .12s,border-color .12s;}
+  .s911 .addtile:hover{border-color:var(--orange);transform:translateY(-2px);}
+  .s911 .thumb{position:relative;aspect-ratio:1;border-radius:18px;overflow:hidden;background:#eadff9;border:2.5px solid var(--ink);box-shadow:0 5px 0 rgba(32,32,30,.08);}
+  .s911 .thumb .doc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .s911 .thumb .rm{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:var(--ink);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .s911 .footer{flex:0 0 auto;padding:12px 20px 20px;}
+  .s911 .cta{width:100%;background:var(--orange);color:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:15px;font-family:'Fredoka';font-weight:600;font-size:19px;box-shadow:0 6px 0 rgba(32,32,30,.25);cursor:pointer;transition:transform .1s;}
+  .s911 .cta:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(32,32,30,.25);}
+  .s911 .cta:disabled{background:#cfc7de;border-color:#b6aecb;box-shadow:0 6px 0 rgba(182,174,203,.5);cursor:not-allowed;}
+  .s911 .count{text-align:center;font-family:'Fredoka';font-weight:500;font-size:13px;color:#6f6a64;margin-top:9px;}
+  .s911 .sent-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;text-align:center;}
+  .s911 .sent-card{background:linear-gradient(135deg,#e7ddf6,#dcd0f3);border:3px solid var(--ink);border-radius:26px;padding:26px 22px;width:100%;box-shadow:0 8px 0 rgba(32,32,30,.10);display:flex;flex-direction:column;align-items:center;}
+  .s911 .sent-illo{width:130px;height:130px;}
+  .s911 .sent-card h2{font-family:'Fredoka';font-weight:600;font-size:24px;margin:8px 0 6px;}
+  .s911 .sent-card p{font-weight:700;font-size:14px;color:#4f4a5e;line-height:1.5;margin:0;}
+  .s911 .steps{width:100%;margin-top:18px;display:flex;flex-direction:column;gap:9px;}
+  .s911 .step{display:flex;align-items:center;gap:10px;background:#fff;border:2.5px solid var(--ink);border-radius:14px;padding:10px 13px;font-family:'Fredoka';font-weight:600;font-size:13.5px;text-align:left;}
+  .s911 .step .dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;border:2px solid var(--ink);}
+  .s911 .step .dot.done{background:var(--green);}
+  .s911 .step .dot.wait{background:var(--yellow);}
+  .s911 .step .dot.lock{background:#efe9f8;}
+  .s911 .step small{margin-left:auto;font-weight:700;font-size:12px;color:#b7720f;display:inline-flex;align-items:center;gap:3px;}
+
+  /* ============================================================= 12–15 */
+  .s1215{background:#f5f6f8;color:#1b1f2a;font-family:'Manrope';}
+  .s1215 .num{font-family:'Space Grotesk';}
+  .s1215 .pad{padding:10px 18px 18px;display:flex;flex-direction:column;gap:13px;}
+  .s1215 .top{display:flex;align-items:center;gap:11px;padding-top:6px;}
+  .s1215 .top .av{width:42px;height:42px;border-radius:13px;background:#eef0f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;border:1.5px solid #e7e9ef;}
+  .s1215 .top .who .hello{font-size:12.5px;color:#737888;font-weight:600;}
+  .s1215 .top .who .nm{font-family:'Space Grotesk';font-weight:600;font-size:18px;line-height:1.1;}
+  .s1215 .top .spacer{flex:1;}
+  .s1215 .strk{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid #e7e9ef;border-radius:10px;padding:7px 11px;font-weight:800;font-size:14px;}
+  .s1215 .label{display:flex;align-items:center;justify-content:space-between;margin-top:2px;}
+  .s1215 .label h2{font-family:'Space Grotesk';font-weight:600;font-size:15px;margin:0;letter-spacing:.2px;}
+  .s1215 .label a{font-size:12.5px;color:#5860d8;font-weight:700;text-decoration:none;}
+  .s1215 .srow{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #e7e9ef;border-radius:14px;padding:12px 14px;cursor:pointer;transition:border-color .12s;width:100%;text-align:left;font-family:'Manrope';}
+  .s1215 .srow:hover{border-color:#cfd3e0;}
+  .s1215 .srow + .srow{margin-top:8px;}
+  .s1215 .srow .tick{width:7px;height:34px;border-radius:4px;flex:0 0 auto;}
+  .s1215 .srow .mid{flex:1;min-width:0;}
+  .s1215 .srow .mid .nm{font-family:'Space Grotesk';font-weight:600;font-size:15.5px;}
+  .s1215 .srow .mid .sub{font-size:12px;color:#737888;font-weight:600;margin-top:1px;}
+  .s1215 .srow .rt{text-align:right;flex:0 0 auto;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:#737888;}
+  .s1215 .hw{background:#5860d8;border:none;border-radius:16px;padding:15px 16px;color:#fff;position:relative;overflow:hidden;cursor:pointer;text-align:left;width:100%;display:block;}
+  .s1215 .hw .k{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;opacity:.8;display:flex;align-items:center;gap:7px;}
+  .s1215 .hw h3{font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:8px 0 0;}
+  .s1215 .hw .meta{font-size:12.5px;opacity:.85;font-weight:600;margin-top:3px;max-width:210px;line-height:1.35;}
+  .s1215 .hw .go{position:absolute;right:14px;bottom:14px;background:#fff;color:#5860d8;font-family:'Space Grotesk';font-weight:600;font-size:13px;border:none;border-radius:10px;padding:9px 14px;}
+  .s1215 .hw . picon{position:absolute;right:16px;top:14px;opacity:.9;}
+
+  .s1215 .topbar{display:flex;align-items:center;gap:12px;padding-top:6px;}
+  .s1215 .icbtn{width:38px;height:38px;border-radius:11px;background:#fff;border:1.5px solid #e7e9ef;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .s1215 .topbar .t{font-family:'Space Grotesk';font-weight:600;font-size:18px;}
+  .s1215 .instr{font-size:13.5px;color:#737888;font-weight:600;line-height:1.45;}
+  .s1215 .photogrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .s1215 .addtile{border:1.5px dashed #c3c7d2;background:#fff;border-radius:14px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;color:#8b90a0;font-weight:700;font-size:13px;transition:border-color .12s;}
+  .s1215 .addtile:hover{border-color:#5860d8;color:#5860d8;}
+  .s1215 .thumb{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#e7e9f2;border:1.5px solid #e7e9ef;}
+  .s1215 .thumb .doc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .s1215 .thumb .rm{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:8px;background:rgba(27,31,42,.72);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .s1215 .footer{flex:0 0 auto;padding:12px 18px 20px;}
+  .s1215 .cta{width:100%;background:#5860d8;color:#fff;border:none;border-radius:13px;padding:15px;font-family:'Space Grotesk';font-weight:600;font-size:16px;cursor:pointer;transition:background .12s;}
+  .s1215 .cta:hover{background:#4a52c8;}
+  .s1215 .cta:disabled{background:#c8cbe8;cursor:not-allowed;}
+  .s1215 .count{text-align:center;font-size:12.5px;color:#737888;font-weight:600;margin-top:9px;}
+  .s1215 .sent-wrap{flex:1;display:flex;flex-direction:column;padding:20px 18px;}
+  .s1215 .ok-badge{width:56px;height:56px;border-radius:16px;background:#edeefb;display:flex;align-items:center;justify-content:center;}
+  .s1215 .sent-wrap h2{font-family:'Space Grotesk';font-weight:600;font-size:22px;margin:16px 0 6px;}
+  .s1215 .sent-wrap .lead{font-size:14px;color:#737888;font-weight:600;line-height:1.5;margin:0;}
+  .s1215 .statuscard{background:#fff;border:1.5px solid #e7e9ef;border-radius:16px;padding:16px;margin-top:22px;}
+  .s1215 .statusrow{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .s1215 .statusrow + .statusrow{border-top:1px solid #f0f1f5;}
+  .s1215 .statusrow .sd{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .s1215 .statusrow .sm{flex:1;}
+  .s1215 .statusrow .sm .st{font-family:'Space Grotesk';font-weight:600;font-size:14px;}
+  .s1215 .statusrow .sm .ss{font-size:12px;color:#737888;font-weight:600;margin-top:1px;}
+  .s1215 .statusrow .sx{font-size:12px;font-weight:800;}
+  .s1215 .footer.gap{padding-top:0;}
+</style>
+</head>
+<body>
+
+  <div class="head">
+    <h1>tuto — “My Homework”, three ages</h1>
+    <p>A new home tile where a kid photographs finished homework and sends it to Tuto. Tuto checks it in the background and forwards it to the parent; the reward stays <b>pending until the parent approves</b>. The full loop — <b>Home → add photos → sent for approval</b> — is clickable in each skin. Add a couple of photos, hit send.</p>
+    <p class="note">Tap the <b>My Homework</b> tile on any phone. ★ Photos are striped placeholders standing in for real camera shots.</p>
+    <p class="note" style="background:#fff3e6;border-left:4px solid #f79433;padding:10px 14px;border-radius:8px;color:#8a5a1a;"><b>Handoff note for Claude Code:</b> we are <b>only adding the “My Homework” module</b> — do <b>not</b> touch or restyle any existing module. The home tiles, subject icons and mascots shown here are approximations for context; keep the real production components as they are and just wire the new My Homework entry + upload + “sent for approval” flow into them.</p>
+  </div>
+
+  <div class="rail">
+
+    <!-- ======================================================= 6–8 -->
+    <div class="frame">
+      <div class="lab">Ages 6–8</div>
+      <div class="phone s68" data-age="68" data-state="home">
+        <div class="statusbar"><span>9:41</span><div class="dots"><i></i><i></i><i></i><div class="batt"></div></div></div>
+
+        <!-- HOME -->
+        <div class="screen" data-screen="home">
+          <div class="scroll"><div class="body">
+            <div class="greet">
+              <div><div class="hi">Good morning ☀️</div><h2>Hello, Ada!</h2></div>
+              <div class="streak">⭐ 240</div>
+            </div>
+            <div class="hero"><div class="glow"></div>__MASCOT68__</div>
+            <div class="section-l">Ready to earn? 🌟</div>
+            <div class="grid">
+              <button class="card"><div class="pic" style="background:#E8E0FF">__ICO_BOOK68__</div><h3>My Books</h3><span class="gem" style="background:#E8E0FF">⭐ +30</span></button>
+              <button class="card"><div class="pic" style="background:#D4EDFF">__ICO_MATH68__</div><h3>My Math</h3><span class="gem" style="background:#D4EDFF">⭐ +30</span></button>
+              <button class="card"><div class="pic" style="background:#D4F5E0">__ICO_STORY68__</div><h3>My Stories</h3><span class="gem" style="background:#D4F5E0">⭐ +30</span></button>
+              <button class="card"><div class="pic" style="background:#FFE8D4">__ICO_HOUSE68__</div><h3>My House</h3><span class="gem" style="background:#FFE8D4">⭐ +10</span></button>
+              <button class="card wide" data-go="upload">
+                <div class="pic" style="background:#FFF1CF">__ICO_HW68__</div>
+                <div class="txt"><h3>My Homework</h3></div>
+              </button>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- UPLOAD -->
+        <div class="screen sky" data-screen="upload">
+          <div class="scroll"><div class="body">
+            <div class="topbar">
+              <button class="iconbtn" data-go="home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#20201e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="ttl">My Homework</div>
+              <div style="width:42px"></div>
+            </div>
+            <div class="prompt">
+              <div class="pa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="3" stroke="#fff" stroke-width="2"/><circle cx="12" cy="13.5" r="3.4" stroke="#fff" stroke-width="2"/><path d="M8 7l1.4-2.2h5.2L16 7" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+              <span>Take a photo of your finished homework!</span>
+            </div>
+            <div class="photogrid" data-photos>
+              <button class="addtile" data-add>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3.4" stroke="currentColor" stroke-width="2"/><path d="M8 6l1.4-2h5.2L16 6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                Add photo
+              </button>
+            </div>
+            <div class="count" data-count>Add at least one photo</div>
+          </div></div>
+          <div class="footer"><button class="cta" data-send disabled>Send to Tuto</button></div>
+        </div>
+
+        <!-- SENT -->
+        <div class="screen mint" data-screen="sent">
+          <div class="body"><div class="sent-wrap">
+            <div class="sent-illo">__MASCOT68_WIN__</div>
+            <h2>Great job! 🎉</h2>
+            <p>I sent your homework to your grown-up to check.</p>
+            <div class="pendpill"><span class="st">⏳</span> Waiting for ✔ · then ⭐</div>
+          </div></div>
+          <div class="footer"><button class="cta" data-go="home">Done</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= 9–11 -->
+    <div class="frame">
+      <div class="lab">Ages 9–11</div>
+      <div class="phone s911" data-age="911" data-state="home">
+        <div class="statusbar"><span>9:41</span><div class="dots"><i></i><i></i><i></i><div class="batt"></div></div></div>
+
+        <!-- HOME -->
+        <div class="screen" data-screen="home">
+          <div class="scroll"><div class="pad">
+            <div class="me">
+              <div class="ava">__TUTO911_ME__</div>
+              <div class="who"><div class="n">Ada</div><div class="lv">Level 7 · Explorer</div></div>
+              <div class="chip">__GEM911__ 240</div>
+            </div>
+            <button class="sub wide" data-go="upload">
+              <div class="ic" style="background:#FFF1CF">__ICO_HW911__</div>
+              <div class="info"><h3>My Homework</h3></div>
+              <span class="go">Open ▸</span>
+            </button>
+            <div class="sect"><h2>Subjects</h2><a href="#">All ▸</a></div>
+            <div class="grid">
+              <button class="sub"><div class="top"><div class="ic" style="background:#d4eed9">__SYM_READ__</div></div><h3>Reading</h3><span class="rw">__GEM911_S__ +30</span></button>
+              <button class="sub"><div class="top"><div class="ic" style="background:#d4e4fb">__SYM_MATH__</div></div><h3>Math</h3><span class="rw">__GEM911_S__ +30</span></button>
+              <button class="sub"><div class="top"><div class="ic" style="background:#e7ddf6">__SYM_STORY__</div></div><h3>Stories</h3><span class="rw">__GEM911_S__ +30</span></button>
+              <button class="sub"><div class="top"><div class="ic" style="background:#fce4cf">__SYM_SCI__</div></div><h3>Science</h3><span class="rw">__GEM911_S__ +30</span></button>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- UPLOAD -->
+        <div class="screen" data-screen="upload">
+          <div class="scroll"><div class="pad">
+            <div class="topbar">
+              <button class="iconbtn" data-go="home"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#20201e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="t">My Homework</div>
+            </div>
+            <div class="instr">Add a photo of each page you finished. <b>Tuto will check it</b> and send it to your parent to approve.</div>
+            <div class="photogrid" data-photos>
+              <button class="addtile" data-add>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3.4" stroke="currentColor" stroke-width="2"/><path d="M8 6l1.4-2h5.2L16 6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                Add page
+              </button>
+            </div>
+            <div class="count" data-count>0 pages added</div>
+          </div></div>
+          <div class="footer"><button class="cta" data-send disabled>Submit to Tuto</button></div>
+        </div>
+
+        <!-- SENT -->
+        <div class="screen" data-screen="sent">
+          <div class="sent-wrap">
+            <div class="sent-card">
+              <div class="sent-illo">__TUTO911_WIN__</div>
+              <h2>Homework sent! ⚡</h2>
+              <p>Nice work, Ada. Here’s what happens next:</p>
+              <div class="steps">
+                <div class="step"><span class="dot done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Tuto checked your pages</div>
+                <div class="step"><span class="dot wait">⏳</span>Sent to your parent to approve</div>
+                <div class="step"><span class="dot lock">🔒</span>Reward unlocks on approval</div>
+              </div>
+            </div>
+          </div>
+          <div class="footer"><button class="cta" data-go="home">Back to home</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= 12–15 -->
+    <div class="frame">
+      <div class="lab">Ages 12–15</div>
+      <div class="phone s1215" data-age="1215" data-state="home">
+        <div class="statusbar"><span>9:41</span><div class="dots"><i></i><i></i><i></i><div class="batt"></div></div></div>
+
+        <!-- HOME -->
+        <div class="screen" data-screen="home">
+          <div class="scroll"><div class="pad">
+            <div class="top">
+              <div class="av">__TUTO1215_ME__</div>
+              <div class="who"><div class="hello">Welcome back</div><div class="nm">Ada</div></div>
+              <div class="spacer"></div>
+              <div class="strk">🔥 <span class="num">5</span></div>
+            </div>
+            <div class="label"><h2>HOMEWORK</h2></div>
+            <button class="hw" data-go="upload">
+              <div class="k"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="3" stroke="#fff" stroke-width="2"/><circle cx="12" cy="13" r="3.2" stroke="#fff" stroke-width="2"/></svg> Submit homework</div>
+              <h3>My Homework</h3>
+              <div class="meta">Photos → Tuto reviews → parent signs off.</div>
+            </button>
+            <div class="label"><h2>SUBJECTS</h2><a href="#">View all</a></div>
+            <div>
+              <div class="srow"><div class="tick" style="background:#5b8fd6"></div><div class="mid"><div class="nm">English</div><div class="sub">Essay structure · Level 4</div></div><div class="rt num">Lv 4</div></div>
+              <div class="srow"><div class="tick" style="background:#8f86d6"></div><div class="mid"><div class="nm">Math</div><div class="sub">Linear equations · Level 2</div></div><div class="rt num">Lv 2</div></div>
+              <div class="srow"><div class="tick" style="background:#5fae74"></div><div class="mid"><div class="nm">Science</div><div class="sub">Cell biology · Level 1</div></div><div class="rt num">Lv 1</div></div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- UPLOAD -->
+        <div class="screen" data-screen="upload">
+          <div class="scroll"><div class="pad">
+            <div class="topbar">
+              <button class="icbtn" data-go="home"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#1b1f2a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="t">My Homework</div>
+            </div>
+            <div class="instr">Photograph each page of your completed work. Tuto reviews it, then forwards it to your parent for approval.</div>
+            <div class="photogrid" data-photos>
+              <button class="addtile" data-add>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3.2" stroke="currentColor" stroke-width="2"/><path d="M8 6l1.4-2h5.2L16 6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                Add page
+              </button>
+            </div>
+            <div class="count" data-count>0 pages</div>
+          </div></div>
+          <div class="footer"><button class="cta" data-send disabled>Submit for review</button></div>
+        </div>
+
+        <!-- SENT -->
+        <div class="screen" data-screen="sent">
+          <div class="sent-wrap">
+            <div class="ok-badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="#5860d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h2>Submitted for review</h2>
+            <p class="lead">Tuto checked your pages and sent them to your parent. Your reward is pending their approval.</p>
+            <div class="statuscard">
+              <div class="statusrow"><div class="sd" style="background:#e7f6ec"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="#2f9e63" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="sm"><div class="st">Reviewed by Tuto</div><div class="ss">Pages look complete</div></div><div class="sx" style="color:#2f9e63">Done</div></div>
+              <div class="statusrow"><div class="sd" style="background:#fdf3e0">⏳</div><div class="sm"><div class="st">Sent to parent</div><div class="ss">Awaiting approval</div></div><div class="sx" style="color:#b7720f">Pending</div></div>
+              <div class="statusrow"><div class="sd" style="background:#edeefb"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#5860d8" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" stroke="#5860d8" stroke-width="2"/></svg></div><div class="sm"><div class="st">Reward</div><div class="ss">Unlocks once approved</div></div><div class="sx" style="color:#8b90a0">Locked</div></div>
+            </div>
+          </div>
+          <div class="footer gap"><button class="cta" data-go="home">Done</button></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+const INK='#20201e';
+/* ---- shared SVG bits ---- */
+function gemSVG(sz){return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z" fill="#f79433" stroke="#20201e" stroke-width="1.6" stroke-linejoin="round"/></svg>`;}
+/* homework icon: sheet + pencil + camera corner */
+function hwIcon(scale){return `<svg viewBox="0 0 64 64" width="${58*scale}" height="${58*scale}" fill="none"><rect x="14" y="8" width="30" height="40" rx="5" fill="#fff" stroke="${INK}" stroke-width="4"/><path d="M21 20h16M21 28h16M21 36h10" stroke="#f79433" stroke-width="3.4" stroke-linecap="round"/><rect x="34" y="34" width="22" height="17" rx="4" fill="#f79433" stroke="${INK}" stroke-width="4"/><circle cx="45" cy="43" r="4.5" fill="#fff" stroke="${INK}" stroke-width="3"/><path d="M40 34l1.6-3h6.8L50 34" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/></svg>`;}
+
+/* 6-8 blobby mascots */
+const MASCOT68=`<svg viewBox="0 0 200 160" width="180" height="144" aria-label="Tuto waving"><g><rect x="82" y="128" width="15" height="26" rx="7.5" fill="#a98ce6" stroke="${INK}" stroke-width="5.5"/><rect x="103" y="128" width="15" height="26" rx="7.5" fill="#a98ce6" stroke="${INK}" stroke-width="5.5"/><path d="M74 96 q-20 -14 -20 -40" fill="none" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M74 96 q-20 -14 -20 -40" fill="none" stroke="#a98ce6" stroke-width="8" stroke-linecap="round"/><path d="M126 96 q20 -14 20 -40" fill="none" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M126 96 q20 -14 20 -40" fill="none" stroke="#a98ce6" stroke-width="8" stroke-linecap="round"/><path d="M78 56 q-8 -22 10 -24 q8 11 0 26 Z" fill="#a98ce6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><circle cx="100" cy="96" r="50" fill="#a98ce6" stroke="${INK}" stroke-width="6"/><path d="M82 90 q8 -10 17 0" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/><path d="M104 90 q8 -10 17 0" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/><path d="M88 108 q12 18 26 0 Z" fill="${INK}"/><path d="M93 112 q8 8 16 0 Z" fill="#f08bb0"/><circle cx="76" cy="106" r="6.5" fill="#f08bb0" opacity=".6"/><circle cx="124" cy="106" r="6.5" fill="#f08bb0" opacity=".6"/><ellipse cx="84" cy="74" rx="11" ry="8" fill="#fff" opacity=".4"/></g></svg>`;
+const MASCOT68_WIN=`<svg viewBox="0 0 220 200" width="200" height="182" aria-label="Tuto celebrating"><rect x="24" y="34" width="13" height="13" rx="3" fill="#f5d35f" stroke="${INK}" stroke-width="3" transform="rotate(20 30 40)"/><rect x="182" y="40" width="13" height="13" rx="3" fill="#74acef" stroke="${INK}" stroke-width="3" transform="rotate(-15 188 46)"/><circle cx="34" cy="118" r="7" fill="#f08bb0" stroke="${INK}" stroke-width="3"/><circle cx="190" cy="126" r="7" fill="#79cf86" stroke="${INK}" stroke-width="3"/><path d="M28 78 l8 4 M28 86 l8 -4" stroke="#a98ce6" stroke-width="3.4" stroke-linecap="round"/><path d="M194 86 l-8 4 M194 94 l-8 -4" stroke="#f5d35f" stroke-width="3.4" stroke-linecap="round"/><g><rect x="94" y="160" width="16" height="30" rx="8" fill="#a98ce6" stroke="${INK}" stroke-width="6"/><rect x="114" y="160" width="16" height="30" rx="8" fill="#a98ce6" stroke="${INK}" stroke-width="6"/><path d="M86 118 q-18 -20 -22 -40" fill="none" stroke="${INK}" stroke-width="16" stroke-linecap="round"/><path d="M86 118 q-18 -20 -22 -40" fill="none" stroke="#a98ce6" stroke-width="8" stroke-linecap="round"/><path d="M138 118 q18 -20 22 -40" fill="none" stroke="${INK}" stroke-width="16" stroke-linecap="round"/><path d="M138 118 q18 -20 22 -40" fill="none" stroke="#a98ce6" stroke-width="8" stroke-linecap="round"/><path d="M86 74 q-8 -22 10 -24 q8 11 0 26 Z" fill="#a98ce6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><circle cx="112" cy="118" r="50" fill="#a98ce6" stroke="${INK}" stroke-width="6"/><path d="M94 112 q8 -10 17 0" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/><path d="M116 112 q8 -10 17 0" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/><path d="M100 130 q12 20 26 0 Z" fill="${INK}"/><path d="M105 134 q8 8 16 0 Z" fill="#f08bb0"/><circle cx="88" cy="128" r="6.5" fill="#f08bb0" opacity=".6"/><circle cx="136" cy="128" r="6.5" fill="#f08bb0" opacity=".6"/><ellipse cx="96" cy="96" rx="11" ry="8" fill="#fff" opacity=".4"/></g></svg>`;
+
+/* 9-11 rounded Tuto (viewBox 100) */
+function tuto911(color,acc){const C={purple:'#a98ce6',green:'#79cf86',blue:'#74acef'};const c=C[color]||C.purple;let s='';
+  s+=`<path d="M32 30 q-7 -19 9 -20 q6 10 -1 22 Z" fill="${c}" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`;
+  s+=`<path d="M68 30 q7 -19 -9 -20 q-6 10 1 22 Z" fill="${c}" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`;
+  s+=`<circle cx="50" cy="57" r="34" fill="${c}" stroke="${INK}" stroke-width="6"/>`;
+  s+=`<circle cx="40" cy="53" r="4.2" fill="${INK}"/><circle cx="60" cy="53" r="4.2" fill="${INK}"/>`;
+  s+=`<path d="M42 67 q8 8 16 0" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`;
+  s+=`<circle cx="31" cy="64" r="4.5" fill="#f08bb0" opacity=".5"/><circle cx="69" cy="64" r="4.5" fill="#f08bb0" opacity=".5"/>`;
+  s+=`<ellipse cx="39" cy="42" rx="7" ry="5" fill="#fff" opacity=".4"/>`;
+  if(acc==='crown') s+=`<path d="M32 32 L32 15 L42 23 L50 11 L58 23 L68 15 L68 32 Z" fill="#f5d35f" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`;
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%">${s}</svg>`;}
+/* 9-11 subject symbols */
+const SYM={
+  read:`<svg viewBox="0 0 40 40" width="24" height="24"><path d="M5 9h13v24H5z" fill="#fff" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/><path d="M22 9h13v24H22z" fill="#fff" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/><path d="M18 9v24M22 9v24" stroke="${INK}" stroke-width="3"/></svg>`,
+  math:`<svg viewBox="0 0 40 40" width="22" height="22"><g font-family="Fredoka" font-weight="700" fill="${INK}" font-size="18"><text x="3" y="18">1</text><text x="22" y="18">2</text><text x="3" y="36">+</text><text x="22" y="36">3</text></g></svg>`,
+  story:`<svg viewBox="0 0 40 40" width="22" height="22"><path d="M8 32 L24 6 L28 6 L34 32 Z" fill="#fff" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/><path d="M16 18 l16 6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/></svg>`,
+  sci:`<svg viewBox="0 0 40 40" width="22" height="22"><path d="M16 5 v11 l-8 16 a5 5 0 0 0 4 8 h16 a5 5 0 0 0 4 -8 l-8 -16 v-11 Z" fill="#fff" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/><path d="M13 5 h14" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="33" r="2.4" fill="#74acef"/></svg>`,
+};
+/* 12-15 flat avatar */
+function tutoFlat(color){const C={blue:'#5b8fd6'};const c=C[color]||'#8a90a2';let s='';
+  s+=`<path d="M34 30 q-6 -16 8 -17 q5 9 -1 19 Z" fill="${c}"/>`;
+  s+=`<path d="M66 30 q6 -16 -8 -17 q-5 9 1 19 Z" fill="${c}"/>`;
+  s+=`<circle cx="50" cy="56" r="33" fill="${c}"/>`;
+  s+=`<circle cx="41" cy="54" r="3.6" fill="#fff"/><circle cx="59" cy="54" r="3.6" fill="#fff"/>`;
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%">${s}</svg>`;}
+
+/* ---- inject static SVGs ---- */
+const R={
+  MASCOT68, MASCOT68_WIN,
+  ICO_BOOK68:SYM.read, ICO_MATH68:SYM.math, ICO_STORY68:SYM.story,
+  ICO_HOUSE68:`<svg viewBox="0 0 64 64" width="48" height="48" fill="none"><path d="M14 30 L32 14 L50 30 L50 50 L14 50 Z" fill="#fff" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><path d="M10 32 L32 12 L54 32" stroke="${INK}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="27" y="38" width="10" height="12" rx="1.5" fill="#f3a35a"/></svg>`,
+  ICO_HW68:hwIcon(1), ICO_HW911:hwIcon(.72),
+  TUTO911_ME:tuto911('blue','crown'), TUTO911_WIN:tuto911('green'),
+  GEM911:gemSVG(15), GEM911_S:gemSVG(13),
+  SYM_READ:SYM.read, SYM_MATH:SYM.math, SYM_STORY:SYM.story, SYM_SCI:SYM.sci,
+  TUTO1215_ME:tutoFlat('blue'),
+};
+document.querySelectorAll('.phone').forEach(p=>{
+  p.innerHTML=p.innerHTML.replace(/__([A-Z0-9_]+)__/g,(m,k)=>R[k]!==undefined?R[k]:m);
+});
+
+/* ---- photo placeholder generator ---- */
+const PH_TINTS=['#eadff9','#dcecfb','#dbf1e2','#fdeede'];
+let phSeq=0;
+function makePhoto(age){
+  const tint=PH_TINTS[phSeq++%PH_TINTS.length];
+  const div=document.createElement('div');
+  div.className='thumb pop';
+  div.innerHTML=`<div class="doc photo-ph" style="background:${tint}">
+    <svg width="46" height="46" viewBox="0 0 64 64" fill="none" opacity=".55"><rect x="16" y="10" width="32" height="44" rx="4" fill="#fff" stroke="${INK}" stroke-width="3.4"/><path d="M23 22h18M23 30h18M23 38h11" stroke="#9a94a8" stroke-width="3" stroke-linecap="round"/></svg>
+  </div>
+  <button class="rm" aria-label="Remove">×</button>`;
+  return div;
+}
+
+/* ---- controller ---- */
+document.querySelectorAll('.phone').forEach(phone=>{
+  const age=phone.dataset.age;
+  const grid=phone.querySelector('[data-photos]');
+  const addBtn=phone.querySelector('[data-add]');
+  const sendBtn=phone.querySelector('[data-send]');
+  const countEl=phone.querySelector('[data-count]');
+
+  function count(){return grid.querySelectorAll('.thumb').length;}
+  function refresh(){
+    const n=count();
+    sendBtn.disabled=n===0;
+    if(age==='68') countEl.textContent = n===0?'Add at least one photo':(n+(n===1?' photo ready ✓':' photos ready ✓'));
+    else if(age==='911') countEl.textContent = n+(n===1?' page added':' pages added');
+    else countEl.textContent = n+(n===1?' page':' pages');
+  }
+  function reset(){grid.querySelectorAll('.thumb').forEach(t=>t.remove());refresh();}
+
+  addBtn.addEventListener('click',()=>{
+    if(count()>=4) return;
+    const t=makePhoto(age);
+    grid.insertBefore(t,addBtn);
+    t.querySelector('.rm').addEventListener('click',e=>{e.stopPropagation();t.remove();refresh();});
+    if(count()>=4) addBtn.style.display='none';
+    refresh();
+  });
+  // delegate remove to also restore add tile
+  grid.addEventListener('click',()=>{ if(count()<4) addBtn.style.display=''; });
+
+  sendBtn.addEventListener('click',()=>{ phone.dataset.state='sent'; });
+
+  phone.querySelectorAll('[data-go]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const dest=btn.dataset.go;
+      phone.dataset.state=dest;
+      if(dest==='home') reset();
+    });
+  });
+  refresh();
+});
+</script>
+</body>
+</html>

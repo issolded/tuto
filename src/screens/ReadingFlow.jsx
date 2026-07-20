@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { supabase } from '../lib/supabase'
+import { currentChildId } from '../lib/gemini'
 
 const ACCENT = '#FF6B35'
 const BG = 'linear-gradient(160deg, #FFF3E8 0%, #FFDFC8 100%)'
@@ -34,6 +35,7 @@ async function geminiJSON(parts) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       parts,
+      childId: currentChildId(),
       generationConfig: { response_mime_type: 'application/json' },
     }),
   })
