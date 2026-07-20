@@ -139,3 +139,41 @@ on conflict (id, age_group) do update
 
 select age_group, count(*) as set_sayisi, string_agg(id, ', ' order by sort_order) as setler
 from drawings group by age_group order by age_group;
+
+-- ── 2026-07-20 ek: caterpillar seti (yine üç yaş grubunda da aynı görseller) ──
+insert into drawings (id, age_group, name_tr, name_en, category, step_count, sort_order) values
+  ('caterpillar', '6-8',   'Tırtıl', 'Caterpillar', 'Animals', 8, 5),
+  ('caterpillar', '9-11',  'Tırtıl', 'Caterpillar', 'Animals', 8, 5),
+  ('caterpillar', '12-15', 'Tırtıl', 'Caterpillar', 'Animals', 8, 5)
+on conflict (id, age_group) do update
+  set name_tr = excluded.name_tr,
+      name_en = excluded.name_en,
+      category = excluded.category,
+      step_count = excluded.step_count,
+      sort_order = excluded.sort_order;
+
+-- ── 2026-07-20 düzeltme: robot 8 → 7 adım ────────────────────────────────────
+-- Orijinal 5. adım GERİYE gidiyordu: 4. adımda eklenen anten ve kulaklar 5'te
+-- kayboluyor, 6'da geri geliyordu. Eskizler kümülatif olmak zorunda olduğu için
+-- o panel atıldı ve 6,7,8 → 5,6,7 olarak yeniden numaralandı. Storage'daki
+-- artakalan step-08 dosyaları da silindi.
+update drawings set step_count = 7 where id = 'robot';
+
+select id, age_group, step_count from drawings where id = 'robot' order by age_group;
+
+-- ── 2026-07-20 ek: bee (7 adım) + axolotl (6 adım) ───────────────────────────
+-- Adım sayısı setten sete değişiyor; step_count zaten satır başına tutulduğu
+-- için 8 varsayımı hiçbir yerde yok.
+insert into drawings (id, age_group, name_tr, name_en, category, step_count, sort_order) values
+  ('bee',     '6-8',   'Arı',      'Bee',     'Animals', 7, 6),
+  ('bee',     '9-11',  'Arı',      'Bee',     'Animals', 7, 6),
+  ('bee',     '12-15', 'Arı',      'Bee',     'Animals', 7, 6),
+  ('axolotl', '6-8',   'Aksolotl', 'Axolotl', 'Animals', 6, 7),
+  ('axolotl', '9-11',  'Aksolotl', 'Axolotl', 'Animals', 6, 7),
+  ('axolotl', '12-15', 'Aksolotl', 'Axolotl', 'Animals', 6, 7)
+on conflict (id, age_group) do update
+  set name_tr = excluded.name_tr,
+      name_en = excluded.name_en,
+      category = excluded.category,
+      step_count = excluded.step_count,
+      sort_order = excluded.sort_order;

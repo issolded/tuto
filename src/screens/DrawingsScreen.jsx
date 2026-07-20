@@ -63,6 +63,33 @@ const STEP_TIPS = {
     'Add a happy wagging tail!',
     'Add the spots — all done!',
   ],
+  bee: [
+    'Draw a circle for the head.',
+    'Add a big oval body behind it.',
+    'Two curly antennae with little balls on top.',
+    'Draw two big round eyes.',
+    'Add a happy smile.',
+    'Two big wings and tiny legs.',
+    'Add the stripes and a stinger — buzz, done!',
+  ],
+  axolotl: [
+    'Draw a big round head.',
+    'Add a chubby body and little arms.',
+    'Two big shiny eyes.',
+    'Add a happy open smile.',
+    'Feathery gills on both sides and a long tail.',
+    'Go over your lines and add shading — done!',
+  ],
+  caterpillar: [
+    'Draw a big circle for the head.',
+    'Add a round body part behind it.',
+    'Keep adding circles to make the body longer.',
+    'Two big eyes and a happy smile.',
+    'Add two curly antennae on top.',
+    'Little legs under each body part.',
+    'Add spots and stripes on the body.',
+    'Draw a leaf under your caterpillar — done!',
+  ],
   house: [
     'Draw a big square for the walls.',
     'Put a triangle roof on top.',
@@ -73,12 +100,14 @@ const STEP_TIPS = {
     'Draw a path and a little fence.',
     'Add bricks, grass and a sun — all done!',
   ],
+  // Seven steps, not eight: the original step 5 went BACKWARDS (the antenna and
+  // ears it had just added disappeared again), so it was dropped and the rest
+  // renumbered. Step 4 → 5 now only ever adds.
   robot: [
     'Draw a square for the head.',
     'Add a big square body underneath.',
     'Bendy arms, round hands, legs and feet.',
     'An antenna, two big eyes and side ears.',
-    'Neaten the shapes and round the corners.',
     'Add a screen and buttons on the tummy.',
     'Bolts on the corners and little fingers.',
     'Add shading and details — beep boop, done!',
