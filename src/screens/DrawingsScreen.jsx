@@ -360,11 +360,48 @@ function Ready({ sk, target, ageGroup, onStart, onBack }) {
   )
 }
 
+// Leaving the guided steps mid-drawing loses your place in the panels — the
+// top-left arrow is the ONLY way out of this screen (stepping back through
+// panels is the footer Back button's job instead), so it always confirms
+// first rather than silently dropping progress.
+function ExitConfirmModal({ sk, onCancel, onConfirm }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: 'rgba(40,45,35,.42)', padding: 20,
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 340, background: '#fff', borderRadius: sk.radius, padding: 22,
+        textAlign: 'center', boxShadow: '0 14px 32px rgba(0,0,0,.20)',
+        animation: 'ttPop .24s cubic-bezier(.2,.9,.3,1.2) both',
+      }}>
+        <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 18, color: sk.ink }}>
+          Leave this drawing?
+        </div>
+        <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8d83ad', marginTop: 8, lineHeight: 1.4 }}>
+          Your steps so far won't be saved.
+        </div>
+        <div style={{ display: 'flex', gap: 9, marginTop: 18 }}>
+          <button onClick={onCancel} style={{
+            flex: 1, padding: '13px', borderRadius: sk.radius - 8, border: '1.5px solid rgba(32,32,30,.14)',
+            background: '#fff', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14, color: '#6f6a64', cursor: 'pointer',
+          }}>Keep drawing</button>
+          <button onClick={onConfirm} style={{
+            flex: 1, padding: '13px', borderRadius: sk.radius - 8, border: 'none',
+            background: sk.accent, color: '#fff', fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, cursor: 'pointer',
+          }}>Leave</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Guided steps ─────────────────────────────────────────────────────────────
 function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   const total = target.step_count
   const tips = STEP_TIPS[target.id] || []
   const isLast = step >= total - 1
+  const [confirmExit, setConfirmExit] = useState(false)
 
   // Warm the neighbouring panels. Without this every tap on Next waits on a
   // fresh download and the child watches an empty frame; the panels are only
@@ -378,7 +415,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 10px' }}>
-        <BackBtn onClick={step === 0 ? onBack : () => setStep(step - 1)} />
+        <BackBtn onClick={() => setConfirmExit(true)} />
         <Title sk={sk}>{target.name_en}</Title>
         <div style={{ width: 42 }} />
       </div>
@@ -425,18 +462,26 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
         </div>
       )}
 
+      {/* Equal-width pair: this is the ONLY way to move between panels now that
+          the top arrow is exit-only, so Back needs to be as prominent as Next. */}
       <div style={{ display: 'flex', gap: 9, marginTop: 16, paddingBottom: 20 }}>
         <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{
-          padding: '14px 18px', borderRadius: sk.radius - 4, border: '1.5px solid rgba(32,32,30,.14)',
+          flex: 1, padding: '14px 10px', borderRadius: sk.radius - 4, border: '1.5px solid rgba(32,32,30,.14)',
           background: '#fff', cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .45 : 1,
-          fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14, color: '#6f6a64',
-        }}>Back</button>
+          fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14.5, color: '#6f6a64',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}><span>←</span> Back</button>
         <button onClick={() => (isLast ? onFinish() : setStep(step + 1))} style={{
           ...ctaStyle(sk, false), flex: 1, marginTop: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
-          {isLast ? 'I drew it!' : 'Next'}
+          {isLast ? "I drew it!" : <>Next <span>→</span></>}
         </button>
       </div>
+
+      {confirmExit && (
+        <ExitConfirmModal sk={sk} onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
+      )}
     </>
   )
 }
