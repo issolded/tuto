@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import BottomNav from '../components/BottomNav'
-import { supabase, getChildGems, drawingStepUrl } from '../lib/supabase'
+import { supabase, getChildGems, drawingIconUrl } from '../lib/supabase'
 
 const ACCENT = '#f79433'
 const INK = '#241f3a'
@@ -56,15 +56,15 @@ function TaskIcon({ type, c }) {
   )
 }
 
-// Homework tile icon — worksheet sheet + camera badge (see design handoff).
-// The tile art is the age band's drawing character, not a generic icon — see
-// heroArt() in the design prototype. For 6-8 that character IS the finished cat
-// sketch, so it comes from the same Storage panels the guided steps use.
-// The 9-11 (otter) and 12-15 (anime) sets don't exist yet; until they do those
-// bands fall back to the prototype's pencil glyph.
+// The tile art is the age band's drawing character — for 6-8 that's the
+// finished cat sketch. The full guided-step panel is ~1024x1024 and several
+// hundred KB (it needs to be, it's the zoomed-in guide image); this icon is
+// 66px, so it loads a dedicated small derivative instead (drawingIconUrl) —
+// same picture, ~a few KB. The 9-11 (otter) and 12-15 (anime) sets don't
+// exist yet; until they do those bands fall back to the pencil glyph.
 function DrawingsIcon({ age }) {
   if (age == null || age <= 8) {
-    return <img src={drawingStepUrl('cat', '6-8', 8)} alt=""
+    return <img src={drawingIconUrl('cat', '6-8')} alt=""
       style={{ width: 66, height: 66, objectFit: 'contain' }} />
   }
   return (
@@ -77,6 +77,7 @@ function DrawingsIcon({ age }) {
   )
 }
 
+// Homework tile icon — worksheet sheet + camera badge (see design handoff).
 function HomeworkIcon() {
   return (
     <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
