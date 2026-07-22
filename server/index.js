@@ -1187,16 +1187,39 @@ async function handleMessage(parentId, replyCb, text) {
       // present, and 0% of the time with it omitted. Since no function was
       // actually called, re-ask without `tools` for the reply that's actually
       // sent to the parent, instead of trusting this call's own text.
-      let reply = 'Üzgünüm, anlayamadım.'
-      try {
-        const plainData = await callGeminiWithRetry(() => fetchGeminiOnce({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents,
-        }))
-        reply = plainData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || reply
-      } catch {
-        // Fall back to the tools-attached call's text rather than failing outright.
-        reply = parts.map(p => p.text || '').join('').trim() || reply
+      const firstCallText = parts.map(p => p.text || '').join('').trim()
+
+      // A 200 response with no usable text (safety filter, truncation, an
+      // empty "thinking" turn) is NOT a transport-level failure, so
+      // callGeminiWithRetry's retry never kicks in for it — confirmed by
+      // reproducing this exact scenario ("onaylayalim" against this same
+      // pending state): the model answered sensibly both with and without
+      // tools every time we asked, so a blank turn here is a one-off fluke,
+      // not this input being unanswerable. One extra plain-call attempt on an
+      // empty result is cheap and buys back most of those fluke cases before
+      // the parent ever sees a dead-end reply.
+      let reply = ''
+      for (let attempt = 0; attempt < 2 && !reply; attempt++) {
+        try {
+          const plainData = await callGeminiWithRetry(() => fetchGeminiOnce({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents,
+          }))
+          const finishReason = plainData.candidates?.[0]?.finishReason
+          reply = plainData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || ''
+          if (!reply) console.warn(`[MSG] plain-retry attempt ${attempt + 1} came back empty (finishReason=${finishReason}) for parent ${parentId}`)
+        } catch (err) {
+          console.warn(`[MSG] plain-retry attempt ${attempt + 1} threw: ${err.message}`)
+        }
+      }
+      // Both plain attempts came back blank — fall back to the tools-attached
+      // call's own text, and only then to a message that at least gives the
+      // parent something to DO instead of a dead end.
+      if (!reply) reply = firstCallText
+      if (!reply) {
+        reply = language === 'en'
+          ? "Sorry, I couldn't quite catch that — could you try rephrasing, or use the app to approve directly?"
+          : 'Üzgünüm, bunu tam anlayamadım — farklı bir şekilde söyler misin? Ya da uygulamadan doğrudan onaylayabilirsin.'
       }
       await logMessage(parentId, 'tuto', reply)
       await replyCb(reply)
