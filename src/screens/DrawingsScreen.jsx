@@ -512,12 +512,14 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
               // A couple of sets' source panels aren't perfectly registered
-              // step to step — without this the shared ink visibly slides
-              // during the cross-fade instead of just gaining new strokes in
-              // place. Static per-step correction, not part of the opacity
-              // transition. (bee/caterpillar need real correction; everything
-              // else resolves to ~0 and is untouched — see drawingAlign.js.)
-              transform: `translate(${poorerAlign.dx}%, ${poorerAlign.dy}%)`,
+              // step to step (some slide, one — anime-face's final reveal —
+              // is a genuine zoom jump) — without this the shared ink visibly
+              // slides or lurches during the cross-fade instead of just
+              // gaining new strokes in place. Static per-step correction, not
+              // part of the opacity transition; scale is innermost (applied
+              // to the panel first, about its own center) so it matches how
+              // the correction was searched for — see drawingAlign.js.
+              transform: `translate(${poorerAlign.dx}%, ${poorerAlign.dy}%) scale(${poorerAlign.scale})`,
             }}
           />
           {step !== baseStep && (
@@ -527,7 +529,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
               alt={`${target.name_en} ${sk.stepWord} ${richerStep + 1}`}
               style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
-                transform: `translate(${richerAlign.dx}%, ${richerAlign.dy}%)`,
+                transform: `translate(${richerAlign.dx}%, ${richerAlign.dy}%) scale(${richerAlign.scale})`,
                 // Forward: hidden → shown (ink fading in). Back: shown → hidden
                 // (ink fading out, since richerStep is where we came FROM).
                 opacity: forward ? (revealed ? 1 : 0) : (revealed ? 0 : 1),
