@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting } from '../lib/supabase'
@@ -403,6 +403,45 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   const isLast = step >= total - 1
   const [confirmExit, setConfirmExit] = useState(false)
 
+  // Panels are cumulative — step N+1 is step N plus a few more pencil lines in
+  // the exact same spots, nothing removed. So the two images to cross-fade are
+  // never symmetric: one is a strict superset of the other. The image with
+  // FEWER lines can't visually cover the one with more (its "empty" area is
+  // transparent, not white — stacking it on top just lets the extra ink show
+  // through underneath regardless of opacity). So the emptier image always
+  // sits on the constant, fully-opaque BOTTOM, and the richer image is the one
+  // that animates on TOP — fading IN (new ink appearing) when moving forward,
+  // fading OUT (ink un-appearing) when moving back with Back. `baseStep` is
+  // the settled step; it only catches up to `step` once the fade finishes, so
+  // rapid taps just retarget the fade instead of queuing several.
+  const [baseStep, setBaseStep] = useState(step)
+  const [revealed, setRevealed] = useState(true)
+  const forward = step > baseStep
+  const poorerStep = Math.min(baseStep, step)
+  const richerStep = Math.max(baseStep, step)
+
+  // Hide the new top layer SYNCHRONOUSLY, before the browser paints — a plain
+  // effect runs after commit, so the freshly-mounted <img key={step}> would
+  // still carry the PREVIOUS transition's `revealed=true` on its very first
+  // paint and just appear fully visible with no fade (confirmed: opacity read
+  // back as 1 within a few ms of the click, no partial value ever observed).
+  // useLayoutEffect's setState is flushed before paint, so this correction is
+  // what the browser actually renders first.
+  useLayoutEffect(() => {
+    if (step !== baseStep) setRevealed(false)
+  }, [step, baseStep])
+
+  // Only once that hidden frame has actually been painted, fade it back in.
+  useEffect(() => {
+    if (step === baseStep) return
+    // A single rAF isn't reliably enough for the browser to have painted the
+    // opacity:0 frame from the layout effect above before flipping to 1.
+    let raf2
+    const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setRevealed(true)) })
+    const settle = setTimeout(() => setBaseStep(step), 420)
+    return () => { cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); clearTimeout(settle) }
+  }, [step, baseStep])
+
   // Warm the neighbouring panels. Without this every tap on Next waits on a
   // fresh download and the child watches an empty frame; the panels are only
   // ~20-45 KB, so fetching one ahead is cheap and keeps the flow instant.
@@ -437,19 +476,34 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
         ))}
       </div>
 
-      {/* The sketches are cumulative — one image per step, no layering. */}
+      {/* Two stacked layers so a step change fades the new ink in over the old,
+          instead of hard-cutting to the next panel — see baseStep/revealed above. */}
       <div style={{
         background: CATEGORY_TINT[target.category] || PANEL_BG, borderRadius: sk.radius, padding: 10,
         boxShadow: '0 6px 16px rgba(40,30,70,.09)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <img
-          key={step}
-          src={drawingStepUrl(target.id, ageGroup, step + 1)}
-          alt={`${target.name_en} ${sk.stepWord} ${step + 1}`}
-          loading="lazy"
-          style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', borderRadius: sk.radius - 8 }}
-        />
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '1' }}>
+          <img
+            src={drawingStepUrl(target.id, ageGroup, poorerStep + 1)}
+            alt={`${target.name_en} ${sk.stepWord} ${poorerStep + 1}`}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8 }}
+          />
+          {step !== baseStep && (
+            <img
+              key={`${richerStep}-${forward ? 'in' : 'out'}`}
+              src={drawingStepUrl(target.id, ageGroup, richerStep + 1)}
+              alt={`${target.name_en} ${sk.stepWord} ${richerStep + 1}`}
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
+                // Forward: hidden → shown (ink fading in). Back: shown → hidden
+                // (ink fading out, since richerStep is where we came FROM).
+                opacity: forward ? (revealed ? 1 : 0) : (revealed ? 0 : 1),
+                transition: 'opacity 420ms ease',
+              }}
+            />
+          )}
+        </div>
       </div>
 
       {tips[step] && (
