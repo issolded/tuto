@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting } from '../lib/supabase'
+import { drawingAlign } from '../lib/drawingAlign'
 
 // ── Age skins ────────────────────────────────────────────────────────────────
 // Same flow, three presentations (see SKINS in the design prototype). The
@@ -79,6 +80,25 @@ const STEP_TIPS = {
     'Add a happy open smile.',
     'Feathery gills on both sides and a long tail.',
     'Go over your lines and add shading — done!',
+  ],
+  landscape: [
+    'Draw a curved line for the hill.',
+    'Add three pine trees on the left.',
+    'Draw a winding path over the hill.',
+    'Add a little house on the right.',
+    'Draw clouds and a sun in the sky.',
+    'Add shading, a river and smoke — all done!',
+  ],
+  'anime-face': [
+    'Draw a circle and a center line for the face.',
+    'Add the jaw and chin below the circle.',
+    'Draw the ears and neck.',
+    'Add the eyebrows and eyes.',
+    'Draw the pupils and eyelids.',
+    'Add the nose and a smiling mouth.',
+    'Draw the hair shape around the head.',
+    'Add hair strands and shading.',
+    'Finish the shading and details — done!',
   ],
   caterpillar: [
     'Draw a big circle for the head.',
@@ -419,6 +439,8 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   const forward = step > baseStep
   const poorerStep = Math.min(baseStep, step)
   const richerStep = Math.max(baseStep, step)
+  const poorerAlign = drawingAlign(target.id, poorerStep)
+  const richerAlign = drawingAlign(target.id, richerStep)
 
   // Hide the new top layer SYNCHRONOUSLY, before the browser paints — a plain
   // effect runs after commit, so the freshly-mounted <img key={step}> would
@@ -487,7 +509,16 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
           <img
             src={drawingStepUrl(target.id, ageGroup, poorerStep + 1)}
             alt={`${target.name_en} ${sk.stepWord} ${poorerStep + 1}`}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8 }}
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
+              // A couple of sets' source panels aren't perfectly registered
+              // step to step — without this the shared ink visibly slides
+              // during the cross-fade instead of just gaining new strokes in
+              // place. Static per-step correction, not part of the opacity
+              // transition. (bee/caterpillar need real correction; everything
+              // else resolves to ~0 and is untouched — see drawingAlign.js.)
+              transform: `translate(${poorerAlign.dx}%, ${poorerAlign.dy}%)`,
+            }}
           />
           {step !== baseStep && (
             <img
@@ -496,6 +527,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
               alt={`${target.name_en} ${sk.stepWord} ${richerStep + 1}`}
               style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
+                transform: `translate(${richerAlign.dx}%, ${richerAlign.dy}%)`,
                 // Forward: hidden → shown (ink fading in). Back: shown → hidden
                 // (ink fading out, since richerStep is where we came FROM).
                 opacity: forward ? (revealed ? 1 : 0) : (revealed ? 0 : 1),

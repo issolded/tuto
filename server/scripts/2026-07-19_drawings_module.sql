@@ -177,3 +177,18 @@ on conflict (id, age_group) do update
       category = excluded.category,
       step_count = excluded.step_count,
       sort_order = excluded.sort_order;
+
+-- ── 2026-07-22 ek: landscape (Nature, 6 adım) + anime-face (Characters, 9 adım) ─
+insert into drawings (id, age_group, name_tr, name_en, category, step_count, sort_order) values
+  ('landscape',   '6-8',   'Manzara',  'Landscape',  'Nature',     6, 8),
+  ('landscape',   '9-11',  'Manzara',  'Landscape',  'Nature',     6, 8),
+  ('landscape',   '12-15', 'Manzara',  'Landscape',  'Nature',     6, 8),
+  ('anime-face',  '6-8',   'Anime Yüz','Anime Face', 'Characters', 9, 9),
+  ('anime-face',  '9-11',  'Anime Yüz','Anime Face', 'Characters', 9, 9),
+  ('anime-face',  '12-15', 'Anime Yüz','Anime Face', 'Characters', 9, 9)
+on conflict (id, age_group) do update
+  set name_tr = excluded.name_tr,
+      name_en = excluded.name_en,
+      category = excluded.category,
+      step_count = excluded.step_count,
+      sort_order = excluded.sort_order;

@@ -57,24 +57,15 @@ function TaskIcon({ type, c }) {
 }
 
 // The tile art is the age band's drawing character — for 6-8 that's the
-// finished cat sketch. The full guided-step panel is ~1024x1024 and several
-// hundred KB (it needs to be, it's the zoomed-in guide image); this icon is
-// 66px, so it loads a dedicated small derivative instead (drawingIconUrl) —
-// same picture, ~a few KB. The 9-11 (otter) and 12-15 (anime) sets don't
-// exist yet; until they do those bands fall back to the pencil glyph.
+// finished cat sketch, for 9-11/12-15 the finished anime-face sketch (no
+// separate otter set yet, so both older bands share this one for now). The
+// full guided-step panel is ~1MB-scale (it needs to be, it's the zoomed-in
+// guide image); this icon is 66px, so it loads a dedicated small derivative
+// instead (drawingIconUrl) — same picture, ~16KB, not the full panel.
 function DrawingsIcon({ age }) {
-  if (age == null || age <= 8) {
-    return <img src={drawingIconUrl('cat', '6-8')} alt=""
-      style={{ width: 66, height: 66, objectFit: 'contain' }} />
-  }
-  return (
-    <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
-      <path d="M14 50 L18 38 L44 12 L52 20 L26 46 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
-      <path d="M40 16 L48 24" stroke="#20201e" strokeWidth="4"/>
-      <path d="M14 50 L20 48" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/>
-      <path d="M12 56 q6 -4 12 0" stroke="#20201e" strokeWidth="3.4" strokeLinecap="round" fill="none"/>
-    </svg>
-  )
+  const isYoung = age == null || age <= 8
+  return <img src={drawingIconUrl(isYoung ? 'cat' : 'anime-face', '6-8')} alt=""
+    style={{ width: 66, height: 66, objectFit: 'contain' }} />
 }
 
 // Homework tile icon — worksheet sheet + camera badge (see design handoff).
