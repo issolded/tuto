@@ -450,6 +450,61 @@ function EditChildSheet({ child, onClose, onSaved }) {
 }
 
 // ── Add reward sheet ──────────────────────────────────────────────────────────
+// A gem grant with no task behind it — parent's own call, no pending item
+// needed. Same endpoint the Telegram agent's gift_gems tool calls, so a
+// parent can do this from whichever surface is at hand.
+function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
+  const [amount, setAmount] = useState(50)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  const send = async () => {
+    setSending(true); setError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) { setError('Session expired — please sign in again.'); setSending(false); return }
+    try {
+      const res = await fetch(`${SERVER}/api/children/${childId}/gift-gems`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+      onGifted(data.amount)
+    } catch (err) {
+      setError(err.message)
+      setSending(false)
+    }
+  }
+
+  const pct = ((amount - 5) / (500 - 5)) * 100
+  const trackBg = `linear-gradient(to right, ${PC.amber} ${pct}%, ${PC.line} ${pct}%)`
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Gift gems 🎁</div>
+      <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: -8 }}>
+        No task attached — {childName} sees it right away as a bonus gift.
+      </div>
+
+      <Field label={`Amount — ⭐ ${amount} gems`}>
+        <input type="range" min={5} max={500} step={5} value={amount}
+          onChange={e => setAmount(Number(e.target.value))}
+          className="tc-slider" style={{ background: trackBg }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>5</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>500</span>
+        </div>
+      </Field>
+
+      {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+      <Btn onClick={send} disabled={sending}>{sending ? 'Sending…' : `Send ${amount} gems`}</Btn>
+      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+    </BottomSheet>
+  )
+}
+
 function AddRewardSheet({ childId, onClose, onSaved }) {
   const [icon,   setIcon]   = useState('🎁')
   const [name,   setName]   = useState('')
@@ -554,6 +609,7 @@ export default function ParentChildDetail() {
   const [showEditModal,   setShowEditModal]   = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [showAddReward,   setShowAddReward]   = useState(false)
+  const [showGiftGems,    setShowGiftGems]    = useState(false)
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -759,8 +815,12 @@ export default function ParentChildDetail() {
           <Avatar child={child} size={62} />
           <div>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>{child.name}</div>
-            <div style={{ marginTop: 6 }}>
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Pill bg={PC.amberBg} color={PC.amber}>⭐ {gems} gems</Pill>
+              <button className="tc-press tc-tap" onClick={() => setShowGiftGems(true)}
+                style={{ background: 'none', border: `1.5px solid ${PC.line}`, borderRadius: 999, padding: '5px 12px', cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkSoft }}>
+                🎁 Gift gems
+              </button>
             </div>
           </div>
         </div>
@@ -929,6 +989,17 @@ export default function ParentChildDetail() {
           child={child}
           onClose={() => setShowRemoveModal(false)}
           onConfirm={() => nav('/parent/dashboard', { state: { removedId: child.id } })}
+        />
+      )}
+      {showGiftGems && child && (
+        <GiftGemsSheet
+          childId={id}
+          childName={child.name}
+          onClose={() => setShowGiftGems(false)}
+          onGifted={(amount) => {
+            setGems(prev => (prev ?? 0) + amount)
+            setShowGiftGems(false)
+          }}
         />
       )}
       {showAddReward && (

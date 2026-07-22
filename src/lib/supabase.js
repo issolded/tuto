@@ -52,15 +52,19 @@ export function drawingIconUrl(drawingId, ageGroup) {
 }
 
 // The guided-drawing catalogue for an age band.
+//
+// Throws on failure rather than swallowing to [] — an empty catalogue and a
+// FAILED fetch look identical to the caller otherwise, and in Browse they
+// render identically too: no real cards, just the always-present "Soon"
+// placeholders, which reads as "everything is locked" with no hint that
+// anything went wrong (this is exactly what happened when a dev backend was
+// stopped mid-session: the request failed, got swallowed, and the screen
+// quietly showed nothing real).
 export async function getDrawings(ageGroup) {
-  try {
-    const res = await fetch(`${SERVER}/api/drawings?age_group=${encodeURIComponent(ageGroup)}`)
-    const data = await res.json()
-    return data.drawings || []
-  } catch (err) {
-    console.error('[getDrawings] error:', err.message)
-    return []
-  }
+  const res = await fetch(`${SERVER}/api/drawings?age_group=${encodeURIComponent(ageGroup)}`)
+  if (!res.ok) throw new Error(`Server error ${res.status}`)
+  const data = await res.json()
+  return data.drawings || []
 }
 
 // Shrinks a camera photo before it goes over the wire. A raw phone capture is
@@ -120,6 +124,18 @@ export async function submitPainting(childId, file, { drawingId = null, ageGroup
   const data = await res.json()
   if (!res.ok) throw new Error(data?.message || data?.error || `Server error ${res.status}`)
   return data   // { painting, awarded, capped, dailyCap }
+}
+
+// Deletes a painting (row + its private-bucket photo, server-side). Does NOT
+// touch any gem already awarded on approval — same as deleteChildStory,
+// which never claws back gems either.
+export async function deleteChildPainting(childId, paintingId) {
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/paintings/${encodeURIComponent(paintingId)}`, {
+    method: 'DELETE',
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data
 }
 
 // The child's saved paintings, newest first, with freshly signed photo URLs.

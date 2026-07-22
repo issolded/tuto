@@ -737,6 +737,24 @@ const CONTRIBUTION_TOOLS = [{
         required: ['submission_id'],
       },
     },
+    {
+      name: 'gift_gems',
+      description:
+        'The parent wants to give a child gems with no task or approval attached — a surprise, a birthday, ' +
+        '"just because" ("Ada\'ya 50 gem hediye et", "Osman\'a doğum günü için 100 gem ver", "Ada\'ya 20 gem ' +
+        'ekle"). This is NOT a task reward and needs no pending item. Take child_id from the children list in ' +
+        'context and amount as the exact number the parent said. The server enforces a 1-500 range — if the ' +
+        'parent asks for more than 500, do NOT silently reduce it: tell them 500 is the most you can gift at ' +
+        'once and ask if that works, rather than calling this with a different number than they asked for.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child to gift gems to, from the children list in context.' },
+          amount: { type: 'NUMBER', description: 'The exact gem amount the parent asked for (whole number, 1-500).' },
+        },
+        required: ['child_id', 'amount'],
+      },
+    },
   ],
 }]
 
@@ -860,6 +878,28 @@ async function rejectSubmissionTool(submissionId, parentId) {
   if (error) return { success: false, error: error.message }
 
   return { success: true, id: sub.id, childName: child.name }
+}
+
+// A gem grant with no task behind it — the parent's own call, no approval
+// flow. Still server-authoritative on the two things that matter: the child
+// really belongs to THIS parent (checked here, not just trusted from
+// context, since this is also reachable from the dashboard with a bare
+// parent JWT), and the amount is clamped server-side rather than trusting
+// whatever the request — or the model — sends. Recorded as reason='bonus',
+// which GemsScreen already renders as "Bonus Gift 🎁" to the child.
+async function giftGemsTool(childId, amount, parentId) {
+  const n = Math.round(Number(amount))
+  if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'amount must be between 1 and 500' }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: n, reason: 'bonus' })
+  if (error) return { success: false, error: error.message }
+
+  return { success: true, childName: child.name, amount: n }
 }
 
 async function approveContributionTool(contributionId, parentId) {
@@ -1249,6 +1289,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await approvePaintingById(args.painting_id, parentId)
       } else if (name === 'reject_drawing') {
         toolResult = await rejectPaintingById(args.painting_id, parentId)
+      } else if (name === 'gift_gems') {
+        toolResult = await giftGemsTool(args.child_id, args.amount, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
@@ -1665,6 +1707,32 @@ app.delete('/api/children/:childId/stories/:storyId', async (req, res) => {
   const { error } = await supabase.from('stories').delete().eq('id', storyId).eq('child_id', childId)
   if (error) return res.status(500).json({ error: error.message })
   res.json({ ok: true })
+})
+
+// Deletes a painting: removes the row and its photo from the private bucket
+// (the client never had a read/write policy on that bucket anyway, so the
+// service role is the only thing that CAN clean up the file). Deliberately
+// does NOT touch bt_ledger — a gem the server already awarded on approval
+// stays awarded; deleting the picture doesn't claw it back. Same reasoning
+// as My Stories' delete (which never touches gems either), and avoids the
+// "taking gems away" problem entirely rather than half-solving it.
+app.delete('/api/children/:childId/paintings/:paintingId', async (req, res) => {
+  const { childId, paintingId } = req.params
+  try {
+    const { data: painting } = await supabase
+      .from('paintings').select('id, photo_path').eq('id', paintingId).eq('child_id', childId).maybeSingle()
+    if (!painting) return res.status(404).json({ error: 'not found' })
+
+    const { error } = await supabase.from('paintings').delete().eq('id', paintingId).eq('child_id', childId)
+    if (error) return res.status(500).json({ error: error.message })
+
+    if (painting.photo_path) {
+      await supabase.storage.from(PAINTING_BUCKET).remove([painting.photo_path]).then(() => {}, () => {})
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 const CONTRIBUTION_CATEGORIES = ['self_care', 'household', 'family', 'outside']
@@ -3048,6 +3116,27 @@ async function paintingActionRoute(req, res, action) {
 
 app.post('/api/paintings/:id/approve', (req, res) => paintingActionRoute(req, res, approvePaintingById))
 app.post('/api/paintings/:id/reject', (req, res) => paintingActionRoute(req, res, rejectPaintingById))
+
+// Dashboard's "gift gems" button — same tool the Telegram agent calls, same
+// ownership check, just reached with a parent JWT instead of a chat-scoped id.
+app.post('/api/children/:childId/gift-gems', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const result = await giftGemsTool(req.params.childId, req.body.amount, userId)
+    if (!result.success) {
+      const code = result.error === 'forbidden' ? 403 : result.error === 'child not found' ? 404 : 400
+      return res.status(code).json({ error: result.error })
+    }
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // The child's own library. The photos are in a private bucket with no client
 // read policy, so the server signs each one; the child app has no session and

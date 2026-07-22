@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { drawingStepUrl, getDrawings, getPaintings, submitPainting } from '../lib/supabase'
+import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
 import { drawingAlign } from '../lib/drawingAlign'
 
 // ── Age skins ────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ function PaintingStatus({ p, sk, compact }) {
 }
 
 // ── Browse ───────────────────────────────────────────────────────────────────
-function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, onBack, loading }) {
+function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, onBack, loading, error, onRetry }) {
   const [cat, setCat] = useState('All')
   const shown = cat === 'All' ? drawings : drawings.filter(d => d.category === cat)
   const shownLocked = cat === 'All' ? LOCKED : LOCKED.filter(l => l.category === cat)
@@ -250,6 +250,26 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#8d83ad' }}>
           Loading drawings…
+        </div>
+      ) : error ? (
+        // Distinct from "no drawings yet" — a failed fetch used to fall
+        // through silently to the always-present "Soon" placeholders, which
+        // read as every single drawing being locked with no sign anything
+        // had gone wrong.
+        <div style={{
+          textAlign: 'center', padding: '40px 20px', background: '#fff', borderRadius: sk.radius,
+          boxShadow: '0 6px 16px rgba(40,30,70,.09)',
+        }}>
+          <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginBottom: 6 }}>
+            Couldn't load drawings
+          </div>
+          <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8d83ad', marginBottom: 16 }}>
+            Check your connection and try again.
+          </div>
+          <button onClick={onRetry} style={{
+            padding: '11px 22px', borderRadius: 999, border: 'none', background: sk.accent, color: '#fff',
+            fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 13.5, cursor: 'pointer',
+          }}>Try again</button>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
@@ -384,7 +404,9 @@ function Ready({ sk, target, ageGroup, onStart, onBack }) {
 // top-left arrow is the ONLY way out of this screen (stepping back through
 // panels is the footer Back button's job instead), so it always confirms
 // first rather than silently dropping progress.
-function ExitConfirmModal({ sk, onCancel, onConfirm }) {
+// Generic two-button confirm dialog — used for leaving a guided drawing
+// mid-flow and for deleting a painting, so both share one implementation.
+function ConfirmModal({ sk, title, body, cancelLabel, confirmLabel, confirmDanger, onCancel, onConfirm }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center',
@@ -396,20 +418,21 @@ function ExitConfirmModal({ sk, onCancel, onConfirm }) {
         animation: 'ttPop .24s cubic-bezier(.2,.9,.3,1.2) both',
       }}>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 18, color: sk.ink }}>
-          Leave this drawing?
+          {title}
         </div>
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8d83ad', marginTop: 8, lineHeight: 1.4 }}>
-          Your steps so far won't be saved.
+          {body}
         </div>
         <div style={{ display: 'flex', gap: 9, marginTop: 18 }}>
           <button onClick={onCancel} style={{
             flex: 1, padding: '13px', borderRadius: sk.radius - 8, border: '1.5px solid rgba(32,32,30,.14)',
             background: '#fff', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14, color: '#6f6a64', cursor: 'pointer',
-          }}>Keep drawing</button>
+          }}>{cancelLabel}</button>
           <button onClick={onConfirm} style={{
             flex: 1, padding: '13px', borderRadius: sk.radius - 8, border: 'none',
-            background: sk.accent, color: '#fff', fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, cursor: 'pointer',
-          }}>Leave</button>
+            background: confirmDanger ? '#e5484d' : sk.accent, color: '#fff',
+            fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 15, cursor: 'pointer',
+          }}>{confirmLabel}</button>
         </div>
       </div>
     </div>
@@ -568,7 +591,10 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
       </div>
 
       {confirmExit && (
-        <ExitConfirmModal sk={sk} onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
+        <ConfirmModal sk={sk}
+          title="Leave this drawing?" body="Your steps so far won't be saved."
+          cancelLabel="Keep drawing" confirmLabel="Leave"
+          onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
       )}
     </>
   )
@@ -676,11 +702,23 @@ function Reward({ sk, result, onLibrary, onAgain }) {
 }
 
 // ── Library ──────────────────────────────────────────────────────────────────
-function Library({ sk, paintings, drawings, loading, onBack, onAgain }) {
+function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }) {
+  const [confirmTarget, setConfirmTarget] = useState(null) // painting awaiting delete confirmation
+  const [deletingId, setDeletingId] = useState(null)
+
   const nameFor = p => {
     if (!p.drawing_id) return 'My own drawing'
     return drawings.find(d => d.id === p.drawing_id)?.name_en || p.drawing_id
   }
+
+  async function confirmDelete() {
+    const p = confirmTarget
+    setConfirmTarget(null)
+    setDeletingId(p.id)
+    await onDelete(p)
+    setDeletingId(null)
+  }
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
@@ -705,12 +743,17 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
           {paintings.map(p => (
             <div key={p.id} style={{
-              background: '#fff', borderRadius: sk.radius, overflow: 'hidden',
-              boxShadow: '0 6px 16px rgba(40,30,70,.09)',
+              position: 'relative', background: '#fff', borderRadius: sk.radius, overflow: 'hidden',
+              boxShadow: '0 6px 16px rgba(40,30,70,.09)', opacity: deletingId === p.id ? .4 : 1,
             }}>
               {p.photo
                 ? <img src={p.photo} alt="" loading="lazy" style={{ width: '100%', height: 118, objectFit: 'cover', display: 'block' }} />
                 : <div style={{ height: 118, background: '#F3EFE6' }} />}
+              <button onClick={() => setConfirmTarget(p)} disabled={deletingId === p.id} aria-label="Delete" style={{
+                position: 'absolute', top: 7, right: 7, width: 26, height: 26, borderRadius: '50%', border: 'none',
+                background: 'rgba(30,30,25,.55)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>✕</button>
               <div style={{ padding: '9px 11px 11px' }}>
                 <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 14, color: sk.ink }}>{nameFor(p)}</div>
                 <PaintingStatus p={p} sk={sk} />
@@ -722,6 +765,16 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain }) {
 
       <button onClick={onAgain} style={ctaStyle(sk, false)}>Draw again</button>
       <div style={{ height: 20 }} />
+
+      {confirmTarget && (
+        <ConfirmModal sk={sk}
+          title="Delete this painting?"
+          body={confirmTarget.reward_amount > 0
+            ? `This removes it from your library. The ${sk.gemIcon} +${confirmTarget.reward_amount} you already earned stays yours.`
+            : "This removes it from your library — you can't undo this."}
+          cancelLabel="Keep it" confirmLabel="Delete" confirmDanger
+          onCancel={() => setConfirmTarget(null)} onConfirm={confirmDelete} />
+      )}
     </>
   )
 }
@@ -746,6 +799,7 @@ export default function DrawingsScreen() {
   const [view, setView] = useState('browse')   // browse|ready|steps|upload|reward|library
   const [drawings, setDrawings] = useState([])
   const [loadingDrawings, setLoadingDrawings] = useState(true)
+  const [drawingsError, setDrawingsError] = useState(false)
   const [paintings, setPaintings] = useState([])
   const [loadingPaintings, setLoadingPaintings] = useState(true)
   const [target, setTarget] = useState(null)   // null = free draw
@@ -755,9 +809,18 @@ export default function DrawingsScreen() {
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
 
+  function loadDrawings() {
+    setLoadingDrawings(true)
+    setDrawingsError(false)
+    getDrawings(ageGroup)
+      .then(setDrawings)
+      .catch(() => setDrawingsError(true))
+      .finally(() => setLoadingDrawings(false))
+  }
+
   useEffect(() => {
     if (!child?.id) { nav('/child/home', { replace: true }); return }
-    getDrawings(ageGroup).then(d => { setDrawings(d); setLoadingDrawings(false) })
+    loadDrawings()
     getPaintings(child.id).then(p => { setPaintings(p); setLoadingPaintings(false) })
   }, [])
 
@@ -800,11 +863,24 @@ export default function DrawingsScreen() {
     setTarget(null); setStep(0); setResult(null); clearPhoto(); setView('browse')
   }
 
+  // Removes the row and its photo server-side; never touches any gem already
+  // awarded — see deleteChildPainting.
+  async function handleDeletePainting(p) {
+    try {
+      await deleteChildPainting(child.id, p.id)
+      setPaintings(prev => prev.filter(x => x.id !== p.id))
+    } catch {
+      // The Library grid just un-dims the card (deletingId reset) — the
+      // child can tap the × again.
+    }
+  }
+
   return (
     <div style={{ minHeight: '100dvh', background: sk.bg }}>
       <div style={{ maxWidth: 430, margin: '0 auto', padding: '14px 16px calc(14px + env(safe-area-inset-bottom))' }}>
         {view === 'browse' && (
-          <Browse sk={sk} drawings={drawings} ageGroup={ageGroup} paintings={paintings} loading={loadingDrawings}
+          <Browse sk={sk} drawings={drawings} ageGroup={ageGroup} paintings={paintings}
+            loading={loadingDrawings} error={drawingsError} onRetry={loadDrawings}
             onPick={d => { setTarget(d); setStep(0); setView('ready') }}
             onFree={() => { setTarget(null); setView('ready') }}
             onLibrary={() => setView('library')}
@@ -830,7 +906,7 @@ export default function DrawingsScreen() {
         )}
         {view === 'library' && (
           <Library sk={sk} paintings={paintings} drawings={drawings} loading={loadingPaintings}
-            onBack={() => setView('browse')} onAgain={startOver} />
+            onBack={() => setView('browse')} onAgain={startOver} onDelete={handleDeletePainting} />
         )}
       </div>
     </div>
