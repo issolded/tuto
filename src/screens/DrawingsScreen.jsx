@@ -135,6 +135,7 @@ const STEP_TIPS = {
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
+const DIFFICULTIES = ['All', 'Easy', 'Medium', 'Hard']
 const LOCKED = [
   { name: 'Butterfly', category: 'Animals' },
   { name: 'Alien', category: 'Characters' },
@@ -224,7 +225,10 @@ function PaintingStatus({ p, sk, compact }) {
 // ── Browse ───────────────────────────────────────────────────────────────────
 function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, onBack, loading, error, onRetry }) {
   const [cat, setCat] = useState('All')
-  const shown = cat === 'All' ? drawings : drawings.filter(d => d.category === cat)
+  const [diff, setDiff] = useState('All')
+  const shown = drawings
+    .filter(d => cat === 'All' || d.category === cat)
+    .filter(d => diff === 'All' || d.difficulty === diff)
   const shownLocked = cat === 'All' ? LOCKED : LOCKED.filter(l => l.category === cat)
 
   return (
@@ -235,7 +239,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
         <div style={{ width: 42 }} />
       </div>
 
-      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 8 }}>
         {CATEGORIES.map(c => (
           <button key={c} onClick={() => setCat(c)} style={{
             flexShrink: 0, padding: '8px 15px', borderRadius: 999, cursor: 'pointer',
@@ -244,6 +248,18 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
             color: cat === c ? '#fff' : '#6f6a64',
             fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 13,
           }}>{c}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 12 }}>
+        {DIFFICULTIES.map(d => (
+          <button key={d} onClick={() => setDiff(d)} style={{
+            flexShrink: 0, padding: '6px 13px', borderRadius: 999, cursor: 'pointer',
+            border: diff === d ? 'none' : '1.5px solid rgba(32,32,30,.14)',
+            background: diff === d ? sk.ink : '#fff',
+            color: diff === d ? '#fff' : '#8d83ad',
+            fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5,
+          }}>{d}</button>
         ))}
       </div>
 

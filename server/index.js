@@ -2865,7 +2865,7 @@ app.get('/api/drawings', async (req, res) => {
     const ageGroup = typeof req.query.age_group === 'string' ? req.query.age_group : '6-8'
     const { data, error } = await supabase
       .from('drawings')
-      .select('id, age_group, name_tr, name_en, category, step_count')
+      .select('id, age_group, name_tr, name_en, category, step_count, difficulty')
       .eq('age_group', ageGroup)
       .eq('active', true)
       .order('sort_order', { ascending: true })
