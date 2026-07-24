@@ -127,9 +127,9 @@ export default function ChildHome() {
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '54px 22px 96px', fontFamily: "'Nunito', sans-serif" }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 13, color: INK_SOFT, marginBottom: 3 }}>Good morning ☀️</div>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 28, color: INK, lineHeight: 1.1, letterSpacing: '-.4px', whiteSpace: 'nowrap' }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 28, color: INK, lineHeight: 1.1, letterSpacing: '-.4px' }}>
               Hello, {child?.name ?? 'Friend'}!
             </div>
           </div>
