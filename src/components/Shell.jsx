@@ -37,7 +37,7 @@ export default function Shell({ active, background, children }) {
   const contentMax = isTablet ? TABLET_MAX : PHONE_MAX
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background }}>
+    <div style={{ height: '100dvh', overflow: 'hidden', display: 'flex', background }}>
       {useRail && <RailNav active={active} />}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: contentMax, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
