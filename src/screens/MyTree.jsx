@@ -599,7 +599,7 @@ function Intro({ onContinue }) {
 
 function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
   return (
-    <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', height: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 23, color: '#37a06f' }}>My Tree 🌳</div>
@@ -647,7 +647,7 @@ function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining,
 
 function BandMid({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
   return (
-    <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', height: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 20, color: '#37a06f' }}>My Tree 🌳</div>
