@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
+import { useIsTablet } from '../components/Shell'
 import { submitHomework, getHomeworkSubmissions, confirmHomeworkDate } from '../lib/supabase'
 
 // "My Homework" — child photographs finished homework (up to 15 pages) and
@@ -64,6 +65,7 @@ function histDate(iso) {
 
 export default function HomeworkScreen() {
   const nav = useNavigate()
+  const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const fileRef = useRef(null)
   const [photos, setPhotos] = useState([]) // { file, url }
@@ -151,7 +153,7 @@ export default function HomeworkScreen() {
   // ── Sent (pending approval) ─────────────────────────────────────────────────
   if (screen === 'sent') {
     return (
-      <div style={wrap(MINT)}>
+      <div style={wrap(MINT, isTablet)}>
         <style>{HW_CSS}</style>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 26px', textAlign: 'center' }}>
           <div style={{ position: 'relative', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -175,7 +177,7 @@ export default function HomeworkScreen() {
 
   // ── Upload ──────────────────────────────────────────────────────────────────
   return (
-    <div style={wrap(SKY)}>
+    <div style={wrap(SKY, isTablet)}>
       <style>{HW_CSS}</style>
 
       <input
@@ -319,10 +321,10 @@ function confirmBtn(primary) {
   }
 }
 
-function wrap(bg) {
+function wrap(bg, isTablet) {
   return {
     position: 'relative', // confines the checking/confirm overlays to the phone frame
-    minHeight: '100vh', maxWidth: 430, margin: '0 auto',
+    minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto',
     background: bg, display: 'flex', flexDirection: 'column', overflow: 'hidden',
     fontFamily: "'Nunito', sans-serif",
   }

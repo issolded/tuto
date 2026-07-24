@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import { TreeArt, Sprig } from '../components/TreeArt'
+import { useIsTablet } from '../components/Shell'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -563,9 +564,10 @@ function ForestArchive({ open, onClose, data, loading, error }) {
 // ── intro (6-8 only, shown once) ────────────────────────────────────────────────
 
 function Intro({ onContinue }) {
+  const isTablet = useIsTablet()
   return (
     <div style={{
-      background: 'linear-gradient(178deg,#EAF7EE 0%,#D2EEDF 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto',
+      background: 'linear-gradient(178deg,#EAF7EE 0%,#D2EEDF 100%)', minHeight: '100dvh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto',
       display: 'flex', flexDirection: 'column',
     }}>
       <style>{`@keyframes ttFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
@@ -598,8 +600,9 @@ function Intro({ onContinue }) {
 // ── 6-8 · "My Tree" (primary) ───────────────────────────────────────────────────
 
 function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
+  const isTablet = useIsTablet()
   return (
-    <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', height: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', height: '100dvh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 23, color: '#37a06f' }}>My Tree 🌳</div>
@@ -646,8 +649,9 @@ function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining,
 // ── 9-11 · intermediate ─────────────────────────────────────────────────────────
 
 function BandMid({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
+  const isTablet = useIsTablet()
   return (
-    <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', height: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', height: '100dvh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 20, color: '#37a06f' }}>My Tree 🌳</div>
@@ -697,8 +701,9 @@ function BandMid({ groups, todayCount, monthForest, monthTreeCount, remaining, o
 // ── 12-15 · "My Part" (mature) ──────────────────────────────────────────────────
 
 function BandMature({ groups, monthCount, remaining, onAdd, composer, nav }) {
+  const isTablet = useIsTablet()
   return (
-    <div style={{ background: 'linear-gradient(180deg,#F5F7F4 0%,#EAEFEA 100%)', minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'linear-gradient(180deg,#F5F7F4 0%,#EAEFEA 100%)', minHeight: '100dvh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 8px' }}>
         <BackButton onClick={() => nav('/child/home')} dark />
         <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 600, fontSize: 22, color: '#27332c' }}>My Part 💪</div>
