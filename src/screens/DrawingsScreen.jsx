@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
 import { drawingAlign } from '../lib/drawingAlign'
+import Shell from '../components/Shell'
 
 // ── Age skins ────────────────────────────────────────────────────────────────
 // Same flow, three presentations (see SKINS in the design prototype). The
@@ -892,8 +893,8 @@ export default function DrawingsScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: sk.bg }}>
-      <div style={{ maxWidth: 430, margin: '0 auto', padding: '14px 16px calc(14px + env(safe-area-inset-bottom))' }}>
+    <Shell background={sk.bg}>
+      <div style={{ flex: 1, minHeight: 0, padding: '14px 16px calc(14px + env(safe-area-inset-bottom))' }}>
         {view === 'browse' && (
           <Browse sk={sk} drawings={drawings} ageGroup={ageGroup} paintings={paintings}
             loading={loadingDrawings} error={drawingsError} onRetry={loadDrawings}
@@ -925,6 +926,6 @@ export default function DrawingsScreen() {
             onBack={() => setView('browse')} onAgain={startOver} onDelete={handleDeletePainting} />
         )}
       </div>
-    </div>
+    </Shell>
   )
 }

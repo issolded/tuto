@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import BottomNav from '../components/BottomNav'
+import Shell from '../components/Shell'
 import { supabase, getChildGems, drawingIconUrl } from '../lib/supabase'
 
 const ACCENT = '#f79433'
@@ -18,6 +18,18 @@ const HOME_CSS = `
 .tuto-card:active{ transform: scale(.97); }
 .tuto-gempill{ transition: transform .12s ease; }
 .tuto-gempill:active{ transform: scale(.95); }
+.tuto-hero{ display:flex; flex-direction:column; align-items:center; }
+.tuto-task-grid{ display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+@media (min-width:768px) {
+  .tuto-hero{
+    flex-direction:row; align-items:center; justify-content:center; gap:32px;
+    background:#fff; border-radius:28px; padding:18px 36px; margin:6px 0 22px;
+    box-shadow:0 6px 20px rgba(40,30,70,.08);
+  }
+  .tuto-hero-mascot{ height:140px !important; margin:0 !important; }
+  .tuto-hero-text{ font-size:24px !important; margin:0 !important; }
+  .tuto-task-grid{ grid-template-columns:repeat(3, 1fr); }
+}
 `
 
 const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, chore: 10 }
@@ -109,14 +121,10 @@ export default function ChildHome() {
   }, [])
 
   return (
-    <div style={{
-      minHeight: '100vh', maxWidth: 430, margin: '0 auto',
-      background: LILAC, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      fontFamily: "'Nunito', sans-serif",
-    }}>
+    <Shell active="home" background={LILAC}>
       <style>{HOME_CSS}</style>
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '54px 22px 18px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '54px 22px 96px', fontFamily: "'Nunito', sans-serif" }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <div>
@@ -138,16 +146,18 @@ export default function ChildHome() {
           </button>
         </div>
 
-        <div style={{ position: 'relative', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0 2px' }}>
-          <div style={{ position: 'absolute', width: 184, height: 184, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.95) 30%, rgba(255,255,255,0) 72%)' }} />
-          <TutoMascot size={150} style={{ position: 'relative', zIndex: 1, animation: 'float 3s ease-in-out infinite' }} />
+        <div className="tuto-hero">
+          <div className="tuto-hero-mascot" style={{ position: 'relative', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0 2px' }}>
+            <div style={{ position: 'absolute', width: 184, height: 184, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.95) 30%, rgba(255,255,255,0) 72%)' }} />
+            <TutoMascot size={150} style={{ position: 'relative', zIndex: 1, animation: 'float 3s ease-in-out infinite' }} />
+          </div>
+
+          <div className="tuto-hero-text" style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '8px 2px 13px' }}>
+            Ready to earn? 🌟
+          </div>
         </div>
 
-        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '8px 2px 13px' }}>
-          Ready to earn? 🌟
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+        <div className="tuto-task-grid">
           {TASKS.map((t, i) => (
             <button key={i} className="tuto-card" onClick={() => nav(t.route, { state: { ...t, from: '/child/home' } })}
               style={{
@@ -171,10 +181,9 @@ export default function ChildHome() {
             </button>
           ))}
 
-          {/* My Homework — full-width, no reward pill (reward is pending/parent-set) */}
+          {/* My Homework — same card shape as the four tasks (no reward pill: reward is pending/parent-set) */}
           <button className="tuto-card" onClick={() => nav('/child/homework')}
             style={{
-              gridColumn: '1 / -1',
               background: '#fff', border: 'none', borderRadius: 22, padding: 12,
               display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
               cursor: 'pointer', textAlign: 'left', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
@@ -185,11 +194,10 @@ export default function ChildHome() {
             <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Homework</h3>
           </button>
 
-          {/* My Drawings — same full-width shape as My Homework. No reward pill:
+          {/* My Drawings — same card shape as the others. No reward pill:
               the amount is decided server-side and capped per day. */}
           <button className="tuto-card" onClick={() => nav('/child/drawings')}
             style={{
-              gridColumn: '1 / -1',
               background: '#fff', border: 'none', borderRadius: 22, padding: 12,
               display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
               cursor: 'pointer', textAlign: 'left', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
@@ -201,8 +209,6 @@ export default function ChildHome() {
           </button>
         </div>
       </div>
-
-      <BottomNav active="home" />
-    </div>
+    </Shell>
   )
 }

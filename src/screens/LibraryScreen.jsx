@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
-import BottomNav from '../components/BottomNav'
+import Shell from '../components/Shell'
 import BookOpenTransition from '../components/BookOpenTransition'
 import { supabase, getChildStories } from '../lib/supabase'
 
@@ -123,8 +123,9 @@ export default function LibraryScreen() {
   const completed  = (books ?? []).filter(b =>  b.completed)
 
   return (
+    <Shell active="library" background="#F4F4F8">
     <div
-      style={{ background: '#F4F4F8', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}
+      style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
       onClick={() => jiggling && setJiggling(false)}
     >
       <style>{ANIM_CSS}</style>
@@ -277,8 +278,6 @@ export default function LibraryScreen() {
         />
       )}
 
-      <BottomNav active="library" fixed />
-
       {opening && (
         <BookOpenTransition
           key={opening.story.id}
@@ -290,6 +289,7 @@ export default function LibraryScreen() {
         />
       )}
     </div>
+    </Shell>
   )
 }
 

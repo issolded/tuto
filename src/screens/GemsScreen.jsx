@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
-import BottomNav from '../components/BottomNav'
+import Shell from '../components/Shell'
 
 const ANIM = `
 @keyframes fadeUp {
@@ -61,7 +61,7 @@ export default function GemsScreen() {
   const total = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
 
   return (
-    <div style={{ background: '#FFF8E0', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <Shell active="gems" background="#FFF8E0">
       <style>{ANIM}</style>
 
       {/* Balance card */}
@@ -125,7 +125,6 @@ export default function GemsScreen() {
         )}
       </div>
 
-      <BottomNav active="gems" fixed />
-    </div>
+    </Shell>
   )
 }

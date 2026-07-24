@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getChildRewards, getChildGems } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
-import BottomNav from '../components/BottomNav'
+import Shell from '../components/Shell'
 
 const ANIM = `
 @keyframes fadeUp {
@@ -77,7 +77,7 @@ export default function GoalsScreen() {
   const loading = rewards === null || gems === null
 
   return (
-    <div style={{ background: '#FFF8E0', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <Shell active="goals" background="#FFF8E0">
       <style>{ANIM}</style>
 
       {/* Header */}
@@ -110,7 +110,6 @@ export default function GoalsScreen() {
         )}
       </div>
 
-      <BottomNav active="goals" fixed />
-    </div>
+    </Shell>
   )
 }

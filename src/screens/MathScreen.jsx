@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
+import { useIsTablet } from '../components/Shell'
 import { supabase } from '../lib/supabase'
 import { generateMathQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem } from '../lib/mathTemplates'
@@ -673,6 +674,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
 
 export default function MathScreen() {
   const nav   = useNavigate()
+  const isTablet = useIsTablet()
   const child    = JSON.parse(localStorage.getItem('child') || 'null')
   const age      = child?.age || 7
   const language = child?.language || 'en'
@@ -874,7 +876,7 @@ export default function MathScreen() {
 
   // ── Shared container ──────────────────────────────────────────────────────
   const wrap = {
-    background: FLOW_BG, minHeight: '100vh', maxWidth: 430,
+    background: FLOW_BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430,
     margin: '0 auto', display: 'flex', flexDirection: 'column',
     fontFamily: "'Nunito', sans-serif",
   }

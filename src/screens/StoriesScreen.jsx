@@ -9,6 +9,7 @@ import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
 import BookOpenTransition from '../components/BookOpenTransition'
 import FlippingBook from '../components/FlippingBook'
+import { useIsTablet } from '../components/Shell'
 
 
 function getTutoMessage(age) {
@@ -146,6 +147,7 @@ function BackBtn({ onClick }) {
 export default function StoriesScreen() {
   const nav = useNavigate()
   const location = useLocation()
+  const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
 
   const [loadingStories, setLoadingStories] = useState(true)
@@ -433,7 +435,7 @@ export default function StoriesScreen() {
   // ── STEP: TITLE ────────────────────────────────────────────────────────────
   if (step === 'title') {
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
           <BackBtn onClick={() => { setStep('idle'); setChosenIdea(null) }} />
@@ -502,7 +504,7 @@ export default function StoriesScreen() {
     const removePhoto = (i) => setPhotos(prev => prev.filter((_, idx) => idx !== i))
 
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
           <BackBtn onClick={() => { setStep('title'); setPhotos([]) }} />
@@ -596,7 +598,7 @@ export default function StoriesScreen() {
   // ── STEP: EVALUATING ──────────────────────────────────────────────────────
   if (step === 'evaluating') {
     return (
-      <div style={{ background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px' }}>
+      <div style={{ background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px' }}>
         <FlippingBook />
       </div>
     )
@@ -606,7 +608,7 @@ export default function StoriesScreen() {
   if (step === 'encourage') {
     const isBlocked = evalResult?.has_profanity || evalResult?.too_short
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
           <BackBtn onClick={() => setStep('write')} />
@@ -649,7 +651,7 @@ export default function StoriesScreen() {
   if (step === 'spelling') {
     const errors = evalResult?.spelling_errors || []
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
           <BackBtn onClick={() => isEditMode ? exitEditMode() : setStep('encourage')} />
@@ -750,7 +752,7 @@ export default function StoriesScreen() {
   if (step === 'corrected') {
     const corrected = buildCorrectedText(editableTextRef.current || evalResult?.transcribed_text || '', evalResult?.spelling_errors || [], spellingState)
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
           <BackBtn onClick={() => setStep('spelling')} />
@@ -822,7 +824,7 @@ export default function StoriesScreen() {
   // ── STEP: GENTLE-SPELLING (≤10) ──────────────────────────────────────────
   if (step === 'gentle-spelling') {
     return (
-      <div style={{ background: BG_YOUNG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG_YOUNG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}{`
           @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&family=Fredoka+One&display=swap');
           .story-body { font-family: 'Lexend', sans-serif !important; }
@@ -1006,7 +1008,7 @@ export default function StoriesScreen() {
     }
 
     return (
-      <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         {coverReturnStep && (
           <div style={{ padding: '56px 24px 0' }}>
@@ -1127,7 +1129,7 @@ export default function StoriesScreen() {
       nav('/child/library')
     }
     return (
-      <div style={{ background: isYoung ? BG_YOUNG : BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: isYoung ? BG_YOUNG : BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', position: 'relative', overflow: 'hidden' }}>
         <style>{ANIM}</style>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {CONFETTI_COLORS.map((c, i) => (
@@ -1167,7 +1169,7 @@ export default function StoriesScreen() {
 
   // ── IDLE ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <style>{ANIM}</style>
 
       <div style={{ padding: '56px 24px 20px' }}>
