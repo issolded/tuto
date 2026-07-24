@@ -20,6 +20,7 @@ const HOME_CSS = `
 .tuto-gempill:active{ transform: scale(.95); }
 .tuto-hero{ display:flex; flex-direction:column; align-items:center; }
 .tuto-task-grid{ display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+.tuto-wide-card{ grid-column:1 / -1; }
 @media (min-width:768px) {
   .tuto-hero{
     flex-direction:row; align-items:center; justify-content:center; gap:32px;
@@ -29,6 +30,7 @@ const HOME_CSS = `
   .tuto-hero-mascot{ height:140px !important; margin:0 !important; }
   .tuto-hero-text{ font-size:24px !important; margin:0 !important; }
   .tuto-task-grid{ grid-template-columns:repeat(3, 1fr); }
+  .tuto-wide-card{ grid-column:auto; }
 }
 `
 
@@ -181,8 +183,8 @@ export default function ChildHome() {
             </button>
           ))}
 
-          {/* My Homework — same card shape as the four tasks (no reward pill: reward is pending/parent-set) */}
-          <button className="tuto-card" onClick={() => nav('/child/homework')}
+          {/* My Homework — full-width on phone (2-col grid), normal card on tablet (3-col grid) */}
+          <button className="tuto-card tuto-wide-card" onClick={() => nav('/child/homework')}
             style={{
               background: '#fff', border: 'none', borderRadius: 22, padding: 12,
               display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
@@ -194,9 +196,9 @@ export default function ChildHome() {
             <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Homework</h3>
           </button>
 
-          {/* My Drawings — same card shape as the others. No reward pill:
-              the amount is decided server-side and capped per day. */}
-          <button className="tuto-card" onClick={() => nav('/child/drawings')}
+          {/* My Drawings — same full-width-on-phone / normal-on-tablet shape as My Homework.
+              No reward pill: the amount is decided server-side and capped per day. */}
+          <button className="tuto-card tuto-wide-card" onClick={() => nav('/child/drawings')}
             style={{
               background: '#fff', border: 'none', borderRadius: 22, padding: 12,
               display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
