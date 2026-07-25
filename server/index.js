@@ -402,6 +402,14 @@ async function readStoredPhoto(pathOrUrl) {
 }
 
 async function sendNotification(parentId, message) {
+  // Every proactive notification (homework arrived, chore submitted, reward
+  // claimed, ...) used to be invisible to Gemini — logMessage only ran for
+  // genuine chat turns, so when a parent replied "what does that mean?" the
+  // model had no record of what "that" was and improvised. Logging it here,
+  // unconditionally, means fetchConversationHistory picks it up as a 'tuto'
+  // turn the next time this parent writes in.
+  logMessage(parentId, 'tuto', message).catch(() => {})
+
   const { data: parent } = await supabase
     .from('parents')
     .select('notification_channel, telegram_chat_id, whatsapp_phone')
@@ -457,6 +465,10 @@ async function sendNotification(parentId, message) {
 }
 
 async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = PHOTO_BUCKET) {
+  // Same reasoning as sendNotification — log the text so a later "what's
+  // this photo?" reply has something to look back at.
+  logMessage(parentId, 'tuto', message).catch(() => {})
+
   // Sign at the boundary: the messaging platform fetches the image once, so a
   // short TTL is plenty and no long-lived public link ever leaves the server.
   photoUrl = (await signedUrlFor(photoUrl, 900, bucket)) || photoUrl
@@ -547,6 +559,9 @@ async function sendNotificationWithPhotos(parentId, message, photoUrls) {
     try {
       await sendTelegramMediaGroup(parent.telegram_chat_id, urls, message)
       console.log(`[NOTIFY-PHOTOS] ✅ Sent album (${urls.length}) via Telegram → parent ${parentId}`)
+      // Only this branch needs its own log call — the other two paths above
+      // (single photo, no signed URLs) delegate to functions that already log.
+      logMessage(parentId, 'tuto', message).catch(() => {})
       return
     } catch (err) {
       console.error(`[NOTIFY-PHOTOS] ❌ Telegram album failed: ${err.message} — trying single photo`)
@@ -1572,7 +1587,17 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
 
     const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', childId).maybeSingle()
     if (child?.parent_id) {
-      sendNotification(child.parent_id, `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`).catch(() => {})
+      // Parent's own language preference, not the child's — every other
+      // notification in this file reads it the same way (parents.prefs.language,
+      // defaulting to 'tr'). child.language is a different, unrelated field
+      // (every child gets 'en' there with no way to change it — using it here
+      // sent this exact message in English to a parent who only reads Turkish).
+      const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const msg = language === 'en'
+        ? `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`
+        : `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`
+      sendNotification(child.parent_id, msg).catch(() => {})
     }
 
     res.json({ claim })
