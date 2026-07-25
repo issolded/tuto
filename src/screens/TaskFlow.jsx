@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { evaluateTask, generateTask, evaluateChore } from '../lib/gemini'
 import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
+import { useIsTablet } from '../components/Shell'
 
 const ACCENT = '#FF6B35'
 const CHORE_ACCENT = '#FF8C42'
@@ -91,6 +92,7 @@ function ResultCard({ result, taskType }) {
 
 function ChoreFlow({ task }) {
   const nav = useNavigate()
+  const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const inputRef = useRef()
   const pollRef = useRef(null)
@@ -213,7 +215,7 @@ function ChoreFlow({ task }) {
   )
 
   return (
-    <div style={{ background: '#FFF3E0', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: '#FFF3E0', minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <style>{FLOAT_CSS}</style>
 
       {/* Header */}
@@ -396,6 +398,7 @@ function ChoreFlow({ task }) {
 
 function RegularTaskFlow({ task }) {
   const nav = useNavigate()
+  const isTablet = useIsTablet()
   const inputRef = useRef()
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -463,7 +466,7 @@ function RegularTaskFlow({ task }) {
   }
 
   return (
-    <div style={{ background: '#FFF8F0', minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: '#FFF8F0', minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <style>{FLOAT_CSS}</style>
 
       {/* Header */}

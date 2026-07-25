@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
+import { useIsTablet } from '../components/Shell'
 import { supabase } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
 
@@ -86,8 +87,9 @@ Return JSON only:
 
 function Screen({ children, onBack }) {
   const nav = useNavigate()
+  const isTablet = useIsTablet()
   return (
-    <div style={{ background: BG, minHeight: '100vh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '56px 24px 12px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <button
           onClick={onBack ?? (() => nav('/child/home'))}
