@@ -760,7 +760,12 @@ const CONTRIBUTION_TOOLS = [{
         'ekle"). This is NOT a task reward and needs no pending item. Take child_id from the children list in ' +
         'context and amount as the exact number the parent said. The server enforces a 1-500 range — if the ' +
         'parent asks for more than 500, do NOT silently reduce it: tell them 500 is the most you can gift at ' +
-        'once and ask if that works, rather than calling this with a different number than they asked for.',
+        'once and ask if that works, rather than calling this with a different number than they asked for. ' +
+        'Only call this when the parent explicitly asks to gift/give a specific amount of gems — never as a ' +
+        'guess, an apology, or a way to smooth over confusion. If a message is vague, unrelated, or you are ' +
+        'unsure what the parent means (e.g. "ne diyorsun", "anlamadım", "what?", any reaction that is not ' +
+        'clearly a gifting request), do NOT call this — this moves real gems, so an unclear message means ' +
+        'asking a clarifying question, not picking a number and gifting it.',
       parameters: {
         type: 'OBJECT',
         properties: {
