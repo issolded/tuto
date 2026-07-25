@@ -107,6 +107,7 @@ async function getParentContext(parentId) {
       { data: pendingSubs },
       treeState,
       { data: pendingPaintings },
+      { data: pendingClaims },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -124,6 +125,14 @@ async function getParentContext(parentId) {
       getTreeState(child.id, tz).catch(() => null),
       supabase.from('paintings')
         .select('id, drawing_id, created_at')
+        .eq('child_id', child.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      // Reward claims (child tapped "Claim") awaiting a parent decision — same
+      // shape as pendingDrawings/pendingSubs, so a "what's this notification
+      // about?" reply has something real to answer with instead of guessing.
+      supabase.from('reward_claims')
+        .select('id, reward_name, reward_icon, bt_cost, created_at')
         .eq('child_id', child.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
@@ -160,6 +169,17 @@ async function getParentContext(parentId) {
         id: p.id,
         what: p.drawing_id || 'kendi çizimi',
         created_at: p.created_at,
+      })),
+      // A reward CLAIM spends gems on approval — the exact opposite direction
+      // from a submission/contribution/drawing approval, and unrelated to
+      // gift_gems (which has no pending item at all). Keep it visibly distinct
+      // here so the model never reaches for gift_gems to "resolve" one of these.
+      pendingRewardClaims: (pendingClaims || []).map(c => ({
+        id: c.id,
+        reward: c.reward_name,
+        icon: c.reward_icon,
+        cost: c.bt_cost,
+        created_at: c.created_at,
       })),
       tree: treeState
         ? {
@@ -753,6 +773,36 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'approve_reward_claim',
+      description:
+        'Approve ONE SPECIFIC pending reward claim (the child tapped "Claim" on a goal like "TV 1 hour" or ' +
+        '"New toy"), by its exact id from the "onay bekleyen ödül talepleri" list in context. Call this when ' +
+        'the parent clearly approves it in free text ("onayla", "evet", "verebilirsin"). This is NOT gift_gems — ' +
+        'gift_gems adds gems with no pending item; this SPENDS gems from an existing claim. Never call this for ' +
+        'a vague or unrelated message, only a clear approval of the named reward. If more than one claim is ' +
+        'pending and it is unclear which one the parent means, do NOT call this — ask which one first.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          claim_id: { type: 'STRING', description: 'The exact id of the reward claim to approve, taken from the pending reward claims list in context.' },
+        },
+        required: ['claim_id'],
+      },
+    },
+    {
+      name: 'reject_reward_claim',
+      description:
+        'Reject a pending reward claim. No gems are spent; the child keeps their balance and can claim again ' +
+        'later. Only call this when the parent clearly declines ONE SPECIFIC claim from the pending list.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          claim_id: { type: 'STRING', description: 'The exact id of the reward claim to reject, taken from the pending reward claims list in context.' },
+        },
+        required: ['claim_id'],
+      },
+    },
+    {
       name: 'gift_gems',
       description:
         'The parent wants to give a child gems with no task or approval attached — a surprise, a birthday, ' +
@@ -1168,9 +1218,28 @@ async function handleMessage(parentId, replyCb, text) {
             `Sonuç capped=true dönerse, çizim onaylandı ama günlük çizim ödülü dolduğu için gem eklenmedi — ` +
             `bunu açıkça söyle, "gem kazandı" deme.`
           : 'Şu anda onay bekleyen çizim yok.') + `\n\n` +
+        `ŞU AN ONAY BEKLEYEN ÖDÜL TALEPLERİ (çocuk "Claim" butonuna bastı, bir hedefi almak istiyor):\n` +
+        (familyData.flatMap(c => (Array.isArray(c.pendingRewardClaims) ? c.pendingRewardClaims.map(r => ({ ...r, child: c.name })) : [])).length
+          ? familyData.flatMap(c => (Array.isArray(c.pendingRewardClaims) ? c.pendingRewardClaims.map(r => ({ ...r, child: c.name })) : []))
+              .map(r => `- id=${r.id}: ${r.child}, "${r.reward}" istiyor (${r.cost} gem)`).join('\n') +
+            `\n- Bu, bir ÖDÜL TALEBİDİR — gift_gems ile HİÇBİR İLGİSİ YOK, karıştırma. Onaylarsan yukarıdaki ` +
+            `"cost" kadar gem çocuğun hesabından HARCANIR (kazanmaz); reddedersen hiçbir şey değişmez. Ebeveyn ` +
+            `onaylarsa approve_reward_claim'i, reddederse reject_reward_claim'i yukarıdaki EXACT id ile çağır. ` +
+            `Birden fazla talep varsa ve hangisi belirsizse, tahmin etme — sor.\n` +
+            `- Parent'a gönderilen bildirim tam olarak şuydu: '{child}, "{ödül}" ödülünü almak istiyor ({gem} ` +
+            `gem). Tuto uygulamasından onaylayabilirsin.' — parent bu bildirime "ne dedin/anlamadım" gibi ` +
+            `belirsiz bir şeyle cevap verirse, YUKARIDAKİ listeden hangi talebe ait olduğunu bul ve AÇIKÇA ` +
+            `açıkla (kim, hangi ödül, kaç gem, nasıl onaylanır) — asla gift_gems çağırma ya da uydurma bir ` +
+            `"düzelttim, hediye gönderdim" cevabı verme.`
+          : 'Şu anda onay bekleyen ödül talebi yok.') + `\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
+        `- Parent'ın bir mesajı ("ne dedin", "anlamadım", "what?") ne anlama geldiğini genel olarak sorarsa, ` +
+        `konuşma geçmişindeki SENİN bir önceki mesajını bul ve İÇERİĞİNİ açıkla/tekrarla — kendi geçmişindeki ` +
+        `başka bir "kafa karıştırdım, düzelttim, hediye gönderdim" tarzı eski cevabını ASLA taklit etme veya ` +
+        `tekrarlama; her belirsizlik anında gift_gems çağırmak ya da "düzelttim" demek bir alışkanlık değil, ` +
+        `bir HATA — sadece parent açıkça ve net şekilde gem hediye etmek istediğinde gift_gems çağır.\n\n` +
         `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
         `Current local time for parent: ${localTimeStr}\n` +
         `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
@@ -1309,6 +1378,10 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await approvePaintingById(args.painting_id, parentId)
       } else if (name === 'reject_drawing') {
         toolResult = await rejectPaintingById(args.painting_id, parentId)
+      } else if (name === 'approve_reward_claim') {
+        toolResult = await approveClaimById(args.claim_id, parentId)
+      } else if (name === 'reject_reward_claim') {
+        toolResult = await rejectClaimById(args.claim_id, parentId)
       } else if (name === 'gift_gems') {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId)
       } else {
