@@ -198,6 +198,32 @@ export async function getTodaySummary(childId) {
   }
 }
 
+// A child's reward claims (all statuses) — used to know which rewards are
+// already awaiting a parent decision, so "Claim" doesn't show again.
+export async function getRewardClaims(childId) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/reward-claims`)
+    const data = await res.json()
+    return data.claims || []
+  } catch (err) {
+    console.error('[getRewardClaims] error:', err.message)
+    return []
+  }
+}
+
+// Requests a reward — server re-checks gems >= bt_cost itself before creating
+// the pending claim; the parent then approves/rejects from the dashboard.
+export async function claimReward(childId, rewardId) {
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/reward-claims`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reward_id: rewardId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data.claim
+}
+
 export async function getStoryIdeas(childId) {
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/story-ideas`)

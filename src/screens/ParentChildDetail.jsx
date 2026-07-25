@@ -602,6 +602,7 @@ export default function ParentChildDetail() {
   const [contributionPhotos, setContributionPhotos] = useState({}) // contributionId → signed URL
   const [paintings, setPaintings] = useState([])
   const [rewards, setRewards] = useState(null)
+  const [claims, setClaims] = useState([])
   const [justApproved, setJustApproved] = useState(false)
   const [lightbox, setLightbox] = useState(null) // { urls, index } — full-size photo viewer
   const [photoMap, setPhotoMap] = useState({})   // submissionId → signed URLs
@@ -634,7 +635,8 @@ export default function ParentChildDetail() {
       // Same /api/tree the child's MyTree screen reads, so the parent sees the
       // tree the child sees (and the same numbers Tuto quotes on Telegram).
       fetch(`${SERVER}/api/tree?child_id=${id}`).then(r => r.json()).catch(() => null),
-    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData, treeResp]) => {
+      fetch(`${SERVER}/api/children/${id}/reward-claims`).then(r => r.json()).catch(() => ({ claims: [] })),
+    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData, treeResp, claimsResp]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
       setSubmissions(subData || [])
@@ -642,6 +644,7 @@ export default function ParentChildDetail() {
       setContributions(contribData?.contributions || [])
       setContributionsTodayDate(contribData?.todayDate ?? null)
       setTree(treeResp)
+      setClaims(claimsResp?.claims || [])
     })
   }, [id])
 
@@ -727,6 +730,7 @@ export default function ParentChildDetail() {
   // item disappears from the list the moment it's actioned.
   const pendingContributions = (contributions || []).filter(c => c.status === 'pending')
   const pendingContributionGroups = groupByDate(pendingContributions, contributionsTodayDate)
+  const pendingClaims = (claims || []).filter(c => c.status === 'pending')
 
   async function handleApprove(sub) {
     const earnedGems = sub.gems_earned ?? sub.suggested_gems ?? 30
@@ -783,6 +787,29 @@ export default function ParentChildDetail() {
     await fetch(`${SERVER}/api/contributions/${c.id}/reject`, { method: 'POST' })
     setContributions(prev => prev.map(x => x.id === c.id ? { ...x, status: 'rejected' } : x))
   }
+
+  // Approving a reward claim SPENDS gems (opposite direction from a
+  // submission approval) — the server re-checks eligibility itself, so a
+  // stale `gems` read here never decides whether the spend actually happens.
+  async function claimDecision(c, verb) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) return
+    try {
+      const r = await fetch(`${SERVER}/api/reward-claims/${c.id}/${verb}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'failed')
+      setClaims(prev => prev.map(x => x.id === c.id ? { ...x, status: verb === 'approve' ? 'approved' : 'rejected' } : x))
+      if (verb === 'approve') setGems(prev => (prev ?? 0) - c.bt_cost)
+    } catch (err) {
+      console.error(`[claimDecision:${verb}]`, err.message)
+    }
+  }
+  const handleApproveClaim = (c) => claimDecision(c, 'approve')
+  const handleRejectClaim  = (c) => claimDecision(c, 'reject')
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: PC.bg }}>
@@ -901,6 +928,30 @@ export default function ParentChildDetail() {
           )}
         </div>
 
+        {/* reward claims — child tapped "Claim", waiting on you */}
+        {pendingClaims.length > 0 && (
+          <div>
+            <SectionHead>🎁 Reward claims ({pendingClaims.length})</SectionHead>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingClaims.map(c => (
+                <Card key={c.id} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: PC.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                    {c.reward_icon || '🎁'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{c.reward_name}</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.amber }}>⭐ {c.bt_cost} gems</div>
+                  </div>
+                  <button className="tc-press tc-tap" onClick={() => handleApproveClaim(c)}
+                    style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '9px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
+                  <button className="tc-press tc-tap" onClick={() => handleRejectClaim(c)}
+                    style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '9px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* reward goals */}
         <div>
           <SectionHead action={
@@ -916,7 +967,11 @@ export default function ParentChildDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {rewards.map(r => {
                 const pct = r.bt_cost > 0 ? Math.min(100, Math.round((gems / r.bt_cost) * 100)) : 0
-                const ready = gems >= r.bt_cost
+                // A pending claim already has its own card + approve/reject buttons
+                // above — don't also flag this one "ready to claim", that's a
+                // decision already in motion, not a new one waiting to happen.
+                const awaitingDecision = pendingClaims.some(c => c.reward_id === r.id)
+                const ready = gems >= r.bt_cost && !awaitingDecision
                 return (
                   <Card key={r.id} pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -935,7 +990,7 @@ export default function ParentChildDetail() {
                       <div style={{ width: `${pct}%`, height: '100%', background: ready ? PC.green : `linear-gradient(90deg, ${PC.teal}, ${PC.peach})`, borderRadius: 8, transition: 'width .6s ease' }} />
                     </div>
                     <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: ready ? PC.green : PC.inkSoft }}>
-                      {ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
+                      {awaitingDecision ? 'Claimed — see above ⬆️' : ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
                     </div>
                   </Card>
                 )

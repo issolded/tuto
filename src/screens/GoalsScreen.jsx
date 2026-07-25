@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getChildRewards, getChildGems } from '../lib/supabase'
+import { getChildRewards, getChildGems, getRewardClaims, claimReward } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
 
@@ -23,10 +23,11 @@ function ProgressBar({ current, total }) {
   )
 }
 
-function RewardCard({ reward, currentGems, index }) {
+function RewardCard({ reward, currentGems, index, claimStatus, claiming, onClaim }) {
   const needed = reward.bt_cost || 0
   const ready = needed > 0 && currentGems >= needed
   const remaining = Math.max(0, needed - currentGems)
+  const pending = claimStatus === 'pending'
 
   return (
     <div style={{
@@ -36,7 +37,7 @@ function RewardCard({ reward, currentGems, index }) {
       display: 'flex',
       flexDirection: 'column',
       gap: 12,
-      animation: `${ready ? 'glow' : 'fadeUp'} ${ready ? '2s ease infinite' : `0.4s ease ${index * 0.07}s both`}`,
+      animation: `${ready && !pending ? 'glow' : 'fadeUp'} ${ready && !pending ? '2s ease infinite' : `0.4s ease ${index * 0.07}s both`}`,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ width: 52, height: 52, borderRadius: 16, background: '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>
@@ -46,14 +47,30 @@ function RewardCard({ reward, currentGems, index }) {
           <div style={{ fontSize: 16, fontWeight: 800, color: '#2D2D2D', marginBottom: 2 }}>{reward.name}</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#C8900A' }}>⭐ {needed} Gems needed</div>
         </div>
-        {ready && <div style={{ fontSize: 26, animation: 'fadeUp 0.3s ease both' }}>🎉</div>}
+        {ready && !pending && <div style={{ fontSize: 26, animation: 'fadeUp 0.3s ease both' }}>🎉</div>}
       </div>
 
       <ProgressBar current={currentGems} total={needed} />
 
-      <div style={{ fontSize: 13, fontWeight: 700, color: ready ? '#2EC486' : '#7A7A9A' }}>
-        {ready ? 'Ready to claim! 🎉' : `${remaining} more Gems to go!`}
-      </div>
+      {pending ? (
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#C8900A' }}>⏳ Waiting for your parent to approve</div>
+      ) : ready ? (
+        <button
+          onClick={onClaim}
+          disabled={claiming}
+          style={{
+            border: 'none', borderRadius: 14, padding: '11px', width: '100%',
+            fontSize: 14, fontWeight: 800, color: 'white', cursor: claiming ? 'default' : 'pointer',
+            background: claiming ? '#9ED9BE' : '#2EC486', boxShadow: claiming ? 'none' : '0 6px 16px rgba(46,196,134,0.35)',
+          }}
+        >
+          {claiming ? 'Claiming…' : 'Claim! 🎉'}
+        </button>
+      ) : (
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#7A7A9A' }}>
+          {remaining} more Gems to go!
+        </div>
+      )}
     </div>
   )
 }
@@ -62,19 +79,42 @@ export default function GoalsScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [rewards, setRewards] = useState(null)
   const [gems, setGems] = useState(null)
+  const [claims, setClaims] = useState([])
+  const [claimingId, setClaimingId] = useState(null)
 
   useEffect(() => {
     if (!child?.id) { setRewards([]); setGems(0); return }
     Promise.all([
       getChildRewards(child.id),
       getChildGems(child.id),
-    ]).then(([rewardData, gemCount]) => {
+      getRewardClaims(child.id),
+    ]).then(([rewardData, gemCount, claimData]) => {
       setRewards(rewardData)
       setGems(gemCount)
+      setClaims(claimData)
     })
   }, [])
 
   const loading = rewards === null || gems === null
+
+  // Only the pending ones block re-claiming — a rejected claim shouldn't stop
+  // the child from trying again once they've earned more gems.
+  const pendingByReward = Object.fromEntries(
+    claims.filter(c => c.status === 'pending').map(c => [c.reward_id, c])
+  )
+
+  async function handleClaim(reward) {
+    if (!child?.id || claimingId) return
+    setClaimingId(reward.id)
+    try {
+      const claim = await claimReward(child.id, reward.id)
+      setClaims(prev => [claim, ...prev.filter(c => c.id !== claim.id)])
+    } catch (err) {
+      console.error('[claimReward]', err.message)
+    } finally {
+      setClaimingId(null)
+    }
+  }
 
   return (
     <Shell active="goals" background="#FFF8E0">
@@ -105,7 +145,15 @@ export default function GoalsScreen() {
           </div>
         ) : (
           rewards.map((reward, i) => (
-            <RewardCard key={reward.id} reward={reward} currentGems={gems} index={i} />
+            <RewardCard
+              key={reward.id}
+              reward={reward}
+              currentGems={gems}
+              index={i}
+              claimStatus={pendingByReward[reward.id]?.status}
+              claiming={claimingId === reward.id}
+              onClaim={() => handleClaim(reward)}
+            />
           ))
         )}
       </div>

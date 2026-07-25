@@ -1541,6 +1541,124 @@ app.get('/api/children/:childId/rewards', async (req, res) => {
   res.json({ rewards: rewards || [] })
 })
 
+// ── Reward claims ─────────────────────────────────────────────────────────────
+// The child taps "Claim" on an affordable reward; the parent approves or
+// rejects from the dashboard — same request-then-decide shape as homework/
+// chore. The key difference from those: approving a SUBMISSION awards gems,
+// approving a CLAIM spends them (negative bt_ledger entry). Eligibility
+// (gems >= bt_cost) is decided here, server-side, both at claim time and
+// again at approval time — never trusted from the client's own gem count.
+app.post('/api/children/:childId/reward-claims', async (req, res) => {
+  const { childId } = req.params
+  const { reward_id } = req.body
+  if (!reward_id) return res.status(400).json({ error: 'reward_id required' })
+  try {
+    const [{ data: reward }, { data: ledger }, { data: existing }] = await Promise.all([
+      supabase.from('rewards').select('id, name, icon, bt_cost, child_id').eq('id', reward_id).maybeSingle(),
+      supabase.from('bt_ledger').select('amount').eq('child_id', childId),
+      supabase.from('reward_claims').select('*').eq('child_id', childId).eq('reward_id', reward_id).eq('status', 'pending').maybeSingle(),
+    ])
+    if (!reward || reward.child_id !== childId) return res.status(404).json({ error: 'reward not found' })
+    if (existing) return res.json({ claim: existing }) // idempotent — already awaiting a decision
+
+    const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+    if (gems < reward.bt_cost) return res.status(400).json({ error: 'not enough gems' })
+
+    const { data: claim, error } = await supabase
+      .from('reward_claims')
+      .insert({ child_id: childId, reward_id: reward.id, reward_name: reward.name, reward_icon: reward.icon, bt_cost: reward.bt_cost })
+      .select().single()
+    if (error) return res.status(500).json({ error: error.message })
+
+    const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', childId).maybeSingle()
+    if (child?.parent_id) {
+      sendNotification(child.parent_id, `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`).catch(() => {})
+    }
+
+    res.json({ claim })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/children/:childId/reward-claims', async (req, res) => {
+  const { childId } = req.params
+  const { data } = await supabase.from('reward_claims').select('*').eq('child_id', childId).order('created_at', { ascending: false })
+  res.json({ claims: data || [] })
+})
+
+async function approveClaimById(claimId, parentId) {
+  const { data: claim } = await supabase.from('reward_claims').select('*').eq('id', claimId).maybeSingle()
+  if (!claim) return { success: false, error: 'not found' }
+  if (claim.status !== 'pending') return { success: false, error: `already ${claim.status}` }
+
+  const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', claim.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  // Re-check eligibility at approval time too — gems could have moved (e.g.
+  // another claim already approved) since the child originally tapped Claim.
+  const { data: ledger } = await supabase.from('bt_ledger').select('amount').eq('child_id', child.id)
+  const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+  if (gems < claim.bt_cost) return { success: false, error: 'insufficient gems' }
+
+  const { error: updErr } = await supabase
+    .from('reward_claims')
+    .update({ status: 'approved', resolved_at: new Date().toISOString() })
+    .eq('id', claim.id)
+    .eq('status', 'pending') // guard against a concurrent decision racing us
+  if (updErr) return { success: false, error: updErr.message }
+
+  const { error: ledErr } = await supabase
+    .from('bt_ledger')
+    .insert({ child_id: child.id, amount: -claim.bt_cost, reason: claim.reward_name })
+  if (ledErr) {
+    console.error(`[REWARD-CLAIM] ledger insert failed for ${claim.id}: ${ledErr.message}`)
+    await supabase.from('reward_claims').update({ status: 'pending', resolved_at: null }).eq('id', claim.id)
+    return { success: false, error: 'could not record the spend' }
+  }
+
+  return { success: true, id: claim.id, childName: child.name, gems: claim.bt_cost }
+}
+
+async function rejectClaimById(claimId, parentId) {
+  const { data: claim } = await supabase.from('reward_claims').select('*').eq('id', claimId).maybeSingle()
+  if (!claim) return { success: false, error: 'not found' }
+  if (claim.status !== 'pending') return { success: false, error: `already ${claim.status}` }
+
+  const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', claim.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const { error } = await supabase
+    .from('reward_claims')
+    .update({ status: 'rejected', resolved_at: new Date().toISOString() })
+    .eq('id', claim.id)
+    .eq('status', 'pending')
+  if (error) return { success: false, error: error.message }
+  return { success: true, id: claim.id, childName: child.name }
+}
+
+async function claimActionRoute(req, res, action) {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const result = await action(req.params.id, userId)
+    if (!result.success) {
+      const code = result.error === 'forbidden' ? 403 : result.error === 'not found' ? 404 : 400
+      return res.status(code).json({ error: result.error })
+    }
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+app.post('/api/reward-claims/:id/approve', (req, res) => claimActionRoute(req, res, approveClaimById))
+app.post('/api/reward-claims/:id/reject', (req, res) => claimActionRoute(req, res, rejectClaimById))
+
 app.get('/api/children/:childId/gems', async (req, res) => {
   const { childId } = req.params
   const { data: ledger } = await supabase.from('bt_ledger').select('amount').eq('child_id', childId)
