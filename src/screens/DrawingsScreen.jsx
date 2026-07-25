@@ -237,7 +237,11 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
         <Title sk={sk}>My Drawings</Title>
-        <div style={{ width: 42 }} />
+        <button onClick={onLibrary} title="My Paintings" style={{
+          width: 42, height: 42, borderRadius: '50%', background: '#fff', border: 'none',
+          boxShadow: '0 4px 12px rgba(40,30,70,.12)', cursor: 'pointer', fontSize: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>🎨</button>
       </div>
 
       <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 8 }}>
