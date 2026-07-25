@@ -183,6 +183,21 @@ export async function getChildGems(childId) {
   }
 }
 
+// ChildHome's "Bugün" card — tree state, today's per-type activity counts,
+// gems and nearest goal in one request (server aggregates it, see
+// server/index.js's /today-summary route for why this isn't 6 client queries).
+export async function getTodaySummary(childId) {
+  const empty = { today: 0, monthTreeCount: 0, activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 }, gems: 0, nearestGoal: null }
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/today-summary`)
+    const data = await res.json()
+    return { ...empty, ...data }
+  } catch (err) {
+    console.error('[getTodaySummary] error:', err.message)
+    return empty
+  }
+}
+
 export async function getStoryIdeas(childId) {
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/story-ideas`)

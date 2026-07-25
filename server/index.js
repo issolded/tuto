@@ -1548,6 +1548,67 @@ app.get('/api/children/:childId/gems', async (req, res) => {
   res.json({ gems })
 })
 
+// ChildHome's "Bugün" card — one round trip instead of the 6-7 separate
+// queries this would otherwise take client-side (tree, 5 activity types
+// across 3 different tables, gems, nearest goal). Activity counts come from
+// each type's own real table/task_type, never approximated from bt_ledger
+// (its `reason` column is inconsistent — e.g. reading writes the book title,
+// not 'reading' — so it can't be used to detect "did X happen today").
+app.get('/api/children/:childId/today-summary', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const tz = await tzForChild(childId)
+    const now = DateTime.now().setZone(tz)
+    const todayStart = now.startOf('day').toUTC().toISO()
+    const todayEnd = now.endOf('day').toUTC().toISO()
+
+    const [
+      tree,
+      { data: subsToday },
+      { data: mathToday },
+      { data: storiesToday },
+      { data: paintingsToday },
+      { data: ledger },
+      { data: rewards },
+    ] = await Promise.all([
+      getTreeState(childId, tz),
+      supabase.from('submissions').select('task_type').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('math_progress').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('stories').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('paintings').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('bt_ledger').select('amount').eq('child_id', childId),
+      supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).order('bt_cost'),
+    ])
+
+    const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+    const nearestGoal = (rewards || []).find(r => r.bt_cost > gems) || null
+
+    res.json({
+      today: tree.today,
+      monthTreeCount: tree.monthTreeCount,
+      activities: {
+        reading: (subsToday || []).filter(s => s.task_type === 'reading').length,
+        math: (mathToday || []).length,
+        writing: (storiesToday || []).length,
+        homework: (subsToday || []).filter(s => s.task_type === 'homework').length,
+        drawing: (paintingsToday || []).length,
+      },
+      gems,
+      nearestGoal: nearestGoal ? { id: nearestGoal.id, name: nearestGoal.name, icon: nearestGoal.icon, bt_cost: nearestGoal.bt_cost } : null,
+      // Distinguishes "no rewards configured at all" from "gems already cover
+      // every configured reward" — same nearestGoal:null, very different copy.
+      hasAnyGoals: (rewards || []).length > 0,
+    })
+  } catch (err) {
+    res.status(500).json({
+      today: 0, monthTreeCount: 0,
+      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 },
+      gems: 0, nearestGoal: null, hasAnyGoals: false,
+      error: err.message,
+    })
+  }
+})
+
 app.get('/api/children/:childId/story-ideas', async (req, res) => {
   try {
     const { childId } = req.params

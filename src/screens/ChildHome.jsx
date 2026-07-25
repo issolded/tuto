@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import Shell from '../components/Shell'
-import { supabase, getChildGems, drawingIconUrl } from '../lib/supabase'
+import Shell, { useIsTablet } from '../components/Shell'
+import { TreeArt, Sprig } from '../components/TreeArt'
+import { supabase, getChildGems, getTodaySummary, drawingIconUrl } from '../lib/supabase'
 
 const ACCENT = '#f79433'
 const INK = '#241f3a'
@@ -18,17 +19,20 @@ const HOME_CSS = `
 .tuto-card:active{ transform: scale(.97); }
 .tuto-gempill{ transition: transform .12s ease; }
 .tuto-gempill:active{ transform: scale(.95); }
-.tuto-hero{ display:flex; flex-direction:column; align-items:center; }
 .tuto-task-grid{ display:grid; grid-template-columns:1fr 1fr; gap:13px; }
 .tuto-wide-card{ grid-column:1 / -1; }
+.tuto-today-card{ position:relative; background:#fff; border-radius:24px; padding:20px 20px 4px; box-shadow:0 6px 16px rgba(40,30,70,.09); margin:10px 0 18px; }
+.tuto-today-card.mature{ background:#F7F9F6; border:1.5px solid #E4EAE3; box-shadow:none; }
+.tuto-today-sections{ display:flex; flex-direction:column; }
+.tuto-today-sec{ padding:14px 0; border-top:1px dashed #E0DAF0; }
+.tuto-today-sec:first-child{ border-top:none; padding-top:2px; }
+.tuto-today-card.mature .tuto-today-sec{ border-top-color:#E4EAE3; }
 @media (min-width:768px) {
-  .tuto-hero{
-    flex-direction:row; align-items:center; justify-content:center; gap:32px;
-    background:#fff; border-radius:28px; padding:18px 36px; margin:6px 0 22px;
-    box-shadow:0 6px 20px rgba(40,30,70,.08);
-  }
-  .tuto-hero-mascot{ height:140px !important; margin:0 !important; }
-  .tuto-hero-text{ font-size:24px !important; margin:0 !important; }
+  .tuto-today-sections{ flex-direction:row; align-items:stretch; }
+  .tuto-today-sec{ flex:1; border-top:none; padding:16px 0 20px; display:flex; flex-direction:column; justify-content:center; }
+  .tuto-today-sec:nth-child(2){ flex:1.4; border-left:1px dashed #E0DAF0; padding-left:24px; margin-left:24px; }
+  .tuto-today-sec:nth-child(3){ flex:1.1; border-left:1px dashed #E0DAF0; padding-left:24px; margin-left:24px; }
+  .tuto-today-card.mature .tuto-today-sec{ border-left-color:#E4EAE3; }
   .tuto-task-grid{ grid-template-columns:repeat(3, 1fr); }
   .tuto-wide-card{ grid-column:auto; }
 }
@@ -95,11 +99,241 @@ function HomeworkIcon() {
   )
 }
 
+// ── "Bugün" card — same bandFor() thresholds as MyTree.jsx (that file
+// doesn't export it, and it's 3 lines, so duplicated rather than plumbing a
+// cross-file import for it).
+function bandFor(age) {
+  if (age == null) return 'young'
+  if (age <= 8) return 'young'
+  if (age <= 11) return 'mid'
+  return 'mature'
+}
+
+const EMPTY_TODAY = {
+  today: 0, monthTreeCount: 0,
+  activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 },
+  nearestGoal: null, hasAnyGoals: false,
+}
+
+const ACTIVITY_TYPES = [
+  { key: 'reading',  chip: 'Kitap',     bg: '#E8E0FF', emoji: '📖' },
+  { key: 'math',     chip: 'Matematik', bg: '#D4EDFF', emoji: '🔢' },
+  { key: 'writing',  chip: 'Hikaye',    bg: '#D4F5E0', emoji: '✏️' },
+  { key: 'homework', chip: 'Ödev',      bg: '#FFF1CF', emoji: '📸' },
+  { key: 'drawing',  chip: 'Çizim',     bg: '#EFE3FF', emoji: '🎨' },
+]
+
+// Mid/mature's plain-text activity summary — young shows this visually via
+// its chip grid instead, so it never calls this.
+function activitySentence(activities, mature) {
+  const remaining = ACTIVITY_TYPES.filter(a => !activities[a.key])
+  if (remaining.length === 0) return mature ? 'Bugün her şeyi tamamladın' : 'Bugün her şeyi yaptın! 🌟'
+  if (remaining.length === ACTIVITY_TYPES.length) return mature ? 'Bugüne başla' : 'Bugüne başlayalım 🌱'
+  const names = remaining.map(a => mature ? a.chip : a.chip.toLowerCase())
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}`
+  return `${remaining.length} iş kaldı: ${list}`
+}
+
+function TodayPill({ emoji, text, color, bg }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: bg, borderRadius: 999, padding: '4px 10px', fontFamily: FRED, fontWeight: 700, fontSize: 11.5, color }}>
+      <span style={{ fontSize: 11 }}>{emoji}</span>{text}
+    </span>
+  )
+}
+
+function GoalRing({ pct, color, track, size = 84 }) {
+  const stroke = 8
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const dash = (pct / 100) * c
+  return (
+    <svg width={size} height={size} style={{ display: 'block' }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${c - dash}`} strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`} style={{ transition: 'stroke-dasharray .5s ease' }} />
+    </svg>
+  )
+}
+
+// Replaces the old mascot-hero — surfaces the child's actual day (tree →
+// today's activities → nearest goal) instead of a generic "go earn gems"
+// prompt. Tonal skin follows bandFor(child.age); tablet opens the same three
+// sections into side-by-side panels instead of a phone-style vertical stack
+// (both driven by the .tuto-today-* CSS above + the isTablet branches below).
+function TodayCard({ band, isTablet, today, gems, nav }) {
+  const mature = band === 'mature'
+  const ink = mature ? '#27332c' : INK
+  const inkSoft = mature ? '#6c7c72' : INK_SOFT
+  const accent = mature ? '#2f8f6b' : '#37a06f'
+
+  const goal = today.nearestGoal
+  const remaining = goal ? Math.max(0, goal.bt_cost - gems) : 0
+  const pct = goal ? Math.min(100, Math.round((gems / goal.bt_cost) * 100)) : 0
+
+  return (
+    <div className={`tuto-today-card${mature ? ' mature' : ''}`}>
+      {!mature && (
+        <TutoMascot
+          size={band === 'young' ? 66 : 54}
+          style={{
+            position: 'absolute', top: -22, zIndex: 2,
+            filter: 'drop-shadow(0 6px 10px rgba(40,30,70,.18))',
+            ...(isTablet ? { left: '28%', transform: 'translateX(-50%)' } : { right: 16 }),
+          }}
+        />
+      )}
+
+      <div className="tuto-today-sections">
+        {/* ── Tree ── */}
+        <div
+          className="tuto-today-sec"
+          onClick={() => nav('/child/task')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            ...(isTablet ? { flexDirection: 'column', textAlign: 'center' } : {}),
+          }}
+        >
+          {mature ? <Sprig size={24} color={accent} /> : <TreeArt size={isTablet ? 100 : band === 'young' ? 62 : 56} fruits={today.today} target={4} />}
+
+          {band === 'young' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: isTablet ? 'center' : 'flex-start' }}>
+              <TodayPill emoji="🌱" text={`${today.today} yaprak bugün`} color={accent} bg="rgba(76,182,133,.14)" />
+              <TodayPill emoji="🌳" text={`${today.monthTreeCount} ağaç bu ay`} color={accent} bg="rgba(76,182,133,.14)" />
+            </div>
+          )}
+
+          {band === 'mid' && (
+            <div style={{ minWidth: 0, width: isTablet ? '100%' : undefined, flex: isTablet ? undefined : 1 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: ink }}>
+                {today.today} yaprak bugün · bu ay {today.monthTreeCount} 🌳
+              </div>
+              <div style={{ marginTop: 6, height: 7, borderRadius: 999, background: 'rgba(55,160,111,.16)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (today.today / 4) * 100)}%`, borderRadius: 999, background: 'linear-gradient(90deg,#6BBF59,#4cb685)', transition: 'width .5s ease' }} />
+              </div>
+            </div>
+          )}
+
+          {mature && (
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 14, color: ink }}>
+              {today.today} katkı bugün · {today.monthTreeCount} bu ay
+            </div>
+          )}
+
+          {!isTablet && <span style={{ marginLeft: 'auto', color: inkSoft, fontSize: 17, flexShrink: 0 }}>›</span>}
+        </div>
+
+        {/* ── Activities ── */}
+        <div className="tuto-today-sec">
+          {band === 'young' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+              {ACTIVITY_TYPES.map(a => {
+                const count = today.activities[a.key] || 0
+                const done = count > 0
+                return (
+                  <div key={a.key} style={{
+                    position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    background: done ? a.bg : '#F2F0F7', borderRadius: 14, padding: '10px 4px',
+                    opacity: done ? 1 : 0.5,
+                  }}>
+                    <span style={{ fontSize: 20 }}>{a.emoji}</span>
+                    <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 10, color: ink, textAlign: 'center' }}>{a.chip}</span>
+                    {done && (
+                      <span style={{
+                        position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%',
+                        background: '#4cb685', color: '#fff', fontSize: 10, fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,.15)',
+                      }}>{count > 1 ? count : '✓'}</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : mature ? (
+            <>
+              <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: ink, marginBottom: 10 }}>
+                {activitySentence(today.activities, true)}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {ACTIVITY_TYPES.map(a => {
+                  const done = (today.activities[a.key] || 0) > 0
+                  return (
+                    <span key={a.key} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 999, padding: '5px 10px',
+                      fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 12,
+                      background: done ? '#E2F0E9' : '#EEF1ED', color: done ? '#2f8f6b' : '#8a938d',
+                    }}>{done ? '✓' : '○'} {a.chip}</span>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: ink }}>
+              {activitySentence(today.activities, false)}
+            </div>
+          )}
+        </div>
+
+        {/* ── Goal ── */}
+        <div
+          className="tuto-today-sec"
+          onClick={() => nav('/child/goals')}
+          style={{ cursor: 'pointer', ...(isTablet ? { alignItems: 'center', textAlign: 'center' } : {}) }}
+        >
+          {!goal ? (
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: inkSoft }}>
+              {today.hasAnyGoals
+                ? `Tüm hedeflerine ulaştın${mature ? '' : '! 🎉'}`
+                : `Henüz hedef yok — ailen ekleyebilir${mature ? '' : ' 🎯'}`}
+            </div>
+          ) : isTablet ? (
+            <>
+              <GoalRing pct={pct} color={mature ? accent : '#f79433'} track={mature ? '#E4EAE3' : 'rgba(247,148,51,.16)'} />
+              <div style={{ marginTop: 10, fontFamily: mature ? "'Baloo 2', cursive" : FRED, fontWeight: mature ? 500 : 600, fontSize: 14, color: ink }}>
+                {goal.name}'e {remaining}⭐ kaldı
+              </div>
+            </>
+          ) : mature ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 15 }}>{goal.icon}</span>
+                <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: ink }}>{goal.name}</span>
+              </div>
+              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: inkSoft, marginBottom: 8 }}>
+                {remaining} ⭐ kaldı
+              </div>
+              <div style={{ height: 4, borderRadius: 999, background: '#E4EAE3', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 999, background: accent, transition: 'width .5s ease' }} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 17 }}>🎯</span>
+                <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: ink }}>{goal.name}'e çok yakınsın</span>
+              </div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 12.5, color: accent, marginBottom: 6 }}>
+                ⭐ {remaining} gem kaldı · {gems}/{goal.bt_cost}
+              </div>
+              <div style={{ height: 8, borderRadius: 999, background: 'rgba(247,148,51,.14)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 999, background: 'linear-gradient(90deg,#f79433,#FFD93D)', transition: 'width .5s ease' }} />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function ChildHome() {
   const nav = useNavigate()
+  const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const band = bandFor(child?.age)
   const [gems, setGems] = useState(null)
+  const [today, setToday] = useState(EMPTY_TODAY)
 
   const ts = child?.task_settings || {}
   const TASKS = BASE_TASKS
@@ -111,6 +345,7 @@ export default function ChildHome() {
     if (!child?.id) { nav('/child', { replace: true }); return }
 
     getChildGems(child.id).then(setGems)
+    getTodaySummary(child.id).then(setToday)
 
     const channel = supabase
       .channel(`gems-${child.id}`)
@@ -148,16 +383,7 @@ export default function ChildHome() {
           </button>
         </div>
 
-        <div className="tuto-hero">
-          <div className="tuto-hero-mascot" style={{ position: 'relative', height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0 2px' }}>
-            <div style={{ position: 'absolute', width: 184, height: 184, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.95) 30%, rgba(255,255,255,0) 72%)' }} />
-            <TutoMascot size={150} style={{ position: 'relative', zIndex: 1, animation: 'float 3s ease-in-out infinite' }} />
-          </div>
-
-          <div className="tuto-hero-text" style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '8px 2px 13px' }}>
-            Ready to earn? 🌟
-          </div>
-        </div>
+        <TodayCard band={band} isTablet={isTablet} today={today} gems={gems ?? 0} nav={nav} />
 
         <div className="tuto-task-grid">
           {TASKS.map((t, i) => (
