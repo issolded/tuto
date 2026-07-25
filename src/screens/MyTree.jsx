@@ -499,6 +499,7 @@ function ArchiveYearRow({ year }) {
 }
 
 function ForestArchive({ open, onClose, data, loading, error }) {
+  const isTablet = useIsTablet()
   const [openMonthKey, setOpenMonthKey] = useState(null)
   const months = data?.months || []
   const years = data?.years || []
@@ -508,7 +509,7 @@ function ForestArchive({ open, onClose, data, loading, error }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', justifyContent: 'center', pointerEvents: open ? 'auto' : 'none' }}>
       <div style={{
-        width: '100%', maxWidth: 430, height: '100%',
+        width: '100%', maxWidth: isTablet ? 1180 : 430, height: '100%',
         background: 'linear-gradient(180deg,#F2F8EE 0%,#E3F1E4 100%)',
         display: 'flex', flexDirection: 'column',
         transform: open ? 'translateY(0)' : 'translateY(101%)',

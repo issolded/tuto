@@ -131,7 +131,7 @@ export default function GoalsScreen() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: '24px 20px 80px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 20px 80px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {loading ? (
           [0, 1, 2].map(i => (
             <div key={i} style={{ background: 'white', borderRadius: 24, height: 116, opacity: 0.4 + i * 0.15 }} />

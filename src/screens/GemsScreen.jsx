@@ -78,7 +78,7 @@ export default function GemsScreen() {
       </div>
 
       {/* Transaction history */}
-      <div style={{ flex: 1, padding: '20px 20px 80px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 20px 80px' }}>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', marginBottom: 14 }}>
           History
         </div>

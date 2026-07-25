@@ -894,7 +894,7 @@ export default function DrawingsScreen() {
 
   return (
     <Shell background={sk.bg}>
-      <div style={{ flex: 1, minHeight: 0, padding: '14px 16px calc(14px + env(safe-area-inset-bottom))' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px calc(14px + env(safe-area-inset-bottom))' }}>
         {view === 'browse' && (
           <Browse sk={sk} drawings={drawings} ageGroup={ageGroup} paintings={paintings}
             loading={loadingDrawings} error={drawingsError} onRetry={loadDrawings}
