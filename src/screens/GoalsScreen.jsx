@@ -109,6 +109,11 @@ export default function GoalsScreen() {
     try {
       const claim = await claimReward(child.id, reward.id)
       setClaims(prev => [claim, ...prev.filter(c => c.id !== claim.id)])
+      // Escrow: the server deducts the gems immediately, at claim time (not
+      // waiting for parent approval) — this button only ever renders when no
+      // claim is already pending for this reward, so a successful call here
+      // is always a fresh deduction, never a repeat of an existing one.
+      setGems(prev => (prev ?? 0) - reward.bt_cost)
     } catch (err) {
       console.error('[claimReward]', err.message)
     } finally {

@@ -19,6 +19,7 @@ const REASON_LABELS = {
   bonus:           'Bonus Gift 🎁',
   spent_roblox:    'Roblox Time 🎮',
   story:           'My Stories ✏️',
+  adjustment:      'Adjustment ⚖️',
   'Welcome bonus': 'Welcome Bonus 🎉',
   welcome:         'Welcome Bonus 🎉',
 }
@@ -26,6 +27,7 @@ const REASON_LABELS = {
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
   chore: '🏠', homework: '📸', bonus: '🎁', spent_roblox: '🎮', story: '📖',
+  adjustment: '⚖️',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
 

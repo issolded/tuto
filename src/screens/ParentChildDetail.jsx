@@ -788,9 +788,9 @@ export default function ParentChildDetail() {
     setContributions(prev => prev.map(x => x.id === c.id ? { ...x, status: 'rejected' } : x))
   }
 
-  // Approving a reward claim SPENDS gems (opposite direction from a
-  // submission approval) — the server re-checks eligibility itself, so a
-  // stale `gems` read here never decides whether the spend actually happens.
+  // Escrow model: the gems were already deducted when the child tapped Claim
+  // (see the reward-claims POST route), so approving here changes nothing —
+  // rejecting REFUNDS them back to the child.
   async function claimDecision(c, verb) {
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
@@ -803,7 +803,7 @@ export default function ParentChildDetail() {
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || 'failed')
       setClaims(prev => prev.map(x => x.id === c.id ? { ...x, status: verb === 'approve' ? 'approved' : 'rejected' } : x))
-      if (verb === 'approve') setGems(prev => (prev ?? 0) - c.bt_cost)
+      if (verb === 'reject') setGems(prev => (prev ?? 0) + c.bt_cost)
     } catch (err) {
       console.error(`[claimDecision:${verb}]`, err.message)
     }

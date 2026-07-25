@@ -792,8 +792,9 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'reject_reward_claim',
       description:
-        'Reject a pending reward claim. No gems are spent; the child keeps their balance and can claim again ' +
-        'later. Only call this when the parent clearly declines ONE SPECIFIC claim from the pending list.',
+        'Reject a pending reward claim. The gems were already deducted (escrow) when the child tapped Claim — ' +
+        'rejecting REFUNDS them back to the child\'s balance, they can claim again later. Only call this when ' +
+        'the parent clearly declines ONE SPECIFIC claim from the pending list.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -821,6 +822,26 @@ const CONTRIBUTION_TOOLS = [{
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child to gift gems to, from the children list in context.' },
           amount: { type: 'NUMBER', description: 'The exact gem amount the parent asked for (whole number, 1-500).' },
+        },
+        required: ['child_id', 'amount'],
+      },
+    },
+    {
+      name: 'deduct_gems',
+      description:
+        'The opposite of gift_gems — the parent wants to REMOVE gems from a child\'s balance with no reward or ' +
+        'claim attached: a correction, a penalty, "take away" ("Ada\'dan 20 gem sil", "Osman\'ın 10 gemini çıkar", ' +
+        '"remove 15 gems from Ada", "Ada\'nın 5 gemini geri al"). Take child_id from the children list in context ' +
+        'and amount as the exact number the parent said. The server enforces a 1-500 range AND refuses if the ' +
+        'child does not currently have that many gems — do not silently reduce the amount, tell the parent if it ' +
+        'fails and why. Only call this when the parent explicitly asks to remove/subtract/take away a specific ' +
+        'amount — never as a guess, an apology, or a way to smooth over confusion (same rule as gift_gems: an ' +
+        'unclear message means asking a clarifying question, not moving gems).',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child to deduct gems from, from the children list in context.' },
+          amount: { type: 'NUMBER', description: 'The exact gem amount to remove, as the parent said (whole number, 1-500).' },
         },
         required: ['child_id', 'amount'],
       },
@@ -970,6 +991,25 @@ async function giftGemsTool(childId, amount, parentId) {
   if (error) return { success: false, error: error.message }
 
   return { success: true, childName: child.name, amount: n }
+}
+
+async function deductGemsTool(childId, amount, parentId) {
+  const n = Math.round(Number(amount))
+  if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'amount must be between 1 and 500' }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const { data: ledger } = await supabase.from('bt_ledger').select('amount').eq('child_id', childId)
+  const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+  if (n > gems) return { success: false, error: 'insufficient gems', currentGems: gems }
+
+  const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: -n, reason: 'adjustment' })
+  if (error) return { success: false, error: error.message }
+
+  return { success: true, childName: child.name, amount: n, remainingGems: gems - n }
 }
 
 async function approveContributionTool(contributionId, parentId) {
@@ -1222,10 +1262,11 @@ async function handleMessage(parentId, replyCb, text) {
         (familyData.flatMap(c => (Array.isArray(c.pendingRewardClaims) ? c.pendingRewardClaims.map(r => ({ ...r, child: c.name })) : [])).length
           ? familyData.flatMap(c => (Array.isArray(c.pendingRewardClaims) ? c.pendingRewardClaims.map(r => ({ ...r, child: c.name })) : []))
               .map(r => `- id=${r.id}: ${r.child}, "${r.reward}" istiyor (${r.cost} gem)`).join('\n') +
-            `\n- Bu, bir ÖDÜL TALEBİDİR — gift_gems ile HİÇBİR İLGİSİ YOK, karıştırma. Onaylarsan yukarıdaki ` +
-            `"cost" kadar gem çocuğun hesabından HARCANIR (kazanmaz); reddedersen hiçbir şey değişmez. Ebeveyn ` +
-            `onaylarsa approve_reward_claim'i, reddederse reject_reward_claim'i yukarıdaki EXACT id ile çağır. ` +
-            `Birden fazla talep varsa ve hangisi belirsizse, tahmin etme — sor.\n` +
+            `\n- Bu, bir ÖDÜL TALEBİDİR — gift_gems ile HİÇBİR İLGİSİ YOK, karıştırma. Yukarıdaki "cost" kadar ` +
+            `gem çocuğun hesabından çoktan düşüldü (çocuk "Claim"e bastığı an, escrow olarak) — onaylarsan bu ` +
+            `düşüş kalıcı olur, reddedersen gem çocuğa GERİ İADE EDİLİR. Ebeveyn onaylarsa approve_reward_claim'i, ` +
+            `reddederse reject_reward_claim'i yukarıdaki EXACT id ile çağır. Birden fazla talep varsa ve hangisi ` +
+            `belirsizse, tahmin etme — sor.\n` +
             `- Parent'a gönderilen bildirim tam olarak şuydu: '{child}, "{ödül}" ödülünü almak istiyor ({gem} ` +
             `gem). Tuto uygulamasından onaylayabilirsin.' — parent bu bildirime "ne dedin/anlamadım" gibi ` +
             `belirsiz bir şeyle cevap verirse, YUKARIDAKİ listeden hangi talebe ait olduğunu bul ve AÇIKÇA ` +
@@ -1384,6 +1425,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectClaimById(args.claim_id, parentId)
       } else if (name === 'gift_gems') {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId)
+      } else if (name === 'deduct_gems') {
+        toolResult = await deductGemsTool(args.child_id, args.amount, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
@@ -1663,6 +1706,21 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
       .select().single()
     if (error) return res.status(500).json({ error: error.message })
 
+    // Escrow model: the spend is recorded NOW, at claim time, not at approval —
+    // so a child can't rack up several "affordable-looking" pending claims that
+    // together add up to more gems than they actually have (the balance the
+    // rest of the app reads is just the ledger sum; deducting here makes it
+    // reflect commitment immediately, the same way it already does for every
+    // other gem movement in this file). Rejection reverses this exact entry.
+    const { error: ledErr } = await supabase
+      .from('bt_ledger')
+      .insert({ child_id: childId, amount: -reward.bt_cost, reason: reward.name })
+    if (ledErr) {
+      console.error(`[REWARD-CLAIM] escrow ledger insert failed for ${claim.id}: ${ledErr.message}`)
+      await supabase.from('reward_claims').delete().eq('id', claim.id)
+      return res.status(500).json({ error: 'could not record the spend' })
+    }
+
     const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', childId).maybeSingle()
     if (child?.parent_id) {
       // Parent's own language preference, not the child's — every other
@@ -1690,6 +1748,8 @@ app.get('/api/children/:childId/reward-claims', async (req, res) => {
   res.json({ claims: data || [] })
 })
 
+// Escrow model: the spend was already recorded in bt_ledger when the claim
+// was created, so approval is just a status flip — no gems move here.
 async function approveClaimById(claimId, parentId) {
   const { data: claim } = await supabase.from('reward_claims').select('*').eq('id', claimId).maybeSingle()
   if (!claim) return { success: false, error: 'not found' }
@@ -1698,12 +1758,6 @@ async function approveClaimById(claimId, parentId) {
   const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', claim.child_id).maybeSingle()
   if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
-  // Re-check eligibility at approval time too — gems could have moved (e.g.
-  // another claim already approved) since the child originally tapped Claim.
-  const { data: ledger } = await supabase.from('bt_ledger').select('amount').eq('child_id', child.id)
-  const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
-  if (gems < claim.bt_cost) return { success: false, error: 'insufficient gems' }
-
   const { error: updErr } = await supabase
     .from('reward_claims')
     .update({ status: 'approved', resolved_at: new Date().toISOString() })
@@ -1711,18 +1765,11 @@ async function approveClaimById(claimId, parentId) {
     .eq('status', 'pending') // guard against a concurrent decision racing us
   if (updErr) return { success: false, error: updErr.message }
 
-  const { error: ledErr } = await supabase
-    .from('bt_ledger')
-    .insert({ child_id: child.id, amount: -claim.bt_cost, reason: claim.reward_name })
-  if (ledErr) {
-    console.error(`[REWARD-CLAIM] ledger insert failed for ${claim.id}: ${ledErr.message}`)
-    await supabase.from('reward_claims').update({ status: 'pending', resolved_at: null }).eq('id', claim.id)
-    return { success: false, error: 'could not record the spend' }
-  }
-
   return { success: true, id: claim.id, childName: child.name, gems: claim.bt_cost }
 }
 
+// Reverses the exact escrow deduction from claim time — the child gets the
+// gems back, same reward name so it reads as a paired entry in their history.
 async function rejectClaimById(claimId, parentId) {
   const { data: claim } = await supabase.from('reward_claims').select('*').eq('id', claimId).maybeSingle()
   if (!claim) return { success: false, error: 'not found' }
@@ -1731,13 +1778,23 @@ async function rejectClaimById(claimId, parentId) {
   const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', claim.child_id).maybeSingle()
   if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
-  const { error } = await supabase
+  const { error: updErr } = await supabase
     .from('reward_claims')
     .update({ status: 'rejected', resolved_at: new Date().toISOString() })
     .eq('id', claim.id)
     .eq('status', 'pending')
-  if (error) return { success: false, error: error.message }
-  return { success: true, id: claim.id, childName: child.name }
+  if (updErr) return { success: false, error: updErr.message }
+
+  const { error: ledErr } = await supabase
+    .from('bt_ledger')
+    .insert({ child_id: child.id, amount: claim.bt_cost, reason: claim.reward_name })
+  if (ledErr) {
+    console.error(`[REWARD-CLAIM] refund ledger insert failed for ${claim.id}: ${ledErr.message}`)
+    await supabase.from('reward_claims').update({ status: 'pending', resolved_at: null }).eq('id', claim.id)
+    return { success: false, error: 'could not record the refund' }
+  }
+
+  return { success: true, id: claim.id, childName: child.name, gems: claim.bt_cost }
 }
 
 async function claimActionRoute(req, res, action) {
