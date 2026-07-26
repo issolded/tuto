@@ -147,6 +147,10 @@ const STEP_TIPS = {
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
 const DIFFICULTIES = ['All', 'Easy', 'Medium', 'Hard']
+// Stars, not words — "Easy" reads as a judgment when a kid can't even draw it.
+// Keys stay 'Easy'/'Medium'/'Hard' to match the `difficulty` values already in
+// the drawings table; only the on-screen label changes.
+const DIFFICULTY_LABEL = { All: 'All', Easy: '★☆☆', Medium: '★★☆', Hard: '★★★' }
 const LOCKED = [
   { name: 'Butterfly', category: 'Animals' },
   { name: 'Alien', category: 'Characters' },
@@ -274,7 +278,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
             background: diff === d ? sk.ink : '#fff',
             color: diff === d ? '#fff' : '#8d83ad',
             fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5,
-          }}>{d}</button>
+          }}>{DIFFICULTY_LABEL[d]}</button>
         ))}
       </div>
 
