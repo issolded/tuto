@@ -455,6 +455,7 @@ function EditChildSheet({ child, onClose, onSaved }) {
 // parent can do this from whichever surface is at hand.
 function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
   const [amount, setAmount] = useState(50)
+  const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
@@ -467,7 +468,7 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
       const res = await fetch(`${SERVER}/api/children/${childId}/gift-gems`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, note: note.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
@@ -496,6 +497,11 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
           <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>5</span>
           <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>500</span>
         </div>
+      </Field>
+
+      <Field label="Reason (optional)">
+        <input className="tc-input" type="text" value={note} onChange={e => setNote(e.target.value)}
+          placeholder="e.g. Birthday" maxLength={80} />
       </Field>
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
@@ -565,6 +571,34 @@ function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted 
       <Btn onClick={send} disabled={sending || currentGems < 5} variant="danger">{sending ? 'Removing…' : `Remove ${Math.min(amount, max)} gems`}</Btn>
       <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
     </BottomSheet>
+  )
+}
+
+// Confirms a gift/deduct actually happened — the sheet closing on its own
+// wasn't a clear enough signal that gems really moved.
+function GemActionDoneModal({ verb, amount, childName, onClose }) {
+  const isGift = verb === 'gift'
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 210, background: 'rgba(25,32,42,.42)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: PC.card, borderRadius: 28, padding: '30px 26px 24px', width: '100%', maxWidth: 340,
+        textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.28)', animation: 'tcSheet .3s cubic-bezier(.2,.8,.3,1) both',
+      }}>
+        <div style={{ fontSize: 44, marginBottom: 10 }}>{isGift ? '🫴' : '🫳'}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, marginBottom: 6 }}>
+          {isGift ? 'Gems sent!' : 'Gems removed'}
+        </div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, marginBottom: 22, lineHeight: 1.5 }}>
+          {isGift
+            ? `${amount} gems were added to ${childName}'s balance.`
+            : `${amount} gems were removed from ${childName}'s balance.`}
+        </div>
+        <Btn onClick={onClose}>OK</Btn>
+      </div>
+    </div>
   )
 }
 
@@ -675,6 +709,7 @@ export default function ParentChildDetail() {
   const [showAddReward,   setShowAddReward]   = useState(false)
   const [showGiftGems,    setShowGiftGems]    = useState(false)
   const [showDeductGems,  setShowDeductGems]  = useState(false)
+  const [gemActionDone,   setGemActionDone]   = useState(null) // { verb: 'gift'|'deduct', amount }
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -1122,6 +1157,7 @@ export default function ParentChildDetail() {
           onGifted={(amount) => {
             setGems(prev => (prev ?? 0) + amount)
             setShowGiftGems(false)
+            setGemActionDone({ verb: 'gift', amount })
           }}
         />
       )}
@@ -1134,7 +1170,16 @@ export default function ParentChildDetail() {
           onDeducted={(amount) => {
             setGems(prev => (prev ?? 0) - amount)
             setShowDeductGems(false)
+            setGemActionDone({ verb: 'deduct', amount })
           }}
+        />
+      )}
+      {gemActionDone && child && (
+        <GemActionDoneModal
+          verb={gemActionDone.verb}
+          amount={gemActionDone.amount}
+          childName={child.name}
+          onClose={() => setGemActionDone(null)}
         />
       )}
       {showAddReward && (

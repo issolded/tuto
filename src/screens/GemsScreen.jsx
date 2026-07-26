@@ -26,8 +26,8 @@ const REASON_LABELS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  chore: '🏠', homework: '📸', bonus: '🎁', spent_roblox: '🎮', story: '📖',
-  adjustment: '⚖️',
+  chore: '🏠', homework: '📸', bonus: '🫴', spent_roblox: '🎮', story: '📖',
+  adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
 
@@ -107,7 +107,7 @@ export default function GemsScreen() {
               // them into a generic "Task", which would hide exactly the
               // detail these were written for.
               const label = REASON_LABELS[key] || key || 'Task ⭐'
-              const emoji = REASON_EMOJI[key] || (isPositive ? '⭐' : '⚖️')
+              const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               return (
                 <div
                   key={row.id ?? i}

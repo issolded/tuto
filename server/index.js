@@ -816,12 +816,18 @@ const CONTRIBUTION_TOOLS = [{
         'guess, an apology, or a way to smooth over confusion. If a message is vague, unrelated, or you are ' +
         'unsure what the parent means (e.g. "ne diyorsun", "anlamadım", "what?", any reaction that is not ' +
         'clearly a gifting request), do NOT call this — this moves real gems, so an unclear message means ' +
-        'asking a clarifying question, not picking a number and gifting it.',
+        'asking a clarifying question, not picking a number and gifting it.\n' +
+        'If the parent\'s message already states WHY (a birthday, "just because", etc.), pass it as note and ' +
+        'call this right away. If it does NOT, first ASK once whether they\'d like to add a short reason for ' +
+        'the gem history (in their language — e.g. "İsterseniz kısa bir açıklama da ekleyebilirim, yoksa ' +
+        'direkt gönderiyorum" / "Want me to add a short reason, or should I just send it?"), THEN call this ' +
+        'once they reply — with their reason as note, or with no note if they say no/skip. Do not ask twice.',
       parameters: {
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child to gift gems to, from the children list in context.' },
           amount: { type: 'NUMBER', description: 'The exact gem amount the parent asked for (whole number, 1-500).' },
+          note: { type: 'STRING', description: 'Optional short reason for the gift, from the parent\'s own words (this message or their answer to your follow-up question) — shows in the child\'s gem history instead of a generic label. Omit if the parent gave none or declined.' },
         },
         required: ['child_id', 'amount'],
       },
@@ -836,13 +842,18 @@ const CONTRIBUTION_TOOLS = [{
         'child does not currently have that many gems — do not silently reduce the amount, tell the parent if it ' +
         'fails and why. Only call this when the parent explicitly asks to remove/subtract/take away a specific ' +
         'amount — never as a guess, an apology, or a way to smooth over confusion (same rule as gift_gems: an ' +
-        'unclear message means asking a clarifying question, not moving gems).',
+        'unclear message means asking a clarifying question, not moving gems).\n' +
+        'If the parent\'s message already states WHY (e.g. "oyuncak aldım", "toy purchase"), pass it as note and ' +
+        'call this right away. If it does NOT, first ASK once whether they\'d like to add a short reason for the ' +
+        'gem history (in their language — e.g. "İsterseniz kısa bir açıklama da ekleyebilirim, yoksa direkt ' +
+        'yapıyorum" / "Want me to add a short reason, or should I just remove it?"), THEN call this once they ' +
+        'reply — with their reason as note, or with no note if they say no/skip. Do not ask twice.',
       parameters: {
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child to deduct gems from, from the children list in context.' },
           amount: { type: 'NUMBER', description: 'The exact gem amount to remove, as the parent said (whole number, 1-500).' },
-          note: { type: 'STRING', description: 'Optional short reason, ONLY if the parent said one in the same message (e.g. "oyuncak aldım", "toy purchase") — shows in the child\'s gem history instead of a generic label. Omit entirely if the parent gave no reason; never invent one.' },
+          note: { type: 'STRING', description: 'Optional short reason, from the parent\'s own words (this message or their answer to your follow-up question) — shows in the child\'s gem history instead of a generic label. Omit if the parent gave none or declined; never invent one.' },
         },
         required: ['child_id', 'amount'],
       },
@@ -979,7 +990,10 @@ async function rejectSubmissionTool(submissionId, parentId) {
 // parent JWT), and the amount is clamped server-side rather than trusting
 // whatever the request — or the model — sends. Recorded as reason='bonus',
 // which GemsScreen already renders as "Bonus Gift 🎁" to the child.
-async function giftGemsTool(childId, amount, parentId) {
+// note is optional and free-text (e.g. "Birthday") — used as the bt_ledger
+// reason in place of the generic 'bonus' so it reads clearly in the child's
+// gem history. Mirrors deductGemsTool's note handling exactly.
+async function giftGemsTool(childId, amount, parentId, note) {
   const n = Math.round(Number(amount))
   if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'amount must be between 1 and 500' }
 
@@ -988,7 +1002,8 @@ async function giftGemsTool(childId, amount, parentId) {
   if (!child) return { success: false, error: 'child not found' }
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
-  const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: n, reason: 'bonus' })
+  const reason = (typeof note === 'string' && note.trim()) ? note.trim().slice(0, 80) : 'bonus'
+  const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: n, reason })
   if (error) return { success: false, error: error.message }
 
   return { success: true, childName: child.name, amount: n }
@@ -1430,7 +1445,7 @@ async function handleMessage(parentId, replyCb, text) {
       } else if (name === 'reject_reward_claim') {
         toolResult = await rejectClaimById(args.claim_id, parentId)
       } else if (name === 'gift_gems') {
-        toolResult = await giftGemsTool(args.child_id, args.amount, parentId)
+        toolResult = await giftGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else {
@@ -3472,7 +3487,7 @@ app.post('/api/children/:childId/gift-gems', async (req, res) => {
     const userId = userData?.user?.id
     if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
 
-    const result = await giftGemsTool(req.params.childId, req.body.amount, userId)
+    const result = await giftGemsTool(req.params.childId, req.body.amount, userId, req.body.note)
     if (!result.success) {
       const code = result.error === 'forbidden' ? 403 : result.error === 'child not found' ? 404 : 400
       return res.status(code).json({ error: result.error })
