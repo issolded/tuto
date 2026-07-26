@@ -166,6 +166,14 @@ const STEP_TIPS = {
     'Draw the arms and hands clasped together in front.',
     'Add the dress folds and a ribbon hem at the bottom — done!',
   ],
+  'tough-girl': [
+    'Draw the head and ears, with two circles above for the hair buns.',
+    'Add angry eyebrows, sharp eyes, and a frown.',
+    'Draw the shirt and skirt shapes, with arms out to the sides.',
+    'Add the two space buns with wispy hair strands.',
+    'Draw the legs, leggings, and boots, with hands on the hips.',
+    'Add the laces and details on the boots and clothes — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
