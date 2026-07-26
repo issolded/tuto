@@ -143,6 +143,14 @@ const STEP_TIPS = {
     'Fill in feather texture all over the body.',
     'Add pointy ear tufts on top and finish the feathers — done!',
   ],
+  tiger: [
+    'Draw an oval for the body, a circle for the head, and simple lines for the legs and tail.',
+    'Shape the head, back, and legs into a walking tiger, and curl the tail.',
+    'Add the eyes, nose, mouth, and paws with little claws.',
+    'Draw the fur lines flowing along the back and add whiskers.',
+    'Fill in the stripes all over the body, legs, and tail.',
+    'Darken the stripes and add shading to finish — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
