@@ -151,6 +151,13 @@ const STEP_TIPS = {
     'Fill in the stripes all over the body, legs, and tail.',
     'Darken the stripes and add shading to finish — done!',
   ],
+  master: [
+    'Draw a circle for the head and an ear guide line on the side.',
+    'Add the eyebrows and eyes on the face.',
+    'Draw the neck and a cape falling over the shoulders.',
+    'Add the arms, a sash at the waist, and a sword in one hand.',
+    'Draw the long flowing hair and sharpen the face — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
