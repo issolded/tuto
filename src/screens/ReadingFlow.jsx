@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
-import { supabase } from '../lib/supabase'
+import { storageClient } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
 
 const ACCENT = '#FF6B35'
@@ -225,7 +225,7 @@ export default function ReadingFlow() {
       return
     }
     if (!childId) { setStep('new-book'); return }
-    supabase
+    storageClient
       .from('books')
       .select('*')
       .eq('child_id', childId)
@@ -262,7 +262,7 @@ export default function ReadingFlow() {
         return
       }
       if (childId) {
-        const { data: existing } = await supabase.from('books').select('title').eq('child_id', childId)
+        const { data: existing } = await storageClient.from('books').select('title').eq('child_id', childId)
         const dupe = (existing ?? []).some(
           b => b.title.toLowerCase().trim() === title.toLowerCase().trim()
         )
@@ -291,14 +291,15 @@ export default function ReadingFlow() {
       let coverUrl = null
       try {
         const path = `${childId}/covers/${Date.now()}.jpg`
-        await supabase.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
-        coverUrl = supabase.storage.from('submissions').getPublicUrl(path).data.publicUrl
+        await storageClient.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
+        coverUrl = storageClient.storage.from('submissions').getPublicUrl(path).data.publicUrl
       } catch { /* storage optional */ }
-      const { data: newBook } = await supabase
+      const { data: newBook, error: insertError } = await storageClient
         .from('books')
         .insert({ child_id: childId, title, cover_url: coverUrl, current_page: 0, completed: false })
         .select().single()
-      setBook(newBook ?? { title, cover_url: coverUrl })
+      if (insertError) throw insertError
+      setBook(newBook)
       setStep('cover-success')
     } catch {
       setError(MSG.try_again)
@@ -339,7 +340,7 @@ export default function ReadingFlow() {
 
   async function markCompleted() {
     if (book?.id) {
-      await supabase.from('books').update({ completed: true }).eq('id', book.id)
+      await storageClient.from('books').update({ completed: true }).eq('id', book.id)
     }
     setStep('book-done')
   }
@@ -347,7 +348,7 @@ export default function ReadingFlow() {
   async function savePageNumber(skip) {
     const page = skip ? (book?.current_page ?? 0) : (parseInt(pageInput) || 0)
     if (book?.id) {
-      await supabase.from('books').update({ current_page: page }).eq('id', book.id)
+      await storageClient.from('books').update({ current_page: page }).eq('id', book.id)
     }
     nav('/child/library')
   }
@@ -389,9 +390,9 @@ export default function ReadingFlow() {
     const gems = pct >= 0.6 ? 30 : pct >= 0.3 ? 15 : 5
     setGemsEarned(gems)
     setStep('result')
-    if (childId) await supabase.from('bt_ledger').insert({ child_id: childId, amount: gems, reason: book?.title ?? 'Reading' })
-    if (book?.id) await supabase.from('books').update({ current_page: (book.current_page ?? 0) + 1 }).eq('id', book.id)
-    await supabase.from('submissions').insert({
+    if (childId) await storageClient.from('bt_ledger').insert({ child_id: childId, amount: gems, reason: book?.title ?? 'Reading' })
+    if (book?.id) await storageClient.from('books').update({ current_page: (book.current_page ?? 0) + 1 }).eq('id', book.id)
+    await storageClient.from('submissions').insert({
       child_id: childId ?? null,
       task_type: 'reading',
       score: Math.round(pct * 100),

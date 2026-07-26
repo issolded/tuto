@@ -5,7 +5,7 @@ import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
 import Shell from '../components/Shell'
 import BookOpenTransition from '../components/BookOpenTransition'
-import { supabase, getChildStories } from '../lib/supabase'
+import { storageClient, getChildStories } from '../lib/supabase'
 
 const ACCENT = '#FF6B35'
 
@@ -80,7 +80,7 @@ export default function LibraryScreen() {
 
   useEffect(() => {
     if (!child?.id) { setBooks([]); setStories([]); return }
-    supabase
+    storageClient
       .from('books')
       .select('*')
       .eq('child_id', child.id)
@@ -100,7 +100,7 @@ export default function LibraryScreen() {
     setTimeout(async () => {
       setDeletingId(null)
       setBooks(prev => prev.filter(b => b.id !== id))
-      await supabase.from('books').delete().eq('id', id)
+      await storageClient.from('books').delete().eq('id', id)
     }, 320)
   }
 
@@ -114,7 +114,7 @@ export default function LibraryScreen() {
       setCompletingId(null)
       setBooks(prev => prev.map(b => b.id === id ? { ...b, completed: true } : b))
       setCelebrationTitle(title)
-      await supabase.from('books').update({ completed: true }).eq('id', id)
+      await storageClient.from('books').update({ completed: true }).eq('id', id)
     }, 430)
   }
 
