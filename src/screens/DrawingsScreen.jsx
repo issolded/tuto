@@ -174,6 +174,15 @@ const STEP_TIPS = {
     'Draw the legs, leggings, and boots, with hands on the hips.',
     'Add the laces and details on the boots and clothes — done!',
   ],
+  'worried-boy': [
+    'Draw an oval for the head with a center guide line and a jaw shape.',
+    'Add the neck and a leaning body shape.',
+    'Draw the messy hair on top of the head.',
+    'Add worried eyebrows, wide eyes, and a scared open mouth.',
+    'Draw the arms — one pressed against a wall, one on the hip.',
+    'Add the legs and feet in a leaning stance.',
+    'Add clothing wrinkles and details on the arms and wall — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
