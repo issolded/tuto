@@ -133,6 +133,16 @@ const STEP_TIPS = {
     'Bolts on the corners and little fingers.',
     'Add shading and details — beep boop, done!',
   ],
+  owl: [
+    'Draw a circle for the head and an oval below it for the body.',
+    'Add two dot eyes and round out the body into an owl shape.',
+    'Draw a heart-shaped face mask and a little triangle beak.',
+    'Add two feet with tiny claws at the bottom.',
+    'Draw the pupils in the eyes and a line down the wing.',
+    'Add eyebrow feathers and a few lines on the wing.',
+    'Fill in feather texture all over the body.',
+    'Add pointy ear tufts on top and finish the feathers — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
