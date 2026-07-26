@@ -842,6 +842,7 @@ const CONTRIBUTION_TOOLS = [{
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child to deduct gems from, from the children list in context.' },
           amount: { type: 'NUMBER', description: 'The exact gem amount to remove, as the parent said (whole number, 1-500).' },
+          note: { type: 'STRING', description: 'Optional short reason, ONLY if the parent said one in the same message (e.g. "oyuncak aldım", "toy purchase") — shows in the child\'s gem history instead of a generic label. Omit entirely if the parent gave no reason; never invent one.' },
         },
         required: ['child_id', 'amount'],
       },
@@ -993,7 +994,11 @@ async function giftGemsTool(childId, amount, parentId) {
   return { success: true, childName: child.name, amount: n }
 }
 
-async function deductGemsTool(childId, amount, parentId) {
+// note is optional and free-text (e.g. "Toy purchase") — used as the
+// bt_ledger reason in place of the generic 'adjustment' so it reads clearly
+// in the child's gem history, same pattern as a reward claim using the
+// reward's own name instead of a category key.
+async function deductGemsTool(childId, amount, parentId, note) {
   const n = Math.round(Number(amount))
   if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'amount must be between 1 and 500' }
 
@@ -1006,7 +1011,8 @@ async function deductGemsTool(childId, amount, parentId) {
   const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
   if (n > gems) return { success: false, error: 'insufficient gems', currentGems: gems }
 
-  const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: -n, reason: 'adjustment' })
+  const reason = (typeof note === 'string' && note.trim()) ? note.trim().slice(0, 80) : 'adjustment'
+  const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: -n, reason })
   if (error) return { success: false, error: error.message }
 
   return { success: true, childName: child.name, amount: n, remainingGems: gems - n }
@@ -1426,7 +1432,7 @@ async function handleMessage(parentId, replyCb, text) {
       } else if (name === 'gift_gems') {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId)
       } else if (name === 'deduct_gems') {
-        toolResult = await deductGemsTool(args.child_id, args.amount, parentId)
+        toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
@@ -3467,6 +3473,29 @@ app.post('/api/children/:childId/gift-gems', async (req, res) => {
     if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
 
     const result = await giftGemsTool(req.params.childId, req.body.amount, userId)
+    if (!result.success) {
+      const code = result.error === 'forbidden' ? 403 : result.error === 'child not found' ? 404 : 400
+      return res.status(code).json({ error: result.error })
+    }
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Dashboard counterpart to the deduct_gems Telegram tool — same use case as
+// gift-gems but the other direction (e.g. a parent already bought the toy
+// outside the app and wants the balance to reflect it without the child
+// ever tapping Claim).
+app.post('/api/children/:childId/deduct-gems', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const result = await deductGemsTool(req.params.childId, req.body.amount, userId, req.body.note)
     if (!result.success) {
       const code = result.error === 'forbidden' ? 403 : result.error === 'child not found' ? 404 : 400
       return res.status(code).json({ error: result.error })

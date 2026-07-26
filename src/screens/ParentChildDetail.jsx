@@ -505,6 +505,69 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
   )
 }
 
+// For when a parent already handled the reward outside the app (bought the
+// toy, gave the screen time themselves) and the balance should reflect it
+// without the child ever tapping Claim. Note is optional — shows in the
+// child's gem history in place of the generic label when given.
+function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted }) {
+  const [amount, setAmount] = useState(50)
+  const [note, setNote] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  const send = async () => {
+    setSending(true); setError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) { setError('Session expired — please sign in again.'); setSending(false); return }
+    try {
+      const res = await fetch(`${SERVER}/api/children/${childId}/deduct-gems`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount, note: note.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+      onDeducted(data.amount)
+    } catch (err) {
+      setError(err.message)
+      setSending(false)
+    }
+  }
+
+  const max = Math.max(5, currentGems)
+  const pct = ((amount - 5) / (max - 5 || 1)) * 100
+  const trackBg = `linear-gradient(to right, ${PC.danger} ${pct}%, ${PC.line} ${pct}%)`
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Deduct gems ⚖️</div>
+      <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: -8 }}>
+        No task or claim attached — for when you already handled the reward yourself.
+      </div>
+
+      <Field label={`Amount — ⭐ ${amount} gems (${currentGems} available)`}>
+        <input type="range" min={5} max={max} step={5} value={Math.min(amount, max)}
+          onChange={e => setAmount(Number(e.target.value))}
+          className="tc-slider" style={{ background: trackBg }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>5</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>{max}</span>
+        </div>
+      </Field>
+
+      <Field label="Reason (optional)">
+        <input className="tc-input" type="text" value={note} onChange={e => setNote(e.target.value)}
+          placeholder="e.g. Toy purchase" maxLength={80} />
+      </Field>
+
+      {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+      <Btn onClick={send} disabled={sending || currentGems < 5} variant="danger">{sending ? 'Removing…' : `Remove ${Math.min(amount, max)} gems`}</Btn>
+      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+    </BottomSheet>
+  )
+}
+
 function AddRewardSheet({ childId, onClose, onSaved }) {
   const [icon,   setIcon]   = useState('🎁')
   const [name,   setName]   = useState('')
@@ -611,6 +674,7 @@ export default function ParentChildDetail() {
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [showAddReward,   setShowAddReward]   = useState(false)
   const [showGiftGems,    setShowGiftGems]    = useState(false)
+  const [showDeductGems,  setShowDeductGems]  = useState(false)
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -848,6 +912,10 @@ export default function ParentChildDetail() {
                 style={{ background: 'none', border: `1.5px solid ${PC.line}`, borderRadius: 999, padding: '5px 12px', cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkSoft }}>
                 🎁 Gift gems
               </button>
+              <button className="tc-press tc-tap" onClick={() => setShowDeductGems(true)} disabled={gems < 5}
+                style={{ background: 'none', border: `1.5px solid ${PC.line}`, borderRadius: 999, padding: '5px 12px', cursor: gems < 5 ? 'default' : 'pointer', opacity: gems < 5 ? 0.5 : 1, fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkSoft }}>
+                ⚖️ Deduct
+              </button>
             </div>
           </div>
         </div>
@@ -1054,6 +1122,18 @@ export default function ParentChildDetail() {
           onGifted={(amount) => {
             setGems(prev => (prev ?? 0) + amount)
             setShowGiftGems(false)
+          }}
+        />
+      )}
+      {showDeductGems && child && (
+        <DeductGemsSheet
+          childId={id}
+          childName={child.name}
+          currentGems={gems ?? 0}
+          onClose={() => setShowDeductGems(false)}
+          onDeducted={(amount) => {
+            setGems(prev => (prev ?? 0) - amount)
+            setShowDeductGems(false)
           }}
         />
       )}

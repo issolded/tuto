@@ -100,9 +100,14 @@ export default function GemsScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {ledger.map((row, i) => {
               const key = row.reason || row.source || ''
-              const label = REASON_LABELS[key] || 'Task ⭐'
-              const emoji = REASON_EMOJI[key] || '⭐'
               const isPositive = (row.amount || 0) >= 0
+              // Free-text reasons (a reward's own name, a book title, a
+              // parent's optional note on a deduction) aren't in the map by
+              // design — show them as-is instead of flattening every one of
+              // them into a generic "Task", which would hide exactly the
+              // detail these were written for.
+              const label = REASON_LABELS[key] || key || 'Task ⭐'
+              const emoji = REASON_EMOJI[key] || (isPositive ? '⭐' : '⚖️')
               return (
                 <div
                   key={row.id ?? i}
