@@ -42,8 +42,15 @@ async function geminiJSON(parts) {
   })
   if (!r.ok) throw new Error(`API ${r.status}`)
   const d = await r.json()
-  const text = d.candidates?.[0]?.content?.parts?.[0]?.text
-  return JSON.parse(text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim())
+  const text = d.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  // Gemini appends trailing prose/duplicate JSON after the closing brace
+  // roughly 2/3 of the time even with response_mime_type set — slice the
+  // outermost {...} instead of a naive fence strip (see parseObservation()
+  // in server/prompts/homework.js for the same pattern).
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start === -1 || end === -1 || end < start) throw new Error('no JSON object in response')
+  return JSON.parse(text.slice(start, end + 1))
 }
 
 async function identifyCover(file) {
