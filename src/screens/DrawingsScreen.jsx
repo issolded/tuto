@@ -183,6 +183,15 @@ const STEP_TIPS = {
     'Add the legs and feet in a leaning stance.',
     'Add clothing wrinkles and details on the arms and wall — done!',
   ],
+  'girl-with-cat': [
+    'Draw a circle for the head with a center guide cross.',
+    'Add a bow on top of the head.',
+    'Draw the hair with bangs framing the face.',
+    'Add the big eyes, nose, and mouth.',
+    'Draw the shirt, arms, and long pigtails flowing down.',
+    'Draw the legs sitting cross-legged and a little cat beside her.',
+    'Add details on the hair, clothes, and cat — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
