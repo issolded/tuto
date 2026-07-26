@@ -158,6 +158,14 @@ const STEP_TIPS = {
     'Add the arms, a sash at the waist, and a sword in one hand.',
     'Draw the long flowing hair and sharpen the face — done!',
   ],
+  princess: [
+    'Draw an oval for the head with a center guide line.',
+    'Add the big eyes, nose, and mouth on the face.',
+    'Draw the long wavy hair flowing around the head.',
+    'Add the neck and a dress with a V-neck collar.',
+    'Draw the arms and hands clasped together in front.',
+    'Add the dress folds and a ribbon hem at the bottom — done!',
+  ],
 }
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
