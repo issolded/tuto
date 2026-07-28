@@ -18,6 +18,11 @@ import { purgeOldPhotos } from './jobs/purgeOldPhotos.js'
 // only — gems_earned is never taken from the client.
 const HOMEWORK_DEFAULT_GEMS = 25
 
+// Fallback gem rate per task type when a child's task_settings has no entry
+// yet — mirrors src/lib/taskDefaults.js's TASK_DEFAULTS gems values (kept as
+// a separate copy since frontend and backend are deployed independently).
+const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, chore: 10, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20 }
+
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -159,6 +164,13 @@ async function getParentContext(parentId) {
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
+      // The CURRENT gem reward per task type — ground truth for "kaç gem
+      // veriyoruz" questions and the before/after numbers update_task_reward
+      // reports. Falls back to TASK_DEFAULT_GEMS for any type the parent
+      // hasn't customized yet.
+      taskRewards: Object.fromEntries(
+        Object.entries(TASK_DEFAULT_GEMS).map(([type, def]) => [type, child.task_settings?.[type]?.gems ?? def])
+      ),
       pendingContributions: pendingError
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
         : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
@@ -858,6 +870,31 @@ const CONTRIBUTION_TOOLS = [{
         required: ['child_id', 'amount'],
       },
     },
+    {
+      name: 'update_task_reward',
+      description:
+        'Changes how many gems a TASK TYPE pays out going forward — completely different from gift_gems/' +
+        'deduct_gems, which move gems right now. This changes the future rate ("matematiğe 40 gem verelim", ' +
+        '"kitap okumayı 20 yap", "set homework to 15 gems", "ev işi ödülünü 10 yap"). The CURRENT rate for each ' +
+        'type is already in context under each child\'s taskRewards — use it to answer "kaç gem veriyoruz" ' +
+        'questions directly, with NO tool call, and to confirm the new number after a change.\n' +
+        'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
+        '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ev işi"/"ödev' +
+        ' değil, günlük iş"/"chore"/"house" → chore, "ödev"/"homework" → homework, "çizim"/"resim"/"drawing" ' +
+        '→ drawing. If you cannot tell which task type they mean, ASK — do not guess between two.\n' +
+        'The server enforces a 1-500 range. Only call this when the parent explicitly states a task type AND a ' +
+        'specific new number — an unclear or partial request ("matematiği artıralım biraz") means asking for the ' +
+        'exact number, never picking one yourself.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child whose task reward to change, from the children list in context.' },
+          task_type: { type: 'STRING', description: 'One of: reading, math, writing, chore, homework, drawing.' },
+          gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500).' },
+        },
+        required: ['child_id', 'task_type', 'gems'],
+      },
+    },
   ],
 }]
 
@@ -1031,6 +1068,29 @@ async function deductGemsTool(childId, amount, parentId, note) {
   if (error) return { success: false, error: error.message }
 
   return { success: true, childName: child.name, amount: n, remainingGems: gems - n }
+}
+
+// Changes how many gems a task type pays out going forward — a DIFFERENT
+// thing from gift_gems/deduct_gems (those move gems now; this changes the
+// future rate). Merges into the existing task_settings JSONB rather than
+// overwriting it, so other types' settings (and drawing's daily_cap) survive.
+async function updateTaskRewardTool(childId, taskType, gems, parentId) {
+  if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
+  const n = Math.round(Number(gems))
+  if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'gems must be between 1 and 500' }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const nextSettings = { ...(child.task_settings || {}) }
+  nextSettings[taskType] = { ...(nextSettings[taskType] || {}), active: nextSettings[taskType]?.active ?? true, gems: n }
+
+  const { error } = await supabase.from('children').update({ task_settings: nextSettings }).eq('id', childId)
+  if (error) return { success: false, error: error.message }
+
+  return { success: true, childName: child.name, taskType, gems: n }
 }
 
 async function approveContributionTool(contributionId, parentId) {
@@ -1448,6 +1508,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
+      } else if (name === 'update_task_reward') {
+        toolResult = await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
