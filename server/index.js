@@ -1357,6 +1357,14 @@ async function handleMessage(parentId, replyCb, text) {
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
+        `- GENEL KURAL (her tool için geçerli, sadece gift_gems için değil): bir şeyi değiştirdiğini, ` +
+        `kaydettiğini, güncellediğini, sildiğini, gönderdiğini ya da onayladığını SADECE bu turda gerçekten ` +
+        `bir tool çağırdıysan ve sonucu success:true olarak döndüyse söyleyebilirsin. Parent bir şey yapmanı ` +
+        `istediğinde ve elinde bunu yapacak bir tool YOKSA (yukarıdaki tool listesinde karşılığı yoksa), bunu ` +
+        `ASLA yapmış gibi davranma, "güncelledim/kaydettim/hallettim" gibi bir cevap UYDURMA — parent'a bunu ` +
+        `şu an sohbet üzerinden yapamadığını açıkça söyle ve uygulamadaki ilgili ekrandan yapmasını öner. Akışı ` +
+        `bozmamak ya da kibar görünmek için sahte bir başarı mesajı vermek — para/gem/ayar etkilenmese bile — ` +
+        `ebeveynin sana güvenini kalıcı olarak kırar; hiçbir zaman kabul edilebilir bir kısayol değildir.\n\n` +
         `- Parent'ın bir mesajı ("ne dedin", "anlamadım", "what?") ne anlama geldiğini genel olarak sorarsa, ` +
         `konuşma geçmişindeki SENİN bir önceki mesajını bul ve İÇERİĞİNİ açıkla/tekrarla — kendi geçmişindeki ` +
         `başka bir "kafa karıştırdım, düzelttim, hediye gönderdim" tarzı eski cevabını ASLA taklit etme veya ` +
