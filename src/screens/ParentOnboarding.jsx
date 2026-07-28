@@ -308,7 +308,9 @@ export default function ParentOnboarding() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>My Tree</div>
-                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>No gems — voluntary behavior support, always on</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1, lineHeight: 1.4 }}>
+                    Every kind thing they do grows a leaf 🌱 — no gems, so kindness stays its own reward. Always on.
+                  </div>
                 </div>
               </div>
             </div>
