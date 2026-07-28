@@ -81,6 +81,7 @@ export default function ParentOnboarding() {
   const [deviceMode,      setDeviceMode]      = useState(null)
   const [familyCode,      setFamilyCode]      = useState(null)
   const [addingReward,    setAddingReward]    = useState(false)
+  const [showEarnExample, setShowEarnExample] = useState(false)
   const [editingLabelIdx, setEditingLabelIdx] = useState(null)
   const [newReward,       setNewReward]       = useState({ emoji: '⭐', label: '', gems: '' })
   const [saving,          setSaving]          = useState(false)
@@ -342,9 +343,25 @@ export default function ParentOnboarding() {
                 const total = enabled.reduce((sum, t) => sum + TASK_DEFAULTS[t.key].gems, 0)
                 const variable = enabled.some(t => TASK_DEFAULTS[t.key].variable)
                 return (
-                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
-                    💡 Example: if {childName} {TASK_EXAMPLE_PHRASE[enabled[0].key]} and {TASK_EXAMPLE_PHRASE[enabled[1].key]} in a day,
-                    that's {variable ? 'up to ' : ''}{total} gems — use that to gauge what each reward should cost.
+                  <div style={{ marginTop: 10 }}>
+                    <button className="tc-press tc-tap" onClick={() => setShowEarnExample(v => !v)} style={{
+                      display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+                      padding: 0, cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.tealDeep,
+                    }}>
+                      <span>❓ How much can {childName} earn per day?</span>
+                      <span style={{ transform: showEarnExample ? 'rotate(90deg)' : 'none', transition: 'transform .18s', display: 'flex' }}>
+                        <Icon name="chevron" size={14} color={PC.tealDeep} />
+                      </span>
+                    </button>
+                    {showEarnExample && (
+                      <div style={{
+                        fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.5,
+                        marginTop: 8, background: PC.tealBg, borderRadius: 14, padding: '10px 12px',
+                      }}>
+                        If {childName} {TASK_EXAMPLE_PHRASE[enabled[0].key]} and {TASK_EXAMPLE_PHRASE[enabled[1].key]} in a day,
+                        that's {variable ? 'up to ' : ''}{total} gems — use that to gauge what each reward should cost.
+                      </div>
+                    )}
                   </div>
                 )
               })()}
