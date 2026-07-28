@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
+import { gemHint } from '../lib/taskDefaults'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
   Btn, Card, Field, Toggle, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
@@ -281,7 +282,10 @@ export default function ParentOnboarding() {
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: tasks[key] ? PC[key + 'Bg'] : PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <TaskIcon type={key} size={24} />
                   </div>
-                  <span style={{ flex: 1, fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{label}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{label}</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{gemHint(key)}</div>
+                  </div>
                   <div style={{
                     width: 26, height: 26, borderRadius: 8,
                     background: tasks[key] ? PC.teal : PC.line,
@@ -292,6 +296,21 @@ export default function ParentOnboarding() {
                   </div>
                 </button>
               ))}
+
+              {/* My Tree isn't a gem-earning task — always on, no per-child
+                  toggle exists for it — so it's shown as info, not a checkbox. */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px',
+                background: '#fff', border: `1.5px dashed ${PC.line}`, borderRadius: 20,
+              }}>
+                <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>
+                  🌳
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>My Tree</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>No gems — voluntary behavior support, always on</div>
+                </div>
+              </div>
             </div>
             <Btn onClick={next} disabled={!Object.values(tasks).some(Boolean)}>Next →</Btn>
           </div>

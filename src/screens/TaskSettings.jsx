@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, PCSS, TopBar, Card, Toggle, TaskIcon } from '../lib/parentUI'
+import { TASK_DEFAULTS } from '../lib/taskDefaults'
 
 const TASKS = [
   { key: 'reading', label: 'My Books' },
@@ -16,14 +17,11 @@ const TASKS = [
 // with a daily cap. The cap is enforced on the SERVER; this is just the dial.
 const CAPPED_TASKS = { drawing: { min: 1, max: 10 } }
 
-const DEFAULT_SETTINGS = {
-  reading: { active: true, gems: 30 },
-  math:    { active: true, gems: 30 },
-  writing: { active: true, gems: 30 },
-  chore:   { active: true, gems: 10 },
-  homework: { active: true, gems: 25 },
-  drawing: { active: true, gems: 20, daily_cap: 2 },
-}
+const DEFAULT_SETTINGS = Object.fromEntries(
+  Object.entries(TASK_DEFAULTS).map(([key, { gems, daily_cap }]) => [
+    key, { active: true, gems, ...(daily_cap ? { daily_cap } : {}) },
+  ])
+)
 
 function capBtn(PC) {
   return {
