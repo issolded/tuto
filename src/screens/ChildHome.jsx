@@ -38,16 +38,21 @@ const HOME_CSS = `
 }
 `
 
-const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, chore: 10 }
+// My Tree has no entry here on purpose — it earns no gems (see TASK_ACCENT's
+// comment), so its tile skips the "+N gems" badge entirely rather than
+// falling back to a number that isn't true.
+const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30 }
 
 const BASE_TASKS = [
   { bg: '#E8E0FF', name: 'My Books',   route: '/child/library', type: 'reading' },
   { bg: '#D4EDFF', name: 'My Math',    route: '/child/math',    type: 'math'    },
   { bg: '#D4F5E0', name: 'My Stories', route: '/child/stories', type: 'writing' },
-  { bg: '#FFE8D4', name: 'My Tree',    route: '/child/task',    type: 'chore'   },
+  { bg: '#FFE8D4', name: 'My Tree',    route: '/child/task',    type: 'tree'    },
 ]
 
-const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', chore: '#f3a35a' }
+// 'tree' isn't a gem-earning task type (no task_settings entry exists for it
+// — it's always on), it just needs an accent color for its tile icon.
+const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', tree: '#f3a35a' }
 
 function TaskIcon({ type, c }) {
   if (type === 'reading') return (
@@ -59,7 +64,7 @@ function TaskIcon({ type, c }) {
   if (type === 'writing') return (
     <svg width="56" height="56" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M16 48 L24 40" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M30 30 L40 40" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
   )
-  if (type === 'chore') return (
+  if (type === 'tree') return (
     <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
       <rect x="29" y="42" width="6" height="14" rx="2" fill="#A9744F" stroke="#20201e" strokeWidth="3"/>
       <path d="M16 36 C12 26 20 18 32 20 C44 18 52 26 48 36 C52 42 46 48 38 46 C34 50 30 50 26 46 C18 48 12 42 16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
@@ -403,7 +408,7 @@ export default function ChildHome() {
                   background: t.bg, borderRadius: 10, padding: '3px 10px',
                   fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT,
                 }}>
-                  <span style={{ fontSize: 12 }}>⭐</span>+{t.gem}
+                  {t.gem != null ? (<><span style={{ fontSize: 12 }}>⭐</span>+{t.gem}</>) : '🌱 Always on'}
                 </span>
               </div>
             </button>

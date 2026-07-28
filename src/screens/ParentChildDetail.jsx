@@ -14,7 +14,6 @@ const TASK_LABELS = {
   math:    { label: 'My Math',    type: 'math' },
   reading: { label: 'My Books',   type: 'reading' },
   writing: { label: 'My Stories', type: 'writing' },
-  chore:   { label: 'My House',   type: 'chore' },
   story:   { label: 'My Stories', type: 'writing' },
   bonus:   { label: 'Bonus Gift', type: null },
 }
@@ -73,9 +72,6 @@ function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) 
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
           <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.amber }}>+{displayGems} ⭐</div>
-          {sub.task_type === 'chore' && sub.suggested_gems != null && (
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 10, color: PC.reading }}>🤖 AI suggested</div>
-          )}
         </div>
       </div>
       {(() => {

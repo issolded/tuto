@@ -10,8 +10,8 @@ function languageName(language) {
   return language === 'en' ? 'English' : 'Turkish'
 }
 
-// The image safety gate lives in ./imageSafety.js — it's shared with the chore
-// module so the two upload paths can't drift apart.
+// The image safety gate lives in ./imageSafety.js — shared with the drawing
+// and home-contribution upload paths so they can't drift apart.
 
 // ── 1. Observation prompt ─────────────────────────────────────────────────────
 // The model is told it may be wrong and that the parent sees the photo next to

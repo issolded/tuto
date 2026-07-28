@@ -56,10 +56,10 @@ function formatPastDate(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
 }
 
-// Diary photos are photos of a child's home and room — same sensitivity as a
-// chore photo, so they follow the same route: uploaded DIRECTLY to the PRIVATE
-// bucket, and only the storage PATH is sent on. They used to go to the public
-// 'submissions' bucket via getPublicUrl, which left them world-readable.
+// Diary photos are photos of a child's home and room, so they're uploaded
+// DIRECTLY to the PRIVATE bucket, and only the storage PATH is sent on. They
+// used to go to the public 'submissions' bucket via getPublicUrl, which left
+// them world-readable.
 // The server reads the path back, screens the image, and deletes it on block.
 async function uploadDiaryPhoto(file, childId) {
   const ext = (file.type || '').includes('png') ? 'png' : 'jpg'

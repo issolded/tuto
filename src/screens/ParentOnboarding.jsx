@@ -24,7 +24,6 @@ const TASK_EXAMPLE_PHRASE = {
   reading:  'reads a book',
   math:     'does 1 math practice',
   writing:  'writes a story',
-  chore:    'does a chore',
   homework: 'finishes homework',
   drawing:  'draws a picture',
 }
@@ -33,7 +32,6 @@ const TASKS_META = [
   { key: 'reading',  label: 'My Books' },
   { key: 'math',     label: 'My Math' },
   { key: 'writing',  label: 'My Stories' },
-  { key: 'chore',    label: 'My House' },
   { key: 'homework', label: 'My Homework' },
   { key: 'drawing',  label: 'My Drawings' },
 ]
@@ -63,7 +61,7 @@ export default function ParentOnboarding() {
   const [step,            setStep]            = useState(1)
   const [childName,       setChildName]       = useState('')
   const [age,             setAge]             = useState(7)
-  const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, chore: true, homework: true, drawing: true })
+  const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, homework: true, drawing: true })
   const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
   const [whatsapp,        setWhatsapp]        = useState('')
   const [notifChannel,    setNotifChannel]    = useState(null)

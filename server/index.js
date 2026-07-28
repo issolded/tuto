@@ -21,7 +21,7 @@ const HOMEWORK_DEFAULT_GEMS = 25
 // Fallback gem rate per task type when a child's task_settings has no entry
 // yet — mirrors src/lib/taskDefaults.js's TASK_DEFAULTS gems values (kept as
 // a separate copy since frontend and backend are deployed independently).
-const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, chore: 10, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20 }
+const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -121,7 +121,7 @@ async function getParentContext(parentId) {
       supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
-      // Pending submissions (homework/chore) awaiting a parent reply — WITH ids
+      // Pending submissions (homework) awaiting a parent reply — WITH ids
       // so the parent can approve/reject by free text ("onayla", "25 gem yeter").
       supabase.from('submissions').select('id, task_type, task_description, suggested_gems, photo_taken_at, created_at, photo_urls, media_url, status').eq('child_id', child.id).in('status', ['pending', 'blocked']).order('created_at', { ascending: false }),
       // The tree is its own thing — a kindness diary, not a function of gems or
@@ -348,7 +348,7 @@ async function screenChildInput(text, age) {
 }
 
 // The single server-side image safety gate for every child photo upload
-// (homework + chore). screenChildInput above only classifies TEXT — it never
+// (homework, drawings, home contribution photos). screenChildInput above only classifies TEXT — it never
 // sees the picture — so this is what actually stops an inappropriate image.
 // FAILS CLOSED: any transport error, model refusal or malformed response
 // returns "not appropriate" so the caller blocks rather than forwards.
@@ -383,8 +383,8 @@ function storagePathFromPublicUrl(url) {
 // directly by the unauthenticated child app) and for legacy rows.
 const PHOTO_BUCKET = 'submission-photos'
 
-// Photos of the child's own drawings. Private, and — unlike the homework and
-// chore buckets — written ONLY by the service role from this file. There is no
+// Photos of the child's own drawings. Private, and — unlike the homework
+// bucket — written ONLY by the service role from this file. There is no
 // client upload policy on it at all. Declared next to PHOTO_BUCKET because
 // signedUrlFor() below has to be told which of the two a path belongs to.
 const PAINTING_BUCKET = 'paintings'
@@ -434,7 +434,7 @@ async function readStoredPhoto(pathOrUrl) {
 }
 
 async function sendNotification(parentId, message) {
-  // Every proactive notification (homework arrived, chore submitted, reward
+  // Every proactive notification (homework arrived, reward
   // claimed, ...) used to be invisible to Gemini — logMessage only ran for
   // genuine chat turns, so when a parent replied "what does that mean?" the
   // model had no record of what "that" was and improvised. Logging it here,
@@ -734,7 +734,7 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'approve_submission',
       description:
-        'Approve ONE SPECIFIC pending submission (a homework or a chore the child photographed), by its exact id ' +
+        'Approve ONE SPECIFIC pending submission (a homework the child photographed), by its exact id ' +
         'from the "pending submissions" list in context. Call this when the parent clearly approves it in free ' +
         'text ("onayla", "evet", "tamam 25 gem", "harika, onaylıyorum"). ' +
         'gems is OPTIONAL: pass it ONLY if the parent named an amount ("25 gem yeter", "give 10"). If the parent ' +
@@ -754,7 +754,7 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'send_submission_photos',
       description:
-        'Send the parent the actual PHOTO(S) of a submission (homework or chore) here in the chat, by its exact id ' +
+        'Send the parent the actual PHOTO(S) of a submission (homework) here in the chat, by its exact id ' +
         'from the "pending submissions" list. Call this whenever the parent asks to see the photos ' +
         '("görselleri var mı", "fotoğrafı gönder", "show me the photo", "can I see it"). The pending list tells you ' +
         'how many photos each submission has (photoCount) — if photoCount is 0 there is genuinely no photo, ' +
@@ -771,7 +771,7 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'reject_submission',
       description:
-        'Reject a pending submission (homework or chore) by its exact id from the "pending submissions" list, when ' +
+        'Reject a pending submission (homework) by its exact id from the "pending submissions" list, when ' +
         'the parent clearly declines it ("hayır", "eksik kalmış", "olmamış, tekrar yapsın"). No gems are awarded. ' +
         'If more than one submission is pending and it is unclear which one the parent means, do NOT call this — ' +
         'ask which one first, in the parent\'s language.',
@@ -875,13 +875,13 @@ const CONTRIBUTION_TOOLS = [{
       description:
         'Changes how many gems a TASK TYPE pays out going forward — completely different from gift_gems/' +
         'deduct_gems, which move gems right now. This changes the future rate ("matematiğe 40 gem verelim", ' +
-        '"kitap okumayı 20 yap", "set homework to 15 gems", "ev işi ödülünü 10 yap"). The CURRENT rate for each ' +
+        '"kitap okumayı 20 yap", "set homework to 15 gems"). The CURRENT rate for each ' +
         'type is already in context under each child\'s taskRewards — use it to answer "kaç gem veriyoruz" ' +
         'questions directly, with NO tool call, and to confirm the new number after a change.\n' +
         'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
-        '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ev işi"/"ödev' +
-        ' değil, günlük iş"/"chore"/"house" → chore, "ödev"/"homework" → homework, "çizim"/"resim"/"drawing" ' +
-        '→ drawing. If you cannot tell which task type they mean, ASK — do not guess between two.\n' +
+        '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ödev"/"homework" ' +
+        '→ homework, "çizim"/"resim"/"drawing" → drawing. If you cannot tell which task type they mean, ASK — ' +
+        'do not guess between two.\n' +
         'The server enforces a 1-500 range. Only call this when the parent explicitly states a task type AND a ' +
         'specific new number — an unclear or partial request ("matematiği artıralım biraz") means asking for the ' +
         'exact number, never picking one yourself.',
@@ -889,7 +889,7 @@ const CONTRIBUTION_TOOLS = [{
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child whose task reward to change, from the children list in context.' },
-          task_type: { type: 'STRING', description: 'One of: reading, math, writing, chore, homework, drawing.' },
+          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing.' },
           gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500).' },
         },
         required: ['child_id', 'task_type', 'gems'],
@@ -898,7 +898,7 @@ const CONTRIBUTION_TOOLS = [{
   ],
 }]
 
-// Approve a pending homework/chore submission from a parent's free-text reply.
+// Approve a pending homework submission from a parent's free-text reply.
 // Every rule here is DETERMINISTIC — the LLM only picks the id and (maybe) an
 // amount; code decides authorization, double-approval, the reward value, the
 // clamp, and the single ledger write.
@@ -1261,7 +1261,7 @@ async function handleMessage(parentId, replyCb, text) {
     // in that case, since that's a false negative the parent could act on.
     const pendingCheckFailed = familyData.some(c => c.pendingCheckFailed)
 
-    // Pending homework/chore submissions with ids — so a free-text "onayla"
+    // Pending homework submissions with ids — so a free-text "onayla"
     // can be routed to approve_submission for the right one.
     const nowLocalDate = userNow.toFormat('yyyy-MM-dd')
     const allSubsList = familyData.flatMap(c =>
@@ -1301,7 +1301,7 @@ async function handleMessage(parentId, replyCb, text) {
         `ŞU AN ONAY BEKLEYEN GÖNDERİLER (ödev/ev görevi fotoğrafı, toplam ${currentPendingSubs.length}):\n` +
         (currentPendingSubs.length
           ? currentPendingSubs.map(s => {
-              const kind = s.taskType === 'homework' ? 'ödev' : s.taskType === 'chore' ? 'ev görevi' : s.taskType
+              const kind = s.taskType === 'homework' ? 'ödev' : s.taskType
               const gemHint = s.suggestedGems != null ? `, önerilen ödül ${s.suggestedGems} gem` : ''
               const staleHint = s.stale ? ', (fotoğraf bugün çekilmemiş görünüyor)' : ''
               const photoHint = s.photoCount > 0 ? `, ${s.photoCount} fotoğraf var` : ', fotoğrafı yok'
@@ -1395,7 +1395,7 @@ async function handleMessage(parentId, replyCb, text) {
         `- Approving a CONTRIBUTION (a diary / contribution_log entry) does NOT award gems. Gems for contributions ` +
         `are tallied separately in the end-of-month review; approving one simply adds a leaf to the child's tree. ` +
         `For a CONTRIBUTION approval, never say the child "earned gems" — talk about a leaf added to their tree.\n` +
-        `- A SUBMISSION approval is the OPPOSITE: approve_submission (a homework or chore) awards gems IMMEDIATELY. ` +
+        `- A SUBMISSION approval is the OPPOSITE: approve_submission (a homework) awards gems IMMEDIATELY. ` +
         `When it succeeds, its result gives you the exact gem amount — tell the parent how many gems the child ` +
         `earned. Do NOT use tree/leaf language for a submission; that framing is only for contributions.\n` +
         `- If the parent wants ALL of a child's pending contributions approved at once ("hepsini onayla", ` +
@@ -1596,7 +1596,6 @@ const TASK_LABELS = {
   math: 'Matematik',
   writing: 'Yazı Yazma',
   reading: 'Kitap Okuma',
-  chore: 'Ev Görevi',
 }
 
 async function startSubmissionListener() {
@@ -1609,9 +1608,9 @@ async function startSubmissionListener() {
         const submission = payload.new
         console.log('Yeni submission!', JSON.stringify(submission, null, 2))
 
-        // Chore and homework submissions are notified by their own endpoints
+        // Homework submissions are notified by their own endpoint
         // (with the photo + AI observation), not by this generic text path.
-        if (submission.task_type === 'chore' || submission.task_type === 'homework') return
+        if (submission.task_type === 'homework') return
 
         try {
           const { data: child, error } = await supabase
@@ -1770,8 +1769,8 @@ app.get('/api/children/:childId/rewards', async (req, res) => {
 
 // ── Reward claims ─────────────────────────────────────────────────────────────
 // The child taps "Claim" on an affordable reward; the parent approves or
-// rejects from the dashboard — same request-then-decide shape as homework/
-// chore. The key difference from those: approving a SUBMISSION awards gems,
+// rejects from the dashboard — same request-then-decide shape as homework.
+// The key difference from that: approving a SUBMISSION awards gems,
 // approving a CLAIM spends them (negative bt_ledger entry). Eligibility
 // (gems >= bt_cost) is decided here, server-side, both at claim time and
 // again at approval time — never trusted from the client's own gem count.
@@ -2230,8 +2229,8 @@ app.get('/api/cards', async (req, res) => {
 
 // Screens a diary photo through the shared image gate. Returns null when the
 // photo may be forwarded, or a child-facing message when it must not be.
-// Mirrors the chore path: fails CLOSED (unreadable photo → blocked), deletes
-// the rejected upload, and tells the parent that something was held back.
+// Fails CLOSED (unreadable photo → blocked), deletes the rejected upload,
+// and tells the parent that something was held back.
 async function screenContributionPhoto(photoPath, child) {
   const { data: parentRow } = await supabase
     .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
@@ -2245,9 +2244,8 @@ async function screenContributionPhoto(photoPath, child) {
     console.error(`[CONTRIBUTIONS] could not read photo for safety screen: ${err.message}`)
   }
 
-  // 'chore' is the right frame here: both are a child photographing their home.
   const safety = image
-    ? await screenImageSafety({ images: [image], kind: 'chore', language })
+    ? await screenImageSafety({ images: [image], kind: 'home_contribution', language })
     : { appropriate: false, reason: 'photo could not be read' }
 
   // matchesTask is deliberately ignored — a diary label like "I helped outside"
@@ -2294,7 +2292,7 @@ app.post('/api/contributions', async (req, res) => {
     if (!child) return res.status(404).json({ error: 'child not found' })
 
     // A diary photo is forwarded straight to the parent's Telegram, so it goes
-    // through the SAME image gate as homework and chore photos. It used to skip
+    // through the SAME image gate as homework photos. It used to skip
     // it entirely: the label was screened, the picture attached to it was not.
     if (resolvedPhotoUrl) {
       const blocked = await screenContributionPhoto(resolvedPhotoUrl, child)
@@ -2795,94 +2793,6 @@ app.get('/api/contributions/:id/photo', async (req, res) => {
   }
 })
 
-app.post('/api/notify-parent-chore', async (req, res) => {
-  const { childId, photoUrl, taskDescription, suggestedGems, qualityScore, childNote } = req.body
-  if (!childId) return res.status(400).json({ error: 'childId required' })
-  try {
-    const { data: child } = await supabase
-      .from('children').select('name, parent_id').eq('id', childId).single()
-    if (!child) return res.status(404).json({ error: 'Child not found' })
-
-    // Server-side safety gate. The client-side evaluateChore() check is UX only
-    // — it runs in the browser and its catch block assumes appropriate:true on
-    // any error (fails OPEN), and this endpoint previously validated nothing.
-    // Same gate the homework flow uses, so the two can't diverge.
-    if (photoUrl) {
-      const { data: parentRow } = await supabase
-        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
-
-      let image = null
-      try {
-        // photoUrl is a private-bucket PATH for new clients (legacy rows may
-        // still be a public URL — readStoredPhoto handles both).
-        const buffer = await readStoredPhoto(photoUrl)
-        image = {
-          buffer,
-          mimeType: String(photoUrl).endsWith('.png') ? 'image/png' : 'image/jpeg',
-        }
-      } catch (err) {
-        console.error(`[CHORE] could not read photo for safety screen: ${err.message}`)
-      }
-
-      // Unreadable photo → treat as unverified, block (fail closed).
-      const safety = image
-        ? await screenImageSafety({ images: [image], kind: 'chore', language })
-        : { appropriate: false, matchesTask: false, reason: 'photo could not be read' }
-
-      if (!safety.appropriate) {
-        console.log(`[CHORE] inappropriate image child=${childId} — blocked (${safety.reason})`)
-        const legacyPath = storagePathFromPublicUrl(photoUrl)
-        if (legacyPath) await supabase.storage.from('submissions').remove([legacyPath]).then(() => {}, () => {})
-        else await supabase.storage.from(PHOTO_BUCKET).remove([photoUrl]).then(() => {}, () => {})
-        try {
-          await sendNotification(child.parent_id, language === 'en'
-            ? `${child.name} tried to send something as a chore photo that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
-            : `${child.name} ev görevi olarak uygun olmayan bir görsel göndermeye çalıştı. Görseli paylaşmıyorum ama haberin olsun istedim.`)
-        } catch (err) {
-          console.error(`[CHORE] inappropriate alert failed: ${err.message}`)
-        }
-        return res.status(400).json({ error: 'Bu fotoğrafı gönderemedim. Ev görevinin fotoğrafını çeker misin?' })
-      }
-    }
-
-    const gems = suggestedGems || 20
-    const { data: submission, error: subErr } = await supabase
-      .from('submissions')
-      .insert({
-        child_id: childId,
-        task_type: 'chore',
-        status: 'pending',
-        media_url: photoUrl,
-        task_description: taskDescription || 'Ev görevi',
-        suggested_gems: gems,
-        child_note: childNote || null,
-        score: qualityScore || null,
-        gems_earned: null,
-      })
-      .select('id').single()
-
-    if (subErr) {
-      console.error('[notify-parent-chore] submission error:', subErr.message)
-      return res.status(500).json({ error: subErr.message })
-    }
-
-    const message =
-      `🏠 ${child.name} ev görevi tamamladı!\n` +
-      `📝 ${taskDescription || 'Ev görevi'}\n` +
-      (childNote ? `💬 '${childNote}'\n` : '') +
-      `🤖 AI önerisi: +${gems} Gem\n\n` +
-      `Fotoğrafı görmek için: ${photoUrl}\n\n` +
-      `Sen ne dersin? (evet / hayır / kaç gem)`
-
-    await sendNotificationWithPhoto(child.parent_id, message, photoUrl)
-    res.json({ submissionId: submission.id })
-  } catch (err) {
-    console.error('[notify-parent-chore] error:', err.message)
-    res.status(500).json({ error: err.message })
-  }
-})
-
 app.post('/api/children/:childId/stories/cover', async (req, res) => {
   const { childId } = req.params
   const { imageBase64, mimeType } = req.body
@@ -2918,7 +2828,7 @@ const pendingHomeworkNotify = new Map()
 app.post('/api/children/:childId/homework', async (req, res) => {
   const { childId } = req.params
   const { paths } = req.body
-  // Client uploads the images straight to Storage (like chore) and sends only
+  // Client uploads the images straight to Storage and sends only
   // the paths — so the request body stays tiny no matter how many pages, and
   // the ORIGINAL bytes (with EXIF) live on the server side to read.
   if (!Array.isArray(paths) || paths.length === 0) return res.status(400).json({ error: 'paths required' })

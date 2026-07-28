@@ -94,8 +94,8 @@ function blobToBase64(blob) {
 
 // Sends the finished-drawing photo THROUGH the backend.
 //
-// The bytes deliberately do not go straight to Storage the way homework and
-// chore photos do. That route needs an anon insert policy on the bucket, and
+// The bytes deliberately do not go straight to Storage the way homework
+// photos do. That route needs an anon insert policy on the bucket, and
 // child ids are discoverable — so anyone with a family code could drop files
 // into a child's folder. Here the server is the only writer, and it screens the
 // image before storing it. It is one photo, so the round trip is cheap.
@@ -286,9 +286,9 @@ export async function uploadStoryCover(childId, file) {
   return data.cover_url
 }
 
-// Uploads homework photos (1..15) DIRECTLY to Storage from the client (same
-// pattern as chore's uploadPhoto), then sends only the storage PATHS to the
-// backend. This keeps the JSON body tiny (15 photos as base64 would blow past
+// Uploads homework photos (1..15) DIRECTLY to Storage from the client, then
+// sends only the storage PATHS to the backend. This keeps the JSON body tiny
+// (15 photos as base64 would blow past
 // the server's body limit) AND leaves the original bytes — with EXIF intact —
 // on the server side to read. The server still does EXIF/Gemini/screening/gems
 // and writes the PENDING submission; no gem math here by design.

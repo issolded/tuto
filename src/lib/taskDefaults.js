@@ -11,7 +11,6 @@ export const TASK_DEFAULTS = {
   reading:  { gems: 30, variable: true },
   math:     { gems: 30, variable: true },
   writing:  { gems: 30, variable: true },
-  chore:    { gems: 10, variable: false },
   homework: { gems: 25, variable: false },
   drawing:  { gems: 20, variable: false, daily_cap: 2 },
 }

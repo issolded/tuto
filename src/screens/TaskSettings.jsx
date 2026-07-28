@@ -8,7 +8,6 @@ const TASKS = [
   { key: 'reading', label: 'My Books' },
   { key: 'math',    label: 'My Math' },
   { key: 'writing', label: 'My Stories' },
-  { key: 'chore',   label: 'My House' },
   { key: 'homework', label: 'My Homework' },
   { key: 'drawing', label: 'My Drawings' },
 ]

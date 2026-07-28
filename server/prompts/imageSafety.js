@@ -1,20 +1,18 @@
 // One server-side image safety gate shared by every module where a child
-// uploads a photo (homework, chore). Lives here rather than inside a single
-// module's prompts so the two paths can't drift apart.
+// uploads a photo (homework, drawings, home contribution photos). Lives here
+// rather than inside a single module's prompts so the paths can't drift apart.
 //
-// Why server-side: the chore flow already had a client-side check
-// (evaluateChore in src/lib/gemini.js), but it runs in the browser, its catch
-// block assumes appropriate:true on any error (fails OPEN), and the API
-// endpoint itself validated nothing. The client check stays for friendly
-// copy/UX; THIS is the security boundary.
+// Why server-side: fails CLOSED — an unreadable image, a model refusal, or a
+// malformed response all count as "not appropriate" rather than being waved
+// through.
 
 const KIND = {
   homework: {
     claim: 'ödevim',
     expected: 'kâğıt ödev, defter sayfası, çalışma kâğıdı, ders kitabı sayfası, tahta fotoğrafı ya da ekran görüntüsü gibi bir okul çalışması',
   },
-  chore: {
-    claim: 'yaptığım ev görevi',
+  home_contribution: {
+    claim: 'yaptığım ev katkısı',
     expected: 'toplanmış oda, yıkanmış bulaşık, kurulmuş sofra, süpürülmüş zemin gibi tamamlanmış bir ev işini gösteren fotoğraf',
   },
   drawing: {
