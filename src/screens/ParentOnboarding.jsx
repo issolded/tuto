@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
-import { gemHint } from '../lib/taskDefaults'
+import { gemHint, TASK_DEFAULTS } from '../lib/taskDefaults'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
   Btn, Card, Field, Toggle, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
@@ -12,10 +12,22 @@ import {
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 const DEFAULT_REWARDS = [
-  { emoji: '🎮', label: 'Roblox 30min', gems: 30,  lockTitle: true,  hint: '💡 30 mins of playtime' },
-  { emoji: '📺', label: 'TV 1 hour',    gems: 60,  lockTitle: true,  hint: '💡 1 hour of screen time' },
-  { emoji: '🧸', label: 'New toy',      gems: 500, lockTitle: false, hint: '💡 Something special to save up for!' },
+  { emoji: '🎮', label: 'Video Game 30min', gems: 30,  lockTitle: true,  hint: '💡 30 mins of playtime' },
+  { emoji: '📺', label: 'TV 1 hour',        gems: 60,  lockTitle: true,  hint: '💡 1 hour of screen time' },
+  { emoji: '🧸', label: 'New toy',          gems: 500, lockTitle: false, hint: '💡 Something special to save up for!' },
 ]
+
+// Natural phrasing for the "if {child} does X and Y" example on the rewards
+// step — separate from the task label ("My Math") since a sentence needs a
+// verb, not a nav-item name.
+const TASK_EXAMPLE_PHRASE = {
+  reading:  'reads a book',
+  math:     'does 1 math practice',
+  writing:  'writes a story',
+  chore:    'does a chore',
+  homework: 'finishes homework',
+  drawing:  'draws a picture',
+}
 
 const TASKS_META = [
   { key: 'reading',  label: 'My Books' },
@@ -324,6 +336,18 @@ export default function ParentOnboarding() {
             <div>
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Set up {childName}'s rewards! 🎁</div>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Adjust the Gems needed for each reward.</div>
+              {(() => {
+                const enabled = TASKS_META.filter(t => tasks[t.key]).slice(0, 2)
+                if (enabled.length < 2) return null
+                const total = enabled.reduce((sum, t) => sum + TASK_DEFAULTS[t.key].gems, 0)
+                const variable = enabled.some(t => TASK_DEFAULTS[t.key].variable)
+                return (
+                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
+                    💡 Example: if {childName} {TASK_EXAMPLE_PHRASE[enabled[0].key]} and {TASK_EXAMPLE_PHRASE[enabled[1].key]} in a day,
+                    that's {variable ? 'up to ' : ''}{total} gems — use that to gauge what each reward should cost.
+                  </div>
+                )
+              })()}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rewards.map((r, i) => {
