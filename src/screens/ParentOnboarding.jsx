@@ -492,8 +492,8 @@ export default function ParentOnboarding() {
         {step === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Stay connected 👨‍👩‍👧</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Choose how you want to be notified about {childName || 'your child'}'s progress</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Chat with Tuto, anytime 💬</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>No need to dig through an app — just message Tuto like you would a friend who knows {childName || 'your child'}, day or night.</div>
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
