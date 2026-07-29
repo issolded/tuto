@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 3 — Activities (redesign)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#F4F6F7;--card:#fff;--ink:#21262E;--inkSoft:#79808C;--inkFaint:#A9AFB9;
+  --line:#ECEEF1;--field:#F3F5F7;--teal:#3FB7AC;--tealDeep:#2EA298;--tealBg:#E4F4F2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e7ebee;font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;display:flex;justify-content:center;padding:24px 0}
+.phone{width:430px;max-width:100%;background:var(--bg);min-height:calc(100vh - 48px);border-radius:34px;box-shadow:0 30px 70px -20px rgba(40,55,75,.35);overflow:hidden;display:flex;flex-direction:column}
+a{color:var(--tealDeep)}a:hover{color:var(--teal)}
+/* progress */
+.prog{padding:40px 24px 0}
+.prog .row{display:flex;justify-content:space-between;margin-bottom:8px}
+.prog .row span{font-size:11px;font-weight:800;color:var(--inkFaint);letter-spacing:.6px}
+.track{height:6px;background:var(--tealBg);border-radius:8px;overflow:hidden}
+.fill{height:100%;width:30%;background:linear-gradient(90deg,var(--teal),var(--tealDeep));border-radius:8px}
+.back{width:42px;height:42px;border-radius:14px;background:#fff;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;margin:14px 20px 0;box-shadow:0 6px 18px -8px rgba(40,55,75,.16)}
+.body{flex:1;padding:16px 24px 40px;display:flex;flex-direction:column}
+h1{font-size:25px;font-weight:800;color:var(--ink);letter-spacing:-.4px;line-height:1.25}
+.sub{font-size:13.5px;font-weight:600;color:var(--inkSoft);margin-top:7px;line-height:1.5}
+/* grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:22px}
+.wide{grid-column:1 / -1}
+.tile{position:relative;background:#fff;border:2px solid var(--line);border-radius:22px;padding:14px 14px 15px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:9px;transition:transform .13s ease,border-color .18s ease,box-shadow .18s ease;box-shadow:0 6px 16px -10px rgba(40,55,75,.14)}
+.tile:hover{transform:translateY(-3px)}
+.tile:active{transform:scale(.97)}
+.tile.on{border-color:var(--tint)}
+.iconwrap{position:relative;height:78px;border-radius:16px;background:var(--tintBg);display:flex;align-items:center;justify-content:center}
+.tile .name{font-size:17px;font-weight:800;color:var(--ink)}
+.tile .desc{font-size:12.5px;font-weight:600;color:var(--inkSoft);line-height:1.4;margin-top:-2px}
+.pill{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;background:var(--tintBg);color:var(--tint);border-radius:11px;padding:4px 10px;font-size:12px;font-weight:800;white-space:nowrap}
+.pill.dim{background:var(--field);color:var(--inkFaint)}
+.check{position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:8px;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;transition:all .16s;box-shadow:0 2px 6px -2px rgba(40,55,75,.2)}
+.tile.on .check{background:var(--teal);border-color:var(--teal)}
+.tile:not(.on) .check svg{opacity:0}
+.tile:not(.on) .iconwrap{filter:saturate(.55);opacity:.72}
+/* tree info tile */
+.tree{grid-column:1 / -1;display:flex;align-items:center;gap:15px;background:#fff;border:1.5px dashed var(--line);border-radius:22px;padding:16px 18px;margin-top:2px}
+.tree .leaf{width:56px;height:56px;flex-shrink:0;border-radius:16px;background:#E6F5EC;display:flex;align-items:center;justify-content:center}
+.tree .t{font-size:16px;font-weight:800;color:var(--ink)}
+.tree .d{font-size:12.5px;font-weight:600;color:var(--inkSoft);margin-top:3px;line-height:1.45}
+.tree .always{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;color:#3a9d72;background:#E6F5EC;border-radius:8px;padding:2px 8px}
+.next{margin-top:26px;background:var(--teal);color:#fff;border:none;border-radius:16px;padding:16px;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 12px 24px -10px rgba(63,183,172,.9)}
+.next:active{transform:scale(.98)}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="prog"><div class="row"><span>STEP 3 OF 10</span><span>30%</span></div><div class="track"><div class="fill"></div></div></div>
+  <div class="back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#21262E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+  <div class="body">
+    <h1 id="head">Where will Mahmut grow? 🌱</h1>
+    <div class="sub">Pick the activities that earn Gems. You can change these anytime.</div>
+    <div class="grid" id="grid"></div>
+    <button class="next">Next →</button>
+  </div>
+</div>
+<script>
+const ICONS={
+ reading:'<svg width="52" height="52" viewBox="0 0 64 64" fill="none"><path d="M32 16 C26 12 18 12 12 15 L12 48 C18 45 26 45 32 49 C38 45 46 45 52 48 L52 15 C46 12 38 12 32 16 Z" fill="#fff" stroke="#20201e" stroke-width="4" stroke-linejoin="round"/><path d="M32 16 L32 49" stroke="#20201e" stroke-width="4" stroke-linecap="round"/><path d="M18 24 H27 M18 31 H27 M37 24 H46 M37 31 H46" stroke="C" stroke-width="3.4" stroke-linecap="round"/></svg>',
+ math:'<svg width="50" height="50" viewBox="0 0 64 64" fill="none"><rect x="12" y="12" width="40" height="40" rx="11" fill="#fff" stroke="#20201e" stroke-width="4"/><path d="M22 24 H30 M26 20 V28" stroke="C" stroke-width="3.6" stroke-linecap="round"/><path d="M35 24 H43" stroke="C" stroke-width="3.6" stroke-linecap="round"/><circle cx="25" cy="40" r="2.4" fill="C"/><circle cx="31" cy="40" r="2.4" fill="C"/><path d="M36 37 L43 44 M43 37 L36 44" stroke="C" stroke-width="3.4" stroke-linecap="round"/></svg>',
+ writing:'<svg width="48" height="48" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" stroke-width="4" stroke-linejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" stroke-width="4" stroke-linecap="round"/><path d="M16 48 L24 40" stroke="#20201e" stroke-width="4" stroke-linecap="round"/><path d="M30 30 L40 40" stroke="C" stroke-width="3.4" stroke-linecap="round"/></svg>',
+ homework:'<svg width="50" height="50" viewBox="0 0 64 64" fill="none"><rect x="14" y="8" width="30" height="40" rx="5" fill="#fff" stroke="#20201e" stroke-width="4"/><path d="M21 20h16M21 28h16M21 36h10" stroke="C" stroke-width="3.4" stroke-linecap="round"/><rect x="34" y="34" width="22" height="17" rx="4" fill="C" stroke="#20201e" stroke-width="4"/><circle cx="45" cy="43" r="4.5" fill="#fff" stroke="#20201e" stroke-width="3"/><path d="M40 34l1.6-3h6.8L50 34" stroke="#20201e" stroke-width="3.4" stroke-linejoin="round"/></svg>',
+ drawing:'<svg width="48" height="48" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" stroke-width="4" stroke-linejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" stroke-width="4" stroke-linecap="round"/><circle cx="21" cy="43" r="3" fill="C"/><circle cx="30" cy="40" r="3" fill="C"/><circle cx="26" cy="47" r="3" fill="C"/></svg>',
+};
+const CHECK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+const TASKS=[
+ {key:'reading', name:'My Books',    desc:'Builds a daily reading habit.',      hint:'Up to 30 gems',  tint:'#8f74d6', bg:'#E8E0FF', wide:false},
+ {key:'math',    name:'My Math',     desc:'Keeps number skills sharp.',        hint:'Up to 30 gems',  tint:'#4f97dd', bg:'#D4EDFF', wide:false},
+ {key:'writing', name:'My Stories',  desc:'Grows writing & imagination.',      hint:'Up to 30 gems',  tint:'#46ac7d', bg:'#D4F5E0', wide:false},
+ {key:'homework',name:'My Homework', desc:'Makes homework a routine.',         hint:'25 gems',        tint:'#e0952f', bg:'#FFF1CF', wide:false},
+ {key:'drawing', name:'My Drawings', desc:'Encourages creativity every day.',  hint:'20 gems · up to 2/day', tint:'#c96aa8', bg:'#EFE3FF', wide:true},
+];
+const state={reading:true,math:true,writing:true,homework:true,drawing:true};
+const grid=document.getElementById('grid');
+TASKS.forEach(t=>{
+  const el=document.createElement('button');
+  el.className='tile'+(t.wide?' wide':'')+(state[t.key]?' on':'');
+  el.style.setProperty('--tint',t.tint);
+  el.style.setProperty('--tintBg',t.bg);
+  const icon=ICONS[t.key].replaceAll('"C"','"'+t.tint+'"');
+  el.innerHTML=`<div class="iconwrap"><span class="check">${CHECK}</span>${icon}</div><div class="name">${t.name}</div><div class="desc">${t.desc}</div><span class="pill">💎 ${t.hint}</span>`;
+  el.onclick=()=>{state[t.key]=!state[t.key];el.classList.toggle('on',state[t.key]);};
+  grid.appendChild(el);
+});
+// tree info tile
+const tree=document.createElement('div');
+tree.className='tree';
+tree.innerHTML=`<div class="leaf"><svg width="34" height="34" viewBox="0 0 64 64" fill="none"><rect x="29" y="42" width="6" height="14" rx="2" fill="#A9744F" stroke="#20201e" stroke-width="3"/><path d="M16 36 C12 26 20 18 32 20 C44 18 52 26 48 36 C52 42 46 48 38 46 C34 50 30 50 26 46 C18 48 12 42 16 36 Z" fill="#fff" stroke="#20201e" stroke-width="4" stroke-linejoin="round"/><circle cx="25" cy="30" r="3.2" fill="#4fb283"/><circle cx="34" cy="26" r="3.2" fill="#4fb283"/><circle cx="40" cy="34" r="3.2" fill="#4fb283"/><circle cx="29" cy="38" r="3.2" fill="#4fb283"/></svg></div><div><div class="t">My Tree 🌳</div><div class="d">Every kind thing they do grows a leaf — no gems, so kindness stays its own reward.</div><span class="always">Always on</span></div>`;
+grid.appendChild(tree);
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ const DEFAULT_REWARDS = [
 // step — separate from the task label ("My Math") since a sentence needs a
 // verb, not a nav-item name.
 const TASK_EXAMPLE_PHRASE = {
-  reading:  'reads a book',
+  reading:  'reads a few pages of a book',
   math:     'does 1 math practice',
   writing:  'writes a story',
   homework: 'finishes homework',
@@ -35,6 +35,40 @@ const TASKS_META = [
   { key: 'homework', label: 'My Homework' },
   { key: 'drawing',  label: 'My Drawings' },
 ]
+
+// Step 3's activity-picker tile grid — per design_handoff_onboarding_step3/.
+// Separate from TASKS_META (which Step 4's earning example still uses) since
+// these tiles carry extra design-only fields (desc, tint, bg) that step
+// doesn't need.
+const STEP3_TASKS = [
+  { key: 'reading',  name: 'My Books',    desc: 'Builds a daily reading habit.',     tint: '#8f74d6', bg: '#E8E0FF' },
+  { key: 'math',     name: 'My Math',     desc: 'Keeps number skills sharp.',        tint: '#4f97dd', bg: '#D4EDFF' },
+  { key: 'writing',  name: 'My Stories',  desc: 'Grows writing & imagination.',      tint: '#46ac7d', bg: '#D4F5E0' },
+  { key: 'homework', name: 'My Homework', desc: 'Makes homework a routine.',         tint: '#e0952f', bg: '#FFF1CF' },
+  { key: 'drawing',  name: 'My Drawings', desc: 'Encourages creativity every day.',  tint: '#c96aa8', bg: '#EFE3FF', wide: true },
+]
+
+// Chunky filled icons matching ChildHome.jsx's TaskIcon (reading/math/writing
+// are pixel-identical to that component), parameterized by tint color instead
+// of ChildHome's fixed accents — Step 3 needs each tile's own tint.
+function Step3Icon({ type, c }) {
+  if (type === 'reading') return (
+    <svg width="52" height="52" viewBox="0 0 64 64" fill="none"><path d="M32 16 C26 12 18 12 12 15 L12 48 C18 45 26 45 32 49 C38 45 46 45 52 48 L52 15 C46 12 38 12 32 16 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M32 16 L32 49" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M18 24 H27 M18 31 H27 M37 24 H46 M37 31 H46" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  if (type === 'math') return (
+    <svg width="50" height="50" viewBox="0 0 64 64" fill="none"><rect x="12" y="12" width="40" height="40" rx="11" fill="#fff" stroke="#20201e" strokeWidth="4"/><path d="M22 24 H30 M26 20 V28" stroke={c} strokeWidth="3.6" strokeLinecap="round"/><path d="M35 24 H43" stroke={c} strokeWidth="3.6" strokeLinecap="round"/><circle cx="25" cy="40" r="2.4" fill={c}/><circle cx="31" cy="40" r="2.4" fill={c}/><path d="M36 37 L43 44 M43 37 L36 44" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  if (type === 'writing') return (
+    <svg width="48" height="48" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M16 48 L24 40" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M30 30 L40 40" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  if (type === 'homework') return (
+    <svg width="50" height="50" viewBox="0 0 64 64" fill="none"><rect x="14" y="8" width="30" height="40" rx="5" fill="#fff" stroke="#20201e" strokeWidth="4"/><path d="M21 20h16M21 28h16M21 36h10" stroke={c} strokeWidth="3.4" strokeLinecap="round"/><rect x="34" y="34" width="22" height="17" rx="4" fill={c} stroke="#20201e" strokeWidth="4"/><circle cx="45" cy="43" r="4.5" fill="#fff" stroke="#20201e" strokeWidth="3"/><path d="M40 34l1.6-3h6.8L50 34" stroke="#20201e" strokeWidth="3.4" strokeLinejoin="round"/></svg>
+  )
+  // drawing
+  return (
+    <svg width="48" height="48" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><circle cx="21" cy="43" r="3" fill={c}/><circle cx="30" cy="40" r="3" fill={c}/><circle cx="26" cy="47" r="3" fill={c}/></svg>
+  )
+}
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 function ProgressBar({ step, total = 10 }) {
@@ -277,55 +311,77 @@ export default function ParentOnboarding() {
 
         {/* ── STEP 3: Tasks ────────────────────────────────────────────────────── */}
         {step === 3 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>What will {childName} work on? 🌟</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Choose the activities that earn Gems. You can change these anytime.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 25, color: PC.ink, lineHeight: 1.25, letterSpacing: '-.4px' }}>Where will {childName} grow? 🌱</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: 7, lineHeight: 1.5 }}>Choose the activities that earn Gems. You can change these anytime.</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {TASKS_META.map(({ key, label }) => (
-                <button key={key} className="tc-press tc-tap" onClick={() => setTasks(t => ({ ...t, [key]: !t[key] }))} style={{
-                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px',
-                  background: tasks[key] ? PC[key + 'Bg'] : '#fff',
-                  border: `1.5px solid ${tasks[key] ? PC[key] : PC.line}`,
-                  borderRadius: 20, cursor: 'pointer', transition: 'all .18s', textAlign: 'left',
-                }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: tasks[key] ? PC[key + 'Bg'] : PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <TaskIcon type={key} size={24} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{label}</div>
-                    <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{gemHint(key)}</div>
-                  </div>
-                  <div style={{
-                    width: 26, height: 26, borderRadius: 8,
-                    background: tasks[key] ? PC.teal : PC.line,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background .18s', flexShrink: 0,
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13, marginTop: 22 }}>
+              {STEP3_TASKS.map(t => {
+                const on = !!tasks[t.key]
+                return (
+                  <button key={t.key} className="tc-press tc-tap" onClick={() => setTasks(s => ({ ...s, [t.key]: !s[t.key] }))} style={{
+                    gridColumn: t.wide ? '1 / -1' : 'auto',
+                    position: 'relative', background: '#fff',
+                    border: `2px solid ${on ? t.tint : PC.line}`,
+                    borderRadius: 22, padding: '14px 14px 15px', cursor: 'pointer', textAlign: 'left',
+                    display: 'flex', flexDirection: 'column', gap: 9, transition: 'border-color .18s ease',
+                    boxShadow: '0 6px 16px -10px rgba(40,55,75,.14)',
                   }}>
-                    {tasks[key] && <Icon name="check" size={14} color="#fff" sw={2.5} />}
-                  </div>
-                </button>
-              ))}
+                    <div style={{
+                      position: 'relative', height: 78, borderRadius: 16, background: t.bg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      filter: on ? 'none' : 'saturate(.55)', opacity: on ? 1 : 0.72, transition: 'all .16s',
+                    }}>
+                      <span style={{
+                        position: 'absolute', top: 9, right: 9, width: 24, height: 24, borderRadius: 8,
+                        background: on ? PC.teal : '#fff', border: on ? 'none' : `2px solid ${PC.line}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px -2px rgba(40,55,75,.2)', transition: 'all .16s',
+                      }}>
+                        {on && <Icon name="check" size={13} color="#fff" sw={3} />}
+                      </span>
+                      <Step3Icon type={t.key} c={t.tint} />
+                    </div>
+                    <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 800, color: PC.ink }}>{t.name}</div>
+                    <div style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.4, marginTop: -2 }}>{t.desc}</div>
+                    <span style={{
+                      alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: t.bg, color: t.tint, borderRadius: 11, padding: '4px 10px',
+                      fontFamily: FONT, fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap',
+                    }}>💎 {gemHint(t.key)}</span>
+                  </button>
+                )
+              })}
 
               {/* My Tree isn't a gem-earning task — always on, no per-child
                   toggle exists for it — so it's shown as info, not a checkbox. */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px',
-                background: '#fff', border: `1.5px dashed ${PC.line}`, borderRadius: 20,
+                gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 15,
+                background: '#fff', border: `1.5px dashed ${PC.line}`, borderRadius: 22, padding: '16px 18px',
               }}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.field, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>
-                  🌳
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: '#E6F5EC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
+                    <rect x="29" y="42" width="6" height="14" rx="2" fill="#A9744F" stroke="#20201e" strokeWidth="3"/>
+                    <path d="M16 36 C12 26 20 18 32 20 C44 18 52 26 48 36 C52 42 46 48 38 46 C34 50 30 50 26 46 C18 48 12 42 16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
+                    <circle cx="25" cy="30" r="3.2" fill="#4fb283"/>
+                    <circle cx="34" cy="26" r="3.2" fill="#4fb283"/>
+                    <circle cx="40" cy="34" r="3.2" fill="#4fb283"/>
+                    <circle cx="29" cy="38" r="3.2" fill="#4fb283"/>
+                  </svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>My Tree</div>
-                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1, lineHeight: 1.4 }}>
-                    Every kind thing they do grows a leaf 🌱 — no gems, so kindness stays its own reward. Always on.
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>My Tree 🌳</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 3, lineHeight: 1.45 }}>
+                    Every kind thing they do grows a leaf — no gems, so kindness stays its own reward.
                   </div>
+                  <span style={{ display: 'inline-block', marginTop: 6, fontFamily: FONT, fontSize: 11, fontWeight: 800, color: '#3a9d72', background: '#E6F5EC', borderRadius: 8, padding: '2px 8px' }}>Always on</span>
                 </div>
               </div>
             </div>
-            <Btn onClick={next} disabled={!Object.values(tasks).some(Boolean)}>Next →</Btn>
+
+            <Btn onClick={next} disabled={!Object.values(tasks).some(Boolean)} style={{ marginTop: 26 }}>Next →</Btn>
           </div>
         )}
 
