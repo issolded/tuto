@@ -422,7 +422,12 @@ export default function ParentOnboarding() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rewards.map((r, i) => {
-                const pct     = ((Math.min(Math.max(r.gems, 10), 1000) - 10) / 990) * 100
+                // 5000 covers a normal drag range, but a parent can always type
+                // a bigger number directly into the gem box (updateReward has no
+                // ceiling) — when they do, the slider's own max/label stretch to
+                // match instead of silently capping at a stale 5000.
+                const sliderMax = Math.max(5000, r.gems)
+                const pct     = ((Math.min(Math.max(r.gems, 10), sliderMax) - 10) / (sliderMax - 10)) * 100
                 const trackBg = `linear-gradient(to right, ${PC.teal} ${pct}%, ${PC.line} ${pct}%)`
                 const isEditingLabel = editingLabelIdx === i
 
@@ -457,14 +462,14 @@ export default function ParentOnboarding() {
                       </button>
                     </div>
 
-                    <input type="range" min={10} max={1000} step={10}
-                      value={Math.min(Math.max(r.gems, 10), 1000)}
+                    <input type="range" min={10} max={sliderMax} step={10}
+                      value={Math.min(Math.max(r.gems, 10), sliderMax)}
                       onChange={e => updateReward(i, 'gems', e.target.value)}
                       className="tc-slider" style={{ background: trackBg }} />
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: -4 }}>
                       <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: PC.inkFaint }}>10</span>
-                      <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: PC.inkFaint }}>1000</span>
+                      <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: PC.inkFaint }}>{sliderMax}</span>
                     </div>
                     {r.hint && <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkSoft }}>{r.hint}</div>}
                   </Card>
