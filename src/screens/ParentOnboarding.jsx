@@ -113,14 +113,14 @@ export default function ParentOnboarding() {
     load()
   }, [step, user])
 
-  const hasRobloxReward = rewards.some(r => r.label.toLowerCase().includes('roblox'))
+  const videoGameReward = rewards.find(r => r.label.toLowerCase().includes('video game'))
 
   const next = () => setStep(s => s + 1)
   const back = () => {
     if (step === 6 || step === 7) {
       setPinPhase('enter'); setPin(''); setPinConfirm(''); setPinError('')
     }
-    if (step === 9 && !hasRobloxReward) { setStep(7); return }
+    if (step === 9 && !videoGameReward) { setStep(7); return }
     setStep(s => s - 1)
   }
 
@@ -593,7 +593,7 @@ export default function ParentOnboarding() {
               How will {childName} use Tuto? 📱
             </div>
 
-            <button className="tc-press tc-tap" onClick={() => { setDeviceMode('separate'); setStep(hasRobloxReward ? 8 : 9) }} style={{
+            <button className="tc-press tc-tap" onClick={() => { setDeviceMode('separate'); setStep(videoGameReward ? 8 : 9) }} style={{
               display: 'flex', alignItems: 'flex-start', gap: 16, padding: '20px 18px',
               background: deviceMode === 'separate' ? PC.tealBg : '#fff',
               border: `2px solid ${deviceMode === 'separate' ? PC.teal : PC.line}`,
@@ -608,7 +608,7 @@ export default function ParentOnboarding() {
               </div>
             </button>
 
-            <button className="tc-press tc-tap" onClick={() => { setDeviceMode('same'); setStep(hasRobloxReward ? 8 : 9) }} style={{
+            <button className="tc-press tc-tap" onClick={() => { setDeviceMode('same'); setStep(videoGameReward ? 8 : 9) }} style={{
               display: 'flex', alignItems: 'flex-start', gap: 16, padding: '20px 18px',
               background: deviceMode === 'same' ? PC.tealBg : '#fff',
               border: `2px solid ${deviceMode === 'same' ? PC.teal : PC.line}`,
@@ -625,20 +625,20 @@ export default function ParentOnboarding() {
           </div>
         )}
 
-        {/* ── STEP 8: Roblox ───────────────────────────────────────────────────── */}
+        {/* ── STEP 8: Game auto-launch ─────────────────────────────────────────── */}
         {step === 8 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div style={{ fontSize: 64, textAlign: 'center', marginTop: 8 }}>🎮</div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 22, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Want me to open Roblox automatically?</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 22, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Want me to open the game automatically?</div>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>I'll add screen time when your child earns enough Gems.</div>
             </div>
             <Card pad={16} style={{ background: PC.tealBg, width: '100%', boxShadow: 'none' }}>
               <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 800, color: PC.tealDeep, marginBottom: 4 }}>How it works</div>
-              <div style={{ fontFamily: FONT, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5 }}>When your child spends Gems on "Roblox 30min", Tuto will automatically launch the app and start a countdown timer.</div>
+              <div style={{ fontFamily: FONT, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5 }}>When your child spends Gems on "{videoGameReward?.label ?? 'Video Game'}", Tuto will automatically launch the game and start a countdown timer.</div>
             </Card>
             <div style={{ width: '100%' }}>
-              <Btn variant="outline" disabled style={{ opacity: 0.4 }}>Yes, connect Roblox</Btn>
+              <Btn variant="outline" disabled style={{ opacity: 0.4 }}>Yes, connect</Btn>
               <div style={{ textAlign: 'center', fontFamily: FONT, fontSize: 11, color: PC.inkFaint, fontWeight: 600, marginTop: 6 }}>Coming soon</div>
             </div>
             <Btn variant="ghost" onClick={next}>Skip for now</Btn>

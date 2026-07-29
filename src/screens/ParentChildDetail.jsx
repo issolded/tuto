@@ -635,7 +635,7 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
 
       <Field label="Goal name">
         <input className="tc-input" type="text" value={name} onChange={e => { setName(e.target.value); setError('') }}
-          placeholder="e.g. Roblox time, Ice cream…" />
+          placeholder="e.g. Video game time, Ice cream…" />
       </Field>
 
       <Field label={`Gem cost — ⭐ ${btCost} gems`}>
