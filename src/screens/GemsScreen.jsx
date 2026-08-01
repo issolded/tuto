@@ -15,6 +15,7 @@ const REASON_LABELS = {
   reading:         'My Books 📚',
   writing:         'My Stories ✏️',
   homework:        'My Homework 📸',
+  drawing:         'My Drawings 🎨',
   bonus:           'Bonus Gift 🎁',
   story:           'My Stories ✏️',
   adjustment:      'Adjustment ⚖️',
@@ -24,7 +25,7 @@ const REASON_LABELS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  homework: '📸', bonus: '🫴', story: '📖',
+  homework: '📸', drawing: '🎨', bonus: '🫴', story: '📖',
   adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
