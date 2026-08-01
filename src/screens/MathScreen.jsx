@@ -703,7 +703,7 @@ export default function MathScreen() {
   // Load level from last math_progress session
   useEffect(() => {
     if (!child?.id) { setLevel(getStartingLevel(age)); return }
-    supabase
+    storageClient
       .from('math_progress')
       .select('level')
       .eq('child_id', child.id)
