@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
-import { supabase } from '../lib/supabase'
+import { storageClient } from '../lib/supabase'
 import { generateMathQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem } from '../lib/mathTemplates'
 
@@ -849,7 +849,7 @@ export default function MathScreen() {
     if (!child?.id) return
     const numCorrect = (evalData.results || []).filter(r => r.correct).length
     try {
-      await supabase.from('math_progress').insert({
+      await storageClient.from('math_progress').insert({
         child_id: child.id,
         session_date: new Date().toISOString().split('T')[0],
         level: newLevel,
@@ -863,7 +863,7 @@ export default function MathScreen() {
         help_used: helpUsedQs.size, // distinct questions where in-app help was actually opened/used (0..5); data only, doesn't affect gems/level
       })
       if ((evalData.gems_earned || 0) > 0) {
-        await supabase.from('bt_ledger').insert({
+        await storageClient.from('bt_ledger').insert({
           child_id: child.id,
           amount: evalData.gems_earned,
           reason: 'math',
