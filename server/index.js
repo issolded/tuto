@@ -4,6 +4,7 @@ import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
 import { DateTime } from 'luxon'
 import exifr from 'exifr'
+import twilio from 'twilio'
 import { startTelegramBot, sendTelegramMessage, sendTelegramPhoto, sendTelegramMediaGroup, getTelegramChatId, setTelegramMessageHandler, sendTelegramTyping } from './telegram.js'
 import crypto, { randomUUID } from 'crypto'
 import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
@@ -430,6 +431,39 @@ async function readStoredPhoto(pathOrUrl) {
   return Buffer.from(await data.arrayBuffer())
 }
 
+// ── WhatsApp (Twilio) ──────────────────────────────────────────────────────
+// Twilio is a BSP wrapping Meta's WhatsApp Business Platform — same 24h
+// customer-service-window rule applies: free-form text only works as a
+// reply within 24h of the parent's last inbound message. That's fine here,
+// every send in this file is a reply to something the parent just did.
+const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER // e.g. "+971553286179"
+const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null
+
+async function sendWhatsAppBusinessMessage(to, message) {
+  if (!twilioClient || !TWILIO_WHATSAPP_NUMBER) throw new Error('Twilio not configured')
+  const toE164 = to.startsWith('+') ? to : `+${to}`
+  await twilioClient.messages.create({
+    from: `whatsapp:${TWILIO_WHATSAPP_NUMBER}`,
+    to: `whatsapp:${toE164}`,
+    body: message,
+  })
+}
+
+// Twilio takes a public/signed image URL directly (mediaUrl) — it fetches
+// and hosts it itself, no manual upload-then-send dance like Meta's raw API.
+async function sendWhatsAppPhoto(to, photoUrl, caption) {
+  if (!twilioClient || !TWILIO_WHATSAPP_NUMBER) throw new Error('Twilio not configured')
+  const toE164 = to.startsWith('+') ? to : `+${to}`
+  await twilioClient.messages.create({
+    from: `whatsapp:${TWILIO_WHATSAPP_NUMBER}`,
+    to: `whatsapp:${toE164}`,
+    body: caption,
+    mediaUrl: [photoUrl],
+  })
+}
+
 async function sendNotification(parentId, message) {
   // Every proactive notification (homework arrived, reward
   // claimed, ...) used to be invisible to Gemini — logMessage only ran for
@@ -459,8 +493,16 @@ async function sendNotification(parentId, message) {
     }
   }
 
-  // TODO: WhatsApp Business (Twilio) branch goes here once the new
-  // connect flow ships — see onboarding WhatsApp redesign.
+  // ── WhatsApp (Twilio) ─────────────────────────────────────────────────────
+  if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+    try {
+      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+      console.log(`[NOTIFY] ✅ Sent via WhatsApp → parent ${parentId}`)
+      return
+    } catch (err) {
+      console.error(`[NOTIFY] ❌ WhatsApp failed: ${err.message}`)
+    }
+  }
 
   console.log(`[NOTIFY] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
@@ -501,8 +543,23 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
     }
   }
 
-  // TODO: WhatsApp Business (Twilio) branch goes here once the new
-  // connect flow ships — see onboarding WhatsApp redesign.
+  // ── WhatsApp (Twilio) — real photo, not just a text fallback ─────────────
+  if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+    try {
+      await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
+      console.log(`[NOTIFY-PHOTO] ✅ Sent photo via WhatsApp → parent ${parentId}`)
+      return
+    } catch (err) {
+      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp photo failed: ${err.message} — trying text`)
+      try {
+        await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+        console.log(`[NOTIFY-PHOTO] ✅ Sent text fallback via WhatsApp → parent ${parentId}`)
+        return
+      } catch (err2) {
+        console.error(`[NOTIFY-PHOTO] ❌ WhatsApp text fallback also failed: ${err2.message}`)
+      }
+    }
+  }
 
   console.log(`[NOTIFY-PHOTO] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
@@ -1516,8 +1573,10 @@ function setupMessageListener() {
 }
 
 const app = express()
+app.set('trust proxy', 1) // Railway sits behind a proxy — needed so req.protocol reports https for Twilio signature validation
 app.use(cors())
 app.use(express.json({ limit: '15mb' }))
+app.use(express.urlencoded({ extended: false })) // Twilio posts form-encoded webhooks
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
@@ -3441,6 +3500,9 @@ app.post('/api/send-welcome', async (req, res) => {
     if (channel === 'telegram' && parent?.telegram_chat_id) {
       await sendTelegramMessage(parent.telegram_chat_id, message)
       console.log(`[WELCOME] Sent via Telegram to parent ${parentId}`)
+    } else if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+      console.log(`[WELCOME] Sent via WhatsApp to parent ${parentId}`)
     } else {
       console.log(`[WELCOME] No channel configured for parent ${parentId} — skipped`)
     }
@@ -3449,6 +3511,137 @@ app.post('/api/send-welcome', async (req, res) => {
   } catch (err) {
     console.error('[send-welcome]', err.message)
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ── WhatsApp connect flow ───────────────────────────────────────────────────
+// Parent taps "Connect WhatsApp" → we mint a short code and a wa.me deep link
+// → they send it from their own phone (same-device, no QR) → our webhook
+// reads the code out of their first message and links whatsapp_phone to this
+// parent. The code is the only proof of ownership; nothing is ever written
+// from a client-submitted phone number the way the old, abandoned flow did.
+function generateConnectCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no 0/O or 1/I — easy to misread when copied off a screen
+  let code = ''
+  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+app.post('/api/whatsapp/connect-code', async (req, res) => {
+  const { parentId } = req.body
+  if (!parentId) return res.status(400).json({ error: 'parentId required' })
+  if (!TWILIO_WHATSAPP_NUMBER) return res.status(500).json({ error: 'WhatsApp sender not configured' })
+
+  try {
+    const code = generateConnectCode()
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    const { error } = await supabase
+      .from('parents')
+      .update({ whatsapp_connect_code: code, whatsapp_connect_code_expires_at: expiresAt })
+      .eq('id', parentId)
+    if (error) throw error
+
+    const text = encodeURIComponent(`Merhaba Tuto, kodum: ${code}`)
+    const waLink = `https://wa.me/${TWILIO_WHATSAPP_NUMBER.replace('+', '')}?text=${text}`
+    res.json({ code, waLink })
+  } catch (err) {
+    console.error('[whatsapp-connect-code]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Polled by the onboarding/dashboard UI after the parent taps the wa.me link.
+// "Connected" means the webhook below actually matched and cleared THIS
+// code — not just "whatsapp_phone is non-null", since a stale unverified
+// value can already be sitting there from the old abandoned flow.
+app.get('/api/whatsapp/connect-status', async (req, res) => {
+  const { parentId, code } = req.query
+  if (!parentId || !code) return res.status(400).json({ error: 'parentId and code required' })
+
+  const { data } = await supabase
+    .from('parents')
+    .select('whatsapp_connect_code, whatsapp_phone')
+    .eq('id', parentId)
+    .maybeSingle()
+
+  const connected = data?.whatsapp_connect_code !== code
+  res.json({ connected, whatsappPhone: connected ? data?.whatsapp_phone : null })
+})
+
+// Incoming WhatsApp messages, via Twilio.
+app.post('/webhook/whatsapp', async (req, res) => {
+  res.type('text/xml').send('<Response></Response>') // acknowledge immediately, no auto-reply
+
+  try {
+    const signature = req.headers['x-twilio-signature']
+    const url = `https://${req.get('host')}${req.originalUrl}`
+    if (!process.env.TWILIO_AUTH_TOKEN || !twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN, signature, url, req.body)) {
+      console.log('[WA] Webhook signature invalid — dropping')
+      return
+    }
+
+    const from = (req.body.From || '').replace('whatsapp:', '') // E.164, e.g. "+905XXXXXXXXX"
+    const text = (req.body.Body || '').trim()
+    if (!from || !text) return
+
+    console.log(`[WA] Incoming from ${from}: "${text}"`)
+
+    // Already-connected parent writing back in — route through the normal brain.
+    // Gated on whatsapp_verified_at specifically (not just whatsapp_phone being
+    // set), so a stale, never-actually-verified number from the old abandoned
+    // flow can't be treated as a live connection.
+    const { data: existing } = await supabase
+      .from('parents')
+      .select('id')
+      .eq('whatsapp_phone', from)
+      .not('whatsapp_verified_at', 'is', null)
+      .limit(1)
+    if (existing?.[0]?.id) {
+      await handleMessage(existing[0].id, reply => sendWhatsAppBusinessMessage(from, reply), text)
+      return
+    }
+
+    // Otherwise this is (hopefully) a first-contact message carrying a connect code.
+    const match = text.toUpperCase().match(/[A-Z0-9]{5}/)
+    if (!match) {
+      await sendWhatsAppBusinessMessage(from, 'Merhaba! Bağlanmak için Tuto uygulamasındaki "WhatsApp\'tan Bağlan" adımından gelen kodu göndermen gerekiyor. / Hi! To connect, please send the code from the "Connect WhatsApp" step in the Tuto app.')
+      return
+    }
+
+    const { data: parent } = await supabase
+      .from('parents')
+      .select('id, name, prefs, notification_channel')
+      .eq('whatsapp_connect_code', match[0])
+      .gt('whatsapp_connect_code_expires_at', new Date().toISOString())
+      .maybeSingle()
+
+    if (!parent) {
+      await sendWhatsAppBusinessMessage(from, 'Bu kod geçersiz ya da süresi dolmuş. Uygulamadan tekrar dener misin? / This code is invalid or expired — please try again from the app.')
+      return
+    }
+
+    const { data: children } = await supabase.from('children').select('name').eq('parent_id', parent.id).order('created_at').limit(1)
+    const childName = children?.[0]?.name || 'çocuğunuzun'
+    const language = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+
+    await supabase
+      .from('parents')
+      .update({
+        whatsapp_phone: from,
+        whatsapp_verified_at: new Date().toISOString(),
+        whatsapp_connect_code: null,
+        whatsapp_connect_code_expires_at: null,
+        ...(parent.notification_channel ? {} : { notification_channel: 'whatsapp' }),
+      })
+      .eq('id', parent.id)
+
+    const confirmMsg = language === 'en'
+      ? `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on.`
+      : `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra buradan haberdar edeceğim.`
+    await sendWhatsAppBusinessMessage(from, confirmMsg)
+    console.log(`[WA] Connected parent ${parent.id} → ${from}`)
+  } catch (err) {
+    console.error('[WA] Webhook error:', err.message)
   }
 })
 

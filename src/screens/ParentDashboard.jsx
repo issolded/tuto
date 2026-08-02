@@ -362,15 +362,16 @@ export default function ParentDashboard() {
 
           <div style={{ height: 1, background: PC.line }} />
 
-          {/* WhatsApp — connect flow is being rebuilt on Twilio, temporarily unavailable */}
+          {/* WhatsApp — connect flow is being rebuilt on Twilio. whatsapp_phone may
+              still hold a stale, never-actually-verified value from the old
+              abandoned flow, so status intentionally ignores it until the new
+              code-matching connect flow ships and can set it for real. */}
           <NotifRow
             icon="💬"
             label="WhatsApp"
-            connected={!!notifData.whatsappPhone}
-            status={notifData.whatsappPhone ? notifData.whatsappPhone : 'Coming soon'}
-            action={notifData.whatsappPhone && notifData.telegramChatId
-              ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
-              : null}
+            connected={false}
+            status="Coming soon"
+            action={null}
           />
         </Card>
       </div>

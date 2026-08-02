@@ -98,6 +98,10 @@ export default function ParentOnboarding() {
   const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, homework: true, drawing: true })
   const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
   const [notifChannel,    setNotifChannel]    = useState(null)
+  const [waCode,          setWaCode]          = useState(null)
+  const [waLink,          setWaLink]          = useState(null)
+  const [waConnected,     setWaConnected]     = useState(false)
+  const [waError,         setWaError]         = useState('')
   const [emailNotif,      setEmailNotif]      = useState(true)
   const [pushNotif,       setPushNotif]       = useState(true)
   const [codeCopied,      setCodeCopied]      = useState(false)
@@ -143,6 +147,38 @@ export default function ParentOnboarding() {
   }, [step, user])
 
   const videoGameReward = rewards.find(r => r.label.toLowerCase().includes('video game'))
+
+  const startWaConnect = async () => {
+    if (!user || waLink) return // already have a code for this session
+    setWaError('')
+    try {
+      const res = await fetch(`${SERVER}/api/whatsapp/connect-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: user.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Server error')
+      setWaCode(data.code)
+      setWaLink(data.waLink)
+    } catch (e) {
+      setWaError(e.message)
+    }
+  }
+
+  // Poll for the webhook having matched the code — the only real signal
+  // that the parent actually sent the WhatsApp message.
+  useEffect(() => {
+    if (notifChannel !== 'whatsapp' || !waCode || !user || waConnected) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${SERVER}/api/whatsapp/connect-status?parentId=${user.id}&code=${waCode}`)
+        const data = await res.json()
+        if (data.connected) setWaConnected(true)
+      } catch { /* keep polling */ }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [notifChannel, waCode, user, waConnected])
 
   const next = () => setStep(s => s + 1)
   const back = () => {
@@ -513,17 +549,27 @@ export default function ParentOnboarding() {
                 </div>
               </button>
 
-              {/* WhatsApp — connect flow is being rebuilt on Twilio, temporarily unavailable */}
-              <div style={{
+              {/* WhatsApp */}
+              <button className="tc-press tc-tap" onClick={() => { setNotifChannel('whatsapp'); startWaConnect() }} style={{
                 flex: 1, padding: '20px 12px',
-                background: '#fff', border: `2px solid ${PC.line}`,
-                borderRadius: 20, textAlign: 'center', opacity: 0.5,
+                background: notifChannel === 'whatsapp' ? PC.greenBg : '#fff',
+                border: `2px solid ${notifChannel === 'whatsapp' ? PC.green : PC.line}`,
+                borderRadius: 20, cursor: 'pointer', textAlign: 'center',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                transition: 'all .18s',
               }}>
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{ width: 44, height: 44 }} />
                 <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.ink }}>WhatsApp</div>
-                <div style={{ fontFamily: FONT, fontSize: 10.5, fontWeight: 700, color: PC.inkFaint }}>Coming soon</div>
-              </div>
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%',
+                  border: `2px solid ${notifChannel === 'whatsapp' ? PC.green : PC.line}`,
+                  background: notifChannel === 'whatsapp' ? PC.green : '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all .18s',
+                }}>
+                  {notifChannel === 'whatsapp' && <Icon name="check" size={10} color="#fff" sw={3} />}
+                </div>
+              </button>
             </div>
 
             {/* Telegram detail */}
@@ -543,6 +589,36 @@ export default function ParentOnboarding() {
                   <div style={{ background: '#E3F2FD', borderRadius: 14, padding: 14, textAlign: 'center', fontFamily: FONT, fontSize: 13, color: '#229ED9', fontWeight: 700 }}>Loading code…</div>
                 )}
                 <Btn onClick={next} style={{ marginTop: 14 }}>I've connected Telegram ✅</Btn>
+              </Card>
+            )}
+
+            {/* WhatsApp detail */}
+            {notifChannel === 'whatsapp' && (
+              <Card pad={20} className="tc-fade" style={{ border: `2px solid ${PC.green}` }}>
+                {waConnected ? (
+                  <>
+                    <div style={{ textAlign: 'center', fontSize: 36, marginBottom: 12 }}>🎉</div>
+                    <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.green, textAlign: 'center', lineHeight: 1.7, marginBottom: 14 }}>
+                      Connected! You'll get updates here from now on.
+                    </div>
+                    <Btn onClick={next}>Continue →</Btn>
+                  </>
+                ) : waLink ? (
+                  <>
+                    <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.ink, lineHeight: 1.6, marginBottom: 14 }}>
+                      Tap below to open WhatsApp with a pre-filled message, then hit send.
+                    </div>
+                    <a href={waLink} target="_blank" rel="noreferrer" className="tc-press"
+                      style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '14px 16px', background: PC.green, borderRadius: 14, fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff' }}>
+                      Open WhatsApp 📲
+                    </a>
+                    <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkFaint, textAlign: 'center', marginTop: 12 }}>
+                      Waiting for your message…
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontFamily: FONT, fontSize: 13, color: PC.inkFaint, textAlign: 'center' }}>{waError || 'Loading…'}</div>
+                )}
               </Card>
             )}
 
