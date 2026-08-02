@@ -403,6 +403,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     sharePick:      'İşte bir grup — kaç tane var?',
     shapeTap:       'Dokundukça say — her seferinde biri yanar 👆',
     shapeDone:      'Hepsini saydın! Kaç tane ettiler?',
+    timesTap:       'Her grubu tek tek getir 👆',
+    timesDone:      'Bak, hepsi eşit! Toplam kaç eder?',
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
   } : {
@@ -420,6 +422,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     sharePick:      'That is one group — how many in it?',
     shapeTap:       'Tap to count — one lights up each time 👆',
     shapeDone:      'You counted them all! How many was that?',
+    timesTap:       'Bring in one group at a time 👆',
+    timesDone:      'See — every group is the same! How many altogether?',
     showHint:       'Show help',
     moreHint:       'More help',
   }
@@ -450,7 +454,12 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // seeing 12 dealt into 3 groups beats reading about it.
   const share = visual?.kind === 'share' ? visual : null
   const shapes = visual?.kind === 'shapes' ? visual : null
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && hintSteps?.length > 0
+  // Both multiplication framings draw the same way — rows of a grid, or groups in a row —
+  // so they share one path and differ only in how the rows are spaced and labelled.
+  const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
+  const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
+  const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -468,7 +477,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -485,7 +494,51 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (shapes) {
+  if (times) {
+    // Revealed a row at a time — the point of multiplication is that every group is the
+    // same size, which only lands if you watch equal rows appear one after another.
+    const shown = Math.min(timesRows, dealt)
+    const done = shown >= timesRows
+    // Stays faithful to the wording — "9 rows of 2" really does show 9 rows — so with
+    // factors up to 12 the dots shrink rather than the layout reflowing into a lie.
+    const tDot = (timesRows > 6 || timesPer > 8) ? 10 : 14
+    const tGap = timesRows > 6 ? 4 : 7
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {done ? t.timesDone : t.timesTap}
+        </div>
+        <button
+          className="math-press"
+          onClick={done ? undefined : () => setDealt(d => Math.min(timesRows, d + 1))}
+          style={{
+            display: 'flex', flexDirection: 'column', gap: tGap, padding: '12px 14px',
+            borderRadius: 16, border: `2px dashed ${done ? '#ded8f0' : ORANGE}`,
+            background: done ? 'transparent' : '#fff7ef',
+            cursor: done ? 'default' : 'pointer',
+          }}
+        >
+          {Array.from({ length: timesRows }).map((_, r) => (
+            <div key={r} style={{ display: 'flex', gap: 5, justifyContent: 'center', opacity: r < shown ? 1 : 0.12 }}>
+              {Array.from({ length: timesPer }).map((_, c) => (
+                <span key={c} style={{
+                  width: tDot, height: tDot,
+                  borderRadius: '50%', background: r < shown ? MATH : '#d9d2ee', display: 'inline-block',
+                }} />
+              ))}
+            </div>
+          ))}
+        </button>
+        <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 15, color: done ? GREEN : MATH_DEEP }}>
+          {shown} × {timesPer}
+        </div>
+      </div>
+    )
+  } else if (shapes) {
     // Tapping counts one more mark, so the child's place is held on screen rather than in
     // their head — the same job the dot-tapping does for addition.
     const totals = shapes.shapes.map(s => SHAPES[s])
@@ -740,7 +793,28 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   const _svgW = 260, _barH = 36, _gap = 10, _br = 9
   let goster
 
-  if (shapes) {
+  if (times) {
+    // The whole array at once, with each row counted down the side — the child reads off
+    // how many rows and how many in each, and does the multiplying themselves.
+    goster = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
+        {Array.from({ length: timesRows }).map((_, r) => (
+          <div key={r} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ fontFamily: FRED, fontSize: 11, fontWeight: 700, color: INK_SOFT, width: 16, textAlign: 'right' }}>{r + 1}</span>
+            {Array.from({ length: timesPer }).map((_, c) => (
+              <span key={c} style={{
+                width: timesPer > 8 ? 11 : 14, height: timesPer > 8 ? 11 : 14,
+                borderRadius: '50%', background: MATH, display: 'inline-block',
+              }} />
+            ))}
+          </div>
+        ))}
+        <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 15, color: MATH_DEEP, marginTop: 2 }}>
+          {timesRows} × {timesPer} = ?
+        </div>
+      </div>
+    )
+  } else if (shapes) {
     // Every mark already lit, so the picture states the count without stating the total.
     goster = (
       <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
