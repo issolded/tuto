@@ -107,10 +107,10 @@ function constantPatternStep(question) {
 // way it goes — a descending pattern was previously unanswerable for the same reason.
 const stepLabel = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)}`
 
-function hasRealHelp(question, questionType, templateTopic, hintSteps) {
+function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   if (templateTopic) {
     if (templateTopic === 'addition' || templateTopic === 'subtraction') return true
-    return (hintSteps?.length ?? 0) > 0
+    return !!visual || (hintSteps?.length ?? 0) > 0
   }
   // A constant-step pattern gets the interactive arrow walkthrough; anything else needs
   // the steps to explain the real rule.
@@ -282,7 +282,71 @@ function StepHints({ question, hintSteps, revealed, onReveal, showMore, moreHint
 
 // ── Help Panel ────────────────────────────────────────────────────────────────
 
-function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, onHelpUsed, language }) {
+// Division and fractions are the same picture — deal a total into equal groups — so one
+// component covers levels 9, 10 and 15. Each tap deals a full round, one item to every
+// group, because that is what "shared equally" actually means; the answer then reads
+// straight off a single group. All numbers come from the template's `visual` descriptor,
+// never parsed from the question text.
+function ShareVisual({ total, groups, highlight, dealt, onDeal, label }) {
+  const perGroup = dealt / groups          // dealt only ever advances a whole round
+  const remaining = total - dealt
+  const dot = total > 18 ? 11 : 14
+
+  const Dot = ({ faded }) => (
+    <span style={{
+      width: dot, height: dot, borderRadius: '50%',
+      background: faded ? '#d9d2ee' : MATH, display: 'inline-block',
+    }} />
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%' }}>
+      <button
+        className="math-press"
+        onClick={remaining > 0 ? onDeal : undefined}
+        disabled={remaining === 0}
+        style={{
+          display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', alignItems: 'center',
+          maxWidth: 250, minHeight: 44, padding: '10px 14px', borderRadius: 16,
+          border: `2px dashed ${remaining > 0 ? ORANGE : '#ded8f0'}`,
+          background: remaining > 0 ? '#fff7ef' : 'transparent',
+          cursor: remaining > 0 ? 'pointer' : 'default',
+        }}
+      >
+        {remaining > 0
+          ? Array.from({ length: remaining }).map((_, i) => <Dot key={i} />)
+          : <span style={{ fontFamily: FRED, fontSize: 13, fontWeight: 600, color: INK_SOFT }}>✓</span>}
+      </button>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+        {Array.from({ length: groups }).map((_, g) => {
+          const isPicked = highlight && g < highlight
+          return (
+            <div key={g} style={{
+              minWidth: 52, minHeight: 52, padding: '8px 9px', borderRadius: 15,
+              border: `2px solid ${isPicked ? GREEN : '#ded8f0'}`,
+              background: isPicked ? `${GREEN}14` : '#fff',
+              display: 'flex', flexWrap: 'wrap', gap: 4,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              {perGroup === 0
+                ? <Dot faded />
+                : Array.from({ length: perGroup }).map((_, i) => <Dot key={i} />)}
+            </div>
+          )
+        })}
+      </div>
+
+      {label && (
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT, textAlign: 'center' }}>
+          {label}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language }) {
   const tr = language === 'tr'
   const t = tr ? {
     title:          'Hep beraber bakalım! 🧸',
@@ -294,6 +358,9 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
     nowCount:       'Şimdi kalanları say! 🔢',
     whichNext:      'Hangi sayı geliyor sence?',
     startLabel:     'başla',
+    shareTap:       'Herkese birer tane ver! 👐',
+    shareDone:      'Herkes eşit aldı! Şimdi bir grubu say 🔢',
+    sharePick:      'İşte bir grup — kaç tane var?',
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
   } : {
@@ -306,6 +373,9 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
     nowCount:       'Now count what\'s left! 🔢',
     whichNext:      'What number comes next?',
     startLabel:     'start',
+    shareTap:       'Give one to each! 👐',
+    shareDone:      'Everyone got the same! Now count one group 🔢',
+    sharePick:      'That is one group — how many in it?',
     showHint:       'Show help',
     moreHint:       'More help',
   }
@@ -332,7 +402,10 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   // an alternating one falls through to the steps like any other question.
   const patternStep = questionType === 'pattern' ? constantPatternStep(question) : null
   const usesArrowUI = patternStep !== null
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && hintSteps?.length > 0
+  // A template-supplied descriptor is ground truth, so it outranks the step hints —
+  // seeing 12 dealt into 3 groups beats reading about it.
+  const share = visual?.kind === 'share' ? visual : null
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -343,13 +416,14 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   const [solvedArrows, setSolvedArrows] = useState({})
   const [tutoBubble,   setTutoBubble]   = useState(null)
   const [hintsRevealed, setHintsRevealed] = useState(0) // gradual reveal: nudge → half → full
+  const [dealt,         setDealt]         = useState(0) // items handed out in the sharing visual
 
   useEffect(() => { if (bigNums) setActiveTab('show') }, [])
 
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -366,7 +440,27 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (usesArrowUI) {
+  if (share) {
+    const done = dealt >= share.total
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {done ? (share.highlight ? t.sharePick : t.shareDone) : t.shareTap}
+        </div>
+        <ShareVisual
+          total={share.total}
+          groups={share.groups}
+          highlight={done ? share.highlight : 0}
+          dealt={dealt}
+          onDeal={() => setDealt(d => Math.min(share.total, d + share.groups))}
+        />
+      </div>
+    )
+  } else if (usesArrowUI) {
     const diff = patternStep
     const arrowCount = nums.length
     const allArrowsSolved = Object.keys(solvedArrows).length === arrowCount
@@ -570,7 +664,25 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   const _svgW = 260, _barH = 36, _gap = 10, _br = 9
   let goster
 
-  if (usesArrowUI) {
+  if (share) {
+    // Already shared out, so the child reads the result rather than doing the dealing —
+    // the equation is written with a "?" so it still stops short of the answer.
+    goster = (
+      <ShareVisual
+        total={share.total}
+        groups={share.groups}
+        highlight={share.highlight}
+        dealt={share.total}
+        onDeal={undefined}
+        // Division reads as plain notation, which needs no translating. A fraction has no
+        // tidy notation for "one of these groups", so it describes the picture instead —
+        // the highlighted group is the answer.
+        label={share.highlight
+          ? (tr ? `${share.total} sayısı ${share.groups} eşit grupta` : `${share.total} in ${share.groups} equal groups`)
+          : `${share.total} ÷ ${share.groups} = ?`}
+      />
+    )
+  } else if (usesArrowUI) {
     const diff = patternStep
     const allPts = [...nums, null]   // null = ?
     const nlW = 280, nlH = 82
@@ -844,7 +956,7 @@ export default function MathScreen() {
     const newAnswers = [...userAnswers, userAns]
 
     const tProblem = templateProblems[qIdx]
-    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx])
+    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.visual)
     if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
@@ -1225,6 +1337,7 @@ export default function MathScreen() {
               questionType={qTypes[qIdx]}
               templateTopic={templateProblems[qIdx]?.topic}
               hintSteps={templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]}
+              visual={templateProblems[qIdx]?.visual}
               onDone={() => { setHelpVisible(false); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}

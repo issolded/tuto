@@ -4,10 +4,19 @@
 //
 // Problem shape:
 //   { topic, level, question_text, format: 'numeric', correct_answer, hint_steps: [],
-//     operandKey }
+//     operandKey, visual? }
 // operandKey identifies the underlying number pair (independent of phrasing/names) so a
 // caller generating several problems in one batch can dedupe — see generateProblem's
-// `avoid` param.
+// `avoid` param. Note it SORTS the pair, so roles are not recoverable from it.
+//
+// `visual` is how a template hands its operands to the help panel with their roles intact,
+// which operandKey cannot do — "3 groups of 4" and "4 groups of 3" share a key. Drawing
+// from this instead of re-parsing the question text is the point: text inference is what
+// previously drew 2 + 1 for a question whose answer was 2×3 + 1×5. Shapes:
+//   { kind: 'share',  total, groups, highlight? }  — deal total into equal groups
+//   { kind: 'groups', groups, per }                — that many equal groups of that size
+//   { kind: 'array',  rows, cols }                 — a rectangular arrangement
+// Optional: a template without one simply gets no visual.
 //
 // A "template" is a function(level) -> problem. It picks numbers, builds the question
 // text, computes correct_answer in code (deterministic, no model guessing), and builds
@@ -96,6 +105,7 @@ function multGroupsVariant(a, b, name, object) {
       `${name} has ${a} ${container} — that's ${a} equal groups.`,
       `Each group has ${b}, so it's ${a} groups of ${b}: ${a} × ${b}.`,
     ],
+    visual: { kind: 'groups', groups: a, per: b },
   }
 }
 
@@ -106,6 +116,7 @@ function multArrayVariant(a, b, name, object) {
       `That's an array: ${a} rows, with ${b} ${object} in each row.`,
       `${a} rows of ${b} is ${a} × ${b}.`,
     ],
+    visual: { kind: 'array', rows: a, cols: b },
   }
 }
 
@@ -116,6 +127,8 @@ function multReadingVariant(a, b, name) {
       `${name} reads for ${a} days, ${b} pages each day.`,
       `That's ${a} days × ${b} pages: ${a} × ${b}.`,
     ],
+    // Days are the groups, pages the size — same picture as containers of objects.
+    visual: { kind: 'groups', groups: a, per: b },
   }
 }
 
@@ -133,7 +146,7 @@ function multiplicationWordTemplate(level) {
   const name = pick(MULT_NAMES)
   const object = pick(MULT_OBJECTS)
   const variant = pick(MULT_VARIANTS)
-  const { question_text, hint_steps } = variant(a, b, name, object)
+  const { question_text, hint_steps, visual } = variant(a, b, name, object)
 
   return {
     topic: 'multiplication-word',
@@ -143,6 +156,7 @@ function multiplicationWordTemplate(level) {
     correct_answer,
     operandKey: pairKey(a, b),
     hint_steps,
+    visual,
   }
 }
 
@@ -163,6 +177,9 @@ function fractionOfNumberTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(d, N),
+    // Same picture as division — split into equal groups — with one group singled out,
+    // which is exactly what "1/d of N" asks for.
+    visual: { kind: 'share', total: N, groups: d, highlight: 1 },
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
       `1/${d} means splitting into ${d} equal groups.`,
@@ -195,6 +212,7 @@ function divisionWordTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
+    visual: { kind: 'share', total: a, groups: b },
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
       `${a} shared into ${b} equal groups.`,
