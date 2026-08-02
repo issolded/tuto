@@ -116,9 +116,52 @@ function fileToBase64(file) {
   })
 }
 
+// gemini-3.5-flash intermittently ends a response badly: it appends stray prose after the
+// object, or stops without emitting the final closing brackets. Both made JSON.parse throw,
+// and every caller here treats that as total failure — a maths session bounced the child
+// back to the mode picker with no questions and no explanation. Measured ~7% of maths
+// generations and ~25% of the longer story-transcription ones, so this is routine, not rare.
+//
+// The content itself is intact in these responses; only the tail is wrong. So walk the
+// object tracking bracket depth (ignoring brackets inside strings), and either stop at the
+// point it balances — discarding trailing junk — or close whatever is still open.
 function parseJSON(text) {
   const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
-  return JSON.parse(cleaned)
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    // fall through to repair
+  }
+
+  const start = cleaned.indexOf('{')
+  if (start === -1) throw new Error('Gemini yanıtında JSON nesnesi yok.')
+
+  const open = []
+  let inString = false, escaped = false
+  let lastClose = -1, pendingAtLastClose = null
+
+  for (let i = start; i < cleaned.length; i++) {
+    const c = cleaned[i]
+    if (escaped) { escaped = false; continue }
+    if (c === '\\') { escaped = true; continue }
+    if (c === '"') { inString = !inString; continue }
+    if (inString) continue
+
+    if (c === '{') open.push('}')
+    else if (c === '[') open.push(']')
+    else if (c === '}' || c === ']') {
+      open.pop()
+      lastClose = i
+      pendingAtLastClose = [...open]
+      // Balanced here: anything after this is trailing junk.
+      if (open.length === 0) return JSON.parse(cleaned.slice(start, i + 1))
+    }
+  }
+
+  // Never balanced — cut the dangling tail and close what is still open. A value that was
+  // truncated mid-way is dropped with it; callers already default missing fields.
+  if (lastClose === -1) throw new Error('Gemini JSON yanıtı onarılamadı.')
+  return JSON.parse(cleaned.slice(start, lastClose + 1) + pendingAtLastClose.reverse().join(''))
 }
 
 // The proxy needs to know WHICH child is calling: it only relays for a real
