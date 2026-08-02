@@ -3601,9 +3601,13 @@ app.post('/webhook/whatsapp', async (req, res) => {
       return
     }
 
-    // Otherwise this is (hopefully) a first-contact message carrying a connect code.
-    const match = text.toUpperCase().match(/[A-Z0-9]{5}/)
-    if (!match) {
+    // Otherwise this is (hopefully) a first-contact message carrying a connect
+    // code. A plain "first 5-char alnum run in the message" regex is a trap —
+    // it happily matches "MERHA" out of "Merhaba" before ever reaching the
+    // real code. Pull out every whole-word 5-char candidate instead and let
+    // the DB decide which one (if any) is a real pending code.
+    const candidates = [...new Set(text.toUpperCase().match(/\b[A-Z0-9]{5}\b/g) || [])]
+    if (!candidates.length) {
       await sendWhatsAppBusinessMessage(from, 'Merhaba! Bağlanmak için Tuto uygulamasındaki "WhatsApp\'tan Bağlan" adımından gelen kodu göndermen gerekiyor. / Hi! To connect, please send the code from the "Connect WhatsApp" step in the Tuto app.')
       return
     }
@@ -3611,7 +3615,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
     const { data: parent } = await supabase
       .from('parents')
       .select('id, name, prefs, notification_channel')
-      .eq('whatsapp_connect_code', match[0])
+      .in('whatsapp_connect_code', candidates)
       .gt('whatsapp_connect_code_expires_at', new Date().toISOString())
       .maybeSingle()
 
