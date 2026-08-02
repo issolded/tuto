@@ -1173,16 +1173,15 @@ export default function MathScreen() {
       child_answer: finalAnswers[i],
       correct: Number(finalAnswers[i]) === Number(correctAns[i]),
     }))
-    const baseGems   = child?.task_settings?.math?.gems ?? 20
-    const gemsEarned = helpUsed ? Math.round(baseGems * 0.67) : baseGems
     const evalData = {
       results, score: accuracy, accuracy, level_change: levelChange,
       new_level: newLevel, topic,
       encouragement: getScoreMsg(accuracy, age),
-      gems_earned: gemsEarned,
     }
-    setEvalResult(evalData)
-    await saveResults(evalData, newLevel)
+    // The reward comes back from the server, so the screen shows what was actually banked
+    // — including 0 once the daily cap is reached, rather than a number the child never got.
+    const gems_earned = await saveResults(evalData, newLevel)
+    setEvalResult({ ...evalData, gems_earned })
     setStep('result')
   }
 
@@ -1193,51 +1192,52 @@ export default function MathScreen() {
       const result   = await evaluateMath([file], questions, correctAns, age, effectiveLevel)
       const newLevel = result.new_level ?? effectiveLevel
       if (result.level_change === 'up') setLeveledUp(true)
-      const mathGems = child?.task_settings?.math?.gems ?? 30
-      setEvalResult({ ...result, gems_earned: result.gems_earned ?? mathGems })
-      await saveResults(result, newLevel)
+      const gems_earned = await saveResults(result, newLevel)
+      setEvalResult({ ...result, gems_earned })
       setStep('result')
     } catch (e) {
       console.error('evaluateMath:', e)
-      const mathGems = child?.task_settings?.math?.gems ?? 30
       const fallback = {
         results: questions.map((q, i) => ({ question: q, correct_answer: correctAns[i], child_answer: '?', correct: false })),
         score: 70, accuracy: 70, level_change: 'same', new_level: effectiveLevel,
-        topic, encouragement: "Great effort! Keep going! 🌟", gems_earned: mathGems,
+        topic, encouragement: "Great effort! Keep going! 🌟",
       }
-      setEvalResult(fallback)
-      await saveResults(fallback, effectiveLevel)
+      const gems_earned = await saveResults(fallback, effectiveLevel)
+      setEvalResult({ ...fallback, gems_earned })
       setStep('result')
     }
   }
 
   // ── Persist to Supabase ───────────────────────────────────────────────────
+  // The session is recorded by the server, which decides the reward: it is the only side
+  // that can read the parent's configured amount, count what has already been earned today
+  // against the daily cap, and tell the parent it happened. The browser used to do all of
+  // this itself — picking the number and writing bt_ledger with the anon key — which meant
+  // the parent's setting was never applied and nothing limited repeat sessions.
+  // Returns the awarded amount so the result screen shows what was actually banked.
   const saveResults = async (evalData, newLevel) => {
-    if (!child?.id) return
+    if (!child?.id) return 0
     const numCorrect = (evalData.results || []).filter(r => r.correct).length
     try {
-      await storageClient.from('math_progress').insert({
-        child_id: child.id,
-        session_date: new Date().toISOString().split('T')[0],
-        level: newLevel,
-        topic: evalData.topic || topic,
-        questions_total: questions.length,
-        questions_correct: numCorrect,
-        accuracy: evalData.accuracy || evalData.score || 0,
-        gemini_notes: evalData.gemini_notes || null,
-        next_session: evalData.next_session || null,
-        level_change: evalData.level_change || 'same',
-        help_used: helpUsedQs.size, // distinct questions where in-app help was actually opened/used (0..5); data only, doesn't affect gems/level
+      const res = await fetch(`${SERVER}/api/children/${child.id}/math-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level: newLevel,
+          topic: evalData.topic || topic,
+          questions_total: questions.length,
+          questions_correct: numCorrect,
+          accuracy: evalData.accuracy || evalData.score || 0,
+          level_change: evalData.level_change || 'same',
+          help_used: helpUsedQs.size,
+        }),
       })
-      if ((evalData.gems_earned || 0) > 0) {
-        await storageClient.from('bt_ledger').insert({
-          child_id: child.id,
-          amount: evalData.gems_earned,
-          reason: 'math',
-        })
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'server error')
+      return data.gems_earned || 0
     } catch (e) {
       console.error('saveResults:', e)
+      return 0
     }
   }
 

@@ -3128,6 +3128,112 @@ app.get('/api/drawings', async (req, res) => {
 // code could write arbitrary files into a child's folder and then have them
 // forwarded to the parent. Here the service role is the only writer, and
 // nothing is stored until it has passed the shared image gate.
+// ── Maths sessions ───────────────────────────────────────────────────────────
+// Maths used to be written straight to the database by the browser: the client picked the
+// gem amount, wrote bt_ledger itself with the anon key, and the server never learned a
+// session had happened. That had four consequences at once — the parent's configured gem
+// value was ignored (the child's stored session carries only id/name/age, so the lookup
+// for it was always undefined and it silently fell back to a hardcoded 20), there was no
+// daily cap so sessions could be repeated for gems indefinitely, no notification was
+// possible, and the amount was whatever the client said.
+//
+// This does not make the *score* trustworthy — the questions are still generated and
+// marked in the browser, so a forged 100% would still be believed. Verifying that needs
+// the server to generate the questions and hold the answers, which is a larger change.
+// What it does fix is everything that follows from the score: the amount, the cap, the
+// settings and the write are all decided here now.
+const MATH_DEFAULTS = { gems: 30, dailyCap: 3 }
+
+function mathSettings(taskSettings) {
+  const s = taskSettings?.math || {}
+  const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : MATH_DEFAULTS.gems
+  const cap = Number.isFinite(s.daily_cap) ? Math.max(0, Math.min(50, Math.trunc(s.daily_cap))) : MATH_DEFAULTS.dailyCap
+  return { gems, dailyCap: cap, active: s.active !== false }
+}
+
+async function rewardedMathToday(childId, tz) {
+  const now = DateTime.now().setZone(tz)
+  const { data, error } = await supabase
+    .from('bt_ledger')
+    .select('id')
+    .eq('child_id', childId)
+    .eq('reason', 'math')
+    .gt('amount', 0)
+    .gte('created_at', now.startOf('day').toUTC().toISO())
+    .lte('created_at', now.endOf('day').toUTC().toISO())
+  // Fail CLOSED, as the drawing cap does: if the count can't be read, pay nothing.
+  if (error) { console.error(`[MATH] cap check failed: ${error.message}`); return null }
+  return (data || []).length
+}
+
+app.post('/api/children/:childId/math-session', async (req, res) => {
+  const { childId } = req.params
+  const { level, topic, questions_total, questions_correct, accuracy, level_change, help_used } = req.body
+  try {
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const settings = mathSettings(child.task_settings)
+    const tz = await tzForChild(childId)
+    const doneToday = await rewardedMathToday(childId, tz)
+
+    // Maths is declared `variable` in taskDefaults, and the parent is shown "up to N" —
+    // but only paper mode ever scaled, via whatever figure the model returned, while
+    // screen mode paid the same flat amount whether the child scored 20% or 100%. One
+    // scale for both, applied here, using the bands the model had been asked for.
+    // Help on top of that costs a third: it is the child's own admission that they needed
+    // a step shown, the same ratio the client used to apply.
+    const acc = Math.max(0, Math.min(100, Number(accuracy) || 0))
+    const scale = acc >= 80 ? 1 : acc >= 60 ? 0.83 : acc >= 40 ? 0.5 : 0.33
+    let gems = 0
+    let capped = false
+    if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
+      capped = true
+    } else {
+      gems = Math.round(settings.gems * scale * (Number(help_used) > 0 ? 0.67 : 1))
+    }
+
+    const { error: progErr } = await supabase.from('math_progress').insert({
+      child_id: childId,
+      session_date: DateTime.now().setZone(tz).toISODate(),
+      level, topic,
+      questions_total, questions_correct,
+      accuracy: acc,
+      level_change: level_change || 'same',
+      help_used: Number(help_used) || 0,
+    })
+    if (progErr) return res.status(500).json({ error: progErr.message })
+
+    if (gems > 0) {
+      const { error: ledErr } = await supabase
+        .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'math' })
+      if (ledErr) {
+        console.error(`[MATH] ledger insert failed for ${childId}: ${ledErr.message}`)
+        gems = 0
+      }
+    }
+
+    // Only the first rewarded session of the day is announced. Nothing here needs the
+    // parent to decide anything, so a message per session would be noise — three in an
+    // afternoon says no more than one does.
+    if (gems > 0 && doneToday === 0) {
+      const { data: parentRow } = await supabase
+        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const msg = language === 'en'
+        ? `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`
+        : `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`
+      sendNotification(child.parent_id, msg).catch(() => {})
+    }
+
+    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap })
+  } catch (err) {
+    console.error('[MATH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/children/:childId/paintings', async (req, res) => {
   const { childId } = req.params
   try {

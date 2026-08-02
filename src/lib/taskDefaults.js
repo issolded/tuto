@@ -9,7 +9,7 @@
 // "up to N" instead of a bare number.
 export const TASK_DEFAULTS = {
   reading:  { gems: 30, variable: true },
-  math:     { gems: 30, variable: true },
+  math:     { gems: 30, variable: true, daily_cap: 3 },
   writing:  { gems: 30, variable: true },
   homework: { gems: 25, variable: false },
   drawing:  { gems: 20, variable: false, daily_cap: 2 },
