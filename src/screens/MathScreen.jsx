@@ -104,6 +104,34 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps) {
     && (question.includes('+') || question.includes('-'))
 }
 
+// The generator can only avoid repeats it is told about, and it was never told: the
+// call site passed a literal empty array, so every session started from a blank slate.
+// Measured across 3 consecutive generations per level, same child: "5, 10, 15, 20, __?"
+// came back in 3 of 3 level-12 sessions, and level 11 returned "Sides of a pentagon +
+// Sides of a triangle = ?" verbatim twice — a child practising daily would just re-answer
+// the same handful of questions.
+//
+// Recent questions live in localStorage rather than the DB: no migration, and a child
+// answers on one device anyway. Keyed per child+level so the avoid-list stays relevant to
+// what is actually being generated. Only the template path has its own dedup (operandKey),
+// so this covers the LLM path.
+const SEEN_CAP = 20
+const seenKey = (childId, level) => `tuto_math_seen_${childId || 'anon'}_${level}`
+
+function readSeenQuestions(childId, level) {
+  try {
+    const v = JSON.parse(localStorage.getItem(seenKey(childId, level)) || '[]')
+    return Array.isArray(v) ? v.filter(q => typeof q === 'string') : []
+  } catch { return [] }
+}
+
+function rememberSeenQuestions(childId, level, questions) {
+  try {
+    const next = [...readSeenQuestions(childId, level), ...(questions || []).filter(Boolean)].slice(-SEEN_CAP)
+    localStorage.setItem(seenKey(childId, level), JSON.stringify(next))
+  } catch { /* private mode / quota — repeated questions are a nuisance, not a failure */ }
+}
+
 function getStartingLevel(age) {
   const n = Number(age)
   if (n <= 6)  return 1
@@ -761,13 +789,14 @@ export default function MathScreen() {
 
     setTemplateProblems([])
     try {
-      const prevQs = []
+      const prevQs = readSeenQuestions(child?.id, effectiveLevel)
       const result = await generateMathQuestions(age, effectiveLevel, prevQs)
       setQuestions(result.questions   || [])
       setCorrectAns(result.answers    || [])
       setQTypes(result.question_types || [])
       setTopic(result.topic           || 'math')
       setLlmHints(Array.isArray(result.hint_steps) ? result.hint_steps : [])
+      rememberSeenQuestions(child?.id, effectiveLevel, result.questions)
       setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
     } catch (e) {
       console.error('generateMathQuestions:', e)
