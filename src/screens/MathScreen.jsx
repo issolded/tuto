@@ -86,12 +86,37 @@ function templateTopicForLevel(level) {
 // HelpPanel ever renders, whether showing help would actually show something. Keeps the
 // auto-help-on-wrong-answer trigger from popping up an empty "draw it in the air" panel
 // for topics (old LLM path, no template) that have no real helper.
+// The arrow walkthrough can only handle a pattern that advances by a constant step.
+// The final arrow has no "to" number, so its expected value is inferred from the others —
+// which silently breaks on alternating patterns. "3, 6, 5, 8, 7, 10, __?" (+3, −1, …) was
+// walking the child off the last 10 with +3 toward 13, when the answer is 9. It was not
+// even completable: the −1 arrows expect a negative number and the keypad has no minus.
+// Such patterns fall through to step hints, which describe the real rule.
+function constantPatternStep(question) {
+  const nums = (question.match(/\d+/g) || []).map(Number)
+  if (nums.length < 3) return null // need two diffs before "constant" means anything
+  const step = nums[1] - nums[0]
+  if (step === 0) return null
+  for (let i = 2; i < nums.length; i++) {
+    if (nums[i] - nums[i - 1] !== step) return null
+  }
+  return step
+}
+
+// Children are asked "how many steps?", so they type a count and the arrow shows which
+// way it goes — a descending pattern was previously unanswerable for the same reason.
+const stepLabel = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)}`
+
 function hasRealHelp(question, questionType, templateTopic, hintSteps) {
   if (templateTopic) {
     if (templateTopic === 'addition' || templateTopic === 'subtraction') return true
     return (hintSteps?.length ?? 0) > 0
   }
-  if (questionType === 'pattern') return true
+  // A constant-step pattern gets the interactive arrow walkthrough; anything else needs
+  // the steps to explain the real rule.
+  if (questionType === 'pattern') {
+    return constantPatternStep(question) !== null || (hintSteps?.length ?? 0) > 0
+  }
   // Model-written steps understand the problem; prefer them over any text guess (see
   // the precedence note in HelpPanel).
   if ((hintSteps?.length ?? 0) > 0) return true
@@ -303,7 +328,11 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   const canTrustText = questionType === 'symbolic' && nums.length >= 2 && !(hintSteps?.length > 0)
   const isPlus  = templateTopic ? templateTopic === 'addition'    : (canTrustText && question.includes('+'))
   const isMinus = templateTopic ? templateTopic === 'subtraction' : (canTrustText && question.includes('-'))
-  const hasStepHints = !isPlus && !isMinus && questionType !== 'pattern' && hintSteps?.length > 0
+  // Only a constant-step pattern can be walked arrow by arrow (see constantPatternStep);
+  // an alternating one falls through to the steps like any other question.
+  const patternStep = questionType === 'pattern' ? constantPatternStep(question) : null
+  const usesArrowUI = patternStep !== null
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -320,7 +349,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || questionType === 'pattern') onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -337,8 +366,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (questionType === 'pattern') {
-    const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
+  if (usesArrowUI) {
+    const diff = patternStep
     const arrowCount = nums.length
     const allArrowsSolved = Object.keys(solvedArrows).length === arrowCount
 
@@ -358,7 +387,10 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
       const from = nums[i]
       const toNum = nums[i + 1]
       const expected = toNum !== undefined ? toNum - from : diff
-      if (Number(input) === expected) {
+      // The child is asked "how many steps?", so they answer with a count. Comparing
+      // against the signed value made every descending pattern unanswerable — the
+      // keypad has no minus key.
+      if (Number(input) === Math.abs(expected)) {
         const newSolved = { ...solvedArrows, [i]: expected }
         setSolvedArrows(newSolved)
         setActiveArrow(null)
@@ -371,11 +403,11 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
           const nextTo = nums[i + 2]
           setTutoBubble(tr
             ? (nextTo !== undefined
-                ? `Evet! +${expected}. Peki ${toNum}'den ${nextTo}'ye?`
-                : `Evet! +${expected}. O zaman ${nums[nums.length - 1]}'dan sonra ne gelir?`)
+                ? `Evet! ${stepLabel(expected)}. Peki ${toNum}'den ${nextTo}'ye?`
+                : `Evet! ${stepLabel(expected)}. O zaman ${nums[nums.length - 1]}'dan sonra ne gelir?`)
             : (nextTo !== undefined
-                ? `Yes! +${expected}. Now ${toNum} to ${nextTo}?`
-                : `Yes! +${expected}. So what comes after ${nums[nums.length - 1]}?`))
+                ? `Yes! ${stepLabel(expected)}. Now ${toNum} to ${nextTo}?`
+                : `Yes! ${stepLabel(expected)}. So what comes after ${nums[nums.length - 1]}?`))
         }
       } else {
         const toDisplay = toNum !== undefined ? toNum : '?'
@@ -417,7 +449,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
                   fontFamily: FRED, fontWeight: 700, fontSize: 11, lineHeight: 1,
                   color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE,
                 }}>
-                  {solvedArrows[i] !== undefined ? `+${solvedArrows[i]}` : '?'}
+                  {solvedArrows[i] !== undefined ? stepLabel(solvedArrows[i]) : '?'}
                 </span>
                 <span style={{
                   fontSize: 15, lineHeight: 1,
@@ -538,8 +570,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   const _svgW = 260, _barH = 36, _gap = 10, _br = 9
   let goster
 
-  if (questionType === 'pattern') {
-    const diff = nums.length >= 2 ? nums[1] - nums[0] : 0
+  if (usesArrowUI) {
+    const diff = patternStep
     const allPts = [...nums, null]   // null = ?
     const nlW = 280, nlH = 82
     const lpad = 22, rpad = 22
@@ -556,7 +588,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
                 <path d={`M ${x1} ${lineY} Q ${mx} ${lineY - arcH} ${x2} ${lineY}`}
                   fill="none" stroke={ORANGE} strokeWidth={2} />
                 <text x={mx} y={lineY - arcH - 4} textAnchor="middle"
-                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">+{diff}</text>
+                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{stepLabel(diff)}</text>
               </g>
             )
           })}
@@ -642,7 +674,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
 
   const showDoneBtn = activeTab === 'show'
     || bigNums
-    || (questionType === 'pattern' && Object.keys(solvedArrows).length === nums.length)
+    || (usesArrowUI && Object.keys(solvedArrows).length === nums.length)
     || (!isPlus && !isMinus)
     || (isMinus && doneRemoval)
     || (isPlus && allTouched)
