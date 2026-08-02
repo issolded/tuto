@@ -97,15 +97,10 @@ export default function ParentOnboarding() {
   const [age,             setAge]             = useState(7)
   const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, homework: true, drawing: true })
   const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
-  const [whatsapp,        setWhatsapp]        = useState('')
   const [notifChannel,    setNotifChannel]    = useState(null)
   const [emailNotif,      setEmailNotif]      = useState(true)
   const [pushNotif,       setPushNotif]       = useState(true)
   const [codeCopied,      setCodeCopied]      = useState(false)
-  const [waPhone,         setWaPhone]         = useState('')
-  const [waSending,       setWaSending]       = useState(false)
-  const [waVerifySent,    setWaVerifySent]    = useState(false)
-  const [waError,         setWaError]         = useState('')
   const [pin,             setPin]             = useState('')
   const [pinConfirm,      setPinConfirm]      = useState('')
   const [pinPhase,        setPinPhase]        = useState('enter')
@@ -214,7 +209,6 @@ export default function ParentOnboarding() {
         email_notifications: emailNotif,
         push_notifications: pushNotif,
         timezone,
-        ...(whatsapp.trim() && { whatsapp_phone: whatsapp.trim() }),
         ...(notifChannel && { notification_channel: notifChannel }),
       }).eq('id', uid.id)
 
@@ -519,27 +513,17 @@ export default function ParentOnboarding() {
                 </div>
               </button>
 
-              {/* WhatsApp */}
-              <button className="tc-press tc-tap" onClick={() => { setNotifChannel('whatsapp'); setWaVerifySent(false); setWaError('') }} style={{
+              {/* WhatsApp — connect flow is being rebuilt on Twilio, temporarily unavailable */}
+              <div style={{
                 flex: 1, padding: '20px 12px',
-                background: notifChannel === 'whatsapp' ? PC.greenBg : '#fff',
-                border: `2px solid ${notifChannel === 'whatsapp' ? PC.green : PC.line}`,
-                borderRadius: 20, cursor: 'pointer', textAlign: 'center',
+                background: '#fff', border: `2px solid ${PC.line}`,
+                borderRadius: 20, textAlign: 'center', opacity: 0.5,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                transition: 'all .18s',
               }}>
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{ width: 44, height: 44 }} />
                 <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.ink }}>WhatsApp</div>
-                <div style={{
-                  width: 20, height: 20, borderRadius: '50%',
-                  border: `2px solid ${notifChannel === 'whatsapp' ? PC.green : PC.line}`,
-                  background: notifChannel === 'whatsapp' ? PC.green : '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all .18s',
-                }}>
-                  {notifChannel === 'whatsapp' && <Icon name="check" size={10} color="#fff" sw={3} />}
-                </div>
-              </button>
+                <div style={{ fontFamily: FONT, fontSize: 10.5, fontWeight: 700, color: PC.inkFaint }}>Coming soon</div>
+              </div>
             </div>
 
             {/* Telegram detail */}
@@ -559,46 +543,6 @@ export default function ParentOnboarding() {
                   <div style={{ background: '#E3F2FD', borderRadius: 14, padding: 14, textAlign: 'center', fontFamily: FONT, fontSize: 13, color: '#229ED9', fontWeight: 700 }}>Loading code…</div>
                 )}
                 <Btn onClick={next} style={{ marginTop: 14 }}>I've connected Telegram ✅</Btn>
-              </Card>
-            )}
-
-            {/* WhatsApp detail */}
-            {notifChannel === 'whatsapp' && (
-              <Card pad={20} className="tc-fade" style={{ border: `2px solid ${PC.green}` }}>
-                {waVerifySent ? (
-                  <>
-                    <div style={{ textAlign: 'center', fontSize: 36, marginBottom: 12 }}>📱</div>
-                    <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.green, textAlign: 'center', lineHeight: 1.7, marginBottom: 14 }}>
-                      We just sent you a message on WhatsApp!<br />Check your WhatsApp and come back here.
-                    </div>
-                    <Btn onClick={next}>Yes, I got it! ✅</Btn>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.ink, marginBottom: 10 }}>Enter your WhatsApp number:</div>
-                    <input className="tc-input" type="tel" placeholder="+905XXXXXXXXX" value={waPhone}
-                      onChange={e => { setWaPhone(e.target.value); setWaError('') }} style={{ marginBottom: waError ? 8 : 14 }} />
-                    {waError && <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.danger, marginBottom: 10 }}>{waError}</div>}
-                    <Btn disabled={!waPhone.trim() || waSending} onClick={async () => {
-                      if (!user) return setWaError('Not logged in.')
-                      setWaSending(true); setWaError('')
-                      try {
-                        const res = await fetch(`${SERVER}/api/send-welcome-whatsapp`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ phoneNumber: waPhone.trim(), childName: childName || 'your child', parentId: user.id }),
-                        })
-                        const data = await res.json()
-                        if (!res.ok) throw new Error(data.error || 'Server error')
-                        setWaVerifySent(true)
-                      } catch (e) {
-                        setWaError(e.message)
-                      } finally {
-                        setWaSending(false)
-                      }
-                    }}>{waSending ? 'Sending…' : 'Connect WhatsApp 📲'}</Btn>
-                  </>
-                )}
               </Card>
             )}
 

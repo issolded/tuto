@@ -162,11 +162,6 @@ export default function ParentDashboard() {
   const [showQR, setShowQR] = useState(false)
   const [notifData, setNotifData] = useState({ telegramChatId: null, whatsappPhone: null, channel: null })
   const [showTelegramSetup, setShowTelegramSetup] = useState(false)
-  const [showWaSetup, setShowWaSetup] = useState(false)
-  const [waPhone, setWaPhone] = useState('')
-  const [waSending, setWaSending] = useState(false)
-  const [waVerifySent, setWaVerifySent] = useState(false)
-  const [waError, setWaError] = useState('')
   const [telegramCodeCopied, setTelegramCodeCopied] = useState(false)
 
   useEffect(() => {
@@ -367,64 +362,16 @@ export default function ParentDashboard() {
 
           <div style={{ height: 1, background: PC.line }} />
 
-          {/* WhatsApp */}
+          {/* WhatsApp — connect flow is being rebuilt on Twilio, temporarily unavailable */}
           <NotifRow
             icon="💬"
             label="WhatsApp"
             connected={!!notifData.whatsappPhone}
-            status={notifData.whatsappPhone ? notifData.whatsappPhone : 'Not connected'}
-            action={!notifData.whatsappPhone
-              ? <Btn full={false} variant="soft" onClick={() => { setShowWaSetup(s => !s); setWaVerifySent(false); setWaError('') }} style={{ padding: '8px 13px', fontSize: 13 }}>{showWaSetup ? 'Cancel' : 'Add number'}</Btn>
-              : notifData.telegramChatId
-                ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
-                : null}
+            status={notifData.whatsappPhone ? notifData.whatsappPhone : 'Coming soon'}
+            action={notifData.whatsappPhone && notifData.telegramChatId
+              ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
+              : null}
           />
-
-          {showWaSetup && !notifData.whatsappPhone && (
-            <div className="tc-fade" style={{ background: PC.greenBg, borderRadius: 15, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: -6 }}>
-              {waVerifySent ? (
-                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.green, textAlign: 'center' }}>
-                  📲 Verification sent! Check your WhatsApp
-                </div>
-              ) : (
-                <>
-                  <input
-                    type="tel"
-                    placeholder="+905XXXXXXXXX"
-                    value={waPhone}
-                    onChange={e => { setWaPhone(e.target.value); setWaError('') }}
-                    className="tc-input"
-                  />
-                  {waError && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.danger }}>{waError}</div>}
-                  <button
-                    disabled={!waPhone.trim() || waSending}
-                    onClick={async () => {
-                      if (!user) return
-                      setWaSending(true); setWaError('')
-                      try {
-                        const res = await fetch(`${SERVER}/api/verify-whatsapp`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ phoneNumber: waPhone.trim(), parentId: user.id }),
-                        })
-                        const json = await res.json()
-                        if (!res.ok) throw new Error(json.error || 'Server error')
-                        setWaVerifySent(true)
-                        setNotifData(d => ({ ...d, whatsappPhone: waPhone.trim(), channel: d.channel || 'whatsapp' }))
-                      } catch (e) {
-                        setWaError(e.message)
-                      } finally {
-                        setWaSending(false)
-                      }
-                    }}
-                    className="tc-press"
-                    style={{ padding: '13px 16px', background: waSending || !waPhone.trim() ? PC.inkFaint : PC.green, border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 800, color: '#fff', cursor: waSending || !waPhone.trim() ? 'not-allowed' : 'pointer', fontFamily: FONT }}>
-                    {waSending ? 'Sending…' : 'Connect WhatsApp 📲'}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
         </Card>
       </div>
 
