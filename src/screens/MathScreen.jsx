@@ -4,7 +4,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { storageClient } from '../lib/supabase'
 import { generateMathQuestions, evaluateMath } from '../lib/gemini'
-import { generateProblem } from '../lib/mathTemplates'
+import { generateProblem, SHAPES } from '../lib/mathTemplates'
 
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
@@ -78,6 +78,7 @@ function templateTopicForLevel(level) {
   if (/^Subtraction/.test(desc)) return 'subtraction'
   if (/Multiplication/.test(desc)) return 'multiplication-word'
   if (/Fraction/i.test(desc)) return 'fraction-of-number'
+  if (/Geometry/i.test(desc)) return 'geometry'
   if (/division|divis|share|equal groups?/i.test(desc)) return 'division-word'
   return null
 }
@@ -282,6 +283,45 @@ function StepHints({ question, hintSteps, revealed, onReveal, showMore, moreHint
 
 // ── Help Panel ────────────────────────────────────────────────────────────────
 
+// Geometry questions show the shape, so the child counts what they can see instead of
+// recalling that a pentagon has five of anything. Squares and rectangles are given
+// explicitly because the regular-polygon formula would stand them on a corner; the rest
+// are regular polygons drawn point-up.
+function shapePoints(kind, r) {
+  if (kind === 'square')    return [[-r, -r], [r, -r], [r, r], [-r, r]]
+  if (kind === 'rectangle') return [[-r * 1.35, -r * 0.75], [r * 1.35, -r * 0.75], [r * 1.35, r * 0.75], [-r * 1.35, r * 0.75]]
+  const n = SHAPES[kind]
+  return Array.from({ length: n }, (_, i) => {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2
+    return [r * Math.cos(a), r * Math.sin(a)]
+  })
+}
+
+// `lit` is how far the child has counted — that many corners (or side midpoints) glow, so
+// counting has a visible place-marker instead of being done in the head.
+function ShapeSVG({ kind, size = 92, ask, lit = 0, showMarks = false }) {
+  const r = size * 0.36
+  const c = size / 2
+  const pts = shapePoints(kind, r)
+  const path = pts.map(([x, y]) => `${(c + x).toFixed(1)},${(c + y).toFixed(1)}`).join(' ')
+  const marks = ask === 'sides'
+    ? pts.map(([x, y], i) => {
+        const [nx, ny] = pts[(i + 1) % pts.length]
+        return [c + (x + nx) / 2, c + (y + ny) / 2]
+      })
+    : pts.map(([x, y]) => [c + x, c + y])
+
+  return (
+    <svg width={size} height={size} style={{ display: 'block' }}>
+      <polygon points={path} fill="#eaf3fc" stroke={MATH} strokeWidth={3} strokeLinejoin="round" />
+      {showMarks && marks.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={i < lit ? 7 : 5}
+          fill={i < lit ? GREEN : '#fff'} stroke={i < lit ? GREEN : MATH} strokeWidth={2.5} />
+      ))}
+    </svg>
+  )
+}
+
 // Division and fractions are the same picture — deal a total into equal groups — so one
 // component covers levels 9, 10 and 15. Each tap deals a full round, one item to every
 // group, because that is what "shared equally" actually means; the answer then reads
@@ -361,6 +401,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     shareTap:       'Herkese birer tane ver! 👐',
     shareDone:      'Herkes eşit aldı! Şimdi bir grubu say 🔢',
     sharePick:      'İşte bir grup — kaç tane var?',
+    shapeTap:       'Dokundukça say — her seferinde biri yanar 👆',
+    shapeDone:      'Hepsini saydın! Kaç tane ettiler?',
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
   } : {
@@ -376,6 +418,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     shareTap:       'Give one to each! 👐',
     shareDone:      'Everyone got the same! Now count one group 🔢',
     sharePick:      'That is one group — how many in it?',
+    shapeTap:       'Tap to count — one lights up each time 👆',
+    shapeDone:      'You counted them all! How many was that?',
     showHint:       'Show help',
     moreHint:       'More help',
   }
@@ -405,7 +449,8 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // A template-supplied descriptor is ground truth, so it outranks the step hints —
   // seeing 12 dealt into 3 groups beats reading about it.
   const share = visual?.kind === 'share' ? visual : null
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && hintSteps?.length > 0
+  const shapes = visual?.kind === 'shapes' ? visual : null
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -423,7 +468,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -440,7 +485,38 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (share) {
+  if (shapes) {
+    // Tapping counts one more mark, so the child's place is held on screen rather than in
+    // their head — the same job the dot-tapping does for addition.
+    const totals = shapes.shapes.map(s => SHAPES[s])
+    const all = totals.reduce((a, b) => a + b, 0)
+    const done = dealt >= all
+    let left = dealt
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {done ? t.shapeDone : t.shapeTap}
+        </div>
+        <div
+          onClick={() => setDealt(d => Math.min(all, d + 1))}
+          style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', cursor: done ? 'default' : 'pointer' }}
+        >
+          {shapes.shapes.map((s, i) => {
+            const lit = Math.max(0, Math.min(totals[i], left))
+            left -= totals[i]
+            return <ShapeSVG key={i} kind={s} size={104} ask={shapes.ask} lit={lit} showMarks />
+          })}
+        </div>
+        <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: done ? GREEN : MATH_DEEP }}>
+          {dealt}
+        </div>
+      </div>
+    )
+  } else if (share) {
     const done = dealt >= share.total
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
@@ -664,7 +740,19 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   const _svgW = 260, _barH = 36, _gap = 10, _br = 9
   let goster
 
-  if (share) {
+  if (shapes) {
+    // Every mark already lit, so the picture states the count without stating the total.
+    goster = (
+      <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {shapes.shapes.map((s, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <ShapeSVG kind={s} size={104} ask={shapes.ask} lit={SHAPES[s]} showMarks />
+            <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: GREEN }}>{SHAPES[s]}</span>
+          </div>
+        ))}
+      </div>
+    )
+  } else if (share) {
     // Already shared out, so the child reads the result rather than doing the dealing —
     // the equation is written with a "?" so it still stops short of the answer.
     goster = (
@@ -1289,6 +1377,8 @@ export default function MathScreen() {
     const q      = questions[qIdx] || ''
     const isWord = qTypes[qIdx] === 'word' || q.length > 35
     const pct    = (qIdx / questions.length) * 100
+    const qVisual = templateProblems[qIdx]?.visual
+    const questionShapes = qVisual?.kind === 'shapes' ? qVisual.shapes : null
 
     return (
       <div style={{ ...wrap, overflow: 'hidden' }}>
@@ -1344,13 +1434,20 @@ export default function MathScreen() {
             />
           ) : (
             <>
-              {/* Question card */}
+              {/* Question card — a question can carry a picture (geometry shows the shape
+                  rather than naming it), so the text sits under whatever it illustrates. */}
               <div key={qIdx} style={{
                 background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
                 boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
-                minHeight: isWord ? 120 : 84, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                minHeight: isWord ? 120 : 84, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 14,
               }}>
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : 32, color: INK, lineHeight: 1.55 }}>
+                {questionShapes && (
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {questionShapes.map((s, i) => <ShapeSVG key={i} kind={s} size={96} />)}
+                  </div>
+                )}
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   {q}
                 </div>
               </div>
