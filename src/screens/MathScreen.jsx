@@ -94,7 +94,13 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps) {
   if (questionType === 'pattern') return true
   const isWordAdd   = questionType === 'word' && /gives?|more|adds?|total|together|gets?/i.test(question)
   const isWordMinus = questionType === 'word' && /takes?|away|left|eats?|loses?|fewer|gives away/i.test(question)
-  return question.includes('+') || question.includes('-') || isWordAdd || isWordMinus
+  const readsArithmetic = question.includes('+') || question.includes('-') || isWordAdd || isWordMinus
+  // Count/Show is drawn from two operands parsed out of the question text, so reading
+  // as addition is not enough — the operands have to actually be numbers. "Sides of a
+  // pentagon + Corners of a triangle = ?" contains a "+" but no digits, and used to open
+  // a panel with zero dots to count. Fall through to step hints when there's nothing to draw.
+  if (readsArithmetic && (question.match(/\d+/g) || []).length >= 2) return true
+  return (hintSteps?.length ?? 0) > 0
 }
 
 function getStartingLevel(age) {
@@ -261,8 +267,11 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   // use that directly instead of guessing from question text/regex, so e.g. a
   // multiplication word problem that happens to contain "total" never gets misread as
   // addition. Old LLM-sourced questions (templateTopic undefined) keep the regex guess.
-  const isPlus  = templateTopic ? templateTopic === 'addition'    : (question.includes('+') || isWordAdd)
-  const isMinus = templateTopic ? templateTopic === 'subtraction' : (question.includes('-') || isWordMinus)
+  // Mirrors hasRealHelp: without two parsed operands there is nothing to draw, so a
+  // worded "+" question falls through to step hints instead of an empty dot grid.
+  const hasOperands = nums.length >= 2
+  const isPlus  = templateTopic ? templateTopic === 'addition'    : ((question.includes('+') || isWordAdd) && hasOperands)
+  const isMinus = templateTopic ? templateTopic === 'subtraction' : ((question.includes('-') || isWordMinus) && hasOperands)
   const hasStepHints = !isPlus && !isMinus && questionType !== 'pattern' && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
@@ -696,6 +705,7 @@ export default function MathScreen() {
   const [helpVisible,   setHelpVisible]  = useState(false)
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
   const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
+  const [llmHints,      setLlmHints]     = useState([])         // per-question hint_steps for the LLM path, where there is no template to read them from
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
@@ -741,6 +751,7 @@ export default function MathScreen() {
       setQTypes(problems.map(() => null))
       setTopic(templateTopic)
       setTemplateProblems(problems)
+      setLlmHints([])
       setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
       return
     }
@@ -753,6 +764,7 @@ export default function MathScreen() {
       setCorrectAns(result.answers    || [])
       setQTypes(result.question_types || [])
       setTopic(result.topic           || 'math')
+      setLlmHints(Array.isArray(result.hint_steps) ? result.hint_steps : [])
       setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
     } catch (e) {
       console.error('generateMathQuestions:', e)
@@ -768,7 +780,7 @@ export default function MathScreen() {
     const newAnswers = [...userAnswers, userAns]
 
     const tProblem = templateProblems[qIdx]
-    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps)
+    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx])
     if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
@@ -1148,7 +1160,7 @@ export default function MathScreen() {
               question={q}
               questionType={qTypes[qIdx]}
               templateTopic={templateProblems[qIdx]?.topic}
-              hintSteps={templateProblems[qIdx]?.hint_steps}
+              hintSteps={templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]}
               onDone={() => { setHelpVisible(false); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}

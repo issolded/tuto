@@ -255,12 +255,17 @@ Mix question types: symbolic equations, word problems, and patterns.
 Make them fun, relatable and age-appropriate. Use names, animals, food, toys in word problems.
 IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.
 For pattern questions, only show the number sequence with a blank. Do NOT include descriptions like 'Count by 3s' or 'Skip count by 2s' in the question. Example: '2, 4, 6, 8, __?' not 'Count by 2s: 2, 4, 6, 8, __?'${topicContext}${avoidClause}
+Also return "hint_steps": one entry per question, each 1-2 SHORT steps that walk the child
+toward the answer WITHOUT ever stating it. When a question needs a fact the child may not
+know, the first step must supply that fact — for "Sides of a pentagon + Corners of a
+triangle = ?" a good entry is ["A pentagon has 5 sides.", "A triangle has 3 corners — now add them."].
 Return JSON only:
 {
   "questions": ["5 + 3 = ?", "Sara has 8 apples and eats 3. How many does she have left?", "2, 4, 6, __ what comes next?"],
   "topic": "addition",
   "answers": [8, 5, 8],
-  "question_types": ["symbolic", "word", "pattern"]
+  "question_types": ["symbolic", "word", "pattern"],
+  "hint_steps": [["Start at 5.", "Count on 3 more: 6, 7, 8."], ["Sara starts with 8 apples.", "Take away the 3 she ate."], ["Look at the gap between each number.", "Each one goes up by 2."]]
 }`
   return callGemini([{ text: prompt }])
 }
