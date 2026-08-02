@@ -163,6 +163,11 @@ export default function ParentDashboard() {
   const [notifData, setNotifData] = useState({ telegramChatId: null, whatsappPhone: null, channel: null })
   const [showTelegramSetup, setShowTelegramSetup] = useState(false)
   const [telegramCodeCopied, setTelegramCodeCopied] = useState(false)
+  const [showWaSetup, setShowWaSetup] = useState(false)
+  const [waCode, setWaCode] = useState(null)
+  const [waLink, setWaLink] = useState(null)
+  const [waJustConnected, setWaJustConnected] = useState(false)
+  const [waError, setWaError] = useState('')
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -219,6 +224,39 @@ export default function ParentDashboard() {
     setNotifData(d => ({ ...d, channel: ch }))
     if (user) await supabase.from('parents').update({ notification_channel: ch }).eq('id', user.id)
   }
+
+  const startWaConnect = async () => {
+    if (!user || waLink) return
+    setWaError('')
+    try {
+      const res = await fetch(`${SERVER}/api/whatsapp/connect-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: user.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Server error')
+      setWaCode(data.code)
+      setWaLink(data.waLink)
+    } catch (e) {
+      setWaError(e.message)
+    }
+  }
+
+  useEffect(() => {
+    if (!showWaSetup || !waCode || !user) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${SERVER}/api/whatsapp/connect-status?parentId=${user.id}&code=${waCode}`)
+        const data = await res.json()
+        if (data.connected) {
+          setWaJustConnected(true)
+          setNotifData(d => ({ ...d, whatsappPhone: data.whatsappPhone, channel: d.channel || 'whatsapp' }))
+        }
+      } catch { /* keep polling */ }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [showWaSetup, waCode, user])
 
   const loadChildren = async (uid) => {
     const { data } = await supabase.from('children').select('*').eq('parent_id', uid).order('created_at')
@@ -340,7 +378,7 @@ export default function ParentDashboard() {
             status={notifData.telegramChatId ? 'Connected' : 'Not connected'}
             action={!notifData.telegramChatId
               ? <Btn full={false} variant="soft" onClick={() => setShowTelegramSetup(s => !s)} style={{ padding: '8px 13px', fontSize: 13 }}>{showTelegramSetup ? 'Cancel' : 'Connect'}</Btn>
-              : notifData.whatsappPhone
+              : waJustConnected
                 ? <button className="tc-press tc-tap" onClick={() => updateChannel('telegram')} style={{ background: notifData.channel === 'telegram' ? PC.teal : PC.tealBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'telegram' ? '#fff' : PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'telegram' ? '★ Primary' : 'Set primary'}</button>
                 : null}
           />
@@ -362,17 +400,40 @@ export default function ParentDashboard() {
 
           <div style={{ height: 1, background: PC.line }} />
 
-          {/* WhatsApp — connect flow is being rebuilt on Twilio. whatsapp_phone may
-              still hold a stale, never-actually-verified value from the old
-              abandoned flow, so status intentionally ignores it until the new
-              code-matching connect flow ships and can set it for real. */}
+          {/* WhatsApp — whatsapp_phone alone doesn't mean "connected": a stale,
+              never-actually-verified value can be sitting there from the old
+              abandoned flow. waJustConnected (set only once THIS session's
+              webhook poll confirms the match) is the real signal. */}
           <NotifRow
             icon="💬"
             label="WhatsApp"
-            connected={false}
-            status="Coming soon"
-            action={null}
+            connected={waJustConnected}
+            status={waJustConnected ? 'Connected' : 'Not connected'}
+            action={!waJustConnected
+              ? <Btn full={false} variant="soft" onClick={() => { setShowWaSetup(s => !s); if (!waLink) startWaConnect() }} style={{ padding: '8px 13px', fontSize: 13 }}>{showWaSetup ? 'Cancel' : 'Connect'}</Btn>
+              : notifData.telegramChatId
+                ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
+                : null}
           />
+
+          {showWaSetup && !waJustConnected && (
+            <div className="tc-fade" style={{ background: PC.greenBg, borderRadius: 15, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: -6 }}>
+              {waLink ? (
+                <>
+                  <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.ink, lineHeight: 1.6 }}>
+                    Tap below to open WhatsApp with a pre-filled message, then hit send.
+                  </div>
+                  <a href={waLink} target="_blank" rel="noreferrer" className="tc-press"
+                    style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '13px 16px', background: PC.green, borderRadius: 14, fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff' }}>
+                    Open WhatsApp 📲
+                  </a>
+                  <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkFaint, textAlign: 'center' }}>Waiting for your message…</div>
+                </>
+              ) : (
+                <div style={{ fontFamily: FONT, fontSize: 13, color: PC.inkFaint, textAlign: 'center' }}>{waError || 'Loading…'}</div>
+              )}
+            </div>
+          )}
         </Card>
       </div>
 
