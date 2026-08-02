@@ -92,15 +92,16 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps) {
     return (hintSteps?.length ?? 0) > 0
   }
   if (questionType === 'pattern') return true
-  const isWordAdd   = questionType === 'word' && /gives?|more|adds?|total|together|gets?/i.test(question)
-  const isWordMinus = questionType === 'word' && /takes?|away|left|eats?|loses?|fewer|gives away/i.test(question)
-  const readsArithmetic = question.includes('+') || question.includes('-') || isWordAdd || isWordMinus
-  // Count/Show is drawn from two operands parsed out of the question text, so reading
-  // as addition is not enough — the operands have to actually be numbers. "Sides of a
-  // pentagon + Corners of a triangle = ?" contains a "+" but no digits, and used to open
-  // a panel with zero dots to count. Fall through to step hints when there's nothing to draw.
-  if (readsArithmetic && (question.match(/\d+/g) || []).length >= 2) return true
-  return (hintSteps?.length ?? 0) > 0
+  // Model-written steps understand the problem; prefer them over any text guess (see
+  // the precedence note in HelpPanel).
+  if ((hintSteps?.length ?? 0) > 0) return true
+  // No steps: the counting visual is only safe for a literal symbolic equation, where
+  // the two parsed numbers really are the operands. Word problems are never inferred —
+  // their numbers may need transforming first — and "Sides of a pentagon + Corners of a
+  // triangle = ?" has a "+" with no digits at all, which used to open an empty panel.
+  return questionType === 'symbolic'
+    && (question.match(/\d+/g) || []).length >= 2
+    && (question.includes('+') || question.includes('-'))
 }
 
 function getStartingLevel(age) {
@@ -260,18 +261,20 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, onDone, o
   const n0 = nums[0] ?? 0
   const n1 = nums[1] ?? 0
 
-  const isWordAdd   = questionType === 'word' && /gives?|more|adds?|total|together|gets?/i.test(question)
-  const isWordMinus = questionType === 'word' && /takes?|away|left|eats?|loses?|fewer|gives away/i.test(question)
-
   // Problems sourced from the template engine (mathTemplates.js) know their own topic —
-  // use that directly instead of guessing from question text/regex, so e.g. a
-  // multiplication word problem that happens to contain "total" never gets misread as
-  // addition. Old LLM-sourced questions (templateTopic undefined) keep the regex guess.
-  // Mirrors hasRealHelp: without two parsed operands there is nothing to draw, so a
-  // worded "+" question falls through to step hints instead of an empty dot grid.
-  const hasOperands = nums.length >= 2
-  const isPlus  = templateTopic ? templateTopic === 'addition'    : ((question.includes('+') || isWordAdd) && hasOperands)
-  const isMinus = templateTopic ? templateTopic === 'subtraction' : ((question.includes('-') || isWordMinus) && hasOperands)
+  // use that directly instead of guessing from question text/regex.
+  //
+  // On the LLM path there is no such ground truth, and guessing from the text is not
+  // merely unhelpful, it teaches the wrong method: "2 cookies are triangles and 1 is a
+  // pentagon, how many corners in total?" has two parsable numbers and the word "total",
+  // so the old guess drew 2 + 1 = 3 when the answer is 2×3 + 1×5 = 11. The numbers in a
+  // word problem are not necessarily the operands of the computation. Model-written
+  // hint_steps are produced with an understanding of the problem, so they take
+  // precedence; the counting visual is kept only as a fallback for literal symbolic
+  // equations, where the text genuinely IS the sum.
+  const canTrustText = questionType === 'symbolic' && nums.length >= 2 && !(hintSteps?.length > 0)
+  const isPlus  = templateTopic ? templateTopic === 'addition'    : (canTrustText && question.includes('+'))
+  const isMinus = templateTopic ? templateTopic === 'subtraction' : (canTrustText && question.includes('-'))
   const hasStepHints = !isPlus && !isMinus && questionType !== 'pattern' && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
