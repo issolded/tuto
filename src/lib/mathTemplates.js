@@ -237,15 +237,16 @@ function divisionWordTemplate(level) {
 const SHAPES = {
   triangle: 3, square: 4, rectangle: 4, pentagon: 5, hexagon: 6, octagon: 8,
 }
-const SIMPLE_SHAPES = ['triangle', 'square', 'rectangle', 'pentagon']
 
 function geometryTemplate(level) {
-  const pool = level <= 6 ? SIMPLE_SHAPES : Object.keys(SHAPES)
+  // Shapes occupy a single rung on the ladder, so difficulty does not ride on the level
+  // number — the rung presents its own whole range instead. Both askings, all six shapes,
+  // and a mix of one shape and two: a pair tops out at 8 + 8, and since every mark is on
+  // screen and countable, that stays within reach of a child who can count to sixteen.
+  const pool = Object.keys(SHAPES)
   const ask = pick(['sides', 'corners'])
   const one = ask.slice(0, -1) // "sides" → "side"
-  // Two-shape totals only once a child is past the early levels; before that, counting a
-  // single shape is the whole task.
-  const pair = level >= 7 && Math.random() < 0.5
+  const pair = Math.random() < 0.45
 
   if (!pair) {
     const shape = pick(pool)

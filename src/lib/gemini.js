@@ -260,18 +260,22 @@ export async function validateStoryInput(text, age, language = 'en') {
   return callGemini([{ text: prompt }])
 }
 
+// Must stay in step with LEVEL_DESC in MathScreen.jsx — that decides which rungs go to a
+// template, this describes the rest to the model, and a rung that means two different
+// things in the two places would generate against the wrong topic. Level 4 is now shapes
+// and is always template-generated, so the model never sees it.
 const MATH_LEVEL_DESC = {
   1: 'Counting, numbers 1-10',
   2: 'Addition up to 10',
   3: 'Subtraction up to 10',
-  4: 'Addition up to 20',
-  5: 'Subtraction up to 20',
-  6: 'Simple word problems (e.g. "You have 5 pencils and give away 3. How many left?")',
-  7: 'Addition and subtraction up to 100',
-  8: 'Multiplication tables 2, 5, 10',
-  9: 'Fractions (1/2, 1/4, 3/4 — express as whole-number answers)',
-  10: 'Division (simple, related to multiplication tables)',
-  11: 'Geometry basics (shapes, sides, corners)',
+  4: 'Shapes: counting sides and corners',
+  5: 'Addition up to 20',
+  6: 'Subtraction up to 20',
+  7: 'Simple word problems (e.g. "You have 5 pencils and give away 3. How many left?")',
+  8: 'Addition and subtraction up to 100',
+  9: 'Multiplication tables 2, 5, 10',
+  10: 'Fractions (1/2, 1/4, 3/4 — express as whole-number answers)',
+  11: 'Division (simple, related to multiplication tables)',
   12: 'Measurement (time, money, weight — simple)',
   13: 'Multiplication tables 3, 4, 6, 7, 8, 9',
   14: 'Complex word problems (multi-step)',

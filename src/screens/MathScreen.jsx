@@ -59,11 +59,17 @@ const CONFETTI = [
   { color: '#FFD93D', left: '90%', delay: '0.03s' },
 ]
 
+// Geometry sat at 11, above multiplication and division, from when it was LLM-written and
+// really an addition question wearing shape vocabulary. Now that the shape is drawn and
+// the child counts what they see, its true difficulty is plain: counting to 8 for one
+// shape, to 16 for two — and every mark is on screen to be counted. So it belongs between
+// the "up to 10" pair and the "up to 20" pair, which also keeps each add/subtract pair
+// together. Everything from Addition up to 20 down to Division shifts one rung later.
 const LEVEL_DESC = {
   1: 'Counting 1–10',       2: 'Addition up to 10',      3: 'Subtraction up to 10',
-  4: 'Addition up to 20',   5: 'Subtraction up to 20',   6: 'Word Problems',
-  7: 'Add & Subtract ×100', 8: 'Multiplication ×2 ×5 ×10', 9: 'Fractions',
-  10: 'Division',           11: 'Geometry',              12: 'Measurement',
+  4: 'Shapes: sides & corners', 5: 'Addition up to 20',  6: 'Subtraction up to 20',
+  7: 'Word Problems',       8: 'Add & Subtract ×100',    9: 'Multiplication ×2 ×5 ×10',
+  10: 'Fractions',          11: 'Division',              12: 'Measurement',
   13: 'Multiplication Tables', 14: 'Multi-step Problems', 15: 'Fractions & Decimals',
 }
 
@@ -78,7 +84,7 @@ function templateTopicForLevel(level) {
   if (/^Subtraction/.test(desc)) return 'subtraction'
   if (/Multiplication/.test(desc)) return 'multiplication-word'
   if (/Fraction/i.test(desc)) return 'fraction-of-number'
-  if (/Geometry/i.test(desc)) return 'geometry'
+  if (/Shapes|Geometry/i.test(desc)) return 'geometry'
   if (/division|divis|share|equal groups?/i.test(desc)) return 'division-word'
   return null
 }
@@ -158,13 +164,16 @@ function rememberSeenQuestions(childId, level, questions) {
   } catch { /* private mode / quota — repeated questions are a nuisance, not a failure */ }
 }
 
+// Kept pointing at the same topics as before the geometry move, so a child of a given age
+// still starts where they used to — except the oldest band, which used to open on geometry
+// purely because it sat high on the ladder, and now opens on division instead.
 function getStartingLevel(age) {
   const n = Number(age)
-  if (n <= 6)  return 1
-  if (n <= 8)  return 3
-  if (n <= 10) return 5
-  if (n <= 12) return 8
-  return 11
+  if (n <= 6)  return 1  // Counting 1–10
+  if (n <= 8)  return 3  // Subtraction up to 10
+  if (n <= 10) return 6  // Subtraction up to 20
+  if (n <= 12) return 9  // Multiplication ×2 ×5 ×10
+  return 11              // Division
 }
 
 function getWelcomeMsg(age) {
