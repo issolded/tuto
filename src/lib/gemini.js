@@ -254,6 +254,15 @@ export async function generateMathQuestions(age, level, previousQuestions = [], 
 Mix question types: symbolic equations, word problems, and patterns.
 Make them fun, relatable and age-appropriate. Use names, animals, food, toys in word problems.
 IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.
+Solving a question must never require knowledge the child could only have from one country,
+or general knowledge that is not maths. So:
+- NO country-specific money (dime, nickel, penny, quarter, cent, dollar, pound). For money,
+  name a neutral amount instead — "a coin worth 10" — or avoid money altogether.
+- Metric units only (grams, kilograms, centimetres, metres, litres). Never pounds, ounces,
+  inches, feet.
+- Do not hinge an answer on a fact the child must simply know (how many legs a spider has,
+  how many days in Lent). Sides and corners of common shapes ARE fine, and the hint may
+  supply that fact.
 For pattern questions, only show the number sequence with a blank. Do NOT include descriptions like 'Count by 3s' or 'Skip count by 2s' in the question. Example: '2, 4, 6, 8, __?' not 'Count by 2s: 2, 4, 6, 8, __?'${topicContext}${avoidClause}
 Also return "hint_steps": one entry per question, each 1-2 SHORT steps that walk the child
 toward the answer WITHOUT ever stating it. When a question needs a fact the child may not
