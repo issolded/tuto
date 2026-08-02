@@ -135,13 +135,16 @@ function multReadingVariant(a, b, name) {
 const MULT_VARIANTS = [multGroupsVariant, multArrayVariant, multReadingVariant]
 
 function multiplicationWordTemplate(level) {
-  const { max } = rangeForLevel(level)
-  // Keep both factors small-ish even at high levels — word problems get unreadable
-  // with huge totals — independent cap from the additive range, but wider than before
-  // so higher levels still feel harder.
-  const factorMax = Math.min(12, Math.max(3, Math.floor(max / 2)))
-  const a = randInt(2, factorMax)
-  const b = randInt(2, factorMax)
+  // The ladder names which tables each rung practises — "×2 ×5 ×10" low down, the harder
+  // ones higher up — but both rungs used to draw factors at random from the same 2..12, so
+  // neither taught what it claimed and the two rungs were indistinguishable. One factor now
+  // comes from the rung's own tables; the other is a plain multiplier. Which side it lands
+  // on varies, so a child does not only ever meet "n groups of 5". Factors stay small
+  // deliberately: word problems get unreadable with large totals.
+  const tables = Number(level) >= 10 ? [3, 4, 6, 7, 8, 9] : [2, 5, 10]
+  const table = pick(tables)
+  const other = randInt(2, 10)
+  const [a, b] = Math.random() < 0.5 ? [table, other] : [other, table]
   const correct_answer = a * b
   const name = pick(MULT_NAMES)
   const object = pick(MULT_OBJECTS)
@@ -165,8 +168,14 @@ function multiplicationWordTemplate(level) {
 // whole number — no decimals/rounding to reason about at this level.
 
 function fractionOfNumberTemplate(level) {
-  const d = pick([2, 3, 4])
-  const multiplier = randInt(2, 6)
+  // `level` used to be accepted and ignored, which had two consequences: a question at
+  // "Fractions & Decimals" was identical to one at "Fractions", and the topic could only
+  // ever produce 3 x 5 = 15 distinct problems — so a 5-question session used a third of
+  // everything there was, and the next session was bound to repeat it.
+  const l = Number(level) || 1
+  const denominators = l >= 12 ? [2, 3, 4, 5, 6, 8, 10] : [2, 3, 4, 5]
+  const d = pick(denominators)
+  const multiplier = randInt(2, l >= 12 ? 10 : 8)
   const N = d * multiplier
   const correct_answer = N / d
 
@@ -197,8 +206,10 @@ const DIV_ITEMS = ['candies', 'stickers', 'cookies', 'marbles', 'balloons', 'cra
 const DIV_WHO = ['friends', 'classmates', 'kids', 'teammates']
 
 function divisionWordTemplate(level) {
-  const b = pick([2, 3, 4, 5])
-  const multiplier = randInt(2, 6)
+  // Division occupies a single rung, so there is nothing to scale between — it just needs
+  // enough room not to repeat itself: 5 x 8 = 40 problems rather than the previous 20.
+  const b = pick([2, 3, 4, 5, 6])
+  const multiplier = randInt(2, 9)
   const a = b * multiplier
   const correct_answer = a / b
   const name = pick(DIV_NAMES)

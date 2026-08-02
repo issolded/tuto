@@ -147,20 +147,25 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
 // answers on one device anyway. Keyed per child+level so the avoid-list stays relevant to
 // what is actually being generated. Only the template path has its own dedup (operandKey),
 // so this covers the LLM path.
+// Two kinds of recent memory, one implementation. 'seen' holds question text for the LLM
+// path, which is told not to repeat it. 'keys' holds template operandKeys — the underlying
+// number pair, independent of the names and wording around it — which seed the generator's
+// avoid set. Templates only ever deduped inside a single batch, so the same "1/4 of 20"
+// came back the moment a child started a second session.
 const SEEN_CAP = 20
-const seenKey = (childId, level) => `tuto_math_seen_${childId || 'anon'}_${level}`
+const seenKey = (kind, childId, level) => `tuto_math_${kind}_${childId || 'anon'}_${level}`
 
-function readSeenQuestions(childId, level) {
+function readSeen(kind, childId, level) {
   try {
-    const v = JSON.parse(localStorage.getItem(seenKey(childId, level)) || '[]')
+    const v = JSON.parse(localStorage.getItem(seenKey(kind, childId, level)) || '[]')
     return Array.isArray(v) ? v.filter(q => typeof q === 'string') : []
   } catch { return [] }
 }
 
-function rememberSeenQuestions(childId, level, questions) {
+function rememberSeen(kind, childId, level, items) {
   try {
-    const next = [...readSeenQuestions(childId, level), ...(questions || []).filter(Boolean)].slice(-SEEN_CAP)
-    localStorage.setItem(seenKey(childId, level), JSON.stringify(next))
+    const next = [...readSeen(kind, childId, level), ...(items || []).filter(Boolean)].slice(-SEEN_CAP)
+    localStorage.setItem(seenKey(kind, childId, level), JSON.stringify(next))
   } catch { /* private mode / quota — repeated questions are a nuisance, not a failure */ }
 }
 
@@ -1086,12 +1091,15 @@ export default function MathScreen() {
       // Deterministic path: no LLM call, no network — pure code templates. Track operand
       // pairs across the batch so the same (a,b) — and therefore the same answer — never
       // repeats, even if only the name/object in the wording changed.
-      const usedOperands = new Set()
+      // Seeded with what recent sessions already asked, so avoidance carries across them
+      // and not just within this batch.
+      const usedOperands = new Set(readSeen('keys', child?.id, effectiveLevel))
       const problems = Array.from({ length: 5 }, () => {
         const p = generateProblem(templateTopic, effectiveLevel, usedOperands)
         usedOperands.add(p.operandKey)
         return p
       })
+      rememberSeen('keys', child?.id, effectiveLevel, problems.map(p => p.operandKey))
       setQuestions(problems.map(p => p.question_text))
       setCorrectAns(problems.map(p => p.correct_answer))
       setQTypes(problems.map(() => null))
@@ -1104,14 +1112,14 @@ export default function MathScreen() {
 
     setTemplateProblems([])
     try {
-      const prevQs = readSeenQuestions(child?.id, effectiveLevel)
+      const prevQs = readSeen('seen', child?.id, effectiveLevel)
       const result = await generateMathQuestions(age, effectiveLevel, prevQs)
       setQuestions(result.questions   || [])
       setCorrectAns(result.answers    || [])
       setQTypes(result.question_types || [])
       setTopic(result.topic           || 'math')
       setLlmHints(Array.isArray(result.hint_steps) ? result.hint_steps : [])
-      rememberSeenQuestions(child?.id, effectiveLevel, result.questions)
+      rememberSeen('seen', child?.id, effectiveLevel, result.questions)
       setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
     } catch (e) {
       console.error('generateMathQuestions:', e)
