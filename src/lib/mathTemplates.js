@@ -40,7 +40,11 @@ function pairKey(a, b) {
 // on what "level" means without each template reinventing scaling.
 function rangeForLevel(level) {
   const l = Math.min(Math.max(Number(level) || 1, 1), 15)
-  return { min: 1, max: 4 + l * 3 } // level 1: 1-7, level 15: 1-49
+  const max = 4 + l * 3
+  // The floor used to be 1 at every rung, so the very easiest question was always in play
+  // no matter how high the child had climbed — a ten-year-old on "Subtraction up to 20"
+  // was handed "2 - 1". Raising it with the ceiling keeps each rung inside its own band.
+  return { min: Math.max(1, Math.round(max / 4)), max }
 }
 
 // ─── Addition ───────────────────────────────────────────────────────────────
@@ -69,9 +73,13 @@ function additionTemplate(level) {
 
 function subtractionTemplate(level) {
   const { min, max } = rangeForLevel(level)
-  // Keep it non-negative: a is the larger operand.
-  const a = randInt(min + 1, max + 1)
-  const b = randInt(min, a - 1)
+  // a is the larger operand, kept non-negative. Both bounds matter: drawing a uniformly
+  // from the whole range put it near the floor half the time, and b then had nowhere to sit
+  // but right beneath it, so 44% of "Subtraction up to 20" came out as 7 - 6 and the like.
+  // a now comes from the upper part of the range and b leaves a gap, so the answer is
+  // actually worth working out.
+  const a = randInt(Math.max(min + 1, Math.round(max * 0.55)), max + 1)
+  const b = randInt(min, Math.max(min, a - 3))
   const correct_answer = a - b
 
   return {

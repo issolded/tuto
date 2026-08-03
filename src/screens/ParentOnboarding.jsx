@@ -230,7 +230,16 @@ export default function ParentOnboarding() {
       const pin_hash = await hashPin(pin)
       const { data: child, error: cErr } = await supabase
         .from('children')
-        .insert({ parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en' })
+        // Step 3 asks which activities earn Gems and its answers were collected into
+        // `tasks` and then dropped — nothing here ever wrote task_settings, so a parent who
+        // switched everything except Maths off still had a child seeing every tile. The
+        // shape matches what TaskSettings writes later, so the two agree from the start.
+        .insert({
+          parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en',
+          task_settings: Object.fromEntries(
+            Object.keys(tasks).map(k => [k, { gems: TASK_DEFAULTS[k].gems, active: !!tasks[k] }])
+          ),
+        })
         .select()
         .single()
       if (cErr) throw cErr
