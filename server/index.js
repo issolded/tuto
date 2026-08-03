@@ -3144,6 +3144,20 @@ app.get('/api/drawings', async (req, res) => {
 // settings and the write are all decided here now.
 const MATH_DEFAULTS = { gems: 30, dailyCap: 3 }
 
+// What each rung practises, as a stable slug. The client used to send this: templates sent
+// their own topic name and the LLM path sent whatever prose the model returned, so eleven
+// rows held nine different topics and "subtraction", "Subtraction up to 20" and
+// "Subtraction up to 10" were three separate things. The level already says what was being
+// practised, so it decides — nothing downstream has to guess which spelling it got.
+// Mirrors LEVEL_DESC in MathScreen.jsx; the two move together.
+const TOPIC_FOR_LEVEL = {
+  1: 'counting',      2: 'addition',       3: 'subtraction',
+  4: 'geometry',      5: 'addition',       6: 'subtraction',
+  7: 'word-problems', 8: 'addition-subtraction-100', 9: 'multiplication',
+  10: 'fractions',    11: 'division',      12: 'measurement',
+  13: 'multiplication', 14: 'multi-step',  15: 'fractions',
+}
+
 function mathSettings(taskSettings) {
   const s = taskSettings?.math || {}
   const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : MATH_DEFAULTS.gems
@@ -3168,7 +3182,7 @@ async function rewardedMathToday(childId, tz) {
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, topic, questions_total, questions_correct, accuracy, level_change, help_used, gemini_notes, next_session } = req.body
+  const { level, questions_total, questions_correct, accuracy, level_change, help_used, gemini_notes, next_session } = req.body
   try {
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -3197,7 +3211,8 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     const { error: progErr } = await supabase.from('math_progress').insert({
       child_id: childId,
       session_date: DateTime.now().setZone(tz).toISODate(),
-      level, topic,
+      level,
+      topic: TOPIC_FOR_LEVEL[level] || 'math',
       questions_total, questions_correct,
       accuracy: acc,
       level_change: level_change || 'same',

@@ -87,6 +87,7 @@ function templateTopicForLevel(level) {
   if (/Multiplication/.test(desc)) return 'multiplication-word'
   if (/Fraction/i.test(desc)) return 'fraction-of-number'
   if (/Shapes|Geometry/i.test(desc)) return 'geometry'
+  if (/Counting/i.test(desc)) return 'counting'
   if (/division|divis|share|equal groups?/i.test(desc)) return 'division-word'
   return null
 }
@@ -470,12 +471,13 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // seeing 12 dealt into 3 groups beats reading about it.
   const share = visual?.kind === 'share' ? visual : null
   const shapes = visual?.kind === 'shapes' ? visual : null
+  const counting = visual?.kind === 'count' ? visual : null
   // Both multiplication framings draw the same way — rows of a grid, or groups in a row —
   // so they share one path and differ only in how the rows are spaced and labelled.
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && hintSteps?.length > 0
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -493,7 +495,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times || counting) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -510,7 +512,35 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (times) {
+  if (counting) {
+    // Counting out loud is exactly the skill, so the help is the act itself: one lights up
+    // per tap and the tally keeps the child's place, which is the whole difficulty at this
+    // age — not the numbers, but losing track of which ones are already counted.
+    const total = counting.n
+    const done = dealt >= total
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {done ? t.shapeDone : t.shapeTap}
+        </div>
+        <div
+          onClick={() => setDealt(d => Math.min(total, d + 1))}
+          style={{ display: 'flex', gap: 9, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 280, cursor: done ? 'default' : 'pointer' }}
+        >
+          {Array.from({ length: total }).map((_, i) => (
+            <span key={i} style={{ fontSize: 32, lineHeight: 1, opacity: i < dealt ? 1 : 0.3, transition: 'opacity .15s' }}>
+              {counting.item}
+            </span>
+          ))}
+        </div>
+        <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 22, color: done ? GREEN : MATH_DEEP }}>{dealt}</div>
+      </div>
+    )
+  } else if (times) {
     // Revealed a row at a time — the point of multiplication is that every group is the
     // same size, which only lands if you watch equal rows appear one after another.
     const shown = Math.min(timesRows, dealt)
@@ -809,7 +839,20 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   const _svgW = 260, _barH = 36, _gap = 10, _br = 9
   let goster
 
-  if (times) {
+  if (counting) {
+    goster = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 280 }}>
+          {Array.from({ length: counting.n }).map((_, i) => (
+            <span key={i} style={{ fontSize: 30, lineHeight: 1, position: 'relative' }}>
+              {counting.item}
+              <span style={{ position: 'absolute', bottom: -9, left: '50%', transform: 'translateX(-50%)', fontFamily: FRED, fontSize: 11, fontWeight: 700, color: MATH_DEEP }}>{i + 1}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  } else if (times) {
     // The whole array at once, with each row counted down the side — the child reads off
     // how many rows and how many in each, and does the multiplying themselves.
     goster = (
@@ -1194,8 +1237,20 @@ export default function MathScreen() {
       const result   = await evaluateMath([file], questions, correctAns, age, effectiveLevel)
       const newLevel = result.new_level ?? effectiveLevel
       if (result.level_change === 'up') setLeveledUp(true)
-      const gems_earned = await saveResults(result, newLevel)
-      setEvalResult({ ...result, gems_earned })
+      // The model echoes the questions back and the result list used to be built from that
+      // echo, so a misread question was shown to the child as one they had been asked —
+      // in testing, a photo of different sums produced a list of sums the app never set.
+      // We know what was asked and what the answers were, so only the child's answer and
+      // the mark are taken from the model, matched up by position.
+      const marks = Array.isArray(result.results) ? result.results : []
+      const pinned = questions.map((q, i) => ({
+        question: q,
+        correct_answer: correctAns[i],
+        child_answer: marks[i]?.child_answer ?? '—',
+        correct: marks[i]?.correct === true,
+      }))
+      const gems_earned = await saveResults({ ...result, results: pinned }, newLevel)
+      setEvalResult({ ...result, results: pinned, gems_earned })
       setStep('result')
     } catch (e) {
       console.error('evaluateMath:', e)
@@ -1219,17 +1274,23 @@ export default function MathScreen() {
   // Returns the awarded amount so the result screen shows what was actually banked.
   const saveResults = async (evalData, newLevel) => {
     if (!child?.id) return 0
+    // Accuracy is counted from the marks that are actually shown, not from the figure the
+    // model reported alongside them — otherwise a session can display "2 / 5 correct" and
+    // record 80%, and the reward follows the number nobody saw.
     const numCorrect = (evalData.results || []).filter(r => r.correct).length
+    const derivedAccuracy = questions.length ? Math.round((numCorrect / questions.length) * 100) : 0
     try {
       const res = await fetch(`${SERVER}/api/children/${child.id}/math-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           level: newLevel,
-          topic: evalData.topic || topic,
+          // topic is no longer sent: the server derives it from the level, so the two
+          // paths can't disagree about what a session was (templates used to send a slug,
+          // the model whatever prose it felt like).
           questions_total: questions.length,
           questions_correct: numCorrect,
-          accuracy: evalData.accuracy || evalData.score || 0,
+          accuracy: derivedAccuracy,
           level_change: evalData.level_change || 'same',
           help_used: helpUsedQs.size,
           // Paper mode only — the model's read on how the work went, and what to try next.
@@ -1478,6 +1539,9 @@ export default function MathScreen() {
     const pct    = (qIdx / questions.length) * 100
     const qVisual = templateProblems[qIdx]?.visual
     const questionShapes = qVisual?.kind === 'shapes' ? qVisual.shapes : null
+    // Counting shows the objects themselves — the whole question is what is in front of
+    // them, so a child who cannot yet read "How many do you see?" can still answer it.
+    const questionCount = qVisual?.kind === 'count' ? qVisual : null
 
     return (
       <div style={{ ...wrap, overflow: 'hidden' }}>
@@ -1546,7 +1610,14 @@ export default function MathScreen() {
                     {questionShapes.map((s, i) => <ShapeSVG key={i} kind={s} size={96} />)}
                   </div>
                 )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes ? 20 : 32), color: INK, lineHeight: 1.55 }}>
+                {questionCount && (
+                  <div style={{ display: 'flex', gap: 9, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 300 }}>
+                    {Array.from({ length: questionCount.n }).map((_, i) => (
+                      <span key={i} style={{ fontSize: 34, lineHeight: 1 }}>{questionCount.item}</span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   {q}
                 </div>
               </div>

@@ -296,7 +296,45 @@ function geometryTemplate(level) {
   }
 }
 
+// ── Counting ────────────────────────────────────────────────────────────────
+// The first rung, for the youngest children, was the one still going to the model: the
+// simplest possible task carrying an API call, a wait, and a chance of a wrong answer.
+// Counting is what a template is for. Two shapes of question — count what is shown, and
+// say what comes next — with the objects drawn, so a child who cannot yet read the words
+// can still answer.
+const COUNT_ITEMS = ['🍎', '⭐', '🐟', '🌸', '🚗', '🐛', '🍓', '🎈']
+
+function countingTemplate(level) {
+  if (Math.random() < 0.65) {
+    const n = randInt(1, 10)
+    return {
+      topic: 'counting',
+      level,
+      question_text: 'How many do you see?',
+      format: 'numeric',
+      correct_answer: n,
+      operandKey: `count:${n}`,
+      hint_steps: ['Touch each one as you say the number.', 'The last number you say is the answer.'],
+      visual: { kind: 'count', n, item: pick(COUNT_ITEMS) },
+    }
+  }
+  // "What comes after 6?" — the other half of knowing the number line, and it needs no
+  // arithmetic, just the order.
+  const n = randInt(1, 9)
+  return {
+    topic: 'counting',
+    level,
+    question_text: `What number comes after ${n}?`,
+    format: 'numeric',
+    correct_answer: n + 1,
+    operandKey: `after:${n}`,
+    hint_steps: [`Start at ${n} and say the next number.`, 'Counting up goes 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.'],
+    visual: { kind: 'count', n, item: pick(COUNT_ITEMS), upTo: true },
+  }
+}
+
 const REGISTRY = {
+  counting: countingTemplate,
   addition: additionTemplate,
   subtraction: subtractionTemplate,
   'multiplication-word': multiplicationWordTemplate,
