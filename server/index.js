@@ -3182,7 +3182,7 @@ async function rewardedMathToday(childId, tz) {
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, questions_total, questions_correct, accuracy, level_change, help_used, gemini_notes, next_session } = req.body
+  const { level, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
   try {
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -3208,14 +3208,37 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       gems = Math.round(settings.gems * scale * (Number(help_used) > 0 ? 0.67 : 1))
     }
 
+    // Advancing used to take a single good session, so a child who breezed through five
+    // easy questions moved up permanently — in testing a seven-year-old crossed four rungs
+    // in thirty-five minutes and reached the top of the ladder on work well below her. It
+    // takes two in a row at the same rung now. Dropping still takes one: being out of your
+    // depth is the case where moving quickly helps, so the rule is deliberately asymmetric.
+    //
+    // A stored row records the level the child ENDED on but the accuracy they earned at the
+    // one before it, so a row that advanced cannot also count as the first of the next
+    // pair — otherwise "twice in a row" would collapse back into "every session".
+    const { data: prevRows } = await supabase
+      .from('math_progress')
+      .select('level, accuracy, level_change')
+      .eq('child_id', childId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const last = prevRows?.[0]
+    const earnedHereBefore = !!last && last.level === level && last.accuracy >= 80 && last.level_change !== 'up'
+
+    let newLevel = level
+    let levelChange = 'same'
+    if (acc >= 80 && earnedHereBefore && level < 15) { newLevel = level + 1; levelChange = 'up' }
+    else if (acc < 40 && level > 1) { newLevel = level - 1; levelChange = 'down' }
+
     const { error: progErr } = await supabase.from('math_progress').insert({
       child_id: childId,
       session_date: DateTime.now().setZone(tz).toISODate(),
-      level,
-      topic: TOPIC_FOR_LEVEL[level] || 'math',
+      level: newLevel,
+      topic: TOPIC_FOR_LEVEL[level] || 'math',   // what was practised — the level they came in on
       questions_total, questions_correct,
       accuracy: acc,
-      level_change: level_change || 'same',
+      level_change: levelChange,
       help_used: Number(help_used) || 0,
       gemini_notes: typeof gemini_notes === 'string' ? gemini_notes.slice(0, 500) : null,
       next_session: typeof next_session === 'string' ? next_session.slice(0, 500) : null,
@@ -3249,7 +3272,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head).catch(() => {})
     }
 
-    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap })
+    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange })
   } catch (err) {
     console.error('[MATH]', err.message)
     res.status(500).json({ error: err.message })

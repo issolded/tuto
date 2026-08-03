@@ -1208,25 +1208,21 @@ export default function MathScreen() {
     const numCorrect = finalAnswers.filter((a, i) => Number(a) === Number(correctAns[i])).length
     const accuracy   = Math.round((numCorrect / questions.length) * 100)
 
-    let levelChange = 'same'
-    let newLevel    = effectiveLevel
-    if (accuracy >= 80 && effectiveLevel < 15) { levelChange = 'up';   newLevel = effectiveLevel + 1; setLeveledUp(true) }
-    else if (accuracy < 40 && effectiveLevel > 1) { levelChange = 'down'; newLevel = effectiveLevel - 1 }
-
     const results = questions.map((q, i) => ({
       question: q, correct_answer: correctAns[i],
       child_answer: finalAnswers[i],
       correct: Number(finalAnswers[i]) === Number(correctAns[i]),
     }))
     const evalData = {
-      results, score: accuracy, accuracy, level_change: levelChange,
-      new_level: newLevel, topic,
+      results, score: accuracy, accuracy, topic,
       encouragement: getScoreMsg(accuracy, age),
     }
-    // The reward comes back from the server, so the screen shows what was actually banked
-    // — including 0 once the daily cap is reached, rather than a number the child never got.
-    const gems_earned = await saveResults(evalData, newLevel)
-    setEvalResult({ ...evalData, gems_earned })
+    // Both the reward and the level come back from the server, so the screen shows what was
+    // actually banked — including 0 once the daily cap is reached, rather than a number the
+    // child never got — and only celebrates a level the child actually moved to.
+    const saved = await saveResults(evalData)
+    if (saved?.level_change === 'up') setLeveledUp(true)
+    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, level_change: saved?.level_change ?? 'same' })
     setStep('result')
   }
 
@@ -1235,8 +1231,6 @@ export default function MathScreen() {
     setStep('evaluating')
     try {
       const result   = await evaluateMath([file], questions, correctAns, age, effectiveLevel)
-      const newLevel = result.new_level ?? effectiveLevel
-      if (result.level_change === 'up') setLeveledUp(true)
       // The model echoes the questions back and the result list used to be built from that
       // echo, so a misread question was shown to the child as one they had been asked —
       // in testing, a photo of different sums produced a list of sums the app never set.
@@ -1249,18 +1243,19 @@ export default function MathScreen() {
         child_answer: marks[i]?.child_answer ?? '—',
         correct: marks[i]?.correct === true,
       }))
-      const gems_earned = await saveResults({ ...result, results: pinned }, newLevel)
-      setEvalResult({ ...result, results: pinned, gems_earned })
+      const saved = await saveResults({ ...result, results: pinned })
+      if (saved?.level_change === 'up') setLeveledUp(true)
+      setEvalResult({ ...result, results: pinned, gems_earned: saved ? saved.gems_earned : null })
       setStep('result')
     } catch (e) {
       console.error('evaluateMath:', e)
       const fallback = {
         results: questions.map((q, i) => ({ question: q, correct_answer: correctAns[i], child_answer: '?', correct: false })),
-        score: 70, accuracy: 70, level_change: 'same', new_level: effectiveLevel,
+        score: 70, accuracy: 70,
         topic, encouragement: "Great effort! Keep going! 🌟",
       }
-      const gems_earned = await saveResults(fallback, effectiveLevel)
-      setEvalResult({ ...fallback, gems_earned })
+      const saved = await saveResults(fallback)
+      setEvalResult({ ...fallback, gems_earned: saved ? saved.gems_earned : null })
       setStep('result')
     }
   }
@@ -1272,7 +1267,7 @@ export default function MathScreen() {
   // this itself — picking the number and writing bt_ledger with the anon key — which meant
   // the parent's setting was never applied and nothing limited repeat sessions.
   // Returns the awarded amount so the result screen shows what was actually banked.
-  const saveResults = async (evalData, newLevel) => {
+  const saveResults = async (evalData) => {
     if (!child?.id) return 0
     // Accuracy is counted from the marks that are actually shown, not from the figure the
     // model reported alongside them — otherwise a session can display "2 / 5 correct" and
@@ -1284,14 +1279,15 @@ export default function MathScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          level: newLevel,
+          // The level the child came IN on. The server decides where they end up — it can
+          // see the sessions before this one, which is what dampening needs.
+          level: effectiveLevel,
           // topic is no longer sent: the server derives it from the level, so the two
           // paths can't disagree about what a session was (templates used to send a slug,
           // the model whatever prose it felt like).
           questions_total: questions.length,
           questions_correct: numCorrect,
           accuracy: derivedAccuracy,
-          level_change: evalData.level_change || 'same',
           help_used: helpUsedQs.size,
           // Paper mode only — the model's read on how the work went, and what to try next.
           gemini_notes: evalData.gemini_notes || null,
@@ -1300,7 +1296,7 @@ export default function MathScreen() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'server error')
-      return data.gems_earned || 0
+      return data
     } catch (e) {
       // null, not 0: a session that never reached the server is not the same as one that
       // legitimately earned nothing, and showing "+0 Gems" for it hides the loss from the
