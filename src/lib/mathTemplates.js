@@ -141,9 +141,12 @@ function multiplicationWordTemplate(level) {
   // comes from the rung's own tables; the other is a plain multiplier. Which side it lands
   // on varies, so a child does not only ever meet "n groups of 5". Factors stay small
   // deliberately: word problems get unreadable with large totals.
+  // Tables are taught to twelve, and stopping the multiplier at ten left the "x2 x5 x10"
+  // rung with only 24 distinct problems once operandKey folds a x b and b x a together —
+  // a child doing five sessions had seen all of them.
   const tables = Number(level) >= 10 ? [3, 4, 6, 7, 8, 9] : [2, 5, 10]
   const table = pick(tables)
-  const other = randInt(2, 10)
+  const other = randInt(2, 12)
   const [a, b] = Math.random() < 0.5 ? [table, other] : [other, table]
   const correct_answer = a * b
   const name = pick(MULT_NAMES)

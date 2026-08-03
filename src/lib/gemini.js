@@ -301,6 +301,10 @@ export async function generateMathQuestions(age, level, previousQuestions = [], 
 Mix question types: symbolic equations, word problems, and patterns.
 Make them fun, relatable and age-appropriate. Use names, animals, food, toys in word problems.
 IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.
+Stay inside the topic named above. The levels form a ladder and each one practises its own
+thing, so do not reach for an operation that belongs to a later level — a "word problems"
+level asking "24 / 4 = ?" is teaching division several levels early.
+Write operators the way a child is taught them: × and ÷, never * or /.
 Solving a question must never require knowledge the child could only have from one country,
 or general knowledge that is not maths. So:
 - NO country-specific money (dime, nickel, penny, quarter, cent, dollar, pound). For money,

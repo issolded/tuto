@@ -6,6 +6,8 @@ import { storageClient } from '../lib/supabase'
 import { generateMathQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem, SHAPES } from '../lib/mathTemplates'
 
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
 const MATH_DEEP = '#3d8fcf'
@@ -1236,8 +1238,11 @@ export default function MathScreen() {
       if (!res.ok) throw new Error(data.error || 'server error')
       return data.gems_earned || 0
     } catch (e) {
+      // null, not 0: a session that never reached the server is not the same as one that
+      // legitimately earned nothing, and showing "+0 Gems" for it hides the loss from the
+      // child — they answered five questions and no progress was recorded at all.
       console.error('saveResults:', e)
-      return 0
+      return null
     }
   }
 
@@ -1623,8 +1628,12 @@ export default function MathScreen() {
             <div style={{ width: 1, height: 56, background: '#eee' }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>Earned</div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>+{evalResult.gems_earned}</div>
-              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>Gems ⭐</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>
+                {evalResult.gems_earned == null ? '—' : `+${evalResult.gems_earned}`}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>
+                {evalResult.gems_earned == null ? "Couldn't save — try again later" : 'Gems ⭐'}
+              </div>
             </div>
           </div>
 
