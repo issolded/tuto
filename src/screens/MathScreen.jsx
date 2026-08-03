@@ -1232,6 +1232,9 @@ export default function MathScreen() {
           accuracy: evalData.accuracy || evalData.score || 0,
           level_change: evalData.level_change || 'same',
           help_used: helpUsedQs.size,
+          // Paper mode only — the model's read on how the work went, and what to try next.
+          gemini_notes: evalData.gemini_notes || null,
+          next_session: evalData.next_session || null,
         }),
       })
       const data = await res.json()

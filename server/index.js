@@ -3168,7 +3168,7 @@ async function rewardedMathToday(childId, tz) {
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, topic, questions_total, questions_correct, accuracy, level_change, help_used } = req.body
+  const { level, topic, questions_total, questions_correct, accuracy, level_change, help_used, gemini_notes, next_session } = req.body
   try {
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -3202,6 +3202,8 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       accuracy: acc,
       level_change: level_change || 'same',
       help_used: Number(help_used) || 0,
+      gemini_notes: typeof gemini_notes === 'string' ? gemini_notes.slice(0, 500) : null,
+      next_session: typeof next_session === 'string' ? next_session.slice(0, 500) : null,
     })
     if (progErr) return res.status(500).json({ error: progErr.message })
 
@@ -3221,10 +3223,15 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       const { data: parentRow } = await supabase
         .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
       const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
-      const msg = language === 'en'
+      // Paper mode asks the model how the work actually went, and that read used to be
+      // written to a column nothing has ever selected. "Strong at addition, word problems
+      // need practice" is the sort of thing this product exists to tell a parent, so when
+      // there is one it goes in the message rather than sitting in the table unread.
+      const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
+      const head = language === 'en'
         ? `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`
         : `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`
-      sendNotification(child.parent_id, msg).catch(() => {})
+      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head).catch(() => {})
     }
 
     res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap })
