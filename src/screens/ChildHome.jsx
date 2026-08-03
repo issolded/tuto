@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import Shell, { useIsTablet } from '../components/Shell'
 import { TreeArt, Sprig } from '../components/TreeArt'
-import { supabase, getChildGems, getTodaySummary, drawingIconUrl } from '../lib/supabase'
+import { supabase, storageClient, getChildGems, getTodaySummary, drawingIconUrl } from '../lib/supabase'
 
 const ACCENT = '#f79433'
 const INK = '#241f3a'
@@ -335,7 +335,7 @@ function TodayCard({ band, isTablet, today, gems, nav }) {
 export default function ChildHome() {
   const nav = useNavigate()
   const isTablet = useIsTablet()
-  const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const [child, setChild] = useState(() => JSON.parse(localStorage.getItem('child') || 'null'))
   const band = bandFor(child?.age)
   const [gems, setGems] = useState(null)
   const [today, setToday] = useState(EMPTY_TODAY)
@@ -351,6 +351,23 @@ export default function ChildHome() {
 
     getChildGems(child.id).then(setGems)
     getTodaySummary(child.id).then(setToday)
+
+    // Settings belong to the parent and can change at any moment, so they are re-read on
+    // every visit here rather than frozen at PIN entry — otherwise turning an activity off
+    // would not reach the child until they next logged in, which they rarely do.
+    // storageClient, not the shared client: this is a child-side read and must not run
+    // against a parent session that happens to be persisted in the same browser.
+    storageClient
+      .from('children')
+      .select('id, name, age, task_settings')
+      .eq('id', child.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        setChild(data)
+        localStorage.setItem('child', JSON.stringify(data))
+      })
+      .catch(() => { /* keep the stored copy — stale settings beat a blank home screen */ })
 
     const channel = supabase
       .channel(`gems-${child.id}`)
@@ -414,7 +431,11 @@ export default function ChildHome() {
             </button>
           ))}
 
-          {/* My Homework — full-width on phone (2-col grid), normal card on tablet (3-col grid) */}
+          {/* My Homework — full-width on phone (2-col grid), normal card on tablet (3-col grid).
+              Homework and Drawings are laid out by hand rather than coming from BASE_TASKS,
+              and so were missed by the active filter above — a parent could switch either
+              off in settings and the child would still be looking at the tile. */}
+          {(ts.homework?.active ?? true) && (
           <button className="tuto-card tuto-wide-card" onClick={() => nav('/child/homework')}
             style={{
               background: '#fff', border: 'none', borderRadius: 22, padding: 12,
@@ -426,9 +447,11 @@ export default function ChildHome() {
             </div>
             <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Homework</h3>
           </button>
+          )}
 
           {/* My Drawings — same full-width-on-phone / normal-on-tablet shape as My Homework.
               No reward pill: the amount is decided server-side and capped per day. */}
+          {(ts.drawing?.active ?? true) && (
           <button className="tuto-card tuto-wide-card" onClick={() => nav('/child/drawings')}
             style={{
               background: '#fff', border: 'none', borderRadius: 22, padding: 12,
@@ -440,6 +463,7 @@ export default function ChildHome() {
             </div>
             <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Drawings</h3>
           </button>
+          )}
         </div>
       </div>
     </Shell>

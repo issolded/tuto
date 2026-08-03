@@ -62,7 +62,10 @@ export default function ChildPin() {
       console.log('[ChildPin] match result:', match ?? 'none')
 
       if (match) {
-        const child = { id: match.id, name: match.name, age: match.age }
+        // task_settings decides which activities the child is shown and what each is
+        // worth. It comes back with the row and used to be dropped here, so the child app
+        // never saw a single thing the parent configured.
+        const child = { id: match.id, name: match.name, age: match.age, task_settings: match.task_settings ?? null }
         localStorage.setItem('child', JSON.stringify(child))
         await giveWelcomeBonus(child.id)
         setExpression('excited')
