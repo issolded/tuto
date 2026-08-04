@@ -150,14 +150,19 @@ export async function getPaintings(childId) {
   }
 }
 
+// Returns null when the lookup FAILED and [] when the family genuinely has no children.
+// They used to be the same value, which meant an unreachable server was indistinguishable
+// from an empty family — and the PIN screen turned both into "that's not right", telling a
+// child with the correct PIN that they had got it wrong.
 export async function getChildrenByFamilyCode(familyCode) {
   try {
     const res = await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/children`)
+    if (!res.ok) return null
     const data = await res.json()
     return data.children || []
   } catch (err) {
     console.error('[getChildren] error:', err.message)
-    return []
+    return null
   }
 }
 

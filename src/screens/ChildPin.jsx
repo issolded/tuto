@@ -20,7 +20,8 @@ export default function ChildPin() {
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
   const [expression, setExpression] = useState('default')
-  const [familyChildren, setFamilyChildren] = useState(null) // null = loading
+  // null = still loading, 'unreachable' = lookup failed, [] = family really has no children
+  const [familyChildren, setFamilyChildren] = useState(null)
 
   const familyCode = localStorage.getItem('family_code')
 
@@ -28,8 +29,7 @@ export default function ChildPin() {
   useEffect(() => {
     if (!familyCode) { nav('/setup', { replace: true }); return }
     getChildrenByFamilyCode(familyCode).then(children => {
-      console.log('[ChildPin] family_code:', familyCode, '| children:', children)
-      setFamilyChildren(children || [])
+      setFamilyChildren(children === null ? 'unreachable' : children)
     })
   }, [])
 
@@ -52,14 +52,9 @@ export default function ChildPin() {
     setError('')
     setExpression('thinking')
     try {
+      // The PIN and its hash were both being printed to the console on every attempt.
       const pin_hash = await hashPin(entered)
-      console.log('[ChildPin] entered PIN:', entered)
-      console.log('[ChildPin] computed hash:', pin_hash)
-      console.log('[ChildPin] matching against', familyChildren?.length ?? '?', 'children')
-
-      // Match against family's children list
-      const match = (familyChildren || []).find(c => c.pin_hash === pin_hash)
-      console.log('[ChildPin] match result:', match ?? 'none')
+      const match = (Array.isArray(familyChildren) ? familyChildren : []).find(c => c.pin_hash === pin_hash)
 
       if (match) {
         // task_settings decides which activities the child is shown and what each is
@@ -78,6 +73,36 @@ export default function ChildPin() {
       fail("Something went wrong. Try again! 🤔")
     }
   }
+
+  // A PIN pad is only worth showing when there is something to check it against. These two
+  // cases used to fall through to it and then fail every attempt with "that's not right",
+  // which blamed the child for a device that was never linked, or for a server they could
+  // not reach.
+  const notice = (title, cta) => (
+    <div className="screen" style={{ background: '#1A1A2E', alignItems: 'center', padding: '60px 32px 40px' }}>
+      <TutoMascot size={120} expression="default" />
+      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
+        {title}
+      </div>
+      {cta}
+    </div>
+  )
+
+  if (familyChildren === 'unreachable') return notice(
+    "I can't reach Tuto right now — check the internet and try again 📡",
+    <button onClick={() => window.location.reload()}
+      style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>
+      Try again
+    </button>
+  )
+
+  if (Array.isArray(familyChildren) && familyChildren.length === 0) return notice(
+    'This device isn\u2019t set up yet. Ask your grown-up to add you first! 📱',
+    <button onClick={() => nav('/setup')}
+      style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>
+      Set up this device →
+    </button>
+  )
 
   // No family code — prompt setup
   if (!familyCode) return (
