@@ -11,11 +11,13 @@ import { TreeArt } from '../components/TreeArt'
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 const TASK_LABELS = {
-  math:    { label: 'My Math',    type: 'math' },
-  reading: { label: 'My Books',   type: 'reading' },
-  writing: { label: 'My Stories', type: 'writing' },
-  story:   { label: 'My Stories', type: 'writing' },
-  bonus:   { label: 'Bonus Gift', type: null },
+  math:     { label: 'My Math',     type: 'math' },
+  reading:  { label: 'My Books',    type: 'reading' },
+  writing:  { label: 'My Stories',  type: 'writing' },
+  story:    { label: 'My Stories',  type: 'writing' },
+  homework: { label: 'My Homework', type: null },
+  drawing:  { label: 'My Drawings', type: null },
+  bonus:    { label: 'Bonus Gift',  type: null },
 }
 
 const REWARD_EMOJIS = ['🎮','🍦','🎬','🧸','📱','🎁','🏖️','🎨','🚲','⚽','🎤','📚','🍕','🎡','🛹']
@@ -688,6 +690,8 @@ export default function ParentChildDetail() {
   const nav = useNavigate()
   const [child, setChild] = useState(null)
   const [gems, setGems] = useState(null)
+  // Kept as rows, not just a total — "Completed today" is built from them.
+  const [ledger, setLedger] = useState([])
   const [submissions, setSubmissions] = useState(null)
   const [contributions, setContributions] = useState(null)
   const [contributionsTodayDate, setContributionsTodayDate] = useState(null)
@@ -719,7 +723,7 @@ export default function ParentChildDetail() {
     if (!id) return
     Promise.all([
       supabase.from('children').select('*').eq('id', id).single(),
-      supabase.from('bt_ledger').select('amount').eq('child_id', id),
+      supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', id),
       supabase.from('submissions').select('*').eq('child_id', id).order('created_at', { ascending: false }),
       supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost'),
       // scope=pending ignores period/month entirely — a pending contribution
@@ -734,6 +738,7 @@ export default function ParentChildDetail() {
     ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData, treeResp, claimsResp]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
+      setLedger(ledgerData || [])
       setSubmissions(subData || [])
       setRewards(rewardData || [])
       setContributions(contribData?.contributions || [])
@@ -819,7 +824,15 @@ export default function ParentChildDetail() {
   const loading = !child || gems === null || submissions === null || rewards === null || contributions === null
 
   const pending   = (submissions || []).filter(s => s.status === 'pending')
-  const todayDone = (submissions || []).filter(s => s.status === 'approved' && isToday(s.created_at))
+  // Built from the ledger rather than from submissions. Only homework ever lands in the
+  // submissions table — maths writes math_progress, stories write stories, drawings write
+  // paintings — so a child could do maths, write a story and finish a drawing and the
+  // parent's "Completed today" would still say nothing happened. Every one of those does
+  // write a ledger row when it earns, so that is the one place they all appear.
+  // Spends are negative and are excluded; the welcome bonus is not something the child did.
+  const todayDone = (ledger || [])
+    .filter(e => e.amount > 0 && isToday(e.created_at) && TASK_LABELS[e.reason])
+    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, task_type: e.reason, gems_earned: e.amount }))
   // Backend scopes the fetch to status='pending', but approve/reject flip
   // status optimistically in local state — still need this filter so an
   // item disappears from the list the moment it's actioned.
