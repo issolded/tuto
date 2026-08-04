@@ -3199,7 +3199,13 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // Help on top of that costs a third: it is the child's own admission that they needed
     // a step shown, the same ratio the client used to apply.
     const acc = Math.max(0, Math.min(100, Number(accuracy) || 0))
-    const scale = acc >= 80 ? 1 : acc >= 60 ? 0.83 : acc >= 40 ? 0.5 : 0.33
+    // Banded scoring came from the prompt the model used to be given, and it is too coarse
+    // for a five-question session: the top band opened at 80%, which IS four out of five,
+    // so a perfect round paid exactly the same as one with a mistake in it — and nought out
+    // of five paid the same as one. Sliding the scale instead keeps the same two ends the
+    // bands had (a third of the reward for getting none, all of it for getting all) while
+    // making every question actually count.
+    const scale = 0.33 + 0.67 * (acc / 100)
     let gems = 0
     let capped = false
     if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
