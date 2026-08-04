@@ -1090,6 +1090,7 @@ export default function MathScreen() {
   const [leveledUp,     setLeveledUp]    = useState(false)
   const [helpUsed,      setHelpUsed]     = useState(false)
   const [helpVisible,   setHelpVisible]  = useState(false)
+  const [hintOpenFor,   setHintOpenFor]  = useState(null)  // question index whose optional hint is showing
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
   const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState([])         // per-question hint_steps for the LLM path, where there is no template to read them from
@@ -1117,6 +1118,15 @@ export default function MathScreen() {
   }, [])
 
   const effectiveLevel = level ?? startingLevelForAge(age)
+
+  // What this session can actually pay. The two mode cards promised "+30 Gems" and
+  // "+20 Gems", which stopped being true when the amount moved to the server: it pays the
+  // parent's configured figure scaled by how the child did, and the mode no longer changes
+  // it at all. Reading the same setting the server reads keeps the promise honest — and it
+  // is a maximum, because accuracy scales it.
+  const maxGems = Number.isFinite(child?.task_settings?.math?.gems)
+    ? Math.max(0, Math.trunc(child.task_settings.math.gems))
+    : 30
 
   // ── Start: pick mode then generate questions ─────────────────────────────
   //
@@ -1424,7 +1434,7 @@ export default function MathScreen() {
           <div style={{
             alignSelf: 'flex-start', background: MATH, color: '#fff',
             borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-          }}>⭐ +30 Gems</div>
+          }}>⭐ Up to {maxGems} Gems</div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             We love pen and paper! Your brain grows every time you write! 🧠
           </div>
@@ -1445,7 +1455,7 @@ export default function MathScreen() {
           <div style={{
             alignSelf: 'flex-start', background: GREEN, color: '#fff',
             borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-          }}>⭐ +20 Gems</div>
+          }}>⭐ Up to {maxGems} Gems</div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             Type your answers right here, one by one.
           </div>
@@ -1646,6 +1656,47 @@ export default function MathScreen() {
                   {q}
                 </div>
               </div>
+
+              {/* Optional hint — the child can ask BEFORE answering, which is the only way an
+                  older child could get one at all: the help panel opens on a wrong answer and
+                  only under nine. Just the first step, never the rest: a template's second step
+                  counts out the numbers and would hand over the answer. */}
+              {(() => {
+                const steps = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
+                if (!Array.isArray(steps) || !steps.length) return null
+                const open = hintOpenFor === qIdx
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <button
+                      className="math-press"
+                      onClick={() => {
+                        if (open) { setHintOpenFor(null); return }
+                        setHintOpenFor(qIdx)
+                        // Same cost as being shown help after a wrong answer — the server docks
+                        // a third for either, so asking early is never the cheaper trick.
+                        setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
+                        setHelpUsed(true)
+                      }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
+                        background: open ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
+                        color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                        boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
+                      }}
+                    >
+                      💡 {language === 'tr' ? 'İpucu' : 'Hint'} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+                    </button>
+                    {open && (
+                      <div style={{
+                        background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT,
+                        lineHeight: 1.5, textAlign: 'center', animation: 'scaleIn .22s ease both',
+                      }}>{steps[0]}</div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Answer display */}
               <div style={{
