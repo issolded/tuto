@@ -68,6 +68,13 @@ const CONFETTI = [
 // shape, to 16 for two — and every mark is on screen to be counted. So it belongs between
 // the "up to 10" pair and the "up to 20" pair, which also keeps each add/subtract pair
 // together. Everything from Addition up to 20 down to Division shifts one rung later.
+// A question the child could not read: laid out in columns, marked up, or simply too long
+// for the one line it is given. Deliberately conservative — dropping a question costs the
+// session one slot, showing an unreadable one costs the child the answer.
+function isUnreadable(q) {
+  return q.includes('|') || /\n/.test(q) || /^\s*[-*#]\s/m.test(q) || q.length > 320
+}
+
 // Mirrors HelpPanel's own isPlus/isMinus/pattern detection — used to decide, before
 // HelpPanel ever renders, whether showing help would actually show something. Keeps the
 // auto-help-on-wrong-answer trigger from popping up an empty "draw it in the air" panel
@@ -1150,6 +1157,11 @@ export default function MathScreen() {
           const q = result.questions?.[i]
           const a = result.answers?.[i]
           if (typeof q !== 'string' || !q.trim() || !Number.isFinite(Number(a))) return
+          // The question is drawn as one run of plain text, so anything laid out in columns
+          // arrives as a wall: a statistics question came back as a markdown table and read
+          // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
+          // The prompt forbids it; this is what enforces it.
+          if (isUnreadable(q)) return
           slot.question = q
           slot.answer = Number(a)
           slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'

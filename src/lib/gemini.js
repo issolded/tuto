@@ -359,6 +359,15 @@ Make them fun and relatable — use names, animals, food, space, sport. Vary the
 calculations, some word problems.
 Write operators the way a child is taught them: × and ÷, never * or /.
 
+FORMAT — the question is shown to the child as ONE run of plain text, so:
+- Write it as flowing prose that would still make sense read aloud.
+- NEVER a table, and never the pipe character. NEVER markdown, bullet points, numbered lists,
+  headings or line breaks. A table collapses into an unreadable row of numbers.
+- Data for a statistics or graph question goes INTO the sentence: "The Strikers scored 4, 6, 3
+  and 5 goals over four weeks, and the Defenders scored 2, 5, 1 and 4." Never "Team | Week 1 |
+  Week 2".
+- Keep it under 300 characters.
+
 ANSWER RULES — these are strict, because the child types the answer on a number pad:
 - Every answer must be a single positive number: either a whole number, or a decimal with at
   most 2 decimal places. Write decimals with a point, e.g. 3.75.
