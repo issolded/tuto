@@ -495,8 +495,13 @@ export default function ParentOnboarding() {
                       )}
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: PC.tealBg, borderRadius: 12, padding: '5px 10px', flexShrink: 0 }}>
+                        {/* Width follows the digits. It was fixed at 52px, which fits four —
+                            a 10000-gem reward lost its last zero. The slack matters: `ch` is
+                            the width of a zero and the other digits run slightly wider, so the
+                            bare count clips by a pixel. */}
                         <input type="number" value={r.gems} onChange={e => updateReward(i, 'gems', e.target.value)}
-                          style={{ width: 52, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.tealDeep, textAlign: 'right' }} />
+                          className="tc-numplain"
+                          style={{ width: `calc(${Math.max(4, String(r.gems ?? '').length)}ch + 8px)`, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT, fontSize: 14, fontWeight: 800, color: PC.tealDeep, textAlign: 'right' }} />
                         <span style={{ fontSize: 14 }}>💎</span>
                       </div>
 

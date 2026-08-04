@@ -51,6 +51,11 @@ export const PCSS = `
 .tc-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;outline:none;cursor:pointer;}
 .tc-slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#3FB7AC;cursor:pointer;box-shadow:0 3px 10px rgba(63,183,172,.5);border:4px solid #fff;}
 .tc-slider::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#3FB7AC;cursor:pointer;border:4px solid #fff;box-shadow:0 3px 10px rgba(63,183,172,.5);}
+/* A number input reserves room for its spin buttons even where they are never used —
+   here a slider does the same job — and that reserved strip ate into the gem box's fixed
+   width, clipping the last digit of a five-figure reward. */
+.tc-numplain{-moz-appearance:textfield;appearance:textfield;}
+.tc-numplain::-webkit-outer-spin-button,.tc-numplain::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .tc-input{width:100%;padding:14px 16px;border:1.5px solid #ECEEF1;border-radius:15px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15.5px;font-weight:600;color:#21262E;background:#F3F5F7;outline:none;transition:border-color .16s,background .16s;}
 .tc-input::placeholder{color:#A9AFB9;font-weight:600;}
 .tc-input:focus{border-color:#3FB7AC;background:#fff;}
