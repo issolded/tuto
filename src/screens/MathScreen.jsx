@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { storageClient } from '../lib/supabase'
-import { generateMathQuestions, evaluateMath } from '../lib/gemini'
-import { generateProblem, SHAPES } from '../lib/mathTemplates'
+import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
+import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
+import { planSession, templateTopicFor, startingLevelForAge, yearLabelForAge } from '../lib/mathCurriculum'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -67,31 +68,6 @@ const CONFETTI = [
 // shape, to 16 for two — and every mark is on screen to be counted. So it belongs between
 // the "up to 10" pair and the "up to 20" pair, which also keeps each add/subtract pair
 // together. Everything from Addition up to 20 down to Division shifts one rung later.
-const LEVEL_DESC = {
-  1: 'Counting 1–10',       2: 'Addition up to 10',      3: 'Subtraction up to 10',
-  4: 'Shapes: sides & corners', 5: 'Addition up to 20',  6: 'Subtraction up to 20',
-  7: 'Word Problems',       8: 'Add & Subtract ×100',    9: 'Multiplication ×2 ×5 ×10',
-  10: 'Fractions',          11: 'Division',              12: 'Measurement',
-  13: 'Multiplication Tables', 14: 'Multi-step Problems', 15: 'Fractions & Decimals',
-}
-
-// Levels whose LEVEL_DESC maps cleanly onto a mathTemplates.js topic use the deterministic
-// template engine instead of an LLM call. Anything else (counting, generic word problems,
-// fractions, division, geometry, measurement, multi-step) has no template yet, so it keeps
-// going through the old generateMathQuestions() path untouched — easy to extend later by
-// just adding a case here once a matching template exists.
-function templateTopicForLevel(level) {
-  const desc = LEVEL_DESC[level] || ''
-  if (/^Addition/.test(desc)) return 'addition'
-  if (/^Subtraction/.test(desc)) return 'subtraction'
-  if (/Multiplication/.test(desc)) return 'multiplication-word'
-  if (/Fraction/i.test(desc)) return 'fraction-of-number'
-  if (/Shapes|Geometry/i.test(desc)) return 'geometry'
-  if (/Counting/i.test(desc)) return 'counting'
-  if (/division|divis|share|equal groups?/i.test(desc)) return 'division-word'
-  return null
-}
-
 // Mirrors HelpPanel's own isPlus/isMinus/pattern detection — used to decide, before
 // HelpPanel ever renders, whether showing help would actually show something. Keeps the
 // auto-help-on-wrong-answer trigger from popping up an empty "draw it in the air" panel
@@ -119,7 +95,14 @@ const stepLabel = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)}`
 
 function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   if (templateTopic) {
-    if (templateTopic === 'addition' || templateTopic === 'subtraction') return true
+    // Addition and subtraction used to be unconditionally helpable because they were only ever
+    // posed within 20, where the panel's one-emoji-per-unit drawing is the whole point. The
+    // dial now reaches four digits, and sixty-two circles on screen is not help — past what a
+    // child would count, the template's written steps carry it instead.
+    if (templateTopic === 'addition' || templateTopic === 'subtraction') {
+      const nums = (question.match(/\d+/g) || []).map(Number)
+      return isCountable(nums[0], nums[1]) || (hintSteps?.length ?? 0) > 0
+    }
     return !!visual || (hintSteps?.length ?? 0) > 0
   }
   // A constant-step pattern gets the interactive arrow walkthrough; anything else needs
@@ -156,6 +139,10 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
 // avoid set. Templates only ever deduped inside a single batch, so the same "1/4 of 20"
 // came back the moment a child started a second session.
 const SEEN_CAP = 20
+
+// Every age gets the same length. Five was set when a session was five of the same sum;
+// ten topics is what makes it read as a quiz rather than a drill.
+const QUESTIONS_PER_SESSION = 10
 const seenKey = (kind, childId, level) => `tuto_math_${kind}_${childId || 'anon'}_${level}`
 
 function readSeen(kind, childId, level) {
@@ -170,18 +157,6 @@ function rememberSeen(kind, childId, level, items) {
     const next = [...readSeen(kind, childId, level), ...(items || []).filter(Boolean)].slice(-SEEN_CAP)
     localStorage.setItem(seenKey(kind, childId, level), JSON.stringify(next))
   } catch { /* private mode / quota — repeated questions are a nuisance, not a failure */ }
-}
-
-// Kept pointing at the same topics as before the geometry move, so a child of a given age
-// still starts where they used to — except the oldest band, which used to open on geometry
-// purely because it sat high on the ladder, and now opens on division instead.
-function getStartingLevel(age) {
-  const n = Number(age)
-  if (n <= 6)  return 1  // Counting 1–10
-  if (n <= 8)  return 3  // Subtraction up to 10
-  if (n <= 10) return 6  // Subtraction up to 20
-  if (n <= 12) return 9  // Multiplication ×2 ×5 ×10
-  return 11              // Division
 }
 
 function getWelcomeMsg(age) {
@@ -215,8 +190,12 @@ function getScoreMsg(pct, age) {
 
 // ── Number keyboard ──────────────────────────────────────────────────────────
 
-function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
-  const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], ['⌫','0','✓']]
+// The point key appears only for questions whose answer actually has one. Every answer used
+// to be a positive whole number, so there was no key and a four-character limit; curriculum
+// topics like Decimals and Percentages need both. Showing the key on every question instead
+// would put a decimal point in front of a five-year-old counting apples.
+function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false }) {
+  const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], allowDecimal ? ['⌫','0','.','✓'] : ['⌫','0','✓']]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
       {ROWS.map((row, ri) => (
@@ -239,10 +218,12 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled }) {
                   if (disabled) return
                   if (isSubmit) onSubmit()
                   else if (isBack) onChange(v => v.slice(0, -1))
-                  else if (value.length < 4) onChange(v => v + key)
+                  // One point only, and never as the first character.
+                  else if (key === '.') { if (value.length && !value.includes('.')) onChange(v => v + '.') }
+                  else if (value.length < 7) onChange(v => v + key)
                 }}
                 style={{
-                  width: 70, height: 70, borderRadius: '50%', border: 'none',
+                  width: row.length > 3 ? 62 : 70, height: row.length > 3 ? 62 : 70, borderRadius: '50%', border: 'none',
                   background: bg, color: '#fff',
                   fontSize: isSubmit || isBack ? 24 : 27,
                   fontFamily: FRED, fontWeight: 600,
@@ -461,8 +442,11 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // precedence; the counting visual is kept only as a fallback for literal symbolic
   // equations, where the text genuinely IS the sum.
   const canTrustText = questionType === 'symbolic' && nums.length >= 2 && !(hintSteps?.length > 0)
-  const isPlus  = templateTopic ? templateTopic === 'addition'    : (canTrustText && question.includes('+'))
-  const isMinus = templateTopic ? templateTopic === 'subtraction' : (canTrustText && question.includes('-'))
+  // Same gate as hasRealHelp: the emoji drawing only stands in for numbers a child would
+  // actually count, otherwise the panel falls through to the written steps below.
+  const drawable = isCountable(n0, n1)
+  const isPlus  = templateTopic ? (templateTopic === 'addition' && drawable)    : (canTrustText && question.includes('+') && drawable)
+  const isMinus = templateTopic ? (templateTopic === 'subtraction' && drawable) : (canTrustText && question.includes('-') && drawable)
   // Only a constant-step pattern can be walked arrow by arrow (see constantPatternStep);
   // an alternating one falls through to the steps like any other question.
   const patternStep = questionType === 'pattern' ? constantPatternStep(question) : null
@@ -1102,13 +1086,15 @@ export default function MathScreen() {
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
   const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState([])         // per-question hint_steps for the LLM path, where there is no template to read them from
+  const [answerFormats, setAnswerFormats] = useState([])       // 'integer' | 'decimal' per question — decides whether the keypad offers a point
+  const [curriculumTopics, setCurriculumTopics] = useState([]) // the curriculum entry each question came from
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
 
   // Load level from last math_progress session
   useEffect(() => {
-    if (!child?.id) { setLevel(getStartingLevel(age)); return }
+    if (!child?.id) { setLevel(startingLevelForAge(age)); return }
     storageClient
       .from('math_progress')
       .select('level')
@@ -1117,66 +1103,93 @@ export default function MathScreen() {
       .limit(1)
       .then(({ data }) => {
         const rec = data?.[0]
-        setLevel(rec ? rec.level : getStartingLevel(age))
+        setLevel(rec ? rec.level : startingLevelForAge(age))
       })
-      .catch(() => setLevel(getStartingLevel(age)))
+      .catch(() => setLevel(startingLevelForAge(age)))
     return () => clearTimeout(flashTimer.current)
   }, [])
 
-  const effectiveLevel = level ?? getStartingLevel(age)
+  const effectiveLevel = level ?? startingLevelForAge(age)
 
   // ── Start: pick mode then generate questions ─────────────────────────────
+  //
+  // A session used to be five questions on ONE thing, because the level chose the subject and
+  // each rung named a single operation. The child's year now chooses the subject — all of it —
+  // and the level only says how hard. So a session is assembled topic by topic: drawn from a
+  // code template where one genuinely fits that topic, and from a single model call covering
+  // everything else at once.
   const startLoading = async (selectedMode) => {
     setMode(selectedMode)
     setStep('loading')
     setHelpUsedQs(new Set())
 
-    const templateTopic = templateTopicForLevel(effectiveLevel)
-    if (templateTopic) {
-      // Deterministic path: no LLM call, no network — pure code templates. Track operand
-      // pairs across the batch so the same (a,b) — and therefore the same answer — never
-      // repeats, even if only the name/object in the wording changed.
-      // Seeded with what recent sessions already asked, so avoidance carries across them
-      // and not just within this batch.
-      const usedOperands = new Set(readSeen('keys', child?.id, effectiveLevel))
-      const problems = Array.from({ length: 5 }, () => {
-        const p = generateProblem(templateTopic, effectiveLevel, usedOperands)
-        usedOperands.add(p.operandKey)
-        return p
-      })
-      rememberSeen('keys', child?.id, effectiveLevel, problems.map(p => p.operandKey))
-      setQuestions(problems.map(p => p.question_text))
-      setCorrectAns(problems.map(p => p.correct_answer))
-      setQTypes(problems.map(() => null))
-      setTopic(templateTopic)
-      setTemplateProblems(problems)
-      setLlmHints([])
-      setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
-      return
+    const slots = planSession(age, QUESTIONS_PER_SESSION, readSeen('topics', child?.id, 'curriculum'))
+      .map(t => ({ curriculum: t, templateTopic: templateTopicFor(t) }))
+    if (!slots.length) { setStep('mode'); return }
+
+    // Track operand pairs across the batch AND across recent sessions, so the same (a,b) —
+    // and therefore the same answer — never comes back a question or a day later.
+    const usedOperands = new Set(readSeen('keys', child?.id, effectiveLevel))
+    for (const slot of slots) {
+      if (!slot.templateTopic) continue
+      const p = generateProblem(slot.templateTopic, effectiveLevel, usedOperands)
+      usedOperands.add(p.operandKey)
+      slot.problem = p
+      slot.question = p.question_text
+      slot.answer = p.correct_answer
+      slot.format = 'integer'
     }
 
-    setTemplateProblems([])
-    try {
-      const prevQs = readSeen('seen', child?.id, effectiveLevel)
-      const result = await generateMathQuestions(age, effectiveLevel, prevQs)
-      setQuestions(result.questions   || [])
-      setCorrectAns(result.answers    || [])
-      setQTypes(result.question_types || [])
-      setTopic(result.topic           || 'math')
-      setLlmHints(Array.isArray(result.hint_steps) ? result.hint_steps : [])
-      rememberSeen('seen', child?.id, effectiveLevel, result.questions)
-      setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
-    } catch (e) {
-      console.error('generateMathQuestions:', e)
-      setStep('mode')
+    const llmSlots = slots.filter(s => !s.templateTopic)
+    if (llmSlots.length) {
+      try {
+        const result = await generateCurriculumQuestions(
+          age, effectiveLevel, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'),
+        )
+        llmSlots.forEach((slot, i) => {
+          const q = result.questions?.[i]
+          const a = result.answers?.[i]
+          if (typeof q !== 'string' || !q.trim() || !Number.isFinite(Number(a))) return
+          slot.question = q
+          slot.answer = Number(a)
+          slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
+          slot.hints = Array.isArray(result.hint_steps?.[i]) ? result.hint_steps[i] : null
+        })
+        rememberSeen('seen', child?.id, 'curriculum', llmSlots.map(s => s.question))
+      } catch (e) {
+        // A model that will not answer costs the child the topics only it can pose, not the
+        // whole session — the template questions below are already generated and correct.
+        console.error('generateCurriculumQuestions:', e)
+      }
     }
+
+    // Slots the model skipped or malformed are dropped rather than shown blank.
+    const ready = slots.filter(s => typeof s.question === 'string' && s.question.trim())
+    if (!ready.length) { setStep('mode'); return }
+
+    rememberSeen('keys', child?.id, effectiveLevel, ready.map(s => s.problem?.operandKey))
+    rememberSeen('topics', child?.id, 'curriculum', ready.map(s => s.curriculum.id))
+
+    setQuestions(ready.map(s => s.question))
+    setCorrectAns(ready.map(s => s.answer))
+    setAnswerFormats(ready.map(s => s.format))
+    setQTypes(ready.map(() => null))
+    setCurriculumTopics(ready.map(s => s.curriculum))
+    setTopic(ready[0]?.curriculum?.name || 'math')
+    setTemplateProblems(ready.map(s => s.problem ?? null))
+    setLlmHints(ready.map(s => s.hints ?? null))
+    setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
   }
 
   // ── Screen mode: submit one answer ───────────────────────────────────────
   const submitScreenAnswer = () => {
     if (!input || flash) return
     const userAns    = Number(String(input).trim())
-    const isCorrect  = userAns === Number(correctAns[qIdx])
+    // Exact equality was fine while every answer was a whole number. Decimals arrive from the
+    // model as JSON floats, so 0.1 + 0.2 style drift on either side would mark a correct
+    // answer wrong; compare within a tolerance far below the two decimal places allowed.
+    const target     = Number(correctAns[qIdx])
+    const isCorrect  = Number.isFinite(userAns) && Math.abs(userAns - target) < 1e-9
     const newAnswers = [...userAnswers, userAns]
 
     const tProblem = templateProblems[qIdx]
@@ -1282,9 +1295,13 @@ export default function MathScreen() {
           // The level the child came IN on. The server decides where they end up — it can
           // see the sessions before this one, which is what dampening needs.
           level: effectiveLevel,
-          // topic is no longer sent: the server derives it from the level, so the two
-          // paths can't disagree about what a session was (templates used to send a slug,
-          // the model whatever prose it felt like).
+          // The topics actually covered. The server used to derive this from the level,
+          // which was right while the level chose the subject — it no longer does, and a
+          // session now spans several topics rather than drilling one. The parent's chat
+          // agent reads this column to answer "what has she been working on", so it has to
+          // say what really happened.
+          topics: [...new Set(curriculumTopics.map(t => t?.name).filter(Boolean))],
+          school_year: yearLabelForAge(age),
           questions_total: questions.length,
           questions_correct: numCorrect,
           accuracy: derivedAccuracy,
@@ -1350,7 +1367,7 @@ export default function MathScreen() {
             background: 'rgba(90,169,230,.16)', borderRadius: 14, padding: '8px 18px',
             fontFamily: FRED, fontWeight: 600, fontSize: 14, color: MATH_DEEP,
           }}>
-            📊 {LEVEL_DESC[effectiveLevel] || 'Math Adventure'}
+            📊 {curriculumTopics[qIdx]?.name || yearLabelForAge(age) || 'Math Adventure'}
           </div>
         )}
         <button
@@ -1635,6 +1652,7 @@ export default function MathScreen() {
                 onChange={setInput}
                 onSubmit={submitScreenAnswer}
                 disabled={!!flash}
+                allowDecimal={answerFormats[qIdx] === 'decimal'}
               />
             </>
           )}

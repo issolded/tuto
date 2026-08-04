@@ -38,21 +38,68 @@ function pairKey(a, b) {
 
 // Difficulty → operand range. Same shape for every template so registry/templates agree
 // on what "level" means without each template reinventing scaling.
+// The ceiling used to grow by three a rung and topped out at 49, which was coherent while the
+// ladder only ever went as far as "Subtraction up to 20" — but the dial now sits a child in
+// their school year, and Year 5 arithmetic is not 34 + 28. A linear ceiling put "34 + 28 = ?"
+// in the same ten questions as "round 384,715 to the nearest ten thousand". It grows with the
+// curriculum instead: within 20, then 100, then three digits, then four, and up.
+// Indexed by level. Two rungs per school year, matching the dial's year footings in
+// mathCurriculum.js (Y1→2, Y2→4, Y3→6, Y4→8, Y5→10, Y6→12): within 20, within 100, three
+// digits, four digits, and beyond. This is the band a question works inside — for addition
+// it caps the ANSWER, so "Addition within 20" cannot produce 17 + 16.
+// The top two years are deliberately below what the curriculum's "more than 4 digits" would
+// allow. Screen mode gives the child no paper to work on, and a typed answer to
+// 540375 + 374852 is a wall rather than a question — the gap that made our maths feel easy
+// was never magnitude (the hardest arithmetic in the quiz we were compared against was
+// 456 × 7) but breadth, which the curriculum topics now supply. One array to raise if
+// testing says otherwise.
+const MAX_FOR_LEVEL = [20, 20, 20, 100, 100, 1000, 1000, 10000, 10000, 20000, 20000, 50000, 50000, 50000, 50000, 50000]
+
+// Which school year's footing a level sits on — 1..6. The dial is two rungs per year, so
+// this is what a template consults when its difficulty is about WHICH numbers are in play
+// (tables, denominators) rather than how big they get.
+function bandForLevel(level) {
+  const l = Math.min(Math.max(Number(level) || 1, 1), 15)
+  return Math.min(6, Math.ceil(l / 2) || 1)
+}
+
 function rangeForLevel(level) {
   const l = Math.min(Math.max(Number(level) || 1, 1), 15)
-  const max = 4 + l * 3
+  const max = MAX_FOR_LEVEL[l]
   // The floor used to be 1 at every rung, so the very easiest question was always in play
   // no matter how high the child had climbed — a ten-year-old on "Subtraction up to 20"
   // was handed "2 - 1". Raising it with the ceiling keeps each rung inside its own band.
   return { min: Math.max(1, Math.round(max / 4)), max }
 }
 
+// Whether a pair of operands can honestly be drawn as countable objects. The addition and
+// subtraction help draws one emoji per unit; that is the whole point of it for a six-year-old,
+// and nonsense at 34 + 28, which would put sixty-two circles on screen and ask a child to
+// count them. Past this the help falls back to the template's own written steps.
+export const COUNTABLE_LIMIT = 20
+export function isCountable(a, b) {
+  return Number.isInteger(a) && Number.isInteger(b)
+    && a >= 0 && b >= 0 && a <= COUNTABLE_LIMIT && b <= COUNTABLE_LIMIT && a + b <= 30
+}
+
+// The equal-sharing picture draws one object per unit and splits them into groups. That reads
+// at 20 shared among 4; at 300 shared among 12 it is a screenful of dots nobody can count, so
+// past this the help falls back to the written steps the template already carries.
+const SHAREABLE_LIMIT = 48
+function shareVisual(total, groups, highlight) {
+  if (total > SHAREABLE_LIMIT) return null
+  return highlight ? { kind: 'share', total, groups, highlight } : { kind: 'share', total, groups }
+}
+
 // ─── Addition ───────────────────────────────────────────────────────────────
 
 function additionTemplate(level) {
   const { min, max } = rangeForLevel(level)
-  const a = randInt(min, max)
-  const b = randInt(min, max)
+  // Both operands used to be drawn from the whole range, so the SUM could reach twice the
+  // band's ceiling — "Addition within 20" handing over 17 + 16. The ceiling belongs to the
+  // answer, so the second operand is drawn from what is left of it.
+  const a = randInt(min, Math.max(min, max - min))
+  const b = randInt(min, Math.max(min, max - a))
   const correct_answer = a + b
 
   return {
@@ -62,11 +109,25 @@ function additionTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
-    hint_steps: [
+    hint_steps: countingOnSteps(a, b),
+  }
+}
+
+// "Count on from 19: 20, 21, 22" is the right hint for a six-year-old and absurd once the
+// numbers are in the thousands — the old version listed every single number from a+1 to a+b,
+// which at this level would have written out two thousand of them. Past what a child would
+// ever count, it points at the method they are actually taught instead.
+function countingOnSteps(a, b) {
+  if (isCountable(a, b)) {
+    return [
       `Try counting on from ${a}.`,
       `Count ${b} more starting at ${a}: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`,
-    ],
+    ]
   }
+  return [
+    'Line the two numbers up by their place value — ones under ones, tens under tens.',
+    'Add each column from the right, carrying into the next when a column passes 9.',
+  ]
 }
 
 // ─── Subtraction ────────────────────────────────────────────────────────────
@@ -89,11 +150,22 @@ function subtractionTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
-    hint_steps: [
+    hint_steps: countingBackSteps(a, b),
+  }
+}
+
+// Same limit as counting on, for the same reason: counting back three thousand is not a hint.
+function countingBackSteps(a, b) {
+  if (isCountable(a, b)) {
+    return [
       `Start at ${a} and take away ${b}.`,
       `Count back ${b} from ${a}: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`,
-    ],
+    ]
   }
+  return [
+    'Line the two numbers up by their place value — ones under ones, tens under tens.',
+    'Subtract each column from the right, borrowing from the next column when you need to.',
+  ]
 }
 
 // ─── Multiplication word problem ────────────────────────────────────────────
@@ -183,10 +255,12 @@ function fractionOfNumberTemplate(level) {
   // "Fractions & Decimals" was identical to one at "Fractions", and the topic could only
   // ever produce 3 x 5 = 15 distinct problems — so a 5-question session used a third of
   // everything there was, and the next session was bound to repeat it.
-  const l = Number(level) || 1
-  const denominators = l >= 12 ? [2, 3, 4, 5, 6, 8, 10] : [2, 3, 4, 5]
+  // The one step at level 12 was the whole of the scaling, so a ten-year-old and a six-year-old
+  // both got "1/3 of 6". It follows the year now: bigger denominators and bigger wholes.
+  const band = bandForLevel(level)
+  const denominators = band >= 5 ? [2, 3, 4, 5, 6, 8, 10, 12] : band >= 3 ? [2, 3, 4, 5, 6, 8] : [2, 3, 4]
   const d = pick(denominators)
-  const multiplier = randInt(2, l >= 12 ? 10 : 8)
+  const multiplier = randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 6)
   const N = d * multiplier
   const correct_answer = N / d
 
@@ -199,7 +273,7 @@ function fractionOfNumberTemplate(level) {
     operandKey: pairKey(d, N),
     // Same picture as division — split into equal groups — with one group singled out,
     // which is exactly what "1/d of N" asks for.
-    visual: { kind: 'share', total: N, groups: d, highlight: 1 },
+    visual: shareVisual(N, d, 1),
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
       `1/${d} means splitting into ${d} equal groups.`,
@@ -217,10 +291,11 @@ const DIV_ITEMS = ['candies', 'stickers', 'cookies', 'marbles', 'balloons', 'cra
 const DIV_WHO = ['friends', 'classmates', 'kids', 'teammates']
 
 function divisionWordTemplate(level) {
-  // Division occupies a single rung, so there is nothing to scale between — it just needs
-  // enough room not to repeat itself: 5 x 8 = 40 problems rather than the previous 20.
-  const b = pick([2, 3, 4, 5, 6])
-  const multiplier = randInt(2, 9)
+  // Division used to occupy a single rung, so it took no notice of the level at all — which
+  // is why a Year 5 session could be handed "28 shared among 4". It follows the year now.
+  const band = bandForLevel(level)
+  const b = pick(band >= 5 ? [3, 4, 6, 7, 8, 9, 12] : band >= 3 ? [2, 3, 4, 5, 6, 8] : [2, 3, 4, 5])
+  const multiplier = randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 9)
   const a = b * multiplier
   const correct_answer = a / b
   const name = pick(DIV_NAMES)
@@ -234,7 +309,7 @@ function divisionWordTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
-    visual: { kind: 'share', total: a, groups: b },
+    visual: shareVisual(a, b),
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
       `${a} shared into ${b} equal groups.`,

@@ -3144,12 +3144,9 @@ app.get('/api/drawings', async (req, res) => {
 // settings and the write are all decided here now.
 const MATH_DEFAULTS = { gems: 30, dailyCap: 3 }
 
-// What each rung practises, as a stable slug. The client used to send this: templates sent
-// their own topic name and the LLM path sent whatever prose the model returned, so eleven
-// rows held nine different topics and "subtraction", "Subtraction up to 20" and
-// "Subtraction up to 10" were three separate things. The level already says what was being
-// practised, so it decides — nothing downstream has to guess which spelling it got.
-// Mirrors LEVEL_DESC in MathScreen.jsx; the two move together.
+// What a rung practised, back when a rung practised one thing. Kept only so sessions posted
+// by a client that has not reloaded yet still record something sensible; the level no longer
+// chooses the subject, the child's school year does.
 const TOPIC_FOR_LEVEL = {
   1: 'counting',      2: 'addition',       3: 'subtraction',
   4: 'geometry',      5: 'addition',       6: 'subtraction',
@@ -3163,6 +3160,18 @@ const TOPIC_FOR_LEVEL = {
 // and wrote the ledger from the browser. It earns the same treatment, so the pieces below
 // are shared rather than copied — one settings reader and one cap counter for both.
 const READING_DEFAULTS = { gems: 30, dailyCap: 3 }
+
+// What this session was about, for the column the parent's chat agent reads. A session now
+// spans several curriculum topics instead of drilling one, so it lists them — "Year 5:
+// Multiplication, Fractions, Statistics" answers "what has she been working on" in a way
+// that "subtraction" never could.
+function topicLabel(topics, schoolYear, level) {
+  const names = Array.isArray(topics) ? topics.filter(t => typeof t === 'string' && t.trim()).slice(0, 8) : []
+  if (!names.length) return TOPIC_FOR_LEVEL[level] || 'math'
+  const list = names.join(', ')
+  const prefix = typeof schoolYear === 'string' && schoolYear.trim() ? `${schoolYear.trim()}: ` : ''
+  return `${prefix}${list}`.slice(0, 300)
+}
 
 function taskSettingsFor(taskSettings, key, defaults) {
   const s = taskSettings?.[key] || {}
@@ -3195,7 +3204,7 @@ function rewardScale(accuracy) {
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
+  const { level, topics, school_year, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
   try {
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -3251,7 +3260,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       child_id: childId,
       session_date: DateTime.now().setZone(tz).toISODate(),
       level: newLevel,
-      topic: TOPIC_FOR_LEVEL[level] || 'math',   // what was practised — the level they came in on
+      topic: topicLabel(topics, school_year, level),
       questions_total, questions_correct,
       accuracy: acc,
       level_change: levelChange,

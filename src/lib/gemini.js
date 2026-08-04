@@ -330,6 +330,65 @@ Return JSON only:
   return callGemini([{ text: prompt }])
 }
 
+// Questions for a named set of curriculum topics — one per topic, in the order given.
+//
+// The old generateMathQuestions asks for five questions at "level N (Subtraction up to 20)",
+// which is why a ten-year-old's whole session was subtraction: the prompt could not describe
+// anything else. This one is handed the actual curriculum entries — name and the description
+// written for exactly this purpose — and returns a question per topic. Everything the older
+// prompt learned the hard way (metric only, no country-specific money, × and ÷ rather than
+// * and /, no general knowledge the answer hinges on) is kept, because those were all real
+// faults found in real output.
+export async function generateCurriculumQuestions(age, level, topics, previousQuestions = []) {
+  const list = topics.map((t, i) => `Q${i + 1} — "${t.name}": ${t.description}`).join('\n')
+  const avoidClause = previousQuestions.length > 0
+    ? `\nDo NOT repeat or lightly reword these recent questions: ${JSON.stringify(previousQuestions.slice(-20))}`
+    : ''
+  // The dial runs 1–15 across the whole app; the child's year already fixes the syllabus, so
+  // this only says where inside it to sit.
+  const pitch = level <= 4 ? 'the easier end of this topic'
+    : level >= 12 ? 'the harder end of this topic, but still on the topic'
+    : 'the middle of this topic'
+
+  const prompt = `Generate ${topics.length} maths questions for a ${age} year old following the English National Curriculum.
+Each question covers a DIFFERENT topic, in this exact order:
+${list}
+
+Pitch each question at ${pitch}.
+Make them fun and relatable — use names, animals, food, space, sport. Vary the framing: some plain
+calculations, some word problems.
+Write operators the way a child is taught them: × and ÷, never * or /.
+
+ANSWER RULES — these are strict, because the child types the answer on a number pad:
+- Every answer must be a single positive number: either a whole number, or a decimal with at
+  most 2 decimal places. Write decimals with a point, e.g. 3.75.
+- NEVER an answer that is a fraction (3/4), a ratio (2:3), a range, a list, a letter, or a word.
+- If a topic is naturally about fractions, ratio or algebra, pose it so the ANSWER is still a
+  single number — "3/10 of 40 kg" (answer 12), "share 20 in the ratio 2:3, how much is the
+  larger share" (answer 12), "if 4n = 28, what is n" (answer 7).
+- Never put units inside the answer. Units belong in the question.
+
+FAIRNESS RULES:
+- No country-specific money (dime, nickel, penny, quarter, cent, dollar, pound). Name a neutral
+  amount instead, or avoid money.
+- Metric units only (grams, kilograms, centimetres, metres, litres). Never pounds, ounces,
+  inches, feet.
+- Do not hinge an answer on a fact the child must simply know. Sides and corners of common
+  shapes ARE fine, and the hint may supply the fact.${avoidClause}
+
+Also return "hint_steps": one entry per question, 1-2 SHORT steps that walk the child toward the
+answer WITHOUT ever stating it. Where a question needs a fact, the first step supplies it.
+
+Return JSON only:
+{
+  "questions": ["..."],
+  "answers": [12, 3.75],
+  "answer_formats": ["integer", "decimal"],
+  "hint_steps": [["...", "..."], ["...", "..."]]
+}`
+  return callGemini([{ text: prompt }])
+}
+
 export async function evaluateMath(photos, questions, answers, age, level) {
   const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
   const questionsText = questions.map((q, i) => `Q${i + 1}: ${q} (correct answer: ${answers[i]})`).join('\n')
