@@ -356,7 +356,12 @@ export default function ParentOnboarding() {
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: 7, lineHeight: 1.5 }}>Choose the activities that earn Gems. You can change these anytime.</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13, marginTop: 22 }}>
+            {/* minmax(0, 1fr) rather than 1fr: a grid track's implicit min-width is auto, so it
+                refuses to shrink below its content — and the gem badge below sets nowrap, which
+                makes its min-content the whole string. "Up to 30 gems (up to 3/day)" on both
+                cards pushed the two columns past the viewport and the whole step scrolled
+                sideways. minmax(0, …) lets the tracks shrink; the badge wraps instead. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 13, marginTop: 22 }}>
               {STEP3_TASKS.map(t => {
                 const on = !!tasks[t.key]
                 return (
@@ -388,7 +393,7 @@ export default function ParentOnboarding() {
                     <span style={{
                       alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
                       background: t.bg, color: t.tint, borderRadius: 11, padding: '4px 10px',
-                      fontFamily: FONT, fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap',
+                      fontFamily: FONT, fontSize: 12, fontWeight: 800, lineHeight: 1.35, maxWidth: '100%',
                     }}>💎 {gemHint(t.key)}</span>
                   </button>
                 )

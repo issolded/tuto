@@ -15,11 +15,13 @@ export const TASK_DEFAULTS = {
   drawing:  { gems: 20, variable: false, daily_cap: 2 },
 }
 
-// "Up to 30 gems" / "10 gems" / "20 gems (up to 2/day)" — the exact phrasing
-// used anywhere this needs to be shown to a parent.
+// "Up to 30 gems · 3/day" / "25 gems" — the exact phrasing used anywhere this
+// needs to be shown to a parent. The cap used to read "(up to 2/day)", which
+// repeated "up to" twice in one badge and made the string long enough to force
+// the onboarding grid wider than the screen.
 export function gemHint(key) {
   const meta = TASK_DEFAULTS[key]
   if (!meta) return ''
   const base = meta.variable ? `Up to ${meta.gems} gems` : `${meta.gems} gems`
-  return meta.daily_cap ? `${base} (up to ${meta.daily_cap}/day)` : base
+  return meta.daily_cap ? `${base} · ${meta.daily_cap}/day` : base
 }
