@@ -321,6 +321,45 @@ export async function submitHomework(childId, files) {
   return data
 }
 
+// Uploads the page photos the child just read from, then hands the session to the
+// server. The photos used to be thrown away the moment Gemini had answered — they went
+// to the model, the questions came back, and nothing was kept — so a parent had no way
+// to see what their child had actually read. They go to the same private bucket as
+// homework, by path, for the same reason: the bytes stay server-readable and the JSON
+// body stays small. The gem amount, the daily cap and the parent's message are the
+// server's to decide; nothing here calculates a reward.
+export async function submitReadingSession(childId, { bookId, bookTitle, questions, answers }, pageFiles) {
+  const cid = childId || 'anonymous'
+  const paths = []
+  for (let i = 0; i < (pageFiles || []).length; i++) {
+    const file = pageFiles[i]
+    const ext = (file.type || '').includes('png') ? 'png' : 'jpg'
+    const path = `${cid}/reading/${Date.now()}-${i}.${ext}`
+    const { error } = await storageClient.storage
+      .from(PHOTO_BUCKET)
+      .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false })
+    // A photo that will not upload must not cost the child their session — the reading
+    // already happened. Keep going and send what did land.
+    if (!error) paths.push(path)
+  }
+
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/reading-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      book_id: bookId ?? null,
+      book_title: bookTitle ?? null,
+      questions_total: questions,
+      questions_correct: answers.filter(a => a.was_correct).length,
+      answers,
+      page_photo_urls: paths,
+    }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data
+}
+
 // Answers the "did you do this homework today?" question the server asks when
 // the photo had no readable date. Releases the held parent notification.
 export async function confirmHomeworkDate(submissionId, doneToday) {

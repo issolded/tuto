@@ -8,7 +8,7 @@
 // (reading/math/writing) rather than paid flat — callers use this to show
 // "up to N" instead of a bare number.
 export const TASK_DEFAULTS = {
-  reading:  { gems: 30, variable: true },
+  reading:  { gems: 30, variable: true, daily_cap: 3 },
   math:     { gems: 30, variable: true, daily_cap: 3 },
   writing:  { gems: 30, variable: true },
   homework: { gems: 25, variable: false },

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
-import { storageClient } from '../lib/supabase'
+import { storageClient, submitReadingSession } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
 
 const ACCENT = '#FF6B35'
@@ -209,7 +209,13 @@ export default function ReadingFlow() {
   const [gemsEarned, setGemsEarned] = useState(0)
   const [finalCorrect, setFinalCorrect] = useState(0)
   const [error, setError] = useState('')
-  const [photos, setPhotos] = useState([])           // [{ file, preview }]
+  const [photos, setPhotos] = useState([])           // [{ file, preview }] — the picker
+  // The pages actually submitted. `photos` is cleared as soon as the questions come back so
+  // the picker is empty next time, which used to be the last anyone saw of them: they went to
+  // Gemini and nowhere else. Held here so they can be stored with the finished session.
+  const [pageFiles, setPageFiles] = useState([])
+  const [saveFailed, setSaveFailed] = useState(false)
+  const [capped, setCapped] = useState(false)
   const [titleInput, setTitleInput] = useState('')
   const [pendingCoverPreview, setPendingCoverPreview] = useState(null)
   const coverRef = useRef()
@@ -324,12 +330,14 @@ export default function ReadingFlow() {
     setStep('page-loading')
     setError('')
     try {
-      const { questions: qs } = await readPagesAndAsk(photos.map(p => p.file), book.title, age, language)
+      const files = photos.map(p => p.file)
+      const { questions: qs } = await readPagesAndAsk(files, book.title, age, language)
       setQuestions(qs ?? [])
       setQIdx(0)
       setQVisible(true)
       setAnswers({})
       setOeInput('')
+      setPageFiles(files)
       setPhotos([])
       setStep('questions')
     } catch {
@@ -357,49 +365,72 @@ export default function ReadingFlow() {
     const q = questions[qIdx]
     const correct = optIdx === q.correct
     setAnswers(p => ({ ...p, [qIdx]: optIdx }))
-    setTimeout(() => advanceQ(correct ? 1 : 0), 900)
+    setTimeout(() => advanceQ(correct ? 1 : 0, optIdx), 900)
   }
 
   function handleOE() {
     if (!oeInput.trim()) return
-    setAnswers(p => ({ ...p, [qIdx]: oeInput.trim() }))
+    const given = oeInput.trim()
+    setAnswers(p => ({ ...p, [qIdx]: given }))
     setOeInput('')
-    advanceQ(1)
+    advanceQ(1, given)
   }
 
-  function advanceQ(earned) {
+  // The last answer travels with the call rather than being read back out of state: the
+  // setAnswers above has not landed yet by the time the final question finishes, which is
+  // why the score was already being computed as "everything before" plus a separate flag.
+  function advanceQ(earned, given) {
     setQVisible(false)
     const nextIdx = qIdx + 1
     const isLast = nextIdx >= questions.length
     setTimeout(() => {
-      if (isLast) finishReading(earned)
+      if (isLast) finishReading(earned, given)
       else { setQIdx(nextIdx); setQVisible(true) }
     }, 350)
   }
 
-  async function finishReading(lastEarned) {
-    const prevCorrect = Object.entries(answers).reduce((sum, [i, ans]) => {
-      const q = questions[Number(i)]
-      if (!q) return sum
-      if (q.type === 'mc') return sum + (ans === q.correct ? 1 : 0)
-      return sum + 1
-    }, 0)
-    const total = prevCorrect + lastEarned
-    setFinalCorrect(total)
-    const pct = questions.length > 0 ? total / questions.length : 0
-    const gems = pct >= 0.6 ? 30 : pct >= 0.3 ? 15 : 5
-    setGemsEarned(gems)
-    setStep('result')
-    if (childId) await storageClient.from('bt_ledger').insert({ child_id: childId, amount: gems, reason: book?.title ?? 'Reading' })
-    if (book?.id) await storageClient.from('books').update({ current_page: (book.current_page ?? 0) + 1 }).eq('id', book.id)
-    await storageClient.from('submissions').insert({
-      child_id: childId ?? null,
-      task_type: 'reading',
-      score: Math.round(pct * 100),
-      gems_earned: gems,
-      feedback: `Read ${book?.title ?? 'a book'}`,
-      generated_questions: questions.map(q => q.question),
+  async function finishReading(lastEarned, lastGiven) {
+    // One record of the whole round: what was asked, what the child said, and whether it
+    // was right. Only the question TEXT used to be stored, in a column nothing has ever
+    // read back, and the answers were not stored at all.
+    const given = { ...answers, [qIdx]: lastGiven }
+    const qa = questions.map((q, i) => {
+      const ans = given[i]
+      const isMC = q.type === 'mc'
+      return {
+        question: q.question,
+        type: isMC ? 'mc' : 'oe',
+        options: isMC ? q.options ?? null : null,
+        correct_answer: isMC ? (q.options?.[q.correct] ?? null) : null,
+        child_answer: isMC ? (q.options?.[ans] ?? null) : (ans ?? null),
+        // Open questions are not machine-marked — answering one counts, and the parent
+        // reads the actual words below. That is how the score has always been worked out.
+        was_correct: isMC ? ans === q.correct : ans != null,
+      }
     })
+
+    const correct = qa.filter(a => a.was_correct).length
+    setFinalCorrect(correct)
+    setStep('result')
+
+    if (!childId) { setGemsEarned(0); return }
+    try {
+      const result = await submitReadingSession(
+        childId,
+        { bookId: book?.id ?? null, bookTitle: book?.title ?? null, questions: questions.length, answers: qa },
+        pageFiles,
+      )
+      setGemsEarned(result?.gems_earned ?? 0)
+      setCapped(!!result?.capped)
+      setSaveFailed(false)
+      if (book?.id) setBook(b => (b ? { ...b, current_page: (b.current_page ?? 0) + 1 } : b))
+    } catch (err) {
+      // The reading happened; say plainly that it did not save rather than showing a
+      // confident "+0 Gems", which is what the maths screen used to do when it threw.
+      console.error('[reading] save failed', err)
+      setGemsEarned(0)
+      setSaveFailed(true)
+    }
   }
 
   const coverPrompt = age <= 7
@@ -917,13 +948,13 @@ export default function ReadingFlow() {
           boxShadow: '0 12px 48px rgba(255,107,53,0.40)',
           width: '100%',
         }}>
-          <div style={{ fontSize: 52 }}>💎</div>
+          <div style={{ fontSize: 52 }}>{saveFailed ? '😕' : capped ? '🌙' : '💎'}</div>
           <div>
             <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
-              You earned!
+              {saveFailed ? "Couldn't save" : capped ? 'All your gems for today!' : 'You earned!'}
             </div>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 44, fontWeight: 800, color: 'white', lineHeight: 1 }}>
-              +{gemsEarned} Gems
+            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: saveFailed || capped ? 22 : 44, fontWeight: 800, color: 'white', lineHeight: 1.15 }}>
+              {saveFailed ? 'Tell a grown-up' : capped ? 'Come back tomorrow 📚' : `+${gemsEarned} Gems`}
             </div>
           </div>
         </div>

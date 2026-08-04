@@ -3158,26 +3158,39 @@ const TOPIC_FOR_LEVEL = {
   13: 'multiplication', 14: 'multi-step',  15: 'fractions',
 }
 
-function mathSettings(taskSettings) {
-  const s = taskSettings?.math || {}
-  const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : MATH_DEFAULTS.gems
-  const cap = Number.isFinite(s.daily_cap) ? Math.max(0, Math.min(50, Math.trunc(s.daily_cap))) : MATH_DEFAULTS.dailyCap
+// Reading had every one of maths' faults and one more: it paid a flat client-side amount
+// that ignored what the parent had configured, had no daily limit, told the parent nothing,
+// and wrote the ledger from the browser. It earns the same treatment, so the pieces below
+// are shared rather than copied — one settings reader and one cap counter for both.
+const READING_DEFAULTS = { gems: 30, dailyCap: 3 }
+
+function taskSettingsFor(taskSettings, key, defaults) {
+  const s = taskSettings?.[key] || {}
+  const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : defaults.gems
+  const cap = Number.isFinite(s.daily_cap) ? Math.max(0, Math.min(50, Math.trunc(s.daily_cap))) : defaults.dailyCap
   return { gems, dailyCap: cap, active: s.active !== false }
 }
 
-async function rewardedMathToday(childId, tz) {
+async function rewardedToday(childId, tz, reason) {
   const now = DateTime.now().setZone(tz)
   const { data, error } = await supabase
     .from('bt_ledger')
     .select('id')
     .eq('child_id', childId)
-    .eq('reason', 'math')
+    .eq('reason', reason)
     .gt('amount', 0)
     .gte('created_at', now.startOf('day').toUTC().toISO())
     .lte('created_at', now.endOf('day').toUTC().toISO())
   // Fail CLOSED, as the drawing cap does: if the count can't be read, pay nothing.
-  if (error) { console.error(`[MATH] cap check failed: ${error.message}`); return null }
+  if (error) { console.error(`[CAP] ${reason} check failed: ${error.message}`); return null }
   return (data || []).length
+}
+
+// The two ends the maths bands used to have — a third of the reward for getting none of it
+// right, all of it for getting all — slid into a straight line so every question counts.
+function rewardScale(accuracy) {
+  const acc = Math.max(0, Math.min(100, Number(accuracy) || 0))
+  return 0.33 + 0.67 * (acc / 100)
 }
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
@@ -3188,9 +3201,9 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
-    const settings = mathSettings(child.task_settings)
+    const settings = taskSettingsFor(child.task_settings, 'math', MATH_DEFAULTS)
     const tz = await tzForChild(childId)
-    const doneToday = await rewardedMathToday(childId, tz)
+    const doneToday = await rewardedToday(childId, tz, 'math')
 
     // Maths is declared `variable` in taskDefaults, and the parent is shown "up to N" —
     // but only paper mode ever scaled, via whatever figure the model returned, while
@@ -3198,14 +3211,11 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // scale for both, applied here, using the bands the model had been asked for.
     // Help on top of that costs a third: it is the child's own admission that they needed
     // a step shown, the same ratio the client used to apply.
+    // Banded scoring came from the prompt the model used to be given, and it was too coarse
+    // for a five-question session: the top band opened at 80%, which IS four out of five, so
+    // a perfect round paid exactly the same as one with a mistake in it.
     const acc = Math.max(0, Math.min(100, Number(accuracy) || 0))
-    // Banded scoring came from the prompt the model used to be given, and it is too coarse
-    // for a five-question session: the top band opened at 80%, which IS four out of five,
-    // so a perfect round paid exactly the same as one with a mistake in it — and nought out
-    // of five paid the same as one. Sliding the scale instead keeps the same two ends the
-    // bands had (a third of the reward for getting none, all of it for getting all) while
-    // making every question actually count.
-    const scale = 0.33 + 0.67 * (acc / 100)
+    const scale = rewardScale(acc)
     let gems = 0
     let capped = false
     if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
@@ -3281,6 +3291,98 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange })
   } catch (err) {
     console.error('[MATH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Reading used to end in the browser: it worked out its own gems from a three-step ladder
+// (30 / 15 / 5, ignoring whatever the parent had set), wrote the ledger itself, had no daily
+// limit, and told the parent nothing. It also wrote the BOOK TITLE into the ledger's reason
+// column, so a reading reward was indistinguishable from a spend named after a toy and never
+// matched anything downstream that looked for a task. All of that is decided here now.
+app.post('/api/children/:childId/reading-session', async (req, res) => {
+  const { childId } = req.params
+  const { book_id, book_title, questions_total, questions_correct, answers, page_photo_urls } = req.body
+  try {
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const settings = taskSettingsFor(child.task_settings, 'reading', READING_DEFAULTS)
+    const tz = await tzForChild(childId)
+    const doneToday = await rewardedToday(childId, tz, 'reading')
+
+    const total = Math.max(0, Number(questions_total) || 0)
+    const correct = Math.max(0, Math.min(total, Number(questions_correct) || 0))
+    const acc = total > 0 ? Math.round((correct / total) * 100) : 0
+
+    let gems = 0
+    let capped = false
+    if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
+      capped = true
+    } else {
+      gems = Math.round(settings.gems * rewardScale(acc))
+    }
+
+    // The questions were already being stored and the child's answers were not, which made
+    // the stored half useless: a list of questions with no way to know how they went. They
+    // go in together, in the jsonb column that was already there.
+    const qa = Array.isArray(answers) ? answers.slice(0, 20).map(a => ({
+      question: String(a?.question ?? '').slice(0, 400),
+      type: a?.type === 'oe' ? 'oe' : 'mc',
+      options: Array.isArray(a?.options) ? a.options.slice(0, 6).map(o => String(o).slice(0, 200)) : null,
+      correct_answer: a?.correct_answer == null ? null : String(a.correct_answer).slice(0, 200),
+      child_answer: a?.child_answer == null ? null : String(a.child_answer).slice(0, 400),
+      was_correct: !!a?.was_correct,
+    })) : []
+
+    const { data: sub, error: subErr } = await supabase.from('submissions').insert({
+      child_id: childId,
+      task_type: 'reading',
+      status: 'approved',       // nothing here needs the parent to decide anything
+      score: acc,
+      gems_earned: gems,
+      feedback: book_title ? `Read "${String(book_title).slice(0, 120)}"` : 'Reading',
+      generated_questions: qa,
+      photo_urls: Array.isArray(page_photo_urls) ? page_photo_urls.slice(0, 12) : [],
+    }).select('id').maybeSingle()
+    if (subErr) return res.status(500).json({ error: subErr.message })
+
+    if (gems > 0) {
+      const { error: ledErr } = await supabase
+        .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'reading' })
+      if (ledErr) {
+        console.error(`[READING] ledger insert failed for ${childId}: ${ledErr.message}`)
+        gems = 0
+      }
+    }
+
+    if (book_id) {
+      const { data: bookRow } = await supabase
+        .from('books').select('current_page').eq('id', book_id).maybeSingle()
+      if (bookRow) {
+        await supabase.from('books')
+          .update({ current_page: (bookRow.current_page ?? 0) + 1 }).eq('id', book_id)
+      }
+    }
+
+    // Same rule as maths: the first rewarded session of the day is announced, the rest are
+    // not. Which book it was is the part a parent actually wants — it is the one thing here
+    // they could not have guessed.
+    if (gems > 0 && doneToday === 0) {
+      const { data: parentRow } = await supabase
+        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const title = book_title ? String(book_title).slice(0, 120) : null
+      const msg = language === 'en'
+        ? `${child.name} read${title ? ` "${title}"` : ''} — ${correct}/${total} on the questions. +${gems} gems 💎`
+        : `${child.name} kitap okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. +${gems} gem 💎`
+      sendNotification(child.parent_id, msg).catch(() => {})
+    }
+
+    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, accuracy: acc, submission_id: sub?.id ?? null })
+  } catch (err) {
+    console.error('[READING]', err.message)
     res.status(500).json({ error: err.message })
   }
 })

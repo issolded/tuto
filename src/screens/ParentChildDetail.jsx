@@ -693,6 +693,7 @@ export default function ParentChildDetail() {
   // Kept as rows, not just a total — "Completed today" is built from them.
   const [ledger, setLedger] = useState([])
   const [submissions, setSubmissions] = useState(null)
+  const [openReading, setOpenReading] = useState(null)
   const [contributions, setContributions] = useState(null)
   const [contributionsTodayDate, setContributionsTodayDate] = useState(null)
   const [tree, setTree] = useState(null)
@@ -830,9 +831,31 @@ export default function ParentChildDetail() {
   // parent's "Completed today" would still say nothing happened. Every one of those does
   // write a ledger row when it earns, so that is the one place they all appear.
   // Spends are negative and are excluded; the welcome bonus is not something the child did.
+  // Anything that earned today, not just the reasons this file happens to know about. A
+  // whitelist would hide whatever it had not been told about — the ledger already holds
+  // parent adjustments ("chore", "adjustment") that would have vanished, and reading is
+  // about to write another. Unknown reasons show under their own name instead.
+  // Spends are negative, so they drop out; the welcome bonus is not something the child did.
   const todayDone = (ledger || [])
-    .filter(e => e.amount > 0 && isToday(e.created_at) && TASK_LABELS[e.reason])
-    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, task_type: e.reason, gems_earned: e.amount }))
+    .filter(e => e.amount > 0 && isToday(e.created_at) && e.reason !== 'Welcome bonus')
+    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, task_type: e.reason, gems_earned: e.amount, at: e.created_at }))
+
+  // Reading is the one activity that stores what actually happened — the questions it asked,
+  // what the child answered, and the pages they photographed. That record was written from
+  // the very first version and read by nothing, so a parent could see "My Books +30" and
+  // learn no more than that. The ledger row carries no submission id, so it is paired to the
+  // session written alongside it: same child, same activity, within a minute.
+  const readingSubs = (submissions || []).filter(s => s.task_type === 'reading')
+  function readingDetailFor(entry) {
+    if (entry.task_type !== 'reading') return null
+    const t = new Date(entry.at).getTime()
+    let best = null, bestGap = Infinity
+    for (const sub of readingSubs) {
+      const gap = Math.abs(new Date(sub.created_at).getTime() - t)
+      if (gap < bestGap) { bestGap = gap; best = sub }
+    }
+    return bestGap <= 60_000 ? best : null
+  }
   // Backend scopes the fetch to status='pending', but approve/reject flip
   // status optimistically in local state — still need this filter so an
   // item disappears from the list the moment it's actioned.
@@ -1025,14 +1048,63 @@ export default function ParentChildDetail() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {todayDone.map(sub => {
-                const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
+                const meta = TASK_LABELS[sub.task_type] || { label: sub.task_type || 'Task', type: null }
+                const detail = readingDetailFor(sub)
+                const open = detail && openReading === sub.id
+                const qa = Array.isArray(detail?.generated_questions) ? detail.generated_questions : []
+                const pages = photoMap[detail?.id] || []
                 return (
-                  <Card key={sub.id} pad={12} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 11, background: meta.type ? PC[meta.type + 'Bg'] : PC.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {meta.type ? <TaskIcon type={meta.type} size={20} /> : <span style={{ fontSize: 18 }}>⭐</span>}
+                  <Card key={sub.id} pad={12} style={{ display: 'flex', flexDirection: 'column', gap: open ? 12 : 0 }}>
+                    <div
+                      onClick={detail ? () => setOpenReading(open ? null : sub.id) : undefined}
+                      className={detail ? 'tc-tap' : undefined}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: detail ? 'pointer' : 'default' }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 11, background: meta.type ? PC[meta.type + 'Bg'] : PC.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {meta.type ? <TaskIcon type={meta.type} size={20} /> : <span style={{ fontSize: 18 }}>⭐</span>}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{meta.label}</div>
+                        {detail && (
+                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 1 }}>
+                            {detail.feedback} · {qa.filter(q => q.was_correct).length}/{qa.length} correct
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.green }}>+{sub.gems_earned ?? 0} ⭐</div>
+                      {detail && (
+                        <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkFaint }}>{open ? '▲' : '▼'}</span>
+                      )}
                     </div>
-                    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{meta.label}</div>
-                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.green }}>+{sub.gems_earned ?? 0} ⭐</div>
+
+                    {open && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {pages.length > 0 && (
+                          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                            {pages.map((url, i) => (
+                              <img key={url} src={url} alt={`page ${i + 1}`} onClick={() => setLightbox({ urls: pages, index: i })}
+                                style={{ width: 90, height: 90, flex: '0 0 auto', borderRadius: 12, objectFit: 'cover', cursor: 'zoom-in' }} />
+                            ))}
+                          </div>
+                        )}
+                        {qa.length === 0 ? (
+                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint }}>No questions recorded.</div>
+                        ) : qa.map((q, i) => (
+                          <div key={i} style={{ background: PC.readingBg, borderRadius: 12, padding: '10px 12px' }}>
+                            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.ink, lineHeight: 1.35 }}>
+                              {i + 1}. {q.question}
+                            </div>
+                            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, marginTop: 4, color: q.type === 'oe' ? PC.inkSoft : q.was_correct ? PC.green : PC.danger }}>
+                              {q.type === 'oe' ? '💬' : q.was_correct ? '✓' : '✕'} {q.child_answer || '—'}
+                            </div>
+                            {q.type === 'mc' && !q.was_correct && q.correct_answer && (
+                              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 2 }}>
+                                Answer: {q.correct_answer}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 )
               })}
