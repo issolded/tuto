@@ -96,7 +96,15 @@ async function getParentContext(parentId) {
   const userNow = DateTime.now().setZone(tz)
   const todayStart = userNow.startOf('day').toUTC().toISO()
   const todayEnd   = userNow.endOf('day').toUTC().toISO()
-  const parentPrefs = parentRow?.prefs ?? null
+  // Only the preferences this system actually honours. The full prefs blob was handed to the
+  // model as family data, and the model is told to report facts from it — so it would answer
+  // "how many gems is maths worth?" with prefs.gem_values.math (20) while the server pays
+  // task_settings.math.gems (30), and "do you message at night?" with the 08:00–21:30 in
+  // allowed_hours, which nothing enforces. Seven of the nine fields are read by no code at
+  // all: they are the schema for the two gates, and the gates are not built yet. Until they
+  // are, describing them to the parent is describing something that does not happen.
+  const prefsAll = parentRow?.prefs ?? null
+  const parentPrefs = prefsAll ? { language: prefsAll.language ?? null, tone: prefsAll.tone ?? null } : null
 
   return Promise.all(children.map(async child => {
     const [
