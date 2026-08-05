@@ -21,6 +21,9 @@ const HOMEWORK_DEFAULT_GEMS = 25
 // a separate copy since frontend and backend are deployed independently).
 const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20 }
 
+// Scored tasks: the configured figure is the most a session can pay, not what it will pay.
+const VARIABLE_TASKS = new Set(['reading', 'math', 'writing'])
+
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -83,6 +86,29 @@ async function fetchGeminiOnce(body) {
 const GEMINI_FALLBACK_REPLY = {
   tr: 'Şu an yapay zeka platformumdaki bir teknik sorun nedeniyle mesajla yanıt veremiyorum. Bunu çözene kadar tüm ayarlara ve onaylara Tuto uygulaması üzerinden erişebilirsiniz.',
   en: "I'm currently unable to reply due to a technical issue with my AI platform. Until this is resolved, you can access all settings and approvals through the Tuto app.",
+}
+
+// Every timestamp handed to the model is a raw UTC ISO string, while the prompt tells it the
+// parent's current LOCAL time. It has no way to reconcile the two and does not try: asked what
+// the child did, it read 05:01:56+00:00 and reported "early morning, 05:01" for a session the
+// child sat down to at 09:01 in Dubai. Times are converted before the model ever sees them, so
+// there is nothing left to reconcile.
+const TIME_KEYS = new Set(['created_at', 'photo_taken_at', 'parent_approved_at', 'date', 'session_date'])
+
+function toLocalTimes(value, tz) {
+  if (Array.isArray(value)) return value.map(v => toLocalTimes(v, tz))
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => {
+      // Only full timestamps. A plain calendar date like session_date "2026-08-05" carries no
+      // time to shift, and converting it anyway would invent one and could move the day.
+      if (TIME_KEYS.has(k) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+        const dt = DateTime.fromISO(v, { zone: 'utc' }).setZone(tz)
+        return [k, dt.isValid ? dt.toFormat('yyyy-MM-dd HH:mm') : v]
+      }
+      return [k, toLocalTimes(v, tz)]
+    }))
+  }
+  return value
 }
 
 async function getParentContext(parentId) {
@@ -160,7 +186,7 @@ async function getParentContext(parentId) {
     // Surface the failure explicitly instead of silently coercing it to [].
     if (pendingError) console.error(`[CONTEXT] pending contributions read failed for child=${child.id}: ${pendingError.message}`)
 
-    return {
+    return toLocalTimes({
       name: child.name,
       age: child.age,
       totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
@@ -174,8 +200,15 @@ async function getParentContext(parentId) {
       // veriyoruz" questions and the before/after numbers update_task_reward
       // reports. Falls back to TASK_DEFAULT_GEMS for any type the parent
       // hasn't customized yet.
+      // Reading, maths and writing are scored, so the figure is a CEILING — the server pays it
+      // scaled by how the child did, and again by a third if they took help. A bare number read
+      // as a flat rate: asked what maths was worth, the model answered "exactly 30 gems every
+      // time" for a session that had just paid 15.
       taskRewards: Object.fromEntries(
-        Object.entries(TASK_DEFAULT_GEMS).map(([type, def]) => [type, child.task_settings?.[type]?.gems ?? def])
+        Object.entries(TASK_DEFAULT_GEMS).map(([type, def]) => {
+          const gems = child.task_settings?.[type]?.gems ?? def
+          return [type, VARIABLE_TASKS.has(type) ? `up to ${gems} (scaled by score)` : gems]
+        })
       ),
       pendingContributions: pendingError
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
@@ -230,7 +263,7 @@ async function getParentContext(parentId) {
         }
       }),
       parentPrefs,
-    }
+    }, tz)
   }))
 }
 
@@ -253,6 +286,16 @@ async function askGeminiWithContext(parentId, userMessage) {
     `- Reference specific data when relevant (e.g. "Ada earned 30 gems yesterday!")\n` +
     `- Keep responses concise — max 3-4 sentences for simple questions\n` +
     `- For progress questions, give concrete insights from the data\n\n` +
+    `All times in the data are already in the parent's local timezone — read them as written.\n\n` +
+    // Asked whether it messages late at night, the model had nothing to go on and answered
+    // that it never messages first — which is untrue, and exactly the sort of thing a parent
+    // decides whether to trust the product on. What it actually sends is small and knowable,
+    // so it is stated rather than left to be guessed at.
+    `What you send on your own, without being asked: one message the first time a child earns\n` +
+    `gems from maths or reading each day, a message when homework or a drawing is submitted for\n` +
+    `approval, and a message when a child asks to claim a reward. Nothing is scheduled and there\n` +
+    `are no quiet hours yet — if a child works late, the message goes then. Everything else is a\n` +
+    `reply to the parent.\n\n` +
     `CRITICAL: Only report facts from the data provided.\n` +
     `If the data is empty or null, say so honestly.\n` +
     `NEVER invent or assume activity that is not in the data.\n` +
@@ -1264,9 +1307,10 @@ async function handleMessage(parentId, replyCb, text) {
         description: s.description,
         suggestedGems: s.suggested_gems,
         photoCount: s.photoCount,
-        stale: s.photo_taken_at
-          ? DateTime.fromISO(s.photo_taken_at, { zone: 'utc' }).setZone(tz).toFormat('yyyy-MM-dd') !== nowLocalDate
-          : false,
+        // photo_taken_at arrives from getParentContext already converted to the parent's local
+        // time ("yyyy-MM-dd HH:mm"). Re-parsing it as UTC and shifting again would move the day
+        // a second time and flip this flag either side of midnight — the date is simply read.
+        stale: s.photo_taken_at ? String(s.photo_taken_at).slice(0, 10) !== nowLocalDate : false,
       }))
     )
     const pendingSubsList = allSubsList.filter(s => s.status !== 'blocked')
