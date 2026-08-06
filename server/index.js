@@ -1397,7 +1397,12 @@ async function handleMessage(parentId, replyCb, text) {
         `bir tool çağırdıysan ve sonucu success:true olarak döndüyse söyleyebilirsin. Parent bir şey yapmanı ` +
         `istediğinde ve elinde bunu yapacak bir tool YOKSA (yukarıdaki tool listesinde karşılığı yoksa), bunu ` +
         `ASLA yapmış gibi davranma, "güncelledim/kaydettim/hallettim" gibi bir cevap UYDURMA — parent'a bunu ` +
-        `şu an sohbet üzerinden yapamadığını açıkça söyle ve uygulamadaki ilgili ekrandan yapmasını öner. Akışı ` +
+        `şu an sohbet üzerinden yapamadığını açıkça söyle. Uygulamada o işi yapan bir ekran OLDUĞUNU biliyorsan ` +
+        `oraya yönlendir; bilmiyorsan bir ekran adı UYDURMA — "henüz yapılamıyor" de ve orada bırak. ` +
+        `Ebeveyn "Ada kesirlerde zorlanıyor, kesirlere ağırlık verelim" dediğinde bunu doğru bir şekilde ` +
+        `reddediyorsun, ama ardından "matematik ayarları ekranından konuları seçebilirsiniz" diyorsun ve ` +
+        `öyle bir ekran yok: ayarlarda sadece hangi aktivitelerin açık olduğu ve kaç gem kazandırdığı var. ` +
+        `Çalışma konusunu, odağını veya zorluğunu ebeveynin ayarlayabileceği bir yer HENÜZ YOK. Akışı ` +
         `bozmamak ya da kibar görünmek için sahte bir başarı mesajı vermek — para/gem/ayar etkilenmese bile — ` +
         `ebeveynin sana güvenini kalıcı olarak kırar; hiçbir zaman kabul edilebilir bir kısayol değildir.\n\n` +
         `- Parent'ın bir mesajı ("ne dedin", "anlamadım", "what?") ne anlama geldiğini genel olarak sorarsa, ` +
