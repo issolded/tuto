@@ -114,7 +114,7 @@ function toLocalTimes(value, tz) {
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
-    supabase.from('children').select('id, name, age, task_settings').eq('parent_id', parentId),
+    supabase.from('children').select('id, name, age, task_settings, math_focus').eq('parent_id', parentId),
   ])
   if (!children?.length) return []
 
@@ -145,6 +145,7 @@ async function getParentContext(parentId) {
       treeState,
       { data: pendingPaintings },
       { data: pendingClaims },
+      mathStanding,
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -173,6 +174,7 @@ async function getParentContext(parentId) {
         .eq('child_id', child.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
+      topicStanding(child.id).catch(() => null),
     ])
 
     const sub = submissions || []
@@ -214,6 +216,18 @@ async function getParentContext(parentId) {
         return rounds.length ? rounds : `no reading questions recorded for ${child.name} yet`
       })(),
       mathProgress: math.length ? math : `${child.name} has not done any math yet`,
+      // Per-topic standing, computed from the raw attempts by the same function the question
+      // generator reads. One object, two readers — if the parent is told fractions are weak
+      // and the next session does not lean on fractions, that is a lie of exactly the kind
+      // this week has been spent removing.
+      // "not enough yet" is carried through rather than hidden: a topic with three attempts
+      // is not a strong topic, and the model must not round it into one.
+      mathTopics: mathStanding?.length
+        ? mathStanding
+        : `not enough maths answered yet to say anything per topic for ${child.name}`,
+      mathFocus: child.math_focus
+        ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
+        : 'no topic is being weighted for ' + child.name,
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
@@ -3335,6 +3349,37 @@ async function topicStanding(childId) {
     }
   }).sort((a, b) => a.accuracy - b.accuracy)
 }
+
+// What the maths screen needs before it can build a session: where the child stands on the
+// dial, how each topic is going, and whether a parent has asked for something to be weighted.
+// The screen used to read math_progress straight from the browser for the level alone; the
+// other two have no client-side source at all, and putting the standing behind the same call
+// keeps the figure the parent is told and the figure the generator uses identical by
+// construction.
+app.get('/api/children/:childId/math-plan', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const [{ data: child }, { data: prevRows }] = await Promise.all([
+      supabase.from('children').select('id, age, math_focus').eq('id', childId).maybeSingle(),
+      supabase.from('math_progress').select('level').eq('child_id', childId)
+        .order('created_at', { ascending: false }).limit(1),
+    ])
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    const standing = await topicStanding(childId)
+    res.json({
+      level: prevRows?.[0]?.level ?? null,   // null = the client falls back to the age footing
+      focus: child.math_focus ?? null,
+      standing: standing ?? [],
+      // Named so the client never has to know the thresholds, and so there is one place to
+      // change what "weak" means.
+      weak_topic_ids: (standing ?? []).filter(t => t.standing === 'weak').map(t => t.topic_id),
+    })
+  } catch (err) {
+    console.error('[MATH-PLAN]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params

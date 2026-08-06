@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
-import { storageClient } from '../lib/supabase'
 import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
 import { planSession, templateTopicFor, startingLevelForAge, yearLabelForAge } from '../lib/mathCurriculum'
@@ -1101,6 +1100,7 @@ export default function MathScreen() {
   const [helpUsed,      setHelpUsed]     = useState(false)
   const [helpVisible,   setHelpVisible]  = useState(false)
   const [hintOpenFor,   setHintOpenFor]  = useState(null)  // question index whose optional hint is showing
+  const [weighting,     setWeighting]    = useState({ focusTopicId: null, weakTopicIds: [] })
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
   const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState([])         // per-question hint_steps for the LLM path, where there is no template to read them from
@@ -1110,20 +1110,28 @@ export default function MathScreen() {
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
 
-  // Load level from last math_progress session
+  // Level, per-topic standing and any focus a parent asked for — one call, one authority. The
+  // level used to be read straight from math_progress in the browser; the other two have no
+  // client-side source, and fetching them together is what keeps the figure the parent is told
+  // and the figure this screen builds a session from the same figure.
   useEffect(() => {
     if (!child?.id) { setLevel(startingLevelForAge(age)); return }
-    storageClient
-      .from('math_progress')
-      .select('level')
-      .eq('child_id', child.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .then(({ data }) => {
-        const rec = data?.[0]
-        setLevel(rec ? rec.level : startingLevelForAge(age))
-      })
-      .catch(() => setLevel(startingLevelForAge(age)))
+    ;(async () => {
+      try {
+        const res = await fetch(`${SERVER}/api/children/${child.id}/math-plan`)
+        if (!res.ok) throw new Error(`server ${res.status}`)
+        const plan = await res.json()
+        setLevel(Number.isFinite(plan?.level) ? plan.level : startingLevelForAge(age))
+        setWeighting({
+          focusTopicId: plan?.focus?.topic_id ?? null,
+          weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
+        })
+      } catch (e) {
+        // A session with no weighting is still a good session; one that will not start is not.
+        console.error('math-plan:', e)
+        setLevel(startingLevelForAge(age))
+      }
+    })()
     return () => clearTimeout(flashTimer.current)
   }, [])
 
@@ -1150,7 +1158,7 @@ export default function MathScreen() {
     setStep('loading')
     setHelpUsedQs(new Set())
 
-    const slots = planSession(age, QUESTIONS_PER_SESSION, readSeen('topics', child?.id, 'curriculum'))
+    const slots = planSession(age, QUESTIONS_PER_SESSION, readSeen('topics', child?.id, 'curriculum'), weighting)
       .map(t => ({ curriculum: t, templateTopic: templateTopicFor(t) }))
     if (!slots.length) { setStep('mode'); return }
 

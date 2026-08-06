@@ -93,9 +93,29 @@ export function yearLabelForAge(age) {
 // Picks the topics for one session. Every topic in the year gets used before any is used
 // twice, and topics carried over from recent sessions go last — so consecutive sessions
 // differ even when the year has fewer topics than the session has questions.
-export function planSession(age, count, recentTopicIds = []) {
+// `weighting` is what makes a session respond to the child rather than just rotate. A topic a
+// parent has asked for takes three of the ten slots; each topic the child is measurably weak on
+// takes one extra. Both are capped together, because the whole reason a session spans the
+// year's topics is breadth — drilling the weak one until it is fixed would rebuild the single
+// -topic worksheet the ladder used to hand out.
+const FOCUS_SLOTS = 3
+const MAX_WEIGHTED_SLOTS = 5
+
+export function planSession(age, count, recentTopicIds = [], weighting = {}) {
   const topics = BRITISH_CURRICULUM[ageToSchoolYear(age)]?.topics ?? []
   if (!topics.length) return []
+
+  const byId = new Map(topics.map(t => [t.id, t]))
+  const weighted = []
+  const focus = weighting.focusTopicId ? byId.get(weighting.focusTopicId) : null
+  if (focus) for (let i = 0; i < Math.min(FOCUS_SLOTS, count); i++) weighted.push(focus)
+  for (const id of weighting.weakTopicIds || []) {
+    if (weighted.length >= Math.min(MAX_WEIGHTED_SLOTS, count)) break
+    const t = byId.get(id)
+    // The focus already has its slots; giving it more for also being weak would crowd the rest.
+    if (t && t !== focus) weighted.push(t)
+  }
+  const remaining = Math.max(0, count - weighted.length)
 
   const recent = new Set(recentTopicIds)
   const fresh = topics.filter(t => !recent.has(t.id))
@@ -103,16 +123,18 @@ export function planSession(age, count, recentTopicIds = []) {
   const ordered = [...shuffle(fresh), ...shuffle(seen)]
 
   const plan = []
-  while (plan.length < count) {
+  while (plan.length < remaining) {
     // A year with eight topics and a ten-question session covers all eight, then comes back
     // round for two. Re-shuffling each lap keeps which two from being the same every time.
     const lap = plan.length === 0 ? ordered : shuffle(topics)
     for (const t of lap) {
-      if (plan.length >= count) break
+      if (plan.length >= remaining) break
       plan.push(t)
     }
   }
-  return plan
+  // Interleaved rather than front-loaded: three fraction questions in a row reads as a
+  // punishment, the same three spread through the session read as a session.
+  return shuffle([...weighted, ...plan])
 }
 
 function shuffle(list) {
