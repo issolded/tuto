@@ -314,6 +314,9 @@ or general knowledge that is not maths. So:
 - Do not hinge an answer on a fact the child must simply know (how many legs a spider has,
   how many days in Lent). Sides and corners of common shapes ARE fine, and the hint may
   supply that fact.
+- PLAUSIBILITY: When placing a large number in a real-world context, the number must fit.
+  A stadium holds at most 100,000 people. Use city populations, annual sales, or distances
+  for 6-digit numbers. Never assign an implausibly large crowd, room, or object count.
 For pattern questions, only show the number sequence with a blank. Do NOT include descriptions like 'Count by 3s' or 'Skip count by 2s' in the question. Example: '2, 4, 6, 8, __?' not 'Count by 2s: 2, 4, 6, 8, __?'${topicContext}${avoidClause}
 Also return "hint_steps": one entry per question, each 1-2 SHORT steps that walk the child
 toward the answer WITHOUT ever stating it. When a question needs a fact the child may not
@@ -383,7 +386,13 @@ FAIRNESS RULES:
 - Metric units only (grams, kilograms, centimetres, metres, litres). Never pounds, ounces,
   inches, feet.
 - Do not hinge an answer on a fact the child must simply know. Sides and corners of common
-  shapes ARE fine, and the hint may supply the fact.${avoidClause}
+  shapes ARE fine, and the hint may supply the fact.
+- PLAUSIBILITY: When placing a large number in a real-world context, the number must fit that
+  context. A stadium holds at most 100,000 people — 637,000 fans is impossible and confusing.
+  Good contexts for 6-digit numbers: city population (200,000–900,000), a country's annual
+  ticket sales, total distance driven in a year. Country populations or distances between
+  continents fit 7-digit numbers. Never assign a crowd size, room capacity, or small-object
+  count that defies common sense.${avoidClause}
 
 Also return "hint_steps": one entry per question, 1-2 SHORT steps that walk the child toward the
 answer WITHOUT ever stating it. Where a question needs a fact, the first step supplies it.
