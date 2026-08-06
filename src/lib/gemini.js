@@ -92,11 +92,6 @@ export function ageToSchoolYear(age) {
   return 'year6'
 }
 
-export function getTopicsForChild(age, schoolYear = null) {
-  const year = schoolYear || ageToSchoolYear(age)
-  return BRITISH_CURRICULUM[year]?.topics || []
-}
-
 export { BRITISH_CURRICULUM }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -253,89 +248,9 @@ export async function generateStoryIdeas(age, language = 'en') {
   return callGemini([{ text: prompt }])
 }
 
-export async function validateStoryInput(text, age, language = 'en') {
-  const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
-  const prompt = `You are a content moderator for a children's educational app. A ${n}-year-old child submitted this story idea: "${text}". Determine if this is appropriate, safe, and suitable for a child's story — no violence, scary content, adult themes, or inappropriate language. Respond in ${lang}. Return JSON only: { "ok": boolean, "reason": string }`
-  return callGemini([{ text: prompt }])
-}
-
-// Must stay in step with LEVEL_DESC in MathScreen.jsx — that decides which rungs go to a
-// template, this describes the rest to the model, and a rung that means two different
-// things in the two places would generate against the wrong topic. Level 4 is now shapes
-// and is always template-generated, so the model never sees it.
-const MATH_LEVEL_DESC = {
-  1: 'Counting, numbers 1-10',
-  2: 'Addition up to 10',
-  3: 'Subtraction up to 10',
-  4: 'Shapes: counting sides and corners',
-  5: 'Addition up to 20',
-  6: 'Subtraction up to 20',
-  7: 'Simple word problems (e.g. "You have 5 pencils and give away 3. How many left?")',
-  8: 'Addition and subtraction up to 100',
-  9: 'Multiplication tables 2, 5, 10',
-  10: 'Fractions (1/2, 1/4, 3/4 — express as whole-number answers)',
-  11: 'Division (simple, related to multiplication tables)',
-  12: 'Measurement (time, money, weight — simple)',
-  13: 'Multiplication tables 3, 4, 6, 7, 8, 9',
-  14: 'Complex word problems (multi-step)',
-  15: 'Fractions and decimals (express as whole-number answers)',
-}
-
-export async function generateMathQuestions(age, level, previousQuestions = [], topicId = null) {
-  const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
-  const levelDesc = MATH_LEVEL_DESC[clampedLevel] || MATH_LEVEL_DESC[5]
-  let topicContext = ''
-  if (topicId) {
-    const year = ageToSchoolYear(age)
-    const topic = BRITISH_CURRICULUM[year]?.topics.find(t => t.id === topicId)
-      || Object.values(BRITISH_CURRICULUM).flatMap(y => y.topics).find(t => t.id === topicId)
-    if (topic) {
-      topicContext = `\nFocus specifically on this curriculum topic: "${topic.name}". ${topic.description}`
-    }
-  }
-  const avoidClause = previousQuestions.length > 0
-    ? `\nDo NOT repeat these questions: ${JSON.stringify(previousQuestions.slice(-10))}`
-    : ''
-  const prompt = `Generate 5 math questions for a ${age} year old at level ${clampedLevel} (${levelDesc}).
-Mix question types: symbolic equations, word problems, and patterns.
-Make them fun, relatable and age-appropriate. Use names, animals, food, toys in word problems.
-IMPORTANT: All answers must be single positive whole numbers (integers). Design every question so the answer is a positive integer.
-Stay inside the topic named above. The levels form a ladder and each one practises its own
-thing, so do not reach for an operation that belongs to a later level — a "word problems"
-level asking "24 / 4 = ?" is teaching division several levels early.
-Write operators the way a child is taught them: × and ÷, never * or /.
-Solving a question must never require knowledge the child could only have from one country,
-or general knowledge that is not maths. So:
-- NO country-specific money (dime, nickel, penny, quarter, cent, dollar, pound). For money,
-  name a neutral amount instead — "a coin worth 10" — or avoid money altogether.
-- Metric units only (grams, kilograms, centimetres, metres, litres). Never pounds, ounces,
-  inches, feet.
-- Do not hinge an answer on a fact the child must simply know (how many legs a spider has,
-  how many days in Lent). Sides and corners of common shapes ARE fine, and the hint may
-  supply that fact.
-- PLAUSIBILITY: When placing a large number in a real-world context, the number must fit.
-  A stadium holds at most 100,000 people. Use city populations, annual sales, or distances
-  for 6-digit numbers. Never assign an implausibly large crowd, room, or object count.
-For pattern questions, only show the number sequence with a blank. Do NOT include descriptions like 'Count by 3s' or 'Skip count by 2s' in the question. Example: '2, 4, 6, 8, __?' not 'Count by 2s: 2, 4, 6, 8, __?'${topicContext}${avoidClause}
-Also return "hint_steps": one entry per question, each 1-2 SHORT steps that walk the child
-toward the answer WITHOUT ever stating it. When a question needs a fact the child may not
-know, the first step must supply that fact — for "Sides of a pentagon + Corners of a
-triangle = ?" a good entry is ["A pentagon has 5 sides.", "A triangle has 3 corners — now add them."].
-Return JSON only:
-{
-  "questions": ["5 + 3 = ?", "Sara has 8 apples and eats 3. How many does she have left?", "2, 4, 6, __ what comes next?"],
-  "topic": "addition",
-  "answers": [8, 5, 8],
-  "question_types": ["symbolic", "word", "pattern"],
-  "hint_steps": [["Start at 5.", "Count on 3 more: 6, 7, 8."], ["Sara starts with 8 apples.", "Take away the 3 she ate."], ["Look at the gap between each number.", "Each one goes up by 2."]]
-}`
-  return callGemini([{ text: prompt }])
-}
-
 // Questions for a named set of curriculum topics — one per topic, in the order given.
 //
-// The old generateMathQuestions asks for five questions at "level N (Subtraction up to 20)",
+// The generator this replaced asked for five questions at "level N (Subtraction up to 20)",
 // which is why a ten-year-old's whole session was subtraction: the prompt could not describe
 // anything else. This one is handed the actual curriculum entries — name and the description
 // written for exactly this purpose — and returns a question per topic. Everything the older

@@ -9,8 +9,8 @@
 //
 // Meanwhile BRITISH_CURRICULUM has sat in gemini.js since early on: 49 topics across Year 1
 // to Year 6, each with a description written to be handed to a model, each already mapped to
-// an age. `generateMathQuestions` even takes the `topicId` that would have used it. Nothing
-// ever passed one. The taxonomy was written and never fed.
+// an age. The generator even took a `topicId` that would have used it, and nothing ever passed
+// one — the taxonomy was written and never fed. That generator has since been deleted.
 //
 // So the two jobs are separated here:
 //   - AGE decides the curriculum — a ten-year-old gets Year 5's eight topics, all of them.
