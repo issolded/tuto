@@ -96,6 +96,16 @@ function constantPatternStep(question) {
   return step
 }
 
+// One comparison for the whole screen. The per-question check and the final marking used to
+// each have their own: a tolerance in one, strict equality in the other. They agree today only
+// because a typed "62.5" parses to exactly 62.5 — the moment either side is computed rather
+// than parsed, a child would be told "correct" mid-session and marked wrong in the results.
+function sameAnswer(given, expected) {
+  const a = Number(String(given ?? '').trim())
+  const b = Number(expected)
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 1e-9
+}
+
 // Children are asked "how many steps?", so they type a count and the arrow shows which
 // way it goes — a descending pattern was previously unanswerable for the same reason.
 const stepLabel = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)}`
@@ -1206,13 +1216,8 @@ export default function MathScreen() {
   // ── Screen mode: submit one answer ───────────────────────────────────────
   const submitScreenAnswer = () => {
     if (!input || flash) return
-    const userAns    = Number(String(input).trim())
-    // Exact equality was fine while every answer was a whole number. Decimals arrive from the
-    // model as JSON floats, so 0.1 + 0.2 style drift on either side would mark a correct
-    // answer wrong; compare within a tolerance far below the two decimal places allowed.
-    const target     = Number(correctAns[qIdx])
-    const isCorrect  = Number.isFinite(userAns) && Math.abs(userAns - target) < 1e-9
-    const newAnswers = [...userAnswers, userAns]
+    const isCorrect  = sameAnswer(input, correctAns[qIdx])
+    const newAnswers = [...userAnswers, Number(String(input).trim())]
 
     const tProblem = templateProblems[qIdx]
     const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.visual)
@@ -1240,13 +1245,13 @@ export default function MathScreen() {
   // ── Screen mode: evaluate locally ────────────────────────────────────────
   const doScreenEval = async (finalAnswers) => {
     setStep('evaluating')
-    const numCorrect = finalAnswers.filter((a, i) => Number(a) === Number(correctAns[i])).length
+    const numCorrect = finalAnswers.filter((a, i) => sameAnswer(a, correctAns[i])).length
     const accuracy   = Math.round((numCorrect / questions.length) * 100)
 
     const results = questions.map((q, i) => ({
       question: q, correct_answer: correctAns[i],
       child_answer: finalAnswers[i],
-      correct: Number(finalAnswers[i]) === Number(correctAns[i]),
+      correct: sameAnswer(finalAnswers[i], correctAns[i]),
     }))
     const evalData = {
       results, score: accuracy, accuracy, topic,
@@ -1324,6 +1329,25 @@ export default function MathScreen() {
           // say what really happened.
           topics: [...new Set(curriculumTopics.map(t => t?.name).filter(Boolean))],
           school_year: yearLabelForAge(age),
+          // Every question, with the curriculum topic it came from and how it went. The
+          // session row records one accuracy figure across eight topics, which cannot answer
+          // "which topic is she weak at" or "what did she get wrong" — the two things a parent
+          // actually asks. Sent per question so the server can keep the raw record.
+          attempts: (evalData.results || []).map((r, i) => {
+            const topic = curriculumTopics[i]
+            if (!topic?.id) return null
+            return {
+              topic_id: topic.id,
+              topic_name: topic.name ?? null,
+              source: templateProblems[i] ? 'template' : 'llm',
+              question: questions[i] ?? null,
+              // Paper mode has no typed answer — the model read the page — so this is null
+              // there rather than invented.
+              child_answer: r?.child_answer == null ? null : String(r.child_answer),
+              correct: !!r?.correct,
+              help_used: helpUsedQs.has(i),
+            }
+          }).filter(Boolean),
           questions_total: questions.length,
           questions_correct: numCorrect,
           accuracy: derivedAccuracy,

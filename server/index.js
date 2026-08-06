@@ -3280,9 +3280,65 @@ function rewardScale(accuracy) {
   return 0.33 + 0.67 * (acc / 100)
 }
 
+// How many of a topic's most recent attempts count, and how few are too few to speak.
+//
+// A window of attempts rather than a window of days: a topic practised often refreshes quickly,
+// a topic that comes up rarely keeps a longer memory, and neither needs a calendar rule. Topic
+// ids are year-scoped, so moving up a school year retires last year's record by itself.
+//
+// The floor matters more than the window. Year 5 has eight topics and a session has ten
+// questions, so a topic gets about one question a session — measured, five attempts takes four
+// or five sessions. Calling a child weak at multiplication off two questions is the same
+// mistake as every other one this week: saying something we do not know.
+const MASTERY_WINDOW = 12
+const MASTERY_MIN_ATTEMPTS = 5
+const MASTERY_WEAK_BELOW = 60
+const MASTERY_CLEARS_AT = 80
+
+// Per-topic standing for one child, computed from the raw attempts every time it is asked for.
+// There is deliberately no stored mastery table: a second copy of a fact drifts from the first,
+// which is how prefs.gem_values came to say 20 while task_settings said 30.
+async function topicStanding(childId) {
+  const { data, error } = await supabase
+    .from('math_attempts')
+    .select('topic_id, topic_name, correct, created_at')
+    .eq('child_id', childId)
+    .order('created_at', { ascending: false })
+    .limit(400)
+  if (error) { console.error(`[MASTERY] read failed for ${childId}: ${error.message}`); return null }
+
+  const byTopic = new Map()
+  for (const row of data || []) {
+    const bucket = byTopic.get(row.topic_id) || { topic_id: row.topic_id, topic_name: row.topic_name, rows: [] }
+    // Newest first from the query, so the first MASTERY_WINDOW seen are the most recent.
+    if (bucket.rows.length < MASTERY_WINDOW) bucket.rows.push(row)
+    byTopic.set(row.topic_id, bucket)
+  }
+
+  return [...byTopic.values()].map(b => {
+    const attempts = b.rows.length
+    const correct = b.rows.filter(r => r.correct).length
+    const accuracy = Math.round((correct / attempts) * 100)
+    return {
+      topic_id: b.topic_id,
+      topic_name: b.topic_name,
+      attempts,
+      correct,
+      accuracy,
+      // The verdict is decided here, never by the model reading the numbers. Given raw rows it
+      // will call a child weak off three questions, which is exactly what the floor exists to
+      // prevent.
+      standing: attempts < MASTERY_MIN_ATTEMPTS ? 'not enough yet'
+        : accuracy < MASTERY_WEAK_BELOW ? 'weak'
+        : accuracy >= MASTERY_CLEARS_AT ? 'strong'
+        : 'getting there',
+    }
+  }).sort((a, b) => a.accuracy - b.accuracy)
+}
+
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, topics, school_year, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
+  const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
   try {
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -3348,6 +3404,47 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     })
     if (progErr) return res.status(500).json({ error: progErr.message })
 
+    // The raw per-question record. Written after the session row so a failure here costs the
+    // history but never the child's gems — the reward is not worth losing to a bookkeeping
+    // write, and the session row is what the reward is based on.
+    const sessionId = randomUUID()
+    const rows = (Array.isArray(attempts) ? attempts : []).slice(0, 40)
+      .filter(a => a && typeof a.topic_id === 'string' && a.topic_id)
+      .map(a => ({
+        child_id: childId,
+        session_id: sessionId,
+        topic_id: a.topic_id.slice(0, 60),
+        topic_name: typeof a.topic_name === 'string' ? a.topic_name.slice(0, 120) : null,
+        source: a.source === 'llm' ? 'llm' : 'template',
+        level,
+        question: typeof a.question === 'string' ? a.question.slice(0, 500) : null,
+        child_answer: a.child_answer == null ? null : String(a.child_answer).slice(0, 120),
+        correct: !!a.correct,
+        help_used: !!a.help_used,
+      }))
+    if (rows.length) {
+      const { error: attErr } = await supabase.from('math_attempts').insert(rows)
+      if (attErr) console.error(`[MATH] attempts insert failed for ${childId}: ${attErr.message}`)
+    }
+
+    // A focus the parent asked for lasts until the child masters it, not for a fixed run of
+    // sessions — so the parent hears the outcome of what they asked for, which is the whole
+    // point of their having asked.
+    let focusCleared = null
+    if (rows.length) {
+      const { data: focusRow } = await supabase
+        .from('children').select('math_focus').eq('id', childId).maybeSingle()
+      const focus = focusRow?.math_focus
+      if (focus?.topic_id) {
+        const standing = await topicStanding(childId)
+        const t = standing?.find(x => x.topic_id === focus.topic_id)
+        if (t && t.attempts >= MASTERY_MIN_ATTEMPTS && t.accuracy >= MASTERY_CLEARS_AT) {
+          await supabase.from('children').update({ math_focus: null }).eq('id', childId)
+          focusCleared = { topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
+        }
+      }
+    }
+
     if (gems > 0) {
       const { error: ledErr } = await supabase
         .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'math' })
@@ -3375,7 +3472,20 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head).catch(() => {})
     }
 
-    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange })
+    // A cleared focus is announced whatever else happened today. It is not routine progress —
+    // it is the answer to something the parent asked for, and the once-a-day rule exists to
+    // stop routine progress becoming noise, not to swallow this.
+    if (focusCleared) {
+      const { data: parentRow } = await supabase
+        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const msg = language === 'en'
+        ? `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`
+        : `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`
+      sendNotification(child.parent_id, msg).catch(() => {})
+    }
+
+    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange, focus_cleared: focusCleared })
   } catch (err) {
     console.error('[MATH]', err.message)
     res.status(500).json({ error: err.message })
