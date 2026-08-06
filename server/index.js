@@ -146,7 +146,7 @@ async function getParentContext(parentId) {
       { data: pendingPaintings },
       { data: pendingClaims },
     ] = await Promise.all([
-      supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
       supabase.from('math_progress').select('level, topic, accuracy, level_change, help_used, questions_total, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
       supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
@@ -191,7 +191,28 @@ async function getParentContext(parentId) {
       age: child.age,
       totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
       todaySubmissions: today.length ? today : `${child.name} has not completed any tasks today`,
-      submissions: sub.length ? sub : `${child.name} has not completed any tasks yet`,
+      // Reading stores what it asked and what the child said, and the parent can open it in
+      // the app — but the chat agent was never given it, so "which ones did she get wrong?"
+      // was answered "I cannot see that" about data we hold. Only the newest few rounds carry,
+      // and only their questions: twenty submissions' worth would crowd out everything else.
+      submissions: sub.length
+        ? sub.map(({ generated_questions, ...rest }) => rest)
+        : `${child.name} has not completed any tasks yet`,
+      recentReadingQuestions: (() => {
+        const rounds = sub
+          .filter(x => x.task_type === 'reading' && Array.isArray(x.generated_questions) && x.generated_questions.length)
+          .slice(0, 3)
+          .map(x => ({
+            book: x.feedback || 'a book',
+            created_at: x.created_at,
+            questions: x.generated_questions.map(q => ({
+              question: q?.question ?? null,
+              child_answer: q?.child_answer ?? null,
+              was_correct: q?.was_correct ?? null,
+            })),
+          }))
+        return rounds.length ? rounds : `no reading questions recorded for ${child.name} yet`
+      })(),
       mathProgress: math.length ? math : `${child.name} has not done any math yet`,
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
