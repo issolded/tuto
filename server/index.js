@@ -964,8 +964,77 @@ const CONTRIBUTION_TOOLS = [{
         required: ['child_id', 'task_type', 'gems'],
       },
     },
+    {
+      name: 'set_math_focus',
+      description:
+        'Weights one maths curriculum topic in the child\'s next sessions, because the parent said they are ' +
+        'struggling with it ("Ada kesirlerde zorlanıyor, kesirlere ağırlık verelim", "çarpma çıksın biraz daha", ' +
+        '"focus on fractions"). It does NOT change the difficulty level and does NOT remove other topics — the ' +
+        'child still sees the rest of the year, that topic just comes up about three times as often.\n' +
+        'The topic must be one the child actually studies: the exact topic_id values are in that child\'s ' +
+        'mathTopics in context. Match the parent\'s words to one of THOSE ids — never invent an id and never ' +
+        'pick a topic from another year. If their words fit none of them, or fit two, ASK which they mean and ' +
+        'list the topic names you have; do not guess.\n' +
+        'Say plainly that it lasts until the child gets on top of it — it clears itself once that topic passes ' +
+        '80% over its last 12 questions, and you will tell them when it does. To stop early, call this with ' +
+        'topic_id set to "none".',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
+          topic_id: { type: 'STRING', description: 'A topic_id copied exactly from that child\'s mathTopics in context, or "none" to stop weighting.' },
+        },
+        required: ['child_id', 'topic_id'],
+      },
+    },
   ],
 }]
+
+// Weight a curriculum topic for a child. The model picks WHICH topic; everything else is
+// decided here — that the child belongs to this parent, that the topic is one they actually
+// study, and that a topic already mastered is refused rather than quietly set and instantly
+// cleared on the next session.
+async function setMathFocusTool(childId, topicId, parentId) {
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id, age').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'not your child' }
+
+  if (!topicId || topicId === 'none') {
+    const { error } = await supabase.from('children').update({ math_focus: null }).eq('id', childId)
+    if (error) return { success: false, error: error.message }
+    return { success: true, cleared: true, child: child.name }
+  }
+
+  // The id is checked against the topics this child has actually been asked, not against a
+  // copy of the curriculum kept here. The curriculum lives in the frontend and the two deploy
+  // separately, so a second copy would drift — and it is unnecessary: a session covers every
+  // topic of the child's year, so one sitting is enough for all of them to be known. A topic
+  // the child has never met cannot be weighted, which is the right answer anyway.
+  const standing = await topicStanding(childId)
+  if (!standing?.length) {
+    return { success: false, error: 'no maths answered yet', child: child.name,
+             detail: `${child.name} has not done a maths session yet, so there are no topics to weight` }
+  }
+  const topic = standing.find(x => x.topic_id === topicId)
+  if (!topic) {
+    return { success: false, error: `"${topicId}" is not one of ${child.name}'s topics`,
+             available: standing.map(x => ({ topic_id: x.topic_id, name: x.topic_name })) }
+  }
+
+  const t = topic
+  if (t && t.attempts >= MASTERY_MIN_ATTEMPTS && t.accuracy >= MASTERY_CLEARS_AT) {
+    return { success: false, already_mastered: true, child: child.name, topic_name: topic.topic_name,
+             accuracy: t.accuracy, attempts: t.attempts }
+  }
+
+  const { error } = await supabase.from('children').update({
+    math_focus: { topic_id: topicId, topic_name: topic.topic_name, set_at: new Date().toISOString(), source: 'parent' },
+  }).eq('id', childId)
+  if (error) return { success: false, error: error.message }
+  return { success: true, child: child.name, topic_name: topic.topic_name,
+           clears_at: `${MASTERY_CLEARS_AT}% over the last ${MASTERY_WINDOW}` }
+}
 
 // Approve a pending homework submission from a parent's free-text reply.
 // Every rule here is DETERMINISTIC — the LLM only picks the id and (maybe) an
@@ -1593,6 +1662,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'update_task_reward') {
         toolResult = await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId)
+      } else if (name === 'set_math_focus') {
+        toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
