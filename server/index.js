@@ -222,8 +222,16 @@ async function getParentContext(parentId) {
       // this week has been spent removing.
       // "not enough yet" is carried through rather than hidden: a topic with three attempts
       // is not a strong topic, and the model must not round it into one.
+      // Topics under the floor are sent WITHOUT their numbers. Labelling them "not enough yet"
+      // and leaving accuracy beside it was not enough: given one correct answer out of one, the
+      // model reported "100% doğruluk, oldukça başarılı", and given one wrong answer, "%0". The
+      // verdict being code's to make means the model must not be handed the figures that would
+      // let it make its own.
       mathTopics: mathStanding?.length
-        ? mathStanding
+        ? mathStanding.map(t => t.standing === 'not enough yet'
+            ? { topic_name: t.topic_name, attempts: t.attempts,
+                standing: `only ${t.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
+            : t)
         : `not enough maths answered yet to say anything per topic for ${child.name}`,
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
