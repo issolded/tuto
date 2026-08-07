@@ -4,7 +4,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
-import { planSession, templateTopicFor, startingLevelForAge, yearLabelForAge } from '../lib/mathCurriculum'
+import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -100,7 +100,10 @@ function constantPatternStep(question) {
 // because a typed "62.5" parses to exactly 62.5 — the moment either side is computed rather
 // than parsed, a child would be told "correct" mid-session and marked wrong in the results.
 function sameAnswer(given, expected) {
-  const a = Number(String(given ?? '').trim())
+  // A skipped question stores null, and Number('') is 0 — so without this a skip would count
+  // as correct against an answer of 0. No answer is not an answer.
+  if (given === null || given === undefined || String(given).trim() === '') return false
+  const a = Number(String(given).trim())
   const b = Number(expected)
   return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 1e-9
 }
@@ -1101,6 +1104,7 @@ export default function MathScreen() {
   const [helpVisible,   setHelpVisible]  = useState(false)
   const [hintOpenFor,   setHintOpenFor]  = useState(null)  // question index whose optional hint is showing
   const [weighting,     setWeighting]    = useState({ focusTopicId: null, weakTopicIds: [] })
+  const [skippable,     setSkippable]    = useState(() => new Set()) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
   const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState([])         // per-question hint_steps for the LLM path, where there is no template to read them from
@@ -1121,7 +1125,11 @@ export default function MathScreen() {
         const res = await fetch(`${SERVER}/api/children/${child.id}/math-plan`)
         if (!res.ok) throw new Error(`server ${res.status}`)
         const plan = await res.json()
-        setLevel(Number.isFinite(plan?.level) ? plan.level : startingLevelForAge(age))
+        // Clamped to the child's year here rather than trusted as stored: levels written under
+        // the old meaning of the dial are still in the table, and one of them had a
+        // seven-year-old on 15. The clamped value is what gets sent back when the session
+        // saves, so a stale level corrects itself the first time a child plays.
+        setLevel(clampLevelToAge(plan?.level, age))
         setWeighting({
           focusTopicId: plan?.focus?.topic_id ?? null,
           weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
@@ -1232,6 +1240,12 @@ export default function MathScreen() {
     if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
+      // Help does not end the question — the child tries again — so under nine a wrong answer
+      // was unreachable: the same question came back until it was right, and every session
+      // finished at 100%. That is a loop for the child and a broken signal for everything
+      // downstream, because the levelling rule only ever saw a perfect score. Once help has
+      // been shown, moving on becomes possible.
+      setSkippable(prev => { const next = new Set(prev); next.add(qIdx); return next })
       setInput('')
       return
     }
@@ -1248,6 +1262,23 @@ export default function MathScreen() {
         setQIdx(i => i + 1)
       }
     }, 1400)
+  }
+
+  // Moving on without getting it right. Recorded as WRONG, deliberately: a question the child
+  // could not answer is not a question they answered, and the whole point is that the score
+  // starts telling the truth again.
+  const skipScreenQuestion = () => {
+    if (flash) return
+    setHelpVisible(false)
+    setInput('')
+    const newAnswers = [...userAnswers, null]
+    setFlash({ correct: false, answer: correctAns[qIdx], skipped: true })
+    flashTimer.current = setTimeout(() => {
+      setFlash(null)
+      setUserAnswers(newAnswers)
+      if (qIdx + 1 >= questions.length) doScreenEval(newAnswers)
+      else { setQIdx(i => i + 1); setHintOpenFor(null) }
+    }, 900)
   }
 
   // ── Screen mode: evaluate locally ────────────────────────────────────────
@@ -1729,6 +1760,19 @@ export default function MathScreen() {
                   </div>
                 )
               })()}
+
+              {skippable.has(qIdx) && !flash && (
+                <button
+                  className="math-press"
+                  onClick={skipScreenQuestion}
+                  style={{
+                    alignSelf: 'center', border: 'none', background: 'rgba(255,255,255,.72)',
+                    color: INK_SOFT, borderRadius: 999, padding: '9px 18px', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                    boxShadow: '0 3px 10px rgba(60,120,200,.08)',
+                  }}
+                >{language === 'tr' ? 'Bunu geç →' : 'Skip this one →'}</button>
+              )}
 
               {/* Answer display */}
               <div style={{

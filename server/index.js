@@ -146,6 +146,7 @@ async function getParentContext(parentId) {
       { data: pendingPaintings },
       { data: pendingClaims },
       mathStanding,
+      { data: lastMathQuestions },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -175,6 +176,13 @@ async function getParentContext(parentId) {
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       topicStanding(child.id).catch(() => null),
+      // The questions themselves. math_attempts has held them since yesterday and the parent
+      // asked the obvious thing — "ne sorular çıktı, ne yanıt verdi" — and was told the texts
+      // are not in the system. They were, two tables away. The most recent sitting only:
+      // that is what "bugün ne yaptı" means, and forty rows would crowd the context.
+      supabase.from('math_attempts')
+        .select('session_id, topic_name, question, child_answer, correct, help_used, created_at')
+        .eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
     ])
 
     const sub = submissions || []
@@ -233,6 +241,11 @@ async function getParentContext(parentId) {
                 standing: `only ${t.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
             : t)
         : `not enough maths answered yet to say anything per topic for ${child.name}`,
+      recentMathQuestions: (lastMathQuestions || []).length
+        ? (lastMathQuestions || []).filter(r => r.session_id === lastMathQuestions[0].session_id)
+            .map(r => ({ topic: r.topic_name, question: r.question, child_answer: r.child_answer,
+                         was_correct: r.correct, used_hint: r.help_used }))
+        : `no maths questions recorded for ${child.name} yet`,
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,

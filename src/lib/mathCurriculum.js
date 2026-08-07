@@ -86,6 +86,26 @@ export function startingLevelForAge(age) {
   return BASE_LEVEL_FOR_YEAR[ageToSchoolYear(age)] ?? 6
 }
 
+// The dial is not free to wander. Once level stopped choosing the subject it stopped having
+// any bound, and levels stored under the old meaning came through unchanged: a seven-year-old
+// sitting on 15 because the ladder had once carried her there got Year 2's topics — the right
+// topics — at the top of the number range, which is where "31099 + 17807" came from, next to
+// seven stars to count.
+//
+// A year owns exactly two rungs and the number ranges step between years, not within them —
+// so the band is [base-1, base]. Allowing base+1 crossed the boundary: it put a Year 2 child,
+// whose curriculum says "addition within 100", on "552 + 256".
+//
+// That leaves the dial with little to do inside a year, which is the honest position: the
+// meaningful unit of difficulty here is the school year. Moving between years is a decision
+// worth surfacing to a parent rather than one a run of good sessions makes silently.
+export function clampLevelToAge(level, age) {
+  const base = BASE_LEVEL_FOR_YEAR[ageToSchoolYear(age)] ?? 6
+  const n = Number(level)
+  if (!Number.isFinite(n)) return base
+  return Math.min(Math.max(Math.round(n), base - 1), base)
+}
+
 export function yearLabelForAge(age) {
   return BRITISH_CURRICULUM[ageToSchoolYear(age)]?.label ?? ''
 }

@@ -388,6 +388,12 @@ function geometryTemplate(level) {
 const COUNT_ITEMS = ['🍎', '⭐', '🐟', '🌸', '🚗', '🐛', '🍓', '🎈']
 
 function countingTemplate(level) {
+  // The template took a level and ignored it, so "Numbers to 100" drew seven apples for a
+  // Year 2 child in the same session as a four-digit sum. Past the first year it is a number
+  // -line topic, not a counting-objects one: one more, ten more, and the steps of 2s, 5s and
+  // 10s the curriculum actually names.
+  if (bandForLevel(level) >= 2) return numberLineTemplate(level)
+
   if (Math.random() < 0.65) {
     const n = randInt(1, 10)
     return {
@@ -413,6 +419,49 @@ function countingTemplate(level) {
     operandKey: `after:${n}`,
     hint_steps: [`Start at ${n} and say the next number.`, 'Counting up goes 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.'],
     visual: { kind: 'count', n, item: pick(COUNT_ITEMS), upTo: true },
+  }
+}
+
+// Year 2 and up: "Numbers to 100" — one/ten more and less, and counting on in 2s, 5s and 10s.
+// Scaled by the band so a Year 3 child works to 1000 rather than to 20.
+function numberLineTemplate(level) {
+  const { max: cap } = rangeForLevel(level)
+  const shape = pick(['more', 'less', 'step'])
+
+  if (shape === 'step') {
+    const step = pick([2, 5, 10])
+    // The whole sequence, including the answer, has to fit the year's ceiling — a Year 2
+    // sequence running 370, 380, 390, 400 is outside "Numbers to 100" even though each step
+    // is right.
+    const highestStart = Math.max(step, cap - step * 4)
+    const start = randInt(1, Math.max(1, Math.floor(highestStart / step))) * step
+    const terms = [start, start + step, start + step * 2, start + step * 3]
+    return {
+      topic: 'counting', level,
+      question_text: `${terms.join(', ')}, __ what comes next?`,
+      format: 'numeric',
+      correct_answer: start + step * 4,
+      operandKey: `step:${step}:${start}`,
+      hint_steps: [`Look at the gap between each number.`, `Each one goes up by ${step}.`],
+    }
+  }
+
+  const amount = pick([1, 10])
+  const up = shape === 'more'
+  // The ANSWER has to fit the ceiling too: "10 more than 99" is 109, outside a Year 2 that
+  // says "numbers to 100".
+  const low = amount === 10 ? 10 : 2
+  const n = randInt(low, Math.max(low + 1, up ? cap - amount : cap))   // randInt is inclusive
+  return {
+    topic: 'counting', level,
+    question_text: `What is ${amount} ${up ? 'more' : 'less'} than ${n}?`,
+    format: 'numeric',
+    correct_answer: up ? n + amount : n - amount,
+    operandKey: `${up ? 'more' : 'less'}:${amount}:${n}`,
+    hint_steps: [
+      amount === 10 ? 'Ten more changes the tens digit, not the ones.' : `Start at ${n}.`,
+      up ? `Count ${amount} forwards from ${n}.` : `Count ${amount} backwards from ${n}.`,
+    ],
   }
 }
 
