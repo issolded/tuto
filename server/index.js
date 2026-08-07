@@ -130,7 +130,12 @@ async function getParentContext(parentId) {
   // all: they are the schema for the two gates, and the gates are not built yet. Until they
   // are, describing them to the parent is describing something that does not happen.
   const prefsAll = parentRow?.prefs ?? null
-  const parentPrefs = prefsAll ? { language: prefsAll.language ?? null, tone: prefsAll.tone ?? null } : null
+  const parentPrefs = prefsAll
+    ? { language: prefsAll.language ?? null, tone: prefsAll.tone ?? null,
+        // Back in the moment something started honouring it: the maths notification reads this
+        // to decide between a message per session and one a day.
+        notify_per_task: prefsAll.notify_per_task !== false }
+    : null
 
   return Promise.all(children.map(async child => {
     const [
@@ -3591,12 +3596,17 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       }
     }
 
-    // Only the first rewarded session of the day is announced. Nothing here needs the
-    // parent to decide anything, so a message per session would be noise — three in an
-    // afternoon says no more than one does.
-    if (gems > 0 && doneToday === 0) {
-      const { data: parentRow } = await supabase
-        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    // Whether every rewarded session is announced or only the day's first. This was hardcoded
+    // to the first — three in an afternoon says no more than one does — but a parent who did a
+    // second session and heard nothing experiences that as the notification being broken, and
+    // prefs.notify_per_task has existed all along for exactly this decision with nothing
+    // reading it. Default true: a parent who has never chosen hears about each session, which
+    // is the behaviour they expect before they know there is a choice.
+    const { data: prefsRow } = await supabase
+      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    if (gems > 0 && (perTask || doneToday === 0)) {
+      const parentRow = prefsRow
       const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
       // Paper mode asks the model how the work actually went, and that read used to be
       // written to a column nothing has ever selected. "Strong at addition, word problems
@@ -3700,12 +3710,12 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
       }
     }
 
-    // Same rule as maths: the first rewarded session of the day is announced, the rest are
-    // not. Which book it was is the part a parent actually wants — it is the one thing here
+    // Same rule as maths, including the preference: every rewarded session or only the day's
+    // first. Which book it was is the part a parent actually wants — it is the one thing here
     // they could not have guessed.
-    if (gems > 0 && doneToday === 0) {
-      const { data: parentRow } = await supabase
-        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const { data: parentRow } = await supabase
+      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    if (gems > 0 && (parentRow?.prefs?.notify_per_task !== false || doneToday === 0)) {
       const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
       const title = book_title ? String(book_title).slice(0, 120) : null
       const msg = language === 'en'
