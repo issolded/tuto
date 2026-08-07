@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import Shell, { useIsTablet } from '../components/Shell'
@@ -43,11 +44,12 @@ const HOME_CSS = `
 // falling back to a number that isn't true.
 const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30 }
 
+// Names are keys, not text: resolved against the child's language where they are drawn.
 const BASE_TASKS = [
-  { bg: '#E8E0FF', name: 'My Books',   route: '/child/library', type: 'reading' },
-  { bg: '#D4EDFF', name: 'My Math',    route: '/child/math',    type: 'math'    },
-  { bg: '#D4F5E0', name: 'My Stories', route: '/child/stories', type: 'writing' },
-  { bg: '#FFE8D4', name: 'My Tree',    route: '/child/task',    type: 'tree'    },
+  { bg: '#E8E0FF', nameKey: 'task_reading', route: '/child/library', type: 'reading' },
+  { bg: '#D4EDFF', nameKey: 'task_math',    route: '/child/math',    type: 'math'    },
+  { bg: '#D4F5E0', nameKey: 'task_writing', route: '/child/stories', type: 'writing' },
+  { bg: '#FFE8D4', nameKey: 'task_tree',    route: '/child/task',    type: 'tree'    },
 ]
 
 // 'tree' isn't a gem-earning task type (no task_settings entry exists for it
@@ -121,22 +123,30 @@ const EMPTY_TODAY = {
 }
 
 const ACTIVITY_TYPES = [
-  { key: 'reading',  chip: 'Books',    bg: '#E8E0FF', emoji: '📖' },
-  { key: 'math',     chip: 'Math',     bg: '#D4EDFF', emoji: '🔢' },
-  { key: 'writing',  chip: 'Story',    bg: '#D4F5E0', emoji: '✏️' },
-  { key: 'homework', chip: 'Homework', bg: '#FFF1CF', emoji: '📸' },
-  { key: 'drawing',  chip: 'Drawing',  bg: '#EFE3FF', emoji: '🎨' },
+  { key: 'reading',  chipKey: 'chip_books',    bg: '#E8E0FF', emoji: '📖' },
+  { key: 'math',     chipKey: 'chip_math',     bg: '#D4EDFF', emoji: '🔢' },
+  { key: 'writing',  chipKey: 'chip_story',    bg: '#D4F5E0', emoji: '✏️' },
+  { key: 'homework', chipKey: 'chip_homework', bg: '#FFF1CF', emoji: '📸' },
+  { key: 'drawing',  chipKey: 'chip_drawing',  bg: '#EFE3FF', emoji: '🎨' },
 ]
 
 // Mid/mature's plain-text activity summary — young shows this visually via
 // its chip grid instead, so it never calls this.
-function activitySentence(activities, mature) {
+function activitySentence(activities, mature, lang) {
   const remaining = ACTIVITY_TYPES.filter(a => !activities[a.key])
-  if (remaining.length === 0) return mature ? 'You did everything today' : 'You did everything today! 🌟'
-  if (remaining.length === ACTIVITY_TYPES.length) return mature ? 'Get started today' : "Let's start today 🌱"
-  const names = remaining.map(a => mature ? a.chip : a.chip.toLowerCase())
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-  return `${remaining.length} left: ${list}`
+  if (remaining.length === 0) return t(mature ? 'all_done_mature' : 'all_done_young', lang)
+  if (remaining.length === ACTIVITY_TYPES.length) return t(mature ? 'start_mature' : 'start_young', lang)
+  const names = remaining.map(a => {
+    const n = t(a.chipKey, lang)
+    // Turkish does not lower-case a list like this, and its words are already the plain form.
+    return mature || lang === 'tr' ? n : n.toLowerCase()
+  })
+  const list = names.length === 1
+    ? names[0]
+    : lang === 'tr'
+      ? `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}`
+      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  return lang === 'tr' ? `${remaining.length} tane kaldı: ${list}` : `${remaining.length} left: ${list}`
 }
 
 function TodayPill({ emoji, text, color, bg }) {
@@ -243,7 +253,7 @@ function TodayCard({ band, isTablet, today, gems, nav }) {
                     opacity: done ? 1 : 0.5,
                   }}>
                     <span style={{ fontSize: 20 }}>{a.emoji}</span>
-                    <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 10, color: ink, textAlign: 'center' }}>{a.chip}</span>
+                    <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 10, color: ink, textAlign: 'center' }}>{t(a.chipKey, lang)}</span>
                     {done && (
                       <span style={{
                         position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%',
@@ -258,7 +268,7 @@ function TodayCard({ band, isTablet, today, gems, nav }) {
           ) : mature ? (
             <>
               <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: ink, marginBottom: 10 }}>
-                {activitySentence(today.activities, true)}
+                {activitySentence(today.activities, true, lang)}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                 {ACTIVITY_TYPES.map(a => {
@@ -268,14 +278,14 @@ function TodayCard({ band, isTablet, today, gems, nav }) {
                       display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 999, padding: '5px 10px',
                       fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 12,
                       background: done ? '#E2F0E9' : '#EEF1ED', color: done ? '#2f8f6b' : '#8a938d',
-                    }}>{done ? '✓' : '○'} {a.chip}</span>
+                    }}>{done ? '✓' : '○'} {t(a.chipKey, lang)}</span>
                   )
                 })}
               </div>
             </>
           ) : (
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: ink }}>
-              {activitySentence(today.activities, false)}
+              {activitySentence(today.activities, false, lang)}
             </div>
           )}
         </div>
@@ -336,6 +346,10 @@ export default function ChildHome() {
   const nav = useNavigate()
   const isTablet = useIsTablet()
   const [child, setChild] = useState(() => JSON.parse(localStorage.getItem('child') || 'null'))
+  const lang = childLang(child)
+  // The greeting follows the clock, and the clock is the child's device.
+  const hour = new Date().getHours()
+  const greetingKey = hour < 12 ? 'greeting_morning' : hour < 18 ? 'greeting_afternoon' : 'greeting_evening'
   const band = bandFor(child?.age)
   const [gems, setGems] = useState(null)
   const [today, setToday] = useState(EMPTY_TODAY)
@@ -387,9 +401,9 @@ export default function ChildHome() {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 13, color: INK_SOFT, marginBottom: 3 }}>Good morning ☀️</div>
+            <div style={{ fontWeight: 800, fontSize: 13, color: INK_SOFT, marginBottom: 3 }}>{greetingKey && t(greetingKey, lang)}</div>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 28, color: INK, lineHeight: 1.1, letterSpacing: '-.4px' }}>
-              Hello, {child?.name ?? 'Friend'}!
+              {t('hello_name', lang)}, {child?.name ?? t('friend', lang)}!
             </div>
           </div>
           <button className="tuto-gempill" onClick={() => nav('/child/gems')}
@@ -408,24 +422,24 @@ export default function ChildHome() {
         <TodayCard band={band} isTablet={isTablet} today={today} gems={gems ?? 0} nav={nav} />
 
         <div className="tuto-task-grid">
-          {TASKS.map((t, i) => (
-            <button key={i} className="tuto-card" onClick={() => nav(t.route, { state: { ...t, from: '/child/home' } })}
+          {TASKS.map((task, i) => (
+            <button key={i} className="tuto-card" onClick={() => nav(task.route, { state: { ...task, from: '/child/home' } })}
               style={{
                 background: '#fff', border: 'none', borderRadius: 22, padding: '12px 12px 13px',
                 display: 'flex', flexDirection: 'column', gap: 7, cursor: 'pointer', textAlign: 'left',
                 boxShadow: '0 6px 16px rgba(40,30,70,.09)',
               }}>
-              <div style={{ background: t.bg, height: 84, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TaskIcon type={t.type} c={TASK_ACCENT[t.type]} />
+              <div style={{ background: task.bg, height: 84, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TaskIcon type={task.type} c={TASK_ACCENT[task.type]} />
               </div>
-              <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '2px 0 0' }}>{t.name}</h3>
+              <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '2px 0 0' }}>{t(task.nameKey, lang)}</h3>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: t.bg, borderRadius: 10, padding: '3px 10px',
+                  background: task.bg, borderRadius: 10, padding: '3px 10px',
                   fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT,
                 }}>
-                  {t.gem != null ? (<><span style={{ fontSize: 12 }}>⭐</span>+{t.gem}</>) : '🌱 Always on'}
+                  {task.gem != null ? (<><span style={{ fontSize: 12 }}>⭐</span>+{task.gem}</>) : '🌱 Always on'}
                 </span>
               </div>
             </button>
