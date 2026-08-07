@@ -1175,7 +1175,7 @@ export default function MathScreen() {
     const usedOperands = new Set(readSeen('keys', child?.id, effectiveLevel))
     for (const slot of slots) {
       if (!slot.templateTopic) continue
-      const p = generateProblem(slot.templateTopic, effectiveLevel, usedOperands)
+      const p = generateProblem(slot.templateTopic, effectiveLevel, usedOperands, language)
       usedOperands.add(p.operandKey)
       slot.problem = p
       slot.question = p.question_text
@@ -1187,7 +1187,7 @@ export default function MathScreen() {
     if (llmSlots.length) {
       try {
         const result = await generateCurriculumQuestions(
-          age, effectiveLevel, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'),
+          age, effectiveLevel, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'), language,
         )
         llmSlots.forEach((slot, i) => {
           const q = result.questions?.[i]

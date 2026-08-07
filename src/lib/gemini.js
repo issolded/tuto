@@ -257,7 +257,12 @@ export async function generateStoryIdeas(age, language = 'en') {
 // prompt learned the hard way (metric only, no country-specific money, × and ÷ rather than
 // * and /, no general knowledge the answer hinges on) is kept, because those were all real
 // faults found in real output.
-export async function generateCurriculumQuestions(age, level, topics, previousQuestions = []) {
+export async function generateCurriculumQuestions(age, level, topics, previousQuestions = [], language = 'en') {
+  // Translating the interface is not enough on its own: a child who reads only Turkish cannot
+  // answer "A baker has 1 kg of flour" however Turkish the buttons around it are. The topic
+  // descriptions stay in English — they are curriculum text written for the model, not for the
+  // child — and only the questions themselves change language.
+  const lang = language === 'tr' ? 'Turkish' : 'English'
   const list = topics.map((t, i) => `Q${i + 1} — "${t.name}": ${t.description}`).join('\n')
   const avoidClause = previousQuestions.length > 0
     ? `\nDo NOT repeat or lightly reword these recent questions: ${JSON.stringify(previousQuestions.slice(-20))}`
@@ -269,6 +274,8 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
     : 'the middle of this topic'
 
   const prompt = `Generate ${topics.length} maths questions for a ${age} year old following the English National Curriculum.
+Write every question, and every hint step, in ${lang}. Use ${lang} number words and ${lang} names
+where a name is needed. The JSON keys stay exactly as shown below, in English.
 Each question covers a DIFFERENT topic, in this exact order:
 ${list}
 

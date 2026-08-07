@@ -32,6 +32,15 @@ function pick(arr) {
   return arr[randInt(0, arr.length - 1)]
 }
 
+// Word banks are keyed by language; anything still a bare array is language-neutral.
+function pickL(bank, lang) {
+  return pick(Array.isArray(bank) ? bank : (bank[lang] || bank.en))
+}
+
+// Picks between an English and a Turkish phrasing. Everything a child reads goes through here,
+// so adding a language is adding a branch rather than hunting for strings.
+const tr = (lang, en, turkish) => (lang === 'tr' ? turkish : en)
+
 function pairKey(a, b) {
   return [a, b].sort((x, y) => x - y).join(',')
 }
@@ -93,7 +102,7 @@ function shareVisual(total, groups, highlight) {
 
 // ─── Addition ───────────────────────────────────────────────────────────────
 
-function additionTemplate(level) {
+function additionTemplate(level, lang) {
   const { min, max } = rangeForLevel(level)
   // Both operands used to be drawn from the whole range, so the SUM could reach twice the
   // band's ceiling — "Addition within 20" handing over 17 + 16. The ceiling belongs to the
@@ -109,7 +118,7 @@ function additionTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
-    hint_steps: countingOnSteps(a, b),
+    hint_steps: countingOnSteps(a, b, lang),
   }
 }
 
@@ -117,22 +126,25 @@ function additionTemplate(level) {
 // numbers are in the thousands — the old version listed every single number from a+1 to a+b,
 // which at this level would have written out two thousand of them. Past what a child would
 // ever count, it points at the method they are actually taught instead.
-function countingOnSteps(a, b) {
+function countingOnSteps(a, b, lang) {
   if (isCountable(a, b)) {
     return [
-      `Try counting on from ${a}.`,
-      `Count ${b} more starting at ${a}: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`,
+      tr(lang, `Try counting on from ${a}.`, `${a} sayısından ileri saymayı dene.`),
+      tr(lang, `Count ${b} more starting at ${a}: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`,
+              `${a} sayısından ${b} tane ileri say: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`),
     ]
   }
   return [
-    'Line the two numbers up by their place value — ones under ones, tens under tens.',
-    'Add each column from the right, carrying into the next when a column passes 9.',
+    tr(lang, 'Line the two numbers up by their place value — ones under ones, tens under tens.',
+             'Sayıları basamaklarına göre alt alta yaz — birler birlerin, onlar onların altına.'),
+    tr(lang, 'Add each column from the right, carrying into the next when a column passes 9.',
+             'Sağdan başlayarak her basamağı topla, 9\'u geçince bir sonraki basamağa elde ver.'),
   ]
 }
 
 // ─── Subtraction ────────────────────────────────────────────────────────────
 
-function subtractionTemplate(level) {
+function subtractionTemplate(level, lang) {
   const { min, max } = rangeForLevel(level)
   // a is the larger operand, kept non-negative. Both bounds matter: drawing a uniformly
   // from the whole range put it near the floor half the time, and b then had nowhere to sit
@@ -150,21 +162,24 @@ function subtractionTemplate(level) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
-    hint_steps: countingBackSteps(a, b),
+    hint_steps: countingBackSteps(a, b, lang),
   }
 }
 
 // Same limit as counting on, for the same reason: counting back three thousand is not a hint.
-function countingBackSteps(a, b) {
+function countingBackSteps(a, b, lang) {
   if (isCountable(a, b)) {
     return [
-      `Start at ${a} and take away ${b}.`,
-      `Count back ${b} from ${a}: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`,
+      tr(lang, `Start at ${a} and take away ${b}.`, `${a} sayısından başla ve ${b} çıkar.`),
+      tr(lang, `Count back ${b} from ${a}: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`,
+              `${a} sayısından ${b} geri say: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`),
     ]
   }
   return [
-    'Line the two numbers up by their place value — ones under ones, tens under tens.',
-    'Subtract each column from the right, borrowing from the next column when you need to.',
+    tr(lang, 'Line the two numbers up by their place value — ones under ones, tens under tens.',
+             'Sayıları basamaklarına göre alt alta yaz — birler birlerin, onlar onların altına.'),
+    tr(lang, 'Subtract each column from the right, borrowing from the next column when you need to.',
+             'Sağdan başlayarak her basamağı çıkar, gerektiğinde soldaki basamaktan onluk al.'),
   ]
 }
 
@@ -173,39 +188,53 @@ function countingBackSteps(a, b) {
 // doesn't read as the same sentence with the name swapped, plus object/name/container
 // word banks so phrasing varies independently of the shape.
 
-const MULT_NAMES = ['Mia', 'Leo', 'Sam', 'Ada', 'Theo', 'Noah', 'Zoe', 'Iris']
-const MULT_OBJECTS = ['marbles', 'stickers', 'cookies', 'crayons', 'pencils', 'apples', 'shells', 'buttons']
-const MULT_CONTAINERS = ['baskets', 'boxes', 'jars', 'bags', 'bowls', 'trays']
+// Turkish takes no plural after a number — "3 misket", not "3 misketler" — so the Turkish
+// banks are singular where the English ones are plural.
+const MULT_NAMES = { en: ['Mia', 'Leo', 'Sam', 'Ada', 'Theo', 'Noah', 'Zoe', 'Iris'],
+                     tr: ['Ada', 'Zeynep', 'Emir', 'Elif', 'Kaan', 'Deniz', 'Mert', 'Ece'] }
+const MULT_OBJECTS = { en: ['marbles', 'stickers', 'cookies', 'crayons', 'pencils', 'apples', 'shells', 'buttons'],
+                       tr: ['misket', 'çıkartma', 'kurabiye', 'boya kalemi', 'kalem', 'elma', 'deniz kabuğu', 'düğme'] }
+const MULT_CONTAINERS = { en: ['baskets', 'boxes', 'jars', 'bags', 'bowls', 'trays'],
+                          tr: ['sepet', 'kutu', 'kavanoz', 'torba', 'kâse', 'tepsi'] }
 
-function multGroupsVariant(a, b, name, object) {
-  const container = pick(MULT_CONTAINERS)
+function multGroupsVariant(a, b, name, object, lang) {
+  const container = pickL(MULT_CONTAINERS, lang)
   return {
-    question_text: `${name} has ${a} ${container}, each with ${b} ${object} inside. How many ${object} in total?`,
+    question_text: tr(lang,
+      `${name} has ${a} ${container}, each with ${b} ${object} inside. How many ${object} in total?`,
+      `${name} ${a} ${container} hazırladı, her birinde ${b} ${object} var. Toplam kaç ${object} eder?`),
     hint_steps: [
-      `${name} has ${a} ${container} — that's ${a} equal groups.`,
-      `Each group has ${b}, so it's ${a} groups of ${b}: ${a} × ${b}.`,
+      tr(lang, `${name} has ${a} ${container} — that's ${a} equal groups.`, `${a} ${container} var — yani ${a} eşit grup.`),
+      tr(lang, `Each group has ${b}, so it's ${a} groups of ${b}: ${a} × ${b}.`, `Her grupta ${b} tane var: ${a} × ${b}.`),
     ],
     visual: { kind: 'groups', groups: a, per: b },
   }
 }
 
-function multArrayVariant(a, b, name, object) {
+function multArrayVariant(a, b, name, object, lang) {
   return {
-    question_text: `${name} arranges ${object} in ${a} rows of ${b}. How many ${object} in total?`,
+    question_text: tr(lang,
+      `${name} arranges ${object} in ${a} rows of ${b}. How many ${object} in total?`,
+      `${name} ${object} dizdi: ${a} sıra, her sırada ${b} tane. Toplam kaç ${object} eder?`),
     hint_steps: [
-      `That's an array: ${a} rows, with ${b} ${object} in each row.`,
-      `${a} rows of ${b} is ${a} × ${b}.`,
+      tr(lang, `That's an array: ${a} rows, with ${b} ${object} in each row.`, `Bu bir dizilim: ${a} sıra, her sırada ${b} ${object}.`),
+      tr(lang, `${a} rows of ${b} is ${a} × ${b}.`, `${a} sıra × ${b} tane: ${a} × ${b}.`),
     ],
     visual: { kind: 'array', rows: a, cols: b },
   }
 }
 
-function multReadingVariant(a, b, name) {
+// Signature matches the other two even though this one has no object of its own: they are
+// called through one `variant(...)` reference, so an argument out of place lands silently —
+// this one was receiving the object name as its language.
+function multReadingVariant(a, b, name, _object, lang) {
   return {
-    question_text: `${name} reads ${b} pages a day for ${a} days. How many pages does ${name} read in total?`,
+    question_text: tr(lang,
+      `${name} reads ${b} pages a day for ${a} days. How many pages does ${name} read in total?`,
+      `${name} her gün ${b} sayfa okuyor. ${a} günde toplam kaç sayfa okur?`),
     hint_steps: [
-      `${name} reads for ${a} days, ${b} pages each day.`,
-      `That's ${a} days × ${b} pages: ${a} × ${b}.`,
+      tr(lang, `${name} reads for ${a} days, ${b} pages each day.`, `${name} ${a} gün okuyor, her gün ${b} sayfa.`),
+      tr(lang, `That's ${a} days × ${b} pages: ${a} × ${b}.`, `Yani ${a} gün × ${b} sayfa: ${a} × ${b}.`),
     ],
     // Days are the groups, pages the size — same picture as containers of objects.
     visual: { kind: 'groups', groups: a, per: b },
@@ -214,7 +243,7 @@ function multReadingVariant(a, b, name) {
 
 const MULT_VARIANTS = [multGroupsVariant, multArrayVariant, multReadingVariant]
 
-function multiplicationWordTemplate(level) {
+function multiplicationWordTemplate(level, lang) {
   // The ladder names which tables each rung practises — "×2 ×5 ×10" low down, the harder
   // ones higher up — but both rungs used to draw factors at random from the same 2..12, so
   // neither taught what it claimed and the two rungs were indistinguishable. One factor now
@@ -229,10 +258,10 @@ function multiplicationWordTemplate(level) {
   const other = randInt(2, 12)
   const [a, b] = Math.random() < 0.5 ? [table, other] : [other, table]
   const correct_answer = a * b
-  const name = pick(MULT_NAMES)
-  const object = pick(MULT_OBJECTS)
+  const name = pickL(MULT_NAMES, lang)
+  const object = pickL(MULT_OBJECTS, lang)
   const variant = pick(MULT_VARIANTS)
-  const { question_text, hint_steps, visual } = variant(a, b, name, object)
+  const { question_text, hint_steps, visual } = variant(a, b, name, object, lang)
 
   return {
     topic: 'multiplication-word',
@@ -250,7 +279,7 @@ function multiplicationWordTemplate(level) {
 // d is the denominator (2, 3, or 4); N is always a multiple of d so the answer is a
 // whole number — no decimals/rounding to reason about at this level.
 
-function fractionOfNumberTemplate(level) {
+function fractionOfNumberTemplate(level, lang) {
   // `level` used to be accepted and ignored, which had two consequences: a question at
   // "Fractions & Decimals" was identical to one at "Fractions", and the topic could only
   // ever produce 3 x 5 = 15 distinct problems — so a 5-question session used a third of
@@ -267,7 +296,7 @@ function fractionOfNumberTemplate(level) {
   return {
     topic: 'fraction-of-number',
     level,
-    question_text: `What is 1/${d} of ${N}?`,
+    question_text: tr(lang, `What is 1/${d} of ${N}?`, `${N} sayısının 1/${d} kadarı kaçtır?`),
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(d, N),
@@ -276,8 +305,8 @@ function fractionOfNumberTemplate(level) {
     visual: shareVisual(N, d, 1),
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
-      `1/${d} means splitting into ${d} equal groups.`,
-      `Split ${N} into ${d} equal groups: ${N} ÷ ${d}.`,
+      tr(lang, `1/${d} means splitting into ${d} equal groups.`, `1/${d}, ${d} eşit gruba ayırmak demek.`),
+      tr(lang, `Split ${N} into ${d} equal groups: ${N} ÷ ${d}.`, `${N} sayısını ${d} eşit gruba ayır: ${N} ÷ ${d}.`),
     ],
   }
 }
@@ -286,11 +315,13 @@ function fractionOfNumberTemplate(level) {
 // b is the group count (2-5); a is always a multiple of b so the share is a whole
 // number — no remainders to reason about at this level.
 
-const DIV_NAMES = ['Mia', 'Leo', 'Sam', 'Ada', 'Theo', 'Noah', 'Zoe', 'Iris']
-const DIV_ITEMS = ['candies', 'stickers', 'cookies', 'marbles', 'balloons', 'crayons', 'pencils', 'stamps']
-const DIV_WHO = ['friends', 'classmates', 'kids', 'teammates']
+const DIV_NAMES = MULT_NAMES
+const DIV_ITEMS = { en: ['candies', 'stickers', 'cookies', 'marbles', 'balloons', 'crayons', 'pencils', 'stamps'],
+                    tr: ['şeker', 'çıkartma', 'kurabiye', 'misket', 'balon', 'boya kalemi', 'kalem', 'pul'] }
+const DIV_WHO = { en: ['friends', 'classmates', 'kids', 'teammates'],
+                  tr: ['arkadaş', 'sınıf arkadaşı', 'çocuk', 'takım arkadaşı'] }
 
-function divisionWordTemplate(level) {
+function divisionWordTemplate(level, lang) {
   // Division used to occupy a single rung, so it took no notice of the level at all — which
   // is why a Year 5 session could be handed "28 shared among 4". It follows the year now.
   const band = bandForLevel(level)
@@ -298,22 +329,24 @@ function divisionWordTemplate(level) {
   const multiplier = randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 9)
   const a = b * multiplier
   const correct_answer = a / b
-  const name = pick(DIV_NAMES)
-  const items = pick(DIV_ITEMS)
-  const who = pick(DIV_WHO)
+  const name = pickL(DIV_NAMES, lang)
+  const items = pickL(DIV_ITEMS, lang)
+  const who = pickL(DIV_WHO, lang)
 
   return {
     topic: 'division-word',
     level,
-    question_text: `${name} has ${a} ${items}. Shared equally among ${b} ${who}. How many each?`,
+    question_text: tr(lang,
+      `${name} has ${a} ${items}. Shared equally among ${b} ${who}. How many each?`,
+      `${name} ${a} ${items} ${b} ${who} arasında eşit paylaştırdı. Her birine kaç tane düşer?`),
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
     visual: shareVisual(a, b),
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
-      `${a} shared into ${b} equal groups.`,
-      `Split ${a} into ${b} groups: ${a} ÷ ${b}.`,
+      tr(lang, `${a} shared into ${b} equal groups.`, `${a} tane, ${b} eşit gruba paylaştırılıyor.`),
+      tr(lang, `Split ${a} into ${b} groups: ${a} ÷ ${b}.`, `${a} sayısını ${b} gruba ayır: ${a} ÷ ${b}.`),
     ],
   }
 }
@@ -335,14 +368,16 @@ const SHAPES = {
   triangle: 3, square: 4, rectangle: 4, pentagon: 5, hexagon: 6, octagon: 8,
 }
 
-function geometryTemplate(level) {
+function geometryTemplate(level, lang) {
   // Shapes occupy a single rung on the ladder, so difficulty does not ride on the level
   // number — the rung presents its own whole range instead. Both askings, all six shapes,
   // and a mix of one shape and two: a pair tops out at 8 + 8, and since every mark is on
   // screen and countable, that stays within reach of a child who can count to sixteen.
   const pool = Object.keys(SHAPES)
-  const ask = pick(['sides', 'corners'])
-  const one = ask.slice(0, -1) // "sides" → "side"
+  const askKey = pick(['sides', 'corners'])
+  const ask = tr(lang, askKey, askKey === 'sides' ? 'kenarı' : 'köşesi')
+  // Singular for the hint text. Turkish already reads as one ("kenarı"), English drops the s.
+  const one = lang === 'tr' ? ask : ask.slice(0, -1)
   const pair = Math.random() < 0.45
 
   if (!pair) {
@@ -350,13 +385,13 @@ function geometryTemplate(level) {
     return {
       topic: 'geometry',
       level,
-      question_text: `How many ${ask} does this shape have?`,
+      question_text: tr(lang, `How many ${ask} does this shape have?`, `Bu şeklin kaç ${ask} var?`),
       format: 'numeric',
       correct_answer: SHAPES[shape],
       operandKey: `${shape}:${ask}`,
       hint_steps: [
-        `Start at one ${one} and go around the shape.`,
-        `Count every ${one} once — the glowing one is where you are.`,
+        tr(lang, `Start at one ${one} and go around the shape.`, `Bir noktadan başla, şeklin etrafını dolaş.`),
+        tr(lang, `Count every ${one} once — the glowing one is where you are.`, `Her birini bir kez say — parlayan, bulunduğun yer.`),
       ],
       visual: { kind: 'shapes', shapes: [shape], ask },
     }
@@ -367,13 +402,13 @@ function geometryTemplate(level) {
   return {
     topic: 'geometry',
     level,
-    question_text: `How many ${ask} do these two shapes have altogether?`,
+    question_text: tr(lang, `How many ${ask} do these two shapes have altogether?`, `Bu iki şeklin toplam kaç ${ask} var?`),
     format: 'numeric',
     correct_answer: SHAPES[a] + SHAPES[b],
     operandKey: [a, b].sort().join('+') + `:${ask}`,
     hint_steps: [
-      `Count the ${ask} of the first shape, then the second.`,
-      `Add the two counts together.`,
+      tr(lang, `Count the ${ask} of the first shape, then the second.`, `Önce birinci şeklin ${ask}, sonra ikincisinin ${ask} say.`),
+      tr(lang, `Add the two counts together.`, `İki sayıyı topla.`),
     ],
     visual: { kind: 'shapes', shapes: [a, b], ask },
   }
@@ -387,23 +422,24 @@ function geometryTemplate(level) {
 // can still answer.
 const COUNT_ITEMS = ['🍎', '⭐', '🐟', '🌸', '🚗', '🐛', '🍓', '🎈']
 
-function countingTemplate(level) {
+function countingTemplate(level, lang) {
   // The template took a level and ignored it, so "Numbers to 100" drew seven apples for a
   // Year 2 child in the same session as a four-digit sum. Past the first year it is a number
   // -line topic, not a counting-objects one: one more, ten more, and the steps of 2s, 5s and
   // 10s the curriculum actually names.
-  if (bandForLevel(level) >= 2) return numberLineTemplate(level)
+  if (bandForLevel(level) >= 2) return numberLineTemplate(level, lang)
 
   if (Math.random() < 0.65) {
     const n = randInt(1, 10)
     return {
       topic: 'counting',
       level,
-      question_text: 'How many do you see?',
+      question_text: tr(lang, 'How many do you see?', 'Kaç tane görüyorsun?'),
       format: 'numeric',
       correct_answer: n,
       operandKey: `count:${n}`,
-      hint_steps: ['Touch each one as you say the number.', 'The last number you say is the answer.'],
+      hint_steps: [tr(lang, 'Touch each one as you say the number.', 'Her birine dokunarak say.'),
+                   tr(lang, 'The last number you say is the answer.', 'Söylediğin son sayı cevaptır.')],
       visual: { kind: 'count', n, item: pick(COUNT_ITEMS) },
     }
   }
@@ -413,18 +449,19 @@ function countingTemplate(level) {
   return {
     topic: 'counting',
     level,
-    question_text: `What number comes after ${n}?`,
+    question_text: tr(lang, `What number comes after ${n}?`, `${n} sayısından sonra hangi sayı gelir?`),
     format: 'numeric',
     correct_answer: n + 1,
     operandKey: `after:${n}`,
-    hint_steps: [`Start at ${n} and say the next number.`, 'Counting up goes 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.'],
+    hint_steps: [tr(lang, `Start at ${n} and say the next number.`, `${n} sayısından başla ve sonraki sayıyı söyle.`),
+                 tr(lang, 'Counting up goes 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.', 'İleri sayma: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.')],
     visual: { kind: 'count', n, item: pick(COUNT_ITEMS), upTo: true },
   }
 }
 
 // Year 2 and up: "Numbers to 100" — one/ten more and less, and counting on in 2s, 5s and 10s.
 // Scaled by the band so a Year 3 child works to 1000 rather than to 20.
-function numberLineTemplate(level) {
+function numberLineTemplate(level, lang) {
   const { max: cap } = rangeForLevel(level)
   const shape = pick(['more', 'less', 'step'])
 
@@ -438,11 +475,12 @@ function numberLineTemplate(level) {
     const terms = [start, start + step, start + step * 2, start + step * 3]
     return {
       topic: 'counting', level,
-      question_text: `${terms.join(', ')}, __ what comes next?`,
+      question_text: tr(lang, `${terms.join(', ')}, __ what comes next?`, `${terms.join(', ')}, __ sırada hangi sayı gelir?`),
       format: 'numeric',
       correct_answer: start + step * 4,
       operandKey: `step:${step}:${start}`,
-      hint_steps: [`Look at the gap between each number.`, `Each one goes up by ${step}.`],
+      hint_steps: [tr(lang, `Look at the gap between each number.`, `Sayılar arasındaki farka bak.`),
+                   tr(lang, `Each one goes up by ${step}.`, `Her seferinde ${step} artıyor.`)],
     }
   }
 
@@ -454,13 +492,18 @@ function numberLineTemplate(level) {
   const n = randInt(low, Math.max(low + 1, up ? cap - amount : cap))   // randInt is inclusive
   return {
     topic: 'counting', level,
-    question_text: `What is ${amount} ${up ? 'more' : 'less'} than ${n}?`,
+    question_text: tr(lang,
+      `What is ${amount} ${up ? 'more' : 'less'} than ${n}?`,
+      `${n} sayısının ${amount} ${up ? 'fazlası' : 'eksiği'} kaçtır?`),
     format: 'numeric',
     correct_answer: up ? n + amount : n - amount,
     operandKey: `${up ? 'more' : 'less'}:${amount}:${n}`,
     hint_steps: [
-      amount === 10 ? 'Ten more changes the tens digit, not the ones.' : `Start at ${n}.`,
-      up ? `Count ${amount} forwards from ${n}.` : `Count ${amount} backwards from ${n}.`,
+      amount === 10
+        ? tr(lang, 'Ten more changes the tens digit, not the ones.', 'On fazlası onlar basamağını değiştirir, birler aynı kalır.')
+        : tr(lang, `Start at ${n}.`, `${n} sayısından başla.`),
+      up ? tr(lang, `Count ${amount} forwards from ${n}.`, `${n} sayısından ${amount} ileri say.`)
+         : tr(lang, `Count ${amount} backwards from ${n}.`, `${n} sayısından ${amount} geri say.`),
     ],
   }
 }
@@ -483,15 +526,15 @@ export const TOPICS = Object.keys(REGISTRY)
 // roll collides, reroll (bounded) until a fresh number pair comes up. Callers building a
 // multi-question batch should accumulate returned operandKeys into the same Set across
 // calls; single one-off calls (e.g. MathLab) can just omit it.
-export function generateProblem(topic, level, avoid = null) {
+export function generateProblem(topic, level, avoid = null, lang = 'en') {
   const template = REGISTRY[topic]
   if (!template) throw new Error(`Unknown math template topic: ${topic}`)
-  if (!avoid) return template(level)
+  if (!avoid) return template(level, lang)
 
   const MAX_ATTEMPTS = 30
-  let problem = template(level)
+  let problem = template(level, lang)
   for (let attempt = 1; attempt < MAX_ATTEMPTS && avoid.has(problem.operandKey); attempt++) {
-    problem = template(level)
+    problem = template(level, lang)
   }
   return problem
 }

@@ -95,6 +95,10 @@ export default function ParentOnboarding() {
   const [step,            setStep]            = useState(1)
   const [childName,       setChildName]       = useState('')
   const [age,             setAge]             = useState(7)
+  // The language the CHILD is spoken to in — separate from anything the parent reads. The
+  // column has existed all along and onboarding wrote 'en' into it unconditionally, so a child
+  // who speaks only Turkish got an English app with English questions.
+  const [childLang,       setChildLang]       = useState('en')
   const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, homework: true, drawing: true })
   const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
   const [notifChannel,    setNotifChannel]    = useState(null)
@@ -235,7 +239,7 @@ export default function ParentOnboarding() {
         // switched everything except Maths off still had a child seeing every tile. The
         // shape matches what TaskSettings writes later, so the two agree from the start.
         .insert({
-          parent_id: uid.id, name: childName.trim(), age, pin_hash, language: 'en',
+          parent_id: uid.id, name: childName.trim(), age, pin_hash, language: childLang,
           task_settings: Object.fromEntries(
             Object.keys(tasks).map(k => [k, { gems: TASK_DEFAULTS[k].gems, active: !!tasks[k] }])
           ),
@@ -342,6 +346,27 @@ export default function ParentOnboarding() {
                 <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>−</button>
                 <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 36, color: PC.ink }}>{age}</div>
                 <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>+</button>
+              </div>
+            </Field>
+            <Field label="Which language should I speak to them in?">
+              <div style={{ display: 'flex', gap: 10 }}>
+                {[{ id: 'en', label: 'English', flag: '🇬🇧' }, { id: 'tr', label: 'Türkçe', flag: '🇹🇷' }].map(o => {
+                  const on = childLang === o.id
+                  return (
+                    <button key={o.id} className="tc-press tc-tap" onClick={() => setChildLang(o.id)} style={{
+                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      background: on ? PC.tealBg : '#fff', border: `2px solid ${on ? PC.teal : PC.line}`,
+                      borderRadius: 16, padding: '14px 10px', cursor: 'pointer',
+                      fontFamily: FONT, fontWeight: 800, fontSize: 15, color: on ? PC.tealDeep : PC.inkSoft,
+                      transition: 'border-color .16s, background .16s',
+                    }}>
+                      <span style={{ fontSize: 20 }}>{o.flag}</span>{o.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 8, lineHeight: 1.45 }}>
+                Questions, hints and Tuto's replies to {childName.trim() || 'your child'} will be in this language.
               </div>
             </Field>
             <Btn onClick={next} disabled={!childName.trim()}>Next →</Btn>
