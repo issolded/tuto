@@ -1309,7 +1309,7 @@ export default function MathScreen() {
   const doPaperEval = async (file) => {
     setStep('evaluating')
     try {
-      const result   = await evaluateMath([file], questions, correctAns, age, effectiveLevel)
+      const result   = await evaluateMath([file], questions, correctAns, age, effectiveLevel, language)
       // The model echoes the questions back and the result list used to be built from that
       // echo, so a misread question was shown to the child as one they had been asked —
       // in testing, a photo of different sums produced a list of sums the app never set.

@@ -34,6 +34,9 @@ export default function TaskSettings() {
   const nav = useNavigate()
   const [childName, setChildName] = useState('')
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  // Lives on the child row, not in task_settings: it is not a task and task_settings is
+  // rewritten wholesale on every toggle here, which would take the language with it.
+  const [childLang, setChildLang] = useState('en')
   const [saving, setSaving] = useState(false)
   const saveTimer = useRef(null)
 
@@ -47,10 +50,11 @@ export default function TaskSettings() {
 
   useEffect(() => {
     if (!id) return
-    supabase.from('children').select('name, task_settings').eq('id', id).single()
+    supabase.from('children').select('name, task_settings, language').eq('id', id).single()
       .then(({ data }) => {
         if (!data) return
         setChildName(data.name)
+        setChildLang(data.language === 'tr' ? 'tr' : 'en')
         if (data.task_settings) {
           setSettings({ ...DEFAULT_SETTINGS, ...data.task_settings })
         }
@@ -64,6 +68,13 @@ export default function TaskSettings() {
       await supabase.from('children').update({ task_settings: next }).eq('id', id)
       setSaving(false)
     }, 500)
+  }
+
+  const saveLanguage = async (lang) => {
+    setChildLang(lang)
+    setSaving(true)
+    await supabase.from('children').update({ language: lang }).eq('id', id)
+    setSaving(false)
   }
 
   const toggleTask = (key) => {
@@ -96,6 +107,31 @@ export default function TaskSettings() {
       />
 
       <div style={{ flex: 1, padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Card pad={16} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>
+            Language {childName ? `for ${childName}` : ''}
+          </div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, lineHeight: 1.45, marginTop: -4 }}>
+            The language {childName || 'your child'} sees — questions, hints and Tuto's replies.
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+            {[{ id: 'en', label: 'English', flag: '🇬🇧' }, { id: 'tr', label: 'Türkçe', flag: '🇹🇷' }].map(o => {
+              const on = childLang === o.id
+              return (
+                <button key={o.id} className="tc-press tc-tap" onClick={() => saveLanguage(o.id)} style={{
+                  flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  background: on ? PC.tealBg : '#fff', border: `2px solid ${on ? PC.teal : PC.line}`,
+                  borderRadius: 14, padding: '12px 10px', cursor: 'pointer',
+                  fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: on ? PC.tealDeep : PC.inkSoft,
+                  transition: 'border-color .16s, background .16s',
+                }}>
+                  <span style={{ fontSize: 18 }}>{o.flag}</span>{o.label}
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, marginBottom: 6, padding: '0 2px' }}>
           Toggle tasks on/off and adjust gem rewards.
         </div>

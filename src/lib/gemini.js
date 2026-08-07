@@ -236,8 +236,11 @@ Rules:
   return callGemini([{ text: prompt }])
 }
 
-export async function checkTitleSpelling(title) {
-  const prompt = `Check this story title for spelling errors: "${title}". Return JSON only: { "corrected": "corrected title or same if no errors", "has_errors": true or false }`
+// The language matters here or the check does harm: a Turkish title run through an English
+// spell check comes back "corrected" into nonsense.
+export async function checkTitleSpelling(title, language = 'en') {
+  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const prompt = `Check this ${lang} story title for spelling errors: "${title}". The title is written in ${lang} — judge it as ${lang}, and if it is already correct return it unchanged. Return JSON only: { "corrected": "corrected title or same if no errors", "has_errors": true or false }`
   return callGemini([{ text: prompt }])
 }
 
@@ -329,7 +332,12 @@ Return JSON only:
   return callGemini([{ text: prompt }])
 }
 
-export async function evaluateMath(photos, questions, answers, age, level) {
+export async function evaluateMath(photos, questions, answers, age, level, language = 'en') {
+  // The child reads `encouragement`; the parent reads `gemini_notes` and `next_session` in
+  // their Telegram message. Both follow the child's language — in a family where the two
+  // differ the note arrives in the child's language, which is the lesser oddity of the two
+  // and the one that keeps the child's own screen right.
+  const lang = language === 'tr' ? 'Turkish' : 'English'
   const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
   const questionsText = questions.map((q, i) => `Q${i + 1}: ${q} (correct answer: ${answers[i]})`).join('\n')
   const prompt = `Evaluate this ${age}-year-old child's math work photo.
@@ -354,6 +362,7 @@ Return JSON only:
   "gemini_notes": "Strong at addition, word problems need practice",
   "next_session": "Try more word problems",
   "encouragement": "warm age-appropriate message max 2 sentences, never mention level number or level change, never say wrong",
+  "_language_note": "write encouragement, gemini_notes and next_session in ${lang}; leave every JSON key in English",
   "gems_earned": 30
 }
 Rules: level_change is "up" if accuracy>=80, "down" if accuracy<40, else "same". new_level = ${clampedLevel} adjusted by level_change (min 1, max 15). gems_earned: 30 if accuracy>=80, 25 if>=60, 15 if>=40, else 10.`

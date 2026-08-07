@@ -149,6 +149,7 @@ export default function StoriesScreen() {
   const location = useLocation()
   const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const language = child?.language === 'tr' ? 'tr' : 'en'
 
   const [loadingStories, setLoadingStories] = useState(true)
   const [stories, setStories] = useState([])
@@ -194,7 +195,7 @@ export default function StoriesScreen() {
     if (!storyTitle.trim() || checkingTitle) return
     setCheckingTitle(true)
     try {
-      const result = await checkTitleSpelling(storyTitle.trim())
+      const result = await checkTitleSpelling(storyTitle.trim(), language)
       if (result.has_errors && result.corrected && result.corrected !== storyTitle.trim()) {
         setTitleSuggestion(result.corrected)
       } else {
