@@ -334,6 +334,29 @@ export const DRAWING_STEPS = {
       'Tepesine sivri kulak püskülleri ekle ve tüyleri iyice koyulaştır.',
     ],
   },
+  // Audited against drawings/cat/*.webp — eight steps, not nine: icon.webp is not a step.
+  cat: {
+    en: [
+      'Draw a wide oval for the head.',
+      'Add a rounded body below it, wider at the bottom.',
+      'Put two pointed ears on top of the head.',
+      'Draw two circles for the eyes.',
+      'Fill the eyes in dark, leaving a white dot in each.',
+      'Add a little triangle nose, a curvy mouth, and two lines at the front for the legs.',
+      'Draw long whiskers on both sides, front paws, and a curling tail on the right.',
+      'Add stripes and short fur strokes all over — your cat is done!',
+    ],
+    tr: [
+      'Kafa için geniş bir oval çiz.',
+      'Altına aşağı doğru genişleyen yuvarlak bir gövde ekle.',
+      'Kafasının üstüne iki sivri kulak koy.',
+      'Gözler için iki daire çiz.',
+      'Gözleri koyu doldur, her birinde beyaz bir nokta bırak.',
+      'Küçük bir üçgen burun, kıvrımlı bir ağız ve önüne bacaklar için iki çizgi ekle.',
+      'İki yana uzun bıyıklar, ön patiler ve sağa kıvrılan bir kuyruk çiz.',
+      'Her yerine çizgiler ve kısa tüyler ekle — kedin hazır!',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
