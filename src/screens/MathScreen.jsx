@@ -179,7 +179,7 @@ function rememberSeen(kind, childId, level, items) {
   } catch { /* private mode / quota — repeated questions are a nuisance, not a failure */ }
 }
 
-function getWelcomeMsg(age, lang) {
+function getWelcomeMsg(age, language) {
   const n = Number(age)
   if (n <= 7)  return t('math_welcome_young', language)
   if (n <= 10) return t('math_welcome_mid', language)

@@ -214,7 +214,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
 
           {band === 'young' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: isTablet ? 'center' : 'flex-start' }}>
-              <TodayPill emoji="🌱" text={`${today.today} leaves today`} color={accent} bg="rgba(76,182,133,.14)" />
+              <TodayPill emoji="🌱" text={`${today.today} ${t('tree_leaves_today', lang)}`} color={accent} bg="rgba(76,182,133,.14)" />
               <TodayPill emoji="🌳" text={`${today.monthTreeCount} trees this month`} color={accent} bg="rgba(76,182,133,.14)" />
             </div>
           )}
@@ -222,7 +222,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
           {band === 'mid' && (
             <div style={{ minWidth: 0, width: isTablet ? '100%' : undefined, flex: isTablet ? undefined : 1 }}>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: ink }}>
-                {today.today} leaves today · {today.monthTreeCount} this month 🌳
+                {today.today} {t('tree_leaves_today', lang)} · {today.monthTreeCount} {t('tree_this_month', lang)}
               </div>
               <div style={{ marginTop: 6, height: 7, borderRadius: 999, background: 'rgba(55,160,111,.16)', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${Math.min(100, (today.today / 4) * 100)}%`, borderRadius: 999, background: 'linear-gradient(90deg,#6BBF59,#4cb685)', transition: 'width .5s ease' }} />
