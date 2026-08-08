@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t, childLang } from '../lib/i18n'
 import { supabase } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
@@ -30,18 +31,19 @@ const REASON_EMOJI = {
   'Welcome bonus': '🎉', welcome: '🎉',
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr, lang) {
   const d = new Date(dateStr)
   const today = new Date()
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === today.toDateString()) return 'Today'
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  if (d.toDateString() === today.toDateString()) return t('gems_today', lang)
+  if (d.toDateString() === yesterday.toDateString()) return t('gems_yesterday', lang)
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export default function GemsScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const lang = childLang(child)
   const [ledger, setLedger] = useState(null)
 
   useEffect(() => {
@@ -52,8 +54,6 @@ export default function GemsScreen() {
       .eq('child_id', child.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
-        console.log('[GemsScreen] bt_ledger rows:', data)
-        console.log('[GemsScreen] error:', error)
         setLedger(data || [])
       })
   }, [])
@@ -81,7 +81,7 @@ export default function GemsScreen() {
       {/* Transaction history */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 20px 80px' }}>
         <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', marginBottom: 14 }}>
-          History
+          {t('gems_history', lang)}
         </div>
 
         {loading ? (
@@ -92,7 +92,7 @@ export default function GemsScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, paddingTop: 36, animation: 'fadeUp 0.4s ease both' }}>
             <TutoMascot size={150} expression="default" />
             <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6 }}>
-              No gems yet!<br />Complete a task to earn your first gems! ⭐
+              {t('gems_none_title', lang)}<br />{t('gems_none_body', lang)}
             </div>
           </div>
         ) : (
@@ -105,7 +105,12 @@ export default function GemsScreen() {
               // design — show them as-is instead of flattening every one of
               // them into a generic "Task", which would hide exactly the
               // detail these were written for.
-              const label = REASON_LABELS[key] || key || 'Task ⭐'
+              // Activity names come from the same dictionary the home tiles use, so a child
+              // does not see "My Math" here and "Matematiğim" one screen back. A free-text
+              // reason (a reward's own name, a parent's note) is shown as written.
+              const TASK_KEYS = { math: 'task_math', reading: 'task_reading', writing: 'task_writing',
+                                  story: 'task_writing', homework: 'task_homework', drawing: 'task_drawing' }
+              const label = TASK_KEYS[key] ? t(TASK_KEYS[key], lang) : (REASON_LABELS[key] || key || 'Task ⭐')
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               return (
                 <div
@@ -118,7 +123,7 @@ export default function GemsScreen() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{label}</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', marginTop: 2 }}>
-                      {row.created_at ? formatDate(row.created_at) : ''}
+                      {row.created_at ? formatDate(row.created_at, lang) : ''}
                     </div>
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 900, color: isPositive ? '#2EC486' : '#FF6B35', fontFamily: "'Baloo 2', cursive", whiteSpace: 'nowrap' }}>
