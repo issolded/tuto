@@ -1234,16 +1234,38 @@ async function rejectSubmissionTool(submissionId, parentId) {
 // note is optional and free-text (e.g. "Birthday") — used as the bt_ledger
 // reason in place of the generic 'bonus' so it reads clearly in the child's
 // gem history. Mirrors deductGemsTool's note handling exactly.
+// A parent's note becomes the ledger reason, which is what the child reads in their gem
+// history. Nothing checked it: a note went from a parent's message to a child's screen
+// untouched. The model happened to refuse one that needed refusing, but a model's good
+// judgement on the day is not a rule — this is.
+//
+// Refuses the whole action rather than quietly dropping the note, because a parent who wrote
+// something unsuitable should be asked for another, not have a gift arrive stripped of the
+// message they meant to send.
+async function screenParentNote(note, childAge) {
+  const text = typeof note === 'string' ? note.trim() : ''
+  if (!text) return { ok: true, note: null }
+  let screening
+  try { screening = await screenChildInput(text, childAge ?? 7) } catch { return { ok: true, note: text } }
+  if (screening?.appropriateness === 'inappropriate') {
+    return { ok: false, reason: screening.reason || 'not suitable for a child to read' }
+  }
+  return { ok: true, note: text }
+}
+
 async function giftGemsTool(childId, amount, parentId, note) {
   const n = Math.round(Number(amount))
   if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'amount must be between 1 and 500' }
 
   const { data: child } = await supabase
-    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+    .from('children').select('id, name, parent_id, age').eq('id', childId).maybeSingle()
   if (!child) return { success: false, error: 'child not found' }
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
-  const reason = (typeof note === 'string' && note.trim()) ? note.trim().slice(0, 80) : 'bonus'
+  const screened = await screenParentNote(note, child.age)
+  if (!screened.ok) return { success: false, note_rejected: true, reason: screened.reason,
+    hint: 'Tell the parent this note is not suitable for their child to read, and ask for a different one. Do NOT retry with the same note.' }
+  const reason = screened.note ? screened.note.slice(0, 80) : 'bonus'
   const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: n, reason })
   if (error) return { success: false, error: error.message }
 
@@ -1259,7 +1281,7 @@ async function deductGemsTool(childId, amount, parentId, note) {
   if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'amount must be between 1 and 500' }
 
   const { data: child } = await supabase
-    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+    .from('children').select('id, name, parent_id, age').eq('id', childId).maybeSingle()
   if (!child) return { success: false, error: 'child not found' }
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
@@ -1267,7 +1289,10 @@ async function deductGemsTool(childId, amount, parentId, note) {
   const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
   if (n > gems) return { success: false, error: 'insufficient gems', currentGems: gems }
 
-  const reason = (typeof note === 'string' && note.trim()) ? note.trim().slice(0, 80) : 'adjustment'
+  const screened = await screenParentNote(note, child.age)
+  if (!screened.ok) return { success: false, note_rejected: true, reason: screened.reason,
+    hint: 'Tell the parent this note is not suitable for their child to read, and ask for a different one. Do NOT retry with the same note.' }
+  const reason = screened.note ? screened.note.slice(0, 80) : 'adjustment'
   const { error } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: -n, reason })
   if (error) return { success: false, error: error.message }
 
