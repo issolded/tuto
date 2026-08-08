@@ -127,7 +127,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
 
       <div style={{ position: 'absolute', top: 120, left: 0, right: 0, textAlign: 'center', fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 800, fontSize: 74, letterSpacing: 6, color: '#fff', opacity: 0.45, pointerEvents: 'none' }}>story</div>
 
-      <button onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 14, left: 18, width: 38, height: 38, borderRadius: '50%', border: 'none', background: '#fff', color: '#241f3a', fontSize: 17, cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.14)', zIndex: 5 }}>✕</button>
+      <button onClick={onClose} aria-label={t('a_close', lang)} style={{ position: 'absolute', top: 14, left: 18, width: 38, height: 38, borderRadius: '50%', border: 'none', background: '#fff', color: '#241f3a', fontSize: 17, cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.14)', zIndex: 5 }}>✕</button>
 
       <div style={{ width: 300, height: 430, display: 'flex', alignItems: 'center', justifyContent: 'center', perspective: 1700, perspectiveOrigin: '50% 46%', position: 'relative', zIndex: 2 }}>
         <div style={{ position: 'relative', width: 250, height: 348, transformStyle: 'preserve-3d', transform: 'rotateX(2deg)' }}>
@@ -189,13 +189,13 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
             <button
               onClick={() => turnPage(-1)}
               disabled={pageIndex === 0}
-              aria-label="Previous page"
+              aria-label={t('a_prev_page', lang)}
               style={{ position: 'absolute', left: -16, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#fff', color: '#8a6bd4', fontSize: 16, fontWeight: 800, cursor: pageIndex === 0 ? 'default' : 'pointer', opacity: pageIndex === 0 ? 0.35 : 1, boxShadow: '0 3px 10px rgba(40,30,70,.14)', zIndex: 6 }}
             >‹</button>
             <button
               onClick={() => turnPage(1)}
               disabled={pageIndex === pages.length - 1}
-              aria-label="Next page"
+              aria-label={t('a_next_page', lang)}
               style={{ position: 'absolute', right: -16, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#fff', color: '#8a6bd4', fontSize: 16, fontWeight: 800, cursor: pageIndex === pages.length - 1 ? 'default' : 'pointer', opacity: pageIndex === pages.length - 1 ? 0.35 : 1, boxShadow: '0 3px 10px rgba(40,30,70,.14)', zIndex: 6 }}
             >›</button>
           </>

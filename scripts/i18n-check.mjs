@@ -29,7 +29,7 @@ const EXPORTS = ['t', 'translator', 'childLang', 'formatDay', 'localeFor', 'LANG
 // screens (the parent UI is not translated yet), and anything that never renders.
 const NOT_CHILD_FACING = [
   'lib/gemini.js', 'lib/supabase.js', 'lib/mathTemplates.js', 'lib/mathCurriculum.js',
-  'screens/Parent', 'screens/ReadingFlow.jsx', 'main.jsx', 'App.jsx',
+  'screens/Parent', 'lib/parentUI.jsx', 'screens/TaskSettings.jsx', 'screens/ReadingFlow.jsx', 'screens/ChildPin.jsx', 'screens/FamilySetup.jsx', 'main.jsx', 'App.jsx',
 ]
 
 function walk(dir, out = []) {
@@ -138,11 +138,39 @@ for (const file of walk(SRC)) {
     if (/^[^A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü]*$/.test(text)) return          // punctuation/emoji only
     if (/[{}<>=;()[\]`]/.test(text)) return                        // code, not prose
     if (text.endsWith(',')) return                                 // a style prop, continued
+    if (/^(return|const|let|var|else|case|default)\b/.test(text)) return   // a statement
+    if (/^[?:.|&]/.test(text)) return                              // a continued expression
     if (/\b[\w-]+:\s/.test(text)) return                          // key: value, not a sentence
     const words = text.split(/\s+/).filter(w => /[A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü]{2,}/.test(w))
     if (words.length < 2) return
     add('hardcoded-text', file, n, text.slice(0, 60))
   })
+
+  // Prose in a quoted string inside a JSX expression — {busy ? 'Sending…' : 'Add'}.
+  // This shape defeated both earlier scans, and the unused-key report is what exposed it:
+  // keys had been written for strings that were still sitting here untranslated.
+  if (childFacing) {
+    lines.forEach((raw, i) => {
+      const text = raw.trim()
+      if (/^(import|export|const [A-Z_]+ =)/.test(text)) return
+      if (!/[{?:]/.test(text)) return
+      for (const m of raw.matchAll(/'([^'\\]{4,60})'/g)) {
+        const v = m[1]
+        // Style values outnumber prose here by roughly ten to one, so the filter is written
+        // to let through only what reads like a sentence a child would see.
+        if (/[:;(){}<>=|#\\]|^,|,$/.test(v)) continue                     // style / code
+        if (/\d/.test(v)) continue                                       // 12px 28px, 1fr
+        if (/sans-serif|serif|cursive|monospace|Fredoka|Baloo|Nunito|Georgia/.test(v)) continue
+        const words = v.split(/\s+/).filter(w => /^[A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü'’.,!?…-]+$/.test(w)
+                                                && /[A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü]{2}/.test(w))
+        if (words.length !== v.split(/\s+/).length) continue             // something unwordy
+        const looksWritten = /^[A-ZÀ-ÿĞŞİÇÖÜ]/.test(v) || /[.!?…]$/.test(v)
+                          || /[\u{1F300}-\u{1FAFF}\u2600-\u27BF✓◷]/u.test(v)
+        if (!looksWritten || words.length < 2) continue
+        add('hardcoded-expr', file, i + 1, v)
+      }
+    })
+  }
 
   // Quoted prose passed to a prop that renders — title=, placeholder=, aria-label=
   if (childFacing) {
@@ -162,7 +190,7 @@ const unused = [...keys].filter(k =>
   ![...dynamic].some(p => k.startsWith(p))
 )
 
-const order = ['missing-import', 'lang-out-of-scope', 'unknown-key', 'hardcoded-text', 'hardcoded-attr', 'missing-translation']
+const order = ['missing-import', 'lang-out-of-scope', 'unknown-key', 'hardcoded-text', 'hardcoded-expr', 'hardcoded-attr', 'missing-translation']
 findings.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
 
 if (!findings.length) {

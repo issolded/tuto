@@ -75,6 +75,7 @@ async function uploadDiaryPhoto(file, childId) {
 // ── shared pieces ──────────────────────────────────────────────────────────────
 
 function EntryRow({ category, label, status, fresh, photoUrl, canAddPhoto, onAttachPhoto, attaching }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const C = CATS[category] || CATS.outside
   const fileRef = useRef()
   return (
@@ -99,7 +100,7 @@ function EntryRow({ category, label, status, fresh, photoUrl, canAddPhoto, onAtt
               marginTop: 3, border: 'none', background: 'none', padding: 0, cursor: attaching ? 'default' : 'pointer',
               fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11, color: attaching ? '#b3a894' : '#37a06f',
             }}>
-              {attaching ? 'Sending photo…' : '📷 Add a photo'}
+              {attaching ? t('tree_sending_photo', lang) : '📷 Add a photo'}
             </button>
             <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
               onChange={e => { const f = e.target.files?.[0]; if (f) onAttachPhoto(f); e.target.value = '' }} />
@@ -182,7 +183,7 @@ function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
             fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, cursor: busy ? 'default' : 'pointer',
             boxShadow: busy ? 'none' : '0 5px 14px rgba(55,160,111,.36)',
           }}>
-            {busy ? 'Sending…' : file ? 'Add with photo' : 'Add without a photo'}
+            {busy ? 'Sending…' : file ? t('tree_add_with_photo', lang) : 'Add without a photo'}
           </button>
         </div>
       </div>
@@ -227,7 +228,7 @@ function MatureRow({ category, label, status, fresh }) {
       <span style={{ width: 9, height: 9, borderRadius: '50%', background: C.color, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 500, fontSize: 14.5, color: '#27332c' }}>{label}</div>
-        <div style={{ fontWeight: 800, fontSize: 11, color: '#6c7c72', marginTop: 1 }}>{status === 'approved' ? 'Approved' : 'Sent for approval'}</div>
+        <div style={{ fontWeight: 800, fontSize: 11, color: '#6c7c72', marginTop: 1 }}>{status === 'approved' ? 'Approved' : t('tree_sent_approval', lang)}</div>
       </div>
       <span style={{
         fontWeight: 800, fontSize: 10.5, padding: '4px 9px', borderRadius: 999,
@@ -283,10 +284,10 @@ function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemo
             disabled={busy}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submit() }}
-            placeholder={prominent ? 'What did you do to help?' : 'Did something else? Write it here'}
+            placeholder={prominent ? t('tree_what_did_you', lang) : t('tree_write_here', lang)}
             style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: '#4a3f2e' }}
           />
-          <button onClick={() => fileRef.current?.click()} disabled={busy} title="Add a photo (optional)"
+          <button onClick={() => fileRef.current?.click()} disabled={busy} title={t('tree_photo_opt', lang)}
             style={{ background: 'none', border: 'none', cursor: busy ? 'default' : 'pointer', fontSize: 16, opacity: 0.6, flexShrink: 0 }}>📷</button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) onAttachPhoto(f) }} />
@@ -764,6 +765,7 @@ function BandMature({ groups, monthCount, remaining, onAdd, composer, nav }) {
 // ── entry point ──────────────────────────────────────────────────────────────────
 
 export default function MyTree() {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const band = bandFor(child?.age)
@@ -1066,12 +1068,12 @@ export default function MyTree() {
       <style>{`@keyframes ttPop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}`}</style>
       {loadError && (
         <div style={{ position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FFF0EE', color: '#D63030', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12.5, padding: '8px 16px', borderRadius: 12, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
-          ⚠️ Couldn't reach the server — try again in a bit.
+          {t('tree_no_server', lang)}
         </div>
       )}
       {moderationError && (
         <div style={{ position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FFF6E2', color: '#9B6E1A', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12.5, padding: '8px 16px', borderRadius: 12, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
-          Couldn't add that — try writing something else.
+          {t('tree_cant_add', lang)}
         </div>
       )}
       {photoError && (

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { formatDay, localeFor, childLang } from '../lib/i18n'
+import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
@@ -16,7 +16,7 @@ const SKINS = {
     accent: '#f79433', ink: '#20201e', radius: 22,
     gemIcon: '⭐', stepWord: 'step',
     readySay: "Grab some paper and a pencil.\nTap ready when you're set!",
-    done: 'Your masterpiece is saved. Your grown-up can see it too!',
+    done: t('dr_saved_seen', lang),
   },
   mid: {
     bg: 'linear-gradient(180deg,#F3EEFF 0%,#E4DBFB 100%)',
@@ -30,7 +30,7 @@ const SKINS = {
     accent: '#5860d8', ink: '#1b1f2a', radius: 14,
     gemIcon: '✦', stepWord: 'Step',
     readySay: "Grab paper and a pencil. When you're set, start the guided steps.",
-    done: 'Saved to your library. Reward added to your balance.',
+    done: t('dr_saved_reward', lang),
   },
 }
 
@@ -261,12 +261,13 @@ function DrawingThumb({ id, ageGroup, stepCount, category, radius = 14 }) {
 // Where a saved drawing stands. The reward is not instant — a grown-up has to
 // approve it — so the child needs to see which of theirs are still waiting.
 function statusLabel(p, sk) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   if (p.status === 'approved') {
     return p.reward_amount > 0
       ? { text: `${sk.gemIcon} +${p.reward_amount}`, color: sk.accent }
       : { text: '✓ Approved', color: '#37a06f' }
   }
-  if (p.status === 'rejected') return { text: 'Not this time', color: '#9a93a8' }
+  if (p.status === 'rejected') return { text: t('dr_not_this_time', lang), color: '#9a93a8' }
   return { text: '◷ Waiting', color: '#b9892f' }
 }
 
@@ -292,6 +293,7 @@ function PaintingStatus({ p, sk, compact }) {
 
 // ── Browse ───────────────────────────────────────────────────────────────────
 function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, onBack, loading, error, onRetry }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [cat, setCat] = useState('All')
   const [diff, setDiff] = useState('All')
   const shown = drawings
@@ -304,7 +306,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
         <Title sk={sk}>My Drawings</Title>
-        <button onClick={onLibrary} title="My Paintings" style={{
+        <button onClick={onLibrary} title={t('dr_my_paintings', lang)} style={{
           width: 42, height: 42, borderRadius: '50%', background: '#fff', border: 'none',
           boxShadow: '0 4px 12px rgba(40,30,70,.12)', cursor: 'pointer', fontSize: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -337,7 +339,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#8d83ad' }}>
-          Loading drawings…
+          {t('dr_loading', lang)}
         </div>
       ) : error ? (
         // Distinct from "no drawings yet" — a failed fetch used to fall
@@ -349,10 +351,10 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           boxShadow: '0 6px 16px rgba(40,30,70,.09)',
         }}>
           <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginBottom: 6 }}>
-            Couldn't load drawings
+            {t('dr_load_failed', lang)}
           </div>
           <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8d83ad', marginBottom: 16 }}>
-            Check your connection and try again.
+            {t('dr_check_conn', lang)}
           </div>
           <button onClick={onRetry} style={{
             padding: '11px 22px', borderRadius: 999, border: 'none', background: sk.accent, color: '#fff',
@@ -402,10 +404,10 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
         }}>✎</span>
         <span style={{ flex: 1 }}>
           <span style={{ display: 'block', fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink }}>
-            Draw my own idea
+            {t('dr_own_idea', lang)}
           </span>
           <span style={{ display: 'block', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#8d83ad' }}>
-            Skip the steps — draw whatever you want
+            {t('dr_skip_steps', lang)}
           </span>
         </span>
         <span style={{ color: sk.accent, fontSize: 17 }}>▸</span>
@@ -446,7 +448,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           width: '100%', marginTop: 10, background: 'none', border: 'none', cursor: 'pointer',
           fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 13, color: sk.accent, padding: '8px 0 20px',
         }}>
-          Open library ▸
+          {t('dr_open_library', lang)}
         </button>
       )}
       <div style={{ height: 16 }} />
@@ -456,11 +458,12 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
 
 // ── Ready ────────────────────────────────────────────────────────────────────
 function Ready({ sk, target, ageGroup, onStart, onBack }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
-        <Title sk={sk}>{target ? target.name_en : 'My own idea'}</Title>
+        <Title sk={sk}>{target ? target.name_en : t('dr_my_own_idea', lang)}</Title>
         <div style={{ width: 42 }} />
       </div>
 
@@ -529,6 +532,7 @@ function ConfirmModal({ sk, title, body, cancelLabel, confirmLabel, confirmDange
 
 // ── Guided steps ─────────────────────────────────────────────────────────────
 function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const total = target.step_count
   const tips = STEP_TIPS[target.id] || []
   const isLast = step >= total - 1
@@ -680,7 +684,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
 
       {confirmExit && (
         <ConfirmModal sk={sk}
-          title="Leave this drawing?" body="Your steps so far won't be saved."
+          title={t('dr_leave_drawing', lang)} body="Your steps so far won't be saved."
           cancelLabel="Keep drawing" confirmLabel="Leave"
           onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
       )}
@@ -690,12 +694,13 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
 
 // ── Upload ───────────────────────────────────────────────────────────────────
 function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, error, onBack }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const fileRef = useRef(null)
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
-        <Title sk={sk}>{target ? target.name_en : 'My own idea'}</Title>
+        <Title sk={sk}>{target ? target.name_en : t('dr_my_own_idea', lang)}</Title>
         <div style={{ width: 42 }} />
       </div>
 
@@ -708,7 +713,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
         }}>📷</span>
         <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 500, fontSize: 15.5, color: sk.ink }}>
-          Take a photo of your finished drawing!
+          {t('dr_take_photo', lang)}
         </span>
       </div>
 
@@ -739,7 +744,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
       )}
 
       <button onClick={onSubmit} disabled={!photo || submitting} style={ctaStyle(sk, !photo || submitting)}>
-        {submitting ? 'Saving…' : 'Add to my library'}
+        {submitting ? 'Saving…' : t('dr_add_to_library', lang)}
       </button>
     </>
   )
@@ -837,7 +842,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
               {p.photo
                 ? <img src={p.photo} alt="" loading="lazy" style={{ width: '100%', height: 118, objectFit: 'cover', display: 'block' }} />
                 : <div style={{ height: 118, background: '#F3EFE6' }} />}
-              <button onClick={() => setConfirmTarget(p)} disabled={deletingId === p.id} aria-label="Delete" style={{
+              <button onClick={() => setConfirmTarget(p)} disabled={deletingId === p.id} aria-label={t('dr_delete', lang)} style={{
                 position: 'absolute', top: 7, right: 7, width: 26, height: 26, borderRadius: '50%', border: 'none',
                 background: 'rgba(30,30,25,.55)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -856,7 +861,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
 
       {confirmTarget && (
         <ConfirmModal sk={sk}
-          title="Delete this painting?"
+          title={t('dr_delete_painting', lang)}
           body={confirmTarget.reward_amount > 0
             ? `This removes it from your library. The ${sk.gemIcon} +${confirmTarget.reward_amount} you already earned stays yours.`
             : "This removes it from your library — you can't undo this."}

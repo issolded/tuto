@@ -1,3 +1,4 @@
+import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
 import { generateProblem, TOPICS } from '../lib/mathTemplates'
 
@@ -5,6 +6,7 @@ import { generateProblem, TOPICS } from '../lib/mathTemplates'
 // any menu, not wired to MathScreen/levels/gems — pure sandbox at /math-lab to try
 // templates and tune them before anything touches production.
 export default function MathLab() {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [topic, setTopic] = useState(TOPICS[0])
   const [level, setLevel] = useState(1)
   const [problem, setProblem] = useState(() => generateProblem(TOPICS[0], 1))
@@ -65,7 +67,7 @@ export default function MathLab() {
             value={input}
             onChange={e => { setInput(e.target.value); setResult(null) }}
             onKeyDown={e => e.key === 'Enter' && check()}
-            placeholder="your answer"
+            placeholder={t('lab_your_answer', lang)}
             style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, padding: '8px 10px', borderRadius: 8, border: 'none' }}
           />
           <button onClick={check} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#2EC486', color: 'white', fontFamily: 'monospace', cursor: 'pointer' }}>
@@ -83,7 +85,7 @@ export default function MathLab() {
           disabled={hintShown >= problem.hint_steps.length}
           style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #8d83ad', background: 'none', color: '#fff', fontFamily: 'monospace', cursor: hintShown >= problem.hint_steps.length ? 'default' : 'pointer', opacity: hintShown >= problem.hint_steps.length ? 0.5 : 1 }}
         >
-          {hintShown === 0 ? 'Show help' : hintShown < problem.hint_steps.length ? 'More help' : 'Fully revealed'}
+          {hintShown === 0 ? t('lab_show_help', lang) : hintShown < problem.hint_steps.length ? t('lab_more_help', lang) : t('lab_fully_revealed', lang)}
         </button>
         {hintShown > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -97,7 +99,7 @@ export default function MathLab() {
       </div>
 
       <button onClick={() => nextProblem()} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#7C5CBF', color: 'white', fontFamily: 'monospace', cursor: 'pointer' }}>
-        Next problem →
+        {t('lab_next_problem', lang)}
       </button>
 
       <details style={{ marginTop: 30, fontSize: 12, color: '#666' }}>

@@ -107,6 +107,7 @@ export default function HomeworkScreen() {
   }
 
   async function handleSend() {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
     if (!photos.length || submitting) return
     setSubmitting(true)
     setError(null)
@@ -129,7 +130,7 @@ export default function HomeworkScreen() {
     } catch (err) {
       setSubmissions(prev => prev.filter(r => r.id !== optimistic.id))
       setPhase('idle')
-      setError(err.message || 'Gönderilemedi, tekrar dener misin?')
+      setError(err.message || t('hw_send_failed', lang))
     } finally {
       setSubmitting(false)
     }
@@ -169,7 +170,7 @@ export default function HomeworkScreen() {
           </p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 999, padding: '11px 18px', marginTop: 20, boxShadow: '0 6px 16px rgba(40,30,70,.12)', fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK }}>
             <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#f5d35f', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⏳</span>
-            Waiting for ✔ · then ⭐
+            {t('hw_waiting_for', lang)}
           </div>
         </div>
         <div style={{ flex: '0 0 auto', padding: '14px 22px 22px' }}>
@@ -219,7 +220,7 @@ export default function HomeworkScreen() {
           {photos.map((p, i) => (
             <div key={p.url} className="hw-pop" style={{ position: 'relative', aspectRatio: '1', borderRadius: 20, overflow: 'hidden', background: '#eadff9', border: '3px solid #fff', boxShadow: '0 5px 14px rgba(40,30,70,.10)' }}>
               <img src={p.url} alt={`page ${i + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button onClick={() => removePhoto(i)} aria-label="remove" style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', background: 'rgba(32,32,30,.72)', border: 'none', color: '#fff', fontSize: 16, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+              <button onClick={() => removePhoto(i)} aria-label={t('hw_remove', lang)} style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', background: 'rgba(32,32,30,.72)', border: 'none', color: '#fff', fontSize: 16, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
             </div>
           ))}
           {count < MAX_PHOTOS && (
@@ -246,7 +247,7 @@ export default function HomeworkScreen() {
           return (
             <div style={{ marginTop: 22 }}>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, margin: '0 2px 11px', display: 'flex', alignItems: 'center', gap: 7 }}>
-                📅 This week
+                {t('hw_this_week', lang)}
               </div>
               {rows.map(row => {
                 const st = HW_STATUS[row.status]
@@ -287,7 +288,7 @@ export default function HomeworkScreen() {
             {t('hw_looking_dots', lang)}
           </div>
           <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15, color: INK_SOFT, marginTop: 6 }}>
-            One sec 👀
+            {t('hw_one_sec', lang)}
           </div>
         </div>
       )}

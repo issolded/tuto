@@ -72,7 +72,7 @@ export default function FlippingBook() {
         <div className="fb-spark a">✨</div>
         <div className="fb-spark b">✨</div>
         <div className="fb-spark c">⭐</div>
-        <svg className="fb-mascot-svg" viewBox="0 0 200 200" aria-label="Tuto reading" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+        <svg className="fb-mascot-svg" viewBox="0 0 200 200" aria-label={t('a_tuto_reading', lang)} style={{ width: '100%', height: '100%', overflow: 'visible' }}>
           <path d="M74 48 q-10 -26 12 -28 q8 13 -1 30 Z" fill="#a98ce6" stroke="#241f3a" strokeWidth="6" strokeLinejoin="round"/>
           <path d="M126 48 q10 -26 -12 -28 q-8 13 1 30 Z" fill="#a98ce6" stroke="#241f3a" strokeWidth="6" strokeLinejoin="round"/>
           <circle cx="100" cy="100" r="56" fill="#a98ce6" stroke="#241f3a" strokeWidth="6"/>

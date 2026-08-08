@@ -1,3 +1,4 @@
+import { t, childLang } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
@@ -149,7 +150,7 @@ export default function StoriesScreen() {
   const location = useLocation()
   const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
-  const language = child?.language === 'tr' ? 'tr' : 'en'
+  const language = childLang(child)
 
   const [loadingStories, setLoadingStories] = useState(true)
   const [stories, setStories] = useState([])
@@ -444,13 +445,13 @@ export default function StoriesScreen() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 0 }}>
           <TutoMascot size={140} expression="excited" style={{ animation: 'fadeUp 0.4s ease both' }} />
           <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 20, marginBottom: 28, animation: 'fadeUp 0.4s ease 0.1s both' }}>
-            What will your story be called? 📖
+            {t('st_what_called', language)}
           </div>
           <input
             type="text"
             value={storyTitle}
             onChange={e => { setStoryTitle(e.target.value); setTitleSuggestion(null) }}
-            placeholder="My amazing story..."
+            placeholder={t('st_placeholder', language)}
             autoFocus
             style={{ width: '100%', borderRadius: 18, border: '2.5px solid #A5D6A7', padding: '16px 18px', fontSize: 16, fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#2D5016', background: 'white', outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 12px rgba(46,196,134,0.10)', animation: 'fadeUp 0.4s ease 0.15s both' }}
             onKeyDown={e => e.key === 'Enter' && storyTitle.trim() && !titleSuggestion && handleTitleNext()}
@@ -469,13 +470,13 @@ export default function StoriesScreen() {
                   onClick={() => { setStoryTitle(titleSuggestion); setTitleSuggestion(null); setStep('write') }}
                   style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 14, padding: '12px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: 'white', cursor: 'pointer' }}
                 >
-                  Yes, fix it!
+                  {t('st_yes_fix', language)}
                 </button>
                 <button
                   onClick={() => { setTitleSuggestion(null); setStep('write') }}
                   style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 14, padding: '12px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
                 >
-                  No, keep mine
+                  {t('st_no_keep', language)}
                 </button>
               </div>
             </div>
@@ -492,7 +493,7 @@ export default function StoriesScreen() {
             onClick={() => { setStoryTitle(''); setTitleSuggestion(null); setStep('write') }}
             style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 14, textDecoration: 'underline', animation: 'fadeUp 0.4s ease 0.25s both' }}
           >
-            I'll think of a title later
+            {t('st_title_later', language)}
           </button>
         </div>
       </div>
@@ -568,7 +569,7 @@ export default function StoriesScreen() {
               onClick={() => fileRef.current?.click()}
               style={{ width: '100%', background: 'none', border: '2.5px dashed #A5D6A7', borderRadius: 18, padding: '14px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer', marginBottom: 14 }}
             >
-              📸 Add another page
+              {t('st_add_page', language)}
             </button>
           )}
 
@@ -578,7 +579,7 @@ export default function StoriesScreen() {
               onClick={() => fileRef.current?.click()}
               style={{ width: '100%', background: '#2D5016', border: 'none', borderRadius: 20, padding: '20px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(45,80,22,0.25)', animation: 'fadeUp 0.35s ease 0.2s both' }}
             >
-              I'm ready, Tuto! 📸
+              {t('st_im_ready', language)}
             </button>
           )}
 
@@ -633,7 +634,7 @@ export default function StoriesScreen() {
           </div>
           {isBlocked ? (
             <button onClick={() => setStep('write')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
-              ← Go back and try again
+              {t('st_go_back', language)}
             </button>
           ) : (
             <button
@@ -667,7 +668,7 @@ export default function StoriesScreen() {
             />
           ) : (
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
-              Your story! 📖
+              {t('st_your_story', language)}
             </div>
           )}
           <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both' }}>
@@ -699,15 +700,15 @@ export default function StoriesScreen() {
             </div>
           )}
           <button onClick={goToCorrections} style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.35s ease 0.15s both' }}>
-            Looks good! →
+            {t('st_looks_good', language)}
           </button>
           {isEditMode && (
             <>
               <button onClick={() => { setCoverReturnStep('spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', marginTop: 10, fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
-                🎨 Edit cover
+                {t('st_edit_cover', language)}
               </button>
               <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '12px 8px' }}>
-                🗑️ Delete this story
+                {t('st_delete_story', language)}
               </button>
             </>
           )}
@@ -726,13 +727,13 @@ export default function StoriesScreen() {
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'fixed' : s)); setActiveError(null) }}
                   style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 16, padding: '14px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer' }}
                 >
-                  ✅ Yes, fix it!
+                  {t('st_yes_fix_tick', language)}
                 </button>
                 <button
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'not_sure' : s)); setActiveError(null) }}
                   style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
                 >
-                  🤷 Not sure
+                  {t('st_not_sure', language)}
                 </button>
               </div>
             </div>
@@ -774,7 +775,7 @@ export default function StoriesScreen() {
           <div style={{ background: 'white', borderRadius: 24, padding: '16px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 16, animation: 'fadeUp 0.35s ease 0.08s both', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <TutoMascot size={64} expression="excited" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: 14, fontWeight: 700, color: '#2D5016', lineHeight: 1.7, paddingTop: 8 }}>
-              Here's your story with the fixes! How does it look? ✨
+              {t('st_with_fixes', language)}
             </div>
           </div>
           <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 24, animation: 'fadeUp 0.35s ease 0.12s both' }}>
@@ -796,16 +797,16 @@ export default function StoriesScreen() {
             </button>
             {!editingCompleted && (
               <button onClick={() => finishStory('in_progress')} style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}>
-                📝 I'll finish this book later
+                {t('st_finish_later', language)}
               </button>
             )}
             {isEditMode && (
               <>
                 <button onClick={() => { setCoverReturnStep('corrected'); setStep('cover') }} style={{ background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
-                  🎨 Edit cover
+                  {t('st_edit_cover', language)}
                 </button>
                 <button onClick={() => setConfirmDeleteStory(true)} style={{ background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
-                  🗑️ Delete this story
+                  {t('st_delete_story', language)}
                 </button>
               </>
             )}
@@ -885,7 +886,7 @@ export default function StoriesScreen() {
             {/* Story text area */}
             <div style={{ flex: 1, padding: '20px 18px 20px 14px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#4cb685', marginBottom: 10, letterSpacing: 0.4, textTransform: 'uppercase' }}>
-                ✏️ Tap any word to fix it
+                {t('st_tap_word', language)}
               </div>
               <div
                 ref={editorRef}
@@ -940,16 +941,16 @@ export default function StoriesScreen() {
                 onClick={() => finishYoungEditor('in_progress')}
                 style={{ width: '100%', background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
               >
-                📝 I'll finish this book later
+                {t('st_finish_later', language)}
               </button>
             )}
             {isEditMode && (
               <>
                 <button onClick={() => { setCoverReturnStep('gentle-spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
-                  🎨 Edit cover
+                  {t('st_edit_cover', language)}
                 </button>
                 <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
-                  🗑️ Delete this story
+                  {t('st_delete_story', language)}
                 </button>
               </>
             )}
@@ -975,7 +976,7 @@ export default function StoriesScreen() {
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'not_sure' : s)); setActiveError(null) }}
                   style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
                 >
-                  ✏️ No, fix it
+                  {t('st_no_fix_it', language)}
                 </button>
               </div>
             </div>
@@ -1104,13 +1105,13 @@ export default function StoriesScreen() {
               onClick={saveCover}
               style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '16px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
             >
-              📚 Done, save my cover!
+              {t('st_save_cover', language)}
             </button>
             <button
               onClick={finishCover}
               style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
             >
-              Skip for now →
+              {t('st_skip_for_now', language)}
             </button>
           </div>
         </div>
@@ -1153,13 +1154,13 @@ export default function StoriesScreen() {
           onClick={() => setStep('cover')}
           style={{ marginTop: 32, background: isYoung ? '#4cb685' : '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
         >
-          🎨 Design your cover!
+          {t('st_design_cover', language)}
         </button>
         <button
           onClick={resetState}
           style={{ marginTop: 10, background: 'none', border: 'none', color: isYoung ? '#4cb685' : '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', animation: 'fadeUp 0.4s ease 0.25s both' }}
         >
-          Back to My Stories
+          {t('st_back_to_stories', language)}
         </button>
       </div>
     )
@@ -1189,7 +1190,7 @@ export default function StoriesScreen() {
         {!loadingStories && inProgressStory && (
           <div style={{ marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
-              Continue Writing 📝
+              {t('st_continue_writing', language)}
             </div>
             <button
               onClick={() => openStoryForEdit(inProgressStory, '/child/stories')}
@@ -1230,7 +1231,7 @@ export default function StoriesScreen() {
             onClick={startNewStory}
             style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', width: '100%', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.35s ease 0.14s both' }}
           >
-            ✏️ Write New Story
+            {t('st_write_new', language)}
           </button>
         )}
       </div>
