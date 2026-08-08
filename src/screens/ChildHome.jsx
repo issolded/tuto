@@ -10,7 +10,7 @@ const ACCENT = '#f79433'
 const INK = '#241f3a'
 const INK_SOFT = '#8d83ad'
 const LILAC = '#e7ddf6'
-const FRED = "'Fredoka', 'Nunito', sans-serif"
+const FRED = "'Fredoka', 'Baloo 2', 'Nunito', sans-serif"
 
 const HOME_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');

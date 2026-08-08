@@ -16,7 +16,7 @@ const INK       = '#241f3a'
 const INK_SOFT  = '#8d83ad'
 const GREEN     = '#4cb685'
 const ORANGE    = '#f79433'
-const FRED      = "'Fredoka', 'Nunito', sans-serif"
+const FRED      = "'Fredoka', 'Baloo 2', 'Nunito', sans-serif"
 const FLOW_BG   = 'linear-gradient(172deg,#EAF5FF 0%,#D2E9FB 100%)'
 
 const ANIM = `

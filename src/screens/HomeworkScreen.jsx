@@ -15,7 +15,7 @@ const INK_SOFT = '#8d83ad'
 const ORANGE = '#f79433'
 const SKY = '#d4e4fb'
 const MINT = '#d4eed9'
-const FRED = "'Fredoka', 'Nunito', sans-serif"
+const FRED = "'Fredoka', 'Baloo 2', 'Nunito', sans-serif"
 const MAX_PHOTOS = 15
 
 const HW_CSS = `
