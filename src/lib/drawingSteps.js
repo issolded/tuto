@@ -209,6 +209,25 @@ export const DRAWING_STEPS = {
       'Uzun, savrulan saçları çiz, sonra pelerini ve pantolonu bol ince çizgiyle gölgele.',
     ],
   },
+  // Audited against drawings/axolotl/*.webp.
+  axolotl: {
+    en: [
+      'Draw a big wide circle for the head, and a rounder body just below it.',
+      'Add two little arms out to the sides and two short legs underneath.',
+      'Draw two big oval eyes, filled in dark, with two white dots in each.',
+      'Add a wide open smile.',
+      'Draw three feathery frills on each side of the head, and a long flat tail curving to the left.',
+      'Go over all the outlines to make them dark and smooth.',
+    ],
+    tr: [
+      'Kafa için büyük ve geniş bir daire, hemen altına da daha yuvarlak bir gövde çiz.',
+      'İki yanına küçük kollar, altına da iki kısa bacak ekle.',
+      'İçi koyu doldurulmuş iki büyük oval göz çiz, her birine iki beyaz nokta koy.',
+      'Kocaman, açık bir gülümseme ekle.',
+      'Kafasının iki yanına üçer tüylü solungaç, sola doğru kıvrılan uzun ve yassı bir kuyruk çiz.',
+      'Bütün dış çizgilerin üstünden geçip koyu ve düzgün hâle getir.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
