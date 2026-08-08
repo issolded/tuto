@@ -4,6 +4,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
+import { t } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -178,11 +179,11 @@ function rememberSeen(kind, childId, level, items) {
   } catch { /* private mode / quota — repeated questions are a nuisance, not a failure */ }
 }
 
-function getWelcomeMsg(age) {
+function getWelcomeMsg(age, lang) {
   const n = Number(age)
-  if (n <= 7)  return "Let's go on a number adventure! 🚀\nI'll show you some fun puzzles — just do your best!"
-  if (n <= 10) return "Time to level up your math powers! ⚡\nShow me what you've got!"
-  return "Ready for a challenge? 🔥\nLet's see those math skills!"
+  if (n <= 7)  return t('math_welcome_young', language)
+  if (n <= 10) return t('math_welcome_mid', language)
+  return t('math_welcome_older', language)
 }
 
 function getScoreMsg(pct, age) {
@@ -1444,7 +1445,7 @@ export default function MathScreen() {
         <TutoMascot size={150} expression="excited" color={MATH}
           style={{ animation: 'float 3s ease-in-out infinite' }} />
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-          {getWelcomeMsg(age)}
+          {getWelcomeMsg(age, language)}
         </div>
         {level !== null && (
           <div style={{
@@ -1452,7 +1453,7 @@ export default function MathScreen() {
             background: 'rgba(90,169,230,.16)', borderRadius: 14, padding: '8px 18px',
             fontFamily: FRED, fontWeight: 600, fontSize: 14, color: MATH_DEEP,
           }}>
-            📊 {curriculumTopics[qIdx]?.name || yearLabelForAge(age) || 'Math Adventure'}
+            📊 {curriculumTopics[qIdx]?.name || yearLabelForAge(age) || t('math_adventure', language)}
           </div>
         )}
         <button
@@ -1463,7 +1464,7 @@ export default function MathScreen() {
             padding: '17px 54px', fontFamily: FRED, fontSize: 20, fontWeight: 600,
             cursor: 'pointer', boxShadow: '0 10px 28px rgba(61,143,207,.42)', marginTop: 4,
           }}
-        >Let's go! →</button>
+        >{t('math_lets_go', language)}</button>
       </div>
     </div>
   )
@@ -1477,7 +1478,7 @@ export default function MathScreen() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '52px 20px 10px' }}>
         <BackBtn />
         <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: INK, letterSpacing: '-.3px' }}>
-          How do you want to work? 🤔
+          {t('math_mode_title', language)}
         </span>
       </div>
 
@@ -1493,13 +1494,13 @@ export default function MathScreen() {
           }}
         >
           <span style={{ fontSize: 42 }}>✏️</span>
-          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>On Paper</div>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>{t('math_on_paper', language)}</div>
           <div style={{
             alignSelf: 'flex-start', background: MATH, color: '#fff',
             borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
           }}>⭐ Up to {maxGems} Gems</div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
-            We love pen and paper! Your brain grows every time you write! 🧠
+            {t('math_paper_desc', language)}
           </div>
         </button>
 
@@ -1514,13 +1515,13 @@ export default function MathScreen() {
           }}
         >
           <span style={{ fontSize: 42 }}>📱</span>
-          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>On Screen</div>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>{t('math_on_screen', language)}</div>
           <div style={{
             alignSelf: 'flex-start', background: GREEN, color: '#fff',
             borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
           }}>⭐ Up to {maxGems} Gems</div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
-            Type your answers right here, one by one.
+            {t('math_screen_desc', language)}
           </div>
         </button>
       </div>
@@ -1540,7 +1541,7 @@ export default function MathScreen() {
         <TutoMascot size={140} expression="thinking" color={MATH}
           style={{ animation: 'float 2s ease-in-out infinite' }} />
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 20, color: INK, textAlign: 'center' }}>
-          {step === 'loading' ? 'Preparing your puzzles…' : 'Checking your work…'}
+          {t(step === 'loading' ? 'math_preparing' : 'math_checking', language)}
         </div>
         <div style={{ display: 'flex', gap: 7 }}>
           {[0, 1, 2].map(i => (
@@ -1850,7 +1851,7 @@ export default function MathScreen() {
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: accuracy >= 80 ? GREEN : ORANGE, lineHeight: 1.05 }}>
                 {accuracy}%
               </div>
-              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>{numCorrect} / {questions.length} correct</div>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>{numCorrect} / {questions.length} {t('math_correct', language)}</div>
             </div>
             <div style={{ width: 1, height: 56, background: '#eee' }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
@@ -1859,7 +1860,7 @@ export default function MathScreen() {
                 {evalResult.gems_earned == null ? '—' : `+${evalResult.gems_earned}`}
               </div>
               <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>
-                {evalResult.gems_earned == null ? "Couldn't save — try again later" : 'Gems ⭐'}
+                {evalResult.gems_earned == null ? t('math_save_failed', language) : `${t('math_gems_word', language)} ⭐`}
               </div>
             </div>
           </div>

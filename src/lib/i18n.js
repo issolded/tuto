@@ -60,6 +60,16 @@ const STRINGS = {
   math_lets_go:       { en: "Let's go! →",   tr: 'Hadi başlayalım! →' },
   math_correct:       { en: 'correct',       tr: 'doğru' },
   math_back_home:     { en: 'Back home',     tr: 'Ana sayfaya dön' },
+  math_adventure:     { en: 'Math Adventure', tr: 'Matematik Macerası' },
+  math_preparing:     { en: 'Preparing your puzzles…', tr: 'Sorularını hazırlıyorum…' },
+  math_checking:      { en: 'Checking your work…',     tr: 'Yaptıklarına bakıyorum…' },
+  math_save_failed:   { en: "Couldn't save — try again later", tr: 'Kaydedemedim — birazdan tekrar dene' },
+  math_welcome_young: { en: "Let's go on a number adventure! 🚀\nI'll show you some fun puzzles — just do your best!",
+                        tr: 'Hadi sayı macerasına çıkalım! 🚀\nSana eğlenceli sorular göstereceğim — elinden geleni yap yeter!' },
+  math_welcome_mid:   { en: "Time to level up your math powers! ⚡\nShow me what you've got!",
+                        tr: 'Matematik gücünü artırma zamanı! ⚡\nHadi göster kendini!' },
+  math_welcome_older: { en: "Ready for a challenge? 🔥\nLet's see those math skills!",
+                        tr: 'Zorlu bir şeye hazır mısın? 🔥\nBakalım matematiğin nasıl!' },
 }
 
 // `t('math_on_paper', lang)` — falls back to English rather than showing a key, because a
