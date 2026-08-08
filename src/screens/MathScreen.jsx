@@ -1498,7 +1498,7 @@ export default function MathScreen() {
           <div style={{
             alignSelf: 'flex-start', background: MATH, color: '#fff',
             borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-          }}>⭐ Up to {maxGems} Gems</div>
+          }}>⭐ {t('math_up_to_gems', language)} {maxGems} {t('math_gems_word', language)}</div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             {t('math_paper_desc', language)}
           </div>
@@ -1519,7 +1519,7 @@ export default function MathScreen() {
           <div style={{
             alignSelf: 'flex-start', background: GREEN, color: '#fff',
             borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-          }}>⭐ Up to {maxGems} Gems</div>
+          }}>⭐ {t('math_up_to_gems', language)} {maxGems} {t('math_gems_word', language)}</div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             {t('math_screen_desc', language)}
           </div>
