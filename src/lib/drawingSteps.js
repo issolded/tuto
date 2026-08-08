@@ -190,6 +190,25 @@ export const DRAWING_STEPS = {
       'Sıra sıra kavisli pullar çiz, yanına da yukarı süzülen birkaç kabarcık koy.',
     ],
   },
+  // Audited against drawings/master/*.webp. Five steps for a whole standing figure, so each
+  // one is a big jump — this is the hardest drawing in the set and the wording says what to
+  // block in rather than pretending it is easy.
+  master: {
+    en: [
+      'Draw a head with a pointed chin, a guide line down the middle and one across, then the neck and the collar.',
+      'Draw sharp narrow eyes under strong eyebrows, and a small mouth.',
+      'Drape a wide cloak from the shoulders, flaring out, with the body showing below it.',
+      'Add the arms — one hand on the hip, the other down by a sword — a belt, and the legs.',
+      'Draw long flowing hair, then shade the cloak and trousers with lots of fine lines.',
+    ],
+    tr: [
+      'Sivri çeneli bir kafa çiz, ortasından ve enine yardım çizgileri geçir, sonra boynu ve yakayı ekle.',
+      'Kalın kaşların altına keskin, ince gözler ve küçük bir ağız çiz.',
+      'Omuzlardan aşağı yayılan geniş bir pelerin çiz, altından gövde görünsün.',
+      'Kolları ekle — bir el belde, öbürü aşağıda kılıcın yanında — bir kemer ve bacaklar.',
+      'Uzun, savrulan saçları çiz, sonra pelerini ve pantolonu bol ince çizgiyle gölgele.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
