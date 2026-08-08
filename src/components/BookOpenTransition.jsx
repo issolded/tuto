@@ -123,7 +123,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
         }
       `}</style>
 
-      <div style={{ position: 'absolute', top: 120, left: 0, right: 0, textAlign: 'center', fontFamily: "'Baloo 2', cursive", fontWeight: 800, fontSize: 74, letterSpacing: 6, color: '#fff', opacity: 0.45, pointerEvents: 'none' }}>story</div>
+      <div style={{ position: 'absolute', top: 120, left: 0, right: 0, textAlign: 'center', fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 800, fontSize: 74, letterSpacing: 6, color: '#fff', opacity: 0.45, pointerEvents: 'none' }}>story</div>
 
       <button onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 14, left: 18, width: 38, height: 38, borderRadius: '50%', border: 'none', background: '#fff', color: '#241f3a', fontSize: 17, cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.14)', zIndex: 5 }}>✕</button>
 
@@ -136,12 +136,12 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
             {pageIndex === 0 && (
               <>
                 <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || 'Untitled Story'}</div>
-                <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
+                <div style={{ fontFamily: "'Fredoka', 'Nunito', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
               </>
             )}
             <div style={{ fontFamily: "'Lexend', sans-serif", fontSize: 13, lineHeight: 1.78, color: '#1a3d2b', whiteSpace: 'pre-wrap', flex: 1, minHeight: 0 }}>{pages[pageIndex]}</div>
             {pages.length > 1 && (
-              <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 11, color: '#c2cfc7', alignSelf: 'center', marginTop: 6, flexShrink: 0 }}>{pageIndex + 1} / {pages.length}</div>
+              <div style={{ fontFamily: "'Fredoka', 'Nunito', sans-serif", fontWeight: 600, fontSize: 11, color: '#c2cfc7', alignSelf: 'center', marginTop: 6, flexShrink: 0 }}>{pageIndex + 1} / {pages.length}</div>
             )}
           </div>
 
@@ -156,7 +156,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
               {turn.showTitle && (
                 <>
                   <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || 'Untitled Story'}</div>
-                  <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
+                  <div style={{ fontFamily: "'Fredoka', 'Nunito', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
                 </>
               )}
               <div style={{ fontFamily: "'Lexend', sans-serif", fontSize: 13, lineHeight: 1.78, color: '#1a3d2b', whiteSpace: 'pre-wrap', flex: 1, minHeight: 0, overflow: 'hidden' }}>{turn.content}</div>
@@ -201,13 +201,13 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
       </div>
 
       <div style={{ textAlign: 'center', position: 'relative', zIndex: 2, opacity: isOpen ? 1 : 0, transform: isOpen ? 'translateY(0)' : 'translateY(8px)', transition: 'all 0.4s ease' }}>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 800, fontSize: 20, color: '#8a6bd4' }}>{story.title || 'Untitled Story'}</div>
-        <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 3 }}>
+        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 800, fontSize: 20, color: '#8a6bd4' }}>{story.title || 'Untitled Story'}</div>
+        <div style={{ fontFamily: "'Fredoka', 'Nunito', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 3 }}>
           Written by {childName}
         </div>
         <button
           onClick={onEdit}
-          style={{ marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 16, padding: '12px 28px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}
+          style={{ marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 16, padding: '12px 28px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}
         >
           ✏️ Edit
         </button>

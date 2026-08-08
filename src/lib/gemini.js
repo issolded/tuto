@@ -224,14 +224,18 @@ Return JSON only, no other text:
   "too_short": boolean,
   "encouragement": "short warm message max 2 sentences in ${lang}",
   "spelling_errors": [{ "wrong": "misspelled word as written", "correct": "correct spelling", "index": 0 }],
-  "gems_earned": number
+  "quality": number
 }
+Set "quality" 0-100 for how well the story is told for this age — ideas, sentences, spelling
+effort. Judge the WRITING, not its length: a short story told well scores high. Do NOT decide
+any reward; the amount is not yours to set.
 Rules:
 - word_count: count words in the text above
 - too_short: true if word_count < 15
 - encouragement: always positive and warm, age-appropriate for a ${n}-year-old, in ${lang}, never mention evaluation or checking
 - has_profanity: true if any profanity or inappropriate language is present
-- gems_earned: 10 minimum, up to 50 based on word_count and quality; independent of spelling
+- quality: judge the writing for this age. Length is NOT quality — the server weighs effort
+  separately and will not thank you for inflating this because a story is long.
 - spelling_errors: for the 11+ path only — flag unambiguous misspellings in the text with a single clear correction. Empty array is fine; when in doubt, omit.`
   return callGemini([{ text: prompt }])
 }

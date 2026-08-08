@@ -120,11 +120,11 @@ function ConfirmDeleteStoryModal({ onConfirm, onCancel, deleting }) {
     <div onClick={e => { e.stopPropagation(); !deleting && onCancel() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 28 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 28, padding: '32px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>🗑️</div>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', marginBottom: 8 }}>Delete this story?</div>
+        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', marginBottom: 8 }}>Delete this story?</div>
         <div style={{ fontSize: 14, color: '#6A9956', fontWeight: 600, marginBottom: 28, lineHeight: 1.5 }}>This can't be undone.</div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onCancel} disabled={deleting} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0FFF4', color: '#2D5016', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} disabled={deleting} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)', opacity: deleting ? 0.6 : 1 }}>
+          <button onClick={onCancel} disabled={deleting} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0FFF4', color: '#2D5016', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onConfirm} disabled={deleting} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)', opacity: deleting ? 0.6 : 1 }}>
             {deleting ? 'Deleting…' : 'Delete'}
           </button>
         </div>
@@ -308,7 +308,7 @@ export default function StoriesScreen() {
             storyId,
             title: displayTitle, topic: chosenIdea?.topic || '',
             transcribed_text: editorText, corrected_text: savedText,
-            status, gems_earned: evalResult?.gems_earned || 0,
+            status, quality: evalResult?.quality ?? 0,
           })
           if (saved.story) {
             setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
@@ -343,7 +343,7 @@ export default function StoriesScreen() {
           storyId,
           title: displayTitle, topic: chosenIdea?.topic || '',
           transcribed_text: baseText, corrected_text: corrected,
-          status, gems_earned: evalResult?.gems_earned || 0,
+          status, quality: evalResult?.quality ?? 0,
         })
         if (saved.story) {
           setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
@@ -443,7 +443,7 @@ export default function StoriesScreen() {
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 0 }}>
           <TutoMascot size={140} expression="excited" style={{ animation: 'fadeUp 0.4s ease both' }} />
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 20, marginBottom: 28, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 20, marginBottom: 28, animation: 'fadeUp 0.4s ease 0.1s both' }}>
             What will your story be called? 📖
           </div>
           <input
@@ -467,13 +467,13 @@ export default function StoriesScreen() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => { setStoryTitle(titleSuggestion); setTitleSuggestion(null); setStep('write') }}
-                  style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 14, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: 'white', cursor: 'pointer' }}
+                  style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 14, padding: '12px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, color: 'white', cursor: 'pointer' }}
                 >
                   Yes, fix it!
                 </button>
                 <button
                   onClick={() => { setTitleSuggestion(null); setStep('write') }}
-                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 14, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
+                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 14, padding: '12px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
                 >
                   No, keep mine
                 </button>
@@ -483,7 +483,7 @@ export default function StoriesScreen() {
             <button
               onClick={handleTitleNext}
               disabled={!storyTitle.trim() || checkingTitle}
-              style={{ width: '100%', marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 18, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: 'white', cursor: storyTitle.trim() && !checkingTitle ? 'pointer' : 'default', opacity: storyTitle.trim() && !checkingTitle ? 1 : 0.4, boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+              style={{ width: '100%', marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 18, padding: '16px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: 'white', cursor: storyTitle.trim() && !checkingTitle ? 'pointer' : 'default', opacity: storyTitle.trim() && !checkingTitle ? 1 : 0.4, boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}
             >
               {checkingTitle ? 'Checking... ✨' : 'Next →'}
             </button>
@@ -512,7 +512,7 @@ export default function StoriesScreen() {
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px', gap: 0 }}>
           <div style={{ fontSize: 72, lineHeight: 1, animation: 'fadeUp 0.35s ease both' }}>{chosenIdea?.emoji ?? '✏️'}</div>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 14, marginBottom: 24, lineHeight: 1.3, animation: 'fadeUp 0.35s ease 0.08s both' }}>
+          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginTop: 14, marginBottom: 24, lineHeight: 1.3, animation: 'fadeUp 0.35s ease 0.08s both' }}>
             {displayTitle}
           </div>
 
@@ -566,7 +566,7 @@ export default function StoriesScreen() {
           {photos.length > 0 && photos.length < 10 && (
             <button
               onClick={() => fileRef.current?.click()}
-              style={{ width: '100%', background: 'none', border: '2.5px dashed #A5D6A7', borderRadius: 18, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer', marginBottom: 14 }}
+              style={{ width: '100%', background: 'none', border: '2.5px dashed #A5D6A7', borderRadius: 18, padding: '14px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer', marginBottom: 14 }}
             >
               📸 Add another page
             </button>
@@ -576,7 +576,7 @@ export default function StoriesScreen() {
           {photos.length === 0 && (
             <button
               onClick={() => fileRef.current?.click()}
-              style={{ width: '100%', background: '#2D5016', border: 'none', borderRadius: 20, padding: '20px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(45,80,22,0.25)', animation: 'fadeUp 0.35s ease 0.2s both' }}
+              style={{ width: '100%', background: '#2D5016', border: 'none', borderRadius: 20, padding: '20px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(45,80,22,0.25)', animation: 'fadeUp 0.35s ease 0.2s both' }}
             >
               I'm ready, Tuto! 📸
             </button>
@@ -586,7 +586,7 @@ export default function StoriesScreen() {
           {photos.length > 0 && (
             <button
               onClick={startEvaluation}
-              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.25s ease both' }}
+              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 19, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.25s ease both' }}
             >
               I'm done! 🎉
             </button>
@@ -618,27 +618,27 @@ export default function StoriesScreen() {
           <TutoMascot size={160} expression={isBlocked ? 'default' : 'excited'} style={{ animation: 'fadeUp 0.4s ease both' }} />
           <div style={{ background: 'white', borderRadius: 28, padding: '28px 24px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', textAlign: 'center', marginTop: 24, boxSizing: 'border-box', animation: 'fadeUp 0.4s ease 0.1s both' }}>
             {evalResult?.has_profanity ? (
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
                 Hmm, let's keep our story friendly!<br />Some words aren't great for stories. Try again? 😊
               </div>
             ) : evalResult?.too_short ? (
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
                 Hmm, I think there's more to this story!<br />Can you write a bit more? 📝
               </div>
             ) : (
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800, color: '#2D5016', lineHeight: 1.7 }}>
                 {evalResult?.encouragement}
               </div>
             )}
           </div>
           {isBlocked ? (
-            <button onClick={() => setStep('write')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
+            <button onClick={() => setStep('write')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
               ← Go back and try again
             </button>
           ) : (
             <button
               onClick={() => Number(child?.age) <= 10 ? startGentleEditor() : setStep('spelling')}
-              style={{ width: '100%', marginTop: 24, background: '#4cb685', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+              style={{ width: '100%', marginTop: 24, background: '#4cb685', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
             >
               {Number(child?.age) <= 10 ? 'Awesome! Let\'s go! 🌟' : 'Let\'s look at your story! →'}
             </button>
@@ -663,10 +663,10 @@ export default function StoriesScreen() {
               value={storyTitle}
               onChange={e => setStoryTitle(e.target.value)}
               placeholder={displayTitle}
-              style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', marginBottom: 8, border: '2px solid #A5D6A7', borderRadius: 14, padding: '8px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', marginBottom: 8, border: '2px solid #A5D6A7', borderRadius: 14, padding: '8px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
             />
           ) : (
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 8, animation: 'fadeUp 0.35s ease both' }}>
               Your story! 📖
             </div>
           )}
@@ -698,15 +698,15 @@ export default function StoriesScreen() {
               ⚠️ Couldn't delete — please try again. ({deleteError})
             </div>
           )}
-          <button onClick={goToCorrections} style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.35s ease 0.15s both' }}>
+          <button onClick={goToCorrections} style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.35s ease 0.15s both' }}>
             Looks good! →
           </button>
           {isEditMode && (
             <>
-              <button onClick={() => { setCoverReturnStep('spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', marginTop: 10, fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
+              <button onClick={() => { setCoverReturnStep('spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', marginTop: 10, fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
                 🎨 Edit cover
               </button>
-              <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '12px 8px' }}>
+              <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '12px 8px' }}>
                 🗑️ Delete this story
               </button>
             </>
@@ -718,19 +718,19 @@ export default function StoriesScreen() {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(45,80,22,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }} onClick={() => setActiveError(null)}>
             <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '28px 28px 0 0', padding: '28px 24px 44px', animation: 'fadeUp 0.25s ease both' }} onClick={e => e.stopPropagation()}>
               <div style={{ width: 36, height: 4, background: '#E8E8F0', borderRadius: 4, margin: '0 auto 20px' }} />
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: '#2D5016', textAlign: 'center', marginBottom: 20 }}>
                 Did you mean <span style={{ color: '#2EC486' }}>"{errors[activeError].correct}"</span>?
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'fixed' : s)); setActiveError(null) }}
-                  style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer' }}
+                  style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer' }}
                 >
                   ✅ Yes, fix it!
                 </button>
                 <button
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'not_sure' : s)); setActiveError(null) }}
-                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
+                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
                 >
                   🤷 Not sure
                 </button>
@@ -764,10 +764,10 @@ export default function StoriesScreen() {
               value={storyTitle}
               onChange={e => setStoryTitle(e.target.value)}
               placeholder={displayTitle}
-              style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, border: '2px solid #A5D6A7', borderRadius: 14, padding: '8px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, border: '2px solid #A5D6A7', borderRadius: 14, padding: '8px 12px', background: 'white', outline: 'none', animation: 'fadeUp 0.35s ease both' }}
             />
           ) : (
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, animation: 'fadeUp 0.35s ease both' }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#2D5016', marginBottom: 16, animation: 'fadeUp 0.35s ease both' }}>
               {displayTitle}
             </div>
           )}
@@ -791,20 +791,20 @@ export default function StoriesScreen() {
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.35s ease 0.16s both' }}>
-            <button onClick={() => finishStory('completed')} style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}>
+            <button onClick={() => finishStory('completed')} style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}>
               {editingCompleted ? '💾 Save changes' : '🏆 My story is finished!'}
             </button>
             {!editingCompleted && (
-              <button onClick={() => finishStory('in_progress')} style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}>
+              <button onClick={() => finishStory('in_progress')} style={{ background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}>
                 📝 I'll finish this book later
               </button>
             )}
             {isEditMode && (
               <>
-                <button onClick={() => { setCoverReturnStep('corrected'); setStep('cover') }} style={{ background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
+                <button onClick={() => { setCoverReturnStep('corrected'); setStep('cover') }} style={{ background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
                   🎨 Edit cover
                 </button>
-                <button onClick={() => setConfirmDeleteStory(true)} style={{ background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
+                <button onClick={() => setConfirmDeleteStory(true)} style={{ background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
                   🗑️ Delete this story
                 </button>
               </>
@@ -829,7 +829,7 @@ export default function StoriesScreen() {
         <style>{ANIM}{`
           @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&family=Fredoka+One&display=swap');
           .story-body { font-family: 'Lexend', sans-serif !important; }
-          .story-title-book { font-family: 'Fredoka One', 'Baloo 2', cursive !important; }
+          .story-title-book { font-family: 'Fredoka One', 'Baloo 2', 'Nunito', cursive !important; }
         `}</style>
         <div style={{ padding: '56px 24px 0' }}>
           <BackBtn onClick={() => isEditMode ? exitEditMode() : setStep('encourage')} />
@@ -928,7 +928,7 @@ export default function StoriesScreen() {
             <button
               onClick={() => finishYoungEditor('completed')}
               disabled={saving}
-              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: saving ? 'default' : 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', opacity: saving ? 0.75 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+              style={{ width: '100%', background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: saving ? 'default' : 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', opacity: saving ? 0.75 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
             >
               {saving && (
                 <div style={{ width: 18, height: 18, border: '3px solid rgba(255,255,255,0.45)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -938,17 +938,17 @@ export default function StoriesScreen() {
             {!editingCompleted && (
               <button
                 onClick={() => finishYoungEditor('in_progress')}
-                style={{ width: '100%', background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
+                style={{ width: '100%', background: 'white', border: '2.5px solid #A5D6A7', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
               >
                 📝 I'll finish this book later
               </button>
             )}
             {isEditMode && (
               <>
-                <button onClick={() => { setCoverReturnStep('gentle-spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
+                <button onClick={() => { setCoverReturnStep('gentle-spelling'); setStep('cover') }} style={{ width: '100%', background: 'none', border: '2px solid #A5D6A7', borderRadius: 16, padding: '12px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}>
                   🎨 Edit cover
                 </button>
-                <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
+                <button onClick={() => setConfirmDeleteStory(true)} style={{ width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '8px' }}>
                   🗑️ Delete this story
                 </button>
               </>
@@ -961,19 +961,19 @@ export default function StoriesScreen() {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(47,158,107,0.35)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }} onClick={() => setActiveError(null)}>
             <div style={{ background: 'white', width: '100%', maxWidth: 430, borderRadius: '28px 28px 0 0', padding: '28px 24px 44px', animation: 'fadeUp 0.25s ease both' }} onClick={e => e.stopPropagation()}>
               <div style={{ width: 36, height: 4, background: '#E8E8F0', borderRadius: 4, margin: '0 auto 20px' }} />
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2f9e6b', textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: '#2f9e6b', textAlign: 'center', marginBottom: 20 }}>
                 I read this as <span style={{ color: '#4cb685' }}>"{youngErrors[activeError].word || youngErrors[activeError].correct}"</span> — did I get it right?
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'fixed' : s)); setActiveError(null) }}
-                  style={{ flex: 1, background: '#4cb685', border: 'none', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer' }}
+                  style={{ flex: 1, background: '#4cb685', border: 'none', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer' }}
                 >
                   ✅ Yes!
                 </button>
                 <button
                   onClick={() => { setSpellingState(prev => prev.map((s, i) => i === activeError ? 'not_sure' : s)); setActiveError(null) }}
-                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
+                  style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 16, padding: '14px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: '#6A9956', cursor: 'pointer' }}
                 >
                   ✏️ No, fix it
                 </button>
@@ -1017,7 +1017,7 @@ export default function StoriesScreen() {
           </div>
         )}
         <div style={{ padding: coverReturnStep ? '12px 24px 16px' : '52px 24px 16px', textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 24, fontWeight: 800, color: '#2D5016' }}>Design your cover! 🎨</div>
+          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 24, fontWeight: 800, color: '#2D5016' }}>Design your cover! 🎨</div>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956', marginTop: 4 }}>Pick a colour, then tap the cover to add your drawing</div>
         </div>
 
@@ -1037,7 +1037,7 @@ export default function StoriesScreen() {
 
             {/* Title */}
             <div style={{ padding: '14px 14px 8px 18px', flexShrink: 0, zIndex: 2 }}>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.25 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 13, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.25 }}>
                 {displayTitle}
               </div>
             </div>
@@ -1102,7 +1102,7 @@ export default function StoriesScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
             <button
               onClick={saveCover}
-              style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
+              style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '16px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)' }}
             >
               📚 Done, save my cover!
             </button>
@@ -1138,11 +1138,11 @@ export default function StoriesScreen() {
           ))}
         </div>
         <TutoMascot size={180} expression="proud" style={{ animation: 'fadeUp 0.4s ease both' }} />
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 34, fontWeight: 900, color: isYoung ? '#2f9e6b' : '#2D5016', marginTop: 20, textAlign: 'center', lineHeight: 1.2, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 34, fontWeight: 900, color: isYoung ? '#2f9e6b' : '#2D5016', marginTop: 20, textAlign: 'center', lineHeight: 1.2, animation: 'fadeUp 0.4s ease 0.1s both' }}>
           {isYoung ? 'Amazing writing! 🎉' : 'Amazing! 🎉'}
         </div>
         <div style={{ background: 'white', borderRadius: isYoung ? 36 : 28, padding: '24px 44px', marginTop: 20, boxShadow: '0 8px 32px rgba(76,182,133,0.20)', animation: 'fadeUp 0.4s ease 0.15s both', textAlign: 'center' }}>
-          <div style={{ fontSize: 56, fontWeight: 900, fontFamily: "'Baloo 2', cursive", color: '#f79433', lineHeight: 1 }}>
+          <div style={{ fontSize: 56, fontWeight: 900, fontFamily: "'Baloo 2', 'Nunito', cursive", color: '#f79433', lineHeight: 1 }}>
             +{gems}
           </div>
           <div style={{ fontSize: 15, fontWeight: 800, color: isYoung ? '#4cb685' : '#6A9956', marginTop: 6 }}>
@@ -1151,7 +1151,7 @@ export default function StoriesScreen() {
         </div>
         <button
           onClick={() => setStep('cover')}
-          style={{ marginTop: 32, background: isYoung ? '#4cb685' : '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
+          style={{ marginTop: 32, background: isYoung ? '#4cb685' : '#2EC486', border: 'none', borderRadius: 20, padding: '18px 36px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(76,182,133,0.35)', animation: 'fadeUp 0.4s ease 0.2s both' }}
         >
           🎨 Design your cover!
         </button>
@@ -1175,7 +1175,7 @@ export default function StoriesScreen() {
 
       <div style={{ padding: '56px 24px 20px' }}>
         <BackBtn onClick={() => nav(listOrigin)} />
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
+        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
           {child?.name ?? 'Friend'}, the Creative Writer ✏️
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', marginTop: 6 }}>
@@ -1188,7 +1188,7 @@ export default function StoriesScreen() {
         {/* In-progress story */}
         {!loadingStories && inProgressStory && (
           <div style={{ marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
               Continue Writing 📝
             </div>
             <button
@@ -1197,7 +1197,7 @@ export default function StoriesScreen() {
             >
               <span style={{ fontSize: 44 }}>🌳</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', marginBottom: 4 }}>
                   {inProgressStory.title || 'Untitled Story'}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956' }}>Pick up where you left off →</div>
@@ -1209,7 +1209,7 @@ export default function StoriesScreen() {
         {/* Completed stories grid */}
         {!loadingStories && completedStories.length > 0 && (
           <div style={{ marginBottom: 24, animation: 'fadeUp 0.35s ease 0.07s both' }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
               My Stories 📚{' '}
               <span style={{ fontSize: 12, fontWeight: 600, color: '#6A9956' }}>{completedStories.length} written</span>
             </div>
@@ -1228,7 +1228,7 @@ export default function StoriesScreen() {
         {!loadingStories && (
           <button
             onClick={startNewStory}
-            style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', width: '100%', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.35s ease 0.14s both' }}
+            style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', width: '100%', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.35s ease 0.14s both' }}
           >
             ✏️ Write New Story
           </button>

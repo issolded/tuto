@@ -338,7 +338,7 @@ function divisionWordTemplate(level, lang) {
     level,
     question_text: tr(lang,
       `${name} has ${a} ${items}. Shared equally among ${b} ${who}. How many each?`,
-      `${name} ${a} ${items} ${b} ${who} arasında eşit paylaştırdı. Her birine kaç tane düşer?`),
+      `${name} ${a} ${items} aldı ve ${b} ${who} arasında eşit paylaştırdı. Her birine kaç tane düşer?`),
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),

@@ -112,7 +112,7 @@ function Screen({ children, onBack }) {
             boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
           }}
         >←</button>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E' }}>
+        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E' }}>
           Read a Book 📖
         </div>
       </div>
@@ -135,7 +135,7 @@ function TutoBubble({ message, tutoSize = 120 }) {
         width: '100%',
       }}>
         <div style={{
-          fontFamily: "'Baloo 2', cursive",
+          fontFamily: "'Baloo 2', 'Nunito', cursive",
           fontSize: 20,
           fontWeight: 700,
           color: '#1A1A2E',
@@ -178,10 +178,10 @@ function PhotoArea({ inputRef, label }) {
       }}
     >
       <div style={{ fontSize: 68 }}>📚</div>
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: ACCENT }}>
+      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 28, fontWeight: 800, color: ACCENT }}>
         Tap here!
       </div>
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 600, color: '#7A7A9A', textAlign: 'center' }}>
+      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 600, color: '#7A7A9A', textAlign: 'center' }}>
         {label}
       </div>
     </div>
@@ -484,7 +484,7 @@ export default function ReadingFlow() {
         />
       )}
       <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 24px rgba(255,107,53,0.10)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 12, fontWeight: 700, color: '#7A7A9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 12, fontWeight: 700, color: '#7A7A9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Book title
         </div>
         <input
@@ -495,7 +495,7 @@ export default function ReadingFlow() {
             border: '2px solid rgba(255,107,53,0.25)',
             borderRadius: 14,
             padding: '14px 16px',
-            fontFamily: "'Baloo 2', cursive",
+            fontFamily: "'Baloo 2', 'Nunito', cursive",
             fontSize: 17,
             fontWeight: 700,
             color: '#1A1A2E',
@@ -514,7 +514,7 @@ export default function ReadingFlow() {
           border: 'none',
           borderRadius: 20,
           padding: '20px 24px',
-          fontFamily: "'Baloo 2', cursive",
+          fontFamily: "'Baloo 2', 'Nunito', cursive",
           fontSize: 20,
           fontWeight: 800,
           cursor: titleInput.trim() ? 'pointer' : 'not-allowed',
@@ -539,7 +539,7 @@ export default function ReadingFlow() {
           textAlign: 'center',
           width: '100%',
         }}>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>
+          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>
             📖 {book?.title}
           </div>
         </div>
@@ -558,7 +558,7 @@ export default function ReadingFlow() {
           border: 'none',
           borderRadius: 20,
           padding: '20px 24px',
-          fontFamily: "'Baloo 2', cursive",
+          fontFamily: "'Baloo 2', 'Nunito', cursive",
           fontSize: 20,
           fontWeight: 800,
           cursor: 'pointer',
@@ -576,7 +576,7 @@ export default function ReadingFlow() {
           border: 'none',
           borderRadius: 20,
           padding: '20px 24px',
-          fontFamily: "'Baloo 2', cursive",
+          fontFamily: "'Baloo 2', 'Nunito', cursive",
           fontSize: 20,
           fontWeight: 800,
           cursor: 'pointer',
@@ -612,7 +612,7 @@ export default function ReadingFlow() {
             border: '2px solid rgba(255,107,53,0.25)',
             borderRadius: 16,
             padding: '18px 20px',
-            fontFamily: "'Baloo 2', cursive",
+            fontFamily: "'Baloo 2', 'Nunito', cursive",
             fontSize: 24,
             fontWeight: 800,
             color: '#1A1A2E',
@@ -631,7 +631,7 @@ export default function ReadingFlow() {
             border: 'none',
             borderRadius: 16,
             padding: '18px',
-            fontFamily: "'Baloo 2', cursive",
+            fontFamily: "'Baloo 2', 'Nunito', cursive",
             fontSize: 20,
             fontWeight: 800,
             cursor: pageInput ? 'pointer' : 'not-allowed',
@@ -649,7 +649,7 @@ export default function ReadingFlow() {
             border: 'none',
             borderRadius: 16,
             padding: '14px',
-            fontFamily: "'Baloo 2', cursive",
+            fontFamily: "'Baloo 2', 'Nunito', cursive",
             fontSize: 17,
             fontWeight: 700,
             cursor: 'pointer',
@@ -673,7 +673,7 @@ export default function ReadingFlow() {
             border: 'none',
             borderRadius: 20,
             padding: '20px 24px',
-            fontFamily: "'Baloo 2', cursive",
+            fontFamily: "'Baloo 2', 'Nunito', cursive",
             fontSize: 20,
             fontWeight: 800,
             cursor: 'pointer',
@@ -736,7 +736,7 @@ export default function ReadingFlow() {
           }}
         >
           <div style={{ fontSize: 56 }}>📸</div>
-          <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: ACCENT }}>
+          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: ACCENT }}>
             Tap to add first page
           </div>
         </div>
@@ -773,7 +773,7 @@ export default function ReadingFlow() {
             border: '2.5px dashed #FF6B35',
             borderRadius: 18,
             padding: '16px',
-            fontFamily: "'Baloo 2', cursive",
+            fontFamily: "'Baloo 2', 'Nunito', cursive",
             fontSize: 17, fontWeight: 800, color: ACCENT,
             cursor: 'pointer', width: '100%',
           }}
@@ -790,7 +790,7 @@ export default function ReadingFlow() {
             background: ACCENT,
             color: 'white', border: 'none', borderRadius: 20,
             padding: '20px 24px',
-            fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800,
+            fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800,
             cursor: 'pointer',
             boxShadow: '0 8px 24px rgba(255,107,53,0.35)',
             width: '100%',
@@ -850,7 +850,7 @@ export default function ReadingFlow() {
             padding: '22px 24px',
             boxShadow: '0 4px 24px rgba(255,107,53,0.10)',
           }}>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E', lineHeight: 1.5 }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E', lineHeight: 1.5 }}>
               {q.question}
             </div>
           </div>
@@ -866,7 +866,7 @@ export default function ReadingFlow() {
                     border: '2px solid rgba(255,107,53,0.18)',
                     borderRadius: 18,
                     padding: '16px 20px',
-                    fontFamily: "'Baloo 2', cursive",
+                    fontFamily: "'Baloo 2', 'Nunito', cursive",
                     fontSize: 18,
                     fontWeight: 700,
                     color: '#1A1A2E',
@@ -886,7 +886,7 @@ export default function ReadingFlow() {
               background: answers[qIdx] === q.correct ? '#E8F8EE' : '#FFF0EE',
               borderRadius: 20,
               padding: '22px 24px',
-              fontFamily: "'Baloo 2', cursive",
+              fontFamily: "'Baloo 2', 'Nunito', cursive",
               fontSize: 22,
               fontWeight: 800,
               color: answers[qIdx] === q.correct ? '#2EC486' : '#D63030',
@@ -909,7 +909,7 @@ export default function ReadingFlow() {
                   border: '2px solid rgba(255,107,53,0.2)',
                   borderRadius: 18,
                   padding: '16px 18px',
-                  fontFamily: "'Baloo 2', cursive",
+                  fontFamily: "'Baloo 2', 'Nunito', cursive",
                   fontSize: 18,
                   fontWeight: 600,
                   color: '#1A1A2E',
@@ -950,10 +950,10 @@ export default function ReadingFlow() {
         }}>
           <div style={{ fontSize: 52 }}>{saveFailed ? '😕' : capped ? '🌙' : '💎'}</div>
           <div>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
               {saveFailed ? "Couldn't save" : capped ? 'All your gems for today!' : 'You earned!'}
             </div>
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: saveFailed || capped ? 22 : 44, fontWeight: 800, color: 'white', lineHeight: 1.15 }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: saveFailed || capped ? 22 : 44, fontWeight: 800, color: 'white', lineHeight: 1.15 }}>
               {saveFailed ? 'Tell a grown-up' : capped ? 'Come back tomorrow 📚' : `+${gemsEarned} Gems`}
             </div>
           </div>

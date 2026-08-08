@@ -91,7 +91,7 @@ export default function ChildPin() {
   const notice = (title, cta) => (
     <div className="screen" style={{ background: '#1A1A2E', alignItems: 'center', padding: '60px 32px 40px' }}>
       <TutoMascot size={120} expression="default" />
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
+      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
         {title}
       </div>
       {cta}
@@ -101,7 +101,7 @@ export default function ChildPin() {
   if (familyChildren === 'unreachable') return notice(
     "I can't reach Tuto right now — check the internet and try again 📡",
     <button onClick={() => window.location.reload()}
-      style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>
+      style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>
       Try again
     </button>
   )
@@ -109,7 +109,7 @@ export default function ChildPin() {
   if (Array.isArray(familyChildren) && familyChildren.length === 0) return notice(
     'This device isn\u2019t set up yet. Ask your grown-up to add you first! 📱',
     <button onClick={() => nav('/setup')}
-      style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>
+      style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}>
       Set up this device →
     </button>
   )
@@ -118,12 +118,12 @@ export default function ChildPin() {
   if (!familyCode) return (
     <div className="screen" style={{ background: '#1A1A2E', alignItems: 'center', padding: '60px 32px 40px' }}>
       <TutoMascot size={120} expression="default" />
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
+      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#FFD93D', textAlign: 'center', marginTop: 20, lineHeight: 1.5 }}>
         Ask your parent to scan the setup QR code first! 📱
       </div>
       <button
         onClick={() => nav('/setup')}
-        style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}
+        style={{ marginTop: 32, background: '#FFD93D', color: '#1A1A2E', border: 'none', borderRadius: 18, padding: '16px 40px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer' }}
       >
         Set up this device →
       </button>
@@ -134,7 +134,7 @@ export default function ChildPin() {
     <div className="screen" style={{ background: '#FF6B35', alignItems: 'center', padding: '60px 32px 40px' }}>
       <button onClick={() => nav('/')} style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.2)', border: 'none', width: 40, height: 40, borderRadius: 12, fontSize: 18, color: 'white', cursor: 'pointer', marginBottom: 24 }}>←</button>
       <TutoMascot size={120} expression={expression} />
-      <div style={{ fontFamily: "'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: 'white', textAlign: 'center', marginTop: 16 }}>Hi! I'm Tuto 👋</div>
+      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 28, fontWeight: 800, color: 'white', textAlign: 'center', marginTop: 16 }}>Hi! I'm Tuto 👋</div>
       <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600, textAlign: 'center', marginBottom: 8, marginTop: 4 }}>Enter your PIN to start!</div>
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         {[0,1,2,3].map(i => (

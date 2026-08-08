@@ -10,7 +10,7 @@ const ACCENT = '#f79433'
 const INK = '#241f3a'
 const INK_SOFT = '#8d83ad'
 const LILAC = '#e7ddf6'
-const FRED = "'Fredoka', sans-serif"
+const FRED = "'Fredoka', 'Nunito', sans-serif"
 
 const HOME_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
@@ -231,7 +231,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
           )}
 
           {mature && (
-            <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 14, color: ink }}>
+            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 500, fontSize: 14, color: ink }}>
               {today.today} contributions today · {today.monthTreeCount} this month
             </div>
           )}
@@ -267,7 +267,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
             </div>
           ) : mature ? (
             <>
-              <div style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: ink, marginBottom: 10 }}>
+              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 500, fontSize: 13.5, color: ink, marginBottom: 10 }}>
                 {activitySentence(today.activities, true, lang)}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
@@ -276,7 +276,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
                   return (
                     <span key={a.key} style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 999, padding: '5px 10px',
-                      fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 12,
+                      fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 500, fontSize: 12,
                       background: done ? '#E2F0E9' : '#EEF1ED', color: done ? '#2f8f6b' : '#8a938d',
                     }}>{done ? '✓' : '○'} {t(a.chipKey, lang)}</span>
                   )
@@ -305,7 +305,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
           ) : isTablet ? (
             <>
               <GoalRing pct={pct} color={mature ? accent : '#f79433'} track={mature ? '#E4EAE3' : 'rgba(247,148,51,.16)'} />
-              <div style={{ marginTop: 10, fontFamily: mature ? "'Baloo 2', cursive" : FRED, fontWeight: mature ? 500 : 600, fontSize: 14, color: ink }}>
+              <div style={{ marginTop: 10, fontFamily: mature ? "'Baloo 2', 'Nunito', cursive" : FRED, fontWeight: mature ? 500 : 600, fontSize: 14, color: ink }}>
                 {remaining}⭐ to {goal.name}
               </div>
             </>
@@ -313,7 +313,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 15 }}>{goal.icon}</span>
-                <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500, fontSize: 13.5, color: ink }}>{goal.name}</span>
+                <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 500, fontSize: 13.5, color: ink }}>{goal.name}</span>
               </div>
               <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: inkSoft, marginBottom: 8 }}>
                 {remaining} ⭐ to go

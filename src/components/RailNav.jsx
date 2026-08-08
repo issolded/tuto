@@ -6,7 +6,7 @@ import { t, childLang } from '../lib/i18n'
 
 const ACCENT = '#f79433'
 const INK_SOFT = '#b6aecb'
-const FRED = "'Fredoka', sans-serif"
+const FRED = "'Fredoka', 'Nunito', sans-serif"
 
 // Tablet-landscape's left rail — same NAV_ITEMS/icons as BottomNav, laid out
 // vertically, with the gem pill pinned to the bottom instead of living in

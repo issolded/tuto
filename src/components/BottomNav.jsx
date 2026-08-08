@@ -3,7 +3,7 @@ import { t, childLang } from '../lib/i18n'
 
 const ACCENT = '#f79433'
 const INK_SOFT = '#b6aecb'
-const FRED = "'Fredoka', sans-serif"
+const FRED = "'Fredoka', 'Nunito', sans-serif"
 
 // Labels are keys, resolved where they are drawn — the same shape the home tiles use, so a
 // nav item and a tile for the same thing cannot end up named differently.

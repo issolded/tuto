@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap');
+/* Fredoka was referenced in eleven places and loaded in none, so every screen using it fell
+   back to whatever the system had. Baloo 2's Latin-Extended coverage is patchy, which is why
+   ğ and ş looked like they came from a different font — because they did: the browser falls
+   back per glyph. Nunito covers Turkish and now sits in front of the generic fallback. */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 

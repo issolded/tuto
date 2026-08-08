@@ -16,7 +16,7 @@ const INK       = '#241f3a'
 const INK_SOFT  = '#8d83ad'
 const GREEN     = '#4cb685'
 const ORANGE    = '#f79433'
-const FRED      = "'Fredoka', sans-serif"
+const FRED      = "'Fredoka', 'Nunito', sans-serif"
 const FLOW_BG   = 'linear-gradient(172deg,#EAF5FF 0%,#D2E9FB 100%)'
 
 const ANIM = `
@@ -393,7 +393,7 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label }) {
 function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language }) {
   const tr = language === 'tr'
   const t = tr ? {
-    title:          'Hep beraber bakalım! 🧸',
+    title:          'Haydi birlikte bakalım! 🧸',
     countTab:       'Sayalım',
     showTab:        'Göster',
     tapInstruction: 'Kaç tanesini çıkartacaksın?',
@@ -1091,6 +1091,7 @@ export default function MathScreen() {
   const [helpVisible,   setHelpVisible]  = useState(false)
   const [hintOpenFor,   setHintOpenFor]  = useState(null)  // question index whose optional hint is showing
   const [weighting,     setWeighting]    = useState({ focusTopicId: null, weakTopicIds: [] })
+  const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set()) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
   const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
@@ -1434,13 +1435,9 @@ export default function MathScreen() {
           {getWelcomeMsg(age, language)}
         </div>
         {level !== null && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 7,
-            background: 'rgba(90,169,230,.16)', borderRadius: 14, padding: '8px 18px',
-            fontFamily: FRED, fontWeight: 600, fontSize: 14, color: MATH_DEEP,
-          }}>
-            📊 {curriculumTopics[qIdx]?.name || yearLabelForAge(age) || t('math_adventure', language)}
-          </div>
+          {/* The school year used to be shown here. A child does not need telling which Year they
+                are working in — it is a curriculum label written for adults, and on a bad day it
+                reads as a verdict. The parent still sees it. */}
         )}
         <button
           className="math-press"
@@ -1547,6 +1544,8 @@ export default function MathScreen() {
   // STEP: paper_questions
   // ─────────────────────────────────────────────────────────────────────────
   if (step === 'paper_questions') return (
+    <>
+    {leaveSheet}
     <div style={{ ...wrap, overflow: 'hidden' }}>
       <style>{ANIM}</style>
 
@@ -1557,12 +1556,12 @@ export default function MathScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 17, color: '#fff', fontWeight: 800, cursor: 'pointer',
           }}
-            onClick={() => setStep('mode')}
+            onClick={() => setConfirmLeave(true)}
           >←</div>
-          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: '#fff' }}>My Math 🔢</div>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: '#fff' }}>{t('math_paper_title', language)}</div>
         </div>
         <div style={{ fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)', marginTop: 6, marginLeft: 45 }}>
-          Now solve these on paper! ✏️
+          {t('math_paper_now', language)}
         </div>
       </div>
 
@@ -1584,8 +1583,44 @@ export default function MathScreen() {
               }}>
                 {i + 1}
               </div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5, flex: 1 }}>
-                {q}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5 }}>
+                  {q}
+                </div>
+                {/* Paper mode had no hints at all: the child on screen could ask for a nudge and
+                    the child with a pencil could not, for the same question. Same first step,
+                    same cost — it counts as help either way. */}
+                {(() => {
+                  const steps = templateProblems[i]?.hint_steps ?? llmHints[i]
+                  if (!Array.isArray(steps) || !steps.length) return null
+                  const open = hintOpenFor === i
+                  return (
+                    <div>
+                      <button
+                        className="math-press"
+                        onClick={() => {
+                          if (open) { setHintOpenFor(null); return }
+                          setHintOpenFor(i)
+                          setHelpUsedQs(prev => { const next = new Set(prev); next.add(i); return next })
+                          setHelpUsed(true)
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none',
+                          background: open ? 'rgba(247,148,51,.16)' : 'rgba(60,120,200,.07)',
+                          color: ORANGE, borderRadius: 999, padding: '5px 12px', cursor: 'pointer',
+                          fontFamily: FRED, fontWeight: 600, fontSize: 13.5,
+                        }}
+                      >💡 {t('math_paper_hint', language)} <span style={{ fontSize: 11 }}>{open ? '▲' : '▼'}</span></button>
+                      {open && (
+                        <div style={{
+                          marginTop: 6, background: 'rgba(60,120,200,.06)', borderRadius: 12,
+                          padding: '9px 12px', fontFamily: FRED, fontWeight: 600, fontSize: 14,
+                          color: INK_SOFT, lineHeight: 1.45,
+                        }}>{steps[0]}</div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )
@@ -1609,15 +1644,48 @@ export default function MathScreen() {
             cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)',
           }}
         >
-          I'm ready, Tuto! 📸
+          {t('math_paper_ready', language)}
         </button>
       </div>
     </div>
+    </>
   )
 
   // ─────────────────────────────────────────────────────────────────────────
   // STEP: screen_questions
   // ─────────────────────────────────────────────────────────────────────────
+  // Leaving throws away everything answered so far — the session is only saved at the end —
+  // and the back arrow sits next to the progress bar where a thumb lands. Asked, not assumed.
+  const leaveSheet = confirmLeave ? (
+    <div
+      onClick={() => setConfirmLeave(false)}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(20,16,40,.55)', zIndex: 60,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: '26px 26px 0 0', padding: '26px 22px 30px',
+        width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10,
+        animation: 'scaleIn .2s ease both',
+      }}>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, textAlign: 'center' }}>
+          {t('math_leave_title', language)}
+        </div>
+        <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', lineHeight: 1.5 }}>
+          {t('math_leave_body', language)}
+        </div>
+        <button className="math-press" onClick={() => setConfirmLeave(false)} style={{
+          marginTop: 8, background: MATH, color: '#fff', border: 'none', borderRadius: 16,
+          padding: '15px', fontFamily: FRED, fontSize: 17, fontWeight: 600, cursor: 'pointer',
+        }}>{t('math_leave_stay', language)}</button>
+        <button className="math-press" onClick={() => nav('/child/home')} style={{
+          background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
+          padding: '11px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
+        }}>{t('math_leave_go', language)}</button>
+      </div>
+    </div>
+  ) : null
+
   if (step === 'screen_questions') {
     const q      = questions[qIdx] || ''
     const isWord = qTypes[qIdx] === 'word' || q.length > 35
@@ -1629,6 +1697,8 @@ export default function MathScreen() {
     const questionCount = qVisual?.kind === 'count' ? qVisual : null
 
     return (
+      <>
+      {leaveSheet}
       <div style={{ ...wrap, overflow: 'hidden' }}>
         <style>{ANIM}</style>
 
@@ -1642,7 +1712,7 @@ export default function MathScreen() {
           }}>
             <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 30, color: 'white', textAlign: 'center', padding: '0 28px', lineHeight: 1.4 }}>
-              {flash.correct ? 'Yes! ⭐' : `Almost! The answer was ${flash.answer} 💪`}
+              {flash.correct ? t('math_yes', language) : `${t('math_almost', language)} ${flash.answer} 💪`}
             </div>
           </div>
         )}
@@ -1651,7 +1721,7 @@ export default function MathScreen() {
         <div style={{ background: MATH, padding: '16px 20px 18px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
-              onClick={() => helpVisible ? setHelpVisible(false) : nav('/child/home')}
+              onClick={() => helpVisible ? setHelpVisible(false) : setConfirmLeave(true)}
               style={{
                 width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.22)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1784,6 +1854,7 @@ export default function MathScreen() {
           )}
         </div>
       </div>
+      </>
     )
   }
 
@@ -1833,7 +1904,7 @@ export default function MathScreen() {
             boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease both',
           }}>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>Score</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t('math_score', language)}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: accuracy >= 80 ? GREEN : ORANGE, lineHeight: 1.05 }}>
                 {accuracy}%
               </div>
@@ -1841,7 +1912,7 @@ export default function MathScreen() {
             </div>
             <div style={{ width: 1, height: 56, background: '#eee' }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>Earned</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t('math_earned', language)}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>
                 {evalResult.gems_earned == null ? '—' : `+${evalResult.gems_earned}`}
               </div>
@@ -1862,7 +1933,7 @@ export default function MathScreen() {
             }}>
               <span style={{ fontSize: 30 }}>🎉</span>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: 'white' }}>
-                You unlocked a new level! 🎉
+                {t('math_new_level', language)}
               </div>
             </div>
           )}
@@ -1871,7 +1942,7 @@ export default function MathScreen() {
           {results.length > 0 && (
             <div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, margin: '2px 2px 8px' }}>
-                Your answers:
+                {t('math_your_answers', language)}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {results.map((r, i) => (
@@ -1885,11 +1956,11 @@ export default function MathScreen() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}>{r.question}</div>
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
-                        Your answer: {r.child_answer ?? '—'}
+                        {t('math_your_answer', language)} {r.child_answer ?? '—'}
                       </div>
                       {!r.correct && (
                         <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 2 }}>
-                          The answer was {r.correct_answer} 💡
+                          {t('math_answer_was', language)} {r.correct_answer} 💡
                         </div>
                       )}
                     </div>
@@ -1908,7 +1979,7 @@ export default function MathScreen() {
               cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', marginTop: 4,
             }}
           >
-            Done! 🏠
+            {t('math_done', language)}! 🏠
           </button>
         </div>
       </div>
