@@ -227,7 +227,7 @@ function BackBtn({ onClick }) {
 
 function Title({ children, sk }) {
   return (
-    <div style={{ flex: 1, textAlign: 'center', fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 19, color: sk.ink }}>
+    <div style={{ flex: 1, textAlign: 'center', fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 19, color: sk.ink }}>
       {children}
     </div>
   )
@@ -348,7 +348,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           textAlign: 'center', padding: '40px 20px', background: '#fff', borderRadius: sk.radius,
           boxShadow: '0 6px 16px rgba(40,30,70,.09)',
         }}>
-          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginBottom: 6 }}>
+          <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginBottom: 6 }}>
             Couldn't load drawings
           </div>
           <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8d83ad', marginBottom: 16 }}>
@@ -368,7 +368,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
             }}>
               <DrawingThumb id={d.id} ageGroup={d.age_group} stepCount={d.step_count}
                 category={d.category} radius={sk.radius - 8} />
-              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginTop: 9 }}>{d.name_en}</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginTop: 9 }}>{d.name_en}</div>
               <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: sk.accent, marginTop: 3 }}>
                 ✎ {d.step_count} {sk.stepWord}s
               </div>
@@ -383,7 +383,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
                 width: '100%', aspectRatio: '1', borderRadius: sk.radius - 8, background: '#f0ecf7',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
               }}>🔒</div>
-              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 16, color: '#8d83ad', marginTop: 9 }}>{l.name}</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: '#8d83ad', marginTop: 9 }}>{l.name}</div>
               <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11, color: '#b3a894', marginTop: 3 }}>SOON</div>
             </div>
           ))}
@@ -401,7 +401,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19,
         }}>✎</span>
         <span style={{ flex: 1 }}>
-          <span style={{ display: 'block', fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink }}>
+          <span style={{ display: 'block', fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink }}>
             Draw my own idea
           </span>
           <span style={{ display: 'block', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#8d83ad' }}>
@@ -419,7 +419,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           boxShadow: '0 6px 16px rgba(40,30,70,.09)',
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 16, color: sk.ink }}>My Paintings</span>
+            <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink }}>My Paintings</span>
             <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#8d83ad' }}>{paintings.length}</span>
             <button onClick={onLibrary} style={{
               marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
@@ -471,7 +471,7 @@ function Ready({ sk, target, ageGroup, onStart, onBack }) {
       <div style={{
         background: '#fff', borderRadius: sk.radius, padding: '16px 18px', margin: '14px 0',
         boxShadow: '0 6px 16px rgba(40,30,70,.09)', textAlign: 'center',
-        fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 16.5, color: sk.ink, whiteSpace: 'pre-line',
+        fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16.5, color: sk.ink, whiteSpace: 'pre-line',
       }}>
         {sk.readySay}
       </div>
@@ -505,7 +505,7 @@ function ConfirmModal({ sk, title, body, cancelLabel, confirmLabel, confirmDange
         textAlign: 'center', boxShadow: '0 14px 32px rgba(0,0,0,.20)',
         animation: 'ttPop .24s cubic-bezier(.2,.9,.3,1.2) both',
       }}>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 18, color: sk.ink }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 18, color: sk.ink }}>
           {title}
         </div>
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8d83ad', marginTop: 8, lineHeight: 1.4 }}>
@@ -519,7 +519,7 @@ function ConfirmModal({ sk, title, body, cancelLabel, confirmLabel, confirmDange
           <button onClick={onConfirm} style={{
             flex: 1, padding: '13px', borderRadius: sk.radius - 8, border: 'none',
             background: confirmDanger ? '#e5484d' : sk.accent, color: '#fff',
-            fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 15, cursor: 'pointer',
+            fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15, cursor: 'pointer',
           }}>{confirmLabel}</button>
         </div>
       </div>
@@ -655,7 +655,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
         <div style={{
           marginTop: 12, background: '#fff', borderRadius: sk.radius, padding: '13px 16px',
           boxShadow: '0 6px 16px rgba(40,30,70,.09)',
-          fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink, textAlign: 'center',
+          fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink, textAlign: 'center',
         }}>
           {tips[step]}
         </div>
@@ -707,7 +707,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
           width: 42, height: 42, borderRadius: '50%', background: sk.accent, color: '#fff', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
         }}>📷</span>
-        <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 500, fontSize: 15.5, color: sk.ink }}>
+        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 500, fontSize: 15.5, color: sk.ink }}>
           Take a photo of your finished drawing!
         </span>
       </div>
@@ -725,7 +725,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
         <button onClick={() => fileRef.current?.click()} style={{
           width: '100%', padding: '46px 16px', borderRadius: sk.radius,
           border: '3px dashed #c4bdd0', background: 'rgba(255,255,255,.6)', cursor: 'pointer',
-          fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 16, color: '#8d83ad',
+          fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: '#8d83ad',
         }}>📷<br />Add photo</button>
       )}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
@@ -755,7 +755,7 @@ function Reward({ sk, result, onLibrary, onAgain }) {
   return (
     <div style={{ textAlign: 'center', paddingTop: 20 }}>
       <TutoMascot size={140} />
-      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 25, color: sk.ink, marginTop: 12 }}>
+      <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 25, color: sk.ink, marginTop: 12 }}>
         Great job! 🎉
       </div>
       <div style={{
@@ -768,7 +768,7 @@ function Reward({ sk, result, onLibrary, onAgain }) {
       <div style={{
         display: 'inline-block', background: '#fff', borderRadius: 999, padding: '11px 22px',
         boxShadow: '0 6px 16px rgba(40,30,70,.10)',
-        fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 17, color: '#b9892f',
+        fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 17, color: '#b9892f',
       }}>
         ◷ Waiting for ✔ · then {sk.gemIcon}
       </div>
@@ -843,7 +843,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>✕</button>
               <div style={{ padding: '9px 11px 11px' }}>
-                <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 14, color: sk.ink }}>{nameFor(p)}</div>
+                <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 14, color: sk.ink }}>{nameFor(p)}</div>
                 <PaintingStatus p={p} sk={sk} />
               </div>
             </div>
@@ -871,7 +871,7 @@ function ctaStyle(sk, disabled) {
   return {
     width: '100%', marginTop: 16, padding: '16px', borderRadius: sk.radius - 2, border: 'none',
     background: disabled ? '#d7cfe6' : sk.accent, color: '#fff', cursor: disabled ? 'default' : 'pointer',
-    fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 19,
+    fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 19,
     boxShadow: disabled ? 'none' : '0 8px 18px rgba(239,133,31,.36)',
   }
 }

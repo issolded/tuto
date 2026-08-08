@@ -127,7 +127,7 @@ export default function GoalsScreen() {
 
       {/* Header */}
       <div style={{ background: '#FFD93D', padding: '52px 24px 28px', borderRadius: '0 0 32px 32px' }}>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 28, fontWeight: 900, color: '#2D2D2D', lineHeight: 1.1 }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 28, fontWeight: 900, color: '#2D2D2D', lineHeight: 1.1 }}>
           My Goals 🏆
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(45,45,45,0.60)', marginTop: 4 }}>
@@ -144,7 +144,7 @@ export default function GoalsScreen() {
         ) : rewards.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, paddingTop: 40 }}>
             <TutoMascot size={150} expression="default" style={{ animation: 'fadeUp 0.4s ease both' }} />
-            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 18, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6, animation: 'fadeUp 0.4s ease 0.1s both' }}>
+            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6, animation: 'fadeUp 0.4s ease 0.1s both' }}>
               No goals yet!<br />Ask your parent to add some 🎯
             </div>
           </div>

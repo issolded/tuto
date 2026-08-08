@@ -136,7 +136,7 @@ export default function LibraryScreen() {
           onClick={e => { e.stopPropagation(); nav('/child/home') }}
           style={{ width: 40, height: 40, borderRadius: 12, background: '#F5F5F5', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A2E' }}
         >←</button>
-        <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>My Library 📚</span>
+        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>My Library 📚</span>
       </div>
 
       {/* Content */}
@@ -145,12 +145,12 @@ export default function LibraryScreen() {
         {/* ── Books by child ── */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
+            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               📖 Books by {child?.name ?? 'You'}
             </div>
             <button
               onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
-              style={{ background: '#E8E0FF', color: '#6C63FF', border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Baloo 2', 'Nunito', cursive" }}
+              style={{ background: '#E8E0FF', color: '#6C63FF', border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
               ✏️ Write
             </button>
@@ -161,10 +161,10 @@ export default function LibraryScreen() {
           ) : stories.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>✏️</div>
-              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No stories yet!</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No stories yet!</div>
               <button
                 onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
-                style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+                style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
                 Write your first story →
               </button>
@@ -185,12 +185,12 @@ export default function LibraryScreen() {
         {/* ── Books from other authors ── */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
+            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               📚 Books from Other Authors
             </div>
             <button
               onClick={e => { e.stopPropagation(); nav('/child/reading') }}
-              style={{ background: '#FFE8D4', color: ACCENT, border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Baloo 2', 'Nunito', cursive" }}
+              style={{ background: '#FFE8D4', color: ACCENT, border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
               + Add
             </button>
@@ -201,10 +201,10 @@ export default function LibraryScreen() {
           ) : books.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📚</div>
-              <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No books yet!</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No books yet!</div>
               <button
                 onClick={e => { e.stopPropagation(); nav('/child/reading') }}
-                style={{ background: ACCENT, color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+                style={{ background: ACCENT, color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
                 Add your first book →
               </button>
@@ -213,7 +213,7 @@ export default function LibraryScreen() {
             <>
               {inProgress.length > 0 && (
                 <div style={{ marginBottom: 28 }}>
-                  <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 12 }}>
+                  <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 12 }}>
                     Reading Now 📖
                   </div>
                   <BookGrid
@@ -231,11 +231,11 @@ export default function LibraryScreen() {
 
               {completed.length > 0 && (
                 <div>
-                  <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 10 }}>
+                  <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 10 }}>
                     Finished Books 🏆
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, #2EC486 0%, #22A876 100%)', borderRadius: 16, padding: '14px 18px', marginBottom: 14, boxShadow: '0 4px 16px rgba(46,196,134,0.25)' }}>
-                    <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800, color: 'white' }}>
+                    <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white' }}>
                       You've read {completed.length} book{completed.length > 1 ? 's' : ''}! Keep it up! 🌟
                     </div>
                   </div>
@@ -363,7 +363,7 @@ function BookCard({ book, jiggling, longPress, isDeleting, isCompleting, onDelet
         )}
       </div>
       <div style={{ padding: '9px 10px 11px' }}>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 13, fontWeight: 800, color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
           {book.title}
         </div>
         {!book.completed && (book.current_page ?? 0) > 0 && (
@@ -407,11 +407,11 @@ function ConfirmDeleteModal({ onConfirm, onCancel }) {
     <div onClick={e => { e.stopPropagation(); onCancel() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 28 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 28, padding: '32px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>📚</div>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E', marginBottom: 8 }}>Remove this book?</div>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E', marginBottom: 8 }}>Remove this book?</div>
         <div style={{ fontSize: 14, color: '#7A7A9A', fontWeight: 600, marginBottom: 28, lineHeight: 1.5 }}>Are you sure you want to remove this book from your library?</div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onCancel} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0F0F5', color: '#1A1A2E', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)' }}>Remove</button>
+          <button onClick={onCancel} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0F0F5', color: '#1A1A2E', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)' }}>Remove</button>
         </div>
       </div>
     </div>
@@ -425,12 +425,12 @@ function ConfirmCompleteModal({ onConfirm, onCancel }) {
     <div onClick={e => { e.stopPropagation(); onCancel() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 28 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 32, padding: '28px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
         <TutoMascot size={90} />
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 21, fontWeight: 800, color: '#1A1A2E', margin: '12px 0 24px', lineHeight: 1.4 }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 21, fontWeight: 800, color: '#1A1A2E', margin: '12px 0 24px', lineHeight: 1.4 }}>
           Wow, did you really finish the whole book? 🎉
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>Yes, I read it all! 📚</button>
-          <button onClick={onCancel} style={{ padding: '14px', border: 'none', borderRadius: 16, background: '#F0F0F5', color: '#7A7A9A', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>Not yet...</button>
+          <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>Yes, I read it all! 📚</button>
+          <button onClick={onCancel} style={{ padding: '14px', border: 'none', borderRadius: 16, background: '#F0F0F5', color: '#7A7A9A', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>Not yet...</button>
         </div>
       </div>
     </div>
@@ -455,7 +455,7 @@ function CelebrationToast({ title, onDone }) {
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 20px 32px', zIndex: 150, pointerEvents: 'none' }}>
         <div style={{ animation: 'toastSlideUp 0.4s ease-out forwards', width: '100%', maxWidth: 390, background: 'linear-gradient(135deg, #2EC486 0%, #1DB974 100%)', borderRadius: 24, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 12px 40px rgba(46,196,134,0.45)', pointerEvents: 'auto' }}>
           <TutoMascot size={60} style={{ flexShrink: 0 }} />
-          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: 'white', lineHeight: 1.4 }}>
+          <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', lineHeight: 1.4 }}>
             Amazing! You finished<br />
             <span style={{ fontSize: 15, fontWeight: 700, opacity: 0.9 }}>{title}</span>! 🌟
           </div>

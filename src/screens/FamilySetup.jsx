@@ -131,7 +131,7 @@ export default function FamilySetup() {
         <TutoMascot size={110} expression={status === 'success' ? 'excited' : 'default'} />
       </div>
 
-      <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 26, fontWeight: 900, marginTop: 20, textAlign: 'center', color: '#FFD93D' }}>
+      <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 26, fontWeight: 900, marginTop: 20, textAlign: 'center', color: '#FFD93D' }}>
         Family Setup
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: 6, textAlign: 'center', lineHeight: 1.6 }}>
@@ -155,7 +155,7 @@ export default function FamilySetup() {
       {status === 'success' && (
         <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, animation: 'fadeUp 0.4s ease both' }}>
           <div style={{ fontSize: 64 }}>✅</div>
-          <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 22, fontWeight: 800, color: '#2EC486', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2EC486', textAlign: 'center' }}>
             Connected! ✅
           </div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
@@ -179,7 +179,7 @@ export default function FamilySetup() {
             style={{
               width: '100%', padding: '18px', border: 'none', borderRadius: 18,
               background: status === 'scanning' ? '#FF6B35' : '#FFD93D',
-              color: '#1A1A2E', fontFamily: "'Baloo 2', 'Nunito', cursive",
+              color: '#1A1A2E', fontFamily: "'TrRound', 'Baloo 2', cursive",
               fontSize: 17, fontWeight: 800, cursor: 'pointer',
               boxShadow: '0 8px 24px rgba(255,211,61,0.3)',
             }}
@@ -217,7 +217,7 @@ export default function FamilySetup() {
                   padding: '14px 18px', border: 'none', borderRadius: 14,
                   background: manualCode.length === 8 && !manualLoading ? '#FFD93D' : 'rgba(255,255,255,0.1)',
                   color: manualCode.length === 8 && !manualLoading ? '#1A1A2E' : 'rgba(255,255,255,0.3)',
-                  fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 800,
+                  fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800,
                   cursor: manualCode.length === 8 && !manualLoading ? 'pointer' : 'not-allowed',
                   transition: 'background 0.2s, color 0.2s', whiteSpace: 'nowrap',
                 }}
@@ -234,7 +234,7 @@ export default function FamilySetup() {
 
           <button
             onClick={() => nav('/')}
-            style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 18, background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+            style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 18, background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
           >
             ← Back
           </button>

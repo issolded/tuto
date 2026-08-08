@@ -11,7 +11,7 @@ export function StoryCoverFace({ story, childName, titleSize = 11, byTextSize = 
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       {/* Title */}
       <div style={{ padding: '10px 14px 6px 14px', flexShrink: 0 }}>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: titleSize, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: titleSize, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
           {story.title || 'Untitled Story'}
         </div>
       </div>

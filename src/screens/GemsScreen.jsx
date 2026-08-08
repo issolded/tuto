@@ -72,7 +72,7 @@ export default function GemsScreen() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
           <span style={{ fontSize: 48 }}>⭐</span>
-          <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 58, fontWeight: 900, color: '#2D2D2D', lineHeight: 1 }}>
+          <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 58, fontWeight: 900, color: '#2D2D2D', lineHeight: 1 }}>
             {loading ? '—' : total}
           </span>
         </div>
@@ -80,7 +80,7 @@ export default function GemsScreen() {
 
       {/* Transaction history */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 20px 80px' }}>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', marginBottom: 14 }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', marginBottom: 14 }}>
           {t('gems_history', lang)}
         </div>
 
@@ -91,7 +91,7 @@ export default function GemsScreen() {
         ) : ledger.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, paddingTop: 36, animation: 'fadeUp 0.4s ease both' }}>
             <TutoMascot size={150} expression="default" />
-            <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6 }}>
+            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6 }}>
               {t('gems_none_title', lang)}<br />{t('gems_none_body', lang)}
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function GemsScreen() {
                       {row.created_at ? formatDate(row.created_at, lang) : ''}
                     </div>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: isPositive ? '#2EC486' : '#FF6B35', fontFamily: "'Baloo 2', 'Nunito', cursive", whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: isPositive ? '#2EC486' : '#FF6B35', fontFamily: "'TrRound', 'Baloo 2', cursive", whiteSpace: 'nowrap' }}>
                     {isPositive ? '+' : ''}{row.amount} 💎
                   </div>
                 </div>

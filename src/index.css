@@ -4,6 +4,19 @@
    back per glyph. Nunito covers Turkish and now sits in front of the generic fallback. */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap');
 
+/* ğ Ğ ş Ş only. Fredoka has every other Turkish letter — measured in the browser by comparing
+   rendered widths against the generic fallback — but not these two, so they were falling
+   through to Nunito, whose lighter, narrower shapes sat badly between Fredoka's round ones.
+   Baloo 2 at 800 matches Fredoka's optical weight at the sizes we use it; the family sits in
+   FRONT of Fredoka in the stack, and the unicode-range means it only ever supplies these four
+   code points. Nothing else about the type changes. */
+@font-face {
+  font-family: 'TrRound';
+  src: url(https://fonts.gstatic.com/s/baloo2/v23/wXK0E3kTposypRydzVT08TS3JnAmtdiayppm_leP6HcMmzcCjA.woff2) format('woff2');
+  font-display: swap;
+  unicode-range: U+011E-011F, U+015E-015F;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {

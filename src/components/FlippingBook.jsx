@@ -88,10 +88,10 @@ export default function FlippingBook() {
       </div>
 
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 800, fontSize: 21, color: '#8a6bd4' }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 800, fontSize: 21, color: '#8a6bd4' }}>
           Reading your story<span className="fb-dot">.</span><span className="fb-dot">.</span><span className="fb-dot">.</span> ✨
         </div>
-        <div style={{ fontFamily: "'Fredoka', 'Baloo 2', 'Nunito', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 2 }}>
+        <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 2 }}>
           Just a moment!
         </div>
       </div>
