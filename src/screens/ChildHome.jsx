@@ -177,7 +177,7 @@ function GoalRing({ pct, color, track, size = 84 }) {
 // prompt. Tonal skin follows bandFor(child.age); tablet opens the same three
 // sections into side-by-side panels instead of a phone-style vertical stack
 // (both driven by the .tuto-today-* CSS above + the isTablet branches below).
-function TodayCard({ band, isTablet, today, gems, nav }) {
+function TodayCard({ band, isTablet, today, gems, nav, lang }) {
   const mature = band === 'mature'
   const ink = mature ? '#27332c' : INK
   const inkSoft = mature ? '#6c7c72' : INK_SOFT
@@ -419,7 +419,7 @@ export default function ChildHome() {
           </button>
         </div>
 
-        <TodayCard band={band} isTablet={isTablet} today={today} gems={gems ?? 0} nav={nav} />
+        <TodayCard lang={lang} band={band} isTablet={isTablet} today={today} gems={gems ?? 0} nav={nav} />
 
         <div className="tuto-task-grid">
           {TASKS.map((task, i) => (
