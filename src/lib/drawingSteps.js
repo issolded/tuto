@@ -357,6 +357,29 @@ export const DRAWING_STEPS = {
       'Her yerine çizgiler ve kısa tüyler ekle — kedin hazır!',
     ],
   },
+  // Audited against drawings/dog/*.webp.
+  dog: {
+    en: [
+      'Draw a big round head.',
+      'Add a rounded body below it, wider at the bottom.',
+      'Draw two floppy ears hanging down each side of the head.',
+      'Add two circles for the eyes, a rounded nose, and a curvy mouth.',
+      'Colour the eyes in dark, leaving a white dot in each.',
+      'Draw the front legs coming down the body, with little paws and toes.',
+      'Add a wagging tail on the right, with a few lines to show it moving, and a tongue.',
+      'Draw round spots on the ears, face and body — all done!',
+    ],
+    tr: [
+      'Büyük ve yuvarlak bir kafa çiz.',
+      'Altına aşağı doğru genişleyen yuvarlak bir gövde ekle.',
+      'Kafasının iki yanına sarkan iki kulak çiz.',
+      'Gözler için iki daire, yuvarlak bir burun ve kıvrımlı bir ağız ekle.',
+      'Gözleri koyu doldur, her birinde beyaz bir nokta bırak.',
+      'Gövdeden aşağı inen ön bacakları, küçük patileri ve parmakları çiz.',
+      'Sağına sallanan bir kuyruk çiz, hareketini gösteren birkaç çizgi ve bir dil ekle.',
+      'Kulaklarına, yüzüne ve gövdesine yuvarlak benekler çiz — bitti!',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
