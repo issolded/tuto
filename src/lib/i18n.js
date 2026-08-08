@@ -86,6 +86,20 @@ const STRINGS = {
   hw_add_photo:       { en: 'Add photo', tr: 'Fotoğraf ekle' },
   hw_looking_dots:    { en: 'Tuto is looking at your homework…', tr: 'Tuto ödevine bakıyor…' },
   tree_photo_optional:{ en: "Want to show a photo? It's up to you.", tr: 'Fotoğraf göstermek ister misin? Sana kalmış.' },
+  tree_helping_grows: { en: '🌱 Helping makes your tree grow', tr: '🌱 Yardım etmek ağacını büyütür' },
+  // ── My Tree: the forest archive (was written Turkish-only)
+  tree_this_month:    { en: 'THIS MONTH', tr: 'BU AY' },
+  tree_n_trees:       { en: 'trees', tr: 'ağaç' },
+  tree_you_grew:      { en: 'you grew 🌳', tr: 'ağaç yetiştirdin 🌳' },
+  tree_back_today:    { en: 'Back to today', tr: 'Bugüne dön' },
+  tree_past_forests:  { en: 'Past forests', tr: 'Geçmiş ormanlar' },
+  tree_fox_watches:   { en: 'The fox is watching your forest grow', tr: 'Tilki büyüttüğün ormanı takip ediyor' },
+  tree_loading:       { en: 'Loading forests…', tr: 'Ormanlar yükleniyor…' },
+  tree_load_failed:   { en: "Couldn't load the forests. Try again in a bit 🦊", tr: 'Ormanlar şu an yüklenemedi. Biraz sonra tekrar dene 🦊' },
+  tree_no_past:       { en: 'No past forests yet — keep growing this month! 🌱', tr: 'Henüz geçmiş bir orman yok — bu ay büyümeye devam et! 🌱' },
+  tree_earlier_years: { en: 'Earlier years', tr: 'Önceki yıllar' },
+  tree_fox_keeps:     { en: 'The fox keeps every forest you grow 🦊🌲', tr: 'Tilki büyüttüğün her ormanı saklıyor 🦊🌲' },
+
   tree_new_month:     { en: '🌱 A new tree starts every month', tr: '🌱 Her ay yeni bir ağaç başlar' },
   tree_grow:          { en: "Let's grow my tree! →", tr: 'Haydi ağacımı büyütelim! →' },
   story_edit:         { en: '✏️ Edit', tr: '✏️ Düzenle' },
@@ -193,12 +207,24 @@ const STRINGS = {
                         tr: 'Zorlu bir şeye hazır mısın? 🔥\nBakalım matematiğin nasıl!' },
 }
 
+// ── Adding a language ────────────────────────────────────────────────────────
+// One entry here, then a field on each string above. Nothing else in the app hardcodes a
+// language: the pickers, the date locale and the fallback all read this list. `npm run
+// i18n:check` will then print exactly which keys the new language is still missing.
+export const LANGS = [
+  { code: 'en', label: 'English', flag: '🇬🇧', locale: 'en-GB' },
+  { code: 'tr', label: 'Türkçe',  flag: '🇹🇷', locale: 'tr-TR' },
+]
+export const DEFAULT_LANG = 'en'
+
+const KNOWN = new Set(LANGS.map(l => l.code))
+
 // `t('math_on_paper', lang)` — falls back to English rather than showing a key, because a
 // missing translation should read oddly, not break the screen.
 export function t(key, lang) {
   const entry = STRINGS[key]
   if (!entry) return key
-  return (lang === 'tr' ? entry.tr : entry.en) ?? entry.en
+  return entry[lang] ?? entry[DEFAULT_LANG] ?? key
 }
 
 // For a component that reads many strings: `const s = translator(lang); s('task_math')`.
@@ -210,7 +236,7 @@ export function translator(lang) {
 // 'en-US' on the tree — so a Turkish child read "16 Jul" and "Friday, August 8". One helper,
 // driven by the same language as everything else.
 export function localeFor(lang) {
-  return lang === 'tr' ? 'tr-TR' : 'en-GB'
+  return (LANGS.find(l => l.code === lang) ?? LANGS[0]).locale
 }
 
 export function formatDay(iso, lang, opts = { day: 'numeric', month: 'short' }) {
@@ -219,5 +245,5 @@ export function formatDay(iso, lang, opts = { day: 'numeric', month: 'short' }) 
 }
 
 export function childLang(child) {
-  return child?.language === 'tr' ? 'tr' : 'en'
+  return KNOWN.has(child?.language) ? child.language : DEFAULT_LANG
 }

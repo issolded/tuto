@@ -1,3 +1,4 @@
+import { LANGS } from '../lib/i18n'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
@@ -350,7 +351,7 @@ export default function ParentOnboarding() {
             </Field>
             <Field label="Which language should I speak to them in?">
               <div style={{ display: 'flex', gap: 10 }}>
-                {[{ id: 'en', label: 'English', flag: '🇬🇧' }, { id: 'tr', label: 'Türkçe', flag: '🇹🇷' }].map(o => {
+                {LANGS.map(l => ({ id: l.code, label: l.label, flag: l.flag })).map(o => {
                   const on = childLang === o.id
                   return (
                     <button key={o.id} className="tc-press tc-tap" onClick={() => setChildLang(o.id)} style={{

@@ -1,3 +1,4 @@
+import { LANGS } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -115,7 +116,7 @@ export default function TaskSettings() {
             The language {childName || 'your child'} sees — questions, hints and Tuto's replies.
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-            {[{ id: 'en', label: 'English', flag: '🇬🇧' }, { id: 'tr', label: 'Türkçe', flag: '🇹🇷' }].map(o => {
+            {LANGS.map(l => ({ id: l.code, label: l.label, flag: l.flag })).map(o => {
               const on = childLang === o.id
               return (
                 <button key={o.id} className="tc-press tc-tap" onClick={() => saveLanguage(o.id)} style={{

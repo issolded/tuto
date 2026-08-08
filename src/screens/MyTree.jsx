@@ -390,7 +390,7 @@ function ForestStrip({ monthForest, monthTreeCount }) {
   if (!plantedDays.length && monthTreeCount === 0) {
     return (
       <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#9B8FC0', padding: '8px 0 4px' }}>
-        🌱 Yardım etmek ağacını büyütür
+        {t('tree_helping_grows', lang)}
       </div>
     )
   }
@@ -416,9 +416,9 @@ function ForestStrip({ monthForest, monthTreeCount }) {
     // which was clipping a tooltip that popped up *inside* the row.
     <div ref={containerRef} style={{ paddingBottom: 6, position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8 }}>
-        <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>Bu ay</span>
+        <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>{t('tree_this_month', lang)}</span>
         <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '4px 10px', borderRadius: 999 }}>
-          🌳 {monthTreeCount} ağaç
+          🌳 {monthTreeCount} {t('tree_n_trees', lang)}
         </span>
       </div>
       {selected && (
@@ -462,7 +462,7 @@ function ForestStrip({ monthForest, monthTreeCount }) {
         })}
       </div>
       <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11.5, color: '#9B8FC0', paddingTop: 6 }}>
-        🌱 Yardım etmek ağacını büyütür
+        {t('tree_helping_grows', lang)}
       </div>
     </div>
   )
@@ -501,18 +501,20 @@ function ArchiveMonthCard({ month, isOpen, onToggle }) {
 }
 
 function ArchiveYearRow({ year }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,.7)', borderRadius: 16, padding: '13px 15px', marginBottom: 9 }}>
       <TreeArt size={30} fruits={DAY_FULL} target={DAY_FULL} />
       <div style={{ flex: 1 }}>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15, color: '#4a3f2e' }}>{year.year}</div>
-        <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12, color: '#37a06f' }}>{year.trees} ağaç yetiştirdin 🌳</div>
+        <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12, color: '#37a06f' }}>{year.trees} {t('tree_you_grew', lang)}</div>
       </div>
     </div>
   )
 }
 
 function ForestArchive({ open, onClose, data, loading, error }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const isTablet = useIsTablet()
   const [openMonthKey, setOpenMonthKey] = useState(null)
   const months = data?.months || []
@@ -530,26 +532,26 @@ function ForestArchive({ open, onClose, data, loading, error }) {
         transition: 'transform .46s cubic-bezier(.3,.9,.3,1)',
       }}>
         <div style={{ flex: '0 0 auto', padding: '18px 18px 10px', position: 'relative' }}>
-          <button onClick={onClose} title="Bugüne dön" style={{ position: 'absolute', top: 18, right: 18, width: 34, height: 34, borderRadius: 12, border: 'none', cursor: 'pointer', background: '#fff', color: '#37a06f', fontSize: 16, boxShadow: '0 2px 8px rgba(40,60,40,.12)' }}>✕</button>
+          <button onClick={onClose} title={t('tree_back_today', lang)} style={{ position: 'absolute', top: 18, right: 18, width: 34, height: 34, borderRadius: 12, border: 'none', cursor: 'pointer', background: '#fff', color: '#37a06f', fontSize: 16, boxShadow: '0 2px 8px rgba(40,60,40,.12)' }}>✕</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 42 }}>
             <span style={{ fontSize: 24 }}>🦊</span>
-            <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 14, color: '#4a3f2e', lineHeight: 1.3 }}>Tilki büyüttüğün ormanı takip ediyor</span>
+            <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 14, color: '#4a3f2e', lineHeight: 1.3 }}>{t('tree_fox_watches', lang)}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
             <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 36, color: '#37a06f', letterSpacing: '-1px' }}>{allTime}</span>
-            <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5, color: '#7a6a4c' }}>ağaç yetiştirdin 🌳</span>
+            <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5, color: '#7a6a4c' }}>{t('tree_you_grew', lang)}</span>
           </div>
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 16px 24px' }}>
           {loading && (
-            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>Ormanlar yükleniyor…</div>
+            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>{t('tree_loading', lang)}</div>
           )}
           {!loading && error && (
-            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>Ormanlar şu an yüklenemedi. Biraz sonra tekrar dene 🦊</div>
+            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>{t('tree_load_failed', lang)}</div>
           )}
           {empty && (
-            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>Henüz geçmiş bir orman yok — bu ay büyümeye devam et! 🌱</div>
+            <div style={{ textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#9B8FC0', padding: '30px 0' }}>{t('tree_no_past', lang)}</div>
           )}
           {months.length > 0 && (
             <div style={{ paddingTop: 4 }}>
@@ -561,13 +563,13 @@ function ForestArchive({ open, onClose, data, loading, error }) {
           )}
           {years.length > 0 && (
             <>
-              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 13, color: '#7a6a4c', padding: '12px 2px 8px' }}>Önceki yıllar</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 13, color: '#7a6a4c', padding: '12px 2px 8px' }}>{t('tree_earlier_years', lang)}</div>
               {years.map(y => <ArchiveYearRow key={y.year} year={y} />)}
             </>
           )}
           {!empty && !loading && !error && (
             <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11.5, color: '#9B8FC0', padding: '10px 20px 0', lineHeight: 1.5 }}>
-              Tilki büyüttüğün her ormanı saklıyor 🦊🌲
+              {t('tree_fox_keeps', lang)}
             </div>
           )}
         </div>
@@ -616,13 +618,14 @@ function Intro({ onContinue }) {
 // ── 6-8 · "My Tree" (primary) ───────────────────────────────────────────────────
 
 function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const isTablet = useIsTablet()
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF7EE 0%,#D7F0E2 100%)', height: '100dvh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 23, color: '#37a06f' }}>My Tree 🌳</div>
-        <button onClick={onOpenArchive} title="Geçmiş ormanlar" style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer' }}>🦊</button>
+        <button onClick={onOpenArchive} title={t('tree_past_forests', lang)} style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer' }}>🦊</button>
       </div>
       {/* Tree block */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 4 }}>
@@ -665,13 +668,14 @@ function BandYoung({ groups, todayCount, monthForest, monthTreeCount, remaining,
 // ── 9-11 · intermediate ─────────────────────────────────────────────────────────
 
 function BandMid({ groups, todayCount, monthForest, monthTreeCount, remaining, onAdd, composer, nav, onOpenArchive }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const isTablet = useIsTablet()
   return (
     <div style={{ background: 'linear-gradient(178deg,#EAF4F0 0%,#DCEDE4 100%)', height: '100dvh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 4px' }}>
         <BackButton onClick={() => nav('/child/home')} />
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 20, color: '#37a06f' }}>My Tree 🌳</div>
-        <button onClick={onOpenArchive} title="Geçmiş ormanlar" style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}>🦊</button>
+        <button onClick={onOpenArchive} title={t('tree_past_forests', lang)} style={{ width: 38, height: 38, borderRadius: '50%', background: '#DCF2E7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}>🦊</button>
       </div>
       {/* Tree progress strip */}
       <div style={{ margin: '6px 16px 4px', padding: '12px 14px', background: 'rgba(255,255,255,.66)', border: '1.5px solid rgba(255,255,255,.9)', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 6px 18px rgba(40,70,55,.08)' }}>

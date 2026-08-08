@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "i18n:check": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",
