@@ -110,7 +110,7 @@ export default function HomeworkScreen() {
     if (!photos.length || submitting) return
     setSubmitting(true)
     setError(null)
-    setPhase('checking') // full-screen t('hw_looking', lang) overlay
+    setPhase('checking') // full-screen "looking at your homework" overlay
     // Optimistically prepend a "checking" row so the just-sent homework shows
     // in the history immediately (server records it as pending after review).
     const optimistic = { id: `temp-${Date.now()}`, date: new Date().toISOString(), pages: photos.length, status: 'checking' }
