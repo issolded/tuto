@@ -1,3 +1,4 @@
+import { stepsFor } from '../lib/drawingSteps'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
@@ -44,156 +45,7 @@ function bandFor(age) {
 }
 const AGE_GROUP = { young: '6-8', mid: '9-11', mature: '12-15' }
 
-// Per-step hints, from TARGETS[].steps[].tip in the prototype.
-const STEP_TIPS = {
-  cat: [
-    'Draw a big oval for the head.',
-    'Add an egg shape below for the body.',
-    'Two pointy ears on top.',
-    'Draw two big round eyes.',
-    'Colour the eyes in and add pupils.',
-    'A little nose, a smile and paw lines.',
-    'Long whiskers and a curvy tail.',
-    'Add stripes and fur — your cat is done!',
-  ],
-  dog: [
-    'Draw a big round head.',
-    'Add an egg shape below for the body.',
-    'Two floppy ears on the sides.',
-    'Round eyes, a little nose and a smile.',
-    'Colour the eyes in dark.',
-    'Draw the front legs and paws.',
-    'Add a happy wagging tail!',
-    'Add the spots — all done!',
-  ],
-  bee: [
-    'Draw a circle for the head.',
-    'Add a big oval body behind it.',
-    'Two curly antennae with little balls on top.',
-    'Draw two big round eyes.',
-    'Add a happy smile.',
-    'Two big wings and tiny legs.',
-    'Add the stripes and a stinger — buzz, done!',
-  ],
-  axolotl: [
-    'Draw a big round head.',
-    'Add a chubby body and little arms.',
-    'Two big shiny eyes.',
-    'Add a happy open smile.',
-    'Feathery gills on both sides and a long tail.',
-    'Go over your lines and add shading — done!',
-  ],
-  landscape: [
-    'Draw a curved line for the hill.',
-    'Add three pine trees on the left.',
-    'Draw a winding path over the hill.',
-    'Add a little house on the right.',
-    'Draw clouds and a sun in the sky.',
-    'Add shading, a river and smoke — all done!',
-  ],
-  'anime-face': [
-    'Draw a circle and a center line for the face.',
-    'Add the jaw and chin below the circle.',
-    'Draw the ears and neck.',
-    'Add the eyebrows and eyes.',
-    'Draw the pupils and eyelids.',
-    'Add the nose and a smiling mouth.',
-    'Draw the hair shape around the head.',
-    'Add hair strands and shading.',
-    'Finish the shading and details — done!',
-  ],
-  caterpillar: [
-    'Draw a big circle for the head.',
-    'Add a round body part behind it.',
-    'Keep adding circles to make the body longer.',
-    'Two big eyes and a happy smile.',
-    'Add two curly antennae on top.',
-    'Little legs under each body part.',
-    'Add spots and stripes on the body.',
-    'Draw a leaf under your caterpillar — done!',
-  ],
-  house: [
-    'Draw a big square for the walls.',
-    'Put a triangle roof on top.',
-    'Add a door in the middle.',
-    'Two windows, one on each side.',
-    'Draw the window panes and a doorknob.',
-    'Add a chimney and some smoke.',
-    'Draw a path and a little fence.',
-    'Add bricks, grass and a sun — all done!',
-  ],
-  // Seven steps, not eight: the original step 5 went BACKWARDS (the antenna and
-  // ears it had just added disappeared again), so it was dropped and the rest
-  // renumbered. Step 4 → 5 now only ever adds.
-  robot: [
-    'Draw a square for the head.',
-    'Add a big square body underneath.',
-    'Bendy arms, round hands, legs and feet.',
-    'An antenna, two big eyes and side ears.',
-    'Add a screen and buttons on the tummy.',
-    'Bolts on the corners and little fingers.',
-    'Add shading and details — beep boop, done!',
-  ],
-  owl: [
-    'Draw a circle for the head and an oval below it for the body.',
-    'Add two dot eyes and round out the body into an owl shape.',
-    'Draw a heart-shaped face mask and a little triangle beak.',
-    'Add two feet with tiny claws at the bottom.',
-    'Draw the pupils in the eyes and a line down the wing.',
-    'Add eyebrow feathers and a few lines on the wing.',
-    'Fill in feather texture all over the body.',
-    'Add pointy ear tufts on top and finish the feathers — done!',
-  ],
-  tiger: [
-    'Draw an oval for the body, a circle for the head, and simple lines for the legs and tail.',
-    'Shape the head, back, and legs into a walking tiger, and curl the tail.',
-    'Add the eyes, nose, mouth, and paws with little claws.',
-    'Draw the fur lines flowing along the back and add whiskers.',
-    'Fill in the stripes all over the body, legs, and tail.',
-    'Darken the stripes and add shading to finish — done!',
-  ],
-  master: [
-    'Draw a circle for the head and an ear guide line on the side.',
-    'Add the eyebrows and eyes on the face.',
-    'Draw the neck and a cape falling over the shoulders.',
-    'Add the arms, a sash at the waist, and a sword in one hand.',
-    'Draw the long flowing hair and sharpen the face — done!',
-  ],
-  princess: [
-    'Draw an oval for the head with a center guide line.',
-    'Add the big eyes, nose, and mouth on the face.',
-    'Draw the long wavy hair flowing around the head.',
-    'Add the neck and a dress with a V-neck collar.',
-    'Draw the arms and hands clasped together in front.',
-    'Add the dress folds and a ribbon hem at the bottom — done!',
-  ],
-  'tough-girl': [
-    'Draw the head and ears, with two circles above for the hair buns.',
-    'Add angry eyebrows, sharp eyes, and a frown.',
-    'Draw the shirt and skirt shapes, with arms out to the sides.',
-    'Add the two space buns with wispy hair strands.',
-    'Draw the legs, leggings, and boots, with hands on the hips.',
-    'Add the laces and details on the boots and clothes — done!',
-  ],
-  'worried-boy': [
-    'Draw an oval for the head with a center guide line and a jaw shape.',
-    'Add the neck and a leaning body shape.',
-    'Draw the messy hair on top of the head.',
-    'Add worried eyebrows, wide eyes, and a scared open mouth.',
-    'Draw the arms — one pressed against a wall, one on the hip.',
-    'Add the legs and feet in a leaning stance.',
-    'Add clothing wrinkles and details on the arms and wall — done!',
-  ],
-  'girl-with-cat': [
-    'Draw a circle for the head with a center guide cross.',
-    'Add a bow on top of the head.',
-    'Draw the hair with bangs framing the face.',
-    'Add the big eyes, nose, and mouth.',
-    'Draw the shirt, arms, and long pigtails flowing down.',
-    'Draw the legs sitting cross-legged and a little cat beside her.',
-    'Add details on the hair, clothes, and cat — done!',
-  ],
-}
+
 
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
 const DIFFICULTIES = ['All', 'Easy', 'Medium', 'Hard']
@@ -534,7 +386,8 @@ function ConfirmModal({ sk, title, body, cancelLabel, confirmLabel, confirmDange
 function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const total = target.step_count
-  const tips = STEP_TIPS[target.id] || []
+  // Only drawings whose steps have been checked against their pictures get words.
+  const tips = stepsFor(target.id, lang) || []
   const isLast = step >= total - 1
   const [confirmExit, setConfirmExit] = useState(false)
 
