@@ -419,6 +419,26 @@ export const DRAWING_STEPS = {
       'Saçın içine teller çiz, kolları ve eteği gölgele, yüzü tamamla.',
     ],
   },
+  // Audited against drawings/tough-girl/*.webp. Steps 3 and 4 are deliberately blocky — the
+  // arms and skirt are plain shapes at that stage, not clothes yet.
+  'tough-girl': {
+    en: [
+      'Draw an oval head, two round buns on top, and a small ear on each side.',
+      'Add a guide line down the middle, then angry slanted eyebrows, two round eyes and a straight cross mouth.',
+      'Block in the body with simple shapes: a rectangle for the top, triangles for the arms out to the sides, and a wide skirt.',
+      'Add two straight legs and a boot on each foot.',
+      'Turn the shapes into clothes — a vest top, hands on the hips, laced boots — and draw the fringe and hair.',
+      'Add pleats to the skirt, laces to the boots, and shade the hair, top and legs.',
+    ],
+    tr: [
+      'Oval bir kafa, tepesine iki yuvarlak topuz, iki yanına da birer küçük kulak çiz.',
+      'Ortasından bir yardım çizgisi geçir, sonra kızgın çapraz kaşlar, iki yuvarlak göz ve dümdüz bir ağız çiz.',
+      'Gövdeyi basit şekillerle kur: üst için bir dikdörtgen, iki yana açılan kollar için üçgenler, altına geniş bir etek.',
+      'İki düz bacak ve her ayağa birer bot ekle.',
+      'Şekilleri kıyafete çevir — askılı bir üst, bele dayalı eller, bağcıklı botlar — sonra kâkülü ve saçı çiz.',
+      'Eteğe pileler, botlara bağcıklar ekle; saçı, üstü ve bacakları gölgele.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
