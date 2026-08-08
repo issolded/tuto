@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
@@ -57,13 +58,16 @@ const HW_STATUS = {
   approved: { label: '✅ Done',     bg: '#dcf3e2', color: '#2f9e63' },
 }
 
-function histDate(iso) {
+function histDate(iso, lang) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) // "16 Jul"
+  return formatDay(d, lang)
 }
 
 export default function HomeworkScreen() {
+  // Read here rather than threaded through props: these are leaves, and a date is the only
+  // thing they need a language for.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
   const isTablet = useIsTablet()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
@@ -252,7 +256,7 @@ export default function HomeworkScreen() {
                       <DocIcon />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.15 }}>{histDate(row.date)}</div>
+                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.15 }}>{histDate(row.date, lang)}</div>
                       <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: INK_SOFT, marginTop: 1 }}>
                         {row.pages} {row.pages === 1 ? 'photo' : 'photos'}
                       </div>

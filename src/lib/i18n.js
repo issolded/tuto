@@ -147,6 +147,18 @@ export function translator(lang) {
   return (key) => t(key, lang)
 }
 
+// Dates were formatted with a hardcoded locale — 'en-GB' in the library and drawings,
+// 'en-US' on the tree — so a Turkish child read "16 Jul" and "Friday, August 8". One helper,
+// driven by the same language as everything else.
+export function localeFor(lang) {
+  return lang === 'tr' ? 'tr-TR' : 'en-GB'
+}
+
+export function formatDay(iso, lang, opts = { day: 'numeric', month: 'short' }) {
+  const d = iso instanceof Date ? iso : new Date(iso)
+  return isNaN(d) ? '' : d.toLocaleDateString(localeFor(lang), opts)
+}
+
 export function childLang(child) {
   return child?.language === 'tr' ? 'tr' : 'en'
 }

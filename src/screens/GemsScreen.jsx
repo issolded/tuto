@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { t, childLang } from '../lib/i18n'
+import { childLang, formatDay, localeFor, t } from '../lib/i18n'
 import { supabase } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
@@ -38,7 +38,7 @@ function formatDate(dateStr, lang) {
   yesterday.setDate(yesterday.getDate() - 1)
   if (d.toDateString() === today.toDateString()) return t('gems_today', lang)
   if (d.toDateString() === yesterday.toDateString()) return t('gems_yesterday', lang)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return formatDay(d, lang, { month: 'short', day: 'numeric' })
 }
 
 export default function GemsScreen() {

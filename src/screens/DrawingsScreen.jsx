@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
@@ -207,9 +208,9 @@ const LOCKED = [
   { name: 'Sun', category: 'Nature' },
 ]
 
-function fmtDate(iso) {
+function fmtDate(iso, lang) {
   try {
-    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    return formatDay(iso, lang)
   } catch { return '' }
 }
 
@@ -270,6 +271,9 @@ function statusLabel(p, sk) {
 }
 
 function PaintingStatus({ p, sk, compact }) {
+  // Read here rather than threaded through props: these are leaves, and a date is the only
+  // thing they need a language for.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const s = statusLabel(p, sk)
   return (
     <div style={{ marginTop: compact ? 4 : 3 }}>
@@ -280,7 +284,7 @@ function PaintingStatus({ p, sk, compact }) {
         {s.text}
       </div>
       <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: compact ? 9.5 : 11, color: '#8d83ad' }}>
-        {fmtDate(p.created_at)}
+        {fmtDate(p.created_at, lang)}
       </div>
     </div>
   )

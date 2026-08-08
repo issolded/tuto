@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
@@ -34,7 +35,7 @@ const MICRO_COPY = {
   mature: 'Logged — your parent will confirm it.',
 }
 
-const TODAY_LABEL = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+const todayLabel = (lang) => formatDay(new Date(), lang, { weekday: 'long', month: 'long', day: 'numeric' })
 
 // Groups a flat list into per-local-day buckets, preserving the newest-first
 // order the backend already sorted them in. Items without a `date` (freshly
@@ -51,9 +52,9 @@ function groupEntriesByDate(entries, todayDate) {
 }
 
 // "June 29" style label for a past day's group header (yyyy-MM-dd, local).
-function formatPastDate(dateStr) {
+function formatPastDate(dateStr, lang) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
+  return formatDay(new Date(y, m - 1, d), lang, { day: 'numeric', month: 'long' })
 }
 
 // Diary photos are photos of a child's home and room, so they're uploaded
@@ -189,22 +190,28 @@ function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
 }
 
 function DiaryDateHeader({ isToday, dateStr }) {
+  // Read here rather than threaded through props: these are leaves, and a date is the only
+  // thing they need a language for.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 16px 6px' }}>
       <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: isToday ? '#37a06f' : '#b9892f' }}>
         {isToday ? 'Today' : 'Waiting'}
       </span>
       <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: isToday ? 17 : 15, color: '#4a3f2e' }}>
-        {isToday ? TODAY_LABEL : formatPastDate(dateStr)}
+        {isToday ? TODAY_LABEL : formatPastDate(dateStr, lang)}
       </span>
     </div>
   )
 }
 
 function MatureDateHeader({ isToday, dateStr }) {
+  // Read here rather than threaded through props: these are leaves, and a date is the only
+  // thing they need a language for.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div style={{ fontWeight: 800, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#6c7c72', paddingTop: 10, paddingBottom: 4 }}>
-      {isToday ? 'Today' : formatPastDate(dateStr)}
+      {isToday ? 'Today' : formatPastDate(dateStr, lang)}
     </div>
   )
 }
@@ -335,12 +342,15 @@ function BackButton({ onClick, dark }) {
 // ── forest strip (6-11 bands) ───────────────────────────────────────────────────
 
 // "July 4" style label for the forest strip's tap tooltip (yyyy-MM-dd, local).
-function formatStripDate(dateStr) {
+function formatStripDate(dateStr, lang) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
+  return formatDay(new Date(y, m - 1, d), lang, { day: 'numeric', month: 'long' })
 }
 
 function ForestStrip({ monthForest, monthTreeCount }) {
+  // Read here rather than threaded through props: these are leaves, and a date is the only
+  // thing they need a language for.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [tooltip, setTooltip] = useState(null)
   const [anchor, setAnchor] = useState({ left: 0, top: 0 })
   // { date, left } once the tooltip's real width is measured and clamped to
@@ -424,7 +434,7 @@ function ForestStrip({ monthForest, monthTreeCount }) {
           fontFamily: 'Nunito, sans-serif', color: '#4a3f2e', whiteSpace: 'nowrap',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
         }}>
-          <span style={{ fontWeight: 700, fontSize: 11 }}>{formatStripDate(selected.date)}</span>
+          <span style={{ fontWeight: 700, fontSize: 11 }}>{formatStripDate(selected.date, lang)}</span>
           <span style={{ fontWeight: 800, fontSize: 10.5, color: '#37a06f' }}>{selected.count} {selected.count === 1 ? 'contribution' : 'contributions'}</span>
         </div>
       )}
@@ -459,12 +469,15 @@ function ForestStrip({ monthForest, monthTreeCount }) {
 
 // ── forest archive overlay (fox → past months/years, 6-11 bands) ───────────────
 
-function monthLabel(year, month) {
-  const raw = new Date(year, month - 1, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })
+function monthLabel(year, month, lang) {
+  const raw = new Date(year, month - 1, 1).toLocaleDateString(localeFor(lang), { month: 'long', year: 'numeric' })
   return raw.charAt(0).toUpperCase() + raw.slice(1)
 }
 
 function ArchiveMonthCard({ month, isOpen, onToggle }) {
+  // Read here rather than threaded through props: these are leaves, and a date is the only
+  // thing they need a language for.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const days = Array.isArray(month.contributions) ? month.contributions.filter(d => (d.count ?? 0) > 0) : []
   return (
     <div onClick={onToggle} style={{
@@ -472,7 +485,7 @@ function ArchiveMonthCard({ month, isOpen, onToggle }) {
       boxShadow: '0 3px 12px rgba(40,55,40,.07)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 15, color: '#4a3f2e' }}>{monthLabel(month.year, month.month)}</span>
+        <span style={{ fontFamily: "'Baloo 2', 'Nunito', cursive", fontWeight: 600, fontSize: 15, color: '#4a3f2e' }}>{monthLabel(month.year, month.month, lang)}</span>
         <span style={{ marginLeft: 'auto', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '3px 10px', borderRadius: 999 }}>
           🌳 {month.trees}
         </span>
