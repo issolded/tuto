@@ -1844,13 +1844,77 @@ app.post('/api/gemini/generate', async (req, res) => {
   }
 })
 
+// The PIN screen needs names and avatars to draw itself. It used to get select('*') — every
+// column of every child to anyone who knew the family code, pin_hash included. A four-digit
+// PIN whose hash is already in the browser is 10,000 offline guesses, and there is no counter
+// that can sit in front of that. Only what the screen draws goes out now.
 app.get('/api/family/:code/children', async (req, res) => {
   const code = req.params.code?.trim().toUpperCase()
   if (!code) return res.status(400).json({ error: 'code required' })
   const { data: parent } = await supabase.from('parents').select('id').eq('family_code', code).maybeSingle()
   if (!parent) return res.json({ children: [] })
-  const { data: children } = await supabase.from('children').select('*').eq('parent_id', parent.id)
+  const { data: children } = await supabase.from('children')
+    .select('id, name, age, avatar_url').eq('parent_id', parent.id)
   res.json({ children: children || [] })
+})
+
+// Wrong PINs, per family. In memory on purpose: a lockout is meant to stop someone poking at
+// a keypad for a few minutes, and losing the count on a deploy costs nothing. What must NOT be
+// lost is the parent being told, and that goes out as it happens.
+const pinAttempts = new Map()   // family code → { fails, lockedUntil, notifiedAt }
+const PIN_MAX_FAILS = 5
+const PIN_LOCK_MS = 10 * 60 * 1000
+const PIN_NOTIFY_GAP_MS = 30 * 60 * 1000
+
+function hashPinServer(pin) {
+  return crypto.createHash('sha256').update(String(pin)).digest('hex')
+}
+
+// Verification moved off the browser. The PIN travels over TLS to be compared here, so the
+// hashes never leave the server and every guess has to come through this counter.
+app.post('/api/family/:code/verify-pin', async (req, res) => {
+  const code = req.params.code?.trim().toUpperCase()
+  const pin = String(req.body?.pin ?? '').trim()
+  if (!code || !/^\d{4}$/.test(pin)) return res.status(400).json({ error: 'code and 4-digit pin required' })
+
+  const now = Date.now()
+  const state = pinAttempts.get(code) || { fails: 0, lockedUntil: 0, notifiedAt: 0 }
+  if (state.lockedUntil > now) {
+    return res.status(429).json({ error: 'locked', retry_in_seconds: Math.ceil((state.lockedUntil - now) / 1000) })
+  }
+
+  const { data: parent } = await supabase.from('parents').select('id').eq('family_code', code).maybeSingle()
+  if (!parent) return res.status(404).json({ error: 'unknown family' })
+
+  const { data: children } = await supabase.from('children')
+    .select('id, name, age, pin_hash, language, task_settings').eq('parent_id', parent.id)
+  const match = (children || []).find(c => c.pin_hash === hashPinServer(pin))
+
+  if (!match) {
+    state.fails += 1
+    if (state.fails >= PIN_MAX_FAILS) {
+      state.lockedUntil = now + PIN_LOCK_MS
+      state.fails = 0
+      // Rate-limited so a child who genuinely keeps forgetting does not spam their parent.
+      if (now - state.notifiedAt > PIN_NOTIFY_GAP_MS) {
+        state.notifiedAt = now
+        const { data: p } = await supabase.from('parents').select('prefs').eq('id', parent.id).maybeSingle()
+        const en = p?.prefs?.language === 'en'
+        sendNotification(parent.id, en
+          ? `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`
+          : `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`
+        ).catch(() => {})
+      }
+      pinAttempts.set(code, state)
+      return res.status(429).json({ error: 'locked', retry_in_seconds: Math.ceil(PIN_LOCK_MS / 1000) })
+    }
+    pinAttempts.set(code, state)
+    return res.status(401).json({ error: 'wrong pin', attempts_left: PIN_MAX_FAILS - state.fails })
+  }
+
+  pinAttempts.delete(code)
+  const { pin_hash, ...child } = match
+  res.json({ child })
 })
 
 app.get('/api/children/:childId/rewards', async (req, res) => {

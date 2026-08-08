@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { supabase, getChildrenByFamilyCode } from '../lib/supabase'
-import { hashPin } from '../lib/hash'
+
+const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 async function giveWelcomeBonus(childId) {
   const { count } = await supabase
@@ -52,19 +53,28 @@ export default function ChildPin() {
     setError('')
     setExpression('thinking')
     try {
-      // The PIN and its hash were both being printed to the console on every attempt.
-      const pin_hash = await hashPin(entered)
-      const match = (Array.isArray(familyChildren) ? familyChildren : []).find(c => c.pin_hash === pin_hash)
+      // Checked on the server. It used to be compared here against pin_hash values the family
+      // lookup handed over, which made a four-digit PIN 10,000 offline guesses and left no
+      // point at which anything could be counted.
+      const res = await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/verify-pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: entered }),
+      })
+      const data = await res.json().catch(() => ({}))
 
-      if (match) {
-        // task_settings decides which activities the child is shown and what each is
-        // worth. It comes back with the row and used to be dropped here, so the child app
-        // never saw a single thing the parent configured.
-        const child = { id: match.id, name: match.name, age: match.age, task_settings: match.task_settings ?? null }
-        localStorage.setItem('child', JSON.stringify(child))
-        await giveWelcomeBonus(child.id)
+      if (res.ok && data.child) {
+        // task_settings decides which activities the child is shown and what each is worth;
+        // language decides what they are shown in. Both come back with the row.
+        localStorage.setItem('child', JSON.stringify(data.child))
+        await giveWelcomeBonus(data.child.id)
         setExpression('excited')
         setTimeout(() => nav('/child/home'), 350)
+      } else if (res.status === 429) {
+        const mins = Math.max(1, Math.ceil((data.retry_in_seconds ?? 600) / 60))
+        fail(`Too many tries! Ask a grown-up — try again in ${mins} minutes ⏳`)
+      } else if (typeof data.attempts_left === 'number' && data.attempts_left <= 2) {
+        fail(`Hmm, that's not right! ${data.attempts_left} more ${data.attempts_left === 1 ? 'try' : 'tries'} 🤔`)
       } else {
         fail("Hmm, that's not right! Try again 🤔")
       }
