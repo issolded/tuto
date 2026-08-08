@@ -67,6 +67,32 @@ export const DRAWING_STEPS = {
       'Tırtılın altına kocaman bir yaprak, yanına da bir çiçek koy.',
     ],
   },
+  // Audited against drawings/mountains/*.webp. This one had no descriptions at all.
+  // Step 5 loses the snow caps drawn in step 3 and gets them back in step 6 — a flaw in the
+  // source art. Unlike robot's step 5 it still teaches something (the bare trunk), so it
+  // stays, and the wording does not mention snow there.
+  mountains: {
+    en: [
+      'Draw a long line across the middle for the ground.',
+      'Draw two big triangles above it for the mountains, overlapping a little.',
+      'Add a zigzag line near each peak for the snow.',
+      'Draw a winding path coming towards you from between the mountains.',
+      'On the left, draw a tree trunk with a few bare branches.',
+      'Give that tree a big bumpy crown of leaves.',
+      'Draw a second leafy tree on the right side.',
+      'Shade the mountainsides, the trees and the path to finish.',
+    ],
+    tr: [
+      'Ortadan boydan boya bir çizgi çekerek yeri çiz.',
+      'Üstüne dağlar için birbirine biraz giren iki büyük üçgen çiz.',
+      'Her zirvenin altına kar için zikzak bir çizgi ekle.',
+      'Dağların arasından sana doğru gelen kıvrımlı bir yol çiz.',
+      'Sol tarafa birkaç çıplak dallı bir ağaç gövdesi çiz.',
+      'O ağaca kabarık, yuvarlak bir yaprak tepesi ver.',
+      'Sağ tarafa yapraklı ikinci bir ağaç çiz.',
+      'Dağ yamaçlarını, ağaçları ve yolu gölgeleyerek bitir.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
