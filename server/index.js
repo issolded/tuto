@@ -375,7 +375,7 @@ async function askGeminiWithContext(parentId, userMessage) {
     throw new Error(err.error?.message || `Gemini API error ${res.status}`)
   }
   const data = await res.json()
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.'
+  return textFromParts(data.candidates?.[0]?.content?.parts) || 'Yanıt alınamadı.'
 }
 
 async function _geminiScreenCall(text, age) {
@@ -411,7 +411,7 @@ async function _geminiScreenCall(text, age) {
     throw new Error(err.error?.message || `Gemini API error ${res.status}`)
   }
   const data = await res.json()
-  const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+  const parsed = JSON.parse(textFromParts(data.candidates?.[0]?.content?.parts) || '{}')
   if (!['ok', 'inappropriate'].includes(parsed.appropriateness)) throw new Error('malformed screen response')
   if (!['none', 'mild', 'concerning', 'serious'].includes(parsed.concern_level)) throw new Error('malformed screen response')
   return parsed
@@ -436,7 +436,7 @@ async function _geminiConfirmSerious(text, age) {
   })
   if (!res.ok) return { confirmed_serious: true } // fail-closed on confirm step
   const data = await res.json()
-  const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+  const parsed = JSON.parse(textFromParts(data.candidates?.[0]?.content?.parts) || '{}')
   return parsed
 }
 
@@ -472,7 +472,7 @@ async function screenImageSafety({ images, kind, language }) {
       contents: [{ parts }],
       generationConfig: { response_mime_type: 'application/json' },
     }))
-    return parseImageSafety(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+    return parseImageSafety(textFromParts(data.candidates?.[0]?.content?.parts) || '{}')
   } catch (err) {
     console.error(`[SAFETY] ${kind} image screen failed (failing closed): ${err.message}`)
     return { appropriate: false, matchesTask: false, reason: 'safety check failed' }
@@ -606,6 +606,14 @@ async function sendWhatsAppPhoto(to, photoUrl, caption) {
     body: caption,
     mediaUrl: [photoUrl],
   })
+}
+
+// Gemini can return "thinking" parts alongside the answer, and they carry text like any other
+// part. Joining every part blindly leaks that reasoning to the parent — one reply arrived as
+// "festival<thought>". Thoughts are dropped here, in one place, so no call site has to
+// remember. Reading parts[0].text has the same fault when the first part is a thought.
+function textFromParts(parts) {
+  return (parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim()
 }
 
 async function sendNotification(parentId, message) {
@@ -1648,7 +1656,7 @@ async function handleMessage(parentId, replyCb, text) {
       // present, and 0% of the time with it omitted. Since no function was
       // actually called, re-ask without `tools` for the reply that's actually
       // sent to the parent, instead of trusting this call's own text.
-      const firstCallText = parts.map(p => p.text || '').join('').trim()
+      const firstCallText = textFromParts(parts)
 
       // A 200 response with no usable text (safety filter, truncation, an
       // empty "thinking" turn) is NOT a transport-level failure, so
@@ -1667,7 +1675,7 @@ async function handleMessage(parentId, replyCb, text) {
             contents,
           }))
           const finishReason = plainData.candidates?.[0]?.finishReason
-          reply = plainData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || ''
+          reply = textFromParts(plainData.candidates?.[0]?.content?.parts)
           if (!reply) console.warn(`[MSG] plain-retry attempt ${attempt + 1} came back empty (finishReason=${finishReason}) for parent ${parentId}`)
         } catch (err) {
           console.warn(`[MSG] plain-retry attempt ${attempt + 1} threw: ${err.message}`)
@@ -1762,7 +1770,7 @@ async function handleMessage(parentId, replyCb, text) {
       ],
       tools: CONTRIBUTION_TOOLS,
     }))
-    const finalText = secondData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || 'Tamamlandı.'
+    const finalText = textFromParts(secondData.candidates?.[0]?.content?.parts) || 'Tamamlandı.'
     await logMessage(parentId, 'tuto', finalText)
     await replyCb(finalText)
     console.log(`[MSG] Reply sent to parent ${parentId}`)
@@ -3205,7 +3213,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
           generationConfig: { response_mime_type: 'application/json' },
         }))
         try {
-          observation = parseObservation(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+          observation = parseObservation(textFromParts(data.candidates?.[0]?.content?.parts) || '{}')
         } catch (parseErr) {
           console.warn(`[HOMEWORK] observation parse attempt ${attempt + 1} failed: ${parseErr.message}`)
         }
@@ -3324,7 +3332,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
               photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems,
             }) }] }],
           }))
-          caption = capData.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim()
+          caption = textFromParts(capData.candidates?.[0]?.content?.parts)
           if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
         }
       } catch (err) {
