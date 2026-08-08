@@ -186,27 +186,13 @@ function getWelcomeMsg(age, language) {
   return t('math_welcome_older', language)
 }
 
-function getScoreMsg(pct, age) {
+function getScoreMsg(pct, age, language) {
   const n = Number(age)
-  if (pct >= 80) {
-    if (n <= 7)  return "WOW! You're a math superstar! 🌟 I'm so proud of you!"
-    if (n <= 10) return "Excellent work! You crushed it! 🔥 Keep those math skills sharp!"
-    return "Outstanding! 🌟 Your math skills are seriously impressive!"
-  }
-  if (pct >= 60) {
-    if (n <= 7)  return "Great job! You did really well! ⭐ Let's keep practicing!"
-    if (n <= 10) return "Nice work! You're getting stronger every session! 💪"
-    return "Good effort! You're making solid progress! 💡"
-  }
-  if (pct >= 40) {
-    if (n <= 7)  return "You're trying so hard and that makes me happy! 🤗 Let's practice more!"
-    if (n <= 10) return "You gave it your best! 💪 Every practice makes you better!"
-    return "Keep pushing! Every challenge helps you grow! 💪"
-  }
-  if (n <= 7)  return "It's okay! Math takes practice and you're doing amazing! 🤗"
-  if (n <= 10) return "These were tough! You'll get there with practice! 💪"
-  return "Challenging problems! Persistence is the key to mastery! 🔑"
+  const band = pct >= 80 ? 'hi' : pct >= 60 ? 'mid' : pct >= 40 ? 'low' : 'vlow'
+  const who = n <= 7 ? 'young' : n <= 10 ? 'mid' : 'older'
+  return t(`score_${band}_${who}`, language)
 }
+
 
 // ── Number keyboard ──────────────────────────────────────────────────────────
 
@@ -1295,7 +1281,7 @@ export default function MathScreen() {
     }))
     const evalData = {
       results, score: accuracy, accuracy, topic,
-      encouragement: getScoreMsg(accuracy, age),
+      encouragement: getScoreMsg(accuracy, age, language),
     }
     // Both the reward and the level come back from the server, so the screen shows what was
     // actually banked — including 0 once the daily cap is reached, rather than a number the
