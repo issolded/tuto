@@ -122,6 +122,7 @@ function EntryRow({ category, label, status, fresh, photoUrl, canAddPhoto, onAtt
 // rather than having to notice a small button on the row afterwards. Adding
 // without a photo is one tap from here, so the photo stays optional.
 function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const fileRef = useRef()
@@ -149,7 +150,7 @@ function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
         </div>
 
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, color: '#8a7f6a', marginTop: 14 }}>
-          Want to show a photo? It's up to you.
+          {t('tree_photo_optional', lang)}
         </div>
 
         {preview ? (
@@ -578,6 +579,7 @@ function ForestArchive({ open, onClose, data, loading, error }) {
 // ── intro (6-8 only, shown once) ────────────────────────────────────────────────
 
 function Intro({ onContinue }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const isTablet = useIsTablet()
   return (
     <div style={{
@@ -596,7 +598,7 @@ function Intro({ onContinue }) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12.5, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '7px 14px', borderRadius: 999 }}>
-          🌱 A new tree starts every month
+          {t('tree_new_month', lang)}
         </div>
       </div>
       <div style={{ padding: '0 24px 26px' }}>
@@ -604,7 +606,7 @@ function Intro({ onContinue }) {
           width: '100%', border: 'none', borderRadius: 20, padding: 16, cursor: 'pointer', background: '#4cb685', color: '#fff',
           fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 17, boxShadow: '0 10px 26px rgba(76,182,133,.42)',
         }}>
-          Let's grow my tree! →
+          {t('tree_grow', lang)}
         </button>
       </div>
     </div>

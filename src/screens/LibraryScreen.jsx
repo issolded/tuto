@@ -154,7 +154,7 @@ export default function LibraryScreen() {
               onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
               style={{ background: '#E8E0FF', color: '#6C63FF', border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
-              ✏️ Write
+              {t('lib_write', lang)}
             </button>
           </div>
 
@@ -188,13 +188,13 @@ export default function LibraryScreen() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
-              📚 Books from Other Authors
+              {t('lib_other_authors', lang)}
             </div>
             <button
               onClick={e => { e.stopPropagation(); nav('/child/reading') }}
               style={{ background: '#FFE8D4', color: ACCENT, border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
-              + Add
+              {t('lib_add', lang)}
             </button>
           </div>
 

@@ -78,6 +78,7 @@ function RewardCard({ reward, currentGems, index, claimStatus, claiming, onClaim
 }
 
 export default function GoalsScreen() {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [rewards, setRewards] = useState(null)
   const [gems, setGems] = useState(null)
@@ -130,7 +131,7 @@ export default function GoalsScreen() {
       {/* Header */}
       <div style={{ background: '#FFD93D', padding: '52px 24px 28px', borderRadius: '0 0 32px 32px' }}>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 28, fontWeight: 900, color: '#2D2D2D', lineHeight: 1.1 }}>
-          My Goals 🏆
+          {t('goals_title', lang)}
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(45,45,45,0.60)', marginTop: 4 }}>
           {gems !== null ? `⭐ ${gems} Gems available` : ' '}

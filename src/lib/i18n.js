@@ -64,7 +64,7 @@ const STRINGS = {
   lib_remove:         { en: 'Remove', tr: 'Kaldır' },
   lib_cancel:         { en: 'Cancel', tr: 'Vazgeç' },
 
-  lib_books_by:       { en: '📖 Books by', tr: '📖 Kitapları:' },
+  lib_books_by:       { en: '📖 Books by', tr: '📖 Kendi kitapları —' },
   lib_you:            { en: 'You',  tr: 'Sen' },
   lib_write_first:    { en: 'Write your first story →', tr: 'İlk hikâyeni yaz →' },
   lib_add_first:      { en: 'Add your first book →',    tr: 'İlk kitabını ekle →' },
@@ -74,6 +74,23 @@ const STRINGS = {
   lib_amazing:        { en: 'Amazing! You finished', tr: 'Harika! Bitirdiğin kitap:' },
   story_untitled:     { en: 'Untitled Story', tr: 'Adsız Hikâye' },
   story_in_progress:  { en: 'In Progress',    tr: 'Devam ediyor' },
+
+  lib_other_authors:  { en: '📚 Books from Other Authors', tr: '📚 Başka Yazarların Kitapları' },
+  lib_write:          { en: '✏️ Write', tr: '✏️ Yaz' },
+  lib_add:            { en: '+ Add',    tr: '+ Ekle' },
+  lib_books_of:       { en: "📖 Books by",  tr: '📖 Kendi Kitapları:' },
+
+  gems_balance:       { en: 'Your Gem Balance', tr: 'Gem Bakiyen' },
+  goals_title:        { en: 'My Goals 🏆', tr: 'Hedeflerim 🏆' },
+  hw_sent:            { en: 'I sent your homework to your grown-up to check.', tr: 'Ödevini kontrol etmesi için annene babana gönderdim.' },
+  hw_take_photo:      { en: 'Take a photo of your finished homework!', tr: 'Bitirdiğin ödevin fotoğrafını çek!' },
+  hw_add_photo:       { en: 'Add photo', tr: 'Fotoğraf ekle' },
+  hw_looking_dots:    { en: 'Tuto is looking at your homework…', tr: 'Tuto ödevine bakıyor…' },
+  tree_photo_optional:{ en: "Want to show a photo? It's up to you.", tr: 'Fotoğraf göstermek ister misin? Sana kalmış.' },
+  tree_new_month:     { en: '🌱 A new tree starts every month', tr: '🌱 Her ay yeni bir ağaç başlar' },
+  tree_grow:          { en: "Let's grow my tree! →", tr: 'Haydi ağacımı büyütelim! →' },
+  story_edit:         { en: '✏️ Edit', tr: '✏️ Düzenle' },
+  just_a_moment:      { en: 'Just a moment!', tr: 'Bir saniye!' },
 
   // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
   nav_home:           { en: 'Home',     tr: 'Ana Sayfa' },

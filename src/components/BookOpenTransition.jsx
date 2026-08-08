@@ -211,7 +211,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
           onClick={onEdit}
           style={{ marginTop: 16, background: '#2EC486', border: 'none', borderRadius: 16, padding: '12px 28px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}
         >
-          ✏️ Edit
+          {t('story_edit', lang)}
         </button>
       </div>
     </div>

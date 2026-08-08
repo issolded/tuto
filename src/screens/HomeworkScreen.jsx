@@ -165,7 +165,7 @@ export default function HomeworkScreen() {
           </div>
           <h2 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 30, color: INK, margin: '6px 0 8px' }}>{t('hw_great', lang)}</h2>
           <p style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 16, color: '#5f5872', lineHeight: 1.5, margin: 0, maxWidth: 250 }}>
-            I sent your homework to your grown-up to check.
+            {t('hw_sent', lang)}
           </p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 999, padding: '11px 18px', marginTop: 20, boxShadow: '0 6px 16px rgba(40,30,70,.12)', fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK }}>
             <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#f5d35f', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⏳</span>
@@ -210,7 +210,7 @@ export default function HomeworkScreen() {
             <CameraIcon />
           </div>
           <span style={{ fontFamily: FRED, fontWeight: 500, fontSize: 16, color: INK, lineHeight: 1.3 }}>
-            Take a photo of your finished homework!
+            {t('hw_take_photo', lang)}
           </span>
         </div>
 
@@ -225,7 +225,7 @@ export default function HomeworkScreen() {
           {count < MAX_PHOTOS && (
             <button className="hw-addtile" onClick={() => fileRef.current?.click()} style={{ border: '3px dashed #c4bdd0', background: 'rgba(255,255,255,.45)', borderRadius: 20, aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', color: '#8d7fb0', fontFamily: FRED, fontWeight: 600, fontSize: 14 }}>
               <CameraIcon size={34} color="currentColor" />
-              Add photo
+              {t('hw_add_photo', lang)}
             </button>
           )}
         </div>
@@ -284,7 +284,7 @@ export default function HomeworkScreen() {
         <div style={{ ...overlay, background: 'rgba(212,228,251,0.97)' }}>
           <TutoMascot size={150} expression="thinking" color="#74acef" style={{ animation: 'hw-float 3s ease-in-out infinite' }} />
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: INK, marginTop: 18 }}>
-            Tuto is looking at your homework…
+            {t('hw_looking_dots', lang)}
           </div>
           <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15, color: INK_SOFT, marginTop: 6 }}>
             One sec 👀

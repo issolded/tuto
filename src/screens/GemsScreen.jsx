@@ -68,7 +68,7 @@ export default function GemsScreen() {
       {/* Balance card */}
       <div style={{ background: 'linear-gradient(135deg, #FFD93D 0%, #FFB347 100%)', padding: '52px 24px 36px', borderRadius: '0 0 40px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(45,45,45,0.50)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-          Your Gem Balance
+          {t('gems_balance', lang)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
           <span style={{ fontSize: 48 }}>⭐</span>

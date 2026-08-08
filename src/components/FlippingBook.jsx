@@ -1,3 +1,4 @@
+import { t, childLang } from '../lib/i18n'
 const RLINES = [88, 64, 88, 64, 88]
 
 function RLeafLines() {
@@ -27,6 +28,7 @@ function RLeaf({ delay, z }) {
 // blinking Tuto mascot. Replaces the static <TutoMascot expression="thinking"> on the
 // 'evaluating' step. Purely decorative/looping — no story data needed.
 export default function FlippingBook() {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 30 }}>
       <style>{`
@@ -92,7 +94,7 @@ export default function FlippingBook() {
           Reading your story<span className="fb-dot">.</span><span className="fb-dot">.</span><span className="fb-dot">.</span> ✨
         </div>
         <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 2 }}>
-          Just a moment!
+          {t('just_a_moment', lang)}
         </div>
       </div>
     </div>
