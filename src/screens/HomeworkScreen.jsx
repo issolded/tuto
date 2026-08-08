@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { formatDay, localeFor, childLang } from '../lib/i18n'
+import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'

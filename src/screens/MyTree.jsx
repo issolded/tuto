@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { formatDay, localeFor, childLang } from '../lib/i18n'
+import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'

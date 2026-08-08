@@ -64,8 +64,7 @@ const STRINGS = {
   lib_remove:         { en: 'Remove', tr: 'Kaldır' },
   lib_cancel:         { en: 'Cancel', tr: 'Vazgeç' },
 
-  lib_books_by:       { en: '📖 Books by', tr: '📖 Kendi kitapları —' },
-  lib_you:            { en: 'You',  tr: 'Sen' },
+  lib_my_books:       { en: '✍️ Books I Wrote', tr: '✍️ Benim Yazdığım Kitaplar' },
   lib_write_first:    { en: 'Write your first story →', tr: 'İlk hikâyeni yaz →' },
   lib_add_first:      { en: 'Add your first book →',    tr: 'İlk kitabını ekle →' },
   lib_reading_now:    { en: 'Reading Now 📖',    tr: 'Şu An Okuduklarım 📖' },

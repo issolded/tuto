@@ -148,7 +148,7 @@ export default function LibraryScreen() {
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
-              {t('lib_books_by', lang)} {child?.name ?? t('lib_you', lang)}
+              {t('lib_my_books', lang)}
             </div>
             <button
               onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
