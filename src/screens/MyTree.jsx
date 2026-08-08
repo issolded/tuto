@@ -199,7 +199,7 @@ function DiaryDateHeader({ isToday, dateStr }) {
         {isToday ? 'Today' : 'Waiting'}
       </span>
       <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 600, fontSize: isToday ? 17 : 15, color: '#4a3f2e' }}>
-        {isToday ? TODAY_LABEL : formatPastDate(dateStr, lang)}
+        {isToday ? todayLabel(lang) : formatPastDate(dateStr, lang)}
       </span>
     </div>
   )
