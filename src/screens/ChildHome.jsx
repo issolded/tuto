@@ -373,7 +373,11 @@ export default function ChildHome() {
     // against a parent session that happens to be persisted in the same browser.
     storageClient
       .from('children')
-      .select('id, name, age, task_settings')
+      // `language` belongs in this list for the same reason task_settings does: the refresh
+      // overwrites the stored child, so anything missing here is not merely stale — it is
+      // erased. Setting a child to Turkish in the parent app took effect until they next
+      // opened the home screen, which wiped it back to the default.
+      .select('id, name, age, task_settings, language')
       .eq('id', child.id)
       .maybeSingle()
       .then(({ data }) => {
