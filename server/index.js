@@ -4335,13 +4335,23 @@ app.post('/webhook/whatsapp', async (req, res) => {
       return
     }
 
-    const { data: parent } = await supabase
+    // `name` is not a column on parents — selecting it returned a 400, which arrives here as
+    // a null row and is indistinguishable from "no such code". Every valid code was answered
+    // "invalid or expired". It was never read either; the greeting uses the child's name.
+    const { data: parent, error: lookupErr } = await supabase
       .from('parents')
-      .select('id, name, prefs, notification_channel')
+      .select('id, prefs, notification_channel')
       .in('whatsapp_connect_code', candidates)
       .gt('whatsapp_connect_code_expires_at', new Date().toISOString())
       .maybeSingle()
 
+    // A failed READ is not a wrong code, and telling a parent their code is invalid when the
+    // database would not answer is how this went unnoticed. They are answered differently.
+    if (lookupErr) {
+      console.error(`[WA] connect lookup failed: ${lookupErr.message}`)
+      await sendWhatsAppBusinessMessage(from, 'Şu an bağlanamadım, birazdan tekrar dener misin? / I could not connect just now — please try again shortly.')
+      return
+    }
     if (!parent) {
       await sendWhatsAppBusinessMessage(from, 'Bu kod geçersiz ya da süresi dolmuş. Uygulamadan tekrar dener misin? / This code is invalid or expired — please try again from the app.')
       return
