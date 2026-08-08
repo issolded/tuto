@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
@@ -66,6 +67,7 @@ function useLongPress(onLongPress, ms = 600) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function LibraryScreen() {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [books, setBooks] = useState(null)
@@ -136,7 +138,7 @@ export default function LibraryScreen() {
           onClick={e => { e.stopPropagation(); nav('/child/home') }}
           style={{ width: 40, height: 40, borderRadius: 12, background: '#F5F5F5', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A2E' }}
         >←</button>
-        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>My Library 📚</span>
+        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>{t('lib_title', lang)}</span>
       </div>
 
       {/* Content */}
@@ -157,11 +159,11 @@ export default function LibraryScreen() {
           </div>
 
           {stories === null ? (
-            <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0A0BC', fontSize: 14 }}>Loading...</div>
+            <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0A0BC', fontSize: 14 }}>{t('lib_loading', lang)}</div>
           ) : stories.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>✏️</div>
-              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No stories yet!</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t('lib_no_stories', lang)}</div>
               <button
                 onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
                 style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
@@ -197,11 +199,11 @@ export default function LibraryScreen() {
           </div>
 
           {books === null ? (
-            <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0A0BC', fontSize: 14 }}>Loading...</div>
+            <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0A0BC', fontSize: 14 }}>{t('lib_loading', lang)}</div>
           ) : books.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📚</div>
-              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>No books yet!</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t('lib_no_books', lang)}</div>
               <button
                 onClick={e => { e.stopPropagation(); nav('/child/reading') }}
                 style={{ background: ACCENT, color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
@@ -403,15 +405,16 @@ function Badge({ onClick, color, style, children }) {
 // ─── Confirm delete modal ──────────────────────────────────────────────────────
 
 function ConfirmDeleteModal({ onConfirm, onCancel }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div onClick={e => { e.stopPropagation(); onCancel() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 28 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 28, padding: '32px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>📚</div>
-        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E', marginBottom: 8 }}>Remove this book?</div>
-        <div style={{ fontSize: 14, color: '#7A7A9A', fontWeight: 600, marginBottom: 28, lineHeight: 1.5 }}>Are you sure you want to remove this book from your library?</div>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E', marginBottom: 8 }}>{t('lib_remove_q', lang)}</div>
+        <div style={{ fontSize: 14, color: '#7A7A9A', fontWeight: 600, marginBottom: 28, lineHeight: 1.5 }}>{t('lib_remove_body', lang)}</div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onCancel} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0F0F5', color: '#1A1A2E', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)' }}>Remove</button>
+          <button onClick={onCancel} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#F0F0F5', color: '#1A1A2E', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer' }}>{t('lib_cancel', lang)}</button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: '14px', border: 'none', borderRadius: 14, background: '#FF3B30', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,59,48,0.35)' }}>{t('lib_remove', lang)}</button>
         </div>
       </div>
     </div>
@@ -421,6 +424,7 @@ function ConfirmDeleteModal({ onConfirm, onCancel }) {
 // ─── Confirm complete modal ────────────────────────────────────────────────────
 
 function ConfirmCompleteModal({ onConfirm, onCancel }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div onClick={e => { e.stopPropagation(); onCancel() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 28 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 32, padding: '28px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
@@ -429,8 +433,8 @@ function ConfirmCompleteModal({ onConfirm, onCancel }) {
           Wow, did you really finish the whole book? 🎉
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>Yes, I read it all! 📚</button>
-          <button onClick={onCancel} style={{ padding: '14px', border: 'none', borderRadius: 16, background: '#F0F0F5', color: '#7A7A9A', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>Not yet...</button>
+          <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>{t('lib_finished', lang)}</button>
+          <button onClick={onCancel} style={{ padding: '14px', border: 'none', borderRadius: 16, background: '#F0F0F5', color: '#7A7A9A', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>{t('lib_not_yet', lang)}</button>
         </div>
       </div>
     </div>

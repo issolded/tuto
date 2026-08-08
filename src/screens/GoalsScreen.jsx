@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t, childLang } from '../lib/i18n'
 import { getChildRewards, getChildGems, getRewardClaims, claimReward } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
@@ -24,6 +25,7 @@ function ProgressBar({ current, total }) {
 }
 
 function RewardCard({ reward, currentGems, index, claimStatus, claiming, onClaim }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const needed = reward.bt_cost || 0
   const ready = needed > 0 && currentGems >= needed
   const remaining = Math.max(0, needed - currentGems)
@@ -64,7 +66,7 @@ function RewardCard({ reward, currentGems, index, claimStatus, claiming, onClaim
             background: claiming ? '#9ED9BE' : '#2EC486', boxShadow: claiming ? 'none' : '0 6px 16px rgba(46,196,134,0.35)',
           }}
         >
-          {claiming ? 'Claiming…' : 'Claim! 🎉'}
+          {claiming ? t('goal_claiming', lang) : t('goal_claim', lang)}
         </button>
       ) : (
         <div style={{ fontSize: 13, fontWeight: 700, color: '#7A7A9A' }}>

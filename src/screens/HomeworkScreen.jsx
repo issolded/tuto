@@ -5,7 +5,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { submitHomework, getHomeworkSubmissions, confirmHomeworkDate } from '../lib/supabase'
 
-// "My Homework" — child photographs finished homework (up to 15 pages) and
+// My Homework — child photographs finished homework (up to 15 pages) and
 // sends it. The child ONLY ever sees "it arrived"; Tuto's observations,
 // possible errors and suggestions are never shown here (that's a rule, not a
 // preference). Reward stays pending until the parent approves. Built in the
@@ -110,7 +110,7 @@ export default function HomeworkScreen() {
     if (!photos.length || submitting) return
     setSubmitting(true)
     setError(null)
-    setPhase('checking') // full-screen "Tuto is looking at your homework" overlay
+    setPhase('checking') // full-screen t('hw_looking', lang) overlay
     // Optimistically prepend a "checking" row so the just-sent homework shows
     // in the history immediately (server records it as pending after review).
     const optimistic = { id: `temp-${Date.now()}`, date: new Date().toISOString(), pages: photos.length, status: 'checking' }
@@ -151,7 +151,7 @@ export default function HomeworkScreen() {
 
   const count = photos.length
   const helper = count === 0
-    ? 'Add at least one photo'
+    ? t('hw_need_photo', lang)
     : `${count} ${count === 1 ? 'photo' : 'photos'} ready ✓`
 
   // ── Sent (pending approval) ─────────────────────────────────────────────────
@@ -163,7 +163,7 @@ export default function HomeworkScreen() {
           <div style={{ position: 'relative', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <TutoMascot size={160} expression="excited" color="#79cf86" style={{ animation: 'hw-float 3s ease-in-out infinite' }} />
           </div>
-          <h2 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 30, color: INK, margin: '6px 0 8px' }}>Great job! 🎉</h2>
+          <h2 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 30, color: INK, margin: '6px 0 8px' }}>{t('hw_great', lang)}</h2>
           <p style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 16, color: '#5f5872', lineHeight: 1.5, margin: 0, maxWidth: 250 }}>
             I sent your homework to your grown-up to check.
           </p>
@@ -200,7 +200,7 @@ export default function HomeworkScreen() {
           <button className="hw-iconbtn" onClick={() => nav('/child/home')} style={iconBtn}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke={INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK }}>My Homework</div>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: INK }}>{t('hw_title', lang)}</div>
           <div style={{ width: 42 }} />
         </div>
 
@@ -275,7 +275,7 @@ export default function HomeworkScreen() {
       {/* footer */}
       <div style={{ flex: '0 0 auto', padding: '14px 22px 22px' }}>
         <button className="hw-cta" onClick={handleSend} disabled={count === 0 || submitting} style={ctaStyle(count === 0 || submitting)}>
-          {submitting ? 'Sending…' : 'Send to Tuto'}
+          {submitting ? t('hw_sending', lang) : t('hw_send', lang)}
         </button>
       </div>
 
@@ -298,10 +298,10 @@ export default function HomeworkScreen() {
           <div style={{ background: '#fff', borderRadius: 26, padding: '26px 22px', width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 20px 50px rgba(30,40,70,.28)' }}>
             <TutoMascot size={92} expression="thinking" color="#74acef" />
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 20, color: INK, marginTop: 12, textAlign: 'center', lineHeight: 1.25 }}>
-              {child?.name ? `${child.name}, did you do this homework today?` : 'Did you do this homework today?'}
+              {child?.name ? `${child.name}, did you do this homework today?` : t('hw_today_q', lang)}
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 20, width: '100%' }}>
-              <button onClick={() => answerDateConfirm(true)} style={confirmBtn(true)}>Yes, today</button>
+              <button onClick={() => answerDateConfirm(true)} style={confirmBtn(true)}>{t('hw_yes_today', lang)}</button>
               <button onClick={() => answerDateConfirm(false)} style={confirmBtn(false)}>No</button>
             </div>
           </div>

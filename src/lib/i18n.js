@@ -37,6 +37,33 @@ const STRINGS = {
   home_so_close:      { en: 'So close to', tr: 'Çok az kaldı:' },
   home_always_on:     { en: '🌱 Always on', tr: '🌱 Her zaman açık' },
 
+  // ── Goals ───────────────────────────────────────────────────────────────────
+  goal_claim:         { en: 'Claim! 🎉',  tr: 'İstiyorum! 🎉' },
+  goal_claiming:      { en: 'Claiming…',  tr: 'Gönderiliyor…' },
+
+  // ── Homework ────────────────────────────────────────────────────────────────
+  hw_title:           { en: 'My Homework', tr: 'Ödevlerim' },
+  hw_looking:         { en: 'Tuto is looking at your homework', tr: 'Tuto ödevine bakıyor' },
+  hw_need_photo:      { en: 'Add at least one photo', tr: 'En az bir fotoğraf ekle' },
+  hw_today_q:         { en: 'Did you do this homework today?', tr: 'Bu ödevi bugün mü yaptın?' },
+  hw_send:            { en: 'Send to Tuto',  tr: "Tuto'ya gönder" },
+  hw_sending:         { en: 'Sending…',      tr: 'Gönderiliyor…' },
+  hw_great:           { en: 'Great job! 🎉', tr: 'Harika iş! 🎉' },
+  hw_yes_today:       { en: 'Yes, today',    tr: 'Evet, bugün' },
+
+  // ── Library ─────────────────────────────────────────────────────────────────
+  lib_title:          { en: 'My Library 📚', tr: 'Kitaplığım 📚' },
+  lib_loading:        { en: 'Loading...',    tr: 'Yükleniyor…' },
+  lib_no_books:       { en: 'No books yet!',   tr: 'Henüz kitap yok!' },
+  lib_no_stories:     { en: 'No stories yet!', tr: 'Henüz hikâye yok!' },
+  lib_not_yet:        { en: 'Not yet...',    tr: 'Henüz değil…' },
+  lib_finished:       { en: 'Yes, I read it all! 📚', tr: 'Evet, hepsini okudum! 📚' },
+  lib_remove_q:       { en: 'Remove this book?', tr: 'Bu kitabı kaldıralım mı?' },
+  lib_remove_body:    { en: 'Are you sure you want to remove this book from your library?',
+                        tr: 'Bu kitabı kitaplığından kaldırmak istediğine emin misin?' },
+  lib_remove:         { en: 'Remove', tr: 'Kaldır' },
+  lib_cancel:         { en: 'Cancel', tr: 'Vazgeç' },
+
   // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
   nav_home:           { en: 'Home',     tr: 'Ana Sayfa' },
   nav_library:        { en: 'Library',  tr: 'Kitaplık' },
