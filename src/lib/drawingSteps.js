@@ -119,6 +119,39 @@ export const DRAWING_STEPS = {
       'Çevresine diken diken saçın kalanını ekle, sonra yüzü ve gözleri gölgele.',
     ],
   },
+  // Audited against drawings/train/*.webp. Four steps, and each one carries a lot — this is
+  // the shortest sequence in the set.
+  train: {
+    en: [
+      'Draw a long rectangle for the engine, sitting on a base, with two small wheels and one big wheel.',
+      'Add a tall chimney on the left, and the cab wall and roof on the right.',
+      'Round off the front of the boiler, put a window in the cab, add a smoke cloud, a wedge at the front, a rod across the wheels, and a wagon behind.',
+      'Shade the whole engine and draw the rails underneath.',
+    ],
+    tr: [
+      'Lokomotif için bir kaide üstünde uzun bir dikdörtgen çiz; iki küçük, bir büyük tekerlek koy.',
+      'Soluna uzun bir baca, sağına da kabinin duvarını ve çatısını ekle.',
+      'Kazanın önünü yuvarlat, kabine pencere koy, bir duman bulutu, önüne bir takoz, tekerleklerin üstüne bir kol ve arkasına bir vagon ekle.',
+      'Bütün lokomotifi gölgele ve altına rayları çiz.',
+    ],
+  },
+  // Audited against drawings/map/*.webp.
+  map: {
+    en: [
+      'Draw a wobbly island shape, with a few tiny rocks in the sea around it.',
+      'Put three mountain peaks inside it, and a lake just below them.',
+      'Wind a river down from the lake to the coast, and add bushy trees on each side.',
+      'Add a castle, a little village, and shade the mountains with snow on top.',
+      'Draw waves in the sea, a sailing boat and a sea serpent, then a dotted trail with bridges over the river.',
+    ],
+    tr: [
+      'Dalgalı kenarlı bir ada çiz, çevresindeki denize de birkaç küçük kaya koy.',
+      'İçine üç dağ zirvesi, hemen altlarına da bir göl çiz.',
+      'Gölden kıyıya kıvrıla kıvrıla bir nehir indir, iki yanına da çalı gibi ağaçlar ekle.',
+      'Bir kale ve küçük bir köy ekle, dağları gölgele, tepelerine kar koy.',
+      'Denize dalgalar, bir yelkenli ve bir deniz yılanı çiz; sonra nehrin üstünden köprülü, noktalı bir patika geçir.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
