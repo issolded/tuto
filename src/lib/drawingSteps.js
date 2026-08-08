@@ -380,6 +380,25 @@ export const DRAWING_STEPS = {
       'Kulaklarına, yüzüne ve gövdesine yuvarlak benekler çiz — bitti!',
     ],
   },
+  // Audited against drawings/landscape/*.webp. The old list had 16 lines for these 6 pictures.
+  landscape: {
+    en: [
+      'Draw one long curve across the page for the top of the hill.',
+      'Add three fir trees standing on the left side of the hill.',
+      'Draw a wide path winding from the bottom of the page up over the hill.',
+      'Put a little house with a roof and a chimney on the right.',
+      'Add a sun with rays, some clouds, and a door and window on the house.',
+      'Shade the hill and the trees, add roof tiles, smoke from the chimney and ripples on the path.',
+    ],
+    tr: [
+      'Tepenin sırtı için sayfayı boydan boya geçen tek bir kavis çiz.',
+      'Tepenin sol yanına yan yana üç çam ağacı ekle.',
+      'Sayfanın altından tepeye doğru kıvrılan geniş bir yol çiz.',
+      'Sağ tarafa çatısı ve bacası olan küçük bir ev koy.',
+      'Işınlı bir güneş, birkaç bulut, eve de bir kapı ve pencere ekle.',
+      'Tepeyi ve ağaçları gölgele; çatıya kiremit, bacaya duman, yola da dalgalar ekle.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
