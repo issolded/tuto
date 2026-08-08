@@ -310,6 +310,30 @@ export const DRAWING_STEPS = {
       'Kanatlara damarlar, gövdeye de kalın şeritler ekle — vızz, bitti!',
     ],
   },
+  // Audited against drawings/owl/*.webp. The ear tufts only appear in the last picture, so
+  // nothing before step 8 mentions them.
+  owl: {
+    en: [
+      'Draw a circle for the head, a long oval body below it, and a wing shape across the front.',
+      'Add two round eyes.',
+      'Draw a heart shape around the eyes for the face, and a small pointed beak.',
+      'Add two legs with toes at the bottom, and the tail behind.',
+      'Draw the pupils and a shine in each eye, and shape the wing.',
+      'Add rows of feathers on the wing and small marks on the chest.',
+      'Cover the whole owl in short feather strokes.',
+      'Add pointed ear tufts on top and darken the feathers all over.',
+    ],
+    tr: [
+      'Kafa için bir daire, altına uzun oval bir gövde, önüne de bir kanat şekli çiz.',
+      'İki yuvarlak göz ekle.',
+      'Gözlerin çevresine yüz için bir kalp şekli, ortasına küçük sivri bir gaga çiz.',
+      'Aşağıya parmaklı iki bacak, arkaya da kuyruğu ekle.',
+      'Göz bebeklerini ve her gözdeki parıltıyı çiz, kanada biçim ver.',
+      'Kanada sıra sıra tüyler, göğsüne küçük benekler ekle.',
+      'Baykuşun her yerini kısa tüy çizgileriyle kapla.',
+      'Tepesine sivri kulak püskülleri ekle ve tüyleri iyice koyulaştır.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
