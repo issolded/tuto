@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuto · Ana sayfa özet widget</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap');
+*{box-sizing:border-box}
+:root{--accent:#f79433;--ink:#241f3a;--ink-soft:#8d83ad;--lilac:#e7ddf6;--green:#37a06f;--green-soft:#4cb685}
+body{margin:0;background:#cfc6e6;font-family:'Nunito',sans-serif;min-height:100vh;padding:26px 16px 60px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.toolbar{display:flex;gap:8px;background:#fff;padding:6px;border-radius:999px;box-shadow:0 4px 14px rgba(40,30,70,.14)}
+.toolbar button{border:none;background:none;font-family:'Fredoka';font-weight:600;font-size:14px;color:var(--ink-soft);padding:9px 16px;border-radius:999px;cursor:pointer}
+.toolbar button.on{background:var(--lilac);color:var(--ink)}
+.stage{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;align-items:flex-start}
+.phone{width:390px;background:var(--lilac);border-radius:40px;padding:12px;box-shadow:0 22px 50px -14px rgba(40,30,70,.5)}
+.tablet{width:900px;background:var(--lilac);border-radius:44px;padding:14px;box-shadow:0 22px 50px -14px rgba(40,30,70,.5)}
+.tablet .screen{height:600px}
+.grid3{grid-template-columns:repeat(3,1fr)!important}
+.screen{background:var(--lilac);border-radius:30px;overflow:hidden;height:720px;display:flex;flex-direction:column}
+.cap{font-family:'Fredoka';font-weight:600;font-size:13px;color:#5b5175;text-align:center;margin-top:12px}
+.scroll{flex:1;overflow-y:auto;padding:34px 20px 30px}
+.scroll::-webkit-scrollbar{display:none}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+.hi-lbl{font-weight:800;font-size:13px;color:var(--ink-soft);margin-bottom:3px}
+.hi-name{font-family:'Fredoka';font-weight:600;font-size:26px;color:var(--ink);line-height:1.1;letter-spacing:-.4px}
+.gem{display:inline-flex;align-items:center;gap:6px;background:#fff;border:none;border-radius:999px;padding:8px 14px;box-shadow:0 3px 10px rgba(40,30,70,.12);font-family:'Fredoka';font-weight:600;font-size:17px;color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:18px}
+.card{background:#fff;border-radius:22px;padding:12px 12px 13px;box-shadow:0 6px 16px rgba(40,30,70,.09)}
+.tile-ico{height:74px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:34px}
+.card h3{font-family:'Fredoka';font-weight:600;font-size:17px;color:var(--ink);margin:8px 0 6px}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:10px;padding:3px 10px;font-family:'Fredoka';font-weight:600;font-size:13px;color:var(--accent)}
+.wide{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:12px}
+.wide .tw{width:66px;height:66px;flex:0 0 auto;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px}
+
+/* ── current hero ── */
+.hero-old{display:flex;flex-direction:column;align-items:center;margin:2px 0 2px}
+.halo{position:relative;height:170px;display:flex;align-items:center;justify-content:center}
+.halo::before{content:"";position:absolute;width:184px;height:184px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95) 30%,rgba(255,255,255,0) 72%)}
+.halo svg{position:relative;z-index:1;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.ready{font-family:'Fredoka';font-weight:600;font-size:18px;color:var(--ink);margin:8px 2px 13px}
+
+/* ── Variant A · combined Today card ── */
+.today{background:#fff;border-radius:24px;box-shadow:0 6px 18px rgba(40,30,70,.09);overflow:hidden}
+.today-top{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.today-tree{width:78px;height:78px;flex:0 0 auto;background:linear-gradient(180deg,#F1FBF4,#DFF3E7);border-radius:18px;display:flex;align-items:center;justify-content:center}
+.today-h{font-family:'Fredoka';font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+.stat-row{display:flex;gap:14px;margin-top:5px}
+.stat b{font-family:'Fredoka';font-weight:600;font-size:20px;color:var(--ink)}
+.stat span{font-weight:800;font-size:11.5px;color:var(--ink-soft);display:block;margin-top:-1px}
+.chev{margin-left:auto;color:#c7bfe0;font-size:20px;flex:0 0 auto}
+.today-goal{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1.5px dashed #EAE3F5;cursor:pointer}
+.goal-ico{width:40px;height:40px;flex:0 0 auto;border-radius:12px;background:#FFF1DA;display:flex;align-items:center;justify-content:center;font-size:20px}
+.goal-lbl{font-family:'Fredoka';font-weight:600;font-size:14.5px;color:var(--ink)}
+.goal-sub{font-weight:800;font-size:11.5px;color:var(--accent);margin-top:1px}
+.bar{height:7px;border-radius:999px;background:#F0E7D2;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#FF6B35,#FFD93D)}
+
+/* ── activity strip ── */
+.act-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 2px}
+.act-title{font-family:'Fredoka';font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.act-count{font-family:'Fredoka';font-weight:600;font-size:12px;color:var(--green);background:rgba(76,182,133,.14);padding:4px 10px;border-radius:999px}
+.chips{display:flex;gap:9px;padding:8px 16px 4px}
+.chip{position:relative;flex:1;aspect-ratio:1;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.chip.todo{background:#F4F1FA;filter:grayscale(.4);opacity:.5}
+.chip .bdg{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 3px;border-radius:999px;background:var(--green-soft);color:#fff;font-family:'Fredoka';font-weight:600;font-size:10px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.act-line{padding:8px 16px 14px;font-family:'Fredoka';font-weight:500;font-size:13.5px;color:#7a6a4c}
+.act-line b{color:var(--ink)}
+/* mature (12-15) — restrained, no cartoon */
+.mcard{background:#F7F9F6;border:1px solid #E4EAE3;border-radius:20px;overflow:hidden}
+.msec{padding:13px 16px}
+.msec+.msec{border-top:1px solid #E4EAE3}
+.mhead{font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#6c7c72}
+.mrow{display:flex;align-items:center;gap:10px;margin-top:8px}
+.mrow b{font-family:'Fredoka';font-weight:600;font-size:17px;color:#27332c}
+.mrow span{font-weight:700;font-size:12.5px;color:#6c7c72}
+.mchips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.mchip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 11px;font-family:'Fredoka';font-weight:500;font-size:12.5px}
+.mchip.done{background:#E2F0E9;color:#2f8f6b}
+.mchip.todo{background:#EEF1ED;color:#93a096}
+.mbar{height:6px;border-radius:999px;background:#E4EAE3;overflow:hidden;margin-top:8px}
+.mbar>i{display:block;height:100%;border-radius:999px;background:#2f8f6b}
+/* tablet 3-panel */
+.tcard{display:grid;grid-template-columns:1.1fr 1.4fr 1.1fr;gap:0;background:#fff;border-radius:26px;box-shadow:0 6px 18px rgba(40,30,70,.09);overflow:hidden}
+.tcard>div{padding:20px 22px}
+.tcard>div+div{border-left:1.5px dashed #EAE3F5}
+</style>
+</head>
+<body>
+<div class="toolbar">
+<button data-v="young" class="on">6-8 · Genç</button>
+<button data-v="mid">9-11 · Orta</button>
+<button data-v="mature">12-15 · Olgun</button>
+<button data-v="tablet">Tablet (6-8)</button>
+</div>
+<div class="stage" id="stage"></div>
+
+<script>
+const INK='#20201e',LEAF='#6BBF59',LEAF_DEEP='#4FA84A',BARK='#A9744F';
+const SLOTS=[[86,78,'#5aa9e6'],[118,74,'#e89a39'],[101,95,'#ef7d9d'],[73,102,'#54b487'],[131,100,'#5aa9e6'],[103,60,'#e89a39'],[90,116,'#ef7d9d'],[122,118,'#54b487']];
+function tree(size,fruits,target){const n=Math.max(0,Math.min(fruits,8));const g=Math.max(0,Math.min(fruits/target,1));const s=(0.34+0.66*g).toFixed(3);const sprout=fruits===0;
+let inner=sprout?`<g><path d="M100 186 Q99 168 100 150" fill="none" stroke="${LEAF_DEEP}" stroke-width="5.5" stroke-linecap="round"/><path d="M100 168 Q79 166 73 149 Q94 147 100 168 Z" fill="${LEAF}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M100 159 Q121 155 127 138 Q105 138 100 159 Z" fill="${LEAF_DEEP}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><circle cx="100" cy="149" r="5.5" fill="${LEAF}" stroke="${INK}" stroke-width="3"/></g>`
+:`<g style="transform:translate(100px,184px) scale(${s}) translate(-100px,-184px)"><path d="M91 184 Q88 150 90 128 L110 128 Q112 150 109 184 Q100 189 91 184 Z" fill="${BARK}" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/><path d="M62 100 Q46 74 72 64 Q74 40 102 46 Q132 39 136 67 Q160 76 148 102 Q160 126 132 130 Q120 148 98 136 Q72 144 64 122 Q46 116 62 100 Z" fill="${LEAF}" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/><ellipse cx="84" cy="78" rx="22" ry="16" fill="#86d27a" opacity=".7"/>`+SLOTS.slice(0,n).map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="7.5" fill="${p[2]}" stroke="${INK}" stroke-width="3"/>`).join('')+`</g>`;
+return `<svg width="${size}" height="${size}" viewBox="0 0 200 200" fill="none"><ellipse cx="100" cy="184" rx="74" ry="15" fill="#cdeed8"/><ellipse cx="100" cy="182" rx="50" ry="9" fill="#b4e4c5"/>${inner}</svg>`;}
+
+function mascot(size){return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" fill="none"><ellipse cx="60" cy="108" rx="30" ry="7" fill="#000" opacity=".08"/><path d="M30 58 Q30 30 60 30 Q90 30 90 58 L90 74 Q90 100 60 100 Q30 100 30 74 Z" fill="#7c5cff" stroke="#241f3a" stroke-width="5" stroke-linejoin="round"/><path d="M40 40 Q34 20 46 22 Q52 32 50 42 Z" fill="#7c5cff" stroke="#241f3a" stroke-width="5" stroke-linejoin="round"/><path d="M80 40 Q86 20 74 22 Q68 32 70 42 Z" fill="#7c5cff" stroke="#241f3a" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="62" r="5" fill="#241f3a"/><circle cx="72" cy="62" r="5" fill="#241f3a"/><path d="M52 76 Q60 82 68 76" stroke="#241f3a" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="42" cy="72" r="4" fill="#ff9bc4" opacity=".7"/><circle cx="78" cy="72" r="4" fill="#ff9bc4" opacity=".7"/></svg>`;}
+
+function ring(pct){const r=25,c=2*Math.PI*r,off=c*(1-pct/100);return `<svg class="ring" viewBox="0 0 58 58"><circle cx="29" cy="29" r="${r}" fill="none" stroke="#F0E7D2" stroke-width="7"/><circle cx="29" cy="29" r="${r}" fill="none" stroke="#f79433" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 29 29)"/><text x="29" y="33" text-anchor="middle" font-family="Fredoka" font-weight="600" font-size="15" fill="#c07f28">${pct}%</text></svg>`;}
+
+function sprig(size,color){color=color||'#2f8f6b';return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 30 L16 9" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/><path d="M16 17 Q7 15 6 7 Q15 8 16 17 Z" fill="${color}" opacity=".9"/><path d="M16 13 Q25 11 26 4 Q17 5 16 13 Z" fill="${color}" opacity=".55"/><circle cx="16" cy="7" r="2.4" fill="${color}"/></svg>`;}
+
+const header=`<div class="head"><div><div class="hi-lbl">Günaydın ☀️</div><div class="hi-name">Merhaba, Ada!</div></div><button class="gem"><span style="font-size:16px">⭐</span>128</button></div>`;
+
+// header with a small mascot avatar beside the greeting
+const headerMascot=`<div class="head"><div style="display:flex;align-items:center;gap:11px"><div style="width:52px;height:52px;flex:0 0 auto;border-radius:50%;background:#fff;box-shadow:0 3px 10px rgba(40,30,70,.12);display:flex;align-items:center;justify-content:center">${mascot(42)}</div><div><div class="hi-lbl">Günaydın ☀️</div><div class="hi-name">Merhaba, Ada!</div></div></div><button class="gem"><span style="font-size:16px">⭐</span>128</button></div>`;
+
+const tasks=`<div class="grid">
+<div class="card"><div class="tile-ico" style="background:#E8E0FF">📖</div><h3>My Books</h3><span class="pill" style="background:#E8E0FF">⭐+30</span></div>
+<div class="card"><div class="tile-ico" style="background:#D4EDFF">➗</div><h3>My Math</h3><span class="pill" style="background:#D4EDFF">⭐+30</span></div>
+<div class="card"><div class="tile-ico" style="background:#D4F5E0">✏️</div><h3>My Stories</h3><span class="pill" style="background:#D4F5E0">⭐+30</span></div>
+<div class="card"><div class="tile-ico" style="background:#FFE8D4">🌳</div><h3>My Tree</h3><span class="pill" style="background:#FFE8D4">⭐+10</span></div>
+<div class="card wide"><div class="tw" style="background:#FFF1CF">📝</div><h3>My Homework</h3></div>
+<div class="card wide"><div class="tw" style="background:#EFE3FF">🎨</div><h3>My Drawings</h3></div>
+</div>`;
+
+const heroOld=`<div class="hero-old"><div class="halo">${mascot(150)}</div><div class="ready">Ready to earn? 🌟</div></div>`;
+
+// activity chip: count>0 = done (colored), null = todo (muted)
+function chip(icon,bg,count){const done=count!=null;
+return `<div class="chip${done?'':' todo'}" style="${done?`background:${bg}`:''}">${icon}${done&&count>1?`<span class="bdg">${count}</span>`:done?`<span class="bdg">✓</span>`:''}</div>`;}
+
+// six task types, today's state
+const ACT=[['📖','#E8E0FF',1],['➗','#D4EDFF',1],['✏️','#D4F5E0',1],['🌳','#FFE8D4',3],['📝','#FFF1CF',null],['🎨','#EFE3FF',null]];
+const goalRow=`<div class="today-goal"><div class="goal-ico">🎯</div>
+<div style="flex:1"><div class="goal-lbl">Paten'e çok yakınsın</div><div class="goal-sub">⭐ 42 gem kaldı · 128/170</div><div class="bar"><i style="width:75%"></i></div></div>
+<div class="chev">›</div></div>`;
+
+// A1 — activity strip leads, tree is one of the chips, then goal
+const widgetA1=`<div class="today">
+<div class="act-head"><span class="act-title">Bugün yaptıkların</span><span class="act-count">✨ 4 iş tamam</span></div>
+<div class="chips">${ACT.map(a=>chip(a[0],a[1],a[2])).join('')}</div>
+<div class="act-line">Süpersin! Bir tek <b>ödev</b> ve <b>çizim</b> kaldı 🌟</div>
+${goalRow}
+</div>`;
+
+// A2 — tree line on top (bugün + bu ay), activity chips for the 5 learning tasks, then goal
+const ACT5=[['📖','#E8E0FF',1],['➗','#D4EDFF',1],['✏️','#D4F5E0',1],['📝','#FFF1CF',null],['🎨','#EFE3FF',null]];
+const widgetA2=`<div class="today">
+<div class="today-top" style="padding-bottom:10px"><div class="today-tree">${tree(62,3,4)}</div>
+<div style="flex:1"><div class="today-h">🌱 Bugün ağacın</div>
+<div class="stat-row"><div class="stat"><b>3</b><span>yaprak bugün</span></div><div class="stat"><b>5</b><span>ağaç bu ay</span></div></div></div>
+<div class="chev">›</div></div>
+<div style="border-top:1.5px dashed #EAE3F5;padding-top:2px"><div class="act-head"><span class="act-title">Bugün yaptıkların</span></div>
+<div class="chips">${ACT5.map(a=>chip(a[0],a[1],a[2])).join('')}</div>
+<div class="act-line">Süpersin! Bir tek <b>ödev</b> ve <b>çizim</b> kaldı 🌟</div></div>
+${goalRow}
+</div>`;
+
+const caps={young:'6-8 · Genç — cartoon ağaç, maskot bakıyor, bol emoji (senin seçtiğin)',mid:'9-11 · Orta — ilerleme çubuğu, daha sakin dil, maskot küçük',mature:'12-15 · Olgun — cartoon/maskot yok, sprig + mono çipler, ölçülü',tablet:'Tablet (6-8) — kart 3 panele açılıyor: ağaç · aktivite · hedef, görevler 3 sütun'};
+
+// young (chosen: mascot peeks beside the tree card)
+const peek=`<div style="position:relative">${widgetA2}<div style="position:absolute;top:-24px;right:16px;z-index:2;filter:drop-shadow(0 4px 8px rgba(40,30,70,.18))">${mascot(66)}</div></div>`;
+
+// mid (9-11): progress bar instead of twin stats, calmer copy, smaller mascot
+const widgetMid=`<div class="today">
+<div class="today-top" style="padding-bottom:10px"><div class="today-tree">${tree(56,3,4)}</div>
+<div style="flex:1"><div class="today-h">Bugün</div>
+<div style="font-family:'Fredoka';font-weight:600;font-size:15px;color:var(--ink);margin:4px 0 8px">3 yaprak bugün · bu ay 5 🌳</div>
+<div class="bar" style="background:rgba(55,160,111,.16)"><i style="width:75%;background:linear-gradient(90deg,#6BBF59,#4cb685)"></i></div></div>
+<div class="chev">›</div></div>
+<div style="border-top:1.5px dashed #EAE3F5;padding-top:2px"><div class="act-head"><span class="act-title">Bugün yaptıkların</span></div>
+<div class="chips">${ACT5.map(a=>chip(a[0],a[1],a[2])).join('')}</div>
+<div class="act-line" style="font-family:'Nunito';font-weight:700;color:#7a6a4c">2 iş kaldı: ödev ve çizim</div></div>
+${goalRow}
+</div>`;
+const midPeek=`<div style="position:relative">${widgetMid}<div style="position:absolute;top:-20px;right:16px;z-index:2;filter:drop-shadow(0 4px 8px rgba(40,30,70,.18))">${mascot(54)}</div></div>`;
+
+// mature (12-15): no cartoon, no mascot — sprig + monochrome chips, plain bar
+const MATURE_ACT=[['Kitap',1],['Matematik',1],['Yazı',1],['Ödev',null],['Çizim',null]];
+const matureCard=`<div class="mcard">
+<div class="msec"><div class="mhead">Bugün</div>
+<div class="mrow">${sprig(24)}<b>3</b><span>katkı bugün · 5 bu ay</span></div>
+<div class="mchips">${MATURE_ACT.map(a=>`<span class="mchip ${a[1]?'done':'todo'}">${a[1]?'✓':'○'} ${a[0]}</span>`).join('')}</div></div>
+<div class="msec"><div class="mhead">Hedef</div>
+<div class="mrow" style="justify-content:space-between;margin-top:9px"><span style="font-family:'Fredoka';font-weight:600;font-size:14.5px;color:#27332c">Paten</span><span style="font-weight:800;font-size:12.5px;color:#2f8f6b">42 ⭐ kaldı</span></div>
+<div class="mbar"><i style="width:75%"></i></div></div>
+</div>`;
+
+// tablet (6-8): card opens into 3 panels; tasks become a uniform 3-col grid
+const tabletCard=`<div style="position:relative"><div class="tcard">
+<div style="text-align:center"><div class="today-h">🌱 Bugün ağacın</div><div style="display:flex;justify-content:center;margin:2px 0">${tree(100,3,4)}</div>
+<div class="stat-row" style="justify-content:center"><div class="stat"><b>3</b><span>yaprak bugün</span></div><div class="stat"><b>5</b><span>ağaç bu ay</span></div></div></div>
+<div><div class="act-title" style="display:block;margin-bottom:4px">Bugün yaptıkların</div>
+<div class="chips" style="padding:8px 0 4px">${ACT5.map(a=>chip(a[0],a[1],a[2])).join('')}</div>
+<div class="act-line" style="padding:8px 0 0">Süpersin! Bir tek <b>ödev</b> ve <b>çizim</b> kaldı 🌟</div></div>
+<div style="text-align:center"><div class="act-title" style="display:block;margin-bottom:10px">Hedefin</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:9px">${ring(75)}<div style="font-family:'Fredoka';font-weight:600;font-size:15px;color:var(--ink)">Paten'e 42⭐ kaldı</div><div class="bar" style="width:100%"><i style="width:75%"></i></div></div></div>
+</div><div style="position:absolute;top:-28px;left:26%;z-index:2;filter:drop-shadow(0 4px 8px rgba(40,30,70,.18))">${mascot(72)}</div></div>`;
+const tabletTasks=`<div class="grid grid3" style="margin-top:20px">
+<div class="card"><div class="tile-ico" style="background:#E8E0FF">📖</div><h3>My Books</h3><span class="pill" style="background:#E8E0FF">⭐+30</span></div>
+<div class="card"><div class="tile-ico" style="background:#D4EDFF">➗</div><h3>My Math</h3><span class="pill" style="background:#D4EDFF">⭐+30</span></div>
+<div class="card"><div class="tile-ico" style="background:#D4F5E0">✏️</div><h3>My Stories</h3><span class="pill" style="background:#D4F5E0">⭐+30</span></div>
+<div class="card"><div class="tile-ico" style="background:#FFE8D4">🌳</div><h3>My Tree</h3><span class="pill" style="background:#FFE8D4">⭐+10</span></div>
+<div class="card"><div class="tile-ico" style="background:#FFF1CF">📝</div><h3>My Homework</h3></div>
+<div class="card"><div class="tile-ico" style="background:#EFE3FF">🎨</div><h3>My Drawings</h3></div>
+</div>`;
+
+function frame(v){
+if(v==='tablet')return `<div><div class="tablet"><div class="screen"><div class="scroll" style="padding:30px 28px">${header}${tabletCard}${tabletTasks}</div></div></div><div class="cap">${caps.tablet}</div></div>`;
+const mid=v==='young'?peek:v==='mid'?midPeek:matureCard;
+return `<div><div class="phone"><div class="screen"><div class="scroll">${header}${mid}${tasks}</div></div></div><div class="cap">${caps[v]}</div></div>`;}
+
+const stage=document.getElementById('stage');
+function render(v){stage.innerHTML=frame(v);}
+render('young');
+document.querySelectorAll('.toolbar button').forEach(b=>b.onclick=()=>{
+document.querySelectorAll('.toolbar button').forEach(x=>x.classList.remove('on'));
+b.classList.add('on');render(b.dataset.v);});
+</script>
+</body>
+</html>

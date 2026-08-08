@@ -151,7 +151,9 @@ function subtractionTemplate(level, lang) {
   // but right beneath it, so 44% of "Subtraction up to 20" came out as 7 - 6 and the like.
   // a now comes from the upper part of the range and b leaves a gap, so the answer is
   // actually worth working out.
-  const a = randInt(Math.max(min + 1, Math.round(max * 0.55)), max + 1)
+  // `max + 1` was written for an exclusive randInt; ours is inclusive, so it handed out
+  // max + 1 — "21 - 5" inside a year whose curriculum says "subtraction within 20".
+  const a = randInt(Math.max(min + 1, Math.round(max * 0.55)), max)
   const b = randInt(min, Math.max(min, a - 3))
   const correct_answer = a - b
 
@@ -286,11 +288,13 @@ function fractionOfNumberTemplate(level, lang) {
   // everything there was, and the next session was bound to repeat it.
   // The one step at level 12 was the whole of the scaling, so a ten-year-old and a six-year-old
   // both got "1/3 of 6". It follows the year now: bigger denominators and bigger wholes.
+  const { max } = rangeForLevel(level)
   const band = bandForLevel(level)
   const denominators = band >= 5 ? [2, 3, 4, 5, 6, 8, 10, 12] : band >= 3 ? [2, 3, 4, 5, 6, 8] : [2, 3, 4]
   const d = pick(denominators)
   const multiplier = randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 6)
-  const N = d * multiplier
+  // The whole N has to fit the year: 1/4 of 24 is outside a Year 1 that works within 20.
+  const N = Math.min(d * multiplier, Math.floor(max / d) * d)
   const correct_answer = N / d
 
   return {
@@ -488,7 +492,9 @@ function numberLineTemplate(level, lang) {
   const up = shape === 'more'
   // The ANSWER has to fit the ceiling too: "10 more than 99" is 109, outside a Year 2 that
   // says "numbers to 100".
-  const low = amount === 10 ? 10 : 2
+  // Must stay above the amount being taken away, or "10 less than 10" asks a six-year-old for
+  // zero — outside the positive-whole-number contract the rest of the app is built on.
+  const low = amount + 1
   const n = randInt(low, Math.max(low + 1, up ? cap - amount : cap))   // randInt is inclusive
   return {
     topic: 'counting', level,
