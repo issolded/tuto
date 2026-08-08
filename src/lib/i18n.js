@@ -32,6 +32,11 @@ const STRINGS = {
   chip_homework:      { en: 'Homework',      tr: 'Ödev' },
   chip_drawing:       { en: 'Drawing',       tr: 'Çizim' },
 
+  home_trees_month:   { en: 'trees this month', tr: 'ağaç bu ay' },
+  home_to_goal:       { en: 'to',        tr: 'kaldı:' },
+  home_so_close:      { en: 'So close to', tr: 'Çok az kaldı:' },
+  home_always_on:     { en: '🌱 Always on', tr: '🌱 Her zaman açık' },
+
   // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
   nav_home:           { en: 'Home',     tr: 'Ana Sayfa' },
   nav_library:        { en: 'Library',  tr: 'Kitaplık' },

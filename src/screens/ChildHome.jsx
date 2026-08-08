@@ -215,7 +215,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
           {band === 'young' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: isTablet ? 'center' : 'flex-start' }}>
               <TodayPill emoji="🌱" text={`${today.today} ${t('tree_leaves_today', lang)}`} color={accent} bg="rgba(76,182,133,.14)" />
-              <TodayPill emoji="🌳" text={`${today.monthTreeCount} trees this month`} color={accent} bg="rgba(76,182,133,.14)" />
+              <TodayPill emoji="🌳" text={`${today.monthTreeCount} ${t('home_trees_month', lang)}`} color={accent} bg="rgba(76,182,133,.14)" />
             </div>
           )}
 
@@ -306,7 +306,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
             <>
               <GoalRing pct={pct} color={mature ? accent : '#f79433'} track={mature ? '#E4EAE3' : 'rgba(247,148,51,.16)'} />
               <div style={{ marginTop: 10, fontFamily: mature ? "'Baloo 2', 'Nunito', cursive" : FRED, fontWeight: mature ? 500 : 600, fontSize: 14, color: ink }}>
-                {remaining}⭐ to {goal.name}
+                {remaining}⭐ {t('home_to_goal', lang)} {goal.name}
               </div>
             </>
           ) : mature ? (
@@ -326,7 +326,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 17 }}>🎯</span>
-                <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: ink }}>So close to {goal.name}</span>
+                <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: ink }}>{t('home_so_close', lang)} {goal.name}</span>
               </div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 12.5, color: accent, marginBottom: 6 }}>
                 ⭐ {remaining} gems to go · {gems}/{goal.bt_cost}
@@ -443,7 +443,7 @@ export default function ChildHome() {
                   background: task.bg, borderRadius: 10, padding: '3px 10px',
                   fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT,
                 }}>
-                  {task.gem != null ? (<><span style={{ fontSize: 12 }}>⭐</span>+{task.gem}</>) : '🌱 Always on'}
+                  {task.gem != null ? (<><span style={{ fontSize: 12 }}>⭐</span>+{task.gem}</>) : t('home_always_on', lang)}
                 </span>
               </div>
             </button>
@@ -463,7 +463,7 @@ export default function ChildHome() {
             <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#FFF1CF', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <HomeworkIcon />
             </div>
-            <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Homework</h3>
+            <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>{t('task_homework', lang)}</h3>
           </button>
           )}
 
@@ -479,7 +479,7 @@ export default function ChildHome() {
             <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#EFE3FF', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <DrawingsIcon age={child?.age} />
             </div>
-            <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>My Drawings</h3>
+            <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>{t('task_drawing', lang)}</h3>
           </button>
           )}
         </div>
