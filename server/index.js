@@ -577,7 +577,9 @@ async function sendWhatsAppTyping(messageSid) {
   const res = await fetch('https://messaging.twilio.com/v3/Indicators/Typing.json', {
     method: 'POST',
     headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messageId: messageSid, channel: 'whatsapp' }),
+    // WHATSAPP, upper case. The prose in Twilio's docs says "whatsapp" and the curl sample
+    // beside it uses "WHATSAPP"; lower case is answered 400, "input may be invalid".
+    body: JSON.stringify({ messageId: messageSid, channel: 'WHATSAPP' }),
   })
   if (!res.ok) console.error(`[WA] typing failed: ${res.status} ${(await res.text()).slice(0, 200)}`)
   else console.log(`[WA] typing shown for ${messageSid}`)
@@ -4353,8 +4355,9 @@ app.post('/webhook/whatsapp', async (req, res) => {
       // Same shape as Telegram: a person reads before they start typing, so the bubble is
       // delayed about a second — and it must not hold up Gemini, so it runs alongside rather
       // than before.
-      const inboundSid = req.body.MessageSid || req.body.SmsMessageSid
-      console.log(`[WA] inbound sid=${inboundSid || 'MISSING'} keys=${Object.keys(req.body).slice(0, 12).join(',')}`)
+      // Twilio's WhatsApp webhook sends SmsMessageSid and SmsSid, never MessageSid — worth
+      // saying, because the obvious guess is wrong and the fallback is what saved it.
+      const inboundSid = req.body.MessageSid || req.body.SmsMessageSid || req.body.SmsSid
       setTimeout(() => sendWhatsAppTyping(inboundSid).catch(() => {}), 800 + Math.random() * 700)
       await handleMessage(existing[0].id, reply => sendWhatsAppBusinessMessage(from, reply), text)
       return
