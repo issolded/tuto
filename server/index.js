@@ -168,9 +168,9 @@ async function getParentContext(parentId) {
       // by improvising from gems/level/stories, which is a different subject.
       getTreeState(child.id, tz).catch(() => null),
       supabase.from('paintings')
-        .select('id, drawing_id, created_at')
+        .select('id, drawing_id, created_at, status')
         .eq('child_id', child.id)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'blocked'])
         .order('created_at', { ascending: false }),
       // Reward claims (child tapped "Claim") awaiting a parent decision — same
       // shape as pendingDrawings/pendingSubs, so a "what's this notification
@@ -277,7 +277,14 @@ async function getParentContext(parentId) {
       pendingCheckFailed: !!pendingError,
       // Drawings wait for the parent too, but they are NOT submissions — a
       // different table and different approve/reject tools.
-      pendingDrawings: (pendingPaintings || []).map(p => ({
+      // Held after the safety screen refused them. Named apart from pendingDrawings because
+      // they are NOT awaiting approval — there is nothing to approve. They exist so a parent
+      // who was told their child uploaded something can look, and they go after a week.
+      blockedDrawings: (pendingPaintings || []).filter(p => p.status === 'blocked').map(p => ({
+        id: p.id, created_at: p.created_at,
+        note: 'the safety screen refused this; send it with send_drawing_photo if the parent asks to see it',
+      })),
+      pendingDrawings: (pendingPaintings || []).filter(p => p.status !== 'blocked').map(p => ({
         id: p.id,
         what: p.drawing_id || 'kendi çizimi',
         created_at: p.created_at,
@@ -808,6 +815,22 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'send_drawing_photo',
+      description:
+        'Sends the parent an image the safety screen refused, when they ask to see what their ' +
+        'child uploaded. The ids are in that child\'s blockedDrawings in context. Only for ' +
+        'those — a drawing awaiting approval is already visible in the app. If they have not ' +
+        'asked, do not offer beyond saying it is available; if the id is not in the list it is ' +
+        'gone, since these are kept a week and then deleted.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          painting_id: { type: 'STRING', description: 'The exact id from that child\'s blockedDrawings in context.' },
+        },
+        required: ['painting_id'],
+      },
+    },
+    {
       name: 'approve_drawing',
       description:
         'Approve ONE SPECIFIC pending drawing (a picture the child drew and photographed), by its exact id from ' +
@@ -1106,6 +1129,44 @@ async function setMathFocusTool(childId, topicId, parentId) {
 // Every rule here is DETERMINISTIC — the LLM only picks the id and (maybe) an
 // amount; code decides authorization, double-approval, the reward value, the
 // clamp, and the single ledger write.
+// Sends a held, refused image to the parent who asked for it. Everything is checked here:
+// that the row is theirs, that it really is a blocked one, and that it still exists.
+// Images the safety screen refused are kept a week so a parent who was told about one can
+// look, and no longer — they were never wanted, only explainable.
+async function purgeHeldImages() {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: stale } = await supabase.from('paintings')
+    .select('id, photo_path').eq('status', 'blocked').lt('created_at', cutoff)
+  for (const row of stale || []) {
+    if (row.photo_path) await supabase.storage.from(PAINTING_BUCKET).remove([row.photo_path])
+    await supabase.from('paintings').delete().eq('id', row.id)
+  }
+  if (stale?.length) console.log(`[PURGE] removed ${stale.length} held image(s) past 7 days`)
+}
+
+async function sendDrawingPhotoTool(paintingId, parentId) {
+  const { data: row } = await supabase
+    .from('paintings').select('id, child_id, photo_path, status').eq('id', paintingId).maybeSingle()
+  if (!row) return { success: false, error: 'not found — held images are deleted after a week' }
+  if (row.status !== 'blocked') return { success: false, error: 'that one was not blocked' }
+
+  const { data: child } = await supabase
+    .from('children').select('name, parent_id').eq('id', row.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'not your child' }
+
+  // signedUrlsFor takes no bucket; the single-item form does, and paintings live in their own.
+  const url = await signedUrlFor(row.photo_path, 3600, PAINTING_BUCKET)
+  if (!url) return { success: false, error: 'image no longer available' }
+  try {
+    await sendNotificationWithPhoto(parentId,
+      `${child.name} — bu görseli güvenlik taraması iletmemişti. / this is the image the safety screen held.`,
+      url, PAINTING_BUCKET)
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+  return { success: true, child: child.name }
+}
+
 async function approveSubmissionTool(submissionId, parentId, gems) {
   const { data: sub } = await supabase
     .from('submissions')
@@ -1753,6 +1814,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'update_task_reward') {
         toolResult = await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId)
+      } else if (name === 'send_drawing_photo') {
+        toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
       } else {
@@ -3966,10 +4029,36 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
     })
     if (!safety.appropriate) {
       console.log(`[DRAWING] inappropriate image child=${childId} — blocked (${safety.reason})`)
+      // Held, not destroyed. Telling a parent their child uploaded something unsuitable and
+      // then that it cannot be shown is the worst of both: they are alarmed and have no way to
+      // judge it for themselves — and "unsuitable" is usually a screenshot or a photo of the
+      // room, not something a parent needs protecting from. It goes to the same private bucket
+      // as everything else, marked blocked so nothing treats it as a drawing, and is deleted
+      // after a week whether they look or not.
+      let heldPath = null
       try {
-        await sendNotification(child.parent_id, language === 'en'
-          ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save or forward it, but I wanted you to know.`
-          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Kaydetmedim ve paylaşmadım ama haberin olsun istedim.`)
+        const ext0 = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'
+        heldPath = `${childId}/blocked/${randomUUID()}.${ext0}`
+        const { error: hErr } = await supabase.storage
+          .from(PAINTING_BUCKET).upload(heldPath, buffer, { contentType, upsert: false })
+        if (hErr) { console.error(`[DRAWING] hold failed: ${hErr.message}`); heldPath = null }
+        else {
+          const { error: rErr } = await supabase.from('paintings').insert({
+            child_id: childId, drawing_id: drawing_id ?? null, photo_path: heldPath, status: 'blocked',
+          })
+          if (rErr) { console.error(`[DRAWING] hold row failed: ${rErr.message}`); heldPath = null }
+        }
+      } catch (err) { console.error(`[DRAWING] hold error: ${err.message}`); heldPath = null }
+
+      try {
+        const canSee = heldPath
+          ? (language === 'en'
+              ? ' I have kept it for a week in case you want to see it — just ask.'
+              : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
+          : ''
+        await sendNotification(child.parent_id, (language === 'en'
+          ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`
+          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee)
       } catch (err) {
         console.error(`[DRAWING] inappropriate alert failed: ${err.message}`)
       }
@@ -4465,8 +4554,12 @@ app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
   // Photo retention — homework/chore images are deleted once past the window
   // (PHOTO_RETENTION_DAYS, default 60). Runs at boot and daily thereafter.
-  purgeOldPhotos().catch(err => console.error(`[PURGE] ${err.message}`))
-  setInterval(() => purgeOldPhotos().catch(err => console.error(`[PURGE] ${err.message}`)), 24 * 60 * 60 * 1000)
+  const purgeAll = async () => {
+    await purgeOldPhotos().catch(err => console.error(`[PURGE] ${err.message}`))
+    await purgeHeldImages().catch(err => console.error(`[PURGE] held: ${err.message}`))
+  }
+  purgeAll()
+  setInterval(purgeAll, 24 * 60 * 60 * 1000)
   startTelegramBot()
   setupMessageListener()
 })
