@@ -11,17 +11,14 @@ const ANIM = `
 }
 `
 
-const REASON_LABELS = {
-  math:            'My Math 🔢',
-  reading:         'My Books 📚',
-  writing:         'My Stories ✏️',
-  homework:        'My Homework 📸',
-  drawing:         'My Drawings 🎨',
-  bonus:           'Bonus Gift 🎁',
-  story:           'My Stories ✏️',
-  adjustment:      'Adjustment ⚖️',
-  'Welcome bonus': 'Welcome Bonus 🎉',
-  welcome:         'Welcome Bonus 🎉',
+// Ledger reasons the activity tiles do not already name. Keys, not text: this list is read
+// beside TASK_KEYS below, and a label written here would be the one thing on the screen that
+// stayed English. 'Welcome bonus' is a reason string some older rows carry verbatim.
+const REASON_KEYS = {
+  bonus:           'gem_bonus_gift',
+  adjustment:      'gem_adjustment',
+  'Welcome bonus': 'gem_welcome',
+  welcome:         'gem_welcome',
 }
 
 const REASON_EMOJI = {
@@ -110,7 +107,8 @@ export default function GemsScreen() {
               // reason (a reward's own name, a parent's note) is shown as written.
               const TASK_KEYS = { math: 'task_math', reading: 'task_reading', writing: 'task_writing',
                                   story: 'task_writing', homework: 'task_homework', drawing: 'task_drawing' }
-              const label = TASK_KEYS[key] ? t(TASK_KEYS[key], lang) : (REASON_LABELS[key] || key || 'Task ⭐')
+              const labelKey = TASK_KEYS[key] || REASON_KEYS[key]
+              const label = labelKey ? t(labelKey, lang) : (key || t('gem_task', lang))
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               return (
                 <div

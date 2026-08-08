@@ -155,6 +155,11 @@ const STRINGS = {
   lab_fully_revealed: { en: 'Fully revealed', tr: 'Hepsi açıldı' },
   hw_send_failed:     { en: "Couldn't send — want to try again?", tr: 'Gönderilemedi, tekrar dener misin?' },
 
+  gem_bonus_gift:     { en: 'Bonus Gift 🎁', tr: 'Sürpriz Hediye 🎁' },
+  gem_adjustment:     { en: 'Adjustment ⚖️', tr: 'Düzeltme ⚖️' },
+  gem_welcome:        { en: 'Welcome Bonus 🎉', tr: 'Hoş Geldin Hediyesi 🎉' },
+  gem_task:           { en: 'Task ⭐', tr: 'Görev ⭐' },
+
   tree_this_month:    { en: 'THIS MONTH', tr: 'BU AY' },
   tree_n_trees:       { en: 'trees', tr: 'ağaç' },
   tree_you_grew:      { en: 'you grew 🌳', tr: 'ağaç yetiştirdin 🌳' },

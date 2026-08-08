@@ -4,6 +4,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
+import { findBadAnswers } from '../lib/mathVerify'
 import { t } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
 
@@ -1191,7 +1192,27 @@ export default function MathScreen() {
           slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
           slot.hints = Array.isArray(result.hint_steps?.[i]) ? result.hint_steps[i] : null
         })
-        rememberSeen('seen', child?.id, 'curriculum', llmSlots.map(s => s.question))
+        // The model writes the question and its answer together, and until now nothing ever
+        // disagreed with it. A wrong answer here is worse than a missing question: the child
+        // solves it correctly, is told they are wrong, and the topic is recorded as a
+        // weakness. Anything that fails verification is dropped and refilled from a template.
+        const filled = llmSlots.filter(s => typeof s.question === 'string' && s.question.trim())
+        const bad = await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language)
+        for (const i of bad) {
+          const slot = filled[i]
+          console.warn(`[VERIFY] dropped a question whose answer did not check out: ${slot.question}`)
+          const fallbackTopic = slot.curriculum?.templateTopic ?? slot.templateTopic
+          const p = fallbackTopic ? generateProblem(fallbackTopic, effectiveLevel, usedOperands, language) : null
+          if (p) {
+            usedOperands.add(p.operandKey)
+            slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
+            slot.format = 'integer'; slot.hints = null
+          } else {
+            slot.question = null
+          }
+        }
+
+        rememberSeen('seen', child?.id, 'curriculum', llmSlots.filter(s => s.question).map(s => s.question))
       } catch (e) {
         // A model that will not answer costs the child the topics only it can pose, not the
         // whole session — the template questions below are already generated and correct.

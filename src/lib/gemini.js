@@ -187,6 +187,12 @@ async function callGemini(parts) {
   return parseJSON(text)
 }
 
+// A plain text-in, JSON-out call. The maths verifier needs one and had no reason to
+// duplicate the proxy call, the thought-part handling or the JSON repair above.
+export async function callGeminiJSON(prompt) {
+  return callGemini([{ text: prompt }])
+}
+
 export async function transcribeStory(photos, language = 'en') {
   const prompt = `You are an expert at reading young children's handwriting. First read the WHOLE page and understand the story the child is telling — its meaning and flow. THEN, for each part, infer the word the child most likely INTENDED, using sentence and story context.
 Example: "once a pola time" → the child means "once upon a time".
