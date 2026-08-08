@@ -553,6 +553,27 @@ const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
   : null
 
+// WhatsApp's typing indicator, the counterpart to sendTelegramTyping. It is not a standalone
+// "show typing to this number" call: it references the inbound message being answered, and
+// Twilio marks that message read as it shows the bubble. So it can only follow something the
+// parent sent — which is the only place it belongs anyway. It clears itself when the reply
+// lands, or after 25 seconds.
+//
+// Public beta at Twilio, so it is fire-and-forget: a typing bubble is never worth failing a
+// reply over.
+async function sendWhatsAppTyping(messageSid) {
+  const sid = process.env.TWILIO_ACCOUNT_SID, token = process.env.TWILIO_AUTH_TOKEN
+  if (!sid || !token || !messageSid) return
+  const body = new URLSearchParams({ messageId: messageSid, channel: 'whatsapp' })
+  const auth = Buffer.from(`${sid}:${token}`).toString('base64')
+  const res = await fetch('https://messaging.twilio.com/v3/Indicators/Typing.json', {
+    method: 'POST',
+    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+  if (!res.ok) console.error(`[WA] typing failed: ${res.status} ${(await res.text()).slice(0, 120)}`)
+}
+
 async function sendWhatsAppBusinessMessage(to, message) {
   if (!twilioClient || !TWILIO_WHATSAPP_NUMBER) throw new Error('Twilio not configured')
   const toE164 = to.startsWith('+') ? to : `+${to}`
@@ -4320,6 +4341,11 @@ app.post('/webhook/whatsapp', async (req, res) => {
       .not('whatsapp_verified_at', 'is', null)
       .limit(1)
     if (existing?.[0]?.id) {
+      // Same shape as Telegram: a person reads before they start typing, so the bubble is
+      // delayed about a second — and it must not hold up Gemini, so it runs alongside rather
+      // than before.
+      const inboundSid = req.body.MessageSid || req.body.SmsMessageSid
+      setTimeout(() => sendWhatsAppTyping(inboundSid).catch(() => {}), 800 + Math.random() * 700)
       await handleMessage(existing[0].id, reply => sendWhatsAppBusinessMessage(from, reply), text)
       return
     }
