@@ -2204,9 +2204,43 @@ app.get('/api/children/:childId/stories', async (req, res) => {
   res.json({ stories: stories || [] })
 })
 
+// What a story is worth. The model used to decide this — evaluateStory returned a gem figure
+// and the client passed it straight through to the ledger — so the parent's configured amount
+// was never consulted and the number moved with the model's mood. The model judges the writing
+// now; the amount is worked out here.
+const WRITING_DEFAULTS = { gems: 30, dailyCap: 3 }
+
+// Words a child of each school year might reasonably write in one sitting. Not a target shown
+// to anyone: it is the point where the effort multiplier reaches its ceiling.
+const WORDS_FOR_YEAR = { year1: 20, year2: 35, year3: 50, year4: 70, year5: 90, year6: 110 }
+
+function schoolYearForAge(age) {
+  const n = Number(age) || 7
+  if (n <= 6) return 'year1'
+  if (n === 7) return 'year2'
+  if (n === 8) return 'year3'
+  if (n === 9) return 'year4'
+  if (n === 10) return 'year5'
+  return 'year6'
+}
+
+function countWords(text) {
+  return String(text || '').trim().split(/\s+/).filter(Boolean).length
+}
+
+// Effort, as a multiplier between a floor and 1. Two honest sentences are still work and still
+// earn — just not what a page earns. The floor is why: a child who writes little, or writes
+// slowly, must not come away with nothing. And it is capped at the year's mark rather than
+// climbing forever, because a reward that keeps rising with length teaches padding.
+const EFFORT_FLOOR = 0.4
+function effortScale(words, age) {
+  const target = WORDS_FOR_YEAR[schoolYearForAge(age)] || 50
+  return Math.min(1, EFFORT_FLOOR + (1 - EFFORT_FLOOR) * (words / target))
+}
+
 app.post('/api/children/:childId/stories', async (req, res) => {
   const { childId } = req.params
-  const { storyId, title, topic, transcribed_text, corrected_text, status, gems_earned, cover_url, cover_color } = req.body
+  const { storyId, title, topic, transcribed_text, corrected_text, status, quality, cover_url, cover_color } = req.body
   try {
     let story, prevStatus
 
@@ -2231,7 +2265,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
     } else {
       prevStatus = null
       const { data: inserted, error } = await supabase.from('stories')
-        .insert({ child_id: childId, title, topic, transcribed_text, corrected_text, status, gems_earned: gems_earned || 0 })
+        .insert({ child_id: childId, title, topic, transcribed_text, corrected_text, status, gems_earned: 0 })
         .select().single()
       if (error) return res.status(500).json({ error: error.message })
       story = inserted
@@ -2239,9 +2273,31 @@ app.post('/api/children/:childId/stories', async (req, res) => {
 
     // Gem awarded only on first-ever completion (prev was not completed)
     const firstCompletion = status === 'completed' && prevStatus !== 'completed'
-    const gemsAwarded = firstCompletion ? (gems_earned || 0) : 0
-    if (gemsAwarded > 0) {
-      await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
+    let gemsAwarded = 0
+    let capped = false
+    if (firstCompletion) {
+      const { data: kid } = await supabase
+        .from('children').select('age, task_settings').eq('id', childId).maybeSingle()
+      const settings = taskSettingsFor(kid?.task_settings, 'writing', WRITING_DEFAULTS)
+      const tz = await tzForChild(childId)
+      const doneToday = await rewardedToday(childId, tz, 'story')
+
+      // Words counted HERE, from the text already in the request — not taken from the client
+      // and not from the model, both of which have been wrong about it.
+      const words = countWords(corrected_text || transcribed_text || story.corrected_text || story.transcribed_text)
+      const q = Math.max(0, Math.min(100, Number(quality) || 0))
+
+      if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
+        capped = true
+      } else {
+        // Quality and effort multiply: a long story told poorly and a good story of two lines
+        // both land in the middle, which is the honest place for each of them.
+        gemsAwarded = Math.round(settings.gems * rewardScale(q) * effortScale(words, kid?.age))
+      }
+      if (gemsAwarded > 0) {
+        await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
+        await supabase.from('stories').update({ gems_earned: gemsAwarded }).eq('id', story.id)
+      }
     }
 
     // Parent notification — insert only (no notification on edits/updates)
@@ -2281,7 +2337,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
       }
     }
 
-    res.json({ story, gems_awarded: gemsAwarded })
+    res.json({ story, gems_awarded: gemsAwarded, capped })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -4302,13 +4358,20 @@ app.post('/webhook/whatsapp', async (req, res) => {
         whatsapp_verified_at: new Date().toISOString(),
         whatsapp_connect_code: null,
         whatsapp_connect_code_expires_at: null,
-        ...(parent.notification_channel ? {} : { notification_channel: 'whatsapp' }),
+        // Connecting WhatsApp means messages come to WhatsApp. This used to set the channel
+        // only when there was not one already — and the column defaults to 'telegram', so
+        // there always was: every parent who connected WhatsApp stayed on Telegram, including
+        // one who had both connected and never saw a WhatsApp message. Sending a code to this
+        // number is an explicit act; it decides the channel.
+        notification_channel: 'whatsapp',
       })
       .eq('id', parent.id)
 
+    // Says plainly that this moves the messages, since a parent who also had Telegram will
+    // otherwise wonder why it went quiet.
     const confirmMsg = language === 'en'
-      ? `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on.`
-      : `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra buradan haberdar edeceğim.`
+      ? `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on — not on Telegram.`
+      : `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra Telegram yerine buradan haber vereceğim.`
     await sendWhatsAppBusinessMessage(from, confirmMsg)
     console.log(`[WA] Connected parent ${parent.id} → ${from}`)
   } catch (err) {
