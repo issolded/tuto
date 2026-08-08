@@ -1895,6 +1895,26 @@ function setupMessageListener() {
   console.log('Message listeners started (Telegram).')
 }
 
+// A child's upload must not wait on the parent's messenger.
+//
+// The drawing upload awaited sendNotificationWithPhoto before answering the browser. Sending
+// a photo over WhatsApp means Twilio fetching the media itself, which is slow and sometimes
+// very slow; the browser gave up first and the connection died at the edge, so the failure
+// reached the child as a CORS error — the platform's error page carries no
+// Access-Control-Allow-Origin. The parent got their message, the child was told the upload
+// failed, and nothing in the logs said so.
+//
+// The notification is already best-effort at every one of these call sites (each sits in a
+// try/catch that only logs), so nothing is lost by running it after the response instead of
+// before it.
+function deferNotify(label, run) {
+  setImmediate(() => {
+    Promise.resolve().then(run).catch(err => {
+      console.error(`[${label}] parent notification failed: ${err?.message ?? err}`)
+    })
+  })
+}
+
 const app = express()
 app.set('trust proxy', 1) // Railway sits behind a proxy — needed so req.protocol reports https for Twilio signature validation
 app.use(cors())
@@ -2624,9 +2644,9 @@ async function screenContributionPhoto(photoPath, child) {
       ? (language === 'en' ? ' I have kept it for a week in case you want to see it — just ask.'
                            : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
       : ''
-    await sendNotification(child.parent_id, (language === 'en'
+    deferNotify('HOMEWORK', () => sendNotification(child.parent_id, (language === 'en'
       ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`
-      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee)
+      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee))
   } catch (err) {
     console.error(`[CONTRIBUTIONS] inappropriate alert failed: ${err.message}`)
   }
@@ -2688,7 +2708,7 @@ app.post('/api/contributions', async (req, res) => {
           const parentMsg = isSerious
             ? `${child.name} şöyle bir şey paylaştı: "${trimmedLabel}". Onunla konuşmak iyi gelebilir.`
             : `${child.name} şöyle bir şey paylaştı: "${trimmedLabel}". Onunla konuşmak iyi gelebilir.`
-          await sendNotification(child.parent_id, parentMsg)
+          deferNotify('HOMEWORK', () => sendNotification(child.parent_id, parentMsg))
         } catch (err) {
           console.error(`[SCREEN] concern notification failed: ${err.message}`)
         }
@@ -2730,9 +2750,9 @@ app.post('/api/contributions', async (req, res) => {
     try {
       const message = `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
       if (resolvedPhotoUrl) {
-        await sendNotificationWithPhoto(child.parent_id, message, resolvedPhotoUrl)
+        deferNotify('TREE', () => sendNotificationWithPhoto(child.parent_id, message, resolvedPhotoUrl))
       } else {
-        await sendNotification(child.parent_id, message)
+        deferNotify('TREE', () => sendNotification(child.parent_id, message))
       }
     } catch (err) {
       console.error(`[CONTRIBUTIONS] notification failed: ${err.message}`)
@@ -2779,11 +2799,11 @@ app.post('/api/contributions/:id/photo', async (req, res) => {
     // The parent already got the "added a contribution" message when the entry
     // was created, so this is a follow-up rather than a repeat.
     try {
-      await sendNotificationWithPhoto(
+      deferNotify('TREE', () => sendNotificationWithPhoto(
         child.parent_id,
         `📷 ${child.name} "${contribution.label}" katkısına bir fotoğraf ekledi.`,
         photo_url,
-      )
+      ))
     } catch (err) {
       console.error(`[CONTRIBUTIONS] photo notification failed: ${err.message}`)
     }
@@ -3456,7 +3476,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
       try {
-        await sendNotificationWithPhotos(child.parent_id, caption, photoUrls)
+        deferNotify('READING', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls))
       } catch (err) {
         console.error(`[HOMEWORK] notification failed: ${err.message}`)
       }
@@ -4082,9 +4102,9 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
               ? ' I have kept it for a week in case you want to see it — just ask.'
               : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
           : ''
-        await sendNotification(child.parent_id, (language === 'en'
+        deferNotify('DRAWING', () => sendNotification(child.parent_id, (language === 'en'
           ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`
-          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee)
+          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee))
       } catch (err) {
         console.error(`[DRAWING] inappropriate alert failed: ${err.message}`)
       }
@@ -4142,13 +4162,13 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
     // short-lived and Telegram re-hosts the image immediately.
     try {
       const what = resolvedDrawing ? `"${resolvedDrawing.name_tr}" çizimini` : 'kendi çizimini'
-      await sendNotificationWithPhoto(
+      deferNotify('DRAWING', () => sendNotificationWithPhoto(
         child.parent_id,
         `🎨 ${child.name} ${what} bitirdi ve fotoğrafını ekledi.\n\n` +
         `Onaylarsan ödülü ekleyeyim — "onayla" diyebilir ya da panelden bakabilirsin.`,
         photo_path,
         PAINTING_BUCKET,
-      )
+      ))
     } catch (err) {
       console.error(`[DRAWING] parent notification failed: ${err.message}`)
     }

@@ -160,13 +160,14 @@ export default function ParentDashboard() {
   const [showModal, setShowModal] = useState(false)
   const [familyCode, setFamilyCode] = useState(null)
   const [showQR, setShowQR] = useState(false)
-  const [notifData, setNotifData] = useState({ telegramChatId: null, whatsappPhone: null, channel: null })
+  const [notifData, setNotifData] = useState({ telegramChatId: null, whatsappPhone: null, whatsappVerifiedAt: null, channel: null })
   const [showTelegramSetup, setShowTelegramSetup] = useState(false)
   const [telegramCodeCopied, setTelegramCodeCopied] = useState(false)
   const [showWaSetup, setShowWaSetup] = useState(false)
   const [waCode, setWaCode] = useState(null)
   const [waLink, setWaLink] = useState(null)
   const [waJustConnected, setWaJustConnected] = useState(false)
+  const waConnected = waJustConnected || !!notifData.whatsappVerifiedAt
   const [waError, setWaError] = useState('')
 
   useEffect(() => {
@@ -203,7 +204,7 @@ export default function ParentDashboard() {
   const loadParentData = async (uid) => {
     const { data } = await supabase
       .from('parents')
-      .select('family_code, telegram_chat_id, whatsapp_phone, notification_channel')
+      .select('family_code, telegram_chat_id, whatsapp_phone, whatsapp_verified_at, notification_channel')
       .eq('id', uid)
       .single()
 
@@ -216,6 +217,7 @@ export default function ParentDashboard() {
     setNotifData({
       telegramChatId: data?.telegram_chat_id || null,
       whatsappPhone: data?.whatsapp_phone || null,
+      whatsappVerifiedAt: data?.whatsapp_verified_at || null,
       channel: data?.notification_channel || null,
     })
   }
@@ -251,7 +253,7 @@ export default function ParentDashboard() {
         const data = await res.json()
         if (data.connected) {
           setWaJustConnected(true)
-          setNotifData(d => ({ ...d, whatsappPhone: data.whatsappPhone, channel: d.channel || 'whatsapp' }))
+          setNotifData(d => ({ ...d, whatsappPhone: data.whatsappPhone, whatsappVerifiedAt: new Date().toISOString(), channel: d.channel || 'whatsapp' }))
         }
       } catch { /* keep polling */ }
     }, 3000)
@@ -390,7 +392,7 @@ export default function ParentDashboard() {
             status={notifData.telegramChatId ? 'Connected' : 'Not connected'}
             action={!notifData.telegramChatId
               ? <Btn full={false} variant="soft" onClick={() => setShowTelegramSetup(s => !s)} style={{ padding: '8px 13px', fontSize: 13 }}>{showTelegramSetup ? 'Cancel' : 'Connect'}</Btn>
-              : waJustConnected
+              : waConnected
                 ? <button className="tc-press tc-tap" onClick={() => updateChannel('telegram')} style={{ background: notifData.channel === 'telegram' ? PC.teal : PC.tealBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'telegram' ? '#fff' : PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'telegram' ? '★ Primary' : 'Set primary'}</button>
                 : null}
           />
@@ -414,21 +416,23 @@ export default function ParentDashboard() {
 
           {/* WhatsApp — whatsapp_phone alone doesn't mean "connected": a stale,
               never-actually-verified value can be sitting there from the old
-              abandoned flow. waJustConnected (set only once THIS session's
+              abandoned flow — but whatsapp_verified_at is written only when a code
+              actually arrived from the number, so it survives a reload. waJustConnected
+              alone meant the row read "Not connected" on every revisit. (set once THIS session's
               webhook poll confirms the match) is the real signal. */}
           <NotifRow
             icon="💬"
             label="WhatsApp"
-            connected={waJustConnected}
-            status={waJustConnected ? 'Connected' : 'Not connected'}
-            action={!waJustConnected
+            connected={waConnected}
+            status={waConnected ? 'Connected' : 'Not connected'}
+            action={!waConnected
               ? <Btn full={false} variant="soft" onClick={() => { setShowWaSetup(s => !s); if (!waLink) startWaConnect() }} style={{ padding: '8px 13px', fontSize: 13 }}>{showWaSetup ? 'Cancel' : 'Connect'}</Btn>
               : notifData.telegramChatId
                 ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
                 : null}
           />
 
-          {showWaSetup && !waJustConnected && (
+          {showWaSetup && !waConnected && (
             <div className="tc-fade" style={{ background: PC.greenBg, borderRadius: 15, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: -6 }}>
               {waLink ? (
                 <>
