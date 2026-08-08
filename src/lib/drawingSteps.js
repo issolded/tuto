@@ -399,6 +399,26 @@ export const DRAWING_STEPS = {
       'Tepeyi ve ağaçları gölgele; çatıya kiremit, bacaya duman, yola da dalgalar ekle.',
     ],
   },
+  // Audited against drawings/princess/*.webp. The old list had 29 lines for these 6 pictures —
+  // by far the worst drift in the set.
+  princess: {
+    en: [
+      'Draw a head with a pointed chin, a line down the middle and one across, then the neck and a V-shaped collar.',
+      'Draw big eyes with long lashes on the guide line, curved eyebrows, and a small nose and mouth.',
+      'Add an ear each side, then the shoulders with puffed sleeves and the top of the dress.',
+      'Draw long hair falling down both sides, the arms coming down, and the hands together in front.',
+      'Add the waist, then a wide skirt with a frilly hem, and put waves in the hair.',
+      'Draw strands through the hair, shade the sleeves and skirt, and finish the face.',
+    ],
+    tr: [
+      'Sivri çeneli bir kafa çiz, ortasından ve enine birer çizgi geçir, sonra boynu ve V yakayı ekle.',
+      'Yardım çizgisinin üstüne uzun kirpikli büyük gözler, kavisli kaşlar, küçük bir burun ve ağız çiz.',
+      'İki yanına birer kulak, sonra omuzları, kabarık kolları ve elbisenin üstünü ekle.',
+      'İki yandan aşağı dökülen uzun saçları, aşağı inen kolları ve önde birleşen elleri çiz.',
+      'Beli çiz, altına fırfırlı geniş bir etek ekle, saçlara da dalga ver.',
+      'Saçın içine teller çiz, kolları ve eteği gölgele, yüzü tamamla.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
