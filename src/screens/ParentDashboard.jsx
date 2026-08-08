@@ -370,6 +370,18 @@ export default function ParentDashboard() {
         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>Notifications</div>
         <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
+          {/* Connecting both is useful and the difference is not obvious: updates go to ONE
+              channel, but a question is answered wherever it was asked. Without this a parent
+              connects the second one and reads the first going quiet as something broken. */}
+          <div style={{
+            background: PC.tealBg, borderRadius: 14, padding: '12px 14px',
+            fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5,
+          }}>
+            Your <strong>primary</strong> channel is where {children.length === 1 ? `${children[0].name}'s` : "your children's"} updates
+            arrive. You can message Tuto on either one at any time — questions are always answered
+            where you asked them.
+          </div>
+
           {/* Telegram */}
           <NotifRow
             icon="✈️"
