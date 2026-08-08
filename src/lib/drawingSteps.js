@@ -93,6 +93,32 @@ export const DRAWING_STEPS = {
       'Dağ yamaçlarını, ağaçları ve yolu gölgeleyerek bitir.',
     ],
   },
+  // Audited against drawings/anime-face/*.webp — nine steps, not ten: that folder also holds
+  // an icon.webp, which the first count mistook for a step.
+  'anime-face': {
+    en: [
+      'Draw a circle for the skull, with a line down the middle and a small mark below for the chin.',
+      'Draw the jaw down to that mark, and two lines for the neck.',
+      'Smooth the whole head into one outline, add an ear on the left, and a guide line across for the eyes.',
+      'Draw sharp eyebrows, the outline of both eyes, a small nose and a smiling mouth.',
+      'Draw a big circle inside each eye for the iris.',
+      'Add the other ear on the right so both match.',
+      'Fill in the pupils and leave a white dot in each for the shine.',
+      'Draw the fringe: pointed strands of hair falling over the forehead.',
+      'Add the rest of the spiky hair all around, then shade the face and eyes.',
+    ],
+    tr: [
+      'Kafatası için bir daire çiz, ortasından bir çizgi geçir, altına da çene için küçük bir işaret koy.',
+      'Çeneyi o işarete kadar indir, boyun için iki çizgi çek.',
+      'Bütün kafayı tek bir hatta yumuşat, soluna bir kulak ekle, gözler için de enine bir yardım çizgisi çiz.',
+      'Keskin kaşlar, iki gözün dış hattı, küçük bir burun ve gülümseyen bir ağız çiz.',
+      'Her gözün içine iris için büyük bir daire çiz.',
+      'Sağa da öbür kulağı ekle, ikisi eşit olsun.',
+      'Göz bebeklerini doldur, her birinde parıltı için beyaz bir nokta bırak.',
+      'Kâkülü çiz: alnına düşen sivri saç tutamları.',
+      'Çevresine diken diken saçın kalanını ekle, sonra yüzü ve gözleri gölgele.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
