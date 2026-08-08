@@ -40,6 +40,55 @@ export const DRAWING_STEPS = {
       'Gözleri boya, ekranın üstüne bir çizgi çek, kollara ve bacaklara eklem çizgileri ekle.',
     ],
   },
+  // Audited against drawings/house/*.webp. The old list had 15 lines for these 8 pictures;
+  // its "two windows" belonged to a version of this house that had two. This one has one.
+  // Audited against drawings/caterpillar/*.webp. The count matched before, which is why this
+  // one looked fine and was not: step 3 is the antennae, not what the old line claimed, and
+  // the old step 5 described the eyes, drawn in step 4.
+  caterpillar: {
+    en: [
+      'Draw a big circle for the head.',
+      'Add three more circles behind it, each a little smaller.',
+      'Give it two curly antennae on top.',
+      'Draw two big eyes with shiny pupils, and a small eyebrow above each.',
+      'Add a happy smile.',
+      'Join the body circles into segments and add little looping legs underneath.',
+      'Draw wavy stripes across each segment.',
+      'Put a big leaf under the caterpillar and a flower beside it.',
+    ],
+    tr: [
+      'Kafa için büyük bir daire çiz.',
+      'Arkasına gittikçe küçülen üç daire daha ekle.',
+      'Tepesine iki tane kıvrık anten çiz.',
+      'Parlak bebekli iki büyük göz çiz, her birinin üstüne de küçük bir kaş.',
+      'Güler yüzlü bir gülümseme ekle.',
+      'Gövde dairelerini halkalara bağla, altına da küçük ilmek bacaklar ekle.',
+      'Her halkanın üstüne dalgalı çizgiler çiz.',
+      'Tırtılın altına kocaman bir yaprak, yanına da bir çiçek koy.',
+    ],
+  },
+  house: {
+    en: [
+      'Draw a big square for the walls.',
+      'Put a wide triangle on top for the roof.',
+      'Add a chimney on the right side of the roof, and a tall rectangle for the door.',
+      'Draw one square window to the right of the door.',
+      'Cover the roof in rows of tiles, and let some smoke curl out of the chimney.',
+      'Split the window into four panes and add curtains, then a round door handle.',
+      'Draw a picket fence across the front of the house.',
+      'Shade the roof, the door and the chimney bricks, and add bushes in the garden.',
+    ],
+    tr: [
+      'Duvarlar için büyük bir kare çiz.',
+      'Üstüne çatı için geniş bir üçgen koy.',
+      'Çatının sağına baca, eve de kapı için uzun bir dikdörtgen ekle.',
+      'Kapının sağına bir tane kare pencere çiz.',
+      'Çatıyı sıra sıra kiremitlerle kapla, bacadan da dumanlar çıksın.',
+      'Pencereyi dört bölmeye ayır, perdelerini ekle, sonra yuvarlak bir kapı kolu çiz.',
+      'Evin önüne boydan boya bir çit çiz.',
+      'Çatıyı, kapıyı ve bacanın tuğlalarını gölgele, bahçeye çalılar ekle.',
+    ],
+  },
 }
 
 // Only these are known to match their pictures. The rest are waiting on the same
