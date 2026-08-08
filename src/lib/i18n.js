@@ -21,16 +21,24 @@ const STRINGS = {
 
   // Activity names — shown on the home tiles and in the gem history.
   task_reading:       { en: 'My Books',      tr: 'Kitaplarım' },
-  task_math:          { en: 'My Math',       tr: 'Matematiğim' },
+  task_math:          { en: 'My Math',       tr: 'Matematik' },
   task_writing:       { en: 'My Stories',    tr: 'Hikâyelerim' },
-  task_homework:      { en: 'My Homework',   tr: 'Ödevim' },
-  task_drawing:       { en: 'My Drawings',   tr: 'Resimlerim' },
+  task_homework:      { en: 'My Homework',   tr: 'Ödevlerim' },
+  task_drawing:       { en: 'My Drawings',   tr: 'Çizimlerim' },
   task_tree:          { en: 'My Tree',       tr: 'Ağacım' },
   chip_books:         { en: 'Books',         tr: 'Kitap' },
   chip_math:          { en: 'Math',          tr: 'Matematik' },
   chip_story:         { en: 'Story',         tr: 'Hikâye' },
   chip_homework:      { en: 'Homework',      tr: 'Ödev' },
-  chip_drawing:       { en: 'Drawing',       tr: 'Resim' },
+  chip_drawing:       { en: 'Drawing',       tr: 'Çizim' },
+
+  // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
+  nav_home:           { en: 'Home',     tr: 'Ana Sayfa' },
+  nav_library:        { en: 'Library',  tr: 'Kitaplık' },
+  // "Gem" stays the currency word everywhere — parent messages, the ledger, the parent app —
+  // so translating it here alone would split the name in two.
+  nav_gems:           { en: 'Gems',     tr: 'Gem’lerim' },
+  nav_goals:          { en: 'Goals',    tr: 'Hedeflerim' },
 
   // ── GemsScreen ──────────────────────────────────────────────────────────────
   gems_history:       { en: 'History',       tr: 'Geçmiş' },

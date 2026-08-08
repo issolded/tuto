@@ -1,14 +1,17 @@
 import { useNavigate } from 'react-router-dom'
+import { t, childLang } from '../lib/i18n'
 
 const ACCENT = '#f79433'
 const INK_SOFT = '#b6aecb'
 const FRED = "'Fredoka', sans-serif"
 
+// Labels are keys, resolved where they are drawn — the same shape the home tiles use, so a
+// nav item and a tile for the same thing cannot end up named differently.
 export const NAV_ITEMS = [
-  { id: 'home',    label: 'Home',    route: '/child/home'    },
-  { id: 'library', label: 'Library', route: '/child/library' },
-  { id: 'gems',    label: 'Gems',    route: '/child/gems'    },
-  { id: 'goals',   label: 'Goals',   route: '/child/goals'   },
+  { id: 'home',    labelKey: 'nav_home',    route: '/child/home'    },
+  { id: 'library', labelKey: 'nav_library', route: '/child/library' },
+  { id: 'gems',    labelKey: 'nav_gems',    route: '/child/gems'    },
+  { id: 'goals',   labelKey: 'nav_goals',   route: '/child/goals'   },
 ]
 
 export function NavIcon({ id, color }) {
@@ -26,6 +29,9 @@ export function NavIcon({ id, color }) {
 // applied to the content column (430 on phone, 1180 on tablet) so the fixed bar lines up
 // with the content above it instead of always freezing at the phone width.
 export default function BottomNav({ active, fixed = false, maxWidth = 430 }) {
+  // Read here rather than passed down: every screen renders this and none of them should
+  // have to remember to hand it a language.
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
   return (
     <>
@@ -36,13 +42,13 @@ export default function BottomNav({ active, fixed = false, maxWidth = 430 }) {
       boxShadow: '0 -6px 20px rgba(40,30,70,.07)',
       ...(fixed ? { position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth, margin: '0 auto', zIndex: 100 } : {}),
     }}>
-      {NAV_ITEMS.map(({ id, label, route }) => {
+      {NAV_ITEMS.map(({ id, labelKey, route }) => {
         const color = id === active ? ACCENT : INK_SOFT
         return (
           <button key={id} onClick={() => nav(route)}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px' }}>
             <NavIcon id={id} color={color} />
-            <span style={{ fontFamily: FRED, fontWeight: 500, fontSize: 12, color }}>{label}</span>
+            <span style={{ fontFamily: FRED, fontWeight: 500, fontSize: 12, color }}>{t(labelKey, lang)}</span>
           </button>
         )
       })}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, getChildGems } from '../lib/supabase'
 import { NAV_ITEMS, NavIcon } from './BottomNav'
+import { t, childLang } from '../lib/i18n'
 
 const ACCENT = '#f79433'
 const INK_SOFT = '#b6aecb'
@@ -11,6 +12,7 @@ const FRED = "'Fredoka', sans-serif"
 // vertically, with the gem pill pinned to the bottom instead of living in
 // ChildHome's header (the header itself isn't part of the rail).
 export default function RailNav({ active }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const [gems, setGems] = useState(null)
@@ -34,7 +36,7 @@ export default function RailNav({ active }) {
     }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');`}</style>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {NAV_ITEMS.map(({ id, label, route }) => {
+        {NAV_ITEMS.map(({ id, labelKey, route }) => {
           const isActive = id === active
           const color = isActive ? ACCENT : INK_SOFT
           return (
@@ -45,7 +47,7 @@ export default function RailNav({ active }) {
                 border: 'none', borderRadius: 14, cursor: 'pointer', padding: '12px 14px', textAlign: 'left',
               }}>
               <NavIcon id={id} color={color} />
-              <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color }}>{label}</span>
+              <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color }}>{t(labelKey, lang)}</span>
             </button>
           )
         })}
