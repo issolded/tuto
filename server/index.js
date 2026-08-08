@@ -563,7 +563,13 @@ const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_
 // reply over.
 async function sendWhatsAppTyping(messageSid) {
   const sid = process.env.TWILIO_ACCOUNT_SID, token = process.env.TWILIO_AUTH_TOKEN
-  if (!sid || !token || !messageSid) return
+  // Silence was the problem the first time this did not work: with no log for the skip and
+  // none for success, a missing SID, a missing credential and a rejected call all looked
+  // identical from the outside.
+  if (!sid || !token || !messageSid) {
+    console.log(`[WA] typing skipped — sid:${!!sid} token:${!!token} messageSid:${messageSid || 'none'}`)
+    return
+  }
   const body = new URLSearchParams({ messageId: messageSid, channel: 'whatsapp' })
   const auth = Buffer.from(`${sid}:${token}`).toString('base64')
   const res = await fetch('https://messaging.twilio.com/v3/Indicators/Typing.json', {
@@ -571,7 +577,8 @@ async function sendWhatsAppTyping(messageSid) {
     headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
   })
-  if (!res.ok) console.error(`[WA] typing failed: ${res.status} ${(await res.text()).slice(0, 120)}`)
+  if (!res.ok) console.error(`[WA] typing failed: ${res.status} ${(await res.text()).slice(0, 200)}`)
+  else console.log(`[WA] typing shown for ${messageSid}`)
 }
 
 async function sendWhatsAppBusinessMessage(to, message) {
@@ -4345,6 +4352,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
       // delayed about a second — and it must not hold up Gemini, so it runs alongside rather
       // than before.
       const inboundSid = req.body.MessageSid || req.body.SmsMessageSid
+      console.log(`[WA] inbound sid=${inboundSid || 'MISSING'} keys=${Object.keys(req.body).slice(0, 12).join(',')}`)
       setTimeout(() => sendWhatsAppTyping(inboundSid).catch(() => {}), 800 + Math.random() * 700)
       await handleMessage(existing[0].id, reply => sendWhatsAppBusinessMessage(from, reply), text)
       return
