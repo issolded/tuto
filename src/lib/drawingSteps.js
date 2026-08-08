@@ -268,6 +268,26 @@ export const DRAWING_STEPS = {
       'Çizgileri ve tüyleri koyulaştır, kaplanın altına yere bir gölge koy.',
     ],
   },
+  // Audited against drawings/horse/*.webp. Steps 5 and 6 are nearly identical — the last one
+  // only deepens the shading — so the wording does not promise a new feature there.
+  horse: {
+    en: [
+      'Sketch guides lightly: an oval for the body, a rounder shape behind for the haunch, and lines for the neck and legs.',
+      'Draw the outline over your guides — head, arched neck, back and rump — with one front leg lifted.',
+      'Shape the legs properly, with a bend at each knee and a hoof at the end.',
+      'Clean up the outline and add the eye, the nostril and the ears.',
+      'Draw the flowing mane along the neck and a long tail behind.',
+      'Shade under the belly, the neck and the legs to make the horse look round.',
+    ],
+    tr: [
+      'Önce hafif yardım şekilleri çiz: gövde için bir oval, arkasına sağrı için daha yuvarlak bir şekil, boyun ve bacaklar için çizgiler.',
+      'Yardım çizgilerinin üstünden hattı çiz — baş, kemerli boyun, sırt ve sağrı — ön bacaklardan biri havada olsun.',
+      'Bacaklara doğru biçimi ver: her dizde bir kıvrım, ucunda bir toynak.',
+      'Dış hattı temizle, gözü, burun deliğini ve kulakları ekle.',
+      'Boyun boyunca savrulan yeleyi ve arkaya uzun bir kuyruk çiz.',
+      'Karnın altını, boynu ve bacakları gölgele ki at yuvarlak dursun.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
