@@ -570,12 +570,14 @@ async function sendWhatsAppTyping(messageSid) {
     console.log(`[WA] typing skipped — sid:${!!sid} token:${!!token} messageSid:${messageSid || 'none'}`)
     return
   }
-  const body = new URLSearchParams({ messageId: messageSid, channel: 'whatsapp' })
+  // JSON, not form-encoded. Twilio's older APIs take form bodies, so that was the assumption
+  // — this one answered 415 / 20422, "does not support this payload format". The .json on the
+  // path was the tell.
   const auth = Buffer.from(`${sid}:${token}`).toString('base64')
   const res = await fetch('https://messaging.twilio.com/v3/Indicators/Typing.json', {
     method: 'POST',
-    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messageId: messageSid, channel: 'whatsapp' }),
   })
   if (!res.ok) console.error(`[WA] typing failed: ${res.status} ${(await res.text()).slice(0, 200)}`)
   else console.log(`[WA] typing shown for ${messageSid}`)
