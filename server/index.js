@@ -1138,7 +1138,10 @@ async function purgeHeldImages() {
   const { data: stale } = await supabase.from('paintings')
     .select('id, photo_path').eq('status', 'blocked').lt('created_at', cutoff)
   for (const row of stale || []) {
-    if (row.photo_path) await supabase.storage.from(PAINTING_BUCKET).remove([row.photo_path])
+    if (row.photo_path) {
+      await supabase.storage.from(PAINTING_BUCKET).remove([row.photo_path]).then(() => {}, () => {})
+      await supabase.storage.from(PHOTO_BUCKET).remove([row.photo_path]).then(() => {}, () => {})
+    }
     await supabase.from('paintings').delete().eq('id', row.id)
   }
   if (stale?.length) console.log(`[PURGE] removed ${stale.length} held image(s) past 7 days`)
@@ -1154,13 +1157,16 @@ async function sendDrawingPhotoTool(paintingId, parentId) {
     .from('children').select('name, parent_id').eq('id', row.child_id).maybeSingle()
   if (!child || child.parent_id !== parentId) return { success: false, error: 'not your child' }
 
-  // signedUrlsFor takes no bucket; the single-item form does, and paintings live in their own.
+  // Held images come from two places and two buckets: a refused drawing lands in the paintings
+  // bucket, a refused contribution photo in the shared one. The row does not say which, so
+  // both are tried rather than adding a column for a week-long record.
   const url = await signedUrlFor(row.photo_path, 3600, PAINTING_BUCKET)
+             || await signedUrlFor(row.photo_path, 3600, PHOTO_BUCKET)
   if (!url) return { success: false, error: 'image no longer available' }
   try {
     await sendNotificationWithPhoto(parentId,
       `${child.name} — bu görseli güvenlik taraması iletmemişti. / this is the image the safety screen held.`,
-      url, PAINTING_BUCKET)
+      url)
   } catch (err) {
     return { success: false, error: err.message }
   }
@@ -2593,14 +2599,34 @@ async function screenContributionPhoto(photoPath, child) {
   if (safety.appropriate) return null
 
   console.log(`[CONTRIBUTIONS] inappropriate image child=${child.id} — blocked (${safety.reason})`)
-  const legacyPath = storagePathFromPublicUrl(photoPath)
-  if (legacyPath) await supabase.storage.from('submissions').remove([legacyPath]).then(() => {}, () => {})
-  else await supabase.storage.from(PHOTO_BUCKET).remove([photoPath]).then(() => {}, () => {})
+  // Kept for a week rather than deleted, the same as a refused drawing and for the same
+  // reason: a parent told their child attached something unsuitable will want to judge it
+  // themselves, and it is usually a screenshot rather than anything they need shielding from.
+  // Homework already worked this way; contributions and drawings were the two that destroyed
+  // the evidence and then had to say so.
+  let heldId = null
+  try {
+    const { data: heldRow } = await supabase.from('paintings').insert({
+      child_id: child.id, photo_path: photoPath, status: 'blocked',
+    }).select('id').maybeSingle()
+    heldId = heldRow?.id ?? null
+  } catch (err) { console.error(`[CONTRIBUTIONS] hold failed: ${err.message}`) }
+
+  if (!heldId) {
+    // Could not hold it — then do not keep it lying around either.
+    const legacyPath = storagePathFromPublicUrl(photoPath)
+    if (legacyPath) await supabase.storage.from('submissions').remove([legacyPath]).then(() => {}, () => {})
+    else await supabase.storage.from(PHOTO_BUCKET).remove([photoPath]).then(() => {}, () => {})
+  }
 
   try {
-    await sendNotification(child.parent_id, language === 'en'
-      ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image, but I wanted you to know.`
-      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmıyorum ama haberin olsun istedim.`)
+    const canSee = heldId
+      ? (language === 'en' ? ' I have kept it for a week in case you want to see it — just ask.'
+                           : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
+      : ''
+    await sendNotification(child.parent_id, (language === 'en'
+      ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`
+      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee)
   } catch (err) {
     console.error(`[CONTRIBUTIONS] inappropriate alert failed: ${err.message}`)
   }
