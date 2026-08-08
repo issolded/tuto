@@ -228,6 +228,25 @@ export const DRAWING_STEPS = {
       'Bütün dış çizgilerin üstünden geçip koyu ve düzgün hâle getir.',
     ],
   },
+  // Audited against drawings/panda/*.webp.
+  panda: {
+    en: [
+      'Draw a big circle for the head, and a rounder, wider one below for the body.',
+      'Draw two large oval eye patches, a small triangle nose and a curved mouth under it.',
+      'Add two round ears on top, and an arm curving down each side.',
+      'Draw the two legs at the bottom, and a small round tail on the right.',
+      'Fill in the eye patches, ears, arms and legs dark, leaving the eyes white with a dot.',
+      'Add short fur strokes all round the edges, and a soft shadow on the ground.',
+    ],
+    tr: [
+      'Kafa için büyük bir daire, altına da gövde için daha yuvarlak ve geniş bir tane çiz.',
+      'İki büyük oval göz lekesi, küçük bir üçgen burun ve altına kavisli bir ağız çiz.',
+      'Üstüne iki yuvarlak kulak, iki yanına da aşağı kıvrılan birer kol ekle.',
+      'Aşağıya iki bacağı, sağ tarafına da küçük yuvarlak bir kuyruk çiz.',
+      'Göz lekelerini, kulakları, kolları ve bacakları koyu doldur; gözler beyaz kalsın, içine birer nokta koy.',
+      'Kenarlarına kısa kürk çizgileri, yere de yumuşak bir gölge ekle.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
