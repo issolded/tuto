@@ -1907,9 +1907,18 @@ function setupMessageListener() {
 // The notification is already best-effort at every one of these call sites (each sits in a
 // try/catch that only logs), so nothing is lost by running it after the response instead of
 // before it.
+// The wait is bounded because these are now unattended. Twilio fetches the media itself, and
+// a hung fetch used to be the caller's problem — visibly, since the child was waiting on it.
+// In the background a hang is silent instead: the promise stays pending, holding its closure,
+// with nothing in the logs. The race does not cancel Twilio's request, but it releases this
+// reference and, more to the point, says so out loud.
+const NOTIFY_TIMEOUT_MS = 30_000
+
 function deferNotify(label, run) {
   setImmediate(() => {
-    Promise.resolve().then(run).catch(err => {
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`timed out after ${NOTIFY_TIMEOUT_MS}ms`)), NOTIFY_TIMEOUT_MS).unref())
+    Promise.race([Promise.resolve().then(run), timeout]).catch(err => {
       console.error(`[${label}] parent notification failed: ${err?.message ?? err}`)
     })
   })
