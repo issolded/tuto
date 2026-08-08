@@ -288,6 +288,28 @@ export const DRAWING_STEPS = {
       'Karnın altını, boynu ve bacakları gölgele ki at yuvarlak dursun.',
     ],
   },
+  // Audited against drawings/bee/*.webp. Note the head is the RIGHT circle, not the left —
+  // the body is drawn first and the head overlaps it.
+  bee: {
+    en: [
+      'Draw a circle for the head.',
+      'Draw a bigger circle behind it, to the left, for the body.',
+      'Give the bee two curly antennae with a little ball on each tip.',
+      'Draw two tall oval eyes and colour the middles in.',
+      'Add a big smile.',
+      'Draw two wings above the body, a pointed sting at the back, and four little legs.',
+      'Add veins in the wings and thick stripes across the body — buzz, done!',
+    ],
+    tr: [
+      'Kafa için bir daire çiz.',
+      'Solunda, arkasına gövde için daha büyük bir daire çiz.',
+      'Arıya uçlarında birer topçuk olan iki kıvrık anten ver.',
+      'İki uzun oval göz çiz, ortalarını boya.',
+      'Kocaman bir gülümseme ekle.',
+      'Gövdenin üstüne iki kanat, arkasına sivri bir iğne ve dört küçük bacak çiz.',
+      'Kanatlara damarlar, gövdeye de kalın şeritler ekle — vızz, bitti!',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
