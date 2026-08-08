@@ -152,6 +152,44 @@ export const DRAWING_STEPS = {
       'Denize dalgalar, bir yelkenli ve bir deniz yılanı çiz; sonra nehrin üstünden köprülü, noktalı bir patika geçir.',
     ],
   },
+  // Audited against drawings/dolphin/*.webp.
+  dolphin: {
+    en: [
+      'Draw one big curve, arching up like a rainbow — that is the back.',
+      'Bring a second curve underneath to close the body, ending in a pointed snout on the right.',
+      'Draw a long side flipper under the middle of the body.',
+      'Add the fin on top of the back, and a forked tail at the other end.',
+      'Draw a big eye with a shine in it, an eyebrow, a smiling mouth, and a small second flipper.',
+      'Go over all your lines to make them dark and smooth.',
+    ],
+    tr: [
+      'Gökkuşağı gibi yukarı kıvrılan büyük bir yay çiz — bu sırtı.',
+      'Altından ikinci bir yay geçirip gövdeyi kapat, sağ ucu sivri bir burun olsun.',
+      'Gövdenin ortasının altına uzun bir yan yüzgeç çiz.',
+      'Sırtının üstüne yüzgeci, öbür ucuna da çatal kuyruğu ekle.',
+      'Parıltılı büyük bir göz, bir kaş, gülümseyen bir ağız ve küçük bir ikinci yüzgeç çiz.',
+      'Bütün çizgilerin üstünden geçip koyu ve düzgün hâle getir.',
+    ],
+  },
+  // Audited against drawings/fish/*.webp.
+  fish: {
+    en: [
+      'Draw a big oval lying on its side for the body.',
+      'Add a triangle tail on the left, pinched in the middle.',
+      'Draw a curved line near the front for the head, and a small circle for the eye.',
+      'Put a pointed fin on top of the back, and give the fish a smile.',
+      'Add a fin on the side of the body and another underneath.',
+      'Draw rows of curved scales, and a few bubbles floating up beside it.',
+    ],
+    tr: [
+      'Gövde için yan yatmış büyük bir oval çiz.',
+      'Soluna ortası içeri girmiş üçgen bir kuyruk ekle.',
+      'Ön tarafa baş için kavisli bir çizgi, göz için de küçük bir daire çiz.',
+      'Sırtının üstüne sivri bir yüzgeç koy ve balığa bir gülümseme ver.',
+      'Gövdenin yanına bir yüzgeç, altına da bir tane daha ekle.',
+      'Sıra sıra kavisli pullar çiz, yanına da yukarı süzülen birkaç kabarcık koy.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
