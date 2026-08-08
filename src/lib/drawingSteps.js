@@ -247,6 +247,27 @@ export const DRAWING_STEPS = {
       'Kenarlarına kısa kürk çizgileri, yere de yumuşak bir gölge ekle.',
     ],
   },
+  // Audited against drawings/tiger/*.webp. Step 1 is a guide skeleton and step 2 is the whole
+  // clean outline — a very big jump, so the wording for step 2 says to draw over the guides
+  // rather than starting again.
+  tiger: {
+    en: [
+      'Sketch guides lightly: a big oval for the body, a circle for the head, and straight lines for the four legs.',
+      'Draw the real outline over your guides — back, chest, legs and tail — and the face with two eyes and a nose.',
+      'Add the paws with claws, the ears, and a ruff of fur around the cheeks.',
+      'Draw fur strokes along the back, chest and legs, and shade around the eyes.',
+      'Add the stripes: curved bands down the back and sides, thinner ones on the legs and tail.',
+      'Deepen the stripes and fur, and put a shadow on the ground under the tiger.',
+    ],
+    tr: [
+      'Önce hafifçe yardım şekilleri çiz: gövde için büyük bir oval, kafa için bir daire, dört bacak için düz çizgiler.',
+      'Yardım çizgilerinin üstünden gerçek hattı çiz — sırt, göğüs, bacaklar ve kuyruk — sonra iki gözlü, burunlu yüzü.',
+      'Pençeleri tırnaklarıyla, kulakları ve yanaklardaki kabarık tüyleri ekle.',
+      'Sırt, göğüs ve bacaklar boyunca tüy çizgileri çiz, gözlerin çevresini gölgele.',
+      'Çizgileri ekle: sırt ve yanlarda kavisli bantlar, bacak ve kuyrukta daha incelerini.',
+      'Çizgileri ve tüyleri koyulaştır, kaplanın altına yere bir gölge koy.',
+    ],
+  },
   house: {
     en: [
       'Draw a big square for the walls.',
