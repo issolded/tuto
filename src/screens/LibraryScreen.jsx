@@ -148,7 +148,7 @@ export default function LibraryScreen() {
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
-              📖 Books by {child?.name ?? 'You'}
+              {t('lib_books_by', lang)} {child?.name ?? t('lib_you', lang)}
             </div>
             <button
               onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
@@ -168,7 +168,7 @@ export default function LibraryScreen() {
                 onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
                 style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
-                Write your first story →
+                {t('lib_write_first', lang)}
               </button>
             </div>
           ) : (
@@ -208,7 +208,7 @@ export default function LibraryScreen() {
                 onClick={e => { e.stopPropagation(); nav('/child/reading') }}
                 style={{ background: ACCENT, color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
-                Add your first book →
+                {t('lib_add_first', lang)}
               </button>
             </div>
           ) : (
@@ -216,7 +216,7 @@ export default function LibraryScreen() {
               {inProgress.length > 0 && (
                 <div style={{ marginBottom: 28 }}>
                   <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 12 }}>
-                    Reading Now 📖
+                    {t('lib_reading_now', lang)}
                   </div>
                   <BookGrid
                     books={inProgress}
@@ -234,7 +234,7 @@ export default function LibraryScreen() {
               {completed.length > 0 && (
                 <div>
                   <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 10 }}>
-                    Finished Books 🏆
+                    {t('lib_finished', lang)}
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, #2EC486 0%, #22A876 100%)', borderRadius: 16, padding: '14px 18px', marginBottom: 14, boxShadow: '0 4px 16px rgba(46,196,134,0.25)' }}>
                     <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white' }}>
@@ -430,7 +430,7 @@ function ConfirmCompleteModal({ onConfirm, onCancel }) {
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 32, padding: '28px 24px 24px', width: '100%', maxWidth: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}>
         <TutoMascot size={90} />
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 21, fontWeight: 800, color: '#1A1A2E', margin: '12px 0 24px', lineHeight: 1.4 }}>
-          Wow, did you really finish the whole book? 🎉
+          {t('lib_really_done', lang)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>{t('lib_finished', lang)}</button>
@@ -444,6 +444,7 @@ function ConfirmCompleteModal({ onConfirm, onCancel }) {
 // ─── Celebration toast ────────────────────────────────────────────────────────
 
 function CelebrationToast({ title, onDone }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   useEffect(() => {
     const t = setTimeout(onDone, 3400)
     return () => clearTimeout(t)
@@ -460,7 +461,7 @@ function CelebrationToast({ title, onDone }) {
         <div style={{ animation: 'toastSlideUp 0.4s ease-out forwards', width: '100%', maxWidth: 390, background: 'linear-gradient(135deg, #2EC486 0%, #1DB974 100%)', borderRadius: 24, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 12px 40px rgba(46,196,134,0.45)', pointerEvents: 'auto' }}>
           <TutoMascot size={60} style={{ flexShrink: 0 }} />
           <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', lineHeight: 1.4 }}>
-            Amazing! You finished<br />
+            {t('lib_amazing', lang)}<br />
             <span style={{ fontSize: 15, fontWeight: 700, opacity: 0.9 }}>{title}</span>! 🌟
           </div>
         </div>

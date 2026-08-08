@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { t, childLang } from '../lib/i18n'
 import { StoryCoverFace } from './StoryCover'
 
 const LINES_WIDTHS = ['62%', '90%', '80%', '94%', '55%', '86%']
@@ -58,6 +59,7 @@ function FillerLines() {
 // Stays open on the reading page afterward — it does NOT auto-navigate; the caller's
 // onEdit only fires when the child taps the "Edit" button.
 export default function BookOpenTransition({ story, childName, fallbackColor, onClose, onEdit }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [isOpen, setIsOpen] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
   const text = story.corrected_text || story.transcribed_text || ''
   const bg = story.cover_color || fallbackColor
@@ -135,7 +137,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, background: 'linear-gradient(90deg, rgba(120,90,60,.22), rgba(120,90,60,.04))' }} />
             {pageIndex === 0 && (
               <>
-                <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || 'Untitled Story'}</div>
+                <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || t('story_untitled', lang)}</div>
                 <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
               </>
             )}
@@ -155,7 +157,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
             >
               {turn.showTitle && (
                 <>
-                  <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || 'Untitled Story'}</div>
+                  <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || t('story_untitled', lang)}</div>
                   <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
                 </>
               )}
@@ -201,7 +203,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
       </div>
 
       <div style={{ textAlign: 'center', position: 'relative', zIndex: 2, opacity: isOpen ? 1 : 0, transform: isOpen ? 'translateY(0)' : 'translateY(8px)', transition: 'all 0.4s ease' }}>
-        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 800, fontSize: 20, color: '#8a6bd4' }}>{story.title || 'Untitled Story'}</div>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 800, fontSize: 20, color: '#8a6bd4' }}>{story.title || t('story_untitled', lang)}</div>
         <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 3 }}>
           Written by {childName}
         </div>

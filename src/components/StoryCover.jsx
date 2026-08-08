@@ -1,3 +1,4 @@
+import { t, childLang } from '../lib/i18n'
 // Shared cover composition for story cards: cover_color background + title (top) +
 // image panel (middle, cover_url or pencil placeholder) + byline (bottom).
 // Used by LibraryScreen's "Books by {child}" grid and StoriesScreen's "My Stories" grid
@@ -6,13 +7,14 @@
 // (background/shadow/aspect-ratio), so the transition can size/transform it independently.
 
 export function StoryCoverFace({ story, childName, titleSize = 11, byTextSize = 9 }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const hasImage = !!story.cover_url
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       {/* Title */}
       <div style={{ padding: '10px 14px 6px 14px', flexShrink: 0 }}>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: titleSize, fontWeight: 800, color: '#1A2E0A', textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {story.title || 'Untitled Story'}
+          {story.title || t('story_untitled', lang)}
         </div>
       </div>
 
@@ -24,7 +26,7 @@ export function StoryCoverFace({ story, childName, titleSize = 11, byTextSize = 
           <span style={{ fontSize: 28 }}>✏️</span>
         )}
         {story.status === 'in_progress' && (
-          <div style={{ position: 'absolute', bottom: 4, right: 4, background: '#FF6B35', borderRadius: 6, padding: '2px 6px', fontSize: 9, fontWeight: 800, color: 'white', zIndex: 3 }}>In Progress</div>
+          <div style={{ position: 'absolute', bottom: 4, right: 4, background: '#FF6B35', borderRadius: 6, padding: '2px 6px', fontSize: 9, fontWeight: 800, color: 'white', zIndex: 3 }}>{t('story_in_progress', lang)}</div>
         )}
       </div>
 

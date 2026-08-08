@@ -64,6 +64,17 @@ const STRINGS = {
   lib_remove:         { en: 'Remove', tr: 'Kaldır' },
   lib_cancel:         { en: 'Cancel', tr: 'Vazgeç' },
 
+  lib_books_by:       { en: '📖 Books by', tr: '📖 Kitapları:' },
+  lib_you:            { en: 'You',  tr: 'Sen' },
+  lib_write_first:    { en: 'Write your first story →', tr: 'İlk hikâyeni yaz →' },
+  lib_add_first:      { en: 'Add your first book →',    tr: 'İlk kitabını ekle →' },
+  lib_reading_now:    { en: 'Reading Now 📖',    tr: 'Şu An Okuduklarım 📖' },
+  lib_finished:       { en: 'Finished Books 🏆', tr: 'Bitirdiklerim 🏆' },
+  lib_really_done:    { en: 'Wow, did you really finish the whole book? 🎉', tr: 'Vay, kitabın hepsini bitirdin mi? 🎉' },
+  lib_amazing:        { en: 'Amazing! You finished', tr: 'Harika! Bitirdiğin kitap:' },
+  story_untitled:     { en: 'Untitled Story', tr: 'Adsız Hikâye' },
+  story_in_progress:  { en: 'In Progress',    tr: 'Devam ediyor' },
+
   // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
   nav_home:           { en: 'Home',     tr: 'Ana Sayfa' },
   nav_library:        { en: 'Library',  tr: 'Kitaplık' },
