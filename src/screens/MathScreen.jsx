@@ -1455,11 +1455,8 @@ export default function MathScreen() {
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
           {getWelcomeMsg(age, language)}
         </div>
-        {level !== null && (
-          {/* The school year used to be shown here. A child does not need telling which Year they
-                are working in — it is a curriculum label written for adults, and on a bad day it
-                reads as a verdict. The parent still sees it. */}
-        )}
+        {/* The school year is deliberately not shown here. It is a curriculum label written for
+            adults, and on a bad day it reads to a child as a verdict. The parent still sees it. */}
         <button
           className="math-press"
           onClick={() => setStep('mode')}
