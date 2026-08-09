@@ -219,6 +219,7 @@ function MatureDateHeader({ isToday, dateStr }) {
 }
 
 function MatureRow({ category, label, status, fresh }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const C = CATS[category] || CATS.outside
   return (
     <div style={{
@@ -258,6 +259,7 @@ function SugCard({ card, onAdd, wide }) {
 }
 
 function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemovePhoto, uploading, submitting }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [text, setText] = useState('')
   const fileRef = useRef()
   const busy = submitting || uploading

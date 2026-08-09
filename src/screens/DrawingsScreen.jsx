@@ -17,21 +17,18 @@ const SKINS = {
     accent: '#f79433', ink: '#20201e', radius: 22,
     gemIcon: '⭐', stepWord: 'step',
     readySay: "Grab some paper and a pencil.\nTap ready when you're set!",
-    done: t('dr_saved_seen', lang),
   },
   mid: {
     bg: 'linear-gradient(180deg,#F3EEFF 0%,#E4DBFB 100%)',
     accent: '#7c5cd6', ink: '#20201e', radius: 22,
     gemIcon: '◆', stepWord: 'Step',
     readySay: 'Get your paper and pencil ready. Take your time — no rush!',
-    done: 'Nice work! Your painting is in your library and you earned gems.',
   },
   mature: {
     bg: 'linear-gradient(180deg,#F7F8FB 0%,#ECEEF5 100%)',
     accent: '#5860d8', ink: '#1b1f2a', radius: 14,
     gemIcon: '✦', stepWord: 'Step',
     readySay: "Grab paper and a pencil. When you're set, start the guided steps.",
-    done: t('dr_saved_reward', lang),
   },
 }
 
@@ -649,6 +646,7 @@ function Reward({ sk, result, onLibrary, onAgain }) {
 
 // ── Library ──────────────────────────────────────────────────────────────────
 function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [confirmTarget, setConfirmTarget] = useState(null) // painting awaiting delete confirmation
   const [deletingId, setDeletingId] = useState(null)
 
