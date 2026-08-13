@@ -1,14 +1,37 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
 import { findBadAnswers } from '../lib/mathVerify'
+import { numeralise } from '../lib/numerals'
 import { t } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+
+// A pull-to-refresh in the middle of a session used to throw the questions away — they are
+// generated once and cannot be regenerated identically, so the child lost the work and the
+// answers already given. sessionStorage, not localStorage: this should survive a reload of the
+// same tab and nothing more. A half-finished session found a day later is not worth resuming.
+const SESSION_KEY = 'tuto_math_session_v1'
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000
+const ANSWERING_STEPS = ['paper_questions', 'screen_questions']
+
+function readSavedSession(childId) {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null')
+    if (!s || s.childId !== (childId ?? null)) return null
+    if (!s.savedAt || Date.now() - s.savedAt > SESSION_TTL_MS) return null
+    if (!ANSWERING_STEPS.includes(s.step)) return null
+    if (!Array.isArray(s.questions) || !s.questions.length) return null
+    // Every question already answered means the snapshot was taken as the evaluation started.
+    // Resuming there would re-ask a finished session, so let it go rather than guess.
+    if ((s.userAnswers?.length ?? 0) >= s.questions.length) return null
+    return s
+  } catch { return null }
+}
 
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
@@ -1075,30 +1098,33 @@ export default function MathScreen() {
   const age      = child?.age || 7
   const language = child?.language || 'en'
 
-  const [step,          setStep]         = useState('welcome')
-  const [mode,          setMode]         = useState(null)        // 'paper' | 'screen'
-  const [level,         setLevel]        = useState(null)
-  const [questions,     setQuestions]    = useState([])
-  const [correctAns,    setCorrectAns]   = useState([])
-  const [qTypes,        setQTypes]       = useState([])
-  const [topic,         setTopic]        = useState('')
-  const [qIdx,          setQIdx]         = useState(0)
-  const [userAnswers,   setUserAnswers]  = useState([])
+  // Read once, before any state is created: a reload lands here with the session it lost.
+  const saved = useMemo(() => readSavedSession(child?.id), [])
+
+  const [step,          setStep]         = useState(saved?.step ?? 'welcome')
+  const [mode,          setMode]         = useState(saved?.mode ?? null)        // 'paper' | 'screen'
+  const [level,         setLevel]        = useState(saved?.level ?? null)
+  const [questions,     setQuestions]    = useState(saved?.questions ?? [])
+  const [correctAns,    setCorrectAns]   = useState(saved?.correctAns ?? [])
+  const [qTypes,        setQTypes]       = useState(saved?.qTypes ?? [])
+  const [topic,         setTopic]        = useState(saved?.topic ?? '')
+  const [qIdx,          setQIdx]         = useState(saved?.qIdx ?? 0)
+  const [userAnswers,   setUserAnswers]  = useState(saved?.userAnswers ?? [])
   const [input,         setInput]        = useState('')
   const [flash,         setFlash]        = useState(null)        // { correct, answer }
   const [evalResult,    setEvalResult]   = useState(null)
   const [leveledUp,     setLeveledUp]    = useState(false)
-  const [helpUsed,      setHelpUsed]     = useState(false)
+  const [helpUsed,      setHelpUsed]     = useState(saved?.helpUsed ?? false)
   const [helpVisible,   setHelpVisible]  = useState(false)
   const [hintOpenFor,   setHintOpenFor]  = useState(null)  // question index whose optional hint is showing
   const [weighting,     setWeighting]    = useState({ focusTopicId: null, weakTopicIds: [] })
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
-  const [skippable,     setSkippable]    = useState(() => new Set()) // questions where help has been shown, so moving on is allowed
-  const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set()) // distinct question indices where help was actually shown/used this session
-  const [templateProblems, setTemplateProblems] = useState([]) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
-  const [llmHints,      setLlmHints]     = useState([])         // per-question hint_steps for the LLM path, where there is no template to read them from
-  const [answerFormats, setAnswerFormats] = useState([])       // 'integer' | 'decimal' per question — decides whether the keypad offers a point
-  const [curriculumTopics, setCurriculumTopics] = useState([]) // the curriculum entry each question came from
+  const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
+  const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
+  const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
+  const [llmHints,      setLlmHints]     = useState(saved?.llmHints ?? [])         // per-question hint_steps for the LLM path, where there is no template to read them from
+  const [answerFormats, setAnswerFormats] = useState(saved?.answerFormats ?? [])       // 'integer' | 'decimal' per question — decides whether the keypad offers a point
+  const [curriculumTopics, setCurriculumTopics] = useState(saved?.curriculumTopics ?? []) // the curriculum entry each question came from
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
@@ -1133,6 +1159,29 @@ export default function MathScreen() {
   }, [])
 
   const effectiveLevel = level ?? startingLevelForAge(age)
+
+  // Snapshot only while questions are on screen. 'loading' and 'evaluating' are in-flight and
+  // 'result' is already saved server-side, so none of them is a state worth coming back to.
+  useEffect(() => {
+    if (!ANSWERING_STEPS.includes(step)) return
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        savedAt: Date.now(), childId: child?.id ?? null,
+        step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
+        answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
+        skippable: [...skippable], helpUsedQs: [...helpUsedQs],
+      }))
+    } catch { /* private mode or quota — the session simply will not survive a reload */ }
+  }, [step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
+      answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs])
+
+  // Reaching any of these means the session is over or was never started, and a snapshot left
+  // behind would resume a session the child has already finished.
+  useEffect(() => {
+    if (step === 'welcome' || step === 'mode' || step === 'result') {
+      try { sessionStorage.removeItem(SESSION_KEY) } catch { /* nothing to clean up */ }
+    }
+  }, [step])
 
   // What this session can actually pay. The two mode cards promised "+30 Gems" and
   // "+20 Gems", which stopped being true when the amount moved to the server: it pays the
@@ -1187,10 +1236,15 @@ export default function MathScreen() {
           // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
           // The prompt forbids it; this is what enforces it.
           if (isUnreadable(q)) return
-          slot.question = q
+          // Children testing this could not get past "eight hundred and forty five" — the
+          // reading stopped them before the arithmetic did, and the topic was recorded as a
+          // weakness. The prompt asks for digits; this makes sure of it.
+          slot.question = numeralise(q, language)
           slot.answer = Number(a)
           slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
-          slot.hints = Array.isArray(result.hint_steps?.[i]) ? result.hint_steps[i] : null
+          slot.hints = Array.isArray(result.hint_steps?.[i])
+            ? result.hint_steps[i].map(h => numeralise(h, language))
+            : null
         })
         // The model writes the question and its answer together, and until now nothing ever
         // disagreed with it. A wrong answer here is worse than a missing question: the child

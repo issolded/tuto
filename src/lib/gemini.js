@@ -287,8 +287,14 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
     : 'the middle of this topic'
 
   const prompt = `Generate ${topics.length} maths questions for a ${age} year old following the English National Curriculum.
-Write every question, and every hint step, in ${lang}. Use ${lang} number words and ${lang} names
-where a name is needed. The JSON keys stay exactly as shown below, in English.
+Write every question, and every hint step, in ${lang}, and use ${lang} names where a name is
+needed. The JSON keys stay exactly as shown below, in English.
+
+Write every NUMBER as digits: 845, not "eight hundred and forty five". This is not a style
+preference. The child answers on a number pad, so they are already thinking in digits, and a
+spelled-out number tests reading rather than maths — a child who can work out 845 - 300 but
+cannot decode the words is recorded as failing the topic. The only exception is a number that
+is part of an ordinary phrase rather than part of the sum ("cut it in half").
 Each question covers a DIFFERENT topic, in this exact order:
 ${list}
 
