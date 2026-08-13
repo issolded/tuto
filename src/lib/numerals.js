@@ -83,10 +83,17 @@ function convert(text, units, tens, scale, glue) {
     for (const t of before) out.push(t.raw)
     if (core.length) {
       const n = wordsToNumber(core.map(t => t.word), units, tens, scale)
-      // Every number word goes, not just the long ones. Sparing small words seemed kinder to
-      // the prose until it produced "45 and six" in one sentence, and mixed notation inside a
-      // sum is worse to read than a slightly stilted "1 of the boxes". One rule, no surprises.
-      if (n === null) out.push(...core.map(t => t.raw))
+      // Every number word goes, however short — sparing small ones produced "45 and six" in a
+      // single sentence, and mixed notation inside a sum is worse than a slightly stilted
+      // "2 children".
+      //
+      // One exception, found on a real Turkish question: "yeni bir bilgisayar" came back as
+      // "yeni 1 bilgisayar". Turkish `bir` is both the number and the indefinite article, and
+      // English `one` is usually "one of them" rather than a quantity. A lone 1 is left as a
+      // word. It costs the odd "3 eksi bir", which reads oddly; writing "a computer" as "1
+      // computer" changes what the sentence says, which is worse.
+      const lone = core.filter(t => t.word).length === 1
+      if (n === null || (lone && n === 1)) out.push(...core.map(t => t.raw))
       else out.push(String(n))
     }
     for (const t of after) out.push(t.raw)
