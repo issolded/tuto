@@ -187,8 +187,8 @@ async function callGemini(parts) {
   // comes first — the same fault that once sent "festival<thought>" to a parent, fixed on the
   // server and still here. It matters most for the answer verifier: a parse failure there is
   // caught and treated as "no opinion", so the gate quietly stops checking.
-  const parts = data.candidates?.[0]?.content?.parts ?? []
-  const text = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim()
+  const replyParts = data.candidates?.[0]?.content?.parts ?? []
+  const text = replyParts.filter(p => !p.thought).map(p => p.text || '').join('').trim()
   if (!text) throw new Error('Gemini boş yanıt döndürdü.')
   return parseJSON(text)
 }
