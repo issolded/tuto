@@ -52,21 +52,38 @@ export function checkArithmetic(question, answer) {
 }
 
 // One call for the whole batch. The proposed answers are deliberately absent from the prompt.
+//
+// It asks two things, because a question can be wrong in two ways. A wrong answer is caught by
+// solving it again. A question with two defensible answers passes that test — both solvers pick
+// the same reading — and still marks a child wrong for the other one. A real example: "Chloe
+// has one coin worth 50 and one worth 10. She buys cherries for 45. How many coins does she get
+// back in change?" — 15 if you read it as the value, 2 if you read it as the number of coins.
 async function solveIndependently(questions, language) {
   const lang = language === 'tr' ? 'Turkish' : 'English'
-  const prompt = `Solve each of these ${lang} maths questions. Work carefully — these are for a
-child and a wrong answer will be shown to them as correct.
+  const prompt = `These are ${lang} maths questions for a child. For each one, do two things.
 
 ${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
-Reply with ONLY this JSON, no other text:
-{"answers": [<number>, ...]}
+FIRST, solve it. Work carefully — a wrong answer will be shown to the child as correct.
 
-One number per question, in order. Use a decimal point, never a comma or a fraction. If a
-question is ambiguous, unanswerable, or has no single numeric answer, put null for it.`
+SECOND, judge whether a careful child could reasonably arrive at a DIFFERENT number by reading
+the question another way. Be strict about this. It is ambiguous if a unit is also a countable
+object ("how many coins" can mean the value or the number of coins), if it is unclear which
+quantity is being asked for, or if the wording supports two readings. It is NOT ambiguous merely
+because it is hard, or because a child might make a mistake.
+
+Reply with ONLY this JSON, no other text:
+{"answers": [<number>, ...], "ambiguous": [true, false, ...]}
+
+One entry per question in each array, in order. Use a decimal point, never a comma or a
+fraction. If a question is unanswerable or has no single numeric answer, put null for its
+answer.`
 
   const data = await callGeminiJSON(prompt)
-  return Array.isArray(data?.answers) ? data.answers : []
+  return {
+    answers: Array.isArray(data?.answers) ? data.answers : [],
+    ambiguous: Array.isArray(data?.ambiguous) ? data.ambiguous : [],
+  }
 }
 
 // Returns the indices that should be dropped.
@@ -89,7 +106,11 @@ export async function findBadAnswers(items, language = 'en') {
   try {
     const second = await solveIndependently(needsModel.map(i => items[i].question), language)
     needsModel.forEach((itemIndex, k) => {
-      const theirs = second[k]
+      // Two defensible readings means the child can be right and marked wrong, so the question
+      // goes whatever the answers say.
+      if (second.ambiguous[k] === true) { bad.push(itemIndex); return }
+
+      const theirs = second.answers[k]
       if (theirs === null || theirs === undefined) return   // no opinion is not a disagreement
       const a = Number(theirs)
       const b = Number(items[itemIndex].answer)

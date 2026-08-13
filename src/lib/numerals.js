@@ -112,8 +112,11 @@ function convert(text, units, tens, scale, glue) {
         continue
       }
       run.push({ raw: tok, word })
-    } else if (/^\s+$/.test(tok) && run.length) {
-      run.push({ raw: tok, word: '' })          // keep spacing inside a run
+    } else if ((/^\s+$/.test(tok) || /^[-‑–]$/.test(tok)) && run.length) {
+      // Spacing, and the hyphen in "forty-five" — which is one number, not two. Splitting the
+      // run there turned it into "40-5", which is worse than the words were. Trailing glue is
+      // trimmed back out when the run is flushed, so a real dash between clauses survives.
+      run.push({ raw: tok, word: '' })
     } else {
       flush()
       out.push(tok)

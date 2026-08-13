@@ -182,7 +182,13 @@ async function callGemini(parts) {
     throw new Error(err.error?.message || `API error ${res.status}`)
   }
   const data = await res.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  // Gemini can return a "thinking" part alongside the answer, and it carries text like any
+  // other part. Reading parts[0] gets the reasoning instead of the JSON whenever a thought
+  // comes first — the same fault that once sent "festival<thought>" to a parent, fixed on the
+  // server and still here. It matters most for the answer verifier: a parse failure there is
+  // caught and treated as "no opinion", so the gate quietly stops checking.
+  const parts = data.candidates?.[0]?.content?.parts ?? []
+  const text = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim()
   if (!text) throw new Error('Gemini boş yanıt döndürdü.')
   return parseJSON(text)
 }
@@ -320,6 +326,9 @@ ANSWER RULES — these are strict, because the child types the answer on a numbe
   single number — "3/10 of 40 kg" (answer 12), "share 20 in the ratio 2:3, how much is the
   larger share" (answer 12), "if 4n = 28, what is n" (answer 7).
 - Never put units inside the answer. Units belong in the question.
+- ONE READING ONLY. The question must have exactly one defensible answer. Watch for a unit that
+  is also a countable object: "how many coins does she get back in change" can mean the value
+  (15) or the number of coins (2). Ask "how much change", or name the quantity plainly.
 
 FAIRNESS RULES:
 - No country-specific money (dime, nickel, penny, quarter, cent, dollar, pound). Name a neutral
