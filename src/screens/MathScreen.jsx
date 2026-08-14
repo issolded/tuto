@@ -1612,6 +1612,40 @@ export default function MathScreen() {
     </div>
   )
 
+  // Leaving throws away everything answered so far — the session is only saved at the end —
+  // and the back arrow sits next to the progress bar where a thumb lands. Asked, not assumed.
+  // Declared above both question screens because both render it: it used to sit between them,
+  // so paper_questions read it before initialisation.
+  const leaveSheet = confirmLeave ? (
+    <div
+      onClick={() => setConfirmLeave(false)}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(20,16,40,.55)', zIndex: 60,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: '26px 26px 0 0', padding: '26px 22px 30px',
+        width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10,
+        animation: 'scaleIn .2s ease both',
+      }}>
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, textAlign: 'center' }}>
+          {t('math_leave_title', language)}
+        </div>
+        <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', lineHeight: 1.5 }}>
+          {t('math_leave_body', language)}
+        </div>
+        <button className="math-press" onClick={() => setConfirmLeave(false)} style={{
+          marginTop: 8, background: MATH, color: '#fff', border: 'none', borderRadius: 16,
+          padding: '15px', fontFamily: FRED, fontSize: 17, fontWeight: 600, cursor: 'pointer',
+        }}>{t('math_leave_stay', language)}</button>
+        <button className="math-press" onClick={() => nav('/child/home')} style={{
+          background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
+          padding: '11px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
+        }}>{t('math_leave_go', language)}</button>
+      </div>
+    </div>
+  ) : null
+
   // ─────────────────────────────────────────────────────────────────────────
   // STEP: paper_questions
   // ─────────────────────────────────────────────────────────────────────────
@@ -1726,37 +1760,6 @@ export default function MathScreen() {
   // ─────────────────────────────────────────────────────────────────────────
   // STEP: screen_questions
   // ─────────────────────────────────────────────────────────────────────────
-  // Leaving throws away everything answered so far — the session is only saved at the end —
-  // and the back arrow sits next to the progress bar where a thumb lands. Asked, not assumed.
-  const leaveSheet = confirmLeave ? (
-    <div
-      onClick={() => setConfirmLeave(false)}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(20,16,40,.55)', zIndex: 60,
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: '#fff', borderRadius: '26px 26px 0 0', padding: '26px 22px 30px',
-        width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10,
-        animation: 'scaleIn .2s ease both',
-      }}>
-        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, textAlign: 'center' }}>
-          {t('math_leave_title', language)}
-        </div>
-        <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', lineHeight: 1.5 }}>
-          {t('math_leave_body', language)}
-        </div>
-        <button className="math-press" onClick={() => setConfirmLeave(false)} style={{
-          marginTop: 8, background: MATH, color: '#fff', border: 'none', borderRadius: 16,
-          padding: '15px', fontFamily: FRED, fontSize: 17, fontWeight: 600, cursor: 'pointer',
-        }}>{t('math_leave_stay', language)}</button>
-        <button className="math-press" onClick={() => nav('/child/home')} style={{
-          background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
-          padding: '11px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
-        }}>{t('math_leave_go', language)}</button>
-      </div>
-    </div>
-  ) : null
 
   if (step === 'screen_questions') {
     const q      = questions[qIdx] || ''
