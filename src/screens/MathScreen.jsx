@@ -1128,13 +1128,146 @@ export default function MathScreen() {
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
+  const prefetch   = useRef(null)   // a session being built ahead of the child choosing a mode
+
+  // ── Start: pick mode then generate questions ─────────────────────────────
+  //
+  // A session used to be five questions on ONE thing, because the level chose the subject and
+  // each rung named a single operation. The child's year now chooses the subject — all of it —
+  // and the level only says how hard. So a session is assembled topic by topic: drawn from a
+  // code template where one genuinely fits that topic, and from a single model call covering
+  // everything else at once.
+  //
+  // Building is separated from starting because it does not depend on the mode: paper and
+  // screen ask the same questions and only differ in how they are presented. That is what
+  // lets the work begin while the child is still reading the welcome screen, instead of after
+  // they have chosen — two model calls run back to back here (write, then verify), and the
+  // child used to watch all of it.
+  //
+  // Nothing here writes state or records anything as seen. A session that is built and never
+  // played must leave no trace, so both are the caller's job once a session is actually used.
+  const buildSession = async (lvl, w) => {
+    const slots = planSession(age, QUESTIONS_PER_SESSION, readSeen('topics', child?.id, 'curriculum'), w)
+      .map(t => ({ curriculum: t, templateTopic: templateTopicFor(t) }))
+    if (!slots.length) return null
+
+    // Track operand pairs across the batch AND across recent sessions, so the same (a,b) —
+    // and therefore the same answer — never comes back a question or a day later.
+    const usedOperands = new Set(readSeen('keys', child?.id, lvl))
+    for (const slot of slots) {
+      if (!slot.templateTopic) continue
+      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language)
+      usedOperands.add(p.operandKey)
+      slot.problem = p
+      slot.question = p.question_text
+      slot.answer = p.correct_answer
+      slot.format = 'integer'
+    }
+
+    const llmSlots = slots.filter(s => !s.templateTopic)
+    let llmQuestions = []
+    if (llmSlots.length) {
+      try {
+        const result = await generateCurriculumQuestions(
+          age, lvl, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'), language,
+        )
+        llmSlots.forEach((slot, i) => {
+          const q = result.questions?.[i]
+          const a = result.answers?.[i]
+          if (typeof q !== 'string' || !q.trim() || !Number.isFinite(Number(a))) return
+          // The question is drawn as one run of plain text, so anything laid out in columns
+          // arrives as a wall: a statistics question came back as a markdown table and read
+          // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
+          // The prompt forbids it; this is what enforces it.
+          if (isUnreadable(q)) return
+          // Children testing this could not get past "eight hundred and forty five" — the
+          // reading stopped them before the arithmetic did, and the topic was recorded as a
+          // weakness. The prompt asks for digits; this makes sure of it.
+          slot.question = numeralise(q, language)
+          slot.answer = Number(a)
+          slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
+          slot.hints = Array.isArray(result.hint_steps?.[i])
+            ? result.hint_steps[i].map(h => numeralise(h, language))
+            : null
+        })
+        // The model writes the question and its answer together, and until now nothing ever
+        // disagreed with it. A wrong answer here is worse than a missing question: the child
+        // solves it correctly, is told they are wrong, and the topic is recorded as a
+        // weakness. Anything that fails verification is dropped and refilled from a template.
+        const filled = llmSlots.filter(s => typeof s.question === 'string' && s.question.trim())
+        const bad = await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language)
+        for (const i of bad) {
+          const slot = filled[i]
+          console.warn(`[VERIFY] dropped a question whose answer did not check out: ${slot.question}`)
+          const fallbackTopic = slot.curriculum?.templateTopic ?? slot.templateTopic
+          const p = fallbackTopic ? generateProblem(fallbackTopic, lvl, usedOperands, language) : null
+          if (p) {
+            usedOperands.add(p.operandKey)
+            slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
+            slot.format = 'integer'; slot.hints = null
+          } else {
+            slot.question = null
+          }
+        }
+
+        llmQuestions = llmSlots.filter(s => s.question).map(s => s.question)
+      } catch (e) {
+        // A model that will not answer costs the child the topics only it can pose, not the
+        // whole session — the template questions below are already generated and correct.
+        console.error('generateCurriculumQuestions:', e)
+      }
+    }
+
+    // Slots the model skipped or malformed are dropped rather than shown blank.
+    const ready = slots.filter(s => typeof s.question === 'string' && s.question.trim())
+    if (!ready.length) return null
+    return { ready, llmQuestions, level: lvl }
+  }
+
+  // Put a built session on screen. Everything with a lasting effect lives here rather than in
+  // buildSession, so a prepared session the child walks away from costs nothing.
+  const adoptSession = ({ ready, llmQuestions, level: lvl }, selectedMode) => {
+    rememberSeen('seen', child?.id, 'curriculum', llmQuestions)
+    rememberSeen('keys', child?.id, lvl, ready.map(s => s.problem?.operandKey))
+    rememberSeen('topics', child?.id, 'curriculum', ready.map(s => s.curriculum.id))
+
+    setQuestions(ready.map(s => s.question))
+    setCorrectAns(ready.map(s => s.answer))
+    setAnswerFormats(ready.map(s => s.format))
+    setQTypes(ready.map(() => null))
+    setCurriculumTopics(ready.map(s => s.curriculum))
+    setTopic(ready[0]?.curriculum?.name || 'math')
+    setTemplateProblems(ready.map(s => s.problem ?? null))
+    setLlmHints(ready.map(s => s.hints ?? null))
+    setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
+  }
+
+  // Begin preparing as soon as the level is known. `result` is what makes the loading screen
+  // skippable: if it is already there when the mode is chosen, the questions go up on the same
+  // tick and the child never sees a spinner at all.
+  const startPrefetch = (lvl, w) => {
+    if (prefetch.current) return
+    const entry = { result: null, promise: null }
+    entry.promise = buildSession(lvl, w)
+      .then(built => { entry.result = built; return built })
+      .catch(e => { console.error('prefetch:', e); return null })
+    prefetch.current = entry
+  }
 
   // Level, per-topic standing and any focus a parent asked for — one call, one authority. The
   // level used to be read straight from math_progress in the browser; the other two have no
   // client-side source, and fetching them together is what keeps the figure the parent is told
   // and the figure this screen builds a session from the same figure.
   useEffect(() => {
-    if (!child?.id) { setLevel(startingLevelForAge(age)); return }
+    // A restored session already has its questions; building another would waste a model call
+    // and hand the child a session they did not ask for.
+    const resuming = !!saved
+    if (!child?.id) {
+      const lvl = startingLevelForAge(age)
+      setLevel(lvl)
+      if (!resuming) startPrefetch(lvl, { focusTopicId: null, weakTopicIds: [] })
+      return
+    }
     ;(async () => {
       try {
         const res = await fetch(`${SERVER}/api/children/${child.id}/math-plan`)
@@ -1144,15 +1277,22 @@ export default function MathScreen() {
         // the old meaning of the dial are still in the table, and one of them had a
         // seven-year-old on 15. The clamped value is what gets sent back when the session
         // saves, so a stale level corrects itself the first time a child plays.
-        setLevel(clampLevelToAge(plan?.level, age))
-        setWeighting({
+        const lvl = clampLevelToAge(plan?.level, age)
+        const w = {
           focusTopicId: plan?.focus?.topic_id ?? null,
           weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
-        })
+        }
+        setLevel(lvl)
+        setWeighting(w)
+        // Started here, not on the mode screen: the two model calls need longer than the
+        // child takes to choose, and the welcome screen is the only slack there is.
+        if (!resuming) startPrefetch(lvl, w)
       } catch (e) {
         // A session with no weighting is still a good session; one that will not start is not.
         console.error('math-plan:', e)
-        setLevel(startingLevelForAge(age))
+        const lvl = startingLevelForAge(age)
+        setLevel(lvl)
+        if (!resuming) startPrefetch(lvl, { focusTopicId: null, weakTopicIds: [] })
       }
     })()
     return () => clearTimeout(flashTimer.current)
@@ -1192,104 +1332,22 @@ export default function MathScreen() {
     ? Math.max(0, Math.trunc(child.task_settings.math.gems))
     : 30
 
-  // ── Start: pick mode then generate questions ─────────────────────────────
-  //
-  // A session used to be five questions on ONE thing, because the level chose the subject and
-  // each rung named a single operation. The child's year now chooses the subject — all of it —
-  // and the level only says how hard. So a session is assembled topic by topic: drawn from a
-  // code template where one genuinely fits that topic, and from a single model call covering
-  // everything else at once.
   const startLoading = async (selectedMode) => {
     setMode(selectedMode)
-    setStep('loading')
     setHelpUsedQs(new Set())
 
-    const slots = planSession(age, QUESTIONS_PER_SESSION, readSeen('topics', child?.id, 'curriculum'), weighting)
-      .map(t => ({ curriculum: t, templateTopic: templateTopicFor(t) }))
-    if (!slots.length) { setStep('mode'); return }
+    const entry = prefetch.current
+    // Consumed either way: a session is played once, and a second run must build its own.
+    prefetch.current = null
 
-    // Track operand pairs across the batch AND across recent sessions, so the same (a,b) —
-    // and therefore the same answer — never comes back a question or a day later.
-    const usedOperands = new Set(readSeen('keys', child?.id, effectiveLevel))
-    for (const slot of slots) {
-      if (!slot.templateTopic) continue
-      const p = generateProblem(slot.templateTopic, effectiveLevel, usedOperands, language)
-      usedOperands.add(p.operandKey)
-      slot.problem = p
-      slot.question = p.question_text
-      slot.answer = p.correct_answer
-      slot.format = 'integer'
-    }
+    if (entry?.result) { adoptSession(entry.result, selectedMode); return }
 
-    const llmSlots = slots.filter(s => !s.templateTopic)
-    if (llmSlots.length) {
-      try {
-        const result = await generateCurriculumQuestions(
-          age, effectiveLevel, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'), language,
-        )
-        llmSlots.forEach((slot, i) => {
-          const q = result.questions?.[i]
-          const a = result.answers?.[i]
-          if (typeof q !== 'string' || !q.trim() || !Number.isFinite(Number(a))) return
-          // The question is drawn as one run of plain text, so anything laid out in columns
-          // arrives as a wall: a statistics question came back as a markdown table and read
-          // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
-          // The prompt forbids it; this is what enforces it.
-          if (isUnreadable(q)) return
-          // Children testing this could not get past "eight hundred and forty five" — the
-          // reading stopped them before the arithmetic did, and the topic was recorded as a
-          // weakness. The prompt asks for digits; this makes sure of it.
-          slot.question = numeralise(q, language)
-          slot.answer = Number(a)
-          slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
-          slot.hints = Array.isArray(result.hint_steps?.[i])
-            ? result.hint_steps[i].map(h => numeralise(h, language))
-            : null
-        })
-        // The model writes the question and its answer together, and until now nothing ever
-        // disagreed with it. A wrong answer here is worse than a missing question: the child
-        // solves it correctly, is told they are wrong, and the topic is recorded as a
-        // weakness. Anything that fails verification is dropped and refilled from a template.
-        const filled = llmSlots.filter(s => typeof s.question === 'string' && s.question.trim())
-        const bad = await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language)
-        for (const i of bad) {
-          const slot = filled[i]
-          console.warn(`[VERIFY] dropped a question whose answer did not check out: ${slot.question}`)
-          const fallbackTopic = slot.curriculum?.templateTopic ?? slot.templateTopic
-          const p = fallbackTopic ? generateProblem(fallbackTopic, effectiveLevel, usedOperands, language) : null
-          if (p) {
-            usedOperands.add(p.operandKey)
-            slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
-            slot.format = 'integer'; slot.hints = null
-          } else {
-            slot.question = null
-          }
-        }
-
-        rememberSeen('seen', child?.id, 'curriculum', llmSlots.filter(s => s.question).map(s => s.question))
-      } catch (e) {
-        // A model that will not answer costs the child the topics only it can pose, not the
-        // whole session — the template questions below are already generated and correct.
-        console.error('generateCurriculumQuestions:', e)
-      }
-    }
-
-    // Slots the model skipped or malformed are dropped rather than shown blank.
-    const ready = slots.filter(s => typeof s.question === 'string' && s.question.trim())
-    if (!ready.length) { setStep('mode'); return }
-
-    rememberSeen('keys', child?.id, effectiveLevel, ready.map(s => s.problem?.operandKey))
-    rememberSeen('topics', child?.id, 'curriculum', ready.map(s => s.curriculum.id))
-
-    setQuestions(ready.map(s => s.question))
-    setCorrectAns(ready.map(s => s.answer))
-    setAnswerFormats(ready.map(s => s.format))
-    setQTypes(ready.map(() => null))
-    setCurriculumTopics(ready.map(s => s.curriculum))
-    setTopic(ready[0]?.curriculum?.name || 'math')
-    setTemplateProblems(ready.map(s => s.problem ?? null))
-    setLlmHints(ready.map(s => s.hints ?? null))
-    setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
+    setStep('loading')
+    const built = entry?.promise
+      ? await entry.promise
+      : await buildSession(effectiveLevel, weighting).catch(e => { console.error('buildSession:', e); return null })
+    if (!built) { setStep('mode'); return }
+    adoptSession(built, selectedMode)
   }
 
   // ── Screen mode: submit one answer ───────────────────────────────────────
@@ -1760,7 +1818,6 @@ export default function MathScreen() {
   // ─────────────────────────────────────────────────────────────────────────
   // STEP: screen_questions
   // ─────────────────────────────────────────────────────────────────────────
-
   if (step === 'screen_questions') {
     const q      = questions[qIdx] || ''
     const isWord = qTypes[qIdx] === 'word' || q.length > 35
