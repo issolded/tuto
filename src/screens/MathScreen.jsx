@@ -271,6 +271,45 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
   )
 }
 
+// ── Fractions, written the way they are taught ───────────────────────────────
+// "1/2" on one line is a reading puzzle before it is a maths one: three characters where the
+// teacher drew one number, and an eight-year-old reads it as two separate numbers. Stacked, it
+// is the shape they already know. Display only — questions are still generated, stored and
+// marked as plain text, so nothing downstream has to learn about this.
+function Frac({ n, d }) {
+  return (
+    <span style={{
+      display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+      verticalAlign: 'middle', margin: '0 3px', lineHeight: 1.12,
+    }}>
+      <span style={{ fontSize: '.74em', padding: '0 3px' }}>{n}</span>
+      <span style={{ alignSelf: 'stretch', height: 2, background: 'currentColor', borderRadius: 2 }} />
+      <span style={{ fontSize: '.74em', padding: '0 3px' }}>{d}</span>
+    </span>
+  )
+}
+
+const FRACTION_RE = /(\d{1,3})\/(\d{1,3})/g
+
+// Strict on purpose: no digit or slash may touch either side, so a division written "8 / 2"
+// and a stray "1/2/3" are left exactly as they are. Division questions use ÷ anyway, which is
+// what makes a bare slash safe to read as a fraction at all.
+function MathText({ text }) {
+  if (typeof text !== 'string' || !text.includes('/')) return text ?? null
+  const parts = []
+  let last = 0
+  for (const m of text.matchAll(FRACTION_RE)) {
+    const before = text[m.index - 1] ?? ''
+    const after  = text[m.index + m[0].length] ?? ''
+    if (/[\d/]/.test(before) || /[\d/]/.test(after)) continue
+    parts.push(text.slice(last, m.index), <Frac key={m.index} n={m[1]} d={m[2]} />)
+    last = m.index + m[0].length
+  }
+  if (!parts.length) return text
+  parts.push(text.slice(last))
+  return <>{parts}</>
+}
+
 // ── Step hints (template-engine problems with no dedicated visual yet) ────────
 // Gradual reveal — nudge, then half, then the full worked step — built straight from
 // the template's own hint_steps, never a separate hand-written explanation.
@@ -282,7 +321,7 @@ function StepHints({ question, hintSteps, revealed, onReveal, showMore, moreHint
         fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, textAlign: 'center', lineHeight: 1.5,
         background: 'rgba(90,169,230,.08)', borderRadius: 16, padding: '12px 16px', width: '100%',
       }}>
-        {question}
+        <MathText text={question} />
       </div>
       {hintSteps.slice(0, revealed).map((h, i) => (
         <div key={i} style={{
@@ -290,7 +329,7 @@ function StepHints({ question, hintSteps, revealed, onReveal, showMore, moreHint
           background: '#f0edf8', borderRadius: 12, padding: '10px 14px', width: '100%',
           animation: 'pop 0.25s ease both',
         }}>
-          {h}
+          <MathText text={h} />
         </div>
       ))}
       {revealed < hintSteps.length && (
@@ -1749,7 +1788,7 @@ export default function MathScreen() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5 }}>
-                  {q}
+                  <MathText text={q} />
                 </div>
                 {/* Paper mode had no hints at all: the child on screen could ask for a nudge and
                     the child with a pencil could not, for the same question. Same first step,
@@ -1905,7 +1944,7 @@ export default function MathScreen() {
                   </div>
                 )}
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount ? 20 : 32), color: INK, lineHeight: 1.55 }}>
-                  {q}
+                  <MathText text={q} />
                 </div>
               </div>
 
@@ -2086,7 +2125,7 @@ export default function MathScreen() {
                   }}>
                     <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{r.correct ? '✅' : '🔄'}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}>{r.question}</div>
+                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}><MathText text={r.question} /></div>
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
                         {t('math_your_answer', language)} {r.child_answer ?? '—'}
                       </div>
