@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
-import { generateCurriculumQuestions, evaluateMath } from '../lib/gemini'
+import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
 import { findBadAnswers } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
@@ -1234,10 +1234,19 @@ export default function MathScreen() {
         // solves it correctly, is told they are wrong, and the topic is recorded as a
         // weakness. Anything that fails verification is dropped and refilled from a template.
         const filled = llmSlots.filter(s => typeof s.question === 'string' && s.question.trim())
-        const bad = await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language)
+        const bad = new Set(await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language))
+        // Length is a property of the question rather than of its answer, so it is checked here
+        // and not in findBadAnswers. Enforced in code because a limit left to the model drifts
+        // back to whatever the prose allows: the old prompt asked for under 300 characters and
+        // got paragraphs of story ending in 18 - 12, which is a reading test, not a maths one.
+        const cap = maxQuestionChars(age)
+        filled.forEach((s, i) => { if (s.question.length > cap) bad.add(i) })
         for (const i of bad) {
           const slot = filled[i]
-          console.warn(`[VERIFY] dropped a question whose answer did not check out: ${slot.question}`)
+          const why = slot.question.length > cap
+            ? `too long (${slot.question.length} > ${cap} chars)`
+            : 'the answer did not check out'
+          console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question}`)
           const fallbackTopic = slot.curriculum?.templateTopic ?? slot.templateTopic
           const p = fallbackTopic ? generateProblem(fallbackTopic, lvl, usedOperands, language) : null
           if (p) {

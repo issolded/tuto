@@ -267,6 +267,18 @@ export async function generateStoryIdeas(age, language = 'en') {
   return callGemini([{ text: prompt }])
 }
 
+// The length a question may not exceed, in characters. The prompt is given this number and the
+// session builder enforces it, so they are exported from one place: told one limit and marked
+// against another, the model drifts back to whatever the prose allows.
+//
+// 300 was the old ceiling and it was three times too generous for a seven-year-old — long enough
+// for a paragraph of story that ended in 18 - 12, which is a reading test wearing a maths hat.
+export function maxQuestionChars(age) {
+  if (age <= 7) return 90
+  if (age <= 9) return 120
+  return 160
+}
+
 // Questions for a named set of curriculum topics — one per topic, in the order given.
 //
 // The generator this replaced asked for five questions at "level N (Subtraction up to 20)",
@@ -291,6 +303,10 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
   const pitch = level <= 4 ? 'the easier end of this topic'
     : level >= 12 ? 'the harder end of this topic, but still on the topic'
     : 'the middle of this topic'
+  const cap = maxQuestionChars(age)
+  // A minority, not none: the curriculum asks for reasoning as its own strand, and a session of
+  // nothing but bare sums stops testing whether the child can find the sum in the first place.
+  const wordBudget = Math.max(1, Math.round(topics.length * 0.3))
 
   const prompt = `Generate ${topics.length} maths questions for a ${age} year old following the English National Curriculum.
 Write every question, and every hint step, in ${lang}, and use ${lang} names where a name is
@@ -305,9 +321,19 @@ Each question covers a DIFFERENT topic, in this exact order:
 ${list}
 
 Pitch each question at ${pitch}.
-Make them fun and relatable — use names, animals, food, space, sport. Vary the framing: some plain
-calculations, some word problems.
 Write operators the way a child is taught them: × and ÷, never * or /.
+
+LENGTH — the rule that matters most, because at ${age} reading is still work and a long question
+tests reading rather than maths:
+- HARD LIMIT ${cap} characters per question. A question over it is thrown away and replaced,
+  however good it is. Count before you answer.
+- Every clause must earn its place. If deleting a phrase leaves the calculation unchanged, the
+  phrase does not belong. A paragraph of story ending in 18 - 12 is the failure to avoid.
+- At most ${wordBudget} of these ${topics.length} may be word problems. The rest are plain
+  calculations, written bare: "18 - 12 = ?".
+- A word problem is ONE name, ONE scene, ONE sentence — setup and question, nothing else:
+  "Ada has 18 stickers and gives 12 away. How many are left?" No second character, no adjectives,
+  no back story, no scene-setting before the numbers arrive.
 
 FORMAT — the question is shown to the child as ONE run of plain text, so:
 - Write it as flowing prose that would still make sense read aloud.
@@ -316,7 +342,6 @@ FORMAT — the question is shown to the child as ONE run of plain text, so:
 - Data for a statistics or graph question goes INTO the sentence: "The Strikers scored 4, 6, 3
   and 5 goals over four weeks, and the Defenders scored 2, 5, 1 and 4." Never "Team | Week 1 |
   Week 2".
-- Keep it under 300 characters.
 
 ANSWER RULES — these are strict, because the child types the answer on a number pad:
 - Every answer must be a single positive number: either a whole number, or a decimal with at
