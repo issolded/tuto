@@ -724,10 +724,11 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
 }
 
 // Multi-photo variant for homework (up to 15 pages). Telegram gets a native
-// album; other channels have no album primitive here, so they fall back to
-// the first photo + caption (parent still sees the homework arrived and can
-// open the app). The notification must NEVER be lost — every path degrades to
-// text rather than throwing.
+// album; WhatsApp has no album primitive and carries one image per message, so
+// the pages go out as a series. Anything else falls back to the first photo +
+// caption (parent still sees the homework arrived and can open the app). The
+// notification must NEVER be lost — every path degrades to text rather than
+// throwing.
 async function sendNotificationWithPhotos(parentId, message, photoUrls) {
   const raw = (photoUrls || []).filter(Boolean)
   if (raw.length <= 1) return sendNotificationWithPhoto(parentId, message, raw[0] || null)
@@ -755,6 +756,28 @@ async function sendNotificationWithPhotos(parentId, message, photoUrls) {
     } catch (err) {
       console.error(`[NOTIFY-PHOTOS] ❌ Telegram album failed: ${err.message} — trying single photo`)
     }
+  }
+
+  if (channel === 'whatsapp' && parent?.whatsapp_phone) {
+    // Caption rides the first page; the rest are bare so the parent reads one
+    // message and then scrolls the homework.
+    let sent = 0
+    try {
+      for (const [i, url] of urls.entries()) {
+        await sendWhatsAppPhoto(parent.whatsapp_phone, url, i === 0 ? message : undefined)
+        sent++
+      }
+    } catch (err) {
+      console.error(`[NOTIFY-PHOTOS] ❌ WhatsApp photo ${sent + 1}/${urls.length} failed: ${err.message}`)
+    }
+    if (sent) {
+      // Falling through after a partial send would deliver page 1 twice, and the
+      // parent already has the caption — better an incomplete set than a duplicate.
+      console.log(`[NOTIFY-PHOTOS] ${sent === urls.length ? '✅' : '⚠️'} Sent ${sent}/${urls.length} photos via WhatsApp → parent ${parentId}`)
+      logMessage(parentId, 'tuto', message).catch(() => {})
+      return
+    }
+    console.error('[NOTIFY-PHOTOS] ❌ WhatsApp sent nothing — trying single photo')
   }
 
   // Any other channel, or a failed album: fall back to the single-photo path
@@ -1672,6 +1695,14 @@ async function handleMessage(parentId, replyCb, text) {
         `başka bir "kafa karıştırdım, düzelttim, hediye gönderdim" tarzı eski cevabını ASLA taklit etme veya ` +
         `tekrarlama; her belirsizlik anında gift_gems çağırmak ya da "düzelttim" demek bir alışkanlık değil, ` +
         `bir HATA — sadece parent açıkça ve net şekilde gem hediye etmek istediğinde gift_gems çağır.\n\n` +
+        `- Bunun TERSİ de aynı ölçüde hatalı ve bir kez gerçekten oldu: parent "Ada'ya 10 gem hediye etmek ` +
+        `istiyorum" dedi, sen de "sohbet üzerinden gem gönderme yetkim bulunmuyor, uygulamadan yapın" ` +
+        `cevabını verdin. Bu yanlıştı. gift_gems ve deduct_gems SENDE VAR ve tam olarak bunun içindir. ` +
+        `Parent açık ve net bir miktar söyleyerek gem vermek ya da silmek istediğinde tool'u ÇAĞIR; ` +
+        `"yetkim yok", "buradan yapamıyorum", "panelden kendiniz yapın" deme. Yukarıdaki "yapamıyorum de" ` +
+        `kuralı SADECE tool listesinde gerçekten karşılığı olmayan istekler içindir (örneğin matematik ` +
+        `konusunu değiştirmek) — konuşmadan önce listeye bak. Var olan bir yeteneği yokmuş gibi göstermek, ` +
+        `olmayan bir yeteneği varmış gibi göstermek kadar güven kırıcıdır.\n\n` +
         `You are Tuto, a warm AI learning assistant and trusted family companion.\n` +
         `Current local time for parent: ${localTimeStr}\n` +
         `You know this family's learning data:\n${JSON.stringify(familyData, null, 2)}\n\n` +
@@ -3220,9 +3251,14 @@ const HOMEWORK_MAX_PHOTOS = 15
 // is a single long-running process (same pattern as the WhatsApp/TG maps).
 const pendingHomeworkNotify = new Map()
 
+// How recently a photo file must have been written to count as "taken just now" when it
+// carries no EXIF date. Generous enough for a child photographing several pages and then
+// waiting on the upload, short enough that yesterday's homework never slips through.
+const JUST_TAKEN_MS = 30 * 60 * 1000
+
 app.post('/api/children/:childId/homework', async (req, res) => {
   const { childId } = req.params
-  const { paths } = req.body
+  const { paths, file_modified_at } = req.body
   // Client uploads the images straight to Storage and sends only
   // the paths — so the request body stays tiny no matter how many pages, and
   // the ORIGINAL bytes (with EXIF) live on the server side to read.
@@ -3274,6 +3310,23 @@ app.post('/api/children/:childId/homework', async (req, res) => {
         photoTakenAt = exif.DateTimeOriginal.toISOString()
       }
     } catch { /* no EXIF (e.g. screenshot) — leave null */ }
+
+    // EXIF is missing for the flow we trust most: iOS Safari's in-app camera writes no
+    // DateTimeOriginal, so a child photographing their homework right now was asked "did
+    // you do this today?" every time, while a screenshot from the library kept its date.
+    // The file's mtime fills that gap. It comes from the client, so it is only believed
+    // when it is minutes old by the SERVER's clock — a forward-set device clock reads as
+    // the future and a stale file reads as old, and both fall through to the question.
+    if (!photoTakenAt) {
+      const mtimes = Array.isArray(file_modified_at) ? file_modified_at : []
+      const fresh = mtimes.every(v => {
+        const age = Date.now() - Number(v)
+        return Number.isFinite(age) && age >= 0 && age <= JUST_TAKEN_MS
+      })
+      if (mtimes.length === paths.length && mtimes.length > 0 && fresh) {
+        photoTakenAt = new Date(Math.max(...mtimes.map(Number))).toISOString()
+      }
+    }
 
     // 2. Store the storage PATHS, not public URLs — the bucket is private, so
     //    readers get a short-lived signed URL instead (signedUrlFor).
@@ -3485,7 +3538,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
       try {
-        deferNotify('READING', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls))
+        deferNotify('HOMEWORK', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls))
       } catch (err) {
         console.error(`[HOMEWORK] notification failed: ${err.message}`)
       }

@@ -206,7 +206,9 @@ export default function ReadingFlow() {
   const [answers, setAnswers] = useState({})
   const [oeInput, setOeInput] = useState('')
   const [pageInput, setPageInput] = useState('')
-  const [gemsEarned, setGemsEarned] = useState(0)
+  // null until the server answers. The result screen opens before the session is saved —
+  // pages upload first — and a 0 sitting there reads as "+0 Gems" for those seconds.
+  const [gemsEarned, setGemsEarned] = useState(null)
   const [finalCorrect, setFinalCorrect] = useState(0)
   const [error, setError] = useState('')
   const [photos, setPhotos] = useState([])           // [{ file, preview }] — the picker
@@ -933,6 +935,8 @@ export default function ReadingFlow() {
     )
   }
 
+  const awaitingGems = gemsEarned == null && !saveFailed
+
   if (step === 'result') return (
     <Screen>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
@@ -948,13 +952,13 @@ export default function ReadingFlow() {
           boxShadow: '0 12px 48px rgba(255,107,53,0.40)',
           width: '100%',
         }}>
-          <div style={{ fontSize: 52 }}>{saveFailed ? '😕' : capped ? '🌙' : '💎'}</div>
+          <div style={{ fontSize: 52 }}>{saveFailed ? '😕' : awaitingGems ? '⏳' : capped ? '🌙' : '💎'}</div>
           <div>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
-              {saveFailed ? "Couldn't save" : capped ? 'All your gems for today!' : 'You earned!'}
+              {saveFailed ? "Couldn't save" : awaitingGems ? 'Nearly there!' : capped ? 'All your gems for today!' : 'You earned!'}
             </div>
-            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: saveFailed || capped ? 22 : 44, fontWeight: 800, color: 'white', lineHeight: 1.15 }}>
-              {saveFailed ? 'Tell a grown-up' : capped ? 'Come back tomorrow 📚' : `+${gemsEarned} Gems`}
+            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: saveFailed || capped || awaitingGems ? 22 : 44, fontWeight: 800, color: 'white', lineHeight: 1.15 }}>
+              {saveFailed ? 'Tell a grown-up' : awaitingGems ? 'Counting your gems…' : capped ? 'Come back tomorrow 📚' : `+${gemsEarned} Gems`}
             </div>
           </div>
         </div>

@@ -311,10 +311,14 @@ export async function submitHomework(childId, files) {
     paths.push(path)
   }
 
+  // A photo taken through the in-app camera carries no EXIF date on iOS Safari, so EXIF
+  // alone made the server ask "did you do this today?" every single time. The file's own
+  // mtime is the moment the camera wrote it; the server only trusts it when it is minutes
+  // old, so a stale screenshot still gets the question.
   const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/homework`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paths }),
+    body: JSON.stringify({ paths, file_modified_at: files.map(f => f.lastModified || null) }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
