@@ -46,12 +46,14 @@ const TEMPLATE_FOR_TOPIC = {
   y2_multiplication: 'multiplication-word',
   y2_division: 'division-word',
   y2_fractions: 'fraction-of-number',
+  y2_time: 'time',
 
   y3_addition: 'addition',
   y3_subtraction: 'subtraction',
   y3_multiplication: 'multiplication-word',
   y3_division: 'division-word',
   y3_fractions: 'fraction-of-number',
+  y3_time: 'time',
   y3_geometry: 'geometry',
 
   y4_addition: 'addition',
@@ -67,9 +69,15 @@ const TEMPLATE_FOR_TOPIC = {
   y5_fractions: 'fraction-of-number',
 
   // Deliberately absent, and it is worth saying why rather than leaving a silent gap:
-  // money and time (no template), place value past 100 (the counting template draws objects),
+  // money (no template), place value past 100 (the counting template draws objects),
   // measurement, area and perimeter, statistics, decimals and percentages, angles beyond
   // sides-and-corners, algebra, ratio, and all of Year 6.
+  //
+  // y1_measurement is the awkward one: it bundles lengths, mass, capacity, money AND telling
+  // the time to the hour, so mapping it to the time template would quietly delete four of its
+  // five strands. It stays with the model, which means a Year 1 child gets time questions with
+  // no clock drawn — the one place the draggable clock would help most. The fix is a
+  // measurement template covering the other strands, not a mapping here.
 }
 
 export function templateTopicFor(topic) {

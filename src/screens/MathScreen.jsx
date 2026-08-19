@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
+import ClockFace, { DraggableClock } from '../components/ClockFace'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
@@ -394,9 +395,12 @@ function ShapeSVG({ kind, size = 92, ask, lit = 0, showMarks = false }) {
 // group, because that is what "shared equally" actually means; the answer then reads
 // straight off a single group. All numbers come from the template's `visual` descriptor,
 // never parsed from the question text.
-function ShareVisual({ total, groups, highlight, dealt, onDeal, label }) {
+function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts }) {
+  // `counts` is the child's own guess dealt out, which is the one case where the groups can
+  // come out uneven — the pool runs dry partway along the row.
   const perGroup = dealt / groups          // dealt only ever advances a whole round
-  const remaining = total - dealt
+  const handedOut = counts ? counts.reduce((a, b) => a + b, 0) : dealt
+  const remaining = total - handedOut
   const dot = total > 18 ? 11 : 14
 
   const Dot = ({ faded }) => (
@@ -428,6 +432,7 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
         {Array.from({ length: groups }).map((_, g) => {
           const isPicked = highlight && g < highlight
+          const inBox = counts ? counts[g] : perGroup
           return (
             <div key={g} style={{
               minWidth: 52, minHeight: 52, padding: '8px 9px', borderRadius: 15,
@@ -436,9 +441,9 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label }) {
               display: 'flex', flexWrap: 'wrap', gap: 4,
               alignItems: 'center', justifyContent: 'center',
             }}>
-              {perGroup === 0
+              {inBox === 0
                 ? <Dot faded />
-                : Array.from({ length: perGroup }).map((_, i) => <Dot key={i} />)}
+                : Array.from({ length: inBox }).map((_, i) => <Dot key={i} />)}
             </div>
           )
         })}
@@ -453,7 +458,15 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label }) {
   )
 }
 
-function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language }) {
+// How many times help answers the child's own number before it gives up and deals the whole
+// thing out. Three is enough for "too many → too few → closer" to be a real narrowing, and few
+// enough that a child who genuinely cannot do it is not stuck in a loop.
+const GUESS_ROUNDS = 3
+
+// Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
+// screen on demand — in a real session a given one turns up once in ten questions and only
+// after a wrong answer.
+export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
   const tr = language === 'tr'
   const t = tr ? {
     title:          'Haydi birlikte bakalım! 🧸',
@@ -474,6 +487,10 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     timesDone:      'Bak, hepsi eşit! Toplam kaç eder?',
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
+    guessTitle:     n => `Sen ${n} dedin — herkese ${n} tane verelim mi?`,
+    guessShort:     n => `Yetmedi! Herkese ${n} tane veremedik.`,
+    guessOver:      (n, left) => `Herkes ${n} tane aldı ama elimizde hâlâ ${left} tane var.`,
+    guessRetry:     'Başka bir sayı deneyeyim! 💪',
   } : {
     title:          'Let\'s look together! 🧸',
     countTab:       'Count',
@@ -493,6 +510,10 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     timesDone:      'See — every group is the same! How many altogether?',
     showHint:       'Show help',
     moreHint:       'More help',
+    guessTitle:     n => `You said ${n} — shall we give everyone ${n}?`,
+    guessShort:     n => `We ran out! Not everyone could get ${n}.`,
+    guessOver:      (n, left) => `Everyone got ${n}, but there are still ${left} left over.`,
+    guessRetry:     'Let me try another number! 💪',
   }
 
   const nums    = question.match(/\d+/g)?.map(Number) || []
@@ -523,14 +544,25 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // A template-supplied descriptor is ground truth, so it outranks the step hints —
   // seeing 12 dealt into 3 groups beats reading about it.
   const share = visual?.kind === 'share' ? visual : null
+  // Answering the child's own number only works where the picture IS the operation — a total
+  // dealt into equal groups. Elsewhere a guess has nothing to be staged against, so those
+  // visuals keep their existing behaviour. After GUESS_ROUNDS the panel stops asking and
+  // falls back to dealing the whole thing out, so a child who is genuinely stuck gets out.
+  const guessNum = Number(guess)
+  const guessMode = !!share && Number.isFinite(guessNum) && guessNum > 0
+    && guessRound > 0 && guessRound <= GUESS_ROUNDS
   const shapes = visual?.kind === 'shapes' ? visual : null
   const counting = visual?.kind === 'count' ? visual : null
+  const clock = visual?.kind === 'clock' ? visual : null
   // Both multiplication framings draw the same way — rows of a grid, or groups in a row —
   // so they share one path and differ only in how the rows are spaced and labelled.
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && !clock && hintSteps?.length > 0
+  // Count/Show is a real choice only where the two tabs draw different things. A clock has one
+  // picture and the point is to turn it, so a second tab holding a still one is a downgrade.
+  const onePanel = hasStepHints || !!clock
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -543,12 +575,15 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   const [hintsRevealed, setHintsRevealed] = useState(0) // gradual reveal: nudge → half → full
   const [dealt,         setDealt]         = useState(0) // items handed out in the sharing visual
 
-  useEffect(() => { if (bigNums) setActiveTab('show') }, [])
+  // Big numbers open on the finished picture because dealing 28 counters one round at a time
+  // is tedious, not instructive. In guess mode that same jump would hand over the answer
+  // before the child has been asked anything, so it is suppressed there.
+  useEffect(() => { if (bigNums && !guessMode) setActiveTab('show') }, [])
 
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times || counting) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -565,7 +600,52 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
   // ── Sayalım content ──────────────────────────────────────────────────────
   let sayalim
 
-  if (counting) {
+  if (clock) {
+    // Reading a clock is not something a child works out from a sentence — they learn it by
+    // turning the hands and watching the other one follow. So the help hands the clock over
+    // and says which way to turn it, and never shows the answer: the readout tracks wherever
+    // the child has dragged to, which is their working, not the solution.
+    const guide = (tr ? {
+      hour:  'Kısa kolu (akrep) çevir — durduğu sayı saati söyler.',
+      halfPast: 'Yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
+      past:  'Yelkovanı 12\'ye götür, sonra yavaşça geri getir. Beşer beşer sayarak kaç dakika döndüğünü bul.',
+      to:    'Yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
+      span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
+      later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
+      h24:   'Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
+    } : {
+      hour:  'Turn the short hand — the number it stops at tells you the hour.',
+      halfPast: 'Take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
+      past:  'Take the long hand to 12, then bring it slowly back. Count round in fives to see how many minutes it moved.',
+      to:    'Turn the long hand forwards until it reaches 12 — how many minutes was that?',
+      span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
+      later: 'Move the short hand on one hour at a time, counting as you go.',
+      h24:   'After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
+    })[clock.ask]
+
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 280,
+        }}>
+          {guide || (tr ? 'Kolları parmağınla çevir — saat seninle değişir.' : 'Turn the hands with your finger — the time changes with you.')}
+        </div>
+        <DraggableClock hour={clock.hour} minute={clock.minute} size={228} language={language} />
+        {hintSteps?.length > 0 && (
+          <StepHints
+            question={question}
+            hintSteps={hintSteps}
+            revealed={hintsRevealed}
+            onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }}
+            showMore={t.showHint}
+            moreHint={t.moreHint}
+          />
+        )}
+      </div>
+    )
+  } else if (counting) {
     // Counting out loud is exactly the skill, so the help is the act itself: one lights up
     // per tap and the tally keeps the child's place, which is the whole difficulty at this
     // age — not the numbers, but losing track of which ones are already counted.
@@ -1058,6 +1138,34 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
     goster = null
   }
 
+  // The child's guess, actually dealt out. Boxes are filled left to right until the pool runs
+  // dry, so "too many" is something they watch happen rather than something they are told.
+  let guessPanel = null
+  if (guessMode) {
+    const counts = Array.from({ length: share.groups }, (_, g) =>
+      Math.max(0, Math.min(guessNum, share.total - g * guessNum)))
+    const handedOut = counts.reduce((a, b) => a + b, 0)
+    const ranOut = guessNum * share.groups > share.total
+    guessPanel = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {t.guessTitle(guessNum)}
+        </div>
+        <ShareVisual total={share.total} groups={share.groups} highlight={0} dealt={0} counts={counts} />
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: ORANGE,
+          textAlign: 'center', maxWidth: 260,
+        }}>
+          {ranOut ? t.guessShort(guessNum) : t.guessOver(guessNum, share.total - handedOut)}
+        </div>
+      </div>
+    )
+  }
+
   const showDoneBtn = activeTab === 'show'
     || bigNums
     || (usesArrowUI && Object.keys(solvedArrows).length === nums.length)
@@ -1082,7 +1190,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
       {/* Count/Show only when the two tabs actually differ — for step-hint problems
           (no dedicated visual yet) both tabs render the same content, so a tab switcher
           would just be a confusing no-op toggle; show a single panel instead. */}
-      {!hasStepHints && (
+      {!onePanel && !guessMode && (
         <div style={{ display: 'flex', gap: 5, background: '#f0edf8', borderRadius: 13, padding: 4 }}>
           {[{ id: 'count', label: t.countTab }, { id: 'show', label: t.showTab }].map(tab => (
             <button
@@ -1102,7 +1210,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
       )}
 
       <div style={{ minHeight: 140 }}>
-        {hasStepHints ? sayalim : (
+        {guessMode ? guessPanel : onePanel ? sayalim : (
           <>
             {activeTab === 'count' && sayalim}
             {activeTab === 'show'  && goster}
@@ -1110,7 +1218,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
         )}
       </div>
 
-      {showDoneBtn && (
+      {(showDoneBtn || guessMode) && (
         <button
           className="math-press"
           onClick={onDone}
@@ -1121,7 +1229,7 @@ function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, o
             animation: 'pop 0.25s ease both',
           }}
         >
-          {t.ready}
+          {guessMode ? t.guessRetry : t.ready}
         </button>
       )}
     </div>
@@ -1160,10 +1268,16 @@ export default function MathScreen() {
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
+  const [wrongGuess,    setWrongGuess]   = useState(null)  // the number the child actually typed, so help can answer THAT rather than the correct answer
+  const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
   const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState(saved?.llmHints ?? [])         // per-question hint_steps for the LLM path, where there is no template to read them from
   const [answerFormats, setAnswerFormats] = useState(saved?.answerFormats ?? [])       // 'integer' | 'decimal' per question — decides whether the keypad offers a point
   const [curriculumTopics, setCurriculumTopics] = useState(saved?.curriculumTopics ?? []) // the curriculum entry each question came from
+
+  // Keyed on the question rather than cleared at each of the several places that advance one,
+  // so a new route to the next question cannot forget to reset and carry a stale guess in.
+  useEffect(() => { setWrongGuess(null); setGuessRound(0) }, [qIdx])
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
@@ -1409,6 +1523,13 @@ export default function MathScreen() {
     if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
+      // The number the child typed is the most useful thing on the screen and it used to be
+      // thrown away here. Help that deals out the correct answer teaches counting, not
+      // dividing: the child can reach it by tapping without ever holding the question in
+      // their head. Given the guess instead, help can deal THAT and let the picture say it
+      // was too much or too little.
+      setWrongGuess(Number(String(input).trim()))
+      setGuessRound(r => r + 1)
       // Help does not end the question — the child tries again — so under nine a wrong answer
       // was unreachable: the same question came back until it was right, and every session
       // finished at 100%. That is a loop for the child and a broken signal for everything
@@ -1875,6 +1996,10 @@ export default function MathScreen() {
     // Counting shows the objects themselves — the whole question is what is in front of
     // them, so a child who cannot yet read "How many do you see?" can still answer it.
     const questionCount = qVisual?.kind === 'count' ? qVisual : null
+    // "What time is it?" is unanswerable without the face, and a time written into the question
+    // text would be a reading exercise — so the clock IS the question here, same as counting.
+    // 'span' asks how many minutes are in n hours and needs no particular time on the face.
+    const questionClock = qVisual?.kind === 'clock' && qVisual.ask !== 'span' ? qVisual : null
 
     return (
       <>
@@ -1929,6 +2054,8 @@ export default function MathScreen() {
               onDone={() => { setHelpVisible(false); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}
+              guess={wrongGuess}
+              guessRound={guessRound}
             />
           ) : (
             <>
@@ -1952,7 +2079,10 @@ export default function MathScreen() {
                     ))}
                   </div>
                 )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount ? 20 : 32), color: INK, lineHeight: 1.55 }}>
+                {questionClock && (
+                  <ClockFace hour={questionClock.hour} minute={questionClock.minute} size={168} />
+                )}
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   <MathText text={q} />
                 </div>
               </div>

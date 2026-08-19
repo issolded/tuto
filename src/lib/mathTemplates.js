@@ -16,6 +16,7 @@
 //   { kind: 'share',  total, groups, highlight? }  — deal total into equal groups
 //   { kind: 'groups', groups, per }                — that many equal groups of that size
 //   { kind: 'array',  rows, cols }                 — a rectangular arrangement
+//   { kind: 'clock',  hour, minute, ask }          — a clock face; `ask` says what is wanted
 // Optional: a template without one simply gets no visual.
 //
 // A "template" is a function(level) -> problem. It picks numbers, builds the question
@@ -23,6 +24,8 @@
 // hint_steps from that same structure — never a separate hand-written explanation that
 // could drift out of sync with the actual numbers. hint_steps stop at method, never state
 // the final answer — the child does that last step themselves.
+
+import { TR_ACC, TR_ABL } from './timeWords'
 
 function randInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -379,6 +382,10 @@ function geometryTemplate(level, lang) {
   // screen and countable, that stays within reach of a child who can count to sixteen.
   const pool = Object.keys(SHAPES)
   const askKey = pick(['sides', 'corners'])
+  // `ask` is the word the question is written in; `askKey` is what the drawing switches on.
+  // They were the same field, so a Turkish "kaç kenarı var?" carried ask:'kenarı', missed the
+  // === 'sides' test and lit the corners while asking about the sides. Right answer, wrong
+  // picture — the one failure a counting visual must not have.
   const ask = tr(lang, askKey, askKey === 'sides' ? 'kenarı' : 'köşesi')
   // Singular for the hint text. Turkish already reads as one ("kenarı"), English drops the s.
   const one = lang === 'tr' ? ask : ask.slice(0, -1)
@@ -392,12 +399,12 @@ function geometryTemplate(level, lang) {
       question_text: tr(lang, `How many ${ask} does this shape have?`, `Bu şeklin kaç ${ask} var?`),
       format: 'numeric',
       correct_answer: SHAPES[shape],
-      operandKey: `${shape}:${ask}`,
+      operandKey: `${shape}:${askKey}`,
       hint_steps: [
         tr(lang, `Start at one ${one} and go around the shape.`, `Bir noktadan başla, şeklin etrafını dolaş.`),
         tr(lang, `Count every ${one} once — the glowing one is where you are.`, `Her birini bir kez say — parlayan, bulunduğun yer.`),
       ],
-      visual: { kind: 'shapes', shapes: [shape], ask },
+      visual: { kind: 'shapes', shapes: [shape], ask: askKey },
     }
   }
 
@@ -409,12 +416,12 @@ function geometryTemplate(level, lang) {
     question_text: tr(lang, `How many ${ask} do these two shapes have altogether?`, `Bu iki şeklin toplam kaç ${ask} var?`),
     format: 'numeric',
     correct_answer: SHAPES[a] + SHAPES[b],
-    operandKey: [a, b].sort().join('+') + `:${ask}`,
+    operandKey: [a, b].sort().join('+') + `:${askKey}`,
     hint_steps: [
       tr(lang, `Count the ${ask} of the first shape, then the second.`, `Önce birinci şeklin ${ask}, sonra ikincisinin ${ask} say.`),
       tr(lang, `Add the two counts together.`, `İki sayıyı topla.`),
     ],
-    visual: { kind: 'shapes', shapes: [a, b], ask },
+    visual: { kind: 'shapes', shapes: [a, b], ask: askKey },
   }
 }
 
@@ -514,8 +521,170 @@ function numberLineTemplate(level, lang) {
   }
 }
 
+// ── Time ─────────────────────────────────────────────────────────────────────
+// Time was on the model's side of the line, and it is the worst topic to leave there: the
+// model writes "the clock shows quarter past four" in words, so the child answers a reading
+// question about a clock they never see. A template can state the time exactly, which is what
+// lets the clock be DRAWN — on the question, and turnable by hand in the help panel.
+//
+// Every shape here answers with a plain whole number, because the keypad has no colon. That is
+// a real constraint rather than a dodge: "how many minutes past 4" is the question a child
+// actually has to answer inside themselves before they can say the time at all.
+
+// Which minutes a year is allowed to land on. Year 1 tells the time to the hour and half past,
+// Year 2 to five minutes, Year 3 to the nearest minute — so the FACE gets harder with the year
+// rather than the arithmetic on top of it.
+function minuteChoicesForBand(band) {
+  if (band <= 1) return [0, 30]
+  if (band === 2) return [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+  return Array.from({ length: 59 }, (_, i) => i + 1)
+}
+
+function timeTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const h = randInt(1, 12)
+  const next = h === 12 ? 1 : h + 1
+  const shapes = band <= 1 ? ['hour', 'halfPast', 'later']
+    : band === 2 ? ['past', 'to', 'span', 'hour', 'later']
+    : ['past', 'to', 'span', 'later', 'h24']
+  const shape = pick(shapes)
+
+  if (shape === 'hour') {
+    return {
+      topic: 'time', level,
+      question_text: tr(lang, 'What time is it? Write just the hour.', 'Saat kaç? Sadece saati yaz.'),
+      format: 'numeric',
+      correct_answer: h,
+      operandKey: `time:hour:${h}`,
+      visual: { kind: 'clock', hour: h, minute: 0, ask: 'hour' },
+      hint_steps: [
+        tr(lang, 'The short hand is the hour hand.', 'Kısa kol akreptir, saati gösterir.'),
+        tr(lang, 'Read the number the short hand points at.', 'Akrebin gösterdiği sayıyı oku.'),
+      ],
+    }
+  }
+
+  // Year 1's half past is not "what is 30" — asking that gives the same answer every time. The
+  // actual skill, and the mistake children reliably make, is that at half past the short hand
+  // sits BETWEEN two numbers and the earlier one is the answer.
+  if (shape === 'halfPast') {
+    return {
+      topic: 'time', level,
+      question_text: tr(lang,
+        'It is half past. Which hour has it just gone past?',
+        'Saat buçuğu gösteriyor. Hangi saati yeni geçti?'),
+      format: 'numeric',
+      correct_answer: h,
+      operandKey: `time:halfPast:${h}`,
+      visual: { kind: 'clock', hour: h, minute: 30, ask: 'halfPast' },
+      hint_steps: [
+        tr(lang, 'At half past, the short hand sits between two numbers.',
+                 'Buçukta akrep iki sayının arasında durur.'),
+        tr(lang, 'The answer is the number it has already passed, not the one ahead.',
+                 'Cevap, akrebin geçtiği sayıdır — ilerideki değil.'),
+      ],
+    }
+  }
+
+  if (shape === 'past') {
+    // Past 30 a child is taught to read it the other way round ("ten to five"), which is what
+    // the 'to' shape asks — so this one stays in the first half of the hour. 0 is excluded
+    // because "how many minutes past 4 is 4 o'clock" gives them nothing to look at.
+    const m = pick(minuteChoicesForBand(band).filter(v => v > 0 && (band >= 3 || v <= 30)))
+    return {
+      topic: 'time', level,
+      question_text: tr(lang, `How many minutes past ${h} is it?`, `Saat ${TR_ACC[h]} kaç dakika geçiyor?`),
+      format: 'numeric',
+      correct_answer: m,
+      operandKey: `time:past:${h}:${m}`,
+      visual: { kind: 'clock', hour: h, minute: m, ask: 'past' },
+      hint_steps: [
+        tr(lang, 'The long hand counts the minutes, starting from 12.',
+                 'Yelkovan dakikaları sayar, 12\'den başlayarak.'),
+        tr(lang, 'Every number on the face is 5 minutes — count round in fives from 12.',
+                 'Kadrandaki her sayı 5 dakikadır — 12\'den başlayıp beşer beşer say.'),
+      ],
+    }
+  }
+
+  if (shape === 'to') {
+    const m = pick(minuteChoicesForBand(band).filter(v => v >= 35))
+    return {
+      topic: 'time', level,
+      question_text: tr(lang, `How many minutes until ${next} o'clock?`, `Saat ${next} olmasına kaç dakika var?`),
+      format: 'numeric',
+      correct_answer: 60 - m,
+      operandKey: `time:to:${h}:${m}`,
+      visual: { kind: 'clock', hour: h, minute: m, ask: 'to' },
+      hint_steps: [
+        tr(lang, 'A whole turn of the long hand is 60 minutes.', 'Yelkovanın bir tam turu 60 dakikadır.'),
+        tr(lang, 'Count on from the long hand round to 12.', 'Yelkovandan 12\'ye kadar ilerleyerek say.'),
+      ],
+    }
+  }
+
+  if (shape === 'span') {
+    const n = randInt(2, band >= 3 ? 6 : 3)
+    return {
+      topic: 'time', level,
+      question_text: tr(lang, `How many minutes are there in ${n} hours?`, `${n} saatte kaç dakika vardır?`),
+      format: 'numeric',
+      correct_answer: n * 60,
+      operandKey: `time:span:${n}`,
+      visual: { kind: 'clock', hour: 12, minute: 0, ask: 'span' },
+      hint_steps: [
+        tr(lang, 'One hour is 60 minutes.', 'Bir saat 60 dakikadır.'),
+        tr(lang, `So ${n} hours is ${n} lots of 60.`, `Yani ${n} saat, ${n} kere 60 eder.`),
+      ],
+    }
+  }
+
+  if (shape === 'h24') {
+    // Afternoon only — the morning half is the same number twice over and teaches nothing.
+    // The minutes are cosmetic here, so they stay in the first half of the hour: at 11:59 the
+    // short hand is already touching the 12 and a child reads the hour as 12, which turns a
+    // question about 24-hour time into a trick about hand positions.
+    const m = pick([0, 5, 10, 15, 20])
+    const afternoon = randInt(1, 11)
+    return {
+      topic: 'time', level,
+      question_text: tr(lang,
+        'The clock shows the afternoon. What is the hour on a 24-hour clock?',
+        'Saat öğleden sonrayı gösteriyor. 24 saatlik gösterimde saat kaçtır?'),
+      format: 'numeric',
+      correct_answer: afternoon + 12,
+      operandKey: `time:h24:${afternoon}:${m}`,
+      visual: { kind: 'clock', hour: afternoon, minute: m, ask: 'h24' },
+      hint_steps: [
+        tr(lang, 'A 24-hour clock keeps counting after midday instead of starting again at 1.',
+                 '24 saatlik gösterim öğleden sonra 1\'e dönmez, saymaya devam eder.'),
+        tr(lang, 'So an afternoon hour is that hour plus 12.', 'Yani öğleden sonraki saate 12 eklenir.'),
+      ],
+    }
+  }
+
+  // 'later' — the only shape that asks the child to move the clock rather than read it, which
+  // is exactly what the draggable hands are for.
+  const n = randInt(1, band <= 1 ? 3 : 6)
+  return {
+    topic: 'time', level,
+    question_text: tr(lang,
+      `It is ${h} o'clock. What time will it be in ${n} ${n === 1 ? 'hour' : 'hours'}? Write just the hour.`,
+      `Saat ${h}. ${n} saat sonra saat kaç olur? Sadece saati yaz.`),
+    format: 'numeric',
+    correct_answer: ((h + n - 1) % 12) + 1,
+    operandKey: `time:later:${h}:${n}`,
+    visual: { kind: 'clock', hour: h, minute: 0, ask: 'later' },
+    hint_steps: [
+      tr(lang, 'Move the short hand on one hour at a time.', 'Akrebi birer saat ilerlet.'),
+      tr(lang, `Count ${n} hours on from ${h}.`, `${TR_ABL[h]} başlayarak ${n} saat ileri say.`),
+    ],
+  }
+}
+
 const REGISTRY = {
   counting: countingTemplate,
+  time: timeTemplate,
   addition: additionTemplate,
   subtraction: subtractionTemplate,
   'multiplication-word': multiplicationWordTemplate,

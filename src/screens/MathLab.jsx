@@ -1,6 +1,7 @@
 import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
 import { generateProblem, TOPICS } from '../lib/mathTemplates'
+import { HelpPanel } from './MathScreen'
 
 // Isolated pilot for the math template engine (src/lib/mathTemplates.js). Not linked from
 // any menu, not wired to MathScreen/levels/gems — pure sandbox at /math-lab to try
@@ -13,18 +14,29 @@ export default function MathLab() {
   const [input, setInput] = useState('')
   const [result, setResult] = useState(null) // null | 'correct' | 'wrong'
   const [hintShown, setHintShown] = useState(0) // 0 = none, 1 = nudge, 2 = half, 3 = full
+  // The real help panel, driven exactly as MathScreen drives it — a wrong answer becomes the
+  // guess, and the round counter is what decides whether help answers that guess or gives up
+  // and shows the whole thing. Without this the sandbox could only show hint text.
+  const [help, setHelp] = useState(null)          // { guess, round } | null
+  const [helpKey, setHelpKey] = useState(0)       // remounts the panel so its internal state resets
 
   const nextProblem = (t = topic, l = level) => {
     setProblem(generateProblem(t, l))
     setInput('')
     setResult(null)
     setHintShown(0)
+    setHelp(null)
   }
 
   const check = () => {
     if (input.trim() === '') return
     const numeric = Number(input)
-    setResult(numeric === problem.correct_answer ? 'correct' : 'wrong')
+    const ok = numeric === problem.correct_answer
+    setResult(ok ? 'correct' : 'wrong')
+    if (!ok) {
+      setHelp(h => ({ guess: numeric, round: (h?.round ?? 0) + 1 }))
+      setHelpKey(k => k + 1)
+    }
   }
 
   return (
@@ -78,6 +90,27 @@ export default function MathLab() {
         {result === 'correct' && <div style={{ marginTop: 12, color: '#2EC486' }}>✅ correct — answer was {problem.correct_answer}</div>}
         {result === 'wrong' && <div style={{ marginTop: 12, color: '#FF6B6B' }}>❌ not quite — you said {input}</div>}
       </div>
+
+      {help && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: '#8d83ad', marginBottom: 8 }}>
+            HelpPanel · guess={help.guess} · round={help.round} · visual={problem.visual?.kind ?? 'none'}
+          </div>
+          <HelpPanel
+            key={helpKey}
+            question={problem.question_text}
+            questionType="symbolic"
+            templateTopic={problem.topic}
+            hintSteps={problem.hint_steps}
+            visual={problem.visual}
+            onDone={() => { setHelp(null); setInput(''); setResult(null) }}
+            onHelpUsed={() => {}}
+            language={lang}
+            guess={help.guess}
+            guessRound={help.round}
+          />
+        </div>
+      )}
 
       <div style={{ marginBottom: 16 }}>
         <button
