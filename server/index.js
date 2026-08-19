@@ -3834,6 +3834,38 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
   }
 })
 
+// Correct-unaided counts one, correct-after-help counts a half, wrong counts nothing.
+// Returns null for an empty set so callers can decide what to fall back to.
+function weightedAccuracy(rows) {
+  const list = Array.isArray(rows) ? rows.filter(Boolean) : []
+  if (!list.length) return null
+  const scored = list.reduce((sum, r) => sum + (r.correct ? (r.help_used ? 0.5 : 1) : 0), 0)
+  return Math.round((scored / list.length) * 100)
+}
+
+// The honest accuracy of the session before this one. math_progress only ever stored the
+// figure the child was shown, so rather than adding a column and a migration the number is
+// recomputed from that session's own attempt rows, which already record help_used per
+// question. Falls back to the stored figure for sessions that have no rows — history from
+// before per-question records existed, or a session whose attempts write failed.
+async function previousLevelAccuracy(childId, lastProgressRow) {
+  if (!lastProgressRow) return null
+  const { data } = await supabase
+    .from('math_attempts')
+    .select('session_id, correct, help_used, created_at')
+    .eq('child_id', childId)
+    .order('created_at', { ascending: false })
+    .limit(60)
+  const newest = data?.[0]
+  if (!newest) return lastProgressRow.accuracy
+  // Both rows are written by the same request seconds apart. If the newest attempts belong to
+  // some older session the two are not describing the same sitting, and pairing them would
+  // silently judge the ladder on the wrong evidence.
+  const drift = Math.abs(new Date(newest.created_at) - new Date(lastProgressRow.created_at))
+  if (!Number.isFinite(drift) || drift > 10 * 60 * 1000) return lastProgressRow.accuracy
+  return weightedAccuracy(data.filter(r => r.session_id === newest.session_id)) ?? lastProgressRow.accuracy
+}
+
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
   const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
@@ -3876,17 +3908,29 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // pair — otherwise "twice in a row" would collapse back into "every session".
     const { data: prevRows } = await supabase
       .from('math_progress')
-      .select('level, accuracy, level_change')
+      .select('level, accuracy, level_change, created_at')
       .eq('child_id', childId)
       .order('created_at', { ascending: false })
       .limit(1)
     const last = prevRows?.[0]
-    const earnedHereBefore = !!last && last.level === level && last.accuracy >= 80 && last.level_change !== 'up'
+
+    // A right answer found only after the help panel was shown is not the same evidence as one
+    // the child produced unaided, but it used to score identically — so "wrong, open help,
+    // read the answer off the picture" was indistinguishable from "knew it", and the ladder
+    // climbed on a signal that had stopped meaning anything. Half marks: enough that using
+    // help still counts for something, not enough to earn a rung on its own.
+    //
+    // Deliberately separate from `acc`. That figure is what the child is shown and what the
+    // gems are scaled by, and neither should change — the point is an honest level, not a
+    // punishment the child can feel.
+    const levelAcc = weightedAccuracy(attempts) ?? acc
+    const lastLevelAcc = await previousLevelAccuracy(childId, last)
+    const earnedHereBefore = !!last && last.level === level && lastLevelAcc >= 80 && last.level_change !== 'up'
 
     let newLevel = level
     let levelChange = 'same'
-    if (acc >= 80 && earnedHereBefore && level < 15) { newLevel = level + 1; levelChange = 'up' }
-    else if (acc < 40 && level > 1) { newLevel = level - 1; levelChange = 'down' }
+    if (levelAcc >= 80 && earnedHereBefore && level < 15) { newLevel = level + 1; levelChange = 'up' }
+    else if (levelAcc < 40 && level > 1) { newLevel = level - 1; levelChange = 'down' }
 
     const { error: progErr } = await supabase.from('math_progress').insert({
       child_id: childId,
