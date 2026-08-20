@@ -222,7 +222,7 @@ function multArrayVariant(a, b, name, object, lang) {
       `${name} arranges ${object} in ${a} rows of ${b}. How many ${object} in total?`,
       `${name} ${object} dizdi: ${a} sıra, her sırada ${b} tane. Toplam kaç ${object} eder?`),
     hint_steps: [
-      tr(lang, `That's an array: ${a} rows, with ${b} ${object} in each row.`, `Bu bir dizilim: ${a} sıra, her sırada ${b} ${object}.`),
+      tr(lang, `Each row is one equal group of ${b} ${object}.`, `Her bir sıra eşit bir grup demek: ${b} ${object}.`),
       tr(lang, `${a} rows of ${b} is ${a} × ${b}.`, `${a} sıra × ${b} tane: ${a} × ${b}.`),
     ],
     visual: { kind: 'array', rows: a, cols: b },
@@ -238,7 +238,7 @@ function multReadingVariant(a, b, name, _object, lang) {
       `${name} reads ${b} pages a day for ${a} days. How many pages does ${name} read in total?`,
       `${name} her gün ${b} sayfa okuyor. ${a} günde toplam kaç sayfa okur?`),
     hint_steps: [
-      tr(lang, `${name} reads for ${a} days, ${b} pages each day.`, `${name} ${a} gün okuyor, her gün ${b} sayfa.`),
+      tr(lang, `Each day is one group of ${b} pages.`, `Her bir gün bir grup demek: ${b} sayfa.`),
       tr(lang, `That's ${a} days × ${b} pages: ${a} × ${b}.`, `Yani ${a} gün × ${b} sayfa: ${a} × ${b}.`),
     ],
     // Days are the groups, pages the size — same picture as containers of objects.

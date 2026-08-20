@@ -395,18 +395,27 @@ function ShapeSVG({ kind, size = 92, ask, lit = 0, showMarks = false }) {
 // group, because that is what "shared equally" actually means; the answer then reads
 // straight off a single group. All numbers come from the template's `visual` descriptor,
 // never parsed from the question text.
-function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts }) {
+function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, capacity }) {
   // `counts` is the child's own guess dealt out, which is the one case where the groups can
   // come out uneven — the pool runs dry partway along the row.
   const perGroup = dealt / groups          // dealt only ever advances a whole round
   const handedOut = counts ? counts.reduce((a, b) => a + b, 0) : dealt
   const remaining = total - handedOut
-  const dot = total > 18 ? 11 : 14
+  const dot = Math.max(total, (capacity || 0) * groups) > 18 ? 11 : 14
 
   const Dot = ({ faded }) => (
     <span style={{
       width: dot, height: dot, borderRadius: '50%',
       background: faded ? '#d9d2ee' : MATH, display: 'inline-block',
+    }} />
+  )
+  // An empty place the guess asked for and the pool could not fill. Without these the boxes
+  // just look unevenly filled for no visible reason: a child who asks for 8 each out of 9
+  // sees 8, 1, 0 and reads it as a muddle, not as "8 each was too many".
+  const Slot = () => (
+    <span style={{
+      width: dot, height: dot, borderRadius: '50%',
+      border: '2px dashed #cfc7e6', boxSizing: 'border-box', display: 'inline-block',
     }} />
   )
 
@@ -426,7 +435,11 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts })
       >
         {remaining > 0
           ? Array.from({ length: remaining }).map((_, i) => <Dot key={i} />)
-          : <span style={{ fontFamily: FRED, fontSize: 13, fontWeight: 600, color: INK_SOFT }}>✓</span>}
+          // A tick means "all handed out, and it worked". An empty pool with boxes still
+          // unfilled is the opposite, so it gets a plain 0 instead of a well-done.
+          : <span style={{ fontFamily: FRED, fontSize: 13, fontWeight: 600, color: INK_SOFT }}>
+              {capacity && capacity * groups > total ? '0' : '✓'}
+            </span>}
       </button>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
@@ -441,9 +454,12 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts })
               display: 'flex', flexWrap: 'wrap', gap: 4,
               alignItems: 'center', justifyContent: 'center',
             }}>
-              {inBox === 0
+              {inBox === 0 && !capacity
                 ? <Dot faded />
-                : Array.from({ length: inBox }).map((_, i) => <Dot key={i} />)}
+                : <>
+                    {Array.from({ length: inBox }).map((_, i) => <Dot key={i} />)}
+                    {Array.from({ length: Math.max(0, (capacity || 0) - inBox) }).map((_, i) => <Slot key={`s${i}`} />)}
+                  </>}
             </div>
           )
         })}
@@ -462,6 +478,11 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts })
 // thing out. Three is enough for "too many → too few → closer" to be a real narrowing, and few
 // enough that a child who genuinely cannot do it is not stuck in a loop.
 const GUESS_ROUNDS = 3
+
+// Every box is drawn to the size the guess asked for, so a wild guess would fill the screen
+// with empty circles and stop reading as a picture. Past this the guess panel steps aside and
+// the ordinary deal-it-out help takes the question.
+const GUESS_MAX_SLOTS = 48
 
 // Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
 // screen on demand — in a real session a given one turns up once in ten questions and only
@@ -488,7 +509,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
     guessTitle:     n => `Sen ${n} dedin — herkese ${n} tane verelim mi?`,
-    guessShort:     n => `Yetmedi! Herkese ${n} tane veremedik.`,
+    guessShort:     (n, short) => `Herkese ${n} tane yetmedi — ${short} tane eksik.`,
     guessOver:      (n, left) => `Herkes ${n} tane aldı ama elimizde hâlâ ${left} tane var.`,
     guessRetry:     'Başka bir sayı deneyeyim! 💪',
   } : {
@@ -511,7 +532,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     showHint:       'Show help',
     moreHint:       'More help',
     guessTitle:     n => `You said ${n} — shall we give everyone ${n}?`,
-    guessShort:     n => `We ran out! Not everyone could get ${n}.`,
+    guessShort:     (n, short) => `Not enough for ${n} each — ${short} short.`,
     guessOver:      (n, left) => `Everyone got ${n}, but there are still ${left} left over.`,
     guessRetry:     'Let me try another number! 💪',
   }
@@ -550,6 +571,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // falls back to dealing the whole thing out, so a child who is genuinely stuck gets out.
   const guessNum = Number(guess)
   const guessMode = !!share && Number.isFinite(guessNum) && guessNum > 0
+    && guessNum * share.groups <= GUESS_MAX_SLOTS
     && guessRound > 0 && guessRound <= GUESS_ROUNDS
   const shapes = visual?.kind === 'shapes' ? visual : null
   const counting = visual?.kind === 'count' ? visual : null
@@ -1155,12 +1177,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         }}>
           {t.guessTitle(guessNum)}
         </div>
-        <ShareVisual total={share.total} groups={share.groups} highlight={0} dealt={0} counts={counts} />
+        <ShareVisual total={share.total} groups={share.groups} highlight={0} dealt={0} counts={counts} capacity={guessNum} />
         <div style={{
           fontFamily: FRED, fontWeight: 600, fontSize: 14, color: ORANGE,
           textAlign: 'center', maxWidth: 260,
         }}>
-          {ranOut ? t.guessShort(guessNum) : t.guessOver(guessNum, share.total - handedOut)}
+          {ranOut
+            ? t.guessShort(guessNum, guessNum * share.groups - share.total)
+            : t.guessOver(guessNum, share.total - handedOut)}
         </div>
       </div>
     )
