@@ -1,3 +1,5 @@
+import { downscale, toBase64 } from './image'
+
 // ── British National Curriculum ───────────────────────────────────────────────
 
 const BRITISH_CURRICULUM = {
@@ -102,13 +104,14 @@ export { BRITISH_CURRICULUM }
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 const API_URL = `${SERVER}/api/gemini/generate`
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+// Camera photos are shrunk first: a full-resolution capture is several MB, base64 inflates
+// it by a third, and every one of those bytes travels twice — browser to our proxy, proxy to
+// Google. Gemini tiles images down to 768px internally anyway, so 1600px costs nothing in
+// reading accuracy. Falls back to the original file wherever canvas is unavailable.
+async function photoPart(photo) {
+  let payload = photo
+  try { payload = await downscale(photo) } catch { payload = photo }
+  return { inline_data: { mime_type: payload.type || 'image/jpeg', data: await toBase64(payload) } }
 }
 
 // gemini-3.5-flash intermittently ends a response badly: it appends stray prose after the
@@ -199,57 +202,46 @@ export async function callGeminiJSON(prompt) {
   return callGemini([{ text: prompt }])
 }
 
-export async function transcribeStory(photos, language = 'en') {
-  const prompt = `You are an expert at reading young children's handwriting. First read the WHOLE page and understand the story the child is telling — its meaning and flow. THEN, for each part, infer the word the child most likely INTENDED, using sentence and story context.
+// Reading the page and judging what is on it used to be two calls, the second unable to start
+// until the first came back — the child watched "Reading your story…" for both round trips.
+// The vision call already has the whole story in front of it, so it answers both questions at
+// once. Note what this does NOT change: spelling_errors are still found in transcribed_text
+// (the cleaned-up version), never in the raw handwriting, because the editor highlights them
+// by matching the word in that text.
+export async function readStory(photos, topic, age, language = 'en') {
+  const n = Number(age) || 7
+  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const prompt = `You are an expert at reading young children's handwriting. A ${n}-year-old child has written a story on the topic: "${topic}". Read it, then judge it.
+
+First read the WHOLE page and understand the story the child is telling — its meaning and flow. THEN, for each part, infer the word the child most likely INTENDED, using sentence and story context.
 Example: "once a pola time" → the child means "once upon a time".
 Produce a clean, readable version of the story in correct, age-appropriate words.
 - Use context to resolve unclear handwriting; don't transcribe meaningless letter fragments — infer the intended real word.
 - IGNORE drawings, speech bubbles, labels, and crossed-out words.
 - Read in natural order: top to bottom, left to right. Multiple photos are sequential pages — join them in order.
 - NEVER output offensive or nonsense strings.
-Return JSON only:
-{
-  "transcribed_text": string,
-  "uncertain_words": [{ "word": string, "index": number }]
-}
-uncertain_words = the few words you had to GUESS or were least sure about, so we can confirm them with the child. Keep this list short (max 4–5 entries). "index" is the 0-based word position in transcribed_text (split by whitespace).`
-  const parts = [{ text: prompt }]
-  for (const photo of photos) {
-    const base64 = await fileToBase64(photo)
-    parts.push({ inline_data: { mime_type: photo.type, data: base64 } })
-  }
-  return callGemini(parts)
-}
 
-export async function evaluateStory(transcribedText, topic, age, language = 'en') {
-  const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
-  const prompt = `You are evaluating a creative story written by a ${n}-year-old child on the topic: "${topic}".
-The story text is:
-"""
-${transcribedText}
-"""
 Return JSON only, no other text:
 {
+  "transcribed_text": string,
+  "uncertain_words": [{ "word": string, "index": number }],
   "word_count": number,
   "has_profanity": boolean,
   "too_short": boolean,
   "encouragement": "short warm message max 2 sentences in ${lang}",
-  "spelling_errors": [{ "wrong": "misspelled word as written", "correct": "correct spelling", "index": 0 }],
+  "spelling_errors": [{ "wrong": "misspelled word exactly as it appears in transcribed_text", "correct": "correct spelling", "index": 0 }],
   "quality": number
 }
-Set "quality" 0-100 for how well the story is told for this age — ideas, sentences, spelling
-effort. Judge the WRITING, not its length: a short story told well scores high. Do NOT decide
-any reward; the amount is not yours to set.
 Rules:
-- word_count: count words in the text above
+- uncertain_words: the few words you had to GUESS or were least sure about, so we can confirm them with the child. Keep this list short (max 4–5 entries). "index" is the 0-based word position in transcribed_text (split by whitespace).
+- word_count: count words in transcribed_text
 - too_short: true if word_count < 15
 - encouragement: always positive and warm, age-appropriate for a ${n}-year-old, in ${lang}, never mention evaluation or checking
 - has_profanity: true if any profanity or inappropriate language is present
-- quality: judge the writing for this age. Length is NOT quality — the server weighs effort
-  separately and will not thank you for inflating this because a story is long.
-- spelling_errors: for the 11+ path only — flag unambiguous misspellings in the text with a single clear correction. Empty array is fine; when in doubt, omit.`
-  return callGemini([{ text: prompt }])
+- spelling_errors: for the 11+ path only — unambiguous misspellings that are STILL PRESENT in transcribed_text, with a single clear correction. Every "wrong" must appear in transcribed_text word for word, or it cannot be highlighted. Empty array is fine; when in doubt, omit.
+- quality: 0-100 for how well the story is told for this age — ideas, sentences, spelling effort. Judge the WRITING, not its length: a short story told well scores high. Length is NOT quality — the server weighs effort separately and will not thank you for inflating this because a story is long. Do NOT decide any reward; the amount is not yours to set.`
+  const parts = [{ text: prompt }, ...await Promise.all(photos.map(photoPart))]
+  return callGemini(parts)
 }
 
 // The language matters here or the check does harm: a Turkish title run through an English
@@ -416,11 +408,7 @@ Return JSON only:
   "gems_earned": 30
 }
 Rules: level_change is "up" if accuracy>=80, "down" if accuracy<40, else "same". new_level = ${clampedLevel} adjusted by level_change (min 1, max 15). gems_earned: 30 if accuracy>=80, 25 if>=60, 15 if>=40, else 10.`
-  const parts = [{ text: prompt }]
-  for (const photo of photos) {
-    const base64 = await fileToBase64(photo)
-    parts.push({ inline_data: { mime_type: photo.type, data: base64 } })
-  }
+  const parts = [{ text: prompt }, ...await Promise.all(photos.map(photoPart))]
   return callGemini(parts)
 }
 

@@ -2,7 +2,7 @@ import { t, childLang } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
-import { transcribeStory, evaluateStory, checkTitleSpelling } from '../lib/gemini'
+import { readStory, checkTitleSpelling } from '../lib/gemini'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
@@ -233,24 +233,23 @@ export default function StoriesScreen() {
   const startEvaluation = async () => {
     setStep('evaluating')
     try {
-      const { transcribed_text, uncertain_words } = await transcribeStory(photos, 'en')
-      if (!transcribed_text) throw new Error('transcription empty')
+      const read = await readStory(photos, chosenIdea?.topic || '', child?.age || 7, 'en')
+      if (!read.transcribed_text) throw new Error('transcription empty')
 
       // Fire-and-forget safety screen — never blocks the child's flow
       if (child?.id) {
         fetch(`${SERVER}/api/screen-story-draft`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ child_id: child.id, transcribed_text }),
+          body: JSON.stringify({ child_id: child.id, transcribed_text: read.transcribed_text }),
         }).catch(() => {})
       }
 
-      const evalData = await evaluateStory(transcribed_text, chosenIdea?.topic || '', child?.age || 7, 'en')
-      const result = { ...evalData, transcribed_text, uncertain_words: uncertain_words || [] }
+      const result = { ...read, uncertain_words: read.uncertain_words || [] }
       setEvalResult(result)
-      console.log('[transcribeStory] transcribed_text:', transcribed_text)
-      console.log('[transcribeStory] uncertain_words:', result.uncertain_words)
-      console.log('[evaluateStory] spelling_errors:', result.spelling_errors)
+      console.log('[readStory] transcribed_text:', result.transcribed_text)
+      console.log('[readStory] uncertain_words:', result.uncertain_words)
+      console.log('[readStory] spelling_errors:', result.spelling_errors)
       setSpellingState((result.spelling_errors || []).map(() => 'pending'))
       setStep('encourage')
     } catch {

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { downscale, toBase64 } from './image'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -67,31 +68,6 @@ export async function getDrawings(ageGroup) {
   return data.drawings || []
 }
 
-// Shrinks a camera photo before it goes over the wire. A raw phone capture is
-// several MB; a drawing on paper needs none of that resolution.
-async function downscale(file, maxEdge = 1600, quality = 0.85) {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
-  const w = Math.round(bitmap.width * scale)
-  const h = Math.round(bitmap.height * scale)
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
-  bitmap.close?.()
-  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality))
-  return blob || file
-}
-
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-}
-
 // Sends the finished-drawing photo THROUGH the backend.
 //
 // The bytes deliberately do not go straight to Storage the way homework
@@ -115,7 +91,7 @@ export async function submitPainting(childId, file, { drawingId = null, ageGroup
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      photo_base64: await blobToBase64(payload),
+      photo_base64: await toBase64(payload),
       mime_type: payload.type || 'image/jpeg',
       drawing_id: drawingId,
       age_group: ageGroup,
@@ -270,17 +246,8 @@ export async function deleteChildStory(childId, storyId) {
   return data
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 export async function uploadStoryCover(childId, file) {
-  const imageBase64 = await fileToBase64(file)
+  const imageBase64 = await toBase64(file)
   const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories/cover`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
