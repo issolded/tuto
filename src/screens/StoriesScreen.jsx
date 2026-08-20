@@ -233,7 +233,7 @@ export default function StoriesScreen() {
   const startEvaluation = async () => {
     setStep('evaluating')
     try {
-      const read = await readStory(photos, chosenIdea?.topic || '', child?.age || 7, 'en')
+      const read = await readStory(photos, chosenIdea?.topic || '', child?.age || 7, language)
       if (!read.transcribed_text) throw new Error('transcription empty')
 
       // Fire-and-forget safety screen — never blocks the child's flow
