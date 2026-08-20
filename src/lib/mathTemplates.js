@@ -597,7 +597,11 @@ function numberLineTemplate(level, lang) {
     const terms = [start, start + step, start + step * 2, start + step * 3]
     return {
       topic: 'counting', level,
-      question_text: tr(lang, `${terms.join(', ')}, __ what comes next?`, `${terms.join(', ')}, __ sırada hangi sayı gelir?`),
+      // A bare sequence, both languages. The Turkish sentence it replaces was ungrammatical
+      // ("__ sırada hangi sayı gelir"), and the words bought nothing: the row of numbers with
+      // a gap on the end already asks the question. Being bare is also what lets the help
+      // panel recognise it and walk the child arrow by arrow (see isBareSequence).
+      question_text: `${terms.join(', ')}, ?`,
       format: 'numeric',
       correct_answer: start + step * 4,
       operandKey: `step:${step}:${start}`,

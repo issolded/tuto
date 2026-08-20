@@ -73,7 +73,11 @@ const ANIM = `
   to   { opacity: 1; transform: translateY(0); }
 }
 .math-press:active { transform: scale(.96) !important; }
-.math-scroll { overflow-y: auto; }
+/* min-height:0 is what makes the flex:1 actually bind. Without it the item's automatic
+   minimum size is its content, so a tall help panel pushed the whole column past the
+   viewport instead of scrolling inside itself — and the wrapper's overflow:hidden then
+   put the bottom of the panel somewhere no scroll could reach on desktop. */
+.math-scroll { overflow-y: auto; min-height: 0; }
 .math-scroll::-webkit-scrollbar { display: none; }
 `
 
@@ -121,6 +125,17 @@ function constantPatternStep(question) {
   return step
 }
 
+// The arrow walkthrough used to be gated on a per-question 'pattern' label, and that label
+// stopped being written the day the session builder moved to curriculum topics — so the one
+// help panel that actually shows a child how far apart two numbers are had been dead. The
+// shape of the question is the honest test anyway: a bare comma-separated run of numbers
+// ending in a blank. Anything with words or an operator in it is a different question and
+// keeps its written steps.
+function isBareSequence(question) {
+  const q = String(question).trim().replace(/[?_…\s]+$/, '').replace(/,$/, '')
+  return /^\d+(?:\s*,\s*\d+)+$/.test(q)
+}
+
 // One comparison for the whole screen. The per-question check and the final marking used to
 // each have their own: a tolerance in one, strict equality in the other. They agree today only
 // because a typed "62.5" parses to exactly 62.5 — the moment either side is computed rather
@@ -152,7 +167,7 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   }
   // A constant-step pattern gets the interactive arrow walkthrough; anything else needs
   // the steps to explain the real rule.
-  if (questionType === 'pattern') {
+  if (isBareSequence(question)) {
     return constantPatternStep(question) !== null || (hintSteps?.length ?? 0) > 0
   }
   // Model-written steps understand the problem; prefer them over any text guess (see
@@ -445,9 +460,20 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, c
   const remaining = total - handedOut
   const dot = Math.max(total, (capacity || 0) * groups) > 18 ? 11 : 14
 
+  // Every box is drawn at the size of a full one, whatever is in it. Boxes that size themselves
+  // to their contents shrink as the sharing goes on, so a row of equal groups looks unequal —
+  // which is the one thing this picture exists to show. A fixed box also means the empty places
+  // are visible as space, not just as missing width.
+  const GAP = 4, PAD = 9
+  const perBox = Math.max(1, capacity || Math.ceil(total / groups))
+  const cols = Math.min(perBox, 5)
+  const boxRows = Math.ceil(perBox / cols)
+  const boxW = Math.max(52, cols * dot + (cols - 1) * GAP + PAD * 2)
+  const boxH = Math.max(52, boxRows * dot + (boxRows - 1) * GAP + PAD * 2)
+
   const Dot = ({ faded }) => (
     <span style={{
-      width: dot, height: dot, borderRadius: '50%',
+      width: dot, height: dot, borderRadius: '50%', flexShrink: 0,
       background: faded ? '#d9d2ee' : MATH, display: 'inline-block',
     }} />
   )
@@ -456,7 +482,7 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, c
   // sees 8, 1, 0 and reads it as a muddle, not as "8 each was too many".
   const Slot = () => (
     <span style={{
-      width: dot, height: dot, borderRadius: '50%',
+      width: dot, height: dot, borderRadius: '50%', flexShrink: 0,
       border: '2px dashed #cfc7e6', boxSizing: 'border-box', display: 'inline-block',
     }} />
   )
@@ -490,10 +516,10 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, c
           const inBox = counts ? counts[g] : perGroup
           return (
             <div key={g} style={{
-              minWidth: 52, minHeight: 52, padding: '8px 9px', borderRadius: 15,
+              width: boxW, height: boxH, boxSizing: 'border-box', padding: PAD, borderRadius: 15,
               border: `2px solid ${isPicked ? GREEN : '#ded8f0'}`,
               background: isPicked ? `${GREEN}14` : '#fff',
-              display: 'flex', flexWrap: 'wrap', gap: 4,
+              display: 'flex', flexWrap: 'wrap', gap: GAP,
               alignItems: 'center', justifyContent: 'center',
             }}>
               {inBox === 0 && !capacity
@@ -602,7 +628,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const isMinus = templateTopic ? (templateTopic === 'subtraction' && drawable) : (canTrustText && question.includes('-') && drawable)
   // Only a constant-step pattern can be walked arrow by arrow (see constantPatternStep);
   // an alternating one falls through to the steps like any other question.
-  const patternStep = questionType === 'pattern' ? constantPatternStep(question) : null
+  const patternStep = isBareSequence(question) ? constantPatternStep(question) : null
   const usesArrowUI = patternStep !== null
   // A template-supplied descriptor is ground truth, so it outranks the step hints —
   // seeing 12 dealt into 3 groups beats reading about it.
@@ -649,7 +675,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Big numbers open on the finished picture because dealing 28 counters one round at a time
   // is tedious, not instructive. In guess mode that same jump would hand over the answer
   // before the child has been asked anything, so it is suppressed there.
-  useEffect(() => { if (bigNums && !guessMode) setActiveTab('show') }, [])
+  // Sharing and the arrow walk are excluded outright. One tap deals a whole round, so 24 into
+  // 6 groups is four taps, not tedious — and a sequence is four arrows however big its numbers
+  // are; "1450, 1460, …" trips the >15 test on digits alone. In both cases the Show tab is the
+  // finished picture, so opening there skips the only part that teaches anything.
+  useEffect(() => { if (bigNums && !guessMode && !share && !usesArrowUI) setActiveTab('show') }, [])
 
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
@@ -880,8 +910,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       const toDisplay = toNum !== undefined ? toNum : '?'
       setActiveArrow(i)
       setArrowInput('')
+      // Turkish case suffixes on a number follow how the number is *said*, which digits do not
+      // tell you: 3310'dan but 3315'ten, and no rule gets you there from the numeral. "X ile Y
+      // arası" needs no suffix at all, so it is right for every number the dial can produce.
       setTutoBubble(tr
-        ? `${from}'den ${toDisplay}'ye kaç adım?`
+        ? `${from} ile ${toDisplay} arası kaç adım?`
         : `${from} to ${toDisplay} — how many steps?`)
     }
 
@@ -899,14 +932,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         setArrowInput('')
         if (Object.keys(newSolved).length === arrowCount) {
           setTutoBubble(tr
-            ? `${nums[nums.length - 1]}'dan sonra ne gelir? Şimdi yaz! 💪`
+            ? `Peki sırada hangi sayı var? Şimdi yaz! 💪`
             : `So what comes after ${nums[nums.length - 1]}? Type it in! 💪`)
         } else {
           const nextTo = nums[i + 2]
           setTutoBubble(tr
             ? (nextTo !== undefined
-                ? `Evet! ${stepLabel(expected)}. Peki ${toNum}'den ${nextTo}'ye?`
-                : `Evet! ${stepLabel(expected)}. O zaman ${nums[nums.length - 1]}'dan sonra ne gelir?`)
+                ? `Evet! ${stepLabel(expected)}. Peki ${toNum} ile ${nextTo} arası?`
+                : `Evet! ${stepLabel(expected)}. O zaman sırada hangi sayı var?`)
             : (nextTo !== undefined
                 ? `Yes! ${stepLabel(expected)}. Now ${toNum} to ${nextTo}?`
                 : `Yes! ${stepLabel(expected)}. So what comes after ${nums[nums.length - 1]}?`))
@@ -914,7 +947,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       } else {
         const toDisplay = toNum !== undefined ? toNum : '?'
         setTutoBubble(tr
-          ? `Tekrar dene! ${from}'den ${toDisplay}'ye say 🔢`
+          ? `Tekrar dene! ${from} ile ${toDisplay} arasını say 🔢`
           : `Try again! Count from ${from} to ${toDisplay} 🔢`)
         setArrowInput('')
       }
@@ -1806,6 +1839,11 @@ export default function MathScreen() {
     margin: '0 auto', display: 'flex', flexDirection: 'column',
     fontFamily: "'Nunito', sans-serif",
   }
+  // The question and paper screens are a fixed shell: header pinned, one scrolling body.
+  // They already said so with overflow:hidden, but only had a minimum height, so a tall help
+  // panel grew the column past the window and the clipped part became unreachable on desktop.
+  // dvh rather than vh so a phone's collapsing address bar does not cut the keypad off.
+  const shell = { ...wrap, height: '100dvh', minHeight: 0, overflow: 'hidden' }
 
   const BackBtn = ({ to }) => (
     <button
@@ -1981,7 +2019,7 @@ export default function MathScreen() {
   if (step === 'paper_questions') return (
     <>
     {leaveSheet}
-    <div style={{ ...wrap, overflow: 'hidden' }}>
+    <div style={shell}>
       <style>{ANIM}</style>
 
       <div style={{ background: MATH, padding: '16px 22px 18px', borderRadius: '0 0 26px 26px', flexShrink: 0 }}>
@@ -2110,7 +2148,7 @@ export default function MathScreen() {
     return (
       <>
       {leaveSheet}
-      <div style={{ ...wrap, overflow: 'hidden' }}>
+      <div style={shell}>
         <style>{ANIM}</style>
 
         {/* Flash feedback overlay */}
