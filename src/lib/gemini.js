@@ -241,7 +241,17 @@ Rules:
 - spelling_errors: for the 11+ path only — unambiguous misspellings that are STILL PRESENT in transcribed_text, with a single clear correction. Every "wrong" must appear in transcribed_text word for word, or it cannot be highlighted. Empty array is fine; when in doubt, omit.
 - quality: 0-100 for how well the story is told for this age — ideas, sentences, spelling effort. Judge the WRITING, not its length: a short story told well scores high. Length is NOT quality — the server weighs effort separately and will not thank you for inflating this because a story is long. Do NOT decide any reward; the amount is not yours to set.`
   const parts = [{ text: prompt }, ...await Promise.all(photos.map(photoPart))]
-  return callGemini(parts)
+  const result = await callGemini(parts)
+  // Asked for the word "exactly as it appears", the model sometimes hands back the punctuation
+  // sitting next to it — "biscit." rather than "biscit". Both consumers match on the bare word,
+  // so that error would quietly fail to highlight and its fix button would replace nothing.
+  if (Array.isArray(result?.spelling_errors)) {
+    const bare = s => String(s ?? '').replace(/^[^\p{L}\p{N}']+|[^\p{L}\p{N}']+$/gu, '')
+    result.spelling_errors = result.spelling_errors
+      .map(e => ({ ...e, wrong: bare(e.wrong), correct: bare(e.correct) }))
+      .filter(e => e.wrong && e.correct && e.wrong !== e.correct)
+  }
+  return result
 }
 
 // The language matters here or the check does harm: a Turkish title run through an English
