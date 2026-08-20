@@ -47,6 +47,7 @@ const TEMPLATE_FOR_TOPIC = {
   y2_division: 'division-word',
   y2_fractions: 'fraction-of-number',
   y2_time: 'time',
+  y2_statistics: 'pictogram',
 
   y3_addition: 'addition',
   y3_subtraction: 'subtraction',
@@ -55,6 +56,7 @@ const TEMPLATE_FOR_TOPIC = {
   y3_fractions: 'fraction-of-number',
   y3_time: 'time',
   y3_geometry: 'geometry',
+  y3_statistics: 'pictogram',
 
   y4_addition: 'addition',
   y4_subtraction: 'subtraction',
@@ -70,8 +72,12 @@ const TEMPLATE_FOR_TOPIC = {
 
   // Deliberately absent, and it is worth saying why rather than leaving a silent gap:
   // money (no template), place value past 100 (the counting template draws objects),
-  // measurement, area and perimeter, statistics, decimals and percentages, angles beyond
+  // measurement, area and perimeter, decimals and percentages, angles beyond
   // sides-and-corners, algebra, ratio, and all of Year 6.
+  //
+  // Statistics stops at Year 3 on purpose: the pictogram template covers pictograms and the
+  // scaled key, which is what Years 2 and 3 ask for. Year 4 and up want bar charts, line
+  // graphs and two-way tables — different pictures, not a harder version of this one.
   //
   // y1_measurement is the awkward one: it bundles lengths, mass, capacity, money AND telling
   // the time to the hour, so mapping it to the time template would quietly delete four of its

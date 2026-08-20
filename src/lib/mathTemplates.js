@@ -17,6 +17,9 @@
 //   { kind: 'groups', groups, per }                — that many equal groups of that size
 //   { kind: 'array',  rows, cols }                 — a rectangular arrangement
 //   { kind: 'clock',  hour, minute, ask }          — a clock face; `ask` says what is wanted
+//   { kind: 'pictogram', unit, each, rows, highlight } — a chart of `unit` symbols, one row
+//       per { label, count }, where one symbol stands for `each`; `highlight` names the rows
+//       the question is about, which the help panel lights up and counts along
 // Optional: a template without one simply gets no visual.
 //
 // A "template" is a function(level) -> problem. It picks numbers, builds the question
@@ -358,6 +361,114 @@ function divisionWordTemplate(level, lang) {
   }
 }
 
+// ── Pictogram (statistics) ───────────────────────────────────────────────────
+// "Each symbol in Can's pictogram is 8 books, so what do his 5 symbols show?" is what the
+// model wrote for this strand: a chart the child cannot see, named with a word they have
+// never met, and underneath it a plain 5 × 8 in costume. Reading the key IS the skill the
+// curriculum asks for, so the chart has to be on screen — and once it is drawn, the word
+// "pictogram" explains itself and never has to appear in the question at all.
+const PICTO_SETS = [
+  { unit: '🍎', en: { noun: 'apples', verb: 'pick'    }, tr: { noun: 'elma',         verb: 'topladı' } },
+  { unit: '⚽', en: { noun: 'goals',  verb: 'score'   }, tr: { noun: 'gol',          verb: 'attı'    } },
+  { unit: '📕', en: { noun: 'books',  verb: 'read'    }, tr: { noun: 'kitap',        verb: 'okudu'   } },
+  { unit: '⭐', en: { noun: 'stars',  verb: 'earn'    }, tr: { noun: 'yıldız',       verb: 'kazandı' } },
+  { unit: '🐚', en: { noun: 'shells', verb: 'collect' }, tr: { noun: 'deniz kabuğu', verb: 'topladı' } },
+]
+
+function shuffled(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = randInt(0, i)
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function pictogramTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const set = pick(PICTO_SETS)
+  const { noun, verb } = set[lang === 'tr' ? 'tr' : 'en']
+  // Year 2 meets "simple pictograms" — one symbol, one thing. The scaled key is Year 3's,
+  // and it is what makes the picture worth reading rather than just counting.
+  const each = band <= 2 ? pick([1, 1, 2]) : pick([2, 5, 10])
+  const names = shuffled(MULT_NAMES[lang === 'tr' ? 'tr' : 'en']).slice(0, 3)
+  // Distinct counts, so "how many more" always has a positive answer and no two rows are
+  // ambiguous to point at.
+  const counts = shuffled([1, 2, 3, 4, 5]).slice(0, 3)
+  const rows = names.map((label, i) => ({ label, count: counts[i] }))
+
+  // Turkish takes no plural after a number; English needs the singular when the key is 1.
+  const keyNoun = lang === 'tr' ? noun : (each === 1 ? noun.replace(/s$/, '') : noun)
+  const keyLine = tr(lang, `Each ${set.unit} stands for ${each} ${keyNoun}.`, `Her ${set.unit} ${each} ${noun} demek.`)
+  const scaleStep = each === 1
+    ? tr(lang, `Each ${set.unit} is one, so the count you say is the answer.`,
+               `Her sembol 1 demek, saydığın sayı cevaptır.`)
+    : tr(lang, `Each ${set.unit} is ${each} — multiply the number of symbols by ${each}.`,
+               `Her sembol ${each} demek — sembol sayısını ${each} ile çarp.`)
+
+  const ask = band <= 2 ? pick(['read', 'read', 'total']) : pick(['read', 'total', 'diff'])
+
+  if (ask === 'total') {
+    const totalSymbols = counts.reduce((a, b) => a + b, 0)
+    return {
+      topic: 'pictogram', level,
+      question_text: tr(lang, `${keyLine} How many ${noun} altogether?`, `${keyLine} Toplam kaç ${noun} var?`),
+      format: 'numeric',
+      correct_answer: totalSymbols * each,
+      operandKey: `picto:total:${each}:${counts.join('-')}`,
+      hint_steps: [
+        tr(lang, `Count the ${set.unit} in every row.`, `Bütün satırlardaki sembolleri say.`),
+        scaleStep,
+      ],
+      visual: { kind: 'pictogram', unit: set.unit, each, rows, highlight: names },
+    }
+  }
+
+  if (ask === 'diff') {
+    const hi = rows.reduce((m, r) => (r.count > m.count ? r : m))
+    const lo = rows.reduce((m, r) => (r.count < m.count ? r : m))
+    return {
+      topic: 'pictogram', level,
+      // Turkish puts a case suffix on a name through an apostrophe and it does not follow
+      // from the spelling — Emir'den but Zeynep'ten. "A ile B arasındaki fark" needs none.
+      question_text: tr(lang,
+        `${keyLine} How many more ${noun} did ${hi.label} ${verb} than ${lo.label}?`,
+        `${keyLine} ${hi.label} ile ${lo.label} arasındaki fark kaç ${noun}?`),
+      format: 'numeric',
+      correct_answer: (hi.count - lo.count) * each,
+      operandKey: `picto:diff:${each}:${hi.count}-${lo.count}`,
+      hint_steps: [
+        tr(lang, `Count ${hi.label}'s row, then ${lo.label}'s row.`,
+                 `Önce ${hi.label} satırını, sonra ${lo.label} satırını say.`),
+        each === 1
+          ? tr(lang, `Take the smaller count away from the bigger one.`, `Küçük sayıyı büyük sayıdan çıkar.`)
+          : tr(lang, `Find the difference in symbols, then multiply it by ${each}.`,
+                     `Sembol farkını bul, sonra ${each} ile çarp.`),
+      ],
+      visual: { kind: 'pictogram', unit: set.unit, each, rows, highlight: [hi.label, lo.label] },
+    }
+  }
+
+  const row = pick(rows)
+  return {
+    topic: 'pictogram', level,
+    question_text: tr(lang,
+      `${keyLine} How many ${noun} did ${row.label} ${verb}?`,
+      `${keyLine} ${row.label} kaç ${noun} ${verb}?`),
+    format: 'numeric',
+    correct_answer: row.count * each,
+    operandKey: `picto:read:${each}:${row.count}`,
+    hint_steps: [
+      // Finding the row is half the skill, so the first step points at it rather than at
+      // the arithmetic — the help panel then lights that row up.
+      tr(lang, `Find the row for ${row.label} and count the ${set.unit}.`,
+               `${row.label} satırındaki sembolleri say.`),
+      scaleStep,
+    ],
+    visual: { kind: 'pictogram', unit: set.unit, each, rows, highlight: [row.label] },
+  }
+}
+
 // ─── Registry ───────────────────────────────────────────────────────────────
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
@@ -691,6 +802,7 @@ const REGISTRY = {
   'fraction-of-number': fractionOfNumberTemplate,
   'division-word': divisionWordTemplate,
   geometry: geometryTemplate,
+  pictogram: pictogramTemplate,
 }
 
 export { SHAPES }

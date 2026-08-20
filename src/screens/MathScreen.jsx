@@ -390,6 +390,48 @@ function ShapeSVG({ kind, size = 92, ask, lit = 0, showMarks = false }) {
   )
 }
 
+// The chart the statistics questions are about. On the question card it is just drawn: the
+// child has to find the right row themselves, which is half of what reading a chart is. In
+// the help panel `tally` runs the key along the asked row — 5, 10, 15 under the symbols —
+// which is the other half, and the reason a scaled pictogram is worth teaching at all.
+export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
+  const lit = new Set(tally ? (highlight || []) : [])
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <div style={{
+        fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT,
+        background: '#f4f1fb', borderRadius: 999, padding: '4px 12px', marginBottom: 2,
+      }}>
+        {unit} = {each}
+      </div>
+      {rows.map(r => (
+        <div key={r.label} style={{
+          display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'stretch',
+          background: lit.has(r.label) ? `${GREEN}14` : 'transparent',
+          borderRadius: 12, padding: '3px 7px',
+        }}>
+          <span style={{
+            width: 56, flexShrink: 0, textAlign: 'right', fontFamily: FRED, fontWeight: 600,
+            fontSize: 13, color: INK,
+          }}>{r.label}</span>
+          <span style={{ display: 'flex', gap: 4 }}>
+            {Array.from({ length: r.count }).map((_, i) => (
+              <span key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: size, lineHeight: 1.1 }}>{unit}</span>
+                {lit.has(r.label) && (
+                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: GREEN }}>
+                    {each * (i + 1)}
+                  </span>
+                )}
+              </span>
+            ))}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // Division and fractions are the same picture — deal a total into equal groups — so one
 // component covers levels 9, 10 and 15. Each tap deals a full round, one item to every
 // group, because that is what "shared equally" actually means; the answer then reads
@@ -574,17 +616,24 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     && guessNum * share.groups <= GUESS_MAX_SLOTS
     && guessRound > 0 && guessRound <= GUESS_ROUNDS
   const shapes = visual?.kind === 'shapes' ? visual : null
+  // The Show tab lights every mark and writes the count beneath it, which on a single shape
+  // is the answer one tap away — so a child who opens help never counts anything. Counting
+  // IS the skill here, so it stays shut until they have genuinely tried, on the same patience
+  // the division help gets: three attempts of their own first.
+  const shapeReveal = !!shapes && guessRound >= GUESS_ROUNDS
   const counting = visual?.kind === 'count' ? visual : null
   const clock = visual?.kind === 'clock' ? visual : null
+  const picto = visual?.kind === 'pictogram' ? visual : null
   // Both multiplication framings draw the same way — rows of a grid, or groups in a row —
   // so they share one path and differ only in how the rows are spaced and labelled.
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && !clock && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
-  // picture and the point is to turn it, so a second tab holding a still one is a downgrade.
-  const onePanel = hasStepHints || !!clock
+  // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
+  // and a chart is the same: there is one of it, already counted along.
+  const onePanel = hasStepHints || !!clock || !!picto || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -655,6 +704,35 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           {guide || (tr ? 'Kolları parmağınla çevir — saat seninle değişir.' : 'Turn the hands with your finger — the time changes with you.')}
         </div>
         <DraggableClock hour={clock.hour} minute={clock.minute} size={228} language={language} />
+        {hintSteps?.length > 0 && (
+          <StepHints
+            question={question}
+            hintSteps={hintSteps}
+            revealed={hintsRevealed}
+            onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }}
+            showMore={t.showHint}
+            moreHint={t.moreHint}
+          />
+        )}
+      </div>
+    )
+  } else if (picto) {
+    // The chart is already in front of the child, so help cannot be "here is the chart".
+    // What it adds is the running total under the row the question asked about: the child
+    // sees 5, 10, 15 appear along the symbols and reads the key instead of being told it.
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 280,
+        }}>
+          {picto.each === 1
+            ? (tr ? 'Işıklı satırdaki sembolleri say.' : 'Count the symbols in the lit row.')
+            : (tr ? `Her sembol ${picto.each} demek — sayı sembolün altında yazıyor.`
+                  : `Each symbol is ${picto.each} — the running total is under each one.`)}
+        </div>
+        <Pictogram unit={picto.unit} each={picto.each} rows={picto.rows} highlight={picto.highlight} tally size={30} />
         {hintSteps?.length > 0 && (
           <StepHints
             question={question}
@@ -2024,6 +2102,10 @@ export default function MathScreen() {
     // text would be a reading exercise — so the clock IS the question here, same as counting.
     // 'span' asks how many minutes are in n hours and needs no particular time on the face.
     const questionClock = qVisual?.kind === 'clock' && qVisual.ask !== 'span' ? qVisual : null
+    // Same reason as the clock: the question names a row and a key, and neither means
+    // anything without the chart. Drawn plain — finding the right row is the skill, so it
+    // is not lit up until the child asks for help.
+    const questionPicto = qVisual?.kind === 'pictogram' ? qVisual : null
 
     return (
       <>
@@ -2106,7 +2188,10 @@ export default function MathScreen() {
                 {questionClock && (
                   <ClockFace hour={questionClock.hour} minute={questionClock.minute} size={168} />
                 )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock ? 20 : 32), color: INK, lineHeight: 1.55 }}>
+                {questionPicto && (
+                  <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
+                )}
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   <MathText text={q} />
                 </div>
               </div>

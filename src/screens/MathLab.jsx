@@ -1,7 +1,7 @@
 import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
 import { generateProblem, TOPICS } from '../lib/mathTemplates'
-import { HelpPanel } from './MathScreen'
+import { HelpPanel, Pictogram } from './MathScreen'
 
 // Isolated pilot for the math template engine (src/lib/mathTemplates.js). Not linked from
 // any menu, not wired to MathScreen/levels/gems — pure sandbox at /math-lab to try
@@ -10,7 +10,9 @@ export default function MathLab() {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [topic, setTopic] = useState(TOPICS[0])
   const [level, setLevel] = useState(1)
-  const [problem, setProblem] = useState(() => generateProblem(TOPICS[0], 1))
+  // The sandbox used to generate English whatever the child's language was, so the one place
+  // built to try templates was the one place a Turkish phrasing could never be seen.
+  const [problem, setProblem] = useState(() => generateProblem(TOPICS[0], 1, null, lang))
   const [input, setInput] = useState('')
   const [result, setResult] = useState(null) // null | 'correct' | 'wrong'
   const [hintShown, setHintShown] = useState(0) // 0 = none, 1 = nudge, 2 = half, 3 = full
@@ -21,7 +23,7 @@ export default function MathLab() {
   const [helpKey, setHelpKey] = useState(0)       // remounts the panel so its internal state resets
 
   const nextProblem = (t = topic, l = level) => {
-    setProblem(generateProblem(t, l))
+    setProblem(generateProblem(t, l, null, lang))
     setInput('')
     setResult(null)
     setHintShown(0)
@@ -71,6 +73,13 @@ export default function MathLab() {
         <div style={{ fontSize: 11, color: '#8d83ad', marginBottom: 8 }}>
           topic={problem.topic} · level={problem.level} · format={problem.format}
         </div>
+        {/* A chart question cannot be read without its chart, so the sandbox draws it too —
+            otherwise the only way to see this template is a real Year 2 session. */}
+        {problem.visual?.kind === 'pictogram' && (
+          <div style={{ background: 'white', borderRadius: 12, padding: 12, marginBottom: 12, color: '#141127' }}>
+            <Pictogram unit={problem.visual.unit} each={problem.visual.each} rows={problem.visual.rows} />
+          </div>
+        )}
         <div style={{ fontSize: 18, marginBottom: 16 }}>{problem.question_text}</div>
 
         <div style={{ display: 'flex', gap: 10 }}>
