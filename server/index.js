@@ -602,6 +602,92 @@ async function sendWhatsAppBusinessMessage(to, message) {
   })
 }
 
+// ── Outside the 24h window: approved templates ────────────────────────────
+// The comment above says every send here is a reply to something the parent just did. That
+// was never quite true — a maths session finished at nine in the evening is nobody's reply.
+// Twilio still returns 201 for those and Meta drops them as 63016, so the log printed ✅ for
+// messages no parent ever saw.
+//
+// Outside the window the only thing that arrives is an approved template, and both of ours
+// take the same two variables: the child's name, and one clause saying what happened. They
+// say deliberately little. The full text is already written to `messages` as a 'tuto' turn
+// before any of this runs, so the moment the parent replies the window opens and Gemini
+// tells them the rest out of history — which is exactly what the templates promise.
+const WA_TEMPLATES = {
+  activity: {
+    tr: process.env.TWILIO_TEMPLATE_ACTIVITY_TR,
+    en: process.env.TWILIO_TEMPLATE_ACTIVITY_EN,
+  },
+  attention: {
+    tr: process.env.TWILIO_TEMPLATE_ATTENTION_TR,
+    en: process.env.TWILIO_TEMPLATE_ATTENTION_EN,
+  },
+}
+
+// A newline, a tab or a run of spaces in a variable is rejected by WhatsApp, and it rejects
+// the whole send rather than the variable — so a stray line break in a book title would lose
+// the notification.
+function templateVar(text, fallback) {
+  const clean = String(text ?? '').replace(/\s+/g, ' ').trim()
+  if (!clean) return fallback
+  return clean.length > 140 ? `${clean.slice(0, 139)}…` : clean
+}
+
+async function whatsappWindowOpen(parentId) {
+  const { data } = await supabase
+    .from('messages')
+    .select('created_at')
+    .eq('parent_id', parentId)
+    .eq('role', 'parent')
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const last = data?.[0]?.created_at
+  if (!last) return false
+  return Date.now() - new Date(last).getTime() < 24 * 60 * 60 * 1000
+}
+
+async function firstChildName(parentId) {
+  const { data } = await supabase
+    .from('children').select('name').eq('parent_id', parentId).order('created_at').limit(1)
+  return data?.[0]?.name || null
+}
+
+async function sendWhatsAppTemplate(to, kind, lang, childName, detail) {
+  if (!twilioClient || !TWILIO_WHATSAPP_NUMBER) throw new Error('Twilio not configured')
+  const contentSid = WA_TEMPLATES[kind]?.[lang]
+  if (!contentSid) throw new Error(`no ${kind}/${lang} template SID configured`)
+  const toE164 = to.startsWith('+') ? to : `+${to}`
+  await twilioClient.messages.create({
+    from: `whatsapp:${TWILIO_WHATSAPP_NUMBER}`,
+    to: `whatsapp:${toE164}`,
+    contentSid,
+    contentVariables: JSON.stringify({ 1: childName, 2: detail }),
+  })
+}
+
+// The three sendNotification* functions all reach here once they know the window is shut.
+// `notice` is { kind: 'activity' | 'attention', child?, detail: string | { tr, en } } —
+// child is optional because some events (a PIN lockout) belong to the family rather than to
+// one child, and the template still needs a name.
+async function sendWhatsAppNotice(parentId, phone, notice, lang, tag) {
+  if (!notice?.kind) {
+    console.log(`[${tag}] ⚠️ parent ${parentId} outside the 24h window and this notification has no template — dropped`)
+    return false
+  }
+  const detail = typeof notice.detail === 'string' ? notice.detail : notice.detail?.[lang]
+  const name = notice.child || await firstChildName(parentId)
+  try {
+    await sendWhatsAppTemplate(phone, notice.kind, lang,
+      templateVar(name, lang === 'en' ? 'your child' : 'çocuğunuz'),
+      templateVar(detail, lang === 'en' ? 'there is something new in the app' : 'uygulamada yeni bir şey var'))
+    console.log(`[${tag}] ✅ Sent ${notice.kind}/${lang} template → parent ${parentId} (window shut)`)
+    return true
+  } catch (err) {
+    console.error(`[${tag}] ❌ WhatsApp template failed: ${err.message}`)
+    return false
+  }
+}
+
 // Twilio takes a public/signed image URL directly (mediaUrl) — it fetches
 // and hosts it itself, no manual upload-then-send dance like Meta's raw API.
 async function sendWhatsAppPhoto(to, photoUrl, caption) {
@@ -623,7 +709,7 @@ function textFromParts(parts) {
   return (parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim()
 }
 
-async function sendNotification(parentId, message) {
+async function sendNotification(parentId, message, notice) {
   // Every proactive notification (homework arrived, reward
   // claimed, ...) used to be invisible to Gemini — logMessage only ran for
   // genuine chat turns, so when a parent replied "what does that mean?" the
@@ -634,7 +720,7 @@ async function sendNotification(parentId, message) {
 
   const { data: parent } = await supabase
     .from('parents')
-    .select('notification_channel, telegram_chat_id, whatsapp_phone')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs')
     .eq('id', parentId)
     .single()
 
@@ -654,19 +740,24 @@ async function sendNotification(parentId, message) {
 
   // ── WhatsApp (Twilio) ─────────────────────────────────────────────────────
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    try {
-      await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
-      console.log(`[NOTIFY] ✅ Sent via WhatsApp → parent ${parentId}`)
+    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    if (await whatsappWindowOpen(parentId)) {
+      try {
+        await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+        console.log(`[NOTIFY] ✅ Sent via WhatsApp → parent ${parentId}`)
+        return
+      } catch (err) {
+        console.error(`[NOTIFY] ❌ WhatsApp failed: ${err.message}`)
+      }
+    } else if (await sendWhatsAppNotice(parentId, parent.whatsapp_phone, notice, lang, 'NOTIFY')) {
       return
-    } catch (err) {
-      console.error(`[NOTIFY] ❌ WhatsApp failed: ${err.message}`)
     }
   }
 
   console.log(`[NOTIFY] ⚠️ No working channel for parent ${parentId} (channel="${channel}") — message dropped`)
 }
 
-async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = PHOTO_BUCKET) {
+async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = PHOTO_BUCKET, notice) {
   // Same reasoning as sendNotification — log the text so a later "what's
   // this photo?" reply has something to look back at.
   logMessage(parentId, 'tuto', message).catch(() => {})
@@ -677,7 +768,7 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
 
   const { data: parent } = await supabase
     .from('parents')
-    .select('notification_channel, telegram_chat_id, whatsapp_phone')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs')
     .eq('id', parentId)
     .single()
 
@@ -703,20 +794,29 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
   }
 
   // ── WhatsApp (Twilio) — real photo, not just a text fallback ─────────────
+  // Outside the window the image cannot go at all: templates carry text only, and this one
+  // has no media header. The parent is told a drawing/homework arrived and sees it in the
+  // app — re-sending it once they reply would mean queueing images, which is a bigger thing
+  // than it looks and not what this is.
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    try {
-      await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
-      console.log(`[NOTIFY-PHOTO] ✅ Sent photo via WhatsApp → parent ${parentId}`)
-      return
-    } catch (err) {
-      console.error(`[NOTIFY-PHOTO] ❌ WhatsApp photo failed: ${err.message} — trying text`)
+    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    if (await whatsappWindowOpen(parentId)) {
       try {
-        await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
-        console.log(`[NOTIFY-PHOTO] ✅ Sent text fallback via WhatsApp → parent ${parentId}`)
+        await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
+        console.log(`[NOTIFY-PHOTO] ✅ Sent photo via WhatsApp → parent ${parentId}`)
         return
-      } catch (err2) {
-        console.error(`[NOTIFY-PHOTO] ❌ WhatsApp text fallback also failed: ${err2.message}`)
+      } catch (err) {
+        console.error(`[NOTIFY-PHOTO] ❌ WhatsApp photo failed: ${err.message} — trying text`)
+        try {
+          await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
+          console.log(`[NOTIFY-PHOTO] ✅ Sent text fallback via WhatsApp → parent ${parentId}`)
+          return
+        } catch (err2) {
+          console.error(`[NOTIFY-PHOTO] ❌ WhatsApp text fallback also failed: ${err2.message}`)
+        }
       }
+    } else if (await sendWhatsAppNotice(parentId, parent.whatsapp_phone, notice, lang, 'NOTIFY-PHOTO')) {
+      return
     }
   }
 
@@ -729,16 +829,16 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
 // caption (parent still sees the homework arrived and can open the app). The
 // notification must NEVER be lost — every path degrades to text rather than
 // throwing.
-async function sendNotificationWithPhotos(parentId, message, photoUrls) {
+async function sendNotificationWithPhotos(parentId, message, photoUrls, notice) {
   const raw = (photoUrls || []).filter(Boolean)
-  if (raw.length <= 1) return sendNotificationWithPhoto(parentId, message, raw[0] || null)
+  if (raw.length <= 1) return sendNotificationWithPhoto(parentId, message, raw[0] || null, PHOTO_BUCKET, notice)
   // Short-lived signed URLs — Telegram fetches and re-hosts them immediately.
   const urls = await signedUrlsFor(raw, 900)
-  if (!urls.length) return sendNotification(parentId, message)
+  if (!urls.length) return sendNotification(parentId, message, notice)
 
   const { data: parent } = await supabase
     .from('parents')
-    .select('notification_channel, telegram_chat_id, whatsapp_phone')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs')
     .eq('id', parentId)
     .single()
 
@@ -759,30 +859,40 @@ async function sendNotificationWithPhotos(parentId, message, photoUrls) {
   }
 
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    // Caption rides the first page; the rest are bare so the parent reads one
-    // message and then scrolls the homework.
-    let sent = 0
-    try {
-      for (const [i, url] of urls.entries()) {
-        await sendWhatsAppPhoto(parent.whatsapp_phone, url, i === 0 ? message : undefined)
-        sent++
+    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    if (!(await whatsappWindowOpen(parentId))) {
+      if (await sendWhatsAppNotice(parentId, parent.whatsapp_phone, notice, lang, 'NOTIFY-PHOTOS')) {
+        // The template deliberately does not carry the caption, so it is the caption sitting
+        // in `messages` that lets Gemini answer the parent's reply with what actually happened.
+        logMessage(parentId, 'tuto', message).catch(() => {})
+        return
       }
-    } catch (err) {
-      console.error(`[NOTIFY-PHOTOS] ❌ WhatsApp photo ${sent + 1}/${urls.length} failed: ${err.message}`)
+    } else {
+      // Caption rides the first page; the rest are bare so the parent reads one
+      // message and then scrolls the homework.
+      let sent = 0
+      try {
+        for (const [i, url] of urls.entries()) {
+          await sendWhatsAppPhoto(parent.whatsapp_phone, url, i === 0 ? message : undefined)
+          sent++
+        }
+      } catch (err) {
+        console.error(`[NOTIFY-PHOTOS] ❌ WhatsApp photo ${sent + 1}/${urls.length} failed: ${err.message}`)
+      }
+      if (sent) {
+        // Falling through after a partial send would deliver page 1 twice, and the
+        // parent already has the caption — better an incomplete set than a duplicate.
+        console.log(`[NOTIFY-PHOTOS] ${sent === urls.length ? '✅' : '⚠️'} Sent ${sent}/${urls.length} photos via WhatsApp → parent ${parentId}`)
+        logMessage(parentId, 'tuto', message).catch(() => {})
+        return
+      }
+      console.error('[NOTIFY-PHOTOS] ❌ WhatsApp sent nothing — trying single photo')
     }
-    if (sent) {
-      // Falling through after a partial send would deliver page 1 twice, and the
-      // parent already has the caption — better an incomplete set than a duplicate.
-      console.log(`[NOTIFY-PHOTOS] ${sent === urls.length ? '✅' : '⚠️'} Sent ${sent}/${urls.length} photos via WhatsApp → parent ${parentId}`)
-      logMessage(parentId, 'tuto', message).catch(() => {})
-      return
-    }
-    console.error('[NOTIFY-PHOTOS] ❌ WhatsApp sent nothing — trying single photo')
   }
 
   // Any other channel, or a failed album: fall back to the single-photo path
   // (which itself falls back to text if the photo send fails).
-  await sendNotificationWithPhoto(parentId, message, urls[0])
+  await sendNotificationWithPhoto(parentId, message, urls[0], PHOTO_BUCKET, notice)
 }
 
 // ── Contribution diary tools (function-calling) ───────────────────────────────
@@ -2096,7 +2206,14 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
         const en = p?.prefs?.language === 'en'
         sendNotification(parent.id, en
           ? `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`
-          : `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`
+          : `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
+          // No child name: a wrong PIN belongs to whoever typed it, and that is the one
+          // thing a failed attempt cannot tell us. The template falls back to the family's
+          // first child, which is the same guess the welcome message already makes.
+          { kind: 'attention', detail: {
+            tr: `art arda ${PIN_MAX_FAILS} yanlış PIN denemesi oldu, 10 dakika kilitledim`,
+            en: `${PIN_MAX_FAILS} wrong PIN attempts in a row — locked for 10 minutes`,
+          } }
         ).catch(() => {})
       }
       pinAttempts.set(code, state)
@@ -2173,7 +2290,10 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
       const msg = language === 'en'
         ? `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`
         : `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`
-      sendNotification(child.parent_id, msg).catch(() => {})
+      sendNotification(child.parent_id, msg, { kind: 'attention', child: child.name, detail: {
+        tr: `"${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem), onayını bekliyor`,
+        en: `wants to claim "${reward.name}" (${reward.bt_cost} gems) and is waiting on you`,
+      } }).catch(() => {})
     }
 
     res.json({ claim })
@@ -2380,7 +2500,11 @@ app.post('/api/screen-story-draft', async (req, res) => {
       try {
         await sendNotification(
           child.parent_id,
-          `${child.name} bir şeyler yazıyor. Bir göz atmanda fayda olabilir.\n\n${transcribed_text}`
+          `${child.name} bir şeyler yazıyor. Bir göz atmanda fayda olabilir.\n\n${transcribed_text}`,
+          { kind: 'attention', child: child.name, detail: {
+            tr: 'yazdığı bir şeye göz atmanda fayda olabilir',
+            en: 'something they are writing may be worth a look',
+          } }
         )
       } catch (err) {
         console.error(`[SCREEN-DRAFT] notify failed: ${err.message}`)
@@ -2509,19 +2633,31 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Screening failed — unknown safety status, stay calm (fail-closed)
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}`
+              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              { kind: 'attention', child: child.name, detail: {
+                tr: 'yazdığı hikayeye göz atmanda fayda olabilir',
+                en: 'the story they wrote may be worth a look',
+              } }
             )
           } else if (cl === 'none' || cl === 'mild') {
             // Clean story — joyful share
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`
+              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              { kind: 'activity', child: child.name, detail: {
+                tr: `bir hikaye yazdı: "${title || 'Hikaye'}"`,
+                en: `wrote a story: "${title || 'Story'}"`,
+              } }
             )
           } else if (screening?.appropriateness === 'inappropriate') {
             // Inappropriate language — neutral share, no judgment
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}`
+              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              { kind: 'attention', child: child.name, detail: {
+                tr: 'bir hikaye yazdı, okumak istersin diye haber veriyorum',
+                en: 'wrote a story you may want to read yourself',
+              } }
             )
           }
           // concerning/serious: silent — draft screen (Point 1) already notified
@@ -2686,7 +2822,11 @@ async function screenContributionPhoto(photoPath, child) {
       : ''
     deferNotify('HOMEWORK', () => sendNotification(child.parent_id, (language === 'en'
       ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`
-      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee))
+      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee,
+      { kind: 'attention', child: child.name, detail: {
+        tr: 'uygun olmayan bir görsel yüklemeye çalıştı, ben paylaşmadım',
+        en: 'tried to upload a photo that is not appropriate for a kids app — I did not forward it',
+      } }))
   } catch (err) {
     console.error(`[CONTRIBUTIONS] inappropriate alert failed: ${err.message}`)
   }
@@ -2748,7 +2888,11 @@ app.post('/api/contributions', async (req, res) => {
           const parentMsg = isSerious
             ? `${child.name} şöyle bir şey paylaştı: "${trimmedLabel}". Onunla konuşmak iyi gelebilir.`
             : `${child.name} şöyle bir şey paylaştı: "${trimmedLabel}". Onunla konuşmak iyi gelebilir.`
-          deferNotify('HOMEWORK', () => sendNotification(child.parent_id, parentMsg))
+          deferNotify('HOMEWORK', () => sendNotification(child.parent_id, parentMsg,
+            { kind: 'attention', child: child.name, detail: {
+              tr: 'paylaştığı bir şey üzerine onunla konuşmak iyi gelebilir',
+              en: 'said something it would be good to talk to them about',
+            } }))
         } catch (err) {
           console.error(`[SCREEN] concern notification failed: ${err.message}`)
         }
@@ -2789,10 +2933,14 @@ app.post('/api/contributions', async (req, res) => {
 
     try {
       const message = `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
+      const notice = { kind: 'activity', child: child.name, detail: {
+        tr: `ev katkısı: "${trimmedLabel}", onayını bekliyor`,
+        en: `a home contribution: "${trimmedLabel}", waiting for your OK`,
+      } }
       if (resolvedPhotoUrl) {
-        deferNotify('TREE', () => sendNotificationWithPhoto(child.parent_id, message, resolvedPhotoUrl))
+        deferNotify('TREE', () => sendNotificationWithPhoto(child.parent_id, message, resolvedPhotoUrl, PHOTO_BUCKET, notice))
       } else {
-        deferNotify('TREE', () => sendNotification(child.parent_id, message))
+        deferNotify('TREE', () => sendNotification(child.parent_id, message, notice))
       }
     } catch (err) {
       console.error(`[CONTRIBUTIONS] notification failed: ${err.message}`)
@@ -2843,6 +2991,11 @@ app.post('/api/contributions/:id/photo', async (req, res) => {
         child.parent_id,
         `📷 ${child.name} "${contribution.label}" katkısına bir fotoğraf ekledi.`,
         photo_url,
+        PHOTO_BUCKET,
+        { kind: 'activity', child: child.name, detail: {
+          tr: `"${contribution.label}" katkısına bir fotoğraf ekledi`,
+          en: `added a photo to their "${contribution.label}" contribution`,
+        } },
       ))
     } catch (err) {
       console.error(`[CONTRIBUTIONS] photo notification failed: ${err.message}`)
@@ -3383,7 +3536,11 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       try {
         await sendNotification(child.parent_id, language === 'en'
           ? `${child.name} sent something as homework that I hesitated to forward automatically — I may well be wrong. I've kept it: just say "show me" and I'll send it here so you can decide for yourself.`
-          : `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`)
+          : `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`,
+          { kind: 'attention', child: child.name, detail: {
+            tr: 'ödev olarak gönderdiği bir görseli iletmekte tereddüt ettim, kararı sana bırakıyorum',
+            en: 'sent a homework photo I hesitated to forward — I would rather you decided',
+          } })
       } catch (err) {
         console.error(`[HOMEWORK] withheld alert failed: ${err.message}`)
       }
@@ -3440,14 +3597,22 @@ app.post('/api/children/:childId/homework', async (req, res) => {
           console.log(`[HOMEWORK] inappropriate content child=${childId} — submission skipped`)
           try {
             await sendNotification(child.parent_id,
-              `${child.name} bir ödev fotoğrafı gönderdi ama içeriğine bir göz atmanda fayda olabilir.`)
+              `${child.name} bir ödev fotoğrafı gönderdi ama içeriğine bir göz atmanda fayda olabilir.`,
+              { kind: 'attention', child: child.name, detail: {
+                tr: 'gönderdiği ödev fotoğrafının içeriğine göz atmanda fayda olabilir',
+                en: 'sent a homework photo whose content may be worth a look',
+              } })
           } catch { /* best-effort */ }
           return res.json({ ok: true })
         }
         if (screening?.concern_level === 'concerning' || screening?.concern_level === 'serious') {
           try {
             await sendNotification(child.parent_id,
-              `${child.name} bir ödev gönderdi. Sayfada dikkat çekebilecek bir şey olabilir, bir göz atmanda fayda var.`)
+              `${child.name} bir ödev gönderdi. Sayfada dikkat çekebilecek bir şey olabilir, bir göz atmanda fayda var.`,
+              { kind: 'attention', child: child.name, detail: {
+                tr: 'gönderdiği ödev sayfasında dikkat çekebilecek bir şey var',
+                en: 'sent a homework page with something on it worth noticing',
+              } })
           } catch { /* best-effort */ }
         }
       }
@@ -3538,7 +3703,11 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
       try {
-        deferNotify('HOMEWORK', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls))
+        deferNotify('HOMEWORK', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls,
+          { kind: 'activity', child: child.name, detail: {
+            tr: `ödev, ${photoUrls.length} sayfa fotoğrafı geldi`,
+            en: `homework, ${photoUrls.length} page photo${photoUrls.length === 1 ? '' : 's'}`,
+          } }))
       } catch (err) {
         console.error(`[HOMEWORK] notification failed: ${err.message}`)
       }
@@ -4016,7 +4185,11 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       const head = language === 'en'
         ? `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`
         : `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`
-      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head).catch(() => {})
+      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
+        { kind: 'activity', child: child.name, detail: {
+          tr: `matematik, ${questions_correct}/${questions_total} doğru, +${gems} gem`,
+          en: `maths, ${questions_correct}/${questions_total} correct, +${gems} gems`,
+        } }).catch(() => {})
     }
 
     // A cleared focus is announced whatever else happened today. It is not routine progress —
@@ -4029,7 +4202,10 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       const msg = language === 'en'
         ? `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`
         : `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`
-      sendNotification(child.parent_id, msg).catch(() => {})
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `${focusCleared.topic_name} artık oturdu, son ${focusCleared.attempts} soruda %${focusCleared.accuracy}`,
+        en: `${focusCleared.topic_name} is solid now — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}`,
+      } }).catch(() => {})
     }
 
     res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange, focus_cleared: focusCleared })
@@ -4129,7 +4305,10 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
       const msg = language === 'en'
         ? `${child.name} read${title ? ` "${title}"` : ''} — ${correct}/${total} on the questions. +${gems} gems 💎`
         : `${child.name} kitap okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. +${gems} gem 💎`
-      sendNotification(child.parent_id, msg).catch(() => {})
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `okuma${title ? ` — "${title}"` : ''}, sorularda ${correct}/${total}, +${gems} gem`,
+        en: `reading${title ? ` — "${title}"` : ''}, ${correct}/${total} on the questions, +${gems} gems`,
+      } }).catch(() => {})
     }
 
     res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, accuracy: acc, submission_id: sub?.id ?? null })
@@ -4218,7 +4397,11 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
           : ''
         deferNotify('DRAWING', () => sendNotification(child.parent_id, (language === 'en'
           ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`
-          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee))
+          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee,
+          { kind: 'attention', child: child.name, detail: {
+            tr: 'çizim olarak uygun olmayan bir görsel yüklemeye çalıştı, kaydetmedim',
+            en: 'tried to upload a drawing photo that is not appropriate for a kids app — I did not save it',
+          } }))
       } catch (err) {
         console.error(`[DRAWING] inappropriate alert failed: ${err.message}`)
       }
@@ -4282,6 +4465,10 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
         `Onaylarsan ödülü ekleyeyim — "onayla" diyebilir ya da panelden bakabilirsin.`,
         photo_path,
         PAINTING_BUCKET,
+        { kind: 'activity', child: child.name, detail: {
+          tr: `${what} bitirdi, fotoğrafı onayını bekliyor`,
+          en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}, the photo is waiting for your OK`,
+        } },
       ))
     } catch (err) {
       console.error(`[DRAWING] parent notification failed: ${err.message}`)
