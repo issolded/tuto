@@ -332,7 +332,7 @@ export async function submitHomework(childId, files) {
 // homework, by path, for the same reason: the bytes stay server-readable and the JSON
 // body stays small. The gem amount, the daily cap and the parent's message are the
 // server's to decide; nothing here calculates a reward.
-export async function submitReadingSession(childId, { bookId, bookTitle, questions, answers }, pageFiles) {
+export async function submitReadingSession(childId, { bookId, bookTitle, questions, answers, currentPage }, pageFiles) {
   const cid = childId || 'anonymous'
   const paths = []
   for (let i = 0; i < (pageFiles || []).length; i++) {
@@ -357,6 +357,7 @@ export async function submitReadingSession(childId, { bookId, bookTitle, questio
       questions_correct: answers.filter(a => a.was_correct).length,
       answers,
       page_photo_urls: paths,
+      current_page: currentPage ?? null,
     }),
   })
   const data = await res.json()

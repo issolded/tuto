@@ -320,6 +320,7 @@ function BookGrid({ books, jiggling, longPress, deletingId, completingId, onDele
 // ─── Book card ─────────────────────────────────────────────────────────────────
 
 function BookCard({ book, jiggling, longPress, isDeleting, isCompleting, onDeleteRequest, onCompleteRequest, onTap }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const busy = isDeleting || isCompleting
   const animation = isDeleting
     ? 'shrink 0.3s ease-in forwards'
@@ -368,10 +369,24 @@ function BookCard({ book, jiggling, longPress, isDeleting, isCompleting, onDelet
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 13, fontWeight: 800, color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
           {book.title}
         </div>
+        {/* This bar used to be current_page / 10, and current_page counted sittings rather than
+            pages — so it filled by a tenth per visit and said nothing about the book. It is a
+            real fraction now, and only drawn when there is a real total to divide by. */}
         {!book.completed && (book.current_page ?? 0) > 0 && (
-          <div style={{ background: '#F0F0FA', borderRadius: 4, height: 4, overflow: 'hidden', marginTop: 6 }}>
-            <div style={{ width: `${Math.min(((book.current_page ?? 0) / 10) * 100, 100)}%`, height: '100%', borderRadius: 4, background: ACCENT }} />
-          </div>
+          book.total_pages > 0 ? (
+            <>
+              <div style={{ background: '#F0F0FA', borderRadius: 4, height: 4, overflow: 'hidden', marginTop: 6 }}>
+                <div style={{ width: `${Math.min((book.current_page / book.total_pages) * 100, 100)}%`, height: '100%', borderRadius: 4, background: ACCENT }} />
+              </div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 11, fontWeight: 700, color: '#9A9AB0', marginTop: 4 }}>
+                {t('lib_pct_before', lang)}{Math.min(Math.round((book.current_page / book.total_pages) * 100), 100)}{t('lib_pct_after', lang)}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 11, fontWeight: 700, color: '#9A9AB0', marginTop: 6 }}>
+              {t('lib_page', lang)} {book.current_page}
+            </div>
+          )
         )}
       </div>
     </div>
@@ -433,7 +448,7 @@ function ConfirmCompleteModal({ onConfirm, onCancel }) {
           {t('lib_really_done', lang)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>{t('lib_finished', lang)}</button>
+          <button onClick={onConfirm} style={{ padding: '16px', border: 'none', borderRadius: 16, background: '#2EC486', color: 'white', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(46,196,134,0.35)' }}>{t('lib_yes_read_all', lang)}</button>
           <button onClick={onCancel} style={{ padding: '14px', border: 'none', borderRadius: 16, background: '#F0F0F5', color: '#7A7A9A', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>{t('lib_not_yet', lang)}</button>
         </div>
       </div>

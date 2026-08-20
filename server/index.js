@@ -4046,7 +4046,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
 // matched anything downstream that looked for a task. All of that is decided here now.
 app.post('/api/children/:childId/reading-session', async (req, res) => {
   const { childId } = req.params
-  const { book_id, book_title, questions_total, questions_correct, answers, page_photo_urls } = req.body
+  const { book_id, book_title, questions_total, questions_correct, answers, page_photo_urls, current_page } = req.body
   try {
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -4101,12 +4101,20 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
       }
     }
 
+    // current_page used to be incremented by one here, once per session, which made it a count
+    // of sittings wearing the name of a page. The page now comes from the session itself —
+    // read off the last photo, or typed by the child — and is only accepted if it moves
+    // forward and stays inside the book, so a misread number cannot send a child backwards.
     if (book_id) {
       const { data: bookRow } = await supabase
-        .from('books').select('current_page').eq('id', book_id).maybeSingle()
+        .from('books').select('current_page, total_pages').eq('id', book_id).maybeSingle()
       if (bookRow) {
-        await supabase.from('books')
-          .update({ current_page: (bookRow.current_page ?? 0) + 1 }).eq('id', book_id)
+        const seen = Math.floor(Number(current_page))
+        const cap = bookRow.total_pages ?? 10000
+        if (Number.isFinite(seen) && seen > (bookRow.current_page ?? 0)) {
+          await supabase.from('books')
+            .update({ current_page: Math.min(seen, cap) }).eq('id', book_id)
+        }
       }
     }
 

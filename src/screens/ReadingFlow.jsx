@@ -4,15 +4,10 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { storageClient, submitReadingSession } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
+import { t, childLang } from '../lib/i18n'
 
 const ACCENT = '#FF6B35'
 const BG = 'linear-gradient(160deg, #FFF3E8 0%, #FFDFC8 100%)'
-
-const MSG = {
-  not_book:       "Hmm, that doesn't look like a book cover! 😄 Show me what you're reading!",
-  low_confidence: "Is this your book? Let me make sure I got it right!",
-  try_again:      "I couldn't see the cover clearly... try better lighting? 📸",
-}
 
 // Gemini calls go through the backend — the API key must never ship in the
 // client bundle (see src/lib/gemini.js for why).
@@ -78,8 +73,12 @@ Base everything strictly on these specific pages shown.
 Mix question types randomly: some "mc" (4 options, correct index 0-3) and some "oe" (open-ended).
 Each question must have a short fun "tuto_intro" in Tuto's voice (1 sentence + emoji).
 All text in ${lang}.
+Also report "last_page_number": the printed page number on the LAST page shown, as an integer.
+Most books print it in a corner or the footer. Use null if no page number is legible anywhere
+in the photos — do not guess it from the order of the photos or the amount of text.
 Return JSON only:
 {
+  "last_page_number": 42,
   "questions": [
     {"type":"mc","tuto_intro":"string","question":"string","options":["A","B","C","D"],"correct":0},
     {"type":"oe","tuto_intro":"string","question":"string"}
@@ -92,7 +91,7 @@ Return JSON only:
 
 // ─── UI components ────────────────────────────────────────────────────────────
 
-function Screen({ children, onBack }) {
+function Screen({ children, onBack, lang }) {
   const nav = useNavigate()
   const isTablet = useIsTablet()
   return (
@@ -113,7 +112,7 @@ function Screen({ children, onBack }) {
           }}
         >←</button>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 20, fontWeight: 800, color: '#1A1A2E' }}>
-          Read a Book 📖
+          {t('rd_title', lang)}
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 24px 48px', gap: 20 }}>
@@ -160,7 +159,7 @@ function TutoBubble({ message, tutoSize = 120 }) {
   )
 }
 
-function PhotoArea({ inputRef, label }) {
+function PhotoArea({ inputRef, label, lang }) {
   return (
     <div
       onClick={() => inputRef.current.click()}
@@ -179,11 +178,85 @@ function PhotoArea({ inputRef, label }) {
     >
       <div style={{ fontSize: 68 }}>📚</div>
       <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: ACCENT }}>
-        Tap here!
+        {t('rd_tap_here', lang)}
       </div>
       <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 600, color: '#7A7A9A', textAlign: 'center' }}>
         {label}
       </div>
+    </div>
+  )
+}
+
+// Asked three times now — how long the book is, which page you are on, which page you stopped
+// at — so it stopped being worth writing out three times.
+function NumberPrompt({ value, onChange, placeholder, onSave, onSkip, saveLabel, skipLabel }) {
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: 24,
+      padding: '24px',
+      boxShadow: '0 4px 24px rgba(255,107,53,0.10)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16,
+    }}>
+      <input
+        type="number"
+        inputMode="numeric"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        min="1"
+        style={{
+          background: '#FFF8F0',
+          border: '2px solid rgba(255,107,53,0.25)',
+          borderRadius: 16,
+          padding: '18px 20px',
+          fontFamily: "'TrRound', 'Baloo 2', cursive",
+          fontSize: 24,
+          fontWeight: 800,
+          color: '#1A1A2E',
+          outline: 'none',
+          textAlign: 'center',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      />
+      <button
+        onClick={onSave}
+        disabled={!value}
+        style={{
+          background: ACCENT,
+          color: 'white',
+          border: 'none',
+          borderRadius: 16,
+          padding: '18px',
+          fontFamily: "'TrRound', 'Baloo 2', cursive",
+          fontSize: 20,
+          fontWeight: 800,
+          cursor: value ? 'pointer' : 'not-allowed',
+          opacity: value ? 1 : 0.45,
+          boxShadow: value ? '0 8px 24px rgba(255,107,53,0.30)' : 'none',
+        }}
+      >
+        {saveLabel}
+      </button>
+      <button
+        onClick={onSkip}
+        style={{
+          background: 'rgba(255,107,53,0.08)',
+          color: '#7A7A9A',
+          border: 'none',
+          borderRadius: 16,
+          padding: '14px',
+          fontFamily: "'TrRound', 'Baloo 2', cursive",
+          fontSize: 17,
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        {skipLabel}
+      </button>
     </div>
   )
 }
@@ -196,7 +269,11 @@ export default function ReadingFlow() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const childId = child?.id
   const age = Number(child?.age) || 7
-  const language = child?.language || 'en'
+  const lang = childLang(child)
+  const s = (key, vars) => {
+    const str = t(key, lang)
+    return vars ? str.replace(/%(\w+)%/g, (m, k) => (vars[k] ?? m)) : str
+  }
 
   const [step, setStep] = useState('checking')
   const [book, setBook] = useState(null)
@@ -206,6 +283,11 @@ export default function ReadingFlow() {
   const [answers, setAnswers] = useState({})
   const [oeInput, setOeInput] = useState('')
   const [pageInput, setPageInput] = useState('')
+  const [totalInput, setTotalInput] = useState('')
+  // Where the child got to in this sitting. Read off the page photos when a page number is
+  // legible in them, asked only when it is not — the photos are already going to the model,
+  // so the common case costs nothing and the child is not interrogated about their own book.
+  const [sessionPage, setSessionPage] = useState(null)
   // null until the server answers. The result screen opens before the session is saved —
   // pages upload first — and a 0 sitting there reads as "+0 Gems" for those seconds.
   const [gemsEarned, setGemsEarned] = useState(null)
@@ -260,12 +342,12 @@ export default function ReadingFlow() {
     try {
       const { is_book, title, confidence } = await identifyCover(file)
       if (!is_book) {
-        setError(MSG.not_book)
+        setError(s('rd_not_book'))
         setStep('new-book')
         return
       }
       if (confidence < 0.6) {
-        setError(MSG.low_confidence)
+        setError(s('rd_low_confidence'))
         setStep('new-book')
         return
       }
@@ -275,7 +357,7 @@ export default function ReadingFlow() {
           b => b.title.toLowerCase().trim() === title.toLowerCase().trim()
         )
         if (dupe) {
-          setError('This book is already in your library! 📚')
+          setError(s('rd_dupe'))
           setStep('new-book')
           return
         }
@@ -285,7 +367,7 @@ export default function ReadingFlow() {
       setTitleInput(title)
       setStep('title-confirm')
     } catch {
-      setError(MSG.try_again)
+      setError(s('rd_try_again'))
       setStep('new-book')
     }
   }
@@ -310,7 +392,7 @@ export default function ReadingFlow() {
       setBook(newBook)
       setStep('cover-success')
     } catch {
-      setError(MSG.try_again)
+      setError(s('rd_try_again'))
       setStep('new-book')
     }
   }
@@ -333,7 +415,7 @@ export default function ReadingFlow() {
     setError('')
     try {
       const files = photos.map(p => p.file)
-      const { questions: qs } = await readPagesAndAsk(files, book.title, age, language)
+      const { questions: qs, last_page_number } = await readPagesAndAsk(files, book.title, age, lang)
       setQuestions(qs ?? [])
       setQIdx(0)
       setQVisible(true)
@@ -341,9 +423,15 @@ export default function ReadingFlow() {
       setOeInput('')
       setPageFiles(files)
       setPhotos([])
-      setStep('questions')
+      // A page number below where the child already was is a misread, not a correction — the
+      // model sees one corner of one photo and books repeat digits in headers and footnotes.
+      const seen = Math.floor(Number(last_page_number))
+      const usable = Number.isFinite(seen) && seen > (book.current_page ?? 0)
+        && seen <= (book.total_pages ?? 10000)
+      if (usable) { setSessionPage(seen); setStep('questions') }
+      else { setPageInput(''); setStep('session-page') }
     } catch {
-      setError('Could not read the pages. Try again!')
+      setError(s('rd_pages_failed'))
       setStep('page-prompt')
     }
   }
@@ -355,10 +443,30 @@ export default function ReadingFlow() {
     setStep('book-done')
   }
 
+  // The number printed on the last page. Asked once, skippable, and skippable is the point:
+  // without it the library shows the child which page they are on instead of a percentage,
+  // which is better than a bar filled against a total someone made up.
+  async function saveTotalPages(skip) {
+    const total = skip ? null : Math.floor(Number(totalInput))
+    if (!skip && book?.id && Number.isFinite(total) && total > 0) {
+      const capped = Math.min(total, 10000)
+      await storageClient.from('books').update({ total_pages: capped }).eq('id', book.id)
+      setBook(b => (b ? { ...b, total_pages: capped } : b))
+    }
+    setPageInput('')
+    setStep('page-number')
+  }
+
   async function savePageNumber(skip) {
-    const page = skip ? (book?.current_page ?? 0) : (parseInt(pageInput) || 0)
-    if (book?.id) {
-      await storageClient.from('books').update({ current_page: page }).eq('id', book.id)
+    if (!skip && book?.id) {
+      const page = Math.floor(Number(pageInput))
+      // Only ever forwards, and never past the end: a child who mistypes 420 for 42 should
+      // not have their book marked as finished, and one who types 2 after reaching 60 has
+      // told us where they are in a chapter, not that they un-read fifty-eight pages.
+      const capped = Math.min(page, book.total_pages ?? 10000)
+      if (Number.isFinite(page) && capped > (book.current_page ?? 0)) {
+        await storageClient.from('books').update({ current_page: capped }).eq('id', book.id)
+      }
     }
     nav('/child/library')
   }
@@ -419,13 +527,18 @@ export default function ReadingFlow() {
     try {
       const result = await submitReadingSession(
         childId,
-        { bookId: book?.id ?? null, bookTitle: book?.title ?? null, questions: questions.length, answers: qa },
+        {
+          bookId: book?.id ?? null,
+          bookTitle: book?.title ?? null,
+          questions: questions.length,
+          answers: qa,
+          currentPage: sessionPage,
+        },
         pageFiles,
       )
       setGemsEarned(result?.gems_earned ?? 0)
       setCapped(!!result?.capped)
       setSaveFailed(false)
-      if (book?.id) setBook(b => (b ? { ...b, current_page: (b.current_page ?? 0) + 1 } : b))
     } catch (err) {
       // The reading happened; say plainly that it did not save rather than showing a
       // confident "+0 Gems", which is what the maths screen used to do when it threw.
@@ -435,26 +548,22 @@ export default function ReadingFlow() {
     }
   }
 
-  const coverPrompt = age <= 7
-    ? "Hi! I love books! 📚 Which book are you reading? Take a photo of the cover!"
-    : age <= 10
-    ? "New book time! 📚 Take a photo of the cover so I know what we're reading!"
-    : "Starting a new book? 📚 Snap a photo of the cover first!"
+  const coverPrompt = s(age <= 7 ? 'rd_cover_young' : age <= 10 ? 'rd_cover_mid' : 'rd_cover_older')
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
   if (step === 'checking') return (
-    <Screen>
+    <Screen lang={lang}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <TutoBubble message="Checking your library... 📚" />
+        <TutoBubble message={s('rd_checking')} />
       </div>
     </Screen>
   )
 
   if (step === 'new-book') return (
-    <Screen>
+    <Screen lang={lang}>
       <TutoBubble message={error || coverPrompt} />
-      <PhotoArea inputRef={coverRef} label="Take a photo of the cover" />
+      <PhotoArea inputRef={coverRef} label={s('rd_cover_label')} lang={lang} />
       <input
         ref={coverRef}
         type="file"
@@ -467,16 +576,16 @@ export default function ReadingFlow() {
   )
 
   if (step === 'cover-loading') return (
-    <Screen>
+    <Screen lang={lang}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <TutoBubble message="Let me see what book this is... 🔍" />
+        <TutoBubble message={s('rd_cover_loading')} />
       </div>
     </Screen>
   )
 
   if (step === 'title-confirm') return (
-    <Screen onBack={() => setStep('new-book')}>
-      <TutoBubble message="Is this your book? 🤔" tutoSize={80} />
+    <Screen lang={lang} onBack={() => setStep('new-book')}>
+      <TutoBubble message={s('rd_is_this')} tutoSize={80} />
       {pendingCoverPreview && (
         <img
           src={pendingCoverPreview}
@@ -487,7 +596,7 @@ export default function ReadingFlow() {
       )}
       <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 24px rgba(255,107,53,0.10)', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 12, fontWeight: 700, color: '#7A7A9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Book title
+          {s('rd_book_title')}
         </div>
         <input
           value={titleInput}
@@ -524,15 +633,15 @@ export default function ReadingFlow() {
           width: '100%',
         }}
       >
-        Yes, that's right! ✅
+        {s('rd_yes_right')}
       </button>
     </Screen>
   )
 
   if (step === 'cover-success') return (
-    <Screen>
+    <Screen lang={lang}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-        <TutoBubble message="Found it! 📚" />
+        <TutoBubble message={s('rd_found_it')} />
         <div style={{
           background: 'white',
           borderRadius: 24,
@@ -550,8 +659,8 @@ export default function ReadingFlow() {
   )
 
   if (step === 'book-status') return (
-    <Screen>
-      <TutoBubble message={`"${book?.title}" — awesome choice! 🌟 Have you already read this book?`} />
+    <Screen lang={lang}>
+      <TutoBubble message={s('rd_have_you_read', { title: book?.title ?? '' })} />
       <button
         onClick={markCompleted}
         style={{
@@ -568,10 +677,10 @@ export default function ReadingFlow() {
           width: '100%',
         }}
       >
-        Yes, I finished it! ✅
+        {s('rd_yes_finished')}
       </button>
       <button
-        onClick={() => setStep('page-number')}
+        onClick={() => { setTotalInput(''); setStep('total-pages') }}
         style={{
           background: ACCENT,
           color: 'white',
@@ -586,87 +695,69 @@ export default function ReadingFlow() {
           width: '100%',
         }}
       >
-        No, I'm reading it now 📖
+        {s('rd_no_reading')}
       </button>
     </Screen>
   )
 
+  if (step === 'total-pages') return (
+    <Screen lang={lang} onBack={() => setStep('book-status')}>
+      <TutoBubble message={s('rd_total_q')} tutoSize={100} />
+      <NumberPrompt
+        value={totalInput}
+        onChange={setTotalInput}
+        placeholder={s('rd_total_ph')}
+        onSave={() => saveTotalPages(false)}
+        onSkip={() => saveTotalPages(true)}
+        saveLabel={s('rd_save')}
+        skipLabel={s('rd_skip')}
+      />
+    </Screen>
+  )
+
   if (step === 'page-number') return (
-    <Screen onBack={() => setStep('book-status')}>
-      <TutoBubble message="Which page are you on? 📖" tutoSize={100} />
-      <div style={{
-        background: 'white',
-        borderRadius: 24,
-        padding: '24px',
-        boxShadow: '0 4px 24px rgba(255,107,53,0.10)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-      }}>
-        <input
-          type="number"
-          value={pageInput}
-          onChange={e => setPageInput(e.target.value)}
-          placeholder="e.g. 42"
-          min="0"
-          style={{
-            background: '#FFF8F0',
-            border: '2px solid rgba(255,107,53,0.25)',
-            borderRadius: 16,
-            padding: '18px 20px',
-            fontFamily: "'TrRound', 'Baloo 2', cursive",
-            fontSize: 24,
-            fontWeight: 800,
-            color: '#1A1A2E',
-            outline: 'none',
-            textAlign: 'center',
-            width: '100%',
-            boxSizing: 'border-box',
-          }}
-        />
-        <button
-          onClick={() => savePageNumber(false)}
-          disabled={!pageInput}
-          style={{
-            background: ACCENT,
-            color: 'white',
-            border: 'none',
-            borderRadius: 16,
-            padding: '18px',
-            fontFamily: "'TrRound', 'Baloo 2', cursive",
-            fontSize: 20,
-            fontWeight: 800,
-            cursor: pageInput ? 'pointer' : 'not-allowed',
-            opacity: pageInput ? 1 : 0.45,
-            boxShadow: pageInput ? '0 8px 24px rgba(255,107,53,0.30)' : 'none',
-          }}
-        >
-          Save →
-        </button>
-        <button
-          onClick={() => savePageNumber(true)}
-          style={{
-            background: 'rgba(255,107,53,0.08)',
-            color: '#7A7A9A',
-            border: 'none',
-            borderRadius: 16,
-            padding: '14px',
-            fontFamily: "'TrRound', 'Baloo 2', cursive",
-            fontSize: 17,
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          Skip
-        </button>
-      </div>
+    <Screen lang={lang} onBack={() => setStep('total-pages')}>
+      <TutoBubble message={s('rd_page_q')} tutoSize={100} />
+      <NumberPrompt
+        value={pageInput}
+        onChange={setPageInput}
+        placeholder={s('rd_page_ph')}
+        onSave={() => savePageNumber(false)}
+        onSkip={() => savePageNumber(true)}
+        saveLabel={s('rd_save')}
+        skipLabel={s('rd_skip')}
+      />
+    </Screen>
+  )
+
+  // Only reached when no page number was legible in the photos. The reading is already done
+  // and the questions are waiting, so this cannot be a wall: skipping leaves the book where
+  // it was and goes straight on.
+  if (step === 'session-page') return (
+    <Screen lang={lang}>
+      <TutoBubble message={s('rd_stopped_q')} tutoSize={100} />
+      <NumberPrompt
+        value={pageInput}
+        onChange={setPageInput}
+        placeholder={s('rd_page_ph')}
+        onSave={() => {
+          const page = Math.floor(Number(pageInput))
+          if (Number.isFinite(page) && page > (book?.current_page ?? 0)) {
+            setSessionPage(Math.min(page, book?.total_pages ?? 10000))
+          }
+          setStep('questions')
+        }}
+        onSkip={() => setStep('questions')}
+        saveLabel={s('rd_save')}
+        skipLabel={s('rd_skip')}
+      />
     </Screen>
   )
 
   if (step === 'book-done') return (
-    <Screen>
+    <Screen lang={lang}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
-        <TutoBubble message="Amazing! Added to your finished books! 🏆" />
+        <TutoBubble message={s('rd_added')} />
         <button
           onClick={() => nav('/child/library')}
           style={{
@@ -683,15 +774,15 @@ export default function ReadingFlow() {
             width: '100%',
           }}
         >
-          Go to My Library →
+          {s('rd_go_library')}
         </button>
       </div>
     </Screen>
   )
 
   if (step === 'existing-book') return (
-    <Screen>
-      <TutoBubble message={`Welcome back! Ready to read more of "${book?.title}"? 📖`} />
+    <Screen lang={lang}>
+      <TutoBubble message={s('rd_welcome_back', { title: book?.title ?? '' })} />
       {book?.cover_url && (
         <img
           src={book.cover_url}
@@ -704,22 +795,22 @@ export default function ReadingFlow() {
         onClick={() => setStep('page-prompt')}
         style={{ fontSize: 20, fontWeight: 800 }}
       >
-        I've been reading! →
+        {s('rd_been_reading')}
       </button>
       <button
         className="btn btn-ghost"
         onClick={() => { setBook(null); setStep('new-book') }}
         style={{ fontSize: 20, fontWeight: 800 }}
       >
-        Start a different book
+        {s('rd_other_book')}
       </button>
     </Screen>
   )
 
   if (step === 'page-prompt') return (
-    <Screen onBack={() => fromLibrary.current ? nav('/child/library') : setStep('existing-book')}>
+    <Screen lang={lang} onBack={() => fromLibrary.current ? nav('/child/library') : setStep('existing-book')}>
       <TutoBubble
-        message={error || "Take photos of all the pages you read! Add as many as you need 📸"}
+        message={error || s('rd_pages_prompt')}
         tutoSize={80}
       />
 
@@ -739,7 +830,7 @@ export default function ReadingFlow() {
         >
           <div style={{ fontSize: 56 }}>📸</div>
           <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: ACCENT }}>
-            Tap to add first page
+            {s('rd_tap_first_page')}
           </div>
         </div>
       )}
@@ -780,7 +871,7 @@ export default function ReadingFlow() {
             cursor: 'pointer', width: '100%',
           }}
         >
-          📸 Add another page ({photos.length}/10)
+          {s('rd_add_another', { n: photos.length })}
         </button>
       )}
 
@@ -798,7 +889,7 @@ export default function ReadingFlow() {
             width: '100%',
           }}
         >
-          Done! Let's talk 📚
+          {s('rd_done_talk')}
         </button>
       )}
 
@@ -818,9 +909,9 @@ export default function ReadingFlow() {
   )
 
   if (step === 'page-loading') return (
-    <Screen>
+    <Screen lang={lang}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <TutoBubble message="Let me see what you've been reading... 🧐 I'm cooking up some questions!" />
+        <TutoBubble message={s('rd_page_loading')} />
       </div>
     </Screen>
   )
@@ -829,7 +920,7 @@ export default function ReadingFlow() {
     const q = questions[qIdx]
     const answered = answers[qIdx] !== undefined
     return (
-      <Screen>
+      <Screen lang={lang}>
         <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
           {questions.map((_, i) => (
             <div
@@ -895,7 +986,7 @@ export default function ReadingFlow() {
               textAlign: 'center',
               boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
             }}>
-              {answers[qIdx] === q.correct ? '✅ Correct!' : `❌ The answer was: ${q.options?.[q.correct]}`}
+              {answers[qIdx] === q.correct ? s('rd_correct') : s('rd_answer_was', { a: q.options?.[q.correct] ?? '' })}
             </div>
           )}
 
@@ -904,7 +995,7 @@ export default function ReadingFlow() {
               <textarea
                 value={oeInput}
                 onChange={e => setOeInput(e.target.value)}
-                placeholder="Write your answer here..."
+                placeholder={s('rd_write_answer')}
                 rows={3}
                 style={{
                   background: 'rgba(255,255,255,0.88)',
@@ -926,7 +1017,7 @@ export default function ReadingFlow() {
                 disabled={!oeInput.trim()}
                 style={{ opacity: oeInput.trim() ? 1 : 0.45, fontSize: 20, fontWeight: 800 }}
               >
-                Send →
+                {s('rd_send')}
               </button>
             </div>
           )}
@@ -938,9 +1029,9 @@ export default function ReadingFlow() {
   const awaitingGems = gemsEarned == null && !saveFailed
 
   if (step === 'result') return (
-    <Screen>
+    <Screen lang={lang}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
-        <TutoBubble message={`Amazing! You got ${finalCorrect} out of ${questions.length} right! 🎉`} />
+        <TutoBubble message={s('rd_result', { c: finalCorrect, n: questions.length })} />
         <div style={{
           background: ACCENT,
           borderRadius: 28,
@@ -955,10 +1046,10 @@ export default function ReadingFlow() {
           <div style={{ fontSize: 52 }}>{saveFailed ? '😕' : awaitingGems ? '⏳' : capped ? '🌙' : '💎'}</div>
           <div>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
-              {saveFailed ? "Couldn't save" : awaitingGems ? 'Nearly there!' : capped ? 'All your gems for today!' : 'You earned!'}
+              {saveFailed ? s('rd_save_failed') : awaitingGems ? s('rd_nearly') : capped ? s('rd_capped') : s('rd_earned')}
             </div>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: saveFailed || capped || awaitingGems ? 22 : 44, fontWeight: 800, color: 'white', lineHeight: 1.15 }}>
-              {saveFailed ? 'Tell a grown-up' : awaitingGems ? 'Counting your gems…' : capped ? 'Come back tomorrow 📚' : `+${gemsEarned} Gems`}
+              {saveFailed ? s('rd_tell_grownup') : awaitingGems ? s('rd_counting') : capped ? s('rd_come_back') : s('rd_gems', { n: gemsEarned })}
             </div>
           </div>
         </div>
@@ -967,7 +1058,7 @@ export default function ReadingFlow() {
           onClick={() => nav('/child/library')}
           style={{ fontSize: 20, fontWeight: 800, width: '100%' }}
         >
-          Back to My Books
+          {s('rd_back_books')}
         </button>
       </div>
     </Screen>
