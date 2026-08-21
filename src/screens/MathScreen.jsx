@@ -2370,11 +2370,17 @@ export default function MathScreen() {
 
               {/* Optional hint — the child can ask BEFORE answering, which is the only way an
                   older child could get one at all: the help panel opens on a wrong answer and
-                  only under nine. Just the first step, never the rest: a template's second step
-                  counts out the numbers and would hand over the answer. */}
+                  only under nine.
+                  This used to show the first step and nothing else, because a counting step ends
+                  "…, 19, 20" with the answer sitting at the end of it. The partition steps stop
+                  deliberately short — "5966 - 3000 = 2966. Now take away the 100." — and holding
+                  those back hid the actual method from exactly the older children who only ever
+                  see this hint. So later steps are shown too, unless they name the answer. */}
               {(() => {
-                const steps = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
-                if (!Array.isArray(steps) || !steps.length) return null
+                const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
+                if (!Array.isArray(all) || !all.length) return null
+                const names = s => new RegExp(`(?<!\\d)${String(correctAns[qIdx]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`).test(String(s))
+                const steps = [all[0], ...all.slice(1).filter(s => !names(s))]
                 const open = hintOpenFor === qIdx
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -2403,7 +2409,8 @@ export default function MathScreen() {
                         background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',
                         fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT,
                         lineHeight: 1.5, textAlign: 'center', animation: 'scaleIn .22s ease both',
-                      }}>{steps[0]}</div>
+                        display: 'flex', flexDirection: 'column', gap: 7,
+                      }}>{steps.map((s, i) => <div key={i}>{s}</div>)}</div>
                     )}
                   </div>
                 )
