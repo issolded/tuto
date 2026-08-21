@@ -598,8 +598,11 @@ function fractionOfNumber(level, lang) {
 const DIV_NAMES = MULT_NAMES
 const DIV_ITEMS = { en: ['candies', 'stickers', 'cookies', 'marbles', 'balloons', 'crayons', 'pencils', 'stamps'],
                     tr: ['şeker', 'çıkartma', 'kurabiye', 'misket', 'balon', 'boya kalemi', 'kalem', 'pul'] }
+// The Turkish list is short on purpose rather than a translation of the English one: with
+// "sınıf arkadaşı" and "takım arkadaşı" in it, the longest roll of this template ran past a
+// seven-year-old's reading limit on its own. Every entry here is one word.
 const DIV_WHO = { en: ['friends', 'classmates', 'kids', 'teammates'],
-                  tr: ['arkadaş', 'sınıf arkadaşı', 'çocuk', 'takım arkadaşı'] }
+                  tr: ['arkadaş', 'öğrenci', 'çocuk', 'kardeş'] }
 
 function divisionWordTemplate(level, lang) {
   // Division used to occupy a single rung, so it took no notice of the level at all — which
@@ -618,7 +621,7 @@ function divisionWordTemplate(level, lang) {
     level,
     question_text: tr(lang,
       `${name} has ${a} ${items}. Shared equally among ${b} ${who}. How many each?`,
-      `${name} ${a} ${items} aldı ve ${b} ${who} arasında eşit paylaştırdı. Her birine kaç tane düşer?`),
+      `${name} ${a} ${items} aldı. ${b} ${who} arasında eşit paylaştırdı. Her birine kaç düşer?`),
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
@@ -1150,10 +1153,20 @@ export const TOPICS = Object.keys(REGISTRY)
 // `columnar` lifts the mental-arithmetic constraint on addition and subtraction. Paper is the
 //   one place a formal written method is possible, so it is the one place the curriculum's
 //   "add numbers with more than 4 digits" is asked for literally.
-export function generateProblem(topic, level, avoid = null, lang = 'en', { numericOnly = false, columnar = false } = {}) {
+// `maxChars` is the reading limit for the child's age. The model's questions were measured
+//   against it from the start and these were not, on the assumption that a template's own
+//   wording is short by construction — but a template's wording is fixed and its longest
+//   substitutions are not: "Emir 15 çıkartma aldı ve 3 sınıf arkadaşı arasında eşit
+//   paylaştırdı..." came to 95 characters against a seven-year-old's 90. Turkish runs longer
+//   than the English it was written beside, so the limit belongs here too. A reroll usually
+//   lands a shorter name and object; if thirty do not, the question still goes out, because a
+//   question slightly over the limit beats a session one question shorter.
+export function generateProblem(topic, level, avoid = null, lang = 'en', { numericOnly = false, columnar = false, maxChars = 0 } = {}) {
   const template = REGISTRY[topic]
   if (!template) throw new Error(`Unknown math template topic: ${topic}`)
-  const reject = p => (avoid ? avoid.has(p.operandKey) : false) || (numericOnly && p.format === 'choice')
+  const reject = p => (avoid ? avoid.has(p.operandKey) : false)
+    || (numericOnly && p.format === 'choice')
+    || (maxChars > 0 && String(p.question_text ?? '').length > maxChars)
 
   const MAX_ATTEMPTS = 30
   let problem = template(level, lang, columnar)

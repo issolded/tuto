@@ -1504,10 +1504,14 @@ export default function MathScreen() {
 
     // Track operand pairs across the batch AND across recent sessions, so the same (a,b) —
     // and therefore the same answer — never comes back a question or a day later.
+    // The reading limit belongs to the child's age, and both sources of questions answer to it —
+    // the model's below, and the templates' here. Template wording used to be assumed short
+    // enough; a Turkish division question came to 95 characters against a seven-year-old's 90.
+    const cap = maxQuestionChars(age)
     const usedOperands = new Set(readSeen('keys', child?.id, lvl))
     for (const slot of slots) {
       if (!slot.templateTopic) continue
-      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language)
+      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language, { maxChars: cap })
       usedOperands.add(p.operandKey)
       slot.problem = p
       slot.question = p.question_text
@@ -1562,11 +1566,22 @@ export default function MathScreen() {
         // Same reasoning for the numbers. The prompt asks for operands a child can partition in
         // their head; this is what makes it true. Only a bare two-operand sum is judged, so a
         // word problem is never dropped over its arithmetic — see needsWrittenMethod.
-        const cap = maxQuestionChars(age)
         filled.forEach((s, i) => {
           if (s.question.length > cap || s.reject) bad.add(i)
           else if (needsWrittenMethod(s.question)) { s.reject = 'needs a column method, and screen mode has no paper'; bad.add(i) }
         })
+        // Where a replacement comes from. This used to read a template topic off the slot, which
+        // could never work: a slot reaches the model precisely BECAUSE its topic has no template,
+        // so the lookup was always null and every dropped question silently shortened the session.
+        // Testing ages 5 to 11 in both languages found three sessions of nine, nine and eight
+        // questions, and nothing in the logs said why.
+        //
+        // So the replacement is drawn from the template topics this child's year already uses,
+        // carrying that topic's curriculum entry with it. The curriculum entry has to travel: it
+        // is what the answer is recorded against, and leaving the old one would mark a child weak
+        // at decimals for missing an addition question. A different topic twice in one session is
+        // the cost, and it is smaller than a question that cannot be answered as written.
+        const spares = slots.filter(s => s.templateTopic && s.problem)
         for (const i of bad) {
           const slot = filled[i]
           const why = slot.reject
@@ -1575,12 +1590,18 @@ export default function MathScreen() {
             ? `too long (${slot.question.length} > ${cap} chars)`
             : 'the answer did not check out'
           console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question}`)
-          const fallbackTopic = slot.curriculum?.templateTopic ?? slot.templateTopic
-          const p = fallbackTopic ? generateProblem(fallbackTopic, lvl, usedOperands, language) : null
+          // Year 6 maps no topic to a template at all — deliberately, since long multiplication
+          // is past what these templates can pose — so a Year 6 session still comes up short
+          // when the model gives us something unanswerable. That needs a template, not a
+          // substitution: see MATH_AUDIT.md.
+          const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
+          const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap }) : null
           if (p) {
             usedOperands.add(p.operandKey)
+            slot.curriculum = spare.curriculum
             slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
             slot.format = p.format === 'choice' ? 'choice' : 'integer'; slot.hints = null
+            slot.reject = null
           } else {
             slot.question = null
           }
