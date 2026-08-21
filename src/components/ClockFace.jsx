@@ -84,20 +84,56 @@ function Hands({ mins, knobs, held }) {
   )
 }
 
-export default function ClockFace({ hour, minute, size = 150, minuteNumbers = false }) {
+export default function ClockFace({ hour, minute, size = 150, minuteNumbers = false, zoomable = false, language = 'en' }) {
   const mins = wrap720((hour % 12) * 60 + minute)
-  return (
+  const [zoom, setZoom] = useState(false)
+  const tr = language === 'tr'
+  const face = (
     <svg width={size} height={size} viewBox="0 0 220 220" style={{ display: 'block', flexShrink: 0 }}>
       <Face minuteNumbers={minuteNumbers} />
       <Hands mins={mins} />
     </svg>
+  )
+  if (!zoomable) return face
+
+  return (
+    <>
+      <button
+        onClick={() => setZoom(true)}
+        aria-label={tr ? 'Saati büyüt' : 'Enlarge the clock'}
+        style={{ border: 'none', background: 'none', padding: 0, cursor: 'zoom-in', lineHeight: 0 }}
+      >{face}</button>
+      {zoom && (
+        <div
+          onClick={() => setZoom(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(36,31,58,.72)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 18, cursor: 'zoom-out',
+          }}
+        >
+          <svg width="86vw" height="86vw" viewBox="0 0 220 220"
+            style={{ display: 'block', width: 'min(86vw, 360px)', height: 'min(86vw, 360px)' }}>
+            <Face minuteNumbers />
+            <Hands mins={mins} />
+          </svg>
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: '#fffdf7' }}>
+            {tr ? 'Kapatmak için dokun' : 'Tap to close'}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
 // hour/minute is where the hands START, not the answer. For most shapes the caller hands over
 // 12:00 and the child turns the hands to the question's time themselves — seeding it with the
 // question's time printed the answer under the face.
-export function DraggableClock({ hour, minute, size = 250, language = 'en', onSpin }) {
+//
+// `readout` is off for any shape whose answer is the time itself, because the help tells the
+// child to turn the hands until they match the question — and the moment they do, a readout
+// saying "twenty-five past eleven" has answered "how many minutes past eleven?" for them.
+export function DraggableClock({ hour, minute, size = 250, language = 'en', onSpin, readout = true }) {
   const start = wrap720((hour % 12) * 60 + minute)
   const [mins, setMins] = useState(start)
   const [held, setHeld] = useState(null)
@@ -163,14 +199,16 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
         <Hands mins={mins} knobs held={held} />
       </svg>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 30, color: MATH_DEEP, letterSpacing: 0.5 }}>
-          {digital(h, m)}
-        </span>
-        <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK_SOFT }}>
-          {timeWords(h, m, language)}
-        </span>
-      </div>
+      {readout && (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 30, color: MATH_DEEP, letterSpacing: 0.5 }}>
+            {digital(h, m)}
+          </span>
+          <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK_SOFT }}>
+            {timeWords(h, m, language)}
+          </span>
+        </div>
+      )}
 
       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: held ? GREEN : INK_SOFT, textAlign: 'center' }}>
         {held === 'hour'   ? (tr ? 'Kısa kol — saati gösterir' : 'Short hand — it shows the hour')

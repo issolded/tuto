@@ -480,6 +480,12 @@ export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
 // group, because that is what "shared equally" actually means; the answer then reads
 // straight off a single group. All numbers come from the template's `visual` descriptor,
 // never parsed from the question text.
+// The draggable clock in help prints the time it is showing in words underneath. That is the
+// whole lesson for "what is 3pm on a 24-hour clock" and for the two duration shapes — and it is
+// the answer, verbatim, for every shape that asks the child to READ the face, because the help
+// tells them to turn the hands until they match the question first.
+const READOUT_SAFE = new Set(['h24', 'span', 'later'])
+
 function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, capacity }) {
   // `counts` is the child's own guess dealt out, which is the one case where the groups can
   // come out uneven — the pool runs dry partway along the row.
@@ -780,6 +786,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           minute={seedFromQuestion ? clock.minute : 0}
           size={228}
           language={language}
+          readout={READOUT_SAFE.has(clock.ask)}
         />
         {hintSteps?.length > 0 && (
           <StepHints
@@ -2334,7 +2341,8 @@ export default function MathScreen() {
                   </div>
                 )}
                 {questionClock && (
-                  <ClockFace hour={questionClock.hour} minute={questionClock.minute} size={168} />
+                  <ClockFace hour={questionClock.hour} minute={questionClock.minute} size={168}
+                    zoomable language={language} />
                 )}
                 {questionPicto && (
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />

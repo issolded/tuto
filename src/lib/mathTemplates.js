@@ -309,11 +309,70 @@ function multiplicationWordTemplate(level, lang) {
 // They only appear from Year 3, which is where adding same-denominator fractions and comparing
 // unit fractions actually enter the curriculum.
 function fractionOfNumberTemplate(level, lang) {
-  const shapes = bandForLevel(level) <= 2 ? ['ofNumber'] : ['ofNumber', 'addSame', 'compare']
+  const band = bandForLevel(level)
+  const shapes = band <= 2 ? ['ofNumber']
+    : band <= 3 ? ['ofNumber', 'addSame', 'compare']
+    : ['ofNumber', 'addSame', 'compare', 'decimal']
   const shape = pick(shapes)
   if (shape === 'addSame') return fractionAddSame(level, lang)
   if (shape === 'compare') return fractionCompare(level, lang)
+  if (shape === 'decimal') return fractionDecimal(level, lang)
   return fractionOfNumber(level, lang)
+}
+
+// 3/4 = 0.75, which Year 4 names outright. Decimals are typable, so this could have been a
+// number-pad question — but the whole difficulty is that a fraction LOOKS like it can be read
+// straight off as a decimal, and only a wrong option can say so back to the child.
+//
+// `near` is a real decimal of the same shape as the answer, so the answer cannot be picked out
+// by how it is written. `nearAs` says what the near miss actually is: another fraction from the
+// same family, or the answer with its digits pushed one place too far right.
+const DECIMAL_BANK = [
+  { n: 1, d: 2, dec: '0.5',  near: '0.05', nearAs: 'tenth' },
+  { n: 1, d: 4, dec: '0.25', near: '0.75', nearAs: '3/4'   },
+  { n: 3, d: 4, dec: '0.75', near: '0.25', nearAs: '1/4'   },
+  { n: 1, d: 5, dec: '0.2',  near: '0.02', nearAs: 'tenth', band: 5 },
+  { n: 2, d: 5, dec: '0.4',  near: '0.6',  nearAs: '3/5',   band: 5 },
+  { n: 3, d: 5, dec: '0.6',  near: '0.4',  nearAs: '2/5',   band: 5 },
+  { n: 4, d: 5, dec: '0.8',  near: '0.08', nearAs: 'tenth', band: 5 },
+]
+
+function fractionDecimal(level, lang) {
+  const band = bandForLevel(level)
+  const e = pick(DECIMAL_BANK.filter(x => (x.band ?? 0) <= band))
+  const { n, d } = e
+
+  const options = shuffle([
+    { value: e.dec, why: tr(lang,
+        `Right — ${n}/${d} of one whole is ${e.dec}.`,
+        `Doğru — bir bütünün ${n}/${d} kadarı ${e.dec} eder.`) },
+    { value: `0.${n}${d}`, why: tr(lang,
+        `That is the fraction read off digit by digit. ${n}/${d} is a division, not two digits after a point.`,
+        `Bu, kesrin rakam rakam okunmuş hâli. ${n}/${d} bir bölme işlemidir, virgülden sonra iki rakam değil.`) },
+    { value: `0.${d}`, why: tr(lang,
+        `That is the bottom number after the point. The bottom number says how many pieces the whole was cut into — it is not the answer itself.`,
+        `Bu, alttaki sayının virgülden sonra yazılmışı. Alttaki sayı bütünün kaç parçaya bölündüğünü söyler — cevabın kendisi değildir.`) },
+    { value: e.near, why: e.nearAs === 'tenth'
+        ? tr(lang, `Ten times too small — ${e.near} is a tenth of ${e.dec}.`,
+                   `On kat küçük — ${e.near}, ${e.dec} sayısının onda biri.`)
+        : tr(lang, `${e.near} is ${e.nearAs}, not ${n}/${d}.`,
+                   `${e.near} sayısı ${e.nearAs} eder, ${n}/${d} değil.`) },
+  ])
+
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: tr(lang, `What is ${n}/${d} written as a decimal?`, `${n}/${d} ondalık sayıyla nasıl yazılır?`),
+    format: 'choice',
+    options,
+    correct_answer: e.dec,
+    operandKey: `frac:dec:${n}/${d}`,
+    hint_steps: [
+      tr(lang, 'A decimal is another way of writing part of one whole.',
+               'Ondalık sayı, bir bütünün parçasını yazmanın başka bir yoludur.'),
+      tr(lang, `Think of money: ${n}/${d} of £1 is ${Math.round(Number(e.dec) * 100)}p, written ${e.dec}.`,
+               `Parayı düşün: 1 liranın ${n}/${d} kadarı ${Math.round(Number(e.dec) * 100)} kuruştur, ${e.dec} diye yazılır.`),
+    ],
+  }
 }
 
 // 2/8 + 3/8. The mistake worth catching is adding the denominators too, which is why 5/16 is
