@@ -87,13 +87,16 @@ function Hands({ mins, knobs, held }) {
 export default function ClockFace({ hour, minute, size = 150, minuteNumbers = false }) {
   const mins = wrap720((hour % 12) * 60 + minute)
   return (
-    <svg width={size} height={size} viewBox="0 0 220 220" style={{ display: 'block' }}>
+    <svg width={size} height={size} viewBox="0 0 220 220" style={{ display: 'block', flexShrink: 0 }}>
       <Face minuteNumbers={minuteNumbers} />
       <Hands mins={mins} />
     </svg>
   )
 }
 
+// hour/minute is where the hands START, not the answer. For most shapes the caller hands over
+// 12:00 and the child turns the hands to the question's time themselves — seeding it with the
+// question's time printed the answer under the face.
 export function DraggableClock({ hour, minute, size = 250, language = 'en', onSpin }) {
   const start = wrap720((hour % 12) * 60 + minute)
   const [mins, setMins] = useState(start)
@@ -184,7 +187,7 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
             borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
             fontFamily: FRED, fontWeight: 600, fontSize: 13,
           }}
-        >↺ {tr ? 'Sorudaki saate dön' : 'Back to the question'}</button>
+        >↺ {tr ? 'Başa dön' : 'Start over'}</button>
       )}
     </div>
   )

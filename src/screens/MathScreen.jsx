@@ -412,7 +412,7 @@ function ShapeSVG({ kind, size = 92, ask, lit = 0, showMarks = false }) {
 export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
   const lit = new Set(tally ? (highlight || []) : [])
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
       <div style={{
         fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT,
         background: '#f4f1fb', borderRadius: 999, padding: '4px 12px', marginBottom: 2,
@@ -706,22 +706,28 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     // turning the hands and watching the other one follow. So the help hands the clock over
     // and says which way to turn it, and never shows the answer: the readout tracks wherever
     // the child has dragged to, which is their working, not the solution.
+    //
+    // Which is only true if the hands do not START on the answer. 'span' and 'later' give the
+    // time away in the question anyway, so beginning there is the question, not the answer.
+    // Every other shape asks the child to READ a face, so the draggable one starts at 12:00
+    // and the question's face sits beside it as the thing to copy.
+    const seedFromQuestion = clock.ask === 'span' || clock.ask === 'later'
     const guide = (tr ? {
-      hour:  'Kısa kolu (akrep) çevir — durduğu sayı saati söyler.',
-      halfPast: 'Yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
-      past:  'Yelkovanı 12\'ye götür, sonra yavaşça geri getir. Beşer beşer sayarak kaç dakika döndüğünü bul.',
-      to:    'Yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
+      hour:  'Aşağıdaki saati, yukarıdaki soruya benzeyene kadar çevir. Akrebin durduğu sayı saati söyler.',
+      halfPast: 'Önce soruya benzet. Sonra yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
+      past:  'Önce soruya benzet. Sonra yelkovanı 12\'ye geri getir ve beşer beşer sayarak kaç dakika döndüğünü bul.',
+      to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
       span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
       later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
-      h24:   'Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
+      h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
     } : {
-      hour:  'Turn the short hand — the number it stops at tells you the hour.',
-      halfPast: 'Take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
-      past:  'Take the long hand to 12, then bring it slowly back. Count round in fives to see how many minutes it moved.',
-      to:    'Turn the long hand forwards until it reaches 12 — how many minutes was that?',
+      hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
+      halfPast: 'Match the question first. Then take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
+      past:  'Match the question first. Then bring the long hand back to 12, counting round in fives to see how many minutes it moved.',
+      to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
       span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
       later: 'Move the short hand on one hour at a time, counting as you go.',
-      h24:   'After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
+      h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
     })[clock.ask]
 
     sayalim = (
@@ -733,7 +739,20 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         }}>
           {guide || (tr ? 'Kolları parmağınla çevir — saat seninle değişir.' : 'Turn the hands with your finger — the time changes with you.')}
         </div>
-        <DraggableClock hour={clock.hour} minute={clock.minute} size={228} language={language} />
+        {!seedFromQuestion && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT }}>
+              {tr ? 'Sorudaki saat' : 'The clock in the question'}
+            </div>
+            <ClockFace hour={clock.hour} minute={clock.minute} size={104} />
+          </div>
+        )}
+        <DraggableClock
+          hour={seedFromQuestion ? clock.hour : 12}
+          minute={seedFromQuestion ? clock.minute : 0}
+          size={228}
+          language={language}
+        />
         {hintSteps?.length > 0 && (
           <StepHints
             question={question}
@@ -1413,6 +1432,14 @@ export default function MathScreen() {
   // Keyed on the question rather than cleared at each of the several places that advance one,
   // so a new route to the next question cannot forget to reset and carry a stale guess in.
   useEffect(() => { setWrongGuess(null); setGuessRound(0) }, [qIdx])
+
+  // Closing help leaves the column scrolled where the child left it, but the column has grown
+  // by then — "Skip this one" is now under the card — so the question's picture ends up above
+  // the viewport. Same for a new question. Send it back to the top.
+  useEffect(() => {
+    const el = document.querySelector('.math-scroll')
+    if (el) el.scrollTop = 0
+  }, [qIdx, helpVisible])
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
@@ -2205,19 +2232,22 @@ export default function MathScreen() {
             <>
               {/* Question card — a question can carry a picture (geometry shows the shape
                   rather than naming it), so the text sits under whatever it illustrates. */}
+              {/* flexShrink: 0 is load-bearing — the column is a flex parent, so on a short
+                  phone it crushed the card and its picture (a clock came out 26px across,
+                  unreadable) rather than letting the column scroll. */}
               <div key={qIdx} style={{
                 background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
                 boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
                 minHeight: isWord ? 120 : 84, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 14,
+                alignItems: 'center', justifyContent: 'center', gap: 14, flexShrink: 0,
               }}>
                 {questionShapes && (
-                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
                     {questionShapes.map((s, i) => <ShapeSVG key={i} kind={s} size={96} />)}
                   </div>
                 )}
                 {questionCount && (
-                  <div style={{ display: 'flex', gap: 9, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 300 }}>
+                  <div style={{ display: 'flex', gap: 9, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 300, flexShrink: 0 }}>
                     {Array.from({ length: questionCount.n }).map((_, i) => (
                       <span key={i} style={{ fontSize: 34, lineHeight: 1 }}>{questionCount.item}</span>
                     ))}
