@@ -1,8 +1,18 @@
 # Matematik Pedagojik Denetimi — 2026-08-21
 
 Batu'nun (9) ilk oturumundaki şikâyetlerle başladı, 5–11 yaş arası tam bir taramaya döndü.
-Kanıt iki kaynaktan: `/tmp/tuto-e2e/math-sweep.json` (21 oturum, yaş 5–11, en/en/tr, her biri 10 soru)
-ve tarayıcıda gerçek telefon boyutunda (390×664) yürütülen saat oturumları.
+
+**Bulgular iki çocuktan geliyor, karıştırmayalım:**
+
+- **Batu (9):** ekranda `3786+4904` (6), görünmeyen grafiğe atıf (4), `582,304`'teki
+  tutarsız binlik ayırıcı (5).
+- **Ada (7):** saat sorusunun yardımı cevabı veriyor (2), yardımdan dönünce görsel
+  kayboluyor (3). Year 4/5/6'da zaman konusu olmadığı için 9 yaşındaki bir çocuğa saat
+  sorusu zaten çıkmıyor — bulgu 7'nin kendisi bu.
+- **Taramadan (5–11):** geri kalan her şey.
+
+Kanıt iki kaynaktan: `/tmp/tuto-e2e/math-sweep.json` (21 oturum, yaş 5–11, en/en/tr, her biri
+10 soru) ve tarayıcıda gerçek telefon boyutunda (390×664) yürütülen saat oturumları.
 
 Bulgular önem sırasına göre. Her birinde dosya:satır ve ölçülen/alıntılanan kanıt var.
 
