@@ -320,6 +320,29 @@ yazım değil, %30'luk bir ek. İkisinde de çıplak dört işlem sorusu yoktu.
 izlendi. 1600 üretimde şık tekrarı yok, doğru cevap hep şıklar içinde, band ≤2'de hiç
 şıklı soru çıkmıyor.
 
+### A4 — Şıklı format genişledi + saat yardımı kapandı (2. tur)
+
+12. **Kesir ↔ ondalık denkliği (Year 4+).** `y4_fractions`'ın tanımı "1/4=0.25, 1/2=0.5,
+    3/4=0.75"u açıkça istiyordu ve şablonda hiç yoktu. Çelduruclar: kesri rakam rakam okumak
+    (`4/5`→`0.45`), alt sayıyı virgülden sonra yazmak (→`0.5`), basamak kaydırmak (→`0.08`).
+    Yakın miss her zaman doğru cevapla aynı yazım şeklinde, ki şıkkın biçiminden elenmesin.
+    Band ≥5'te beşliler de giriyor. Canlıda doğrulandı (yaş 10, TR).
+13. **Şekil adlandırma (Year 4+).** "Bu şeklin adı nedir?" — şekil çizili, şıklar isim.
+    Bu dosyanın geometri notu tam da bunu eleştiriyordu ("çocuğun 'beşgen' kelimesiyle
+    tanışıp tanışmadığını ölçer"); şekli çizmek onu çözüyor, çünkü cevap sayılabilir ve
+    yanlış şık bunu söyleyebiliyor ("beşgen demek 5 kenar demek, bunu say — 3 kenarı var").
+    **Kare ile dikdörtgen asla birbirine karşı şık olmuyor:** kare gerçekten bir dikdörtgendir,
+    yanlış demek yalan olurdu. Canlıda doğrulandı (yaş 9, TR).
+14. **Saat yardımındaki okunuş satırı kapandı.** Ada'nın bulgusu: yardımda saat doğrudan
+    yazıyordu. Kollar önceki turda 12:00'a sıfırlanmıştı — ama rehber metni çocuğa "önce
+    soruya benzet" diyor, benzettiği anda altındaki `11:05 — 11'i 5 geçiyor` satırı
+    "saat 11'i kaç dakika geçiyor?" sorusunu cevaplıyordu. Satır artık yalnızca `h24`,
+    `span`, `later` şekillerinde duruyor: orada söylediği saat cevap değil, iskele.
+15. **Saat dokununca büyüyor.** 168px kadran telefonda küçük. Hem sorudaki hem yardımdaki
+    "Sorudaki saat" kadranı tam ekran açılıyor, dakika sayıları (5, 10, 15…) açık.
+    Overlay `document.body`'ye portal'lanıyor: soru kartı `scaleIn ... both` ile animasyonlu,
+    kalan transform `position: fixed`'i kartın içine hapsediyordu.
+
 ### B — Birlikte karar verelim
 
 - Ekran modu aritmetik büyüklüğü: karalama alanı mı, sınır mı, sütun göstericisi mi? (6)
@@ -331,6 +354,13 @@ izlendi. 1600 üretimde şık tekrarı yok, doğru cevap hep şıklar içinde, b
 - Year 3 üstü istatistik için grafik şablonu? (10)
 - LLM'in de şıklı soru yazması: çelduruc anatomisi ve birim gerçekçiliği prompta nasıl
   girecek? (Şu an şıklı soru yalnızca şablonlardan geliyor.)
+- **Türkçe ondalık ayracı.** Türkiye'de `4/5 = 0,8`; uygulama her yerde nokta kullanıyor
+  (sayı tuş takımındaki tuş da `.`). Virgüle geçmek tuşu, puanlama normalizasyonunu ve
+  LLM'in ürettiği soru metinlerini kapsayan bir i18n işi — Ada'nın defterindeki yazımla
+  çakışıyorsa ayrı iş olarak alınmalı.
+- **`y5_geometry` şablona bağlı değil.** `mathCurriculum.js` yalnızca `y1_shapes`,
+  `y3_geometry`, `y4_geometry`'yi `geometry`'ye eşliyor; Year 5 geometri hâlâ LLM'e gidiyor,
+  yani 10 yaşında şekil adlandırma sorusu hiç çıkmıyor.
 
 **Kapandı:** Para politikası (9) — yerel para birimine izin verildi, yasak olan sikke
 *isimleri*. EN dolar (`$15`), TR lira (`15 TL`). `gemini.js`, commit `abe4001`.
