@@ -5,6 +5,13 @@
 // Problem shape:
 //   { topic, level, question_text, format: 'numeric', correct_answer, hint_steps: [],
 //     operandKey, visual? }
+//
+// format: 'choice' is the second shape, for questions whose answer cannot be typed on a number
+// pad at all — 5/8, 16:15. It adds `options: [{ value, why }]`, correct_answer holding the
+// winning option's own `value` string. Every option carries its own `why`, because a child who
+// picks "5/16" has made one specific mistake (they added the denominators) and the generic hint
+// steps do not name it. Two of the wrong options encode a real misconception, one is a near
+// miss — a plausible-looking number, so the right answer cannot be found by elimination.
 // operandKey identifies the underlying number pair (independent of phrasing/names) so a
 // caller generating several problems in one batch can dedupe — see generateProblem's
 // `avoid` param. Note it SORTS the pair, so roles are not recoverable from it.
@@ -49,6 +56,15 @@ const tr = (lang, en, turkish) => (lang === 'tr' ? turkish : en)
 
 function pairKey(a, b) {
   return [a, b].sort((x, y) => x - y).join(',')
+}
+
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = randInt(0, i)
+    const t = a[i]; a[i] = a[j]; a[j] = t
+  }
+  return a
 }
 
 // Difficulty → operand range. Same shape for every template so registry/templates agree
@@ -287,7 +303,98 @@ function multiplicationWordTemplate(level, lang) {
 // d is the denominator (2, 3, or 4); N is always a multiple of d so the answer is a
 // whole number — no decimals/rounding to reason about at this level.
 
+// One template, three shapes, picked by band — the same arrangement timeTemplate already uses.
+// The two new ones are choice-format because their answers are fractions: a child cannot type
+// 5/8 on a number pad, and asking them to would turn a fractions question into a typing puzzle.
+// They only appear from Year 3, which is where adding same-denominator fractions and comparing
+// unit fractions actually enter the curriculum.
 function fractionOfNumberTemplate(level, lang) {
+  const shapes = bandForLevel(level) <= 2 ? ['ofNumber'] : ['ofNumber', 'addSame', 'compare']
+  const shape = pick(shapes)
+  if (shape === 'addSame') return fractionAddSame(level, lang)
+  if (shape === 'compare') return fractionCompare(level, lang)
+  return fractionOfNumber(level, lang)
+}
+
+// 2/8 + 3/8. The mistake worth catching is adding the denominators too, which is why 5/16 is
+// always on offer.
+function fractionAddSame(level, lang) {
+  const band = bandForLevel(level)
+  const d = pick(band >= 5 ? [6, 8, 10, 12] : [5, 6, 8, 10])
+  // The sum stays a proper fraction with room for a near miss above it, so a+b <= d-2. Building
+  // the candidates rather than rolling and rejecting means no d can come up empty.
+  const pairs = []
+  for (let x = 1; x <= d - 3; x++) for (let y = x + 1; x + y <= d - 2; y++) pairs.push([x, y])
+  // Shuffled so the smaller numerator is not always written first.
+  const [a, b] = shuffle(pick(pairs))
+  const sum = a + b
+
+  const correct = `${sum}/${d}`
+  const options = shuffle([
+    { value: correct, why: tr(lang,
+        `Right — the pieces are the same size, so only the top numbers add: ${a} + ${b} = ${sum}.`,
+        `Doğru — parçalar aynı büyüklükte, sadece üstteki sayılar toplanır: ${a} + ${b} = ${sum}.`) },
+    { value: `${sum}/${d + d}`, why: tr(lang,
+        `The bottom numbers were added too. ${d} and ${d} mean the same size piece, so the bottom stays ${d}.`,
+        `Alttaki sayılar da toplanmış. ${d} ile ${d} aynı büyüklükte parça demek, alt sayı ${d} kalır.`) },
+    { value: `${Math.abs(a - b)}/${d}`, why: tr(lang,
+        `That is ${Math.max(a, b)} take away ${Math.min(a, b)}. The question adds them.`,
+        `Bu ${Math.max(a, b)} eksi ${Math.min(a, b)} olur. Soruda toplama isteniyor.`) },
+    { value: `${sum + 1}/${d}`, why: tr(lang,
+        `One piece too many — count again: ${a} + ${b}.`,
+        `Bir parça fazla — tekrar say: ${a} + ${b}.`) },
+  ])
+
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: tr(lang, `What is ${a}/${d} + ${b}/${d}?`, `${a}/${d} + ${b}/${d} kaçtır?`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `frac:add:${d}:${pairKey(a, b)}`,
+    hint_steps: [
+      tr(lang, 'Both fractions cut the whole into the same number of pieces.',
+               'İki kesir de bütünü aynı sayıda parçaya bölüyor.'),
+      tr(lang, 'So count how many pieces in total — the bottom number does not change.',
+               'O yüzden toplam kaç parça olduğunu say — alttaki sayı değişmez.'),
+    ],
+  }
+}
+
+// Which of 1/4, 1/3, 1/2, 1/5 is largest. Every child's first instinct is that 1/5 wins because
+// 5 is the biggest number, so the options ARE the misconception — no distractor to invent.
+function fractionCompare(level, lang) {
+  const band = bandForLevel(level)
+  const pool = band >= 5 ? [2, 3, 4, 5, 6, 8, 10, 12] : [2, 3, 4, 5, 6, 8]
+  const denoms = shuffle(pool).slice(0, 4)
+  const smallest = Math.min(...denoms)
+  const correct = `1/${smallest}`
+
+  const options = denoms.map(d => d === smallest
+    ? { value: `1/${d}`, why: tr(lang,
+        `Right — cut into only ${d}, so each piece is the biggest.`,
+        `Doğru — sadece ${d} parçaya bölünmüş, o yüzden her parça en büyüğü.`) }
+    : { value: `1/${d}`, why: tr(lang,
+        `1/${d} cuts the whole into ${d} pieces; 1/${smallest} cuts it into only ${smallest}, so those pieces are bigger.`,
+        `1/${d} bütünü ${d} parçaya böler; 1/${smallest} ise sadece ${smallest} parçaya böler, o parçalar daha büyük.`) })
+
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: tr(lang, 'Which of these is the largest?', 'Bunlardan hangisi en büyüktür?'),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `frac:cmp:${[...denoms].sort((x, y) => x - y).join('-')}`,
+    hint_steps: [
+      tr(lang, 'The bottom number says how many pieces the whole was cut into.',
+               'Alttaki sayı, bütünün kaç parçaya bölündüğünü söyler.'),
+      tr(lang, 'The more pieces you cut it into, the smaller each piece gets.',
+               'Kaç parçaya çok bölersen, her bir parça o kadar küçülür.'),
+    ],
+  }
+}
+
+function fractionOfNumber(level, lang) {
   // `level` used to be accepted and ignored, which had two consequences: a question at
   // "Fractions & Decimals" was identical to one at "Fractions", and the topic could only
   // ever produce 3 x 5 = 15 distinct problems — so a 5-question session used a third of
@@ -817,14 +924,16 @@ export const TOPICS = Object.keys(REGISTRY)
 // roll collides, reroll (bounded) until a fresh number pair comes up. Callers building a
 // multi-question batch should accumulate returned operandKeys into the same Set across
 // calls; single one-off calls (e.g. MathLab) can just omit it.
-export function generateProblem(topic, level, avoid = null, lang = 'en') {
+// `numericOnly`: reroll past choice-format shapes. Paper mode is the caller — a question whose
+// answer is picked from options cannot be printed, so it has to come back as something typable.
+export function generateProblem(topic, level, avoid = null, lang = 'en', numericOnly = false) {
   const template = REGISTRY[topic]
   if (!template) throw new Error(`Unknown math template topic: ${topic}`)
-  if (!avoid) return template(level, lang)
+  const reject = p => (avoid ? avoid.has(p.operandKey) : false) || (numericOnly && p.format === 'choice')
 
   const MAX_ATTEMPTS = 30
   let problem = template(level, lang)
-  for (let attempt = 1; attempt < MAX_ATTEMPTS && avoid.has(problem.operandKey); attempt++) {
+  for (let attempt = 1; attempt < MAX_ATTEMPTS && reject(problem); attempt++) {
     problem = template(level, lang)
   }
   return problem

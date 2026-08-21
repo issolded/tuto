@@ -60,6 +60,13 @@ const ANIM = `
   80%  { opacity: 1; }
   100% { opacity: 0; }
 }
+/* flashIn's timings are percentages, so stretching it to hold a sentence on screen would
+   stretch the fade-in with it. A wrong choice explains itself instead, and stays until the
+   child taps or the timer runs out. */
+@keyframes flashHold {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 @keyframes confettiFall {
   0%   { transform: translateY(-14px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(640px) rotate(560deg); opacity: 0; }
@@ -163,7 +170,11 @@ function sameAnswer(given, expected) {
   if (given === null || given === undefined || String(given).trim() === '') return false
   const a = Number(String(given).trim())
   const b = Number(expected)
-  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 1e-9
+  // A multiple-choice answer is the option's own text — "5/8", "16:15" — and Number() turns
+  // that into NaN. Those compare as text. Anything typed on the number pad still compares as
+  // a number, so 07 and 7 remain the same answer.
+  if (!Number.isFinite(b)) return String(given).trim() === String(expected).trim()
+  return Number.isFinite(a) && Math.abs(a - b) < 1e-9
 }
 
 // Children are asked "how many steps?", so they type a count and the arrow shows which
@@ -1460,6 +1471,7 @@ export default function MathScreen() {
 
   const fileRef    = useRef(null)
   const flashTimer = useRef(null)
+  const pendingAdvance = useRef(null)  // lets a tap skip the rest of a flash that is showing a sentence
   const prefetch   = useRef(null)   // a session being built ahead of the child choosing a mode
 
   // ── Start: pick mode then generate questions ─────────────────────────────
@@ -1493,7 +1505,10 @@ export default function MathScreen() {
       slot.problem = p
       slot.question = p.question_text
       slot.answer = p.correct_answer
-      slot.format = 'integer'
+      // Every template used to be numeric, so the format was assumed here rather than read off
+      // the problem. It says so itself now, because a question whose answer is 5/8 cannot be
+      // typed on a number pad at all — it has to be offered as options.
+      slot.format = p.format === 'choice' ? 'choice' : 'integer'
     }
 
     const llmSlots = slots.filter(s => !s.templateTopic)
@@ -1552,7 +1567,7 @@ export default function MathScreen() {
           if (p) {
             usedOperands.add(p.operandKey)
             slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
-            slot.format = 'integer'; slot.hints = null
+            slot.format = p.format === 'choice' ? 'choice' : 'integer'; slot.hints = null
           } else {
             slot.question = null
           }
@@ -1575,18 +1590,29 @@ export default function MathScreen() {
   // Put a built session on screen. Everything with a lasting effect lives here rather than in
   // buildSession, so a prepared session the child walks away from costs nothing.
   const adoptSession = ({ ready, llmQuestions, level: lvl }, selectedMode) => {
-    rememberSeen('seen', child?.id, 'curriculum', llmQuestions)
-    rememberSeen('keys', child?.id, lvl, ready.map(s => s.problem?.operandKey))
-    rememberSeen('topics', child?.id, 'curriculum', ready.map(s => s.curriculum.id))
+    // A multiple-choice question cannot go on paper: the child writes "5/8" or a letter in a
+    // box, and the photo marking has no options to compare it against. The session is built
+    // before the mode is chosen — deliberately, since that is what makes the loading screen
+    // skippable — so the swap happens here instead. Templates generate synchronously, so it
+    // costs nothing. This is also the first piece of the screen/paper split the audit wants.
+    const slots = selectedMode !== 'paper' ? ready : ready.map(s => {
+      if (s.format !== 'choice' || !s.problem) return s
+      const p = generateProblem(s.problem.topic, s.problem.level, null, language, true)
+      return { ...s, problem: p, question: p.question_text, answer: p.correct_answer, format: 'integer' }
+    })
 
-    setQuestions(ready.map(s => s.question))
-    setCorrectAns(ready.map(s => s.answer))
-    setAnswerFormats(ready.map(s => s.format))
-    setQTypes(ready.map(() => null))
-    setCurriculumTopics(ready.map(s => s.curriculum))
-    setTopic(ready[0]?.curriculum?.name || 'math')
-    setTemplateProblems(ready.map(s => s.problem ?? null))
-    setLlmHints(ready.map(s => s.hints ?? null))
+    rememberSeen('seen', child?.id, 'curriculum', llmQuestions)
+    rememberSeen('keys', child?.id, lvl, slots.map(s => s.problem?.operandKey))
+    rememberSeen('topics', child?.id, 'curriculum', slots.map(s => s.curriculum.id))
+
+    setQuestions(slots.map(s => s.question))
+    setCorrectAns(slots.map(s => s.answer))
+    setAnswerFormats(slots.map(s => s.format))
+    setQTypes(slots.map(() => null))
+    setCurriculumTopics(slots.map(s => s.curriculum))
+    setTopic(slots[0]?.curriculum?.name || 'math')
+    setTemplateProblems(slots.map(s => s.problem ?? null))
+    setLlmHints(slots.map(s => s.hints ?? null))
     setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
   }
 
@@ -1698,6 +1724,36 @@ export default function MathScreen() {
     adoptSession(built, selectedMode)
   }
 
+  // Shared tail of every answered question, so the choice path and the typed path cannot drift
+  // apart on what "next question" means.
+  const advanceAfterFlash = (newAnswers) => {
+    setFlash(null)
+    setUserAnswers(newAnswers)
+    setHintOpenFor(null)
+    if (qIdx + 1 >= questions.length) doScreenEval(newAnswers)
+    else setQIdx(i => i + 1)
+  }
+
+  // ── Screen mode: submit one multiple-choice answer ───────────────────────
+  // One tap, one attempt, no second try. A choice question already shows the answer somewhere
+  // on the screen, so letting the child guess again would just be four taps to a certain gem.
+  // What replaces the retry is the option's own `why`: the child sees the specific mistake they
+  // made — added the denominators, subtracted instead — rather than a generic "almost".
+  const submitChoiceAnswer = (value) => {
+    if (flash) return
+    const isCorrect = sameAnswer(value, correctAns[qIdx])
+    const newAnswers = [...userAnswers, value]
+    const why = templateProblems[qIdx]?.options?.find(o => o.value === value)?.why ?? null
+
+    setFlash({ correct: isCorrect, answer: correctAns[qIdx], why: isCorrect ? null : why })
+    setInput('')
+    // A sentence needs longer on screen than a number does, and a child who has read it should
+    // not have to wait out the rest — the overlay takes a tap to move on early.
+    const dwell = isCorrect ? 1400 : (why ? 5200 : 1400)
+    pendingAdvance.current = () => { clearTimeout(flashTimer.current); pendingAdvance.current = null; advanceAfterFlash(newAnswers) }
+    flashTimer.current = setTimeout(() => { pendingAdvance.current = null; advanceAfterFlash(newAnswers) }, dwell)
+  }
+
   // ── Screen mode: submit one answer ───────────────────────────────────────
   const submitScreenAnswer = () => {
     if (!input || flash) return
@@ -1729,15 +1785,7 @@ export default function MathScreen() {
     setFlash({ correct: isCorrect, answer: correctAns[qIdx] })
     setInput('')
 
-    flashTimer.current = setTimeout(() => {
-      setFlash(null)
-      setUserAnswers(newAnswers)
-      if (qIdx + 1 >= questions.length) {
-        doScreenEval(newAnswers)
-      } else {
-        setQIdx(i => i + 1)
-      }
-    }, 1400)
+    flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 1400)
   }
 
   // Moving on without getting it right. Recorded as WRONG, deliberately: a question the child
@@ -1749,12 +1797,7 @@ export default function MathScreen() {
     setInput('')
     const newAnswers = [...userAnswers, null]
     setFlash({ correct: false, answer: correctAns[qIdx], skipped: true })
-    flashTimer.current = setTimeout(() => {
-      setFlash(null)
-      setUserAnswers(newAnswers)
-      if (qIdx + 1 >= questions.length) doScreenEval(newAnswers)
-      else { setQIdx(i => i + 1); setHintOpenFor(null) }
-    }, 900)
+    flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 900)
   }
 
   // ── Screen mode: evaluate locally ────────────────────────────────────────
@@ -2204,15 +2247,28 @@ export default function MathScreen() {
 
         {/* Flash feedback overlay */}
         {flash && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
-            background: flash.correct ? 'rgba(76,182,133,.94)' : 'rgba(247,148,51,.94)',
-            animation: 'flashIn 1.4s ease both',
-          }}>
+          <div
+            onClick={() => pendingAdvance.current?.()}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 300,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+              background: flash.correct ? 'rgba(76,182,133,.94)' : 'rgba(247,148,51,.94)',
+              animation: flash.why ? 'flashHold .22s ease both' : 'flashIn 1.4s ease both',
+              padding: '0 26px', cursor: flash.why ? 'pointer' : 'default',
+            }}>
             <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 30, color: 'white', textAlign: 'center', padding: '0 28px', lineHeight: 1.4 }}>
-              {flash.correct ? t('math_yes', language) : `${t('math_almost', language)} ${flash.answer} 💪`}
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.why ? 22 : 30, color: 'white', textAlign: 'center', padding: '0 2px', lineHeight: 1.45 }}>
+              {flash.correct
+                ? t('math_yes', language)
+                : flash.why
+                  ? <>
+                      <MathText text={flash.why} />
+                      <div style={{ marginTop: 14, fontSize: 19, opacity: .92 }}>{t('math_almost', language)} <MathText text={flash.answer} /></div>
+                      <div style={{ marginTop: 22, fontSize: 15, opacity: .78 }}>
+                        {language === 'tr' ? 'Devam etmek için dokun' : 'Tap to carry on'}
+                      </div>
+                    </>
+                  : `${t('math_almost', language)} ${flash.answer} 💪`}
             </div>
           </div>
         )}
@@ -2342,25 +2398,48 @@ export default function MathScreen() {
                 >{language === 'tr' ? 'Bunu geç →' : 'Skip this one →'}</button>
               )}
 
-              {/* Answer display */}
-              <div style={{
-                background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
-                boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
-                  {input || '?'}
-                </span>
-              </div>
+              {answerFormats[qIdx] === 'choice' ? (
+                /* Four cards where the number pad would be. Two columns, because the answers
+                   here are short (5/8, 16:15) and a single column would push the last one off
+                   a phone screen under the question card. */
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {(templateProblems[qIdx]?.options ?? []).map(opt => (
+                    <button
+                      key={opt.value}
+                      className="math-press"
+                      onClick={() => submitChoiceAnswer(opt.value)}
+                      disabled={!!flash}
+                      style={{
+                        border: 'none', background: 'white', borderRadius: 18, padding: '20px 12px',
+                        boxShadow: '0 6px 18px rgba(60,120,200,.12)', cursor: flash ? 'default' : 'pointer',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 27, color: MATH, lineHeight: 1.2,
+                      }}
+                    ><MathText text={opt.value} /></button>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {/* Answer display */}
+                  <div style={{
+                    background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
+                    boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
+                      {input || '?'}
+                    </span>
+                  </div>
 
-              {/* Keyboard */}
-              <NumberKeyboard
-                value={input}
-                onChange={setInput}
-                onSubmit={submitScreenAnswer}
-                disabled={!!flash}
-                allowDecimal={answerFormats[qIdx] === 'decimal'}
-              />
+                  {/* Keyboard */}
+                  <NumberKeyboard
+                    value={input}
+                    onChange={setInput}
+                    onSubmit={submitScreenAnswer}
+                    disabled={!!flash}
+                    allowDecimal={answerFormats[qIdx] === 'decimal'}
+                  />
+                </>
+              )}
             </>
           )}
         </div>
@@ -2467,11 +2546,11 @@ export default function MathScreen() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}><MathText text={r.question} /></div>
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
-                        {t('math_your_answer', language)} {r.child_answer ?? '—'}
+                        {t('math_your_answer', language)} {r.child_answer == null ? '—' : <MathText text={r.child_answer} />}
                       </div>
                       {!r.correct && (
                         <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 2 }}>
-                          {t('math_answer_was', language)} {r.correct_answer} 💡
+                          {t('math_answer_was', language)} <MathText text={r.correct_answer} /> 💡
                         </div>
                       )}
                     </div>
