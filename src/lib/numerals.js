@@ -128,9 +128,25 @@ function convert(text, units, tens, scale, glue) {
   return out.join('').replace(/ {2,}/g, ' ').trim()
 }
 
+// Thousands separators arrive at random — one session produced "Round 347820 to the nearest
+// 10000" and "Round 482,735 to the nearest 10,000", and another grouped the number but not the
+// place value it was rounding to. Worse in Turkish, where the comma is the DECIMAL separator:
+// an English-style 482,735 reads as 482.735.
+//
+// Stripped rather than made consistent, because the child answers on a number pad with no
+// separator key — what they type back is bare digits either way. Only groups of exactly three
+// are touched, so a decimal survives: English keeps "3.75", Turkish keeps "3,75".
+function stripGroupSeparators(text, lang) {
+  const out = text.replace(/\b\d{1,3}(?:,\d{3})+\b/g, m => m.replace(/,/g, ''))
+  return lang === 'tr'
+    ? out.replace(/\b\d{1,3}(?:\.\d{3})+\b/g, m => m.replace(/\./g, ''))
+    : out
+}
+
 export function numeralise(text, lang = 'en') {
   if (typeof text !== 'string' || !text) return text
-  return lang === 'tr'
+  const converted = lang === 'tr'
     ? convert(text, TR_UNITS, TR_TENS, TR_SCALE, new Set(['yüz', 'bin', 'milyon']))
     : convert(text, EN_UNITS, EN_TENS, EN_SCALE, EN_GLUE)
+  return stripGroupSeparators(converted, lang)
 }

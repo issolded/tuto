@@ -104,6 +104,23 @@ function isUnreadable(q) {
   return q.includes('|') || /\n/.test(q) || /^\s*[-*#]\s/m.test(q) || q.length > 320
 }
 
+// A question that points at a picture that was never drawn. The model-written path has no
+// visual at all, so "the chart shows 8 dogs and 5 cats" asks the child to look at nothing —
+// a nine-year-old testing this stopped and asked where the graph was. The prompt already
+// forbids PRINTING a table and the model obeys it, then refers to one instead; this catches
+// that. Template questions carry their own drawing and never come through here.
+// Turkish suffixes onto the noun and softens the k — grafik becomes grafiğe, grafikte,
+// grafiği — so these match on the stem and are deliberately not word-bounded. "tablo" is safe
+// to match bare: the furniture sense is "masa".
+const TR_MISSING_VISUAL = /grafi[kğ]|tablo|piktogram|diyagram|şema|çizelge|sayı doğrusu/i
+// English "table" is the one ambiguous word — "Sam sat at the table" is a perfectly good
+// question — so it only counts when it is being read FROM.
+const EN_MISSING_VISUAL = /\b(chart|graph|pictogram|diagram|bar model|number line)\b|\b(?:in|from)\s+(?:a|the)\s+table\b|\btable\s+(?:shows|show|below|above|gives)\b/i
+
+function refersToMissingVisual(q) {
+  return EN_MISSING_VISUAL.test(q) || TR_MISSING_VISUAL.test(q)
+}
+
 // Mirrors HelpPanel's own isPlus/isMinus/pattern detection — used to decide, before
 // HelpPanel ever renders, whether showing help would actually show something. Keeps the
 // auto-help-on-wrong-answer trigger from popping up an empty "draw it in the air" panel
@@ -1494,7 +1511,12 @@ export default function MathScreen() {
           // arrives as a wall: a statistics question came back as a markdown table and read
           // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
           // The prompt forbids it; this is what enforces it.
-          if (isUnreadable(q)) return
+          //
+          // Kept on the slot rather than dropped here, so it goes through the same refill as a
+          // failed answer below. Statistics above Year 3 has no chart of its own, so the model
+          // reaches for one nearly every time — dropping outright would quietly shorten those
+          // sessions by a question each.
+          if (isUnreadable(q) || refersToMissingVisual(q)) slot.reject = 'refers to a picture that is not drawn'
           // Children testing this could not get past "eight hundred and forty five" — the
           // reading stopped them before the arithmetic did, and the topic was recorded as a
           // weakness. The prompt asks for digits; this makes sure of it.
@@ -1516,10 +1538,12 @@ export default function MathScreen() {
         // back to whatever the prose allows: the old prompt asked for under 300 characters and
         // got paragraphs of story ending in 18 - 12, which is a reading test, not a maths one.
         const cap = maxQuestionChars(age)
-        filled.forEach((s, i) => { if (s.question.length > cap) bad.add(i) })
+        filled.forEach((s, i) => { if (s.question.length > cap || s.reject) bad.add(i) })
         for (const i of bad) {
           const slot = filled[i]
-          const why = slot.question.length > cap
+          const why = slot.reject
+            ? slot.reject
+            : slot.question.length > cap
             ? `too long (${slot.question.length} > ${cap} chars)`
             : 'the answer did not check out'
           console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question}`)

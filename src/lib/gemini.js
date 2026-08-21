@@ -306,6 +306,12 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
     : level >= 12 ? 'the harder end of this topic, but still on the topic'
     : 'the middle of this topic'
   const cap = maxQuestionChars(age)
+  // Money used to be banned outright, which cost a whole strand: change from a note is one of the
+  // few places arithmetic looks like the child's own life, and the curriculum asks for it. The
+  // amount was never the problem — the coin NAMES were, since "quarter" and "kuruş" only mean
+  // something where they are spent. Dollars rather than pounds for English: these readers are not
+  // all in Britain, and $ is the one symbol a child anywhere has seen.
+  const currency = language === 'tr' ? 'Turkish lira, written as "15 TL"' : 'dollars, written as "$15"'
   // A minority, not none: the curriculum asks for reasoning as its own strand, and a session of
   // nothing but bare sums stops testing whether the child can find the sum in the first place.
   const wordBudget = Math.max(1, Math.round(topics.length * 0.3))
@@ -344,6 +350,11 @@ FORMAT — the question is shown to the child as ONE run of plain text, so:
 - Data for a statistics or graph question goes INTO the sentence: "The Strikers scored 4, 6, 3
   and 5 goals over four weeks, and the Defenders scored 2, 5, 1 and 4." Never "Team | Week 1 |
   Week 2".
+- NOTHING IS DRAWN. The child sees your sentence and nothing else, so never refer to a chart,
+  graph, table, pictogram, diagram or number line — not even in passing. "The chart shows 8 dogs
+  and 5 cats" points at a blank space. Write "There are 8 dogs and 5 cats" instead. Same for
+  angles and shapes: state every measurement the child needs, never "the angle marked x in the
+  diagram".
 
 ANSWER RULES — these are strict, because the child types the answer on a number pad:
 - Every answer must be a single positive number: either a whole number, or a decimal with at
@@ -358,8 +369,9 @@ ANSWER RULES — these are strict, because the child types the answer on a numbe
   (15) or the number of coins (2). Ask "how much change", or name the quantity plainly.
 
 FAIRNESS RULES:
-- No country-specific money (dime, nickel, penny, quarter, cent, dollar, pound). Name a neutral
-  amount instead, or avoid money.
+- Money is allowed, but only in ${currency}. Never name individual coins (penny, nickel, dime,
+  quarter, cent, kuruş): a child outside that country has never held one, and "a quarter" reads
+  as a fraction besides.
 - Metric units only (grams, kilograms, centimetres, metres, litres). Never pounds, ounces,
   inches, feet.
 - Do not hinge an answer on a fact the child must simply know. Sides and corners of common
