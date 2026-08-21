@@ -652,7 +652,64 @@ const SHAPES = {
   triangle: 3, square: 4, rectangle: 4, pentagon: 5, hexagon: 6, octagon: 8,
 }
 
+const SHAPE_NAMES = {
+  triangle:  { en: 'triangle',  tr: 'üçgen' },
+  square:    { en: 'square',    tr: 'kare' },
+  rectangle: { en: 'rectangle', tr: 'dikdörtgen' },
+  pentagon:  { en: 'pentagon',  tr: 'beşgen' },
+  hexagon:   { en: 'hexagon',   tr: 'altıgen' },
+  octagon:   { en: 'octagon',   tr: 'sekizgen' },
+}
+
+// Year 4 is where classifying shapes by name enters the curriculum, and naming is the one
+// geometry question that cannot be typed. It is also the one this file's opening note warns
+// about — a question that only measures whether a child has met the word "pentagon". Drawing
+// the shape is what stops that: the answer is countable, and a wrong option can say so back
+// ("a hexagon means six sides; count this one, it has five").
+function geometryName(level, lang) {
+  const pool = Object.keys(SHAPES)
+  const shown = pick(pool)
+  const n = SHAPES[shown]
+  const name = k => SHAPE_NAMES[k][lang === 'tr' ? 'tr' : 'en']
+  const cap = s => s.charAt(0).toLocaleUpperCase(lang === 'tr' ? 'tr' : 'en') + s.slice(1)
+  const a = k => (/^[aeiou]/.test(SHAPE_NAMES[k].en) ? 'an' : 'a') + ' ' + name(k)
+
+  // Never offer the other four-sided shape against this one. A square really is a rectangle,
+  // so marking it wrong would be a lie, and the reason given would contradict the curriculum.
+  // Shuffle first, then a stable sort by how near the side count is: near misses, tie broken
+  // at random rather than always the same three.
+  const wrongs = shuffle(pool.filter(k => SHAPES[k] !== n))
+    .sort((a, b) => Math.abs(SHAPES[a] - n) - Math.abs(SHAPES[b] - n))
+    .slice(0, 3)
+
+  const options = shuffle([
+    { value: cap(name(shown)), why: tr(lang,
+        `Right — it has ${n} sides, and that is what ${a(shown)} is.`,
+        `Doğru — ${n} kenarı var, ${name(shown)} demek de bu.`) },
+    ...wrongs.map(w => ({ value: cap(name(w)), why: tr(lang,
+        `${cap(a(w))} means ${SHAPES[w]} sides. Count this one — it has ${n}.`,
+        `${cap(name(w))} demek ${SHAPES[w]} kenar demek. Bunu say — ${n} kenarı var.`) })),
+  ])
+
+  return {
+    topic: 'geometry',
+    level,
+    question_text: tr(lang, 'What is this shape called?', 'Bu şeklin adı nedir?'),
+    format: 'choice',
+    options,
+    correct_answer: cap(name(shown)),
+    operandKey: `geo:name:${shown}`,
+    hint_steps: [
+      tr(lang, 'Count the sides of the shape.', 'Şeklin kenarlarını say.'),
+      tr(lang, 'The name carries the number: penta is five, hexa is six, octa is eight.',
+               'Adı sayıyı söyler: beşgen beş, altıgen altı, sekizgen sekiz.'),
+    ],
+    visual: { kind: 'shapes', shapes: [shown], ask: 'sides' },
+  }
+}
+
 function geometryTemplate(level, lang) {
+  if (bandForLevel(level) >= 4 && Math.random() < 0.4) return geometryName(level, lang)
   // Shapes occupy a single rung on the ladder, so difficulty does not ride on the level
   // number — the rung presents its own whole range instead. Both askings, all six shapes,
   // and a mix of one shape and two: a pair tops out at 8 + 8, and since every mark is on
