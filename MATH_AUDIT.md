@@ -343,9 +343,47 @@ izlendi. 1600 üretimde şık tekrarı yok, doğru cevap hep şıklar içinde, b
     Overlay `document.body`'ye portal'lanıyor: soru kartı `scaleIn ... both` ile animasyonlu,
     kalan transform `position: fixed`'i kartın içine hapsediyordu.
 
+### A5 — 6. madde kapandı: zihinden aritmetik kuralı (3. tur)
+
+Suatkan'ın (10 yaş) oturumu 6. maddenin en net kanıtıydı. 10 sorunun 5'i kâğıt istiyordu ve
+cevaplar `8`, `8`, `2` diye geldi — sorudan kaldırılmış tek haneler. Bu aritmetiği bilmemek
+değil, bırakmak. Doğru yaptığı 3 sorunun ikisi zihinden çözülenlerdi (180−115, 15−6).
+
+Not: `What is 8.412 - 3.202?` **binlik ayırıcı hatasının dönüşü değil.** `mathVerify.js`
+ifadeyi kendi hesaplıyor; cevap 5.21 geldiği için ondalık okuma doğrulanmış oldu. Model
+`8412 - 3202` demek isteseydi 5210 yazardı ve soru elenirdi. Ayrıcının düzeldiğinin kanıtı da
+aynı oturumda: "Round 482900" artık ayraçsız geliyor (5. madde).
+
+16. **Tek kural, iki iş: eklenen/çıkarılan sayının en fazla iki sıfırdan farklı basamağı olur.**
+    Üç seçenekten hiçbiri değil — büyüklüğü kısmak (2) Year 5 çocuğuna sessizce Year 3
+    müfredatı verirken ebeveyne "4 haneden büyük toplama çalıştı" derdi; karalama alanı (1)
+    canvas yazmayı gerektiriyordu. Bunun yerine **büyüklük korunuyor, şekil değişiyor**:
+    `5647 + 13043` → `5647 + 13000`. Hâlâ beş haneli, hâlâ `y5_addition`.
+17. **Aynı kural yardımı da yazıyor.** `partitionSteps` sıfırdan farklı her basamak için bir
+    adım yürüyor — `3200 − 2100` → *"2100'ü parçala: 2000 + 100. 3200 − 2000 = 1200. Şimdi 100
+    çıkar."* Son adımı çocuk yapıyor, yani hint cevabı söylemiyor. Kısıt ile açıklama aynı
+    olgu olduğu için birbirinden sapamazlar. `countingOnSteps`/`countingBackSteps` hangi
+    yardımı vereceğini sayıya bakıp kendi seçiyor, bayrakla değil.
+18. **Ödünç kısıtlanmadı, bilerek.** `5147 − 2900` sütunda ödünç ister ama parçalayarak gayet
+    çözülür (5147 − 2000 = 3147, sonra − 900). Ödünç yazılı yöntemin özelliği, sayının değil.
+19. **Kâğıt modu tam genişlikte sayıları geri alıyor.** `adoptSession` şıklı soruların yanında
+    artık toplama/çıkarmayı da `columnar: true` ile yeniden üretiyor. Müfredatın *"formal
+    columnar method"* satırı orada karşılanıyor; kip seçimi böylece zihinden/yazılı yöntem
+    ayrımının karşılığı oluyor (ikisi de müfredatta ayrı şerit). Ekran yolu dokunulmadan
+    kalıyor, çünkü `buildSession`'ın operand tekrar-önleme kümesi orada duruyor.
+20. **LLM tarafı prompt + kod kapısı.** Kip seçildiğinde model çağrısı yok (prefetch'in tüm
+    anlamı bu), o yüzden kural her modda geçerli. Prompt sayı kuralını istiyor, `mathVerify.js`
+    `needsWrittenMethod()` uyguluyor — altın kural. Kapı **bilerek dar**: yalnız iki operandlı
+    çıplak ifadeye bakıyor, sözel problemi elemiyor (LLM o konuların tek kaynağı). Çarpma/bölme
+    daha sıkı: ya çarpım tablosunda ya yuvarlak — `1408 × 23` eleniyor, `1408 × 20` geçiyor.
+
+Doğrulama: 112.000 üretim (7 seviye × 2 dil × 2 işlem) — hiçbir operandda 2'den fazla anlamlı
+basamak yok, hiçbir hint cevabı söylemiyor, ekran modunda hiç sütun talimatı çıkmıyor.
+Kapı 17 vakanın 17'sinde doğru. Kâğıt modu L10'da üretimlerin %96'sı hâlâ sütunlu.
+
 ### B — Birlikte karar verelim
 
-- Ekran modu aritmetik büyüklüğü: karalama alanı mı, sınır mı, sütun göstericisi mi? (6)
+- ~~Ekran modu aritmetik büyüklüğü (6)~~ — kapandı, A5. Üç seçenek yerine dördüncüsü.
 - Year 1 için ölçme şablonu (saat + uzunluk + kütle + hacim + para) — 7'nin gerçek çözümü
 - Year 4+ zaman konusu geri gelsin mi? (7) — şıklı format 16:15 gibi cevapları mümkün
   kıldığı için bu soru yeniden açıldı; artık "kadranı sürükle" tek seçenek değil.

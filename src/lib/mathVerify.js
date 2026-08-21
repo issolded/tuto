@@ -17,6 +17,7 @@
 // A question dropped here is replaced by a template one, so the child still gets ten.
 
 import { callGeminiJSON } from './gemini'
+import { partitionsMentally } from './mathTemplates'
 
 // Trailing text after the numbers is common ("... = ?", "kaç eder?"), so the expression is
 // matched rather than the whole string. Two operands only: three-term expressions bring
@@ -33,6 +34,33 @@ function evaluate(a, op, b) {
     case '÷': case '/': return b === 0 ? null : a / b
     default: return null
   }
+}
+
+// Whether a question can only be done with a pen. Most children answer on screen with nothing
+// to write on, and a session of "8.412 - 3.202" and "9025 + 7383" came back with single digits
+// lifted off the question — abandoned, not failed.
+//
+// Deliberately narrow: only a bare two-operand expression is judged, which is exactly the shape
+// that goes wrong, and only the operand being applied is measured. Word problems are left to
+// the prompt, because dropping one costs the child a topic the model is the only source of.
+//
+// Tables run to twelve, so a multiplier or divisor inside them is fine however it is written;
+// past that it has to be round, since 1408 × 23 is column work and 1408 × 20 is not.
+export function needsWrittenMethod(question) {
+  const matches = [...String(question ?? '').matchAll(new RegExp(EXPR, 'g'))]
+  if (matches.length !== 1) return false
+
+  const [, , op, bRaw] = matches[0]
+  const b = num(bRaw)
+  if (!Number.isFinite(b)) return false
+  if ('×x*÷/'.includes(op)) {
+    // Two non-zero digits is a fair split to ADD and a long multiplication to multiply by, so
+    // scaling gets the tighter bar: inside the tables, or round enough to be one table fact
+    // and a shift. 1408 × 23 is column work; 1408 × 20 is 1408 × 2 with a zero on the end.
+    const roundish = String(bRaw).replace(/[^1-9]/g, '').length <= 1
+    return !(Number.isInteger(b) && Math.abs(b) <= 12) && !roundish
+  }
+  return !partitionsMentally(bRaw)
 }
 
 // 'agree' | 'disagree' | 'unknown'. Unknown is the honest answer for anything with more than

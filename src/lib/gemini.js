@@ -356,6 +356,17 @@ FORMAT — the question is shown to the child as ONE run of plain text, so:
   angles and shapes: state every measurement the child needs, never "the angle marked x in the
   diagram".
 
+NUMBERS THE CHILD CAN HOLD IN THEIR HEAD — most children answer on screen, with nothing to
+write on, so a question that needs a column method gets abandoned rather than failed. A real
+session came back with "8" for "What is 8.412 - 3.202?" and "2" for "9025 + 7383 = ?".
+- Whatever is ADDED, SUBTRACTED, MULTIPLIED or DIVIDED BY must have at most TWO non-zero
+  digits, so it splits into at most two steps: 13000 (one step), 2100 = 2000 + 100 (two steps).
+  The other number is free. "5647 + 13000" is fine; "5647 + 13043" is not.
+- This does NOT mean small numbers. Keep the size the topic calls for — six-digit numbers stay
+  six-digit. It is the shape that changes, not the magnitude.
+- At most ONE decimal place, on both numbers. "8.4 - 3.2", never "8.412 - 3.202".
+- Division must come out exact, from a times table up to 12. No remainders.
+
 ANSWER RULES — these are strict, because the child types the answer on a number pad:
 - Every answer must be a single positive number: either a whole number, or a decimal with at
   most 2 decimal places. Write decimals with a point, e.g. 3.75.

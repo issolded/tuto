@@ -5,7 +5,7 @@ import ClockFace, { DraggableClock } from '../components/ClockFace'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
-import { findBadAnswers } from '../lib/mathVerify'
+import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
 import { t } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
@@ -1559,8 +1559,14 @@ export default function MathScreen() {
         // and not in findBadAnswers. Enforced in code because a limit left to the model drifts
         // back to whatever the prose allows: the old prompt asked for under 300 characters and
         // got paragraphs of story ending in 18 - 12, which is a reading test, not a maths one.
+        // Same reasoning for the numbers. The prompt asks for operands a child can partition in
+        // their head; this is what makes it true. Only a bare two-operand sum is judged, so a
+        // word problem is never dropped over its arithmetic — see needsWrittenMethod.
         const cap = maxQuestionChars(age)
-        filled.forEach((s, i) => { if (s.question.length > cap || s.reject) bad.add(i) })
+        filled.forEach((s, i) => {
+          if (s.question.length > cap || s.reject) bad.add(i)
+          else if (needsWrittenMethod(s.question)) { s.reject = 'needs a column method, and screen mode has no paper'; bad.add(i) }
+        })
         for (const i of bad) {
           const slot = filled[i]
           const why = slot.reject
@@ -1597,14 +1603,24 @@ export default function MathScreen() {
   // Put a built session on screen. Everything with a lasting effect lives here rather than in
   // buildSession, so a prepared session the child walks away from costs nothing.
   const adoptSession = ({ ready, llmQuestions, level: lvl }, selectedMode) => {
-    // A multiple-choice question cannot go on paper: the child writes "5/8" or a letter in a
-    // box, and the photo marking has no options to compare it against. The session is built
-    // before the mode is chosen — deliberately, since that is what makes the loading screen
-    // skippable — so the swap happens here instead. Templates generate synchronously, so it
-    // costs nothing. This is also the first piece of the screen/paper split the audit wants.
+    // The session is built before the mode is chosen — deliberately, since that is what makes
+    // the loading screen skippable — so anything mode-specific is swapped in here. Templates
+    // generate synchronously, so it costs nothing.
+    //
+    // Two things change on paper, both of them things paper is uniquely able to carry:
+    //   - A multiple-choice question cannot go on paper at all: the child writes "5/8" or a
+    //     letter in a box, and the photo marking has no options to compare it against.
+    //   - Addition and subtraction are built partitionable so they can be done in the head,
+    //     because on screen there is nothing to write on. Paper is where a formal written
+    //     method is possible, so it gets the full-width numbers the curriculum asks for.
+    //
+    // Screen mode is the untouched path, which is deliberate: it keeps the operand dedupe that
+    // buildSession accumulated across the batch and across recent sessions. Regenerating here
+    // cannot consult that set, and screen is the common mode.
+    const COLUMNAR = new Set(['addition', 'subtraction'])
     const slots = selectedMode !== 'paper' ? ready : ready.map(s => {
-      if (s.format !== 'choice' || !s.problem) return s
-      const p = generateProblem(s.problem.topic, s.problem.level, null, language, true)
+      if (!s.problem || (s.format !== 'choice' && !COLUMNAR.has(s.problem.topic))) return s
+      const p = generateProblem(s.problem.topic, s.problem.level, null, language, { numericOnly: true, columnar: true })
       return { ...s, problem: p, question: p.question_text, answer: p.correct_answer, format: 'integer' }
     })
 

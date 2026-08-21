@@ -122,15 +122,112 @@ function shareVisual(total, groups, highlight) {
   return highlight ? { kind: 'share', total, groups, highlight } : { kind: 'share', total, groups }
 }
 
+// ─── Mental arithmetic ──────────────────────────────────────────────────────
+// Screen mode gives the child nothing to write on. A ten-year-old's session came back with
+// "8" for 8.412 - 3.202, "8" for 5647 + 13043 and "2" for 9025 + 7383 — single digits lifted
+// off the question. That is not failing the arithmetic, it is abandoning it, and five of the
+// ten questions asked for column work they had no paper to do.
+//
+// The fix is NOT smaller numbers, which would quietly hand a Year 5 child Year 3's curriculum
+// and still tell the parent they practised "addition with more than 4 digits". It is that the
+// number being added or subtracted must PARTITION: at most two non-zero digits, so it splits
+// into at most two steps a child can hold in their head. 5647 + 13043 becomes 5647 + 13000 —
+// same five digits, same curriculum line, but now "add thirteen thousand" rather than four
+// columns of carrying.
+//
+// Borrowing is deliberately not restricted: 5147 - 2900 borrows in column form and partitions
+// perfectly well (5147 - 2000 = 3147, then - 900). Borrowing is a property of the written
+// method, not of the number, so the one rule below is enough.
+//
+// That one rule also writes the help — partitionSteps walks one step per non-zero digit — so
+// the constraint and the explanation are the same fact and cannot drift apart.
+const MENTAL_PARTS = 2
+
+// Rounds DOWN to two significant digits: 13043 → 13000, 1999 → 1900, 47 → 47. Down rather
+// than to nearest so the result can never exceed the headroom the caller measured.
+function mentalise(n) {
+  const step = 10 ** Math.max(0, String(Math.trunc(n)).length - MENTAL_PARTS)
+  return Math.floor(n / step) * step
+}
+
+// The place-value pieces actually doing something: 2100 → [2000, 100], 13000 → [13000].
+function placeParts(n) {
+  const digits = String(Math.trunc(Math.abs(n)))
+  return digits.split('').map((d, i) => Number(d) * 10 ** (digits.length - 1 - i)).filter(Boolean)
+}
+
+// The same rule, applied to a number the templates did not choose. The model writes the topics
+// that have no template — decimals, rounding, angles — and a rule left to a model drifts back
+// to whatever its prose allows, so the prompt asks and this decides. Takes the operand as
+// written, because "3.202" fails on its decimal places before its digits are even counted.
+export function partitionsMentally(written) {
+  const [whole, fraction = ''] = String(written).trim().replace(',', '.').replace('-', '').split('.')
+  if (fraction.length > 1) return false
+  return (whole + fraction).split('').filter(d => d !== '0').length <= MENTAL_PARTS
+}
+
+const UNITS = [
+  { at: 1000, en: 'thousand', tr: 'bin' },
+  { at: 100, en: 'hundred', tr: 'yüz' },
+  { at: 10, en: 'ten', tr: 'onluk' },
+]
+
+// The help for anything past counting range. One step per place-value piece, stopping short of
+// the last one so the child still does the arithmetic — the file's rule is that hint_steps
+// carry method and never the answer, and a walk that ran to the end would carry both.
+//
+// Two pieces is the useful shape: name the split, then do the first piece and hand over the
+// second. One piece has no intermediate to show without giving the answer away, so it names
+// the place value instead, which is the method a child is actually taught for round numbers.
+function partitionSteps(a, b, add, lang) {
+  const parts = placeParts(b)
+  const sign = add ? '+' : '-'
+
+  // A single digit has no place value worth naming — "7 ones" is not an explanation. It is
+  // also only reachable with a large `a`, since a small pair goes to the counting steps.
+  if (b < 10) {
+    return [
+      tr(lang, `Only the ones change here.`, `Burada sadece birler basamağı değişiyor.`),
+      tr(lang, `Count ${add ? 'on' : 'back'} ${b} from ${a}.`,
+               `${a} sayısından ${b} tane ${add ? 'ileri' : 'geri'} say.`),
+    ]
+  }
+
+  if (parts.length === 1) {
+    const u = UNITS.find(x => b % x.at === 0 && b >= x.at)
+    const k = b / u.at
+    const word = tr(lang, `${k} ${u.en}`, `${k} ${u.tr}`)
+    return [
+      tr(lang, `${b} is a round number — ${word}.`, `${b} yuvarlak bir sayı — ${word}.`),
+      tr(lang, `So only that place value changes. ${add ? 'Add' : 'Take away'} ${word} ${add ? 'to' : 'from'} ${a}.`,
+               `Yani sadece o basamak değişiyor. ${a} ${add ? 'sayısına' : 'sayısından'} ${word} ${add ? 'ekle' : 'çıkar'}.`),
+    ]
+  }
+
+  const first = parts[0]
+  const rest = parts.slice(1).join(` ${sign} `)
+  const afterFirst = add ? a + first : a - first
+  return [
+    tr(lang, `You do not need to write this down. Break ${b} up: ${parts.join(' + ')}.`,
+             `Bunu yazmana gerek yok. ${b} sayısını parçala: ${parts.join(' + ')}.`),
+    tr(lang, `${a} ${sign} ${first} = ${afterFirst}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
+             `${a} ${sign} ${first} = ${afterFirst}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`),
+  ]
+}
+
 // ─── Addition ───────────────────────────────────────────────────────────────
 
-function additionTemplate(level, lang) {
+// `columnar` is paper mode asking for the numbers back at full width. On screen the second
+// operand is partitionable; on paper it is whatever the band allows, because a formal written
+// method is exactly what the curriculum wants there and paper is what it needs.
+function additionTemplate(level, lang, columnar = false) {
   const { min, max } = rangeForLevel(level)
   // Both operands used to be drawn from the whole range, so the SUM could reach twice the
   // band's ceiling — "Addition within 20" handing over 17 + 16. The ceiling belongs to the
   // answer, so the second operand is drawn from what is left of it.
   const a = randInt(min, Math.max(min, max - min))
-  const b = randInt(min, Math.max(min, max - a))
+  const raw = randInt(min, Math.max(min, max - a))
+  const b = columnar ? raw : mentalise(raw)
   const correct_answer = a + b
 
   return {
@@ -156,6 +253,11 @@ function countingOnSteps(a, b, lang) {
               `${a} sayısından ${b} tane ileri say: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`),
     ]
   }
+  // Which help a question gets is read off the number itself rather than passed in, so a
+  // question can never be handed the wrong one: anything that partitions gets the mental walk,
+  // and only genuinely columnar numbers — which now reach a child solely in paper mode — get
+  // told to line up columns.
+  if (placeParts(b).length <= MENTAL_PARTS) return partitionSteps(a, b, true, lang)
   return [
     tr(lang, 'Line the two numbers up by their place value — ones under ones, tens under tens.',
              'Sayıları basamaklarına göre alt alta yaz — birler birlerin, onlar onların altına.'),
@@ -166,7 +268,7 @@ function countingOnSteps(a, b, lang) {
 
 // ─── Subtraction ────────────────────────────────────────────────────────────
 
-function subtractionTemplate(level, lang) {
+function subtractionTemplate(level, lang, columnar = false) {
   const { min, max } = rangeForLevel(level)
   // a is the larger operand, kept non-negative. Both bounds matter: drawing a uniformly
   // from the whole range put it near the floor half the time, and b then had nowhere to sit
@@ -176,7 +278,8 @@ function subtractionTemplate(level, lang) {
   // `max + 1` was written for an exclusive randInt; ours is inclusive, so it handed out
   // max + 1 — "21 - 5" inside a year whose curriculum says "subtraction within 20".
   const a = randInt(Math.max(min + 1, Math.round(max * 0.55)), max)
-  const b = randInt(min, Math.max(min, a - 3))
+  const raw = randInt(min, Math.max(min, a - 3))
+  const b = columnar ? raw : mentalise(raw)
   const correct_answer = a - b
 
   return {
@@ -199,6 +302,7 @@ function countingBackSteps(a, b, lang) {
               `${a} sayısından ${b} geri say: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`),
     ]
   }
+  if (placeParts(b).length <= MENTAL_PARTS) return partitionSteps(a, b, false, lang)
   return [
     tr(lang, 'Line the two numbers up by their place value — ones under ones, tens under tens.',
              'Sayıları basamaklarına göre alt alta yaz — birler birlerin, onlar onların altına.'),
@@ -1040,17 +1144,21 @@ export const TOPICS = Object.keys(REGISTRY)
 // roll collides, reroll (bounded) until a fresh number pair comes up. Callers building a
 // multi-question batch should accumulate returned operandKeys into the same Set across
 // calls; single one-off calls (e.g. MathLab) can just omit it.
-// `numericOnly`: reroll past choice-format shapes. Paper mode is the caller — a question whose
-// answer is picked from options cannot be printed, so it has to come back as something typable.
-export function generateProblem(topic, level, avoid = null, lang = 'en', numericOnly = false) {
+// Both options belong to paper mode, which is why they arrive together:
+// `numericOnly` rerolls past choice-format shapes — a question whose answer is picked from
+//   options cannot be printed, so it has to come back as something typable.
+// `columnar` lifts the mental-arithmetic constraint on addition and subtraction. Paper is the
+//   one place a formal written method is possible, so it is the one place the curriculum's
+//   "add numbers with more than 4 digits" is asked for literally.
+export function generateProblem(topic, level, avoid = null, lang = 'en', { numericOnly = false, columnar = false } = {}) {
   const template = REGISTRY[topic]
   if (!template) throw new Error(`Unknown math template topic: ${topic}`)
   const reject = p => (avoid ? avoid.has(p.operandKey) : false) || (numericOnly && p.format === 'choice')
 
   const MAX_ATTEMPTS = 30
-  let problem = template(level, lang)
+  let problem = template(level, lang, columnar)
   for (let attempt = 1; attempt < MAX_ATTEMPTS && reject(problem); attempt++) {
-    problem = template(level, lang)
+    problem = template(level, lang, columnar)
   }
   return problem
 }
