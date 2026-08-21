@@ -393,6 +393,38 @@ ondalıklar `8.412 − 3.202` yerine `0.7 + 0.2` geliyor. İpucu iki dilde de ik
 (*"6840 + 2000 = 8840. Şimdi 900 ekle."*). Kâğıt/ekran ayrımı canlıda da tutuyor: aynı yaşta
 kâğıtta `11163 + 6235`, ekranda `11258 + 8600`.
 
+### A6 — Her yaşa tarama (5–11 × TR/EN, 14 canlı oturum)
+
+Ekran modunda 140 soru. Kâğıt isteyen soru: **0** — A5'in kuralı her yaşta ve iki dilde
+tutuyor. Yaş bantları, cevap formatları, dil karışması, tablo/satır sonu: hepsi temiz.
+
+İki gerçek kusur çıktı, ikisi de düzeltildi (`eefbad4`):
+
+22. **Uzunluk sınırı yalnızca LLM sorularına uygulanıyordu.** Şablonun kendi metni kısadır
+    varsayımıyla — metni kısa, ama en uzun ikamesi değil: *"Emir 15 çıkartma aldı ve 3 sınıf
+    arkadaşı arasında eşit paylaştırdı..."* 7 yaşın 90 karakterine karşı 95. Türkçe, yanında
+    yazıldığı İngilizce'den uzun. Bölme şablonunun metni kısaltıldı, `DIV_WHO`'nun Türkçe
+    listesi tek kelimelik girdilere indi (95 → en uzun 86), ve `generateProblem` artık
+    döndürdüğü her soruyu ölçüyor: sınırı aşan bir üretim yeniden atılıyor. 144.000 üretimde
+    kapı olmadan 1 taşma (çarpma şablonu, 91), kapıyla 0.
+
+23. **Düşen sorunun yerine yenisi hiç gelmiyordu.** Kod "dropped and refilled from a template"
+    diyor ama slotun şablon konusunu okuyordu — bir slot zaten *şablonu olmadığı için* LLM'e
+    gidiyor, yani arama her zaman null dönüyordu ve her düşen soru oturumu sessizce
+    kısaltıyordu. Taramada 9, 9 ve 8 soruluk oturumlar çıktı. Yerine gelen soru artık çocuğun
+    yılının hâlihazırda kullandığı bir şablondan çekiliyor ve **o konunun müfredat kaydını da
+    taşıyor** — yoksa çocuk, kaçırdığı toplama sorusu yüzünden ondalıklarda zayıf işaretlenirdi.
+
+Düzeltmeden sonra tekrar tarandı: 14 oturumun 13'ü tam 10 soru.
+
+**Year 6 hâlâ eksik kalabiliyor** (yaş 11 EN'de 9 soru): `TEMPLATE_FOR_TOPIC` Year 6'da hiçbir
+konuyu şablona bağlamıyor — bilerek, çünkü uzun çarpma bu şablonların pozlayabileceği bir şey
+değil. Bunun çözümü ikame değil, şablon. B listesine eklendi.
+
+Yanlış alarm: 10 yaş TR'deki *"Doğru açı üzerindeki 2 açıdan biri 55 derecedir"* = 125'i
+başta hata sandım. Değil — Türkçede **doğru açı 180°'dir**, dik açı 90°. Soru da cevabı da
+doğru.
+
 ### B — Birlikte karar verelim
 
 - ~~Ekran modu aritmetik büyüklüğü (6)~~ — kapandı, A5. Üç seçenek yerine dördüncüsü.
@@ -411,6 +443,9 @@ kâğıtta `11163 + 6235`, ekranda `11258 + 8600`.
 - **`y5_geometry` şablona bağlı değil.** `mathCurriculum.js` yalnızca `y1_shapes`,
   `y3_geometry`, `y4_geometry`'yi `geometry`'ye eşliyor; Year 5 geometri hâlâ LLM'e gidiyor,
   yani 10 yaşında şekil adlandırma sorusu hiç çıkmıyor.
+- **Year 6'nın hiç şablonu yok** (A6). LLM bir soruyu bozuk verdiğinde 11 yaşındaki çocuğun
+  oturumu kısalıyor, çünkü yerine koyacak şablon yok. Seçenekler: Year 6'ya birkaç şablon
+  yazmak (uzun çarpma, yüzde, ortalama), ya da düşen slot için LLM'i yeniden çağırmak.
 
 **Kapandı:** Para politikası (9) — yerel para birimine izin verildi, yasak olan sikke
 *isimleri*. EN dolar (`$15`), TR lira (`15 TL`). `gemini.js`, commit `abe4001`.
