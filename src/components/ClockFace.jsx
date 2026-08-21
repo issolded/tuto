@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { timeWords, digital } from '../lib/timeWords'
 
 // An analogue clock, drawn once and used twice: still on the question card, and geared and
@@ -103,7 +104,10 @@ export default function ClockFace({ hour, minute, size = 150, minuteNumbers = fa
         aria-label={tr ? 'Saati büyüt' : 'Enlarge the clock'}
         style={{ border: 'none', background: 'none', padding: 0, cursor: 'zoom-in', lineHeight: 0 }}
       >{face}</button>
-      {zoom && (
+      {zoom && createPortal(
+        // Through a portal because the question card animates with `both` fill, which leaves a
+        // transform on it — and a transformed ancestor makes `position: fixed` fix to the CARD.
+        // Rendered in place, the enlarged clock came out trapped inside the card it came from.
         <div
           onClick={() => setZoom(false)}
           style={{
@@ -112,15 +116,18 @@ export default function ClockFace({ hour, minute, size = 150, minuteNumbers = fa
             gap: 18, cursor: 'zoom-out',
           }}
         >
-          <svg width="86vw" height="86vw" viewBox="0 0 220 220"
-            style={{ display: 'block', width: 'min(86vw, 360px)', height: 'min(86vw, 360px)' }}>
+          <svg viewBox="0 0 220 220" style={{
+            display: 'block', flexShrink: 0,
+            width: 'min(86vw, 62vh, 380px)', height: 'min(86vw, 62vh, 380px)',
+          }}>
             <Face minuteNumbers />
             <Hands mins={mins} />
           </svg>
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: '#fffdf7' }}>
             {tr ? 'Kapatmak için dokun' : 'Tap to close'}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
