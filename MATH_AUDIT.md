@@ -289,12 +289,48 @@ Konunun şablonu yoksa dolgu boş döner ve soru yine düşer; Year 4+ istatisti
 - Muhafız regex'i 14 gerçek ihlalde de tetikliyor, 9 temiz soruda tetiklemiyor
   ("Sam sat at the table" mobilya, `grafiğe`/`grafikte` Türkçe ekleri dâhil).
 
+### A3 — Karar verildi ve yayına alındı (çoktan seçmeli)
+
+Karar, LearnLM'in 10 yaş için ürettiği iki soru setiyle (EN + TR) karşılaştırma sonrası
+verildi. İkisinde de tam **3/10** soru sayı tuş takımına sığmıyordu — yani bu bir yeniden
+yazım değil, %30'luk bir ek. İkisinde de çıplak dört işlem sorusu yoktu.
+
+6. **Şıklı format ikinci cevap şekli oldu.** `format: 'choice'` + `options: [{value, why}]`,
+   `correct_answer` kazanan şıkkın kendi metni. Gerekçe: sayı tuş takımı, cevabı tek bir tam
+   sayıya indirgenemeyen her soruyu konudan siliyordu — bir yıllık kesir müfredatı bu yüzden
+   "12'nin 1/3'ü" olarak çıkıyordu.
+7. **Çelduruc anatomisi kural oldu:** 2 gerçek kavram yanılgısı + 1 yakın sayı. Eleme ile
+   bulunamasın diye. Kesirlerde: paydaları da toplamak (5/16), toplama yerine çıkarmak,
+   bir fazla saymak.
+8. **Her şık kendi `why`'ını taşıyor.** 5/16 seçen çocuk *tek bir* hata yaptı ve genel ipucu
+   adımları o hatanın adını koymuyor. Yanlış şıkta genel rehber değil, o şıkkın açıklaması
+   açılıyor.
+9. **Tek dokunuş, tek deneme, tekrar hakkı yok.** Cevap zaten ekranda; ikinci tahmin garanti
+   geme giden dört dokunuştan ibaret olurdu. Tekrarın yerini "ne yaptığının söylenmesi" alıyor.
+   `guessRound` ilerlemiyor, 9 yaş altı yardım paneli bu yolda devreye girmiyor.
+10. **Kâğıt modu şıklı soruyu senkron olarak sayısala çeviriyor.** Şıklı soru basılamaz —
+    çocuk harf yazar, fotoğraf değerlendirmesi çöker. Oturum mod seçilmeden önce kuruluyor
+    (yükleme ekranını atlanabilir kılan şey bu), o yüzden takas `adoptSession`'da. Şablonlar
+    senkron üretildiği için bedava. Aynı zamanda ekran/kâğıt ayrımının ilk taşı.
+11. **Yalnız Year 3 ve üstü.** Aynı paydalı toplama ve birim kesir karşılaştırması müfredata
+    orada giriyor. Ada (Year 2, band 2) bu soruları görmüyor; ilk karşılaşacak olan Batu.
+
+İlk şekiller `fraction-of-number` şablonunda: `addSame` (2/8 + 3/8) ve `compare`
+(1/4, 1/3, 1/2, 1/5'ten hangisi büyük). `timeTemplate`'in banda göre şekil seçme kalıbı
+izlendi. 1600 üretimde şık tekrarı yok, doğru cevap hep şıklar içinde, band ≤2'de hiç
+şıklı soru çıkmıyor.
+
 ### B — Birlikte karar verelim
 
 - Ekran modu aritmetik büyüklüğü: karalama alanı mı, sınır mı, sütun göstericisi mi? (6)
 - Year 1 için ölçme şablonu (saat + uzunluk + kütle + hacim + para) — 7'nin gerçek çözümü
-- Year 4+ zaman konusu geri gelsin mi? (7)
+- Year 4+ zaman konusu geri gelsin mi? (7) — şıklı format 16:15 gibi cevapları mümkün
+  kıldığı için bu soru yeniden açıldı; artık "kadranı sürükle" tek seçenek değil.
 - Açı diyagramı: şablon mu, LLM'e görsel şeması mı? (8)
-- Para politikası: yerel para birimine izin? (9)
 - Yuvarlama için sayı doğrusu şablonu? (yukarıdaki bölüm)
 - Year 3 üstü istatistik için grafik şablonu? (10)
+- LLM'in de şıklı soru yazması: çelduruc anatomisi ve birim gerçekçiliği prompta nasıl
+  girecek? (Şu an şıklı soru yalnızca şablonlardan geliyor.)
+
+**Kapandı:** Para politikası (9) — yerel para birimine izin verildi, yasak olan sikke
+*isimleri*. EN dolar (`$15`), TR lira (`15 TL`). `gemini.js`, commit `abe4001`.
