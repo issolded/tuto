@@ -1940,7 +1940,7 @@ export default function MathScreen() {
     margin: '0 auto', display: 'flex', flexDirection: 'column',
     fontFamily: "'Nunito', sans-serif",
   }
-  // The question and paper screens are a fixed shell: header pinned, one scrolling body.
+  // The question, paper and result screens are a fixed shell: header pinned, one scrolling body.
   // They already said so with overflow:hidden, but only had a minimum height, so a tall help
   // panel grew the column past the window and the clipped part became unreachable on desktop.
   // dvh rather than vh so a phone's collapsing address bar does not cut the keypad off.
@@ -2465,7 +2465,7 @@ export default function MathScreen() {
     const numCorrect = results.filter(r => r.correct).length
 
     return (
-      <div style={{ ...wrap, overflowY: 'auto' }}>
+      <div style={shell}>
         <style>{ANIM}</style>
 
         {/* Confetti for level up */}
