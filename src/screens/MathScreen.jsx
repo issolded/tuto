@@ -778,7 +778,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT }}>
               {tr ? 'Sorudaki saat' : 'The clock in the question'}
             </div>
-            <ClockFace hour={clock.hour} minute={clock.minute} size={104} />
+            <ClockFace hour={clock.hour} minute={clock.minute} size={104} zoomable language={language} />
           </div>
         )}
         <DraggableClock
