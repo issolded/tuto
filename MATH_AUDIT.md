@@ -377,9 +377,21 @@ aynı oturumda: "Round 482900" artık ayraçsız geliyor (5. madde).
     çıplak ifadeye bakıyor, sözel problemi elemiyor (LLM o konuların tek kaynağı). Çarpma/bölme
     daha sıkı: ya çarpım tablosunda ya yuvarlak — `1408 × 23` eleniyor, `1408 × 20` geçiyor.
 
+21. **Cevap öncesi ipucu artık ikinci adımı da gösteriyor.** Kural eskiden "yalnız `steps[0]`"
+    idi, çünkü sayma adımı `…, 19, 20` diye cevapla bitiyordu. Parçalama adımları bilerek bir
+    adım eksik bitiyor, ve yardım paneli yalnızca yanlış cevaptan sonra + 9 yaş altına
+    açıldığı için 10 yaşındaki bir çocuk için **tek yardım bu ipucu**. Yani öğreten kısım tam
+    da onu görebilecek tek gruptan gizliydi. Sonraki adımlar artık cevabı içermedikleri sürece
+    gösteriliyor; sayma adımları eskisi kadar korumalı kalıyor.
+
 Doğrulama: 112.000 üretim (7 seviye × 2 dil × 2 işlem) — hiçbir operandda 2'den fazla anlamlı
 basamak yok, hiçbir hint cevabı söylemiyor, ekran modunda hiç sütun talimatı çıkmıyor.
 Kapı 17 vakanın 17'sinde doğru. Kâğıt modu L10'da üretimlerin %96'sı hâlâ sütunlu.
+
+Canlıda doğrulandı (yaş 9 TR, yaş 10 TR, yaş 10 EN): 30 sorunun hiçbiri kâğıt istemiyor,
+ondalıklar `8.412 − 3.202` yerine `0.7 + 0.2` geliyor. İpucu iki dilde de iki adım gösteriyor
+(*"6840 + 2000 = 8840. Şimdi 900 ekle."*). Kâğıt/ekran ayrımı canlıda da tutuyor: aynı yaşta
+kâğıtta `11163 + 6235`, ekranda `11258 + 8600`.
 
 ### B — Birlikte karar verelim
 
