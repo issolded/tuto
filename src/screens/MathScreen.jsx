@@ -1458,6 +1458,7 @@ export default function MathScreen() {
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
   const [wrongGuess,    setWrongGuess]   = useState(null)  // the number the child actually typed, so help can answer THAT rather than the correct answer
+  const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
   const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
   const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState(saved?.llmHints ?? [])         // per-question hint_steps for the LLM path, where there is no template to read them from
@@ -1657,6 +1658,7 @@ export default function MathScreen() {
     setTopic(slots[0]?.curriculum?.name || 'math')
     setTemplateProblems(slots.map(s => s.problem ?? null))
     setLlmHints(slots.map(s => s.hints ?? null))
+    attempted.current = []
     setStep(selectedMode === 'paper' ? 'paper_questions' : 'screen_questions')
   }
 
@@ -1839,6 +1841,11 @@ export default function MathScreen() {
     if (flash) return
     setHelpVisible(false)
     setInput('')
+    // Kept beside the null rather than in place of it: the null is what the score and the
+    // parent's record are built from, and this is only so the child can see the number they
+    // typed on the results screen. Skipping is unreachable without a wrong answer first, so
+    // there is always one to remember.
+    attempted.current[qIdx] = wrongGuess
     const newAnswers = [...userAnswers, null]
     setFlash({ correct: false, answer: correctAns[qIdx], skipped: true })
     flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 900)
@@ -1853,6 +1860,7 @@ export default function MathScreen() {
     const results = questions.map((q, i) => ({
       question: q, correct_answer: correctAns[i],
       child_answer: finalAnswers[i],
+      attempted: finalAnswers[i] == null ? attempted.current[i] ?? null : null,
       correct: sameAnswer(finalAnswers[i], correctAns[i]),
     }))
     const evalData = {
@@ -2608,7 +2616,16 @@ export default function MathScreen() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}><MathText text={r.question} /></div>
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
-                        {t('math_your_answer', language)} {r.child_answer == null ? '—' : <MathText text={r.child_answer} />}
+                        {/* A skipped question records no answer on purpose — giving up is not
+                            answering, and the score has to say so. But the child DID type
+                            something before help opened, and showing them a dash for it reads
+                            as the app having forgotten. Under nine, where skipping is the only
+                            way past a wrong answer, that was every wrong question: a
+                            seven-year-old typed 960, saw "your answer: —", and the older child
+                            who cannot skip at all was the only one shown their own mistake. */}
+                        {t('math_your_answer', language)} {r.child_answer == null
+                          ? (r.attempted == null ? '—' : <MathText text={r.attempted} />)
+                          : <MathText text={r.child_answer} />}
                       </div>
                       {!r.correct && (
                         <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 2 }}>
