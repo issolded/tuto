@@ -483,6 +483,26 @@ kapsıyordu. Model istenenden kısa bir liste dönerse — ya da cevabı sayı d
 **Year 6 hâlâ kısa kalıyor** (11 yaş EN, aynı testte 8 soru): artık *loglanıyor* ama yerine
 koyacak şablon yok. B listesindeki madde değişmedi, sadece kanıtlandı.
 
+### A10 — Üçüncü varyant: çağrı hiç dönmezse (`ccba31b`)
+
+Yerine koyma `try`'ın **içindeydi**. Yani çağrı hata fırlattığında hiç çalışmıyordu: cevap
+vermeyen bir model, taşıdığı bütün konuları da beraberinde götürüyordu — onların yerini
+alabilecek şablon soruları zaten üretilmiş, aynı dizide dururken. Model kapalıyken 9 yaşındaki
+çocuk **10 yerine 6 soru** alıyordu.
+
+29. **Slotun boş kalmasının üç yolu da artık aynı yerden geçiyor:** soru denetimden geçemedi,
+    model soruyu hiç göndermedi, ya da çağrı hiç ulaşmadı. Playwright ile Gemini proxy'si
+    tamamen kesilerek doğrulandı: 9 ve 10 yaş **tam 10 şablon sorusuyla** dönüyor.
+
+30. **Oturum kurulamayınca çocuk sessizce mod ekranına geri atılıyordu** (`MathScreen.jsx`
+    1767, daha önce not edilmişti). Modu seçiyor, yükleme ekranını izliyor, başladığı yere
+    dönüyor — dokunuşun işlememesinden ayırt edilemez. Artık bir satır yazıyor:
+    *"Sorularını hazırlayamadım. Birazdan tekrar dener misin?"* Bu, Year 6 + model kapalı
+    durumunda üretilebilir hale geldiği için bulundu.
+
+**Canlı son tarama: 14 oturumun 14'ü tam 10 soru, 0 problem.** İlk kez her yaş ve iki dil
+birden tam dönüyor.
+
 ### B — Birlikte karar verelim
 
 - ~~Ekran modu aritmetik büyüklüğü (6)~~ — kapandı, A5. Üç seçenek yerine dördüncüsü.
