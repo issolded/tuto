@@ -468,6 +468,21 @@ Geri kalan her şey temiz: 9 yaş altı yanlış → yardım açılıyor → ge�
 %0 çıkıyor; 10 yaşta yardım yok, yanlış cevap doğrudan ilerliyor; şıklı yanlış cevap kendi
 `why` açıklamasını 5,2 sn gösteriyor. Sayfa hatası yok.
 
+### A9 — 23. maddenin görülmeyen yarısı (`73c124d`)
+
+8 yaşlık bir oturum yine **8 soruyla** döndü ve konsol hiçbir şey demedi. Sebep 23'ün ikiz
+kardeşi: yerine koyma yalnızca modelin **gönderdiği ve denetimden geçemeyen** soruları
+kapsıyordu. Model istenenden kısa bir liste dönerse — ya da cevabı sayı değilse — o slot
+`filled`'e hiç girmiyor, dolayısıyla `bad`'e de girmiyor; oturumdan düşüyor ama kod açısından
+"düşen" bir şey olmadığı için log da yazılmıyordu.
+
+28. **Modelin hiç göndermediği soru da yerine konuyor artık.** İki durum aynı yolu kullanıyor.
+    Doğrulama: modelin cevabı Playwright ile 2 soru kısaltılarak zorlandı — 9 ve 10 yaş
+    düzeltmeden önce 8 soru + sessizlik, sonra **tam 10 soru + 2 log satırı** döndürdü.
+
+**Year 6 hâlâ kısa kalıyor** (11 yaş EN, aynı testte 8 soru): artık *loglanıyor* ama yerine
+koyacak şablon yok. B listesindeki madde değişmedi, sadece kanıtlandı.
+
 ### B — Birlikte karar verelim
 
 - ~~Ekran modu aritmetik büyüklüğü (6)~~ — kapandı, A5. Üç seçenek yerine dördüncüsü.
