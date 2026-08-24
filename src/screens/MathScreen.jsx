@@ -1527,91 +1527,117 @@ export default function MathScreen() {
     const llmSlots = slots.filter(s => !s.templateTopic)
     let llmQuestions = []
     if (llmSlots.length) {
-      const bad = new Set()   // slots needing a replacement, held outside the try so a failed call still refills
-      let callFailed = false
-      try {
-        const result = await generateCurriculumQuestions(
-          age, lvl, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'), language,
-        )
-        llmSlots.forEach((slot, i) => {
-          const q = result.questions?.[i]
-          const a = result.answers?.[i]
-          if (typeof q !== 'string' || !q.trim() || !Number.isFinite(Number(a))) return
-          // The question is drawn as one run of plain text, so anything laid out in columns
-          // arrives as a wall: a statistics question came back as a markdown table and read
-          // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
-          // The prompt forbids it; this is what enforces it.
-          //
-          // Kept on the slot rather than dropped here, so it goes through the same refill as a
-          // failed answer below. Statistics above Year 3 has no chart of its own, so the model
-          // reaches for one nearly every time — dropping outright would quietly shorten those
-          // sessions by a question each.
-          if (isUnreadable(q) || refersToMissingVisual(q)) slot.reject = 'refers to a picture that is not drawn'
-          // Children testing this could not get past "eight hundred and forty five" — the
-          // reading stopped them before the arithmetic did, and the topic was recorded as a
-          // weakness. The prompt asks for digits; this makes sure of it.
-          slot.question = numeralise(q, language)
-          slot.answer = Number(a)
-          slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
-          slot.hints = Array.isArray(result.hint_steps?.[i])
-            ? result.hint_steps[i].map(h => numeralise(h, language))
-            : null
-        })
-        // The model writes the question and its answer together, and until now nothing ever
-        // disagreed with it. A wrong answer here is worse than a missing question: the child
-        // solves it correctly, is told they are wrong, and the topic is recorded as a
-        // weakness. Anything that fails verification is dropped and refilled from a template.
-        const filled = llmSlots.filter(s => typeof s.question === 'string' && s.question.trim())
-        const wrong = new Set(await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language))
-        // Length is a property of the question rather than of its answer, so it is checked here
-        // and not in findBadAnswers. Enforced in code because a limit left to the model drifts
-        // back to whatever the prose allows: the old prompt asked for under 300 characters and
-        // got paragraphs of story ending in 18 - 12, which is a reading test, not a maths one.
-        // Same reasoning for the numbers. The prompt asks for operands a child can partition in
-        // their head; this is what makes it true. Only a bare two-operand sum is judged, so a
-        // word problem is never dropped over its arithmetic — see needsWrittenMethod.
-        filled.forEach((s, i) => {
-          if (s.question.length > cap || s.reject) wrong.add(i)
-          else if (needsWrittenMethod(s.question)) { s.reject = 'needs a column method, and screen mode has no paper'; wrong.add(i) }
-        })
-        wrong.forEach(i => bad.add(filled[i]))
-      } catch (e) {
-        callFailed = true
-        console.error('generateCurriculumQuestions:', e)
+      // One round of asking the model, and the checking that goes with it. Written as one
+      // function because it is run twice — a slot the model spoils is asked for again — and the
+      // second round has to be judged by exactly the same rules as the first. Split in two, they
+      // drift: every rule in this file that ever went wrong went wrong by being applied to one
+      // path and not the other.
+      //
+      // Returns the slots left without a usable question, whichever way they got there: spoiled,
+      // never sent, or the whole call thrown.
+      const askModel = async (targets, avoid) => {
+        const bad = new Set()
+        let failed = false
+        try {
+          const result = await generateCurriculumQuestions(
+            age, lvl, targets.map(s => s.curriculum), avoid, language,
+          )
+          targets.forEach((slot, i) => {
+            const q = result.questions?.[i]
+            const a = result.answers?.[i]
+            if (typeof q !== 'string' || !q.trim() || !Number.isFinite(Number(a))) return
+            // The question is drawn as one run of plain text, so anything laid out in columns
+            // arrives as a wall: a statistics question came back as a markdown table and read
+            // "Team | Week 1 | Week 2 | Week 3 | Week 4 Strikers | 4 | 6 | 3 | 5 Defenders |...".
+            // The prompt forbids it; this is what enforces it.
+            //
+            // Kept on the slot rather than dropped here, so it goes through the same refill as a
+            // failed answer below. Statistics above Year 3 has no chart of its own, so the model
+            // reaches for one nearly every time — dropping outright would quietly shorten those
+            // sessions by a question each.
+            if (isUnreadable(q) || refersToMissingVisual(q)) slot.reject = 'refers to a picture that is not drawn'
+            // Children testing this could not get past "eight hundred and forty five" — the
+            // reading stopped them before the arithmetic did, and the topic was recorded as a
+            // weakness. The prompt asks for digits; this makes sure of it.
+            slot.question = numeralise(q, language)
+            slot.answer = Number(a)
+            slot.format = result.answer_formats?.[i] === 'decimal' ? 'decimal' : 'integer'
+            slot.hints = Array.isArray(result.hint_steps?.[i])
+              ? result.hint_steps[i].map(h => numeralise(h, language))
+              : null
+          })
+          // The model writes the question and its answer together, and until now nothing ever
+          // disagreed with it. A wrong answer here is worse than a missing question: the child
+          // solves it correctly, is told they are wrong, and the topic is recorded as a
+          // weakness. Anything that fails verification is dropped and asked for again.
+          const filled = targets.filter(s => typeof s.question === 'string' && s.question.trim())
+          const wrong = new Set(await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language))
+          // Length is a property of the question rather than of its answer, so it is checked here
+          // and not in findBadAnswers. Enforced in code because a limit left to the model drifts
+          // back to whatever the prose allows: the old prompt asked for under 300 characters and
+          // got paragraphs of story ending in 18 - 12, which is a reading test, not a maths one.
+          // Same reasoning for the numbers. The prompt asks for operands a child can partition in
+          // their head; this is what makes it true. Only a bare two-operand sum is judged, so a
+          // word problem is never dropped over its arithmetic — see needsWrittenMethod.
+          filled.forEach((s, i) => {
+            if (s.question.length > cap || s.reject) wrong.add(i)
+            else if (needsWrittenMethod(s.question)) { s.reject = 'needs a column method, and screen mode has no paper'; wrong.add(i) }
+          })
+          wrong.forEach(i => bad.add(filled[i]))
+        } catch (e) {
+          failed = true
+          console.error('generateCurriculumQuestions:', e)
+        }
+        // Whatever the call did or did not return, a slot still holding no question needs one.
+        // Three ways to get here, and each used to be handled — or not — separately: a question
+        // that failed a check (the only case ever refilled), a list that came back shorter than
+        // it was asked for, and a call that threw. The last two never reached `filled`, so they
+        // fell out of the session without so much as a log line.
+        targets.filter(s => typeof s.question !== 'string' || !s.question.trim()).forEach(s => bad.add(s))
+        return { bad, failed }
       }
 
-      // Every slot that ends up without a usable question, however it got there, is replaced
-      // here. There are three ways, and each one used to be handled — or not — separately:
-      //
-      //   - the model sent a question that failed a check. This was the only case refilled.
-      //   - the model sent a shorter list than it was asked for, or an answer that was not a
-      //     number. Those slots never reach `filled`, so they were not in `bad` either, and
-      //     fell out of the session without ever being logged as a drop.
-      //   - the call threw. The refill used to sit inside the try, so a model that would not
-      //     answer cost the child every topic it was carrying, even though the templates that
-      //     could have covered them were already generated and sitting right there.
-      //
-      // The replacement is drawn from the template topics this child's year already uses, and
-      // carries that topic's curriculum entry with it. The curriculum entry has to travel: it
-      // is what the answer is recorded against, and leaving the old one would mark a child weak
-      // at decimals for missing an addition question. A different topic twice in one session is
-      // the cost, and it is smaller than a session that is short for reasons the child cannot
-      // see and the console never mentioned.
-      const spares = slots.filter(s => s.templateTopic && s.problem)
-      llmSlots.filter(s => typeof s.question !== 'string' || !s.question.trim()).forEach(s => bad.add(s))
-      for (const slot of bad) {
-        const why = !slot.question
-          ? (callFailed ? 'the model could not be reached' : 'the model returned nothing for it')
+      const whyDropped = (slot, failed) =>
+        !slot.question
+          ? (failed ? 'the model could not be reached' : 'the model returned nothing for it')
           : slot.reject
           ? slot.reject
           : slot.question.length > cap
           ? `too long (${slot.question.length} > ${cap} chars)`
           : 'the answer did not check out'
-        console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
-        // Year 6 maps no topic to a template at all — deliberately, since long multiplication
-        // is past what these templates can pose — so a Year 6 session still comes up short
-        // when the model gives us something unanswerable. That needs a template, not a
-        // substitution: see MATH_AUDIT.md.
+
+      const seenQuestions = readSeen('seen', child?.id, 'curriculum')
+      let { bad, failed } = await askModel(llmSlots, seenQuestions)
+
+      // Ask once more for the slots that came back unusable, rather than going straight to a
+      // template. A drop is usually the model having a bad moment on that one question — a
+      // truncated reply, a chart it invented, an answer that does not check out — and asking
+      // again mostly gets a good one. It matters most in Year 6, which maps no topic to a
+      // template at all (long multiplication is past what these templates can pose), so a
+      // substitution was never available there and the session simply came up short.
+      //
+      // The wording that failed goes into the avoid list: without it the model hands back the
+      // same question it just spoiled. Exactly one retry — a second bad answer is a topic the
+      // model cannot pose today, and a child waiting on a third call would feel it.
+      if (bad.size) {
+        const retry = [...bad]
+        for (const slot of retry) {
+          console.warn(`[VERIFY] asking again — ${whyDropped(slot, failed)}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
+        }
+        const avoid = [...seenQuestions, ...retry.map(s => s.question).filter(Boolean)]
+        retry.forEach(s => { s.question = null; s.answer = null; s.hints = null; s.reject = null; s.format = null })
+        ;({ bad, failed } = await askModel(retry, avoid))
+      }
+
+      // Still nothing usable after two attempts. The replacement is drawn from the template
+      // topics this child's year already uses, and carries that topic's curriculum entry with
+      // it. The curriculum entry has to travel: it is what the answer is recorded against, and
+      // leaving the old one would mark a child weak at decimals for missing an addition
+      // question. A different topic twice in one session is the cost, and it is smaller than a
+      // session that is short for reasons the child cannot see.
+      const spares = slots.filter(s => s.templateTopic && s.problem)
+      for (const slot of bad) {
+        console.warn(`[VERIFY] dropped a question — ${whyDropped(slot, failed)}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
         const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
         const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap }) : null
         if (p) {
