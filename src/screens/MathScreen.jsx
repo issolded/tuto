@@ -1459,6 +1459,7 @@ export default function MathScreen() {
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
   const [wrongGuess,    setWrongGuess]   = useState(null)  // the number the child actually typed, so help can answer THAT rather than the correct answer
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
+  const [buildFailed,   setBuildFailed] = useState(false)  // a session that could not be built, so the mode screen can say why
   const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
   const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState(saved?.llmHints ?? [])         // per-question hint_steps for the LLM path, where there is no template to read them from
@@ -1526,6 +1527,8 @@ export default function MathScreen() {
     const llmSlots = slots.filter(s => !s.templateTopic)
     let llmQuestions = []
     if (llmSlots.length) {
+      const bad = new Set()   // slots needing a replacement, held outside the try so a failed call still refills
+      let callFailed = false
       try {
         const result = await generateCurriculumQuestions(
           age, lvl, llmSlots.map(s => s.curriculum), readSeen('seen', child?.id, 'curriculum'), language,
@@ -1559,7 +1562,7 @@ export default function MathScreen() {
         // solves it correctly, is told they are wrong, and the topic is recorded as a
         // weakness. Anything that fails verification is dropped and refilled from a template.
         const filled = llmSlots.filter(s => typeof s.question === 'string' && s.question.trim())
-        const bad = new Set(await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language))
+        const wrong = new Set(await findBadAnswers(filled.map(s => ({ question: s.question, answer: s.answer })), language))
         // Length is a property of the question rather than of its answer, so it is checked here
         // and not in findBadAnswers. Enforced in code because a limit left to the model drifts
         // back to whatever the prose allows: the old prompt asked for under 300 characters and
@@ -1568,61 +1571,61 @@ export default function MathScreen() {
         // their head; this is what makes it true. Only a bare two-operand sum is judged, so a
         // word problem is never dropped over its arithmetic — see needsWrittenMethod.
         filled.forEach((s, i) => {
-          if (s.question.length > cap || s.reject) bad.add(i)
-          else if (needsWrittenMethod(s.question)) { s.reject = 'needs a column method, and screen mode has no paper'; bad.add(i) }
+          if (s.question.length > cap || s.reject) wrong.add(i)
+          else if (needsWrittenMethod(s.question)) { s.reject = 'needs a column method, and screen mode has no paper'; wrong.add(i) }
         })
-        // Where a replacement comes from. This used to read a template topic off the slot, which
-        // could never work: a slot reaches the model precisely BECAUSE its topic has no template,
-        // so the lookup was always null and every dropped question silently shortened the session.
-        // Testing ages 5 to 11 in both languages found three sessions of nine, nine and eight
-        // questions, and nothing in the logs said why.
-        //
-        // So the replacement is drawn from the template topics this child's year already uses,
-        // carrying that topic's curriculum entry with it. The curriculum entry has to travel: it
-        // is what the answer is recorded against, and leaving the old one would mark a child weak
-        // at decimals for missing an addition question. A different topic twice in one session is
-        // the cost, and it is smaller than a question that cannot be answered as written.
-        // Two ways a slot ends up without a usable question, and only one of them used to be
-        // refilled. `bad` holds questions the model SENT and that failed a check. A slot the
-        // model simply skipped — a short list, or an answer that was not a number — never
-        // reaches `filled` at all, so it was not in `bad` either, and it fell out of the
-        // session without ever being counted as a drop. An age-8 session came back with eight
-        // questions and the console said nothing, because from the code's point of view
-        // nothing had been dropped. Both cases need the same replacement.
-        const missing = llmSlots.filter(s => typeof s.question !== 'string' || !s.question.trim())
-        const spares = slots.filter(s => s.templateTopic && s.problem)
-        for (const slot of [...bad].map(i => filled[i]).concat(missing)) {
-          const why = !slot.question
-            ? 'the model returned nothing for it'
-            : slot.reject
-            ? slot.reject
-            : slot.question.length > cap
-            ? `too long (${slot.question.length} > ${cap} chars)`
-            : 'the answer did not check out'
-          console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
-          // Year 6 maps no topic to a template at all — deliberately, since long multiplication
-          // is past what these templates can pose — so a Year 6 session still comes up short
-          // when the model gives us something unanswerable. That needs a template, not a
-          // substitution: see MATH_AUDIT.md.
-          const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
-          const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap }) : null
-          if (p) {
-            usedOperands.add(p.operandKey)
-            slot.curriculum = spare.curriculum
-            slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
-            slot.format = p.format === 'choice' ? 'choice' : 'integer'; slot.hints = null
-            slot.reject = null
-          } else {
-            slot.question = null
-          }
-        }
-
-        llmQuestions = llmSlots.filter(s => s.question).map(s => s.question)
+        wrong.forEach(i => bad.add(filled[i]))
       } catch (e) {
-        // A model that will not answer costs the child the topics only it can pose, not the
-        // whole session — the template questions below are already generated and correct.
+        callFailed = true
         console.error('generateCurriculumQuestions:', e)
       }
+
+      // Every slot that ends up without a usable question, however it got there, is replaced
+      // here. There are three ways, and each one used to be handled — or not — separately:
+      //
+      //   - the model sent a question that failed a check. This was the only case refilled.
+      //   - the model sent a shorter list than it was asked for, or an answer that was not a
+      //     number. Those slots never reach `filled`, so they were not in `bad` either, and
+      //     fell out of the session without ever being logged as a drop.
+      //   - the call threw. The refill used to sit inside the try, so a model that would not
+      //     answer cost the child every topic it was carrying, even though the templates that
+      //     could have covered them were already generated and sitting right there.
+      //
+      // The replacement is drawn from the template topics this child's year already uses, and
+      // carries that topic's curriculum entry with it. The curriculum entry has to travel: it
+      // is what the answer is recorded against, and leaving the old one would mark a child weak
+      // at decimals for missing an addition question. A different topic twice in one session is
+      // the cost, and it is smaller than a session that is short for reasons the child cannot
+      // see and the console never mentioned.
+      const spares = slots.filter(s => s.templateTopic && s.problem)
+      llmSlots.filter(s => typeof s.question !== 'string' || !s.question.trim()).forEach(s => bad.add(s))
+      for (const slot of bad) {
+        const why = !slot.question
+          ? (callFailed ? 'the model could not be reached' : 'the model returned nothing for it')
+          : slot.reject
+          ? slot.reject
+          : slot.question.length > cap
+          ? `too long (${slot.question.length} > ${cap} chars)`
+          : 'the answer did not check out'
+        console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
+        // Year 6 maps no topic to a template at all — deliberately, since long multiplication
+        // is past what these templates can pose — so a Year 6 session still comes up short
+        // when the model gives us something unanswerable. That needs a template, not a
+        // substitution: see MATH_AUDIT.md.
+        const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
+        const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap }) : null
+        if (p) {
+          usedOperands.add(p.operandKey)
+          slot.curriculum = spare.curriculum
+          slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
+          slot.format = p.format === 'choice' ? 'choice' : 'integer'; slot.hints = null
+          slot.reject = null
+        } else {
+          slot.question = null
+        }
+      }
+
+      llmQuestions = llmSlots.filter(s => s.question).map(s => s.question)
     }
 
     // Slots the model skipped or malformed are dropped rather than shown blank.
@@ -1775,7 +1778,8 @@ export default function MathScreen() {
     const built = entry?.promise
       ? await entry.promise
       : await buildSession(effectiveLevel, weighting).catch(e => { console.error('buildSession:', e); return null })
-    if (!built) { setStep('mode'); return }
+    if (!built) { setBuildFailed(true); setStep('mode'); return }
+    setBuildFailed(false)
     adoptSession(built, selectedMode)
   }
 
@@ -2060,6 +2064,21 @@ export default function MathScreen() {
       </div>
 
       <div className="math-scroll" style={{ flex: 1, padding: '4px 22px 24px', display: 'flex', flexDirection: 'column', gap: 15 }}>
+        {/* A session that could not be built used to return the child to this screen with
+            nothing said: they chose a mode, watched the loading screen, and arrived back where
+            they started. Reproducible with the model unreachable in a school year that has no
+            templates to fall back on, and indistinguishable from the tap not having worked. */}
+        {buildFailed && (
+          <div style={{
+            background: '#FFF3E0', borderRadius: 18, padding: '14px 17px',
+            display: 'flex', alignItems: 'center', gap: 11,
+          }}>
+            <span style={{ fontSize: 25 }}>😕</span>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: INK, lineHeight: 1.45 }}>
+              {t('math_build_failed', language)}
+            </div>
+          </div>
+        )}
         {/* Paper */}
         <button
           className="math-press"

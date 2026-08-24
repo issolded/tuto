@@ -348,6 +348,8 @@ const STRINGS = {
   math_preparing:     { en: 'Preparing your puzzles…', tr: 'Sorularını hazırlıyorum…' },
   math_checking:      { en: 'Checking your work…',     tr: 'Yaptıklarına bakıyorum…' },
   math_save_failed:   { en: "Couldn't save — try again later", tr: 'Kaydedemedim — birazdan tekrar dene' },
+  math_build_failed:  { en: "I couldn't get your questions ready. Try again in a moment!",
+                        tr: 'Sorularını hazırlayamadım. Birazdan tekrar dener misin?' },
   math_capped:        { en: 'All done today', tr: 'Bugünlük tamam' },
   math_come_back:     { en: 'Come back tomorrow for more gems', tr: 'Yarın yine gel, gemler seni bekliyor' },
   math_welcome_young: { en: "Let's go on a number adventure! 🚀\nI'll show you some fun puzzles — just do your best!",
