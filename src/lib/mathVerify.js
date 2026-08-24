@@ -24,6 +24,20 @@ import { partitionsMentally } from './mathTemplates'
 // precedence questions this is not trying to settle.
 const EXPR = /(-?\d+(?:[.,]\d+)?)\s*([+\-−×x*÷/])\s*(-?\d+(?:[.,]\d+)?)/
 
+// How many operators actually sit between two numbers. Counting EXPR matches cannot answer
+// that: the matcher takes non-overlapping pairs, so "70 + 80 + 90" yields exactly ONE match —
+// "70 + 80" — and the reader below, believing it had the whole expression, evaluated 150
+// against an answer of 240 and called a correct question wrong. "(70 + 80 + 90) ÷ 3 = ?" fails
+// the same way with a bracket hiding the rest, and both were dropped from real sessions.
+//
+// So operators are counted directly and anything chained is left alone, which is the position
+// the comment above always claimed and the code did not hold.
+//
+// A closing bracket counts as a number on the left, or "(12 + 18) × 2" would come back with one
+// operator — the × sits after a bracket, not after a digit — and be judged as 12 + 18 = 30
+// against its answer of 60.
+const CHAINED = /[\d)]\s*[+\-−×x*÷/]\s*(?=[(\d])/g
+
 const num = (s) => Number(String(s).replace(',', '.'))
 
 // A fraction is not a division, and "24/36" is a fraction — one number, written the way a child
@@ -64,8 +78,9 @@ function evaluate(a, op, b) {
 // Tables run to twelve, so a multiplier or divisor inside them is fine however it is written;
 // past that it has to be round, since 1408 × 23 is column work and 1408 × 20 is not.
 export function needsWrittenMethod(question) {
-  const matches = [...withoutFractions(question).matchAll(new RegExp(EXPR, 'g'))]
-  if (matches.length !== 1) return false
+  const text = withoutFractions(question)
+  const matches = [...text.matchAll(new RegExp(EXPR, 'g'))]
+  if (matches.length !== 1 || (text.match(CHAINED) ?? []).length !== 1) return false
 
   const [, , op, bRaw] = matches[0]
   const b = num(bRaw)
@@ -85,7 +100,7 @@ export function needsWrittenMethod(question) {
 export function checkArithmetic(question, answer) {
   const text = withoutFractions(question)
   const matches = [...text.matchAll(new RegExp(EXPR, 'g'))]
-  if (matches.length !== 1) return 'unknown'
+  if (matches.length !== 1 || (text.match(CHAINED) ?? []).length !== 1) return 'unknown'
 
   const [, aRaw, op, bRaw] = matches[0]
   const value = evaluate(num(aRaw), op, num(bRaw))
