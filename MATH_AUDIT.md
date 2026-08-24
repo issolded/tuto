@@ -425,6 +425,49 @@ Yanlış alarm: 10 yaş TR'deki *"Doğru açı üzerindeki 2 açıdan biri 55 de
 başta hata sandım. Değil — Türkçede **doğru açı 180°'dir**, dik açı 90°. Soru da cevabı da
 doğru.
 
+### A7 — Doğru soruyu silen iki okuma hatası (`ddda098`, `09abd8f`)
+
+`mathVerify.js`'in ifade okuyucusu, LLM'in yazdığı **doğru** soruları yanlış sanıp
+düşürüyordu. İkisi de aynı kökten: `EXPR` çakışmayan çiftleri yakalıyor, yani bulduğu tek
+eşleşmeyi "sorunun tamamı" sanıyor.
+
+24. **Kesir, bölme sanılıyordu.** `24/36` bir sayıdır — çocuğun yazmayı öğrendiği biçimde.
+    `EXPR` bunu 24 ÷ 36 okuyup 0,666 buluyor, cevabı 3 olan soruyu yanlış ilan ediyordu;
+    `needsWrittenMethod` de aynı sayıyı "tablo dışı bölen" görüp kâğıt işi sanıyordu. Yani
+    soru iki ayrı kapıdan mahkûm oluyordu. Kesirler artık okumadan önce metinden tamamen
+    çıkarılıyor (rakamlarıyla birlikte — yoksa geriye kalan `8 + 1` sorunun kendisi sanılırdı).
+
+25. **Zincirli işlem ilk çiftine bakılarak yargılanıyordu.** `70 + 80 + 90` tam **bir**
+    eşleşme veriyor — `70 + 80` — ve okuyucu 150'yi 240'a karşı ölçüp doğru soruyu yanlış
+    sayıyordu. `(70 + 80 + 90) ÷ 3 = ?` de parantezle aynı şekilde düşüyordu. Operatörler
+    artık doğrudan sayılıyor ve zincirli olan hiç yargılanmıyor. Parantez kapanışı soldaki
+    "sayı" sayılmalı, yoksa `(12 + 18) × 2` tek operatörlü görünüp 30 olarak yargılanır.
+
+Etkisi en çok **Year 6'da**: şablon olmadığı için düşen sorunun yeri boş kalıyordu. Düzeltme
+sonrası 11 yaş TR ilk kez tam 10 soru döndürdü. Çevrimdışı doğruluk tabloları 18/18 ve 22/22.
+
+### A8 — Yanlış cevap yolu ve ödül ekranı (`fb0ce1a`, `39d5840`)
+
+Şimdiye kadar hep **doğru** cevaplanan oturumlar test edilmişti. Her soruyu bilerek yanlış
+cevaplayan oturumlar (7, 8, 10 yaş) iki şey çıkardı:
+
+26. **"+0 Gem" ödül hatası değildi, etiketsiz günlük limitti.** 10/10 yapan çocuğa
+    *"KAZANDIN +0 Gem ⭐"* yazıyordu. Sunucu `capped`'i baştan beri cevapta döndürüyor,
+    ekran onu atıyordu. Okuma akışı bunu hep doğru söylüyormuş (`rd_capped`); matematik de
+    artık aynı şeyi söylüyor: *"BUGÜNLÜK TAMAM 🌙 / Yarın yine gel"*. (Günlük limit
+    varsayılan 3 oturum; testin kendisi limiti doldurduğu için ortaya çıktı.)
+
+27. **Soruyu geçen çocuğa yazdığı sayı yerine tire gösteriliyordu.** Geçmek bilerek "cevap
+    yok" olarak kaydediliyor — pes etmek cevaplamak değil, puan bunu söylemeli. Ama sonuç
+    listesi de aynı null'dan kuruluyordu: 960 yazıp yardımı görüp geçen çocuk *"senin
+    cevabın: —"* okuyordu. Dokuz yaş altında geçmek, yanlış cevaptan sonraki **tek** yol
+    olduğu için bu, oturumdaki her yanlış soru demekti; hiç geçemeyen büyük çocuk ise kendi
+    hatasını gören tek çocuktu. Yazılan sayı artık null'un yerine değil, yanında taşınıyor.
+
+Geri kalan her şey temiz: 9 yaş altı yanlış → yardım açılıyor → geçilebiliyor, puan dürüstçe
+%0 çıkıyor; 10 yaşta yardım yok, yanlış cevap doğrudan ilerliyor; şıklı yanlış cevap kendi
+`why` açıklamasını 5,2 sn gösteriyor. Sayfa hatası yok.
+
 ### B — Birlikte karar verelim
 
 - ~~Ekran modu aritmetik büyüklüğü (6)~~ — kapandı, A5. Üç seçenek yerine dördüncüsü.
