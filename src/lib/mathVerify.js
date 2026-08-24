@@ -26,6 +26,23 @@ const EXPR = /(-?\d+(?:[.,]\d+)?)\s*([+\-−×x*÷/])\s*(-?\d+(?:[.,]\d+)?)/
 
 const num = (s) => Number(String(s).replace(',', '.'))
 
+// A fraction is not a division, and "24/36" is a fraction — one number, written the way a child
+// is taught to write it. EXPR reads it as 24 ÷ 36, and both readers built on EXPR then get the
+// question wrong: checkArithmetic evaluates 0.666 against an answer of 3 and calls the question
+// wrong, and needsWrittenMethod sees a divisor outside the times tables and calls it column work.
+// "What is the denominator of 24/36 when it is simplified to its simplest form?" was condemned
+// twice over and dropped, and Year 6 maps no topic to a template, so nothing replaced it — the
+// session came up a question short and the child lost the one fractions question in it.
+//
+// The whole fraction is removed, digits and all, rather than just the slash: leaving "5 8 + 1 8"
+// behind would let "8 + 1" match as the question's single expression and be judged as if it were
+// the question, which is worse than not reading it at all.
+//
+// A genuine division written with a slash is swept up too. That is the right way round: it comes
+// back 'unknown' and goes to the second solve, which answers it properly — and the prompt asks
+// for ÷ in the first place, so a slash between two numbers is a fraction nearly every time.
+const withoutFractions = (text) => String(text ?? '').replace(/\d+\s*\/\s*\d+/g, '#')
+
 function evaluate(a, op, b) {
   switch (op) {
     case '+': return a + b
@@ -47,7 +64,7 @@ function evaluate(a, op, b) {
 // Tables run to twelve, so a multiplier or divisor inside them is fine however it is written;
 // past that it has to be round, since 1408 × 23 is column work and 1408 × 20 is not.
 export function needsWrittenMethod(question) {
-  const matches = [...String(question ?? '').matchAll(new RegExp(EXPR, 'g'))]
+  const matches = [...withoutFractions(question).matchAll(new RegExp(EXPR, 'g'))]
   if (matches.length !== 1) return false
 
   const [, , op, bRaw] = matches[0]
@@ -66,7 +83,7 @@ export function needsWrittenMethod(question) {
 // 'agree' | 'disagree' | 'unknown'. Unknown is the honest answer for anything with more than
 // one expression in it, or none — those go to stage two rather than being guessed at.
 export function checkArithmetic(question, answer) {
-  const text = String(question ?? '')
+  const text = withoutFractions(question)
   const matches = [...text.matchAll(new RegExp(EXPR, 'g'))]
   if (matches.length !== 1) return 'unknown'
 
