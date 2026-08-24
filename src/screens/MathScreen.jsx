@@ -1864,7 +1864,7 @@ export default function MathScreen() {
     // child never got — and only celebrates a level the child actually moved to.
     const saved = await saveResults(evalData)
     if (saved?.level_change === 'up') setLeveledUp(true)
-    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, level_change: saved?.level_change ?? 'same' })
+    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped, level_change: saved?.level_change ?? 'same' })
     setStep('result')
   }
 
@@ -1887,7 +1887,7 @@ export default function MathScreen() {
       }))
       const saved = await saveResults({ ...result, results: pinned })
       if (saved?.level_change === 'up') setLeveledUp(true)
-      setEvalResult({ ...result, results: pinned, gems_earned: saved ? saved.gems_earned : null })
+      setEvalResult({ ...result, results: pinned, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped })
       setStep('result')
     } catch (e) {
       console.error('evaluateMath:', e)
@@ -1897,7 +1897,7 @@ export default function MathScreen() {
         topic, encouragement: "Great effort! Keep going! 🌟",
       }
       const saved = await saveResults(fallback)
-      setEvalResult({ ...fallback, gems_earned: saved ? saved.gems_earned : null })
+      setEvalResult({ ...fallback, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped })
       setStep('result')
     }
   }
@@ -2554,12 +2554,22 @@ export default function MathScreen() {
             </div>
             <div style={{ width: 1, height: 56, background: '#eee' }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t('math_earned', language)}</div>
+              {/* Three outcomes, not two. A session that hits the parent's daily limit earns
+                  nothing legitimately, and the server has always said so — it returns `capped`
+                  alongside the amount, and this screen threw it away. What the child saw was
+                  "EARNED +0 Gems ⭐" after ten out of ten, which reads as the app losing their
+                  work rather than as a limit they have already reached today. Reading has said
+                  it properly all along; maths now says the same thing. */}
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>
+                {evalResult.capped ? t('math_capped', language) : t('math_earned', language)}
+              </div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>
-                {evalResult.gems_earned == null ? '—' : `+${evalResult.gems_earned}`}
+                {evalResult.gems_earned == null ? '—' : evalResult.capped ? '🌙' : `+${evalResult.gems_earned}`}
               </div>
               <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>
-                {evalResult.gems_earned == null ? t('math_save_failed', language) : `${t('math_gems_word', language)} ⭐`}
+                {evalResult.gems_earned == null ? t('math_save_failed', language)
+                  : evalResult.capped ? t('math_come_back', language)
+                  : `${t('math_gems_word', language)} ⭐`}
               </div>
             </div>
           </div>
