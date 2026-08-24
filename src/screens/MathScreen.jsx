@@ -1582,15 +1582,24 @@ export default function MathScreen() {
         // is what the answer is recorded against, and leaving the old one would mark a child weak
         // at decimals for missing an addition question. A different topic twice in one session is
         // the cost, and it is smaller than a question that cannot be answered as written.
+        // Two ways a slot ends up without a usable question, and only one of them used to be
+        // refilled. `bad` holds questions the model SENT and that failed a check. A slot the
+        // model simply skipped — a short list, or an answer that was not a number — never
+        // reaches `filled` at all, so it was not in `bad` either, and it fell out of the
+        // session without ever being counted as a drop. An age-8 session came back with eight
+        // questions and the console said nothing, because from the code's point of view
+        // nothing had been dropped. Both cases need the same replacement.
+        const missing = llmSlots.filter(s => typeof s.question !== 'string' || !s.question.trim())
         const spares = slots.filter(s => s.templateTopic && s.problem)
-        for (const i of bad) {
-          const slot = filled[i]
-          const why = slot.reject
+        for (const slot of [...bad].map(i => filled[i]).concat(missing)) {
+          const why = !slot.question
+            ? 'the model returned nothing for it'
+            : slot.reject
             ? slot.reject
             : slot.question.length > cap
             ? `too long (${slot.question.length} > ${cap} chars)`
             : 'the answer did not check out'
-          console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question}`)
+          console.warn(`[VERIFY] dropped a question — ${why}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
           // Year 6 maps no topic to a template at all — deliberately, since long multiplication
           // is past what these templates can pose — so a Year 6 session still comes up short
           // when the model gives us something unanswerable. That needs a template, not a
