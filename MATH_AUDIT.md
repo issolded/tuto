@@ -503,6 +503,29 @@ alabilecek şablon soruları zaten üretilmiş, aynı dizide dururken. Model kap
 **Canlı son tarama: 14 oturumun 14'ü tam 10 soru, 0 problem.** İlk kez her yaş ve iki dil
 birden tam dönüyor.
 
+### A11 — Year 6 boşluğu: modeli yeniden çağırmak (`cee4a06`)
+
+B listesindeki "Year 6'nın hiç şablonu yok" kalemi için iki seçenek vardı — Year 6'ya şablon
+yazmak ya da düşen slot için modeli yeniden çağırmak. Kullanıcı ikincisini seçti.
+
+31. **Denetimden geçemeyen soru artık doğrudan şablona düşmüyor; model bir kez daha
+    soruluyor.** Düşen soru çoğunlukla modelin o soruda kötü bir an geçirmesi: yarıda kesilen
+    cevap, uydurduğu bir grafik, tutmayan bir sonuç. Bozuk metin `avoid` listesine ekleniyor,
+    yoksa model aynı soruyu geri veriyor. **Tek deneme**; şablonla değiştirme son çare olarak
+    yerinde duruyor.
+
+    Sorma ve denetleme tek fonksiyona (`askModel`) toplandı ve iki kez çalışıyor. Bu dosyadaki
+    A7–A10'un dördü de aynı hatanın varyantıydı: kuralın iki yoldan yalnızca birine uygulanması.
+    İkinci tur birinciyle **aynı** denetimden geçiyor.
+
+    Doğrulama: modelin ilk cevabından 3 soru silinerek (`/tmp/mental/retry.mjs`) 11 EN, 11 TR
+    ve 10 EN sürüldü — **üçü de tam 10**. Year 6 ilk kez bozuk cevaba rağmen tam dönüyor.
+    Model tamamen kapalıyken davranış değişmedi: 9 ve 10 yaş şablonla tam, Year 6 "😕"
+    banner'ıyla duruyor (30. madde).
+
+    Kalan: model **kapalıyken** Year 6 hâlâ oturum üretemiyor, çünkü yerine koyacak hiçbir şey
+    yok. Bu ancak Year 6 şablonlarıyla kapanır — B listesinde duruyor.
+
 ### B — Birlikte karar verelim
 
 - ~~Ekran modu aritmetik büyüklüğü (6)~~ — kapandı, A5. Üç seçenek yerine dördüncüsü.
@@ -521,9 +544,10 @@ birden tam dönüyor.
 - **`y5_geometry` şablona bağlı değil.** `mathCurriculum.js` yalnızca `y1_shapes`,
   `y3_geometry`, `y4_geometry`'yi `geometry`'ye eşliyor; Year 5 geometri hâlâ LLM'e gidiyor,
   yani 10 yaşında şekil adlandırma sorusu hiç çıkmıyor.
-- **Year 6'nın hiç şablonu yok** (A6). LLM bir soruyu bozuk verdiğinde 11 yaşındaki çocuğun
-  oturumu kısalıyor, çünkü yerine koyacak şablon yok. Seçenekler: Year 6'ya birkaç şablon
-  yazmak (uzun çarpma, yüzde, ortalama), ya da düşen slot için LLM'i yeniden çağırmak.
+- **Year 6'nın hiç şablonu yok** (A6) — büyük kısmı A11'de kapandı: bozuk soru için model
+  yeniden çağrılıyor ve oturum tam dönüyor. Geriye tek durum kaldı: **model erişilemezken**
+  Year 6 hiç oturum üretemiyor. Bunun için Year 6'ya birkaç şablon (uzun çarpma, yüzde,
+  ortalama) gerekiyor — yazılsın mı?
 
 **Kapandı:** Para politikası (9) — yerel para birimine izin verildi, yasak olan sikke
 *isimleri*. EN dolar (`$15`), TR lira (`15 TL`). `gemini.js`, commit `abe4001`.
