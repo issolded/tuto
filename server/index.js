@@ -152,6 +152,7 @@ async function getParentContext(parentId) {
       { data: pendingClaims },
       mathStanding,
       { data: lastMathQuestions },
+      { data: goals },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -188,6 +189,12 @@ async function getParentContext(parentId) {
       supabase.from('math_attempts')
         .select('session_id, topic_name, question, child_answer, correct, help_used, created_at')
         .eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
+      // What the child is actually saving for. Without it "hangi hedefleri var" was answered
+      // from the gem history, and add_reward would have had no way to tell a new goal from one
+      // that already exists.
+      supabase.from('rewards')
+        .select('id, name, icon, bt_cost, recurring')
+        .eq('child_id', child.id).is('archived_at', null).order('bt_cost'),
     ])
 
     const sub = submissions || []
@@ -293,6 +300,13 @@ async function getParentContext(parentId) {
       // from a submission/contribution/drawing approval, and unrelated to
       // gift_gems (which has no pending item at all). Keep it visibly distinct
       // here so the model never reaches for gift_gems to "resolve" one of these.
+      goals: (goals || []).map(g => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+        cost: g.bt_cost,
+        kind: g.recurring === false ? 'one-time — retires itself once you approve the claim' : 'repeatable',
+      })),
       pendingRewardClaims: (pendingClaims || []).map(c => ({
         id: c.id,
         reward: c.reward_name,
@@ -1187,6 +1201,35 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'add_reward',
+      description:
+        'Adds a new GOAL the child can save gems for ("Ada\'ya 600 gemlik lego hedefi ekle", "sinema bileti ' +
+        'koyalım 300 gem", "add a goal for a new book, 150 gems"). A goal is a thing the child SPENDS gems on ' +
+        'later — it is not gift_gems (which hands over gems now) and not update_task_reward (which changes what ' +
+        'a task pays). The child\'s existing goals are in that child\'s goals list in context: if the parent ' +
+        'names one that is already there, say so instead of adding a second copy.\n' +
+        'Two things must be clear before you call this, and neither may be guessed: the gem cost, and whether ' +
+        'the goal is one-time or repeatable. If the parent gave no number, ask for one. For recurring: something ' +
+        'earned over and over (screen time, an hour of TV, a trip to the park) is recurring=true; something ' +
+        'bought once (a toy, a lego set, a book, a bike) is recurring=false. When the wording makes it obvious, ' +
+        'decide it yourself and say which you chose in your reply, so the parent can correct you. Only ask when ' +
+        'it genuinely could be either — a one-time goal that comes back is exactly the confusion this exists to ' +
+        'prevent.\n' +
+        'Pick child_id from the children list in context; with one child and no name given, use that child. With ' +
+        'several children and no name, ask which. Choose a fitting emoji yourself — never ask the parent for one.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child this goal belongs to, from the children list in context.' },
+          name:     { type: 'STRING', description: 'Short name of the goal in the parent\'s own words (e.g. "Lego seti", "Sinema").' },
+          gems:     { type: 'NUMBER', description: 'What the goal costs in gems — the exact number the parent said (whole number, 10-100000).' },
+          recurring:{ type: 'BOOLEAN', description: 'true if the child can earn it again and again (screen time, outings); false if it is bought once (a toy, a book).' },
+          icon:     { type: 'STRING', description: 'A single emoji for the goal, chosen by you. Omit for a default.' },
+        },
+        required: ['child_id', 'name', 'gems', 'recurring'],
+      },
+    },
+    {
       name: 'set_math_focus',
       description:
         'Weights one maths curriculum topic in the child\'s next sessions, because the parent said they are ' +
@@ -1211,6 +1254,47 @@ const CONTRIBUTION_TOOLS = [{
     },
   ],
 }]
+
+// The model reads what the parent wants; every rule about it is applied here. The cost range,
+// the ownership check and the duplicate check are deterministic on purpose — a goal is a real
+// promise to a child, and "the model usually gets it right" is not the standard for one.
+async function addRewardTool(childId, name, gems, recurring, icon, parentId) {
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'not your child' }
+
+  const label = String(name ?? '').trim().slice(0, 60)
+  if (!label) return { success: false, error: 'a goal needs a name' }
+
+  const cost = Math.round(Number(gems))
+  if (!Number.isFinite(cost) || cost < 10 || cost > 100000) {
+    return { success: false, error: 'gems must be a whole number between 10 and 100000' }
+  }
+
+  // A second "TV 1 hour" sitting under the first one is not a new goal, it is a mistake the
+  // child sees. Archived ones do not count — a toy bought last month can be wanted again.
+  const { data: existing } = await supabase
+    .from('rewards').select('id, name, bt_cost').eq('child_id', childId).is('archived_at', null)
+  const clash = (existing || []).find(r => r.name?.trim().toLowerCase() === label.toLowerCase())
+  if (clash) return { success: false, error: 'already_exists', existing: { name: clash.name, cost: clash.bt_cost } }
+
+  // An emoji is one grapheme; anything longer is the model having written a word.
+  const emoji = [...String(icon ?? '')].length && [...String(icon)].length <= 2 ? String(icon) : '🎁'
+
+  const { data: reward, error } = await supabase
+    .from('rewards')
+    .insert({ child_id: childId, name: label, icon: emoji, bt_cost: cost, recurring: recurring !== false })
+    .select().single()
+  if (error) return { success: false, error: error.message }
+
+  return {
+    success: true,
+    child: child.name,
+    goal: { id: reward.id, name: reward.name, icon: reward.icon, cost: reward.bt_cost },
+    recurring: reward.recurring !== false,
+  }
+}
 
 // Weight a curriculum topic for a child. The model picks WHICH topic; everything else is
 // decided here — that the child belongs to this parent, that the topic is one they actually
@@ -1963,6 +2047,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId)
       } else if (name === 'send_drawing_photo') {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
+      } else if (name === 'add_reward') {
+        toolResult = await addRewardTool(args.child_id, args.name, args.gems, args.recurring, args.icon, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
       } else {
@@ -2230,7 +2316,10 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
 
 app.get('/api/children/:childId/rewards', async (req, res) => {
   const { childId } = req.params
-  const { data: rewards } = await supabase.from('rewards').select('*').eq('child_id', childId).order('bt_cost')
+  // A one-time goal is archived once the parent approves the claim, not deleted — the claim
+  // history points at it, and a child who saved four weeks for a squishy toy should still be
+  // able to see they got it. Everywhere it is *offered*, though, it has to be gone.
+  const { data: rewards } = await supabase.from('rewards').select('*').eq('child_id', childId).is('archived_at', null).order('bt_cost')
   res.json({ rewards: rewards || [] })
 })
 
@@ -2247,11 +2336,14 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
   if (!reward_id) return res.status(400).json({ error: 'reward_id required' })
   try {
     const [{ data: reward }, { data: ledger }, { data: existing }] = await Promise.all([
-      supabase.from('rewards').select('id, name, icon, bt_cost, child_id').eq('id', reward_id).maybeSingle(),
+      supabase.from('rewards').select('id, name, icon, bt_cost, child_id, archived_at').eq('id', reward_id).maybeSingle(),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('reward_claims').select('*').eq('child_id', childId).eq('reward_id', reward_id).eq('status', 'pending').maybeSingle(),
     ])
     if (!reward || reward.child_id !== childId) return res.status(404).json({ error: 'reward not found' })
+    // A one-time goal already granted cannot be claimed twice, however stale the screen the
+    // child is looking at.
+    if (reward.archived_at) return res.status(410).json({ error: 'reward no longer available' })
     if (existing) return res.json({ claim: existing }) // idempotent — already awaiting a decision
 
     const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
@@ -2325,7 +2417,24 @@ async function approveClaimById(claimId, parentId) {
     .eq('status', 'pending') // guard against a concurrent decision racing us
   if (updErr) return { success: false, error: updErr.message }
 
-  return { success: true, id: claim.id, childName: child.name, gems: claim.bt_cost }
+  // Ada saved for a squishy toy, claimed it, and it was bought — and the goal reappeared in
+  // her list the next morning as if nothing had happened. Screen time is worth earning again
+  // every week; a toy is bought once. Which of the two a goal is, is the parent's to say, and
+  // it is settled here rather than by the child's screen: rejecting refunds the gems and the
+  // goal must survive that, so only an approval retires it.
+  let retired = false
+  if (claim.reward_id) {
+    const { data: reward } = await supabase
+      .from('rewards').select('id, recurring, archived_at').eq('id', claim.reward_id).maybeSingle()
+    if (reward && reward.recurring === false && !reward.archived_at) {
+      const { error: arcErr } = await supabase
+        .from('rewards').update({ archived_at: new Date().toISOString() }).eq('id', reward.id)
+      if (arcErr) console.error(`[REWARD-CLAIM] could not retire one-time reward ${reward.id}: ${arcErr.message}`)
+      else retired = true
+    }
+  }
+
+  return { success: true, id: claim.id, childName: child.name, gems: claim.bt_cost, retired }
 }
 
 // Reverses the exact escrow deduction from claim time — the child gets the
@@ -2415,7 +2524,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       supabase.from('stories').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
       supabase.from('paintings').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
-      supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).order('bt_cost'),
+      supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
     ])
 
     const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)

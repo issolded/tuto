@@ -15,7 +15,9 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 const DEFAULT_REWARDS = [
   { emoji: '🎮', label: 'Video Game 30min', gems: 30,  lockTitle: true,  hint: '💡 30 mins of playtime' },
   { emoji: '📺', label: 'TV 1 hour',        gems: 60,  lockTitle: true,  hint: '💡 1 hour of screen time' },
-  { emoji: '🧸', label: 'New toy',          gems: 500, lockTitle: false, hint: '💡 Something special to save up for!' },
+  // A toy is bought once. Screen time comes round again every week — that difference is a
+  // column on the reward now, and the presets are where a family first meets it.
+  { emoji: '🧸', label: 'New toy',          gems: 500, lockTitle: false, hint: '💡 Something special to save up for!', recurring: false },
 ]
 
 // Natural phrasing for the "if {child} does X and Y" example on the rewards
@@ -251,7 +253,7 @@ export default function ParentOnboarding() {
 
       const active = rewards.filter(r => r.label.trim())
       if (active.length) {
-        await supabase.from('rewards').insert(active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), bt_cost: r.gems })))
+        await supabase.from('rewards').insert(active.map(r => ({ child_id: child.id, icon: r.emoji, name: r.label.trim(), bt_cost: r.gems, recurring: r.recurring !== false })))
       }
 
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone

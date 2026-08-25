@@ -600,10 +600,15 @@ function GemActionDoneModal({ verb, amount, childName, onClose }) {
   )
 }
 
-function AddRewardSheet({ childId, onClose, onSaved }) {
-  const [icon,   setIcon]   = useState('🎁')
-  const [name,   setName]   = useState('')
-  const [btCost, setBtCost] = useState(50)
+// Adds a goal, or edits one that already exists. The same sheet does both: a goal whose cost
+// turned out wrong used to have to be deleted and retyped, which threw away the progress bar
+// the child had been watching.
+function AddRewardSheet({ childId, reward, onClose, onSaved }) {
+  const editing = !!reward
+  const [icon,   setIcon]   = useState(reward?.icon ?? '🎁')
+  const [name,   setName]   = useState(reward?.name ?? '')
+  const [btCost, setBtCost] = useState(reward?.bt_cost ?? 50)
+  const [recurring, setRecurring] = useState(reward ? reward.recurring !== false : true)
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
 
@@ -613,9 +618,10 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
     // moment it is created.
     if (!(btCost >= 10)) return setError('A goal needs to cost at least 10 gems.')
     setSaving(true); setError('')
-    const { error: dbErr } = await supabase.from('rewards').insert({
-      child_id: childId, icon, name: name.trim(), bt_cost: btCost,
-    })
+    const row = { icon, name: name.trim(), bt_cost: btCost, recurring }
+    const { error: dbErr } = editing
+      ? await supabase.from('rewards').update(row).eq('id', reward.id)
+      : await supabase.from('rewards').insert({ child_id: childId, ...row })
     if (dbErr) { setError(dbErr.message); setSaving(false); return }
     onSaved()
   }
@@ -630,7 +636,7 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
 
   return (
     <BottomSheet onClose={onClose}>
-      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Add goal 🏆</div>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{editing ? 'Edit goal 🏆' : 'Add goal 🏆'}</div>
 
       <Field label="Icon">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -666,8 +672,31 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
         </div>
       </Field>
 
+      {/* Ada saved for a squishy toy, claimed it, we bought it — and the goal was back in her
+          list the next morning. Screen time is worth earning again every week; a toy is bought
+          once. Nothing in the app could tell the two apart, so every goal behaved like screen
+          time. */}
+      <Field label="How often">
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { on: true,  title: 'Again and again', sub: 'Screen time, an outing — they can earn it repeatedly' },
+            { on: false, title: 'Just once',       sub: 'A toy, a book — it disappears once you approve it' },
+          ].map(o => (
+            <button key={String(o.on)} className="tc-press" onClick={() => setRecurring(o.on)}
+              style={{
+                flex: 1, textAlign: 'left', cursor: 'pointer', borderRadius: 14, padding: '10px 12px',
+                border: `2px solid ${recurring === o.on ? PC.teal : PC.line}`,
+                background: recurring === o.on ? PC.tealBg : '#fff',
+              }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.ink }}>{o.title}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 11, color: PC.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{o.sub}</div>
+            </button>
+          ))}
+        </div>
+      </Field>
+
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
-      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Add goal'}</Btn>
+      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add goal'}</Btn>
       <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
     </BottomSheet>
   )
@@ -724,6 +753,7 @@ export default function ParentChildDetail() {
   const [showEditModal,   setShowEditModal]   = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [showAddReward,   setShowAddReward]   = useState(false)
+  const [editReward,      setEditReward]      = useState(null)
   const [showGiftGems,    setShowGiftGems]    = useState(false)
   const [showDeductGems,  setShowDeductGems]  = useState(false)
   const [gemActionDone,   setGemActionDone]   = useState(null) // { verb: 'gift'|'deduct', amount }
@@ -742,7 +772,7 @@ export default function ParentChildDetail() {
       supabase.from('children').select('*').eq('id', id).single(),
       supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', id),
       supabase.from('submissions').select('*').eq('child_id', id).order('created_at', { ascending: false }),
-      supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost'),
+      supabase.from('rewards').select('*').eq('child_id', id).is('archived_at', null).order('bt_cost'),
       // scope=pending ignores period/month entirely — a pending contribution
       // must stay visible here until approved/rejected, no matter which
       // month it was logged in (see server/index.js for why scope=month
@@ -1178,9 +1208,18 @@ export default function ParentChildDetail() {
                       <span style={{ fontSize: 26 }}>{r.icon}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{r.name}</div>
-                        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.amber }}>⭐ {r.bt_cost} gems needed</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.amber }}>⭐ {r.bt_cost} gems needed</span>
+                          {r.recurring === false && (
+                            <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 10.5, color: PC.inkSoft, background: PC.line, borderRadius: 7, padding: '2px 6px' }}>just once</span>
+                          )}
+                        </div>
                       </div>
                       {ready && <span style={{ fontSize: 20 }}>🎉</span>}
+                      <button className="tc-press tc-tap" onClick={() => setEditReward(r)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                        <Icon name="edit" size={17} color={PC.inkFaint} />
+                      </button>
                       <button className="tc-press tc-tap" onClick={async () => { await supabase.from('rewards').delete().eq('id', r.id); setRewards(prev => prev.filter(x => x.id !== r.id)) }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                         <Icon name="trash" size={18} color={PC.inkFaint} />
@@ -1279,14 +1318,15 @@ export default function ParentChildDetail() {
           onClose={() => setGemActionDone(null)}
         />
       )}
-      {showAddReward && (
+      {(showAddReward || editReward) && (
         <AddRewardSheet
           childId={id}
-          onClose={() => setShowAddReward(false)}
+          reward={editReward}
+          onClose={() => { setShowAddReward(false); setEditReward(null) }}
           onSaved={async () => {
-            const { data } = await supabase.from('rewards').select('*').eq('child_id', id).order('bt_cost')
+            const { data } = await supabase.from('rewards').select('*').eq('child_id', id).is('archived_at', null).order('bt_cost')
             setRewards(data || [])
-            setShowAddReward(false)
+            setShowAddReward(false); setEditReward(null)
           }}
         />
       )}
