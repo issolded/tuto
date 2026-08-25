@@ -1215,6 +1215,9 @@ const CONTRIBUTION_TOOLS = [{
         'decide it yourself and say which you chose in your reply, so the parent can correct you. Only ask when ' +
         'it genuinely could be either — a one-time goal that comes back is exactly the confusion this exists to ' +
         'prevent.\n' +
+        'Adding is all you can do: there is no way to rename a goal, change its cost or recurrence, or delete it ' +
+        'from here — the parent does that on the child\'s page in the app. So never offer to change it later ' +
+        'and never say you will fix it; if they want it different, tell them where to edit it.\n' +
         'Pick child_id from the children list in context; with one child and no name given, use that child. With ' +
         'several children and no name, ask which. Choose a fitting emoji yourself — never ask the parent for one.',
       parameters: {
