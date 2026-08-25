@@ -609,6 +609,9 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
 
   const save = async () => {
     if (!name.trim()) return setError('Give this goal a name.')
+    // The cost is typed now, so it can be emptied. A goal costing nothing is claimable the
+    // moment it is created.
+    if (!(btCost >= 10)) return setError('A goal needs to cost at least 10 gems.')
     setSaving(true); setError('')
     const { error: dbErr } = await supabase.from('rewards').insert({
       child_id: childId, icon, name: name.trim(), bt_cost: btCost,
@@ -617,7 +620,12 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
     onSaved()
   }
 
-  const pct = ((btCost - 5) / (200 - 5)) * 100
+  // Onboarding already settled this: the slider is for dragging, not a ceiling. It used to stop
+  // at 200 here, so a parent who wanted a 600-gem goal — the thing worth saving weeks for — could
+  // not enter one at all. The number is typed, and the slider's own max stretches to whatever was
+  // typed rather than silently capping it.
+  const sliderMax = Math.max(5000, btCost)
+  const pct = ((Math.min(Math.max(btCost, 10), sliderMax) - 10) / (sliderMax - 10)) * 100
   const trackBg = `linear-gradient(to right, ${PC.amber} ${pct}%, ${PC.line} ${pct}%)`
 
   return (
@@ -640,13 +648,21 @@ function AddRewardSheet({ childId, onClose, onSaved }) {
           placeholder="e.g. Video game time, Ice cream…" />
       </Field>
 
-      <Field label={`Gem cost — ⭐ ${btCost} gems`}>
-        <input type="range" min={5} max={200} step={5} value={btCost}
+      <Field label="Gem cost">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: PC.amberBg, borderRadius: 12, padding: '6px 11px', width: 'fit-content', marginBottom: 10 }}>
+          <input type="number" min={10} value={btCost}
+            onChange={e => setBtCost(parseInt(e.target.value) || 0)}
+            className="tc-numplain"
+            style={{ width: `calc(${Math.max(4, String(btCost ?? '').length)}ch + 8px)`, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT, fontSize: 15, fontWeight: 800, color: PC.ink, textAlign: 'right' }} />
+          <span style={{ fontSize: 14 }}>⭐</span>
+        </div>
+        <input type="range" min={10} max={sliderMax} step={10}
+          value={Math.min(Math.max(btCost, 10), sliderMax)}
           onChange={e => setBtCost(Number(e.target.value))}
           className="tc-slider" style={{ background: trackBg }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>5</span>
-          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>200</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>10</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>{sliderMax}</span>
         </div>
       </Field>
 
