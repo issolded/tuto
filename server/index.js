@@ -2642,7 +2642,12 @@ const WRITING_DEFAULTS = { gems: 30, dailyCap: 3 }
 
 // Words a child of each school year might reasonably write in one sitting. Not a target shown
 // to anyone: it is the point where the effort multiplier reaches its ceiling.
-const WORDS_FOR_YEAR = { year1: 20, year2: 35, year3: 50, year4: 70, year5: 90, year6: 110 }
+//
+// These were set too low to begin with. A month of use showed a seven-year-old settling on
+// three very short stories a day, which was the rational play: 35 words was three sentences,
+// so the ceiling was reachable without really writing anything. The mark now sits where a
+// child has actually told a story rather than started one.
+const WORDS_FOR_YEAR = { year1: 30, year2: 50, year3: 75, year4: 100, year5: 130, year6: 160 }
 
 function schoolYearForAge(age) {
   const n = Number(age) || 7
@@ -2662,7 +2667,11 @@ function countWords(text) {
 // earn — just not what a page earns. The floor is why: a child who writes little, or writes
 // slowly, must not come away with nothing. And it is capped at the year's mark rather than
 // climbing forever, because a reward that keeps rising with length teaches padding.
-const EFFORT_FLOOR = 0.4
+//
+// The floor was 0.4, which paid most of a story's worth for almost none of a story. It cannot
+// be 0 either — a child who writes slowly still sat down. Low enough that length is worth
+// reaching for, high enough that a short piece is not treated as nothing.
+const EFFORT_FLOOR = 0.15
 function effortScale(words, age) {
   const target = WORDS_FOR_YEAR[schoolYearForAge(age)] || 50
   return Math.min(1, EFFORT_FLOOR + (1 - EFFORT_FLOOR) * (words / target))
