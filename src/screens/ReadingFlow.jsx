@@ -311,7 +311,9 @@ export default function ReadingFlow() {
     const stateBook = location.state?.book
     if (stateBook) {
       setBook(stateBook)
-      setStep('page-prompt')
+      // Not straight to the camera: this is the only screen that tells the child where they
+      // stopped and the only one that lets them say the book is finished.
+      setStep('existing-book')
       return
     }
     if (!childId) { setStep('new-book'); return }
@@ -781,7 +783,7 @@ export default function ReadingFlow() {
   )
 
   if (step === 'existing-book') return (
-    <Screen lang={lang}>
+    <Screen lang={lang} onBack={fromLibrary.current ? () => nav('/child/library') : undefined}>
       <TutoBubble message={s('rd_welcome_back', { title: book?.title ?? '' })} />
       {book?.cover_url && (
         <img
@@ -790,12 +792,46 @@ export default function ReadingFlow() {
           style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
         />
       )}
+      {(book?.current_page ?? 0) > 0 && (
+        <div style={{
+          background: 'rgba(255,255,255,0.85)',
+          borderRadius: 18,
+          padding: '14px 18px',
+          textAlign: 'center',
+          fontFamily: "'TrRound', 'Baloo 2', cursive",
+          fontSize: 17,
+          fontWeight: 800,
+          color: '#1A1A2E',
+        }}>
+          {book.total_pages > 0
+            ? s('rd_last_page_of', { n: book.current_page, total: book.total_pages })
+            : s('rd_last_page', { n: book.current_page })}
+        </div>
+      )}
       <button
         className="btn btn-orange"
         onClick={() => setStep('page-prompt')}
         style={{ fontSize: 20, fontWeight: 800 }}
       >
         {s('rd_been_reading')}
+      </button>
+      <button
+        onClick={() => setStep('confirm-complete')}
+        style={{
+          background: '#2EC486',
+          color: 'white',
+          border: 'none',
+          borderRadius: 20,
+          padding: '20px 24px',
+          fontFamily: "'TrRound', 'Baloo 2', cursive",
+          fontSize: 20,
+          fontWeight: 800,
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(46,196,134,0.30)',
+          width: '100%',
+        }}
+      >
+        {s('rd_finished_book')}
       </button>
       <button
         className="btn btn-ghost"
@@ -807,8 +843,41 @@ export default function ReadingFlow() {
     </Screen>
   )
 
+  // A finished book cannot be reopened from the library, so a mis-tap here would retire a
+  // book the child is halfway through.
+  if (step === 'confirm-complete') return (
+    <Screen lang={lang} onBack={() => setStep('existing-book')}>
+      <TutoBubble message={s('rd_finish_confirm', { title: book?.title ?? '' })} />
+      <button
+        onClick={markCompleted}
+        style={{
+          background: '#2EC486',
+          color: 'white',
+          border: 'none',
+          borderRadius: 20,
+          padding: '20px 24px',
+          fontFamily: "'TrRound', 'Baloo 2', cursive",
+          fontSize: 20,
+          fontWeight: 800,
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(46,196,134,0.30)',
+          width: '100%',
+        }}
+      >
+        {s('rd_finish_yes')}
+      </button>
+      <button
+        className="btn btn-ghost"
+        onClick={() => setStep('existing-book')}
+        style={{ fontSize: 20, fontWeight: 800 }}
+      >
+        {s('rd_finish_no')}
+      </button>
+    </Screen>
+  )
+
   if (step === 'page-prompt') return (
-    <Screen lang={lang} onBack={() => fromLibrary.current ? nav('/child/library') : setStep('existing-book')}>
+    <Screen lang={lang} onBack={() => setStep('existing-book')}>
       <TutoBubble
         message={error || s('rd_pages_prompt')}
         tutoSize={80}
