@@ -15,6 +15,9 @@ const ANIM = `
   0%, 100% { box-shadow: 0 0 0 2.5px #2EC486, 0 6px 20px rgba(46,196,134,0.20); }
   50%       { box-shadow: 0 0 0 2.5px #2EC486, 0 6px 28px rgba(46,196,134,0.40); }
 }
+.goal-ask-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 12px; border-radius: 8px; outline: none; }
+.goal-ask-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; border-radius: 50%; background: #FFD93D; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.18); cursor: pointer; }
+.goal-ask-slider::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: #FFD93D; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.18); cursor: pointer; }
 `
 
 function ProgressBar({ current, total }) {
@@ -152,7 +155,8 @@ function AskSheet({ lang, onClose, onSubmit }) {
           <div style={{ fontSize: 26, fontWeight: 900, color: '#C8900A', marginBottom: 6 }}>⭐ {gems}</div>
           <input type="range" min={10} max={1000} step={10} value={gems}
             onChange={e => setGems(Number(e.target.value))}
-            style={{ width: '100%', accentColor: '#FFD93D' }} />
+            className="goal-ask-slider"
+            style={{ background: `linear-gradient(to right, #FFD93D ${((gems - 10) / 990) * 100}%, #F5F0D0 ${((gems - 10) / 990) * 100}%)` }} />
           <div style={{ fontSize: 12.5, fontWeight: 700, color: '#A9A9BE', marginTop: 6, lineHeight: 1.5 }}>
             {t('goal_ask_note', lang)}
           </div>
