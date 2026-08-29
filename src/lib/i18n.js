@@ -40,6 +40,18 @@ const STRINGS = {
   // ── Goals ───────────────────────────────────────────────────────────────────
   goal_claim:         { en: 'Claim! 🎉',  tr: 'İstiyorum! 🎉' },
   goal_claiming:      { en: 'Claiming…',  tr: 'Gönderiliyor…' },
+  goal_ask:           { en: 'Ask for a goal', tr: 'Yeni hedef iste' },
+  goal_ask_title:     { en: 'What would you like?', tr: 'Ne istersin?' },
+  goal_ask_name:      { en: 'What is it?', tr: 'Nedir?' },
+  goal_ask_name_ph:   { en: 'e.g. A skateboard', tr: 'örn. Kaykay' },
+  goal_ask_gems:      { en: 'How many gems do you think?', tr: 'Sence kaç gem olmalı?' },
+  goal_ask_note:      { en: 'Your parent decides the real number.', tr: 'Gerçek sayıya annen ya da baban karar verir.' },
+  goal_ask_send:      { en: 'Ask', tr: 'İste' },
+  goal_ask_sending:   { en: 'Sending…', tr: 'Gönderiliyor…' },
+  goal_ask_cancel:    { en: 'Not now', tr: 'Şimdi değil' },
+  goal_ask_needname:  { en: 'Tell Tuto what you would like first.', tr: "Önce Tuto'ya ne istediğini yaz." },
+  goal_ask_toomany:   { en: 'You already asked for a few. Wait for an answer first!', tr: 'Zaten birkaç tane istedin. Önce cevabını bekle!' },
+  goal_asked_waiting: { en: 'Asked — waiting for your parent', tr: 'İstendi — cevap bekleniyor' },
 
   // ── Homework ────────────────────────────────────────────────────────────────
   hw_title:           { en: 'My Homework', tr: 'Ödevlerim' },

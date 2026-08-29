@@ -205,6 +205,30 @@ export async function claimReward(childId, rewardId) {
   return data.claim
 }
 
+export async function getRewardSuggestions(childId) {
+  try {
+    const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/reward-suggestions`)
+    const data = await res.json()
+    return data.suggestions || []
+  } catch (err) {
+    console.error('[getRewardSuggestions] error:', err.message)
+    return []
+  }
+}
+
+// The gem figure travels as what the child THINKS it should cost. The server stores it
+// for the parent to see and never prices the goal with it.
+export async function suggestReward(childId, { name, icon, gems }) {
+  const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/reward-suggestions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, icon, gems }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)
+  return data.suggestion
+}
+
 export async function getStoryIdeas(childId) {
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/story-ideas`)

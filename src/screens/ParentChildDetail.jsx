@@ -603,10 +603,12 @@ function GemActionDoneModal({ verb, amount, childName, onClose }) {
 // Adds a goal, or edits one that already exists. The same sheet does both: a goal whose cost
 // turned out wrong used to have to be deleted and retyped, which threw away the progress bar
 // the child had been watching.
-function AddRewardSheet({ childId, reward, onClose, onSaved }) {
+function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
   const editing = !!reward
-  const [icon,   setIcon]   = useState(reward?.icon ?? '🎁')
-  const [name,   setName]   = useState(reward?.name ?? '')
+  const [icon,   setIcon]   = useState(reward?.icon ?? suggestion?.icon ?? '🎁')
+  const [name,   setName]   = useState(reward?.name ?? suggestion?.name ?? '')
+  // The child's number is shown but never prefilled into the cost — a prefilled figure is
+  // a price the parent has to notice and override, and the one they don't notice is theirs.
   const [btCost, setBtCost] = useState(reward?.bt_cost ?? 50)
   const [recurring, setRecurring] = useState(reward ? reward.recurring !== false : true)
   const [saving, setSaving] = useState(false)
@@ -619,6 +621,28 @@ function AddRewardSheet({ childId, reward, onClose, onSaved }) {
     if (!(btCost >= 10)) return setError('A goal needs to cost at least 10 gems.')
     setSaving(true); setError('')
     const row = { icon, name: name.trim(), bt_cost: btCost, recurring }
+
+    // Granting a request goes through the server, which creates the goal and closes the
+    // request together. Doing both from here could leave one half done.
+    if (suggestion) {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) { setError('Please sign in again.'); setSaving(false); return }
+      try {
+        const r = await fetch(`${SERVER}/api/reward-suggestions/${suggestion.id}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: name.trim(), icon, gems: btCost, recurring }),
+        })
+        const j = await r.json()
+        if (!r.ok) throw new Error(j?.error === 'already_exists'
+          ? `There is already a goal called "${j.existing?.name}".`
+          : j?.error || 'Could not add this goal.')
+      } catch (err) { setError(err.message); setSaving(false); return }
+      onSaved()
+      return
+    }
+
     const { error: dbErr } = editing
       ? await supabase.from('rewards').update(row).eq('id', reward.id)
       : await supabase.from('rewards').insert({ child_id: childId, ...row })
@@ -636,7 +660,16 @@ function AddRewardSheet({ childId, reward, onClose, onSaved }) {
 
   return (
     <BottomSheet onClose={onClose}>
-      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{editing ? 'Edit goal 🏆' : 'Add goal 🏆'}</div>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>
+        {suggestion ? 'Set the price 🙋' : editing ? 'Edit goal 🏆' : 'Add goal 🏆'}
+      </div>
+      {suggestion && (
+        <div style={{ background: PC.tealBg, borderRadius: 12, padding: '10px 12px', fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.5 }}>
+          {suggestion.suggested_gems
+            ? `They asked for this and guessed ⭐ ${suggestion.suggested_gems} gems. What it really costs is up to you.`
+            : 'They asked for this. What it costs is up to you.'}
+        </div>
+      )}
 
       <Field label="Icon">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -696,7 +729,7 @@ function AddRewardSheet({ childId, reward, onClose, onSaved }) {
       </Field>
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
-      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add goal'}</Btn>
+      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : suggestion ? 'Add this goal' : editing ? 'Save changes' : 'Add goal'}</Btn>
       <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
     </BottomSheet>
   )
@@ -746,6 +779,7 @@ export default function ParentChildDetail() {
   const [paintings, setPaintings] = useState([])
   const [rewards, setRewards] = useState(null)
   const [claims, setClaims] = useState([])
+  const [suggestions, setSuggestions] = useState([])
   const [justApproved, setJustApproved] = useState(false)
   const [lightbox, setLightbox] = useState(null) // { urls, index } — full-size photo viewer
   const [photoMap, setPhotoMap] = useState({})   // submissionId → signed URLs
@@ -754,6 +788,7 @@ export default function ParentChildDetail() {
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [showAddReward,   setShowAddReward]   = useState(false)
   const [editReward,      setEditReward]      = useState(null)
+  const [approveSuggestion, setApproveSuggestion] = useState(null)
   const [showGiftGems,    setShowGiftGems]    = useState(false)
   const [showDeductGems,  setShowDeductGems]  = useState(false)
   const [gemActionDone,   setGemActionDone]   = useState(null) // { verb: 'gift'|'deduct', amount }
@@ -782,7 +817,8 @@ export default function ParentChildDetail() {
       // tree the child sees (and the same numbers Tuto quotes on Telegram).
       fetch(`${SERVER}/api/tree?child_id=${id}`).then(r => r.json()).catch(() => null),
       fetch(`${SERVER}/api/children/${id}/reward-claims`).then(r => r.json()).catch(() => ({ claims: [] })),
-    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData, treeResp, claimsResp]) => {
+      fetch(`${SERVER}/api/children/${id}/reward-suggestions`).then(r => r.json()).catch(() => ({ suggestions: [] })),
+    ]).then(([{ data: childData }, { data: ledgerData }, { data: subData }, { data: rewardData }, contribData, treeResp, claimsResp, suggestResp]) => {
       setChild(childData)
       setGems((ledgerData || []).reduce((sum, r) => sum + (r.amount || 0), 0))
       setLedger(ledgerData || [])
@@ -792,6 +828,7 @@ export default function ParentChildDetail() {
       setContributionsTodayDate(contribData?.todayDate ?? null)
       setTree(treeResp)
       setClaims(claimsResp?.claims || [])
+      setSuggestions(suggestResp?.suggestions || [])
     })
   }, [id])
 
@@ -988,6 +1025,23 @@ export default function ParentChildDetail() {
   const handleApproveClaim = (c) => claimDecision(c, 'approve')
   const handleRejectClaim  = (c) => claimDecision(c, 'reject')
 
+  // Approving is not one tap — it opens the goal sheet, because the parent has to
+  // put a price on it. Only the refusal is immediate.
+  async function handleRejectSuggestion(s) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) return
+    setSuggestions(prev => prev.filter(x => x.id !== s.id))
+    try {
+      const r = await fetch(`${SERVER}/api/reward-suggestions/${s.id}/reject`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!r.ok) throw new Error('failed')
+    } catch {
+      setSuggestions(prev => [s, ...prev])
+    }
+  }
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: PC.bg }}>
       <TutoMascot size={96} color={PC.teal} />
@@ -1158,6 +1212,32 @@ export default function ParentChildDetail() {
           )}
         </div>
 
+        {/* goal requests — child asked for a goal, you set what it costs */}
+        {suggestions.length > 0 && (
+          <div>
+            <SectionHead>🙋 Goal requests ({suggestions.length})</SectionHead>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {suggestions.map(s => (
+                <Card key={s.id} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                    {s.icon || '🎁'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{s.name}</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.inkSoft }}>
+                      {s.suggested_gems ? `${child.name} thinks ⭐ ${s.suggested_gems} — you decide` : `${child.name} asked for this`}
+                    </div>
+                  </div>
+                  <button className="tc-press tc-tap" onClick={() => setApproveSuggestion(s)}
+                    style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '9px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
+                  <button className="tc-press tc-tap" onClick={() => handleRejectSuggestion(s)}
+                    style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '9px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* reward claims — child tapped "Claim", waiting on you */}
         {pendingClaims.length > 0 && (
           <div>
@@ -1318,15 +1398,17 @@ export default function ParentChildDetail() {
           onClose={() => setGemActionDone(null)}
         />
       )}
-      {(showAddReward || editReward) && (
+      {(showAddReward || editReward || approveSuggestion) && (
         <AddRewardSheet
           childId={id}
           reward={editReward}
-          onClose={() => { setShowAddReward(false); setEditReward(null) }}
+          suggestion={approveSuggestion}
+          onClose={() => { setShowAddReward(false); setEditReward(null); setApproveSuggestion(null) }}
           onSaved={async () => {
             const { data } = await supabase.from('rewards').select('*').eq('child_id', id).is('archived_at', null).order('bt_cost')
             setRewards(data || [])
-            setShowAddReward(false); setEditReward(null)
+            if (approveSuggestion) setSuggestions(prev => prev.filter(x => x.id !== approveSuggestion.id))
+            setShowAddReward(false); setEditReward(null); setApproveSuggestion(null)
           }}
         />
       )}

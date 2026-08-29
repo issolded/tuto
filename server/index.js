@@ -153,6 +153,7 @@ async function getParentContext(parentId) {
       mathStanding,
       { data: lastMathQuestions },
       { data: goals },
+      { data: goalRequests },
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -195,6 +196,11 @@ async function getParentContext(parentId) {
       supabase.from('rewards')
         .select('id, name, icon, bt_cost, recurring')
         .eq('child_id', child.id).is('archived_at', null).order('bt_cost'),
+      // Goals the child asked for, still unpriced. The notification that announced one
+      // arrives on this same channel, so the reply to it lands here.
+      supabase.from('reward_suggestions')
+        .select('id, name, icon, suggested_gems, created_at')
+        .eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
     ])
 
     const sub = submissions || []
@@ -306,6 +312,17 @@ async function getParentContext(parentId) {
         icon: g.icon,
         cost: g.bt_cost,
         kind: g.recurring === false ? 'one-time — retires itself once you approve the claim' : 'repeatable',
+      })),
+      // Not a claim: nothing is being spent and no goal exists yet. The child named
+      // something they want and guessed a price. asked_gems is what THEY guessed —
+      // it is not a cost and must never be used as one.
+      pendingGoalRequests: (goalRequests || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        icon: s.icon,
+        asked_gems: s.suggested_gems,
+        created_at: s.created_at,
+        note: 'approve_goal_request needs a gem cost from the parent — ask for one if they have not said a number',
       })),
       pendingRewardClaims: (pendingClaims || []).map(c => ({
         id: c.id,
@@ -1233,6 +1250,47 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'approve_goal_request',
+      description:
+        'Grants a goal the CHILD asked for, at a price the PARENT sets. Only for items in that child\'s ' +
+        'pendingGoalRequests in context — for a goal the parent thought of themselves, use add_reward.\n' +
+        'The child\'s asked_gems is what the child guessed, not an offer and not a default. NEVER pass it as ' +
+        'gems and never suggest it as the price. If the parent has not said a number ("olur", "tamam ekle", ' +
+        '"peki"), that is not enough to call this — ask what it should cost, and only then call it. The parent ' +
+        'saying a bare number right after a goal-request notification IS the price.\n' +
+        'recurring follows the same rule as add_reward: bought once (a toy, a lego set, a book, a bike) is ' +
+        'false; earned again and again (screen time, an outing) is true. Decide it from the item and say which ' +
+        'you chose; only ask when it could genuinely be either.\n' +
+        'This creates the goal and closes the request in one step — do not also call add_reward. Once it is ' +
+        'granted, you cannot change its cost from here; the parent edits it on the child\'s page in the app.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          request_id: { type: 'STRING', description: 'The exact id from pendingGoalRequests in context.' },
+          gems:       { type: 'NUMBER', description: 'What the PARENT said it should cost (whole number, 10-100000). Never the child\'s asked_gems.' },
+          recurring:  { type: 'BOOLEAN', description: 'true if the child can earn it again and again; false if it is bought once.' },
+          name:       { type: 'STRING', description: 'Only if the parent renamed it. Omit to keep the name the child asked for.' },
+          icon:       { type: 'STRING', description: 'A single emoji. Omit to keep the one the child picked.' },
+        },
+        required: ['request_id', 'gems', 'recurring'],
+      },
+    },
+    {
+      name: 'reject_goal_request',
+      description:
+        'Turns down a goal the child asked for, when the parent clearly says no to it ("hayır", "olmaz", ' +
+        '"bunu istemiyorum"). The child is not told they were refused — the request simply stops waiting, and ' +
+        'saying no to their child is the parent\'s to do, not the app\'s. Do not call this because the parent ' +
+        'ignored the request or changed the subject; only on an explicit no.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          request_id: { type: 'STRING', description: 'The exact id from pendingGoalRequests in context.' },
+        },
+        required: ['request_id'],
+      },
+    },
+    {
       name: 'set_math_focus',
       description:
         'Weights one maths curriculum topic in the child\'s next sessions, because the parent said they are ' +
@@ -1871,6 +1929,23 @@ async function handleMessage(parentId, replyCb, text) {
             `açıkla (kim, hangi ödül, kaç gem, nasıl onaylanır) — asla gift_gems çağırma ya da uydurma bir ` +
             `"düzelttim, hediye gönderdim" cevabı verme.`
           : 'Şu anda onay bekleyen ödül talebi yok.') + `\n\n` +
+        `ŞU AN BEKLEYEN HEDEF İSTEKLERİ (çocuk yeni bir hedef istedi, henüz böyle bir hedef YOK):\n` +
+        (familyData.flatMap(c => (Array.isArray(c.pendingGoalRequests) ? c.pendingGoalRequests.map(r => ({ ...r, child: c.name })) : [])).length
+          ? familyData.flatMap(c => (Array.isArray(c.pendingGoalRequests) ? c.pendingGoalRequests.map(r => ({ ...r, child: c.name })) : []))
+              .map(r => `- id=${r.id}: ${r.child}, "${r.name}" hedefini istiyor${r.asked_gems ? ` (çocuğun tahmini: ${r.asked_gems} gem)` : ''}`).join('\n') +
+            `\n- Bu bir ödül TALEBİ DEĞİL: ortada henüz hedef yok, hiçbir gem düşülmedi, iade edilecek bir şey de yok. ` +
+            `Çocuk bir şey istedi, fiyatını ebeveyn koyacak.\n` +
+            `- Çocuğun tahmin ettiği sayı FİYAT DEĞİLDİR. Ada her modülde gem'i optimize ediyor; kendi fiyatladığı ` +
+            `bir bisiklet on gem olurdu. O sayıyı ebeveyne "peki mi?" diye ÖNERME, gems olarak GEÇİRME, ` +
+            `varsayılan gibi kullanma. Ebeveyn sayı söylemeden ("olur", "tamam ekle") approve_goal_request'i ` +
+            `ÇAĞIRMA — kaç gem olacağını sor, sonra çağır.\n` +
+            `- Ebeveyn onaylayıp bir sayı verdiyse approve_goal_request'i, açıkça hayır dediyse ` +
+            `reject_goal_request'i yukarıdaki EXACT id ile çağır. approve_goal_request hem hedefi kurar hem ` +
+            `isteği kapatır; ayrıca add_reward ÇAĞIRMA.\n` +
+            `- Parent'a gönderilen bildirim şuydu: '{child} yeni bir hedef istiyor: "{hedef}" — {gem} gem ` +
+            `olmasını düşünüyor. Kaç gem olacağına sen karar veriyorsun...' — parent bu bildirime belirsiz ` +
+            `cevap verirse yukarıdaki listeden hangisi olduğunu bul ve açıkça anlat.`
+          : 'Şu anda bekleyen hedef isteği yok.') + `\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
@@ -2052,6 +2127,12 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
       } else if (name === 'add_reward') {
         toolResult = await addRewardTool(args.child_id, args.name, args.gems, args.recurring, args.icon, parentId)
+      } else if (name === 'approve_goal_request') {
+        toolResult = await approveSuggestionById(args.request_id, parentId, {
+          gems: args.gems, recurring: args.recurring, name: args.name, icon: args.icon,
+        })
+      } else if (name === 'reject_goal_request') {
+        toolResult = await rejectSuggestionById(args.request_id, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
       } else {
@@ -2469,7 +2550,7 @@ async function rejectClaimById(claimId, parentId) {
   return { success: true, id: claim.id, childName: child.name, gems: claim.bt_cost }
 }
 
-async function claimActionRoute(req, res, action) {
+async function parentDecisionRoute(req, res, action) {
   try {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
     if (!token) return res.status(401).json({ error: 'unauthorized' })
@@ -2477,10 +2558,12 @@ async function claimActionRoute(req, res, action) {
     const userId = userData?.user?.id
     if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
 
-    const result = await action(req.params.id, userId)
+    const result = await action(req.params.id, userId, req.body || {})
     if (!result.success) {
       const code = result.error === 'forbidden' ? 403 : result.error === 'not found' ? 404 : 400
-      return res.status(code).json({ error: result.error })
+      // Whole result, not just the message: a name clash also carries the goal it
+      // clashed with, which is the only useful thing to say back to the parent.
+      return res.status(code).json(result)
     }
     res.json(result)
   } catch (err) {
@@ -2488,8 +2571,156 @@ async function claimActionRoute(req, res, action) {
   }
 }
 
-app.post('/api/reward-claims/:id/approve', (req, res) => claimActionRoute(req, res, approveClaimById))
-app.post('/api/reward-claims/:id/reject', (req, res) => claimActionRoute(req, res, rejectClaimById))
+app.post('/api/reward-claims/:id/approve', (req, res) => parentDecisionRoute(req, res, approveClaimById))
+app.post('/api/reward-claims/:id/reject', (req, res) => parentDecisionRoute(req, res, rejectClaimById))
+
+// ── Goal requests ────────────────────────────────────────────────────────────
+// The child names something they want and says what they think it should cost.
+// That number is never the price — it is an opening bid, kept only so the parent
+// can see what the child had in mind. Ada optimises for gems in every module she
+// is handed (deliberately wrong maths answers to farm the helper, stories written
+// short because short pays best for the effort), so a goal she could price herself
+// would be a ten-gem bicycle. The parent's number is the only one that reaches
+// the rewards table.
+const MAX_PENDING_SUGGESTIONS = 3
+
+app.post('/api/children/:childId/reward-suggestions', async (req, res) => {
+  const { childId } = req.params
+  const label = String(req.body?.name ?? '').trim().slice(0, 60)
+  if (!label) return res.status(400).json({ error: 'name required' })
+
+  try {
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+
+    // A child told "ask your parent" will ask ten times. The cap keeps the
+    // parent's dashboard and their phone readable.
+    const { data: pending } = await supabase
+      .from('reward_suggestions').select('id').eq('child_id', childId).eq('status', 'pending')
+    if ((pending || []).length >= MAX_PENDING_SUGGESTIONS) {
+      return res.status(429).json({ error: 'too many pending requests' })
+    }
+
+    const asked = Math.round(Number(req.body?.gems))
+    const suggested = Number.isFinite(asked) && asked > 0 ? Math.min(asked, 100000) : null
+    const rawIcon = String(req.body?.icon ?? '')
+    const emoji = [...rawIcon].length && [...rawIcon].length <= 2 ? rawIcon : '🎁'
+
+    const { data: suggestion, error } = await supabase
+      .from('reward_suggestions')
+      .insert({ child_id: childId, name: label, icon: emoji, suggested_gems: suggested })
+      .select().single()
+    if (error) return res.status(500).json({ error: error.message })
+
+    if (child.parent_id) {
+      const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const price = suggested
+        ? (language === 'en' ? ` — they think it should cost ${suggested} gems` : ` — ${suggested} gem olmasını düşünüyor`)
+        : ''
+      const msg = language === 'en'
+        ? `${child.name} is asking for a new goal: "${label}"${price}. You decide what it actually costs — add it from the Tuto app, or tell me the number here.`
+        : `${child.name} yeni bir hedef istiyor: "${label}"${price}. Kaç gem olacağına sen karar veriyorsun — Tuto uygulamasından ekleyebilir ya da buraya sayıyı yazabilirsin.`
+      sendNotification(child.parent_id, msg, { kind: 'attention', child: child.name, detail: {
+        tr: `yeni bir hedef istiyor: "${label}"`,
+        en: `is asking for a new goal: "${label}"`,
+      } }).catch(() => {})
+    }
+
+    res.json({ suggestion })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Pending only. A refusal is something a parent says to their child, not something
+// the app should hand a seven-year-old and then leave sitting in their goals list.
+app.get('/api/children/:childId/reward-suggestions', async (req, res) => {
+  const { childId } = req.params
+  const { data } = await supabase
+    .from('reward_suggestions').select('*')
+    .eq('child_id', childId).eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  res.json({ suggestions: data || [] })
+})
+
+// Creates the goal here rather than letting the dashboard insert one and then flip the
+// request: two writes from a browser can half-succeed, and either half alone is wrong —
+// a goal nobody asked for, or a request that comes back after it was granted.
+async function approveSuggestionById(suggestionId, parentId, body) {
+  const { data: suggestion } = await supabase
+    .from('reward_suggestions').select('*').eq('id', suggestionId).maybeSingle()
+  if (!suggestion) return { success: false, error: 'not found' }
+  if (suggestion.status !== 'pending') return { success: false, error: `already ${suggestion.status}` }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', suggestion.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const label = String(body?.name ?? suggestion.name ?? '').trim().slice(0, 60)
+  if (!label) return { success: false, error: 'a goal needs a name' }
+
+  // Deliberately never falls back to suggestion.suggested_gems. The child asked;
+  // the parent prices it. No path exists where the child's number becomes the cost.
+  const cost = Math.round(Number(body?.gems))
+  if (!Number.isFinite(cost) || cost < 10 || cost > 100000) {
+    return { success: false, error: 'gems must be a whole number between 10 and 100000' }
+  }
+
+  const { data: existing } = await supabase
+    .from('rewards').select('id, name, bt_cost').eq('child_id', child.id).is('archived_at', null)
+  const clash = (existing || []).find(r => r.name?.trim().toLowerCase() === label.toLowerCase())
+  if (clash) return { success: false, error: 'already_exists', existing: { name: clash.name, cost: clash.bt_cost } }
+
+  const rawIcon = String(body?.icon ?? suggestion.icon ?? '')
+  const emoji = [...rawIcon].length && [...rawIcon].length <= 2 ? rawIcon : '🎁'
+
+  const { data: reward, error: insErr } = await supabase
+    .from('rewards')
+    .insert({ child_id: child.id, name: label, icon: emoji, bt_cost: cost, recurring: body?.recurring !== false })
+    .select().single()
+  if (insErr) return { success: false, error: insErr.message }
+
+  const { error: updErr } = await supabase
+    .from('reward_suggestions')
+    .update({ status: 'approved', resolved_at: new Date().toISOString(), reward_id: reward.id })
+    .eq('id', suggestion.id).eq('status', 'pending')
+  if (updErr) {
+    console.error(`[GOAL-REQUEST] could not resolve ${suggestion.id}: ${updErr.message}`)
+    await supabase.from('rewards').delete().eq('id', reward.id)
+    return { success: false, error: 'could not record the decision' }
+  }
+
+  return {
+    success: true, id: suggestion.id, childName: child.name,
+    goal: { id: reward.id, name: reward.name, icon: reward.icon, cost: reward.bt_cost },
+    recurring: reward.recurring !== false,
+    asked: suggestion.suggested_gems,
+  }
+}
+
+async function rejectSuggestionById(suggestionId, parentId) {
+  const { data: suggestion } = await supabase
+    .from('reward_suggestions').select('*').eq('id', suggestionId).maybeSingle()
+  if (!suggestion) return { success: false, error: 'not found' }
+  if (suggestion.status !== 'pending') return { success: false, error: `already ${suggestion.status}` }
+
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', suggestion.child_id).maybeSingle()
+  if (!child || child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  const { error: updErr } = await supabase
+    .from('reward_suggestions')
+    .update({ status: 'rejected', resolved_at: new Date().toISOString() })
+    .eq('id', suggestion.id).eq('status', 'pending')
+  if (updErr) return { success: false, error: updErr.message }
+
+  return { success: true, id: suggestion.id, childName: child.name, name: suggestion.name }
+}
+
+app.post('/api/reward-suggestions/:id/approve', (req, res) => parentDecisionRoute(req, res, approveSuggestionById))
+app.post('/api/reward-suggestions/:id/reject', (req, res) => parentDecisionRoute(req, res, rejectSuggestionById))
 
 app.get('/api/children/:childId/gems', async (req, res) => {
   const { childId } = req.params

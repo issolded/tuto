@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { t, childLang } from '../lib/i18n'
-import { getChildRewards, getChildGems, getRewardClaims, claimReward } from '../lib/supabase'
+import { getChildRewards, getChildGems, getRewardClaims, claimReward, getRewardSuggestions, suggestReward } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
+
+const ASK_EMOJIS = ['🎁', '🛹', '🧸', '🎮', '📚', '🚲', '🍕', '🎨', '⚽', '🎧']
 
 const ANIM = `
 @keyframes fadeUp {
@@ -77,6 +79,101 @@ function RewardCard({ reward, currentGems, index, claimStatus, claiming, onClaim
   )
 }
 
+// What the child asked for, still waiting. Deliberately quieter than a real goal card:
+// there is no progress bar and no number in gems, because nothing has been decided yet
+// and a figure shown here would read as a price the child had already been granted.
+function PendingAskCard({ suggestion, index, lang }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.65)', borderRadius: 24, padding: '16px 20px',
+      display: 'flex', alignItems: 'center', gap: 14,
+      border: '2px dashed #E8D9A0',
+      animation: `fadeUp 0.4s ease ${index * 0.07}s both`,
+    }}>
+      <div style={{ width: 46, height: 46, borderRadius: 15, background: '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, flexShrink: 0, opacity: 0.75 }}>
+        {suggestion.icon || '🎁'}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#7A7A9A', marginBottom: 2 }}>{suggestion.name}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#A9A9BE' }}>⏳ {t('goal_asked_waiting', lang)}</div>
+      </div>
+    </div>
+  )
+}
+
+function AskSheet({ lang, onClose, onSubmit }) {
+  const [icon, setIcon] = useState('🎁')
+  const [name, setName] = useState('')
+  const [gems, setGems] = useState(100)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  const send = async () => {
+    if (!name.trim()) return setError(t('goal_ask_needname', lang))
+    setSending(true); setError('')
+    try {
+      await onSubmit({ name: name.trim(), icon, gems })
+    } catch (err) {
+      setError(err.message === 'too many pending requests' ? t('goal_ask_toomany', lang) : err.message)
+      setSending(false)
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(45,45,45,0.45)', zIndex: 60, display: 'flex', alignItems: 'flex-end' }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#FFF8E0', width: '100%', borderRadius: '28px 28px 0 0', padding: '24px 22px 30px',
+        display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '88vh', overflowY: 'auto',
+        animation: 'fadeUp 0.28s ease both',
+      }}>
+        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 23, fontWeight: 900, color: '#2D2D2D' }}>
+          {t('goal_ask_title', lang)}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {ASK_EMOJIS.map(e => (
+            <button key={e} onClick={() => setIcon(e)} style={{
+              width: 46, height: 46, borderRadius: 15, fontSize: 24, cursor: 'pointer',
+              border: `3px solid ${icon === e ? '#2EC486' : 'transparent'}`,
+              background: icon === e ? 'white' : 'rgba(255,255,255,0.6)',
+            }}>{e}</button>
+          ))}
+        </div>
+
+        <div>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: '#7A7A9A', marginBottom: 7 }}>{t('goal_ask_name', lang)}</div>
+          <input value={name} onChange={e => { setName(e.target.value); setError('') }} maxLength={60}
+            placeholder={t('goal_ask_name_ph', lang)}
+            style={{ width: '100%', boxSizing: 'border-box', border: 'none', borderRadius: 16, padding: '14px 16px', fontSize: 16, fontWeight: 700, color: '#2D2D2D', outline: 'none', background: 'white' }} />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: '#7A7A9A', marginBottom: 7 }}>{t('goal_ask_gems', lang)}</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: '#C8900A', marginBottom: 6 }}>⭐ {gems}</div>
+          <input type="range" min={10} max={1000} step={10} value={gems}
+            onChange={e => setGems(Number(e.target.value))}
+            style={{ width: '100%', accentColor: '#FFD93D' }} />
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#A9A9BE', marginTop: 6, lineHeight: 1.5 }}>
+            {t('goal_ask_note', lang)}
+          </div>
+        </div>
+
+        {error && <div style={{ fontSize: 13.5, fontWeight: 800, color: '#E5484D' }}>{error}</div>}
+
+        <button onClick={send} disabled={sending} style={{
+          border: 'none', borderRadius: 18, padding: '15px', width: '100%', fontSize: 16, fontWeight: 900,
+          color: 'white', cursor: sending ? 'default' : 'pointer',
+          background: sending ? '#9ED9BE' : '#2EC486', boxShadow: sending ? 'none' : '0 6px 16px rgba(46,196,134,0.35)',
+        }}>{sending ? t('goal_ask_sending', lang) : t('goal_ask_send', lang)}</button>
+        <button onClick={onClose} style={{
+          border: 'none', borderRadius: 18, padding: '13px', width: '100%', fontSize: 15, fontWeight: 800,
+          color: '#7A7A9A', background: 'transparent', cursor: 'pointer',
+        }}>{t('goal_ask_cancel', lang)}</button>
+      </div>
+    </div>
+  )
+}
+
 export default function GoalsScreen() {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const child = JSON.parse(localStorage.getItem('child') || 'null')
@@ -84,6 +181,8 @@ export default function GoalsScreen() {
   const [gems, setGems] = useState(null)
   const [claims, setClaims] = useState([])
   const [claimingId, setClaimingId] = useState(null)
+  const [suggestions, setSuggestions] = useState([])
+  const [asking, setAsking] = useState(false)
 
   useEffect(() => {
     if (!child?.id) { setRewards([]); setGems(0); return }
@@ -91,12 +190,20 @@ export default function GoalsScreen() {
       getChildRewards(child.id),
       getChildGems(child.id),
       getRewardClaims(child.id),
-    ]).then(([rewardData, gemCount, claimData]) => {
+      getRewardSuggestions(child.id),
+    ]).then(([rewardData, gemCount, claimData, suggestionData]) => {
       setRewards(rewardData)
       setGems(gemCount)
       setClaims(claimData)
+      setSuggestions(suggestionData)
     })
   }, [])
+
+  async function handleAsk({ name, icon, gems: wanted }) {
+    const suggestion = await suggestReward(child.id, { name, icon, gems: wanted })
+    setSuggestions(prev => [suggestion, ...prev])
+    setAsking(false)
+  }
 
   const loading = rewards === null || gems === null
 
@@ -144,7 +251,7 @@ export default function GoalsScreen() {
           [0, 1, 2].map(i => (
             <div key={i} style={{ background: 'white', borderRadius: 24, height: 116, opacity: 0.4 + i * 0.15 }} />
           ))
-        ) : rewards.length === 0 ? (
+        ) : rewards.length === 0 && suggestions.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, paddingTop: 40 }}>
             <TutoMascot size={150} expression="default" style={{ animation: 'fadeUp 0.4s ease both' }} />
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6, animation: 'fadeUp 0.4s ease 0.1s both' }}>
@@ -164,7 +271,23 @@ export default function GoalsScreen() {
             />
           ))
         )}
+
+        {!loading && suggestions.map((s, i) => (
+          <PendingAskCard key={s.id} suggestion={s} index={i} lang={lang} />
+        ))}
+
+        {!loading && (
+          <button onClick={() => setAsking(true)} style={{
+            border: '2.5px dashed #E8D9A0', background: 'rgba(255,255,255,0.5)', borderRadius: 24,
+            padding: '16px', width: '100%', fontSize: 15, fontWeight: 800, color: '#7A7A9A',
+            cursor: 'pointer', animation: 'fadeUp 0.4s ease 0.15s both',
+          }}>
+            ✨ {t('goal_ask', lang)}
+          </button>
+        )}
       </div>
+
+      {asking && <AskSheet lang={lang} onClose={() => setAsking(false)} onSubmit={handleAsk} />}
 
     </Shell>
   )
