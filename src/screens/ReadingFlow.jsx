@@ -308,6 +308,9 @@ export default function ReadingFlow() {
   const fromLibrary = useRef(!!location.state?.book)
 
   useEffect(() => {
+    // "+ Add" in the library used to land on whichever book was open, because the only signal
+    // this screen had was the absence of a book in the route state.
+    if (location.state?.newBook) { setStep('new-book'); return }
     const stateBook = location.state?.book
     if (stateBook) {
       setBook(stateBook)
@@ -459,17 +462,21 @@ export default function ReadingFlow() {
     setStep('page-number')
   }
 
+  // Forwards only when the number came from a photo or the end of a session: a child who
+  // mistypes 420 for 42 should not have their book marked as finished, and one who types 2
+  // after reaching 60 has told us where they are in a chapter, not that they un-read
+  // fifty-eight pages. A child who came here to correct the page is saying the opposite, so
+  // that path takes the number as given.
+  async function writePage(page, { allowBack = false } = {}) {
+    if (!book?.id || !Number.isFinite(page) || page < 1) return
+    const capped = Math.min(page, book.total_pages ?? 10000)
+    if (!allowBack && capped <= (book.current_page ?? 0)) return
+    await storageClient.from('books').update({ current_page: capped }).eq('id', book.id)
+    setBook(b => (b ? { ...b, current_page: capped } : b))
+  }
+
   async function savePageNumber(skip) {
-    if (!skip && book?.id) {
-      const page = Math.floor(Number(pageInput))
-      // Only ever forwards, and never past the end: a child who mistypes 420 for 42 should
-      // not have their book marked as finished, and one who types 2 after reaching 60 has
-      // told us where they are in a chapter, not that they un-read fifty-eight pages.
-      const capped = Math.min(page, book.total_pages ?? 10000)
-      if (Number.isFinite(page) && capped > (book.current_page ?? 0)) {
-        await storageClient.from('books').update({ current_page: capped }).eq('id', book.id)
-      }
-    }
+    if (!skip) await writePage(Math.floor(Number(pageInput)))
     nav('/child/library')
   }
 
@@ -786,28 +793,35 @@ export default function ReadingFlow() {
     <Screen lang={lang} onBack={fromLibrary.current ? () => nav('/child/library') : undefined}>
       <TutoBubble message={s('rd_welcome_back', { title: book?.title ?? '' })} />
       {book?.cover_url && (
+        // contain, not cover: these are photographs of real covers in whatever aspect the
+        // child held the phone, and cropping one to a fixed box cuts the title off.
         <img
           src={book.cover_url}
           alt="cover"
-          style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
+          style={{ maxHeight: 220, maxWidth: '100%', width: 'auto', margin: '0 auto', objectFit: 'contain', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
         />
       )}
-      {(book?.current_page ?? 0) > 0 && (
-        <div style={{
+      <button
+        onClick={() => { setPageInput(String(book?.current_page ?? '')); setStep('set-page') }}
+        style={{
           background: 'rgba(255,255,255,0.85)',
+          border: 'none',
           borderRadius: 18,
           padding: '14px 18px',
-          textAlign: 'center',
+          width: '100%',
+          cursor: 'pointer',
           fontFamily: "'TrRound', 'Baloo 2', cursive",
           fontSize: 17,
           fontWeight: 800,
           color: '#1A1A2E',
-        }}>
-          {book.total_pages > 0
+        }}
+      >
+        {(book?.current_page ?? 0) > 0
+          ? (book.total_pages > 0
             ? s('rd_last_page_of', { n: book.current_page, total: book.total_pages })
-            : s('rd_last_page', { n: book.current_page })}
-        </div>
-      )}
+            : s('rd_last_page', { n: book.current_page }))
+          : s('rd_set_page')}
+      </button>
       <button
         className="btn btn-orange"
         onClick={() => setStep('page-prompt')}
@@ -840,6 +854,24 @@ export default function ReadingFlow() {
       >
         {s('rd_other_book')}
       </button>
+    </Screen>
+  )
+
+  if (step === 'set-page') return (
+    <Screen lang={lang} onBack={() => setStep('existing-book')}>
+      <TutoBubble message={s('rd_set_page')} tutoSize={100} />
+      <NumberPrompt
+        value={pageInput}
+        onChange={setPageInput}
+        placeholder={s('rd_page_ph')}
+        onSave={async () => {
+          await writePage(Math.floor(Number(pageInput)), { allowBack: true })
+          setStep('existing-book')
+        }}
+        onSkip={() => setStep('existing-book')}
+        saveLabel={s('rd_save')}
+        skipLabel={s('rd_cancel')}
+      />
     </Screen>
   )
 

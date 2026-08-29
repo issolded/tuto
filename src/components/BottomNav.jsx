@@ -35,7 +35,6 @@ export default function BottomNav({ active, fixed = false, maxWidth = 430 }) {
   const nav = useNavigate()
   return (
     <>
-    <style>{`@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');`}</style>
     <nav style={{
       flexShrink: 0, background: '#fff', borderRadius: '24px 24px 0 0',
       padding: '12px 14px 22px', display: 'flex', justifyContent: 'space-around', alignItems: 'center',

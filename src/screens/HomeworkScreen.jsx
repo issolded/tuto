@@ -19,7 +19,6 @@ const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 const MAX_PHOTOS = 15
 
 const HW_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@700;800&display=swap');
 @keyframes hw-pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
 @keyframes hw-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .hw-pop{animation:hw-pop .32s cubic-bezier(.3,1.4,.5,1) both;}

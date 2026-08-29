@@ -137,7 +137,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, background: 'linear-gradient(90deg, rgba(120,90,60,.22), rgba(120,90,60,.04))' }} />
             {pageIndex === 0 && (
               <>
-                <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || t('story_untitled', lang)}</div>
+                <div style={{ fontFamily: "'Fredoka One', 'TrRound', 'Baloo 2', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || t('story_untitled', lang)}</div>
                 <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
               </>
             )}
@@ -157,7 +157,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
             >
               {turn.showTitle && (
                 <>
-                  <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || t('story_untitled', lang)}</div>
+                  <div style={{ fontFamily: "'Fredoka One', 'TrRound', 'Baloo 2', cursive", fontSize: 21, color: '#2f9e6b', lineHeight: 1.12, marginBottom: 3, flexShrink: 0 }}>{story.title || t('story_untitled', lang)}</div>
                   <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
                 </>
               )}

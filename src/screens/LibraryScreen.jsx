@@ -191,7 +191,7 @@ export default function LibraryScreen() {
               {t('lib_other_authors', lang)}
             </div>
             <button
-              onClick={e => { e.stopPropagation(); nav('/child/reading') }}
+              onClick={e => { e.stopPropagation(); nav('/child/reading', { state: { newBook: true } }) }}
               style={{ background: '#FFE8D4', color: ACCENT, border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
               {t('lib_add', lang)}
@@ -205,7 +205,7 @@ export default function LibraryScreen() {
               <div style={{ fontSize: 36, marginBottom: 8 }}>📚</div>
               <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t('lib_no_books', lang)}</div>
               <button
-                onClick={e => { e.stopPropagation(); nav('/child/reading') }}
+                onClick={e => { e.stopPropagation(); nav('/child/reading', { state: { newBook: true } }) }}
                 style={{ background: ACCENT, color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
                 {t('lib_add_first', lang)}

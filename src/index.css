@@ -1,8 +1,14 @@
 /* Fredoka was referenced in eleven places and loaded in none, so every screen using it fell
    back to whatever the system had. Baloo 2's Latin-Extended coverage is patchy, which is why
    ğ and ş looked like they came from a different font — because they did: the browser falls
-   back per glyph. Nunito covers Turkish and now sits in front of the generic fallback. */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap');
+   back per glyph. Nunito covers Turkish and now sits in front of the generic fallback.
+
+   Every family the app names lives in this one import. They used to be declared per screen,
+   inside injected <style> tags, so a family loaded only while the screen that imported it was
+   mounted: Lexend and Fredoka One were imported by StoriesScreen but also used by
+   BookOpenTransition, which LibraryScreen renders too, and there they fell through to the
+   generic cursive. */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lexend:wght@400;600&family=Fredoka+One&display=swap');
 
 /* ğ Ğ ş Ş only. Fredoka has every other Turkish letter — measured in the browser by comparing
    rendered widths against the generic fallback — but not these two, so they were falling

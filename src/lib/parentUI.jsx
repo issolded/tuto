@@ -33,7 +33,6 @@ export const SHADOW    = '0 14px 34px -16px rgba(40,55,75,.18), 0 3px 10px -4px 
 export const SHADOW_SM = '0 6px 18px -8px rgba(40,55,75,.16), 0 1px 4px rgba(40,55,75,.04)'
 
 export const PCSS = `
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 *{box-sizing:border-box;}
 .tc-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .tc-scroll::-webkit-scrollbar{display:none;}

@@ -13,7 +13,6 @@ const LILAC = '#e7ddf6'
 const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 
 const HOME_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
 .tuto-card{ transition: transform .13s ease, box-shadow .13s ease; }
 .tuto-card:hover{ transform: translateY(-3px); box-shadow: 0 12px 22px rgba(40,30,70,.15); }

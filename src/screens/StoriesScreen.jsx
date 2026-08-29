@@ -827,7 +827,6 @@ export default function StoriesScreen() {
     return (
       <div style={{ background: BG_YOUNG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}{`
-          @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&family=Fredoka+One&display=swap');
           .story-body { font-family: 'Lexend', sans-serif !important; }
           .story-title-book { font-family: 'Fredoka One', 'TrRound', 'Baloo 2', cursive !important; }
         `}</style>

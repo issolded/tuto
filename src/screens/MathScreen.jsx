@@ -45,7 +45,6 @@ const FRED      = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 const FLOW_BG   = 'linear-gradient(172deg,#EAF5FF 0%,#D2E9FB 100%)'
 
 const ANIM = `
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(-7px); }

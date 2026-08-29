@@ -5,7 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>tuto-app</title>
-    <style>html,body{overflow-x:hidden;max-width:100vw;overscroll-behavior-y:contain}</style>
+    <!-- clip, not hidden: overflow-x:hidden forces overflow-y from visible to auto, so this
+         rule was turning both html and body into scroll containers, one nested in the other.
+         clip keeps the horizontal guard without creating a scroller. -->
+    <style>html,body{overflow-x:clip;max-width:100vw;overscroll-behavior-y:contain}</style>
   </head>
   <body>
     <div id="root"></div>

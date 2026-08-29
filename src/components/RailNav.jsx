@@ -34,7 +34,6 @@ export default function RailNav({ active }) {
       width: 230, flexShrink: 0, background: '#fff', display: 'flex', flexDirection: 'column',
       padding: '32px 16px', gap: 4, boxShadow: '6px 0 20px rgba(40,30,70,.07)',
     }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');`}</style>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {NAV_ITEMS.map(({ id, labelKey, route }) => {
           const isActive = id === active
