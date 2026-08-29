@@ -238,6 +238,7 @@ const STRINGS = {
   dr_my_paintings:    { en: 'My Paintings', tr: 'Resimlerim' },
   dr_leave_drawing:   { en: 'Leave this drawing?', tr: 'Bu çizimden çıkalım mı?' },
   dr_delete:          { en: 'Delete', tr: 'Sil' },
+  dr_close:           { en: 'Close', tr: 'Kapat' },
   dr_delete_painting: { en: 'Delete this painting?', tr: 'Bu resmi sileyim mi?' },
 
   tree_add_with_photo:{ en: 'Add with photo', tr: 'Fotoğrafla ekle' },

@@ -1067,7 +1067,6 @@ export default function MyTree() {
 
   return (
     <>
-      <style>{`@keyframes ttPop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}`}</style>
       {loadError && (
         <div style={{ position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FFF0EE', color: '#D63030', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12.5, padding: '8px 16px', borderRadius: 12, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
           {t('tree_no_server', lang)}

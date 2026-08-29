@@ -94,3 +94,11 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Was declared inside MyTree's injected <style>, so it only existed while that screen was
+   mounted — DrawingsScreen's ConfirmModal asks for it and has never animated. */
+@keyframes ttPop {
+  0% { transform: scale(.7); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}

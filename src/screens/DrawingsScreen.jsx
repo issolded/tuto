@@ -283,7 +283,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
                 border: 'none', background: 'none', padding: 0, cursor: 'pointer', textAlign: 'center',
               }}>
                 {p.photo
-                  ? <img src={p.photo} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: sk.radius - 8, display: 'block' }} />
+                  ? <img src={p.photo} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', background: PANEL_BG, borderRadius: sk.radius - 8, display: 'block' }} />
                   : <div style={{ width: '100%', aspectRatio: '1', borderRadius: sk.radius - 8, background: PANEL_BG }} />}
                 <PaintingStatus p={p} sk={sk} compact />
               </button>
@@ -649,6 +649,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [confirmTarget, setConfirmTarget] = useState(null) // painting awaiting delete confirmation
   const [deletingId, setDeletingId] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const nameFor = p => {
     if (!p.drawing_id) return 'My own drawing'
@@ -691,8 +692,14 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
               boxShadow: '0 6px 16px rgba(40,30,70,.09)', opacity: deletingId === p.id ? .4 : 1,
             }}>
               {p.photo
-                ? <img src={p.photo} alt="" loading="lazy" style={{ width: '100%', height: 118, objectFit: 'cover', display: 'block' }} />
-                : <div style={{ height: 118, background: '#F3EFE6' }} />}
+                ? <button onClick={() => setViewing(p)} aria-label={nameFor(p)} style={{
+                    display: 'block', width: '100%', padding: 0, border: 'none', cursor: 'pointer', background: PANEL_BG,
+                  }}>
+                    {/* A drawing is the thing itself, not decoration for a card: a fixed-height
+                        cover crop of a portrait photo showed a band across its middle. */}
+                    <img src={p.photo} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', display: 'block' }} />
+                  </button>
+                : <div style={{ aspectRatio: '1', background: PANEL_BG }} />}
               <button onClick={() => setConfirmTarget(p)} disabled={deletingId === p.id} aria-label={t('dr_delete', lang)} style={{
                 position: 'absolute', top: 7, right: 7, width: 26, height: 26, borderRadius: '50%', border: 'none',
                 background: 'rgba(30,30,25,.55)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
@@ -709,6 +716,26 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
 
       <button onClick={onAgain} style={ctaStyle(sk, false)}>Draw again</button>
       <div style={{ height: 20 }} />
+
+      {viewing && (
+        <div onClick={() => setViewing(null)} style={{
+          position: 'fixed', inset: 0, zIndex: 95, background: 'rgba(28,26,34,.92)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 14, padding: 18,
+        }}>
+          <img src={viewing.photo} alt={nameFor(viewing)} style={{
+            maxWidth: '100%', maxHeight: '78vh', objectFit: 'contain', borderRadius: 14,
+            animation: 'ttPop .24s cubic-bezier(.2,.9,.3,1.2) both',
+          }} />
+          <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 17, color: '#fff', textAlign: 'center' }}>
+            {nameFor(viewing)}
+          </div>
+          <button onClick={() => setViewing(null)} style={{
+            border: 'none', borderRadius: 999, padding: '12px 30px', background: '#fff', cursor: 'pointer',
+            fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink,
+          }}>{t('dr_close', lang)}</button>
+        </div>
+      )}
 
       {confirmTarget && (
         <ConfirmModal sk={sk}
