@@ -600,7 +600,7 @@ export default function ReadingFlow() {
           src={pendingCoverPreview}
           alt="cover preview"
           draggable={false}
-          style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
+          style={{ maxHeight: 220, maxWidth: '100%', width: 'auto', margin: '0 auto', objectFit: 'contain', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
         />
       )}
       <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 24px rgba(255,107,53,0.10)', display: 'flex', flexDirection: 'column', gap: 10 }}>
