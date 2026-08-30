@@ -25,6 +25,14 @@ export function useIsTablet() {
   return useMediaQuery('(min-width: 768px)')
 }
 
+// A tablet held sideways is the one shape where a column layout breaks down:
+// there is width to spare and almost no height, so anything sized from the
+// column's width (a square panel, a big cover) pushes its own controls off the
+// bottom of the screen.
+export function useIsTabletLandscape() {
+  return useMediaQuery('(min-width: 768px) and (orientation: landscape)')
+}
+
 // Picks the nav for a screen and caps its content column — phone and
 // tablet-portrait keep the bottom tab bar (more thumb-reach at the bottom
 // edge); tablet-landscape switches to a fixed left rail instead. `active` is

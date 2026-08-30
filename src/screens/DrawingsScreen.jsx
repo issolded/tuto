@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
 import { drawingAlign } from '../lib/drawingAlign'
-import Shell from '../components/Shell'
+import Shell, { useIsTabletLandscape } from '../components/Shell'
 
 // ── Age skins ────────────────────────────────────────────────────────────────
 // Same flow, three presentations (see SKINS in the design prototype). The
@@ -211,7 +211,10 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           }}>Try again</button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+        /* Two fixed columns meant a card was half the screen wide whatever the
+           screen was: on a sideways iPad each thumbnail came out ~555px and the
+           twenty drawings became eight thousand pixels of scrolling. */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 11 }}>
           {shown.map(d => (
             <button key={`${d.id}-${d.age_group}`} onClick={() => onPick(d)} style={{
               background: '#fff', border: 'none', borderRadius: sk.radius, padding: 10,
@@ -383,6 +386,7 @@ function ConfirmModal({ sk, title, body, cancelLabel, confirmLabel, confirmDange
 function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const total = target.step_count
+  const wide = useIsTabletLandscape()
   // Only drawings whose steps have been checked against their pictures get words.
   const tips = stepsFor(target.id, lang) || []
   const isLast = step >= total - 1
@@ -438,39 +442,50 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
     })
   }, [step, target.id, ageGroup, total])
 
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 10px' }}>
-        <BackBtn onClick={() => setConfirmExit(true)} />
-        <Title sk={sk}>{target.name_en}</Title>
-        <div style={{ width: 42 }} />
-      </div>
+  const header = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 10px' }}>
+      <BackBtn onClick={() => setConfirmExit(true)} />
+      <Title sk={sk}>{target.name_en}</Title>
+      <div style={{ width: 42 }} />
+    </div>
+  )
 
-      <div style={{
-        textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 800,
-        fontSize: 13, color: sk.accent, marginBottom: 8,
-      }}>
-        {sk.stepWord} {step + 1}/{total}
-      </div>
+  const counter = (
+    <div style={{
+      textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 800,
+      fontSize: 13, color: sk.accent, marginBottom: wide ? 0 : 8,
+    }}>
+      {sk.stepWord} {step + 1}/{total}
+    </div>
+  )
 
-      {/* segment progress bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-        {Array.from({ length: total }, (_, i) => (
-          <div key={i} style={{
-            flex: 1, height: 5, borderRadius: 999,
-            background: i <= step ? sk.accent : 'rgba(32,32,30,.13)',
-          }} />
-        ))}
-      </div>
+  const progress = (
+    <div style={{ display: 'flex', gap: 4, marginBottom: wide ? 0 : 14 }}>
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} style={{
+          flex: 1, height: 5, borderRadius: 999,
+          background: i <= step ? sk.accent : 'rgba(32,32,30,.13)',
+        }} />
+      ))}
+    </div>
+  )
 
-      {/* Two stacked layers so a step change fades the new ink in over the old,
-          instead of hard-cutting to the next panel — see baseStep/revealed above. */}
+  const panel = (
+      /* Two stacked layers so a step change fades the new ink in over the old,
+         instead of hard-cutting to the next panel — see baseStep/revealed above. */
       <div style={{
         background: CATEGORY_TINT[target.category] || PANEL_BG, borderRadius: sk.radius, padding: 10,
         boxShadow: '0 6px 16px rgba(40,30,70,.09)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        ...(wide ? { flex: 1, minHeight: 0, minWidth: 0 } : null),
       }}>
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '1' }}>
+        {/* Sideways, the square takes its size from the HEIGHT it has left over.
+            Sized from the width — as it is in a column — a 1180px content column
+            makes a 1128px panel on an 820px-tall screen, and Next lands half a
+            screen below the fold. */}
+        <div style={wide
+          ? { position: 'relative', height: '100%', maxWidth: '100%', aspectRatio: '1' }
+          : { position: 'relative', width: '100%', aspectRatio: '1' }}>
           <img
             src={drawingStepUrl(target.id, ageGroup, poorerStep + 1)}
             alt={`${target.name_en} ${sk.stepWord} ${poorerStep + 1}`}
@@ -504,40 +519,72 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
           )}
         </div>
       </div>
+  )
 
-      {tips[step] && (
-        <div style={{
-          marginTop: 12, background: '#fff', borderRadius: sk.radius, padding: '13px 16px',
-          boxShadow: '0 6px 16px rgba(40,30,70,.09)',
-          fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink, textAlign: 'center',
-        }}>
-          {tips[step]}
+  const tip = tips[step] && (
+    <div style={{
+      marginTop: wide ? 0 : 12, background: '#fff', borderRadius: sk.radius, padding: '13px 16px',
+      boxShadow: '0 6px 16px rgba(40,30,70,.09)',
+      fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 15.5, color: sk.ink, textAlign: 'center',
+    }}>
+      {tips[step]}
+    </div>
+  )
+
+  const nav = (
+    /* Equal-width pair: this is the ONLY way to move between panels now that
+       the top arrow is exit-only, so Back needs to be as prominent as Next. */
+    <div style={{ display: 'flex', gap: 9, marginTop: wide ? 0 : 16, paddingBottom: wide ? 0 : 20 }}>
+      <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{
+        flex: 1, padding: '14px 10px', borderRadius: sk.radius - 4, border: '1.5px solid rgba(32,32,30,.14)',
+        background: '#fff', cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .45 : 1,
+        fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14.5, color: '#6f6a64',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+      }}><span>←</span> Back</button>
+      <button onClick={() => (isLast ? onFinish() : setStep(step + 1))} style={{
+        ...ctaStyle(sk, false), flex: 1, marginTop: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+      }}>
+        {isLast ? "I drew it!" : <>Next <span>→</span></>}
+      </button>
+    </div>
+  )
+
+  const exitModal = confirmExit && (
+    <ConfirmModal sk={sk}
+      title={t('dr_leave_drawing', lang)} body="Your steps so far won't be saved."
+      cancelLabel="Keep drawing" confirmLabel="Leave"
+      onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
+  )
+
+  // Sideways the panel goes beside its controls rather than above them, so the
+  // drawing gets the full height of the screen and Next never leaves it.
+  if (wide) return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {header}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 18, paddingBottom: 14 }}>
+        {panel}
+        <div style={{ flex: '0 0 300px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {counter}
+          {progress}
+          {tip}
+          <div style={{ flex: 1 }} />
+          {nav}
         </div>
-      )}
-
-      {/* Equal-width pair: this is the ONLY way to move between panels now that
-          the top arrow is exit-only, so Back needs to be as prominent as Next. */}
-      <div style={{ display: 'flex', gap: 9, marginTop: 16, paddingBottom: 20 }}>
-        <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{
-          flex: 1, padding: '14px 10px', borderRadius: sk.radius - 4, border: '1.5px solid rgba(32,32,30,.14)',
-          background: '#fff', cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .45 : 1,
-          fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14.5, color: '#6f6a64',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}><span>←</span> Back</button>
-        <button onClick={() => (isLast ? onFinish() : setStep(step + 1))} style={{
-          ...ctaStyle(sk, false), flex: 1, marginTop: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          {isLast ? "I drew it!" : <>Next <span>→</span></>}
-        </button>
       </div>
+      {exitModal}
+    </div>
+  )
 
-      {confirmExit && (
-        <ConfirmModal sk={sk}
-          title={t('dr_leave_drawing', lang)} body="Your steps so far won't be saved."
-          cancelLabel="Keep drawing" confirmLabel="Leave"
-          onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
-      )}
+  return (
+    <>
+      {header}
+      {counter}
+      {progress}
+      {panel}
+      {tip}
+      {nav}
+      {exitModal}
     </>
   )
 }
@@ -685,7 +732,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
           Nothing here yet — draw something!
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 11 }}>
           {paintings.map(p => (
             <div key={p.id} style={{
               position: 'relative', background: '#fff', borderRadius: sk.radius, overflow: 'hidden',
