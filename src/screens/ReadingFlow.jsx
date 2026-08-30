@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { useIsTablet } from '../components/Shell'
+import { useIsTablet, useIsTabletLandscape } from '../components/Shell'
 import { storageClient, submitReadingSession } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
 import { t, childLang } from '../lib/i18n'
@@ -94,9 +94,14 @@ Return JSON only:
 function Screen({ children, onBack, lang }) {
   const nav = useNavigate()
   const isTablet = useIsTablet()
+  // Every step here is one question and two or three stacked answers. Given the
+  // full 1180 they became metre-wide bars and, with the phone's top padding, the
+  // last one fell off the bottom of a sideways iPad — the child never saw
+  // "Start a different book".
+  const short = useIsTabletLandscape()
   return (
-    <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '56px 24px 12px', display: 'flex', alignItems: 'center', gap: 14 }}>
+    <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 560 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: short ? '20px 24px 8px' : '56px 24px 12px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <button
           onClick={onBack ?? (() => nav('/child/home'))}
           style={{
@@ -115,7 +120,7 @@ function Screen({ children, onBack, lang }) {
           {t('rd_title', lang)}
         </div>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 24px 48px', gap: 20 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: short ? '10px 24px 24px' : '16px 24px 48px', gap: short ? 14 : 20 }}>
         {children}
       </div>
     </div>
@@ -265,6 +270,7 @@ function NumberPrompt({ value, onChange, placeholder, onSave, onSkip, saveLabel,
 
 export default function ReadingFlow() {
   const nav = useNavigate()
+  const short = useIsTabletLandscape()
   const location = useLocation()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const childId = child?.id
@@ -600,7 +606,7 @@ export default function ReadingFlow() {
           src={pendingCoverPreview}
           alt="cover preview"
           draggable={false}
-          style={{ maxHeight: 220, maxWidth: '100%', width: 'auto', margin: '0 auto', objectFit: 'contain', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
+          style={{ maxHeight: short ? 150 : 220, maxWidth: '100%', width: 'auto', margin: '0 auto', objectFit: 'contain', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
         />
       )}
       <div style={{ background: 'white', borderRadius: 24, padding: '20px', boxShadow: '0 4px 24px rgba(255,107,53,0.10)', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -798,7 +804,7 @@ export default function ReadingFlow() {
         <img
           src={book.cover_url}
           alt="cover"
-          style={{ maxHeight: 220, maxWidth: '100%', width: 'auto', margin: '0 auto', objectFit: 'contain', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
+          style={{ maxHeight: short ? 150 : 220, maxWidth: '100%', width: 'auto', margin: '0 auto', objectFit: 'contain', borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
         />
       )}
       <button
