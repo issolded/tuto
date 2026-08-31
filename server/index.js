@@ -789,6 +789,25 @@ function sendGate(prefs, notice, tz) {
   return { send: true }
 }
 
+// approval_required is the other half of the gate, and it is about the question rather than the
+// message. Turned off it does not mean "don't tell me", it means "don't ask me": the thing is
+// approved where it lands, the child's gems arrive, and the parent hears about it afterwards as a
+// finished activity — which notify_level then governs like any other. Silencing only the question
+// would leave the reward waiting on a reply nobody was ever going to be asked for, and the child
+// would experience a notification setting as their gems quietly not coming.
+//
+// Reward claims and goal requests are absent by design: those spend real money and real promises,
+// so there is nothing here to answer on the parent's behalf.
+const APPROVABLE = new Set(['contribution', 'submission', 'drawing'])
+
+async function needsParentApproval(parentId, type) {
+  if (!APPROVABLE.has(type)) return true
+  const { data } = await supabase.from('parents').select('prefs').eq('id', parentId).maybeSingle()
+  // Anything other than an explicit false asks the parent — a missing key, a null column or a
+  // failed read all land on today's behaviour rather than on approving something unasked.
+  return data?.prefs?.approval_required?.[type] !== false
+}
+
 async function sendNotification(parentId, message, notice) {
   // Every proactive notification (homework arrived, reward
   // claimed, ...) used to be invisible to Gemini — logMessage only ran for
@@ -3358,12 +3377,27 @@ app.post('/api/contributions', async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message })
 
+    // Approved before the response goes back, so the child's own screen never shows a "waiting"
+    // state for something nobody is going to be asked about.
+    let row = inserted
+    const ask = await needsParentApproval(child.parent_id, 'contribution')
+    if (!ask && (await approveContributionTool(inserted.id, child.parent_id)).success) {
+      row = { ...row, status: 'approved' }
+    }
+
     try {
-      const message = `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
-      const notice = { kind: 'approval', child: child.name, detail: {
-        tr: `ev katkısı: "${trimmedLabel}", onayını bekliyor`,
-        en: `a home contribution: "${trimmedLabel}", waiting for your OK`,
-      } }
+      const message = ask
+        ? `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
+        : `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nBunları sormadan geçmemi istemiştin, geçtim.`
+      const notice = ask
+        ? { kind: 'approval', child: child.name, detail: {
+            tr: `ev katkısı: "${trimmedLabel}", onayını bekliyor`,
+            en: `a home contribution: "${trimmedLabel}", waiting for your OK`,
+          } }
+        : { kind: 'activity', child: child.name, detail: {
+            tr: `ev katkısı: "${trimmedLabel}"`,
+            en: `a home contribution: "${trimmedLabel}"`,
+          } }
       if (resolvedPhotoUrl) {
         deferNotify('TREE', () => sendNotificationWithPhoto(child.parent_id, message, resolvedPhotoUrl, PHOTO_BUCKET, notice))
       } else {
@@ -3373,7 +3407,7 @@ app.post('/api/contributions', async (req, res) => {
       console.error(`[CONTRIBUTIONS] notification failed: ${err.message}`)
     }
 
-    res.status(201).json(inserted)
+    res.status(201).json(row)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -4086,6 +4120,13 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const todayLocal = DateTime.now().setZone(tz).toFormat('yyyy-MM-dd')
     const needsDateConfirm = photoTakenAt == null
 
+    // Approved here rather than inside the notification, because the notification can be held for
+    // 90 seconds waiting on the child's answer about the photo's date, and the child should not
+    // wait on that for gems the parent already decided not to be asked about.
+    const askApproval = await needsParentApproval(child.parent_id, 'submission')
+    const autoApproved = askApproval ? null : await approveSubmissionTool(submission.id, child.parent_id)
+    const awardedGems = autoApproved?.success ? autoApproved.gems : null
+
     // 6. Parent notification. Gemini writes the caption honoring tone+language;
     //    CODE filters low-confidence errors out and supplies the date sentence.
     //    Runs immediately when the date is known, or after the child answers
@@ -4112,26 +4153,26 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       try {
         const filtered = observation?.looks_like_homework ? filterForParent(observation) : null
         if (!filtered) {
-          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
+          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems })
         } else {
           const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
             contents: [{ parts: [{ text: homeworkCaptionPrompt({
               filteredObservation: filtered, childName: child.name, tone, language,
-              photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems,
+              photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems, awarded: awardedGems,
             }) }] }],
           }))
           caption = textFromParts(capData.candidates?.[0]?.content?.parts)
-          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
+          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems })
         }
       } catch (err) {
         console.error(`[HOMEWORK] caption failed: ${err.message}`)
-        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote })
+        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems })
       }
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
       try {
         deferNotify('HOMEWORK', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls,
-          { kind: 'approval', child: child.name, detail: {
+          { kind: awardedGems == null ? 'approval' : 'activity', child: child.name, detail: {
             tr: `ödev, ${photoUrls.length} sayfa fotoğrafı geldi`,
             en: `homework, ${photoUrls.length} page photo${photoUrls.length === 1 ? '' : 's'}`,
           } }))
@@ -4881,29 +4922,51 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
       .single()
     if (insErr) return res.status(500).json({ error: insErr.message })
 
+    // The photo still goes out either way. What the parent turned off is being asked, not being
+    // shown their child's drawing — and the safety screen above ran before any of this, so an
+    // unasked approval is still a screened one.
+    const ask = await needsParentApproval(child.parent_id, 'drawing')
+    const auto = ask ? null : await approvePaintingById(painting.id, child.parent_id)
+    const approved = !!auto?.success
+
     // Passive transparency plus the ask: the parent sees the photo AND is told
     // it is waiting on them. Same boundary-signing as homework — the URL is
     // short-lived and Telegram re-hosts the image immediately.
     try {
       const what = resolvedDrawing ? `"${resolvedDrawing.name_tr}" çizimini` : 'kendi çizimini'
+      const gemLine = auto?.capped
+        ? 'Bugünün çizim ödülü dolmuştu, o yüzden gem eklemedim.'
+        : `${auto?.gems} gem ekledim.`
       deferNotify('DRAWING', () => sendNotificationWithPhoto(
         child.parent_id,
-        `🎨 ${child.name} ${what} bitirdi ve fotoğrafını ekledi.\n\n` +
-        `Onaylarsan ödülü ekleyeyim — "onayla" diyebilir ya da panelden bakabilirsin.`,
+        approved
+          ? `🎨 ${child.name} ${what} bitirdi ve fotoğrafını ekledi.\n\n${gemLine}`
+          : `🎨 ${child.name} ${what} bitirdi ve fotoğrafını ekledi.\n\n` +
+            `Onaylarsan ödülü ekleyeyim — "onayla" diyebilir ya da panelden bakabilirsin.`,
         photo_path,
         PAINTING_BUCKET,
-        { kind: 'approval', child: child.name, detail: {
-          tr: `${what} bitirdi, fotoğrafı onayını bekliyor`,
-          en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}, the photo is waiting for your OK`,
-        } },
+        approved
+          ? { kind: 'activity', child: child.name, detail: {
+              tr: `${what} bitirdi`,
+              en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}`,
+            } }
+          : { kind: 'approval', child: child.name, detail: {
+              tr: `${what} bitirdi, fotoğrafı onayını bekliyor`,
+              en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}, the photo is waiting for your OK`,
+            } },
       ))
     } catch (err) {
       console.error(`[DRAWING] parent notification failed: ${err.message}`)
     }
 
     res.status(201).json({
-      painting: { ...painting, photo: await signedUrlFor(photo_path, 3600, PAINTING_BUCKET) },
-      status: 'pending',
+      painting: {
+        ...painting,
+        status: approved ? 'approved' : painting.status,
+        reward_amount: approved ? auto.gems : painting.reward_amount,
+        photo: await signedUrlFor(photo_path, 3600, PAINTING_BUCKET),
+      },
+      status: approved ? 'approved' : 'pending',
     })
   } catch (err) {
     res.status(500).json({ error: err.message })

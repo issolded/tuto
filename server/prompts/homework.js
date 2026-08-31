@@ -117,7 +117,11 @@ export function filterForParent(obs) {
 // come from prefs. `staleNote` is a pre-built sentence about the photo date
 // (or '') — CODE decides whether the photo is old, the model just includes the
 // sentence verbatim if given.
-export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems }) {
+// `awarded` is set when the parent has said they don't want to be asked about homework: the
+// submission is already approved and the gems already paid by the time this runs. The closing
+// question has to go with it — a message that asks "shall we approve?" about something already
+// approved reads as Tuto not knowing what it has done.
+export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems, awarded }) {
   const lang = languageName(language)
   const toneLine = tone
     ? `Ebeveynin tercih ettiği ton: "${tone}". Bu tona uy.\n`
@@ -140,10 +144,13 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
     `Kurallar:\n` +
     `- Sadece mesaj metnini yaz. Başlık, JSON, tırnak, madde işareti yok.\n` +
     `- En fazla 3-4 cümle.\n` +
-    `- MESAJI MUTLAKA ebeveynin kararını isteyen doğal bir soruyla bitir. Ödül, ebeveyn onaylayana kadar ` +
-    `askıda bekliyor — ebeveyn bir karar beklendiğini anlamazsa gönderi askıda kalır ve çocuk ödülünü hiç almaz. ` +
-    `Gerçek bir insanın soracağı gibi sor: "Onaylıyor muyuz?", "Sence de hak etmiş mi?" gibi.` +
-    (gems ? ` Onaylanırsa ${gems} gem ekleneceğini de doğal biçimde belirtebilirsin.` : '') + `\n` +
+    (awarded != null
+      ? `- Ebeveyn ödevleri sormadan geçmeni istemiş; bu ödev onaylandı ve ${awarded} gem eklendi. ` +
+        `Bunu doğal biçimde belirt. ONAY SORUSU SORMA — sorulacak bir şey kalmadı.\n`
+      : `- MESAJI MUTLAKA ebeveynin kararını isteyen doğal bir soruyla bitir. Ödül, ebeveyn onaylayana kadar ` +
+        `askıda bekliyor — ebeveyn bir karar beklendiğini anlamazsa gönderi askıda kalır ve çocuk ödülünü hiç almaz. ` +
+        `Gerçek bir insanın soracağı gibi sor: "Onaylıyor muyuz?", "Sence de hak etmiş mi?" gibi.` +
+        (gems ? ` Onaylanırsa ${gems} gem ekleneceğini de doğal biçimde belirtebilirsin.` : '') + `\n`) +
     `- Ama buton, onay linki, "evet/hayır yaz", "1'e bas" gibi MEKANİK yönerge koyma — ebeveyn sana zaten ` +
     `serbest metinle cevap yazabiliyor. Soru bir insanın sorusu gibi olsun, bir formun değil.\n` +
     `- Tüm metin ${lang} dilinde.`
@@ -154,10 +161,12 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
 // notification must NEVER be lost, so this is deterministic and dependency-free.
 // Ends with the approval question too — the reward stays pending until the
 // parent decides, so no path may leave that unasked.
-export function fallbackCaption({ childName, language, staleNote }) {
+export function fallbackCaption({ childName, language, staleNote, awarded }) {
   const base = language === 'en'
     ? `${childName} just sent a photo of their homework. 🌱 Take a look whenever you can.`
     : `${childName} az önce ödevinin fotoğrafını gönderdi. 🌱 Fırsatın olduğunda bir göz atabilirsin.`
-  const ask = language === 'en' ? 'Shall we approve it?' : 'Onaylıyor muyuz?'
-  return [base, staleNote, ask].filter(Boolean).join(' ')
+  const close = awarded != null
+    ? (language === 'en' ? `I approved it for you and added ${awarded} gems.` : `Senin yerine onayladım, ${awarded} gem ekledim.`)
+    : (language === 'en' ? 'Shall we approve it?' : 'Onaylıyor muyuz?')
+  return [base, staleNote, close].filter(Boolean).join(' ')
 }

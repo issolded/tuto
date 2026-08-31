@@ -151,6 +151,56 @@ function NotifRow({ icon, label, status, connected, action }) {
   )
 }
 
+// ── Notification preferences ─────────────────────────────────────────────────
+// These three keys are read by the exit gate on the server (sendGate, server/index.js). Nothing
+// here is cosmetic: each row decides whether a message is sent at all.
+const NOTIFY_LEVELS = [
+  { id: 'quiet',    title: 'Only if something worries me', body: 'Nothing else. You look in the app when you want to.' },
+  { id: 'required', title: 'And when I need you',          body: 'Plus anything that is waiting on your approval.' },
+  { id: 'all',      title: 'Everything',                   body: 'Plus each activity as it is finished.' },
+]
+
+// Reward claims and goal requests are deliberately not here — those spend real-world things, so
+// there is nothing Tuto can decide on the parent's behalf.
+const APPROVAL_TYPES = [
+  { id: 'submission',   label: 'Homework',     body: 'Photos of finished homework' },
+  { id: 'drawing',      label: 'Drawings',     body: 'Photos of finished drawings' },
+  { id: 'contribution', label: 'Helping out',  body: 'Jobs done around the house' },
+]
+
+function LevelRow({ level, selected, onClick }) {
+  return (
+    <button className="tc-press tc-tap" onClick={onClick} style={{
+      display: 'flex', alignItems: 'flex-start', gap: 11, textAlign: 'left', width: '100%',
+      background: selected ? PC.tealBg : '#fff', cursor: 'pointer',
+      border: `1.5px solid ${selected ? PC.teal : PC.line}`, borderRadius: 14, padding: '12px 14px',
+      transition: 'background .18s, border-color .18s',
+    }}>
+      <div style={{
+        width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+        border: `2px solid ${selected ? PC.tealDeep : '#D9DEE3'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {selected && <div style={{ width: 10, height: 10, borderRadius: '50%', background: PC.tealDeep }} />}
+      </div>
+      <div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{level.title}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, lineHeight: 1.45 }}>{level.body}</div>
+      </div>
+    </button>
+  )
+}
+
+function TimeInput({ value, onChange }) {
+  return (
+    <input type="time" value={value} onChange={e => onChange(e.target.value)} style={{
+      fontFamily: FONT, fontWeight: 700, fontSize: 15, color: PC.ink,
+      background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 11,
+      padding: '9px 11px', flex: 1, minWidth: 0,
+    }} />
+  )
+}
+
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export default function ParentDashboard() {
   const nav = useNavigate()
@@ -169,6 +219,7 @@ export default function ParentDashboard() {
   const [waJustConnected, setWaJustConnected] = useState(false)
   const waConnected = waJustConnected || !!notifData.whatsappVerifiedAt
   const [waError, setWaError] = useState('')
+  const [prefs, setPrefs] = useState(null)
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -204,7 +255,7 @@ export default function ParentDashboard() {
   const loadParentData = async (uid) => {
     const { data } = await supabase
       .from('parents')
-      .select('family_code, telegram_chat_id, whatsapp_phone, whatsapp_verified_at, notification_channel')
+      .select('family_code, telegram_chat_id, whatsapp_phone, whatsapp_verified_at, notification_channel, prefs')
       .eq('id', uid)
       .single()
 
@@ -220,12 +271,25 @@ export default function ParentDashboard() {
       whatsappVerifiedAt: data?.whatsapp_verified_at || null,
       channel: data?.notification_channel || null,
     })
+    setPrefs(data?.prefs || {})
   }
 
   const updateChannel = async (ch) => {
     setNotifData(d => ({ ...d, channel: ch }))
     if (user) await supabase.from('parents').update({ notification_channel: ch }).eq('id', user.id)
   }
+
+  // Read-modify-write on the whole jsonb, because the column holds keys this screen knows nothing
+  // about (language, tone, the daily limits) and a partial write would drop them.
+  const savePrefs = async (patch) => {
+    const next = { ...(prefs || {}), ...patch }
+    setPrefs(next)
+    if (user) await supabase.from('parents').update({ prefs: next }).eq('id', user.id)
+  }
+
+  const notifyLevel = NOTIFY_LEVELS.some(l => l.id === prefs?.notify_level) ? prefs.notify_level : 'all'
+  const quiet = prefs?.quiet_hours || null
+  const approvalOff = APPROVAL_TYPES.filter(t => prefs?.approval_required?.[t.id] === false)
 
   const startWaConnect = async () => {
     if (!user || waLink) return
@@ -451,6 +515,84 @@ export default function ParentDashboard() {
             </div>
           )}
         </Card>
+
+        {/* how much Tuto writes */}
+        {prefs && (
+          <>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>How much I write</div>
+            <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {NOTIFY_LEVELS.map(l => (
+                  <LevelRow key={l.id} level={l} selected={notifyLevel === l.id} onClick={() => savePrefs({ notify_level: l.id })} />
+                ))}
+              </div>
+
+              {/* The trap this setting can walk a parent into, said out loud rather than
+                  discovered three days later: at the quietest level an approval is still
+                  waiting, and the child's gems wait with it. */}
+              {notifyLevel === 'quiet' && approvalOff.length < APPROVAL_TYPES.length && (
+                <div style={{ background: PC.peachBg, borderRadius: 13, padding: '11px 13px', fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.ink, lineHeight: 1.5 }}>
+                  I won't tell you when something needs approving — and until you open the app, the
+                  gems wait too. If you'd rather I just handled some of them, turn them off below.
+                </div>
+              )}
+
+              <div style={{ height: 1, background: PC.line }} />
+
+              {/* quiet hours */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>Quiet hours</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, lineHeight: 1.45 }}>
+                      I won't write between these hours. Anything that worries me still comes through.
+                    </div>
+                  </div>
+                  <Toggle on={!!quiet} onClick={() => savePrefs({ quiet_hours: quiet ? null : { start: '21:00', end: '08:00' } })} />
+                </div>
+                {quiet && (
+                  <div className="tc-fade" style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12 }}>
+                    <TimeInput value={quiet.start || ''} onChange={v => savePrefs({ quiet_hours: { ...quiet, start: v } })} />
+                    <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>to</span>
+                    <TimeInput value={quiet.end || ''} onChange={v => savePrefs({ quiet_hours: { ...quiet, end: v } })} />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, background: PC.line }} />
+
+              {/* per-type approvals */}
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>Ask me first</div>
+                <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
+                  Turn one off and I'll approve it myself and add the gems. You'll still see it — I
+                  just won't stop and ask.
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                  {APPROVAL_TYPES.map(t => {
+                    const on = prefs?.approval_required?.[t.id] !== false
+                    return (
+                      <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: PC.ink }}>{t.label}</div>
+                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1 }}>{t.body}</div>
+                        </div>
+                        <Toggle on={on} onClick={() => savePrefs({
+                          approval_required: { ...(prefs?.approval_required || {}), [t.id]: !on },
+                        })} />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint, lineHeight: 1.5, textAlign: 'center' }}>
+                You can change any of this by just telling me, too.
+              </div>
+            </Card>
+          </>
+        )}
       </div>
 
       {showModal && user && (

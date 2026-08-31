@@ -7,7 +7,7 @@ import { hashPin } from '../lib/hash'
 import { gemHint, TASK_DEFAULTS } from '../lib/taskDefaults'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
-  Btn, Card, Field, Toggle, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
+  Btn, Card, Field, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
 } from '../lib/parentUI'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -109,8 +109,6 @@ export default function ParentOnboarding() {
   const [waLink,          setWaLink]          = useState(null)
   const [waConnected,     setWaConnected]     = useState(false)
   const [waError,         setWaError]         = useState('')
-  const [emailNotif,      setEmailNotif]      = useState(true)
-  const [pushNotif,       setPushNotif]       = useState(true)
   const [codeCopied,      setCodeCopied]      = useState(false)
   const [pin,             setPin]             = useState('')
   const [pinConfirm,      setPinConfirm]      = useState('')
@@ -257,9 +255,9 @@ export default function ParentOnboarding() {
       }
 
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      // timezone matters more than it looks: quiet hours are read in it, so a parent who
+      // never reaches this line gets their evening measured in UTC.
       await supabase.from('parents').update({
-        email_notifications: emailNotif,
-        push_notifications: pushNotif,
         timezone,
         ...(notifChannel && { notification_channel: notifChannel }),
       }).eq('id', uid.id)
@@ -671,21 +669,14 @@ export default function ParentOnboarding() {
 
             <div style={{ height: 1, background: PC.line }} />
 
-            {/* Additional notifications */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint, letterSpacing: '.6px' }}>ADDITIONAL NOTIFICATIONS</div>
-
-              <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 22 }}>📧</span>
-                <span style={{ fontFamily: FONT, flex: 1, fontSize: 14, fontWeight: 700, color: PC.ink }}>Email notifications</span>
-                <Toggle on={emailNotif} onClick={() => setEmailNotif(v => !v)} />
-              </Card>
-
-              <Card pad={14} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 22 }}>🔔</span>
-                <span style={{ fontFamily: FONT, flex: 1, fontSize: 14, fontWeight: 700, color: PC.ink }}>Push notifications</span>
-                <Toggle on={pushNotif} onClick={() => setPushNotif(v => !v)} />
-              </Card>
+            {/* There were two toggles here, for email and push. Both were written to `parents`
+                and read by nothing — there is no email or push channel, only the one chosen
+                above. Asking a parent to decide something that cannot happen is worse than not
+                asking. How much Tuto writes is a real choice, but not one anybody can make
+                before they have heard from it once. */}
+            <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.6, textAlign: 'center' }}>
+              You can tell me how often to write, and the hours to leave you alone, whenever you
+              like — from settings, or just by saying so.
             </div>
 
             {!notifChannel && (
