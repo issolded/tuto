@@ -66,8 +66,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - [ ] Stories çeşitlilik: 11+ üretimi tek kalıba (AI-duygu-kontrolü / kapalı-dome) çöküyor;
       üretim promptuna premise çeşitliliği + alt-tema rotasyonu, ya da embedding ile
       semantik dedup. (Güvenlik değil, kalite.)
-- [ ] Telegram "iki kapı": prefs şeması + sendGate + giriş kapısı (mesaj sayacı).
-      Uygulama sırasında 2. adım; henüz başlanmadı.
+- [ ] Telegram "iki kapı": **çıkış kapısı bitti**, giriş kapısı (mesaj sayacı) kaldı.
+      Biten: `prefs` şeması (2026-08-31 migration'ı), `sendGate` (notify_level + quiet_hours,
+      `attention` her ikisini de deler), `approval_required` (kapalıysa "sorma" demektir —
+      sunucu kendisi onaylar ve gem'i yatırır), parent dashboard'da ayar bölümü ve
+      `update_preferences` sohbet aracı. Kalan: giriş kapısı, sonra otomatik pilot.
 - [ ] Problem 3: ebeveyn mesajla story konusu ekler — function calling aracı
       (add_story_ideas), Telegram katmanı gelince.
 - [x] Güvenlik: VITE_GEMINI_API_KEY açığı kapandı — Gemini `/api/gemini/generate`'e proxy'lendi,
