@@ -168,6 +168,14 @@ const APPROVAL_TYPES = [
   { id: 'contribution', label: 'Helping out',  body: 'Jobs done around the house' },
 ]
 
+// Presets rather than a free field: the parent reaching for this is on their way out of the
+// door. The server caps a window at eight hours anyway, so nothing here can ask for more.
+const AUTOPILOT_PRESETS = [
+  { label: '1 hour', minutes: 60 },
+  { label: '2 hours', minutes: 120 },
+  { label: '4 hours', minutes: 240 },
+]
+
 function LevelRow({ level, selected, onClick }) {
   return (
     <button className="tc-press tc-tap" onClick={onClick} style={{
@@ -220,6 +228,7 @@ export default function ParentDashboard() {
   const waConnected = waJustConnected || !!notifData.whatsappVerifiedAt
   const [waError, setWaError] = useState('')
   const [prefs, setPrefs] = useState(null)
+  const [nowTs, setNowTs] = useState(Date.now())
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -290,6 +299,31 @@ export default function ParentDashboard() {
   const notifyLevel = NOTIFY_LEVELS.some(l => l.id === prefs?.notify_level) ? prefs.notify_level : 'all'
   const quiet = prefs?.quiet_hours || null
   const approvalOff = APPROVAL_TYPES.filter(t => prefs?.approval_required?.[t.id] === false)
+
+  const autopilotEnds = prefs?.autopilot?.until ? new Date(prefs.autopilot.until).getTime() : null
+  const autopilotOn = autopilotEnds != null && autopilotEnds > nowTs
+  // The end time passes on its own, so without a tick this panel would still claim to be running
+  // long after the server had handed the approvals back.
+  useEffect(() => {
+    if (!autopilotOn) return
+    const t = setInterval(() => setNowTs(Date.now()), 30000)
+    return () => clearInterval(t)
+  }, [autopilotOn])
+
+  const startAutopilot = (minutes) => {
+    const now = new Date()
+    savePrefs({ autopilot: { started_at: now.toISOString(), until: new Date(now.getTime() + minutes * 60000).toISOString() } })
+  }
+  // Expired rather than erased. Deleting the key here would hand the approvals back silently —
+  // the server's sweep is what writes the summary of what happened, and it only runs on a window
+  // it can still see.
+  const endAutopilot = () => {
+    const now = Date.now()
+    savePrefs({ autopilot: { ...prefs.autopilot, until: new Date(now).toISOString() } })
+    // Without this the panel would keep claiming to be running until the next 30s tick, and a parent
+    // who pressed "I'm back" and saw nothing change would reasonably press it again.
+    setNowTs(now)
+  }
 
   const startWaConnect = async () => {
     if (!user || waLink) return
@@ -522,7 +556,41 @@ export default function ParentDashboard() {
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>How much I write</div>
             <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {/* autopilot — first, because while it runs it overrides everything below it */}
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>I'm busy for a while</div>
+                <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
+                  I'll approve homework, drawings and jobs myself and stay quiet until you're back.
+                  Reward claims and new goals still wait for you, and anything that worries me still
+                  comes through.
+                </div>
+
+                {autopilotOn ? (
+                  <div className="tc-fade" style={{ background: PC.peachBg, borderRadius: 13, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink, lineHeight: 1.45 }}>
+                      On until {new Date(autopilotEnds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+                      <div style={{ fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 2 }}>
+                        I'll tell you what I handled when it ends.
+                      </div>
+                    </div>
+                    <Btn full={false} variant="soft" onClick={endAutopilot} style={{ padding: '8px 13px', fontSize: 13 }}>I'm back</Btn>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 9 }}>
+                    {AUTOPILOT_PRESETS.map(p => (
+                      <Btn key={p.minutes} full={false} variant="outline" onClick={() => startAutopilot(p.minutes)}
+                        style={{ flex: 1, padding: '9px 6px', fontSize: 13 }}>{p.label}</Btn>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, background: PC.line }} />
+
+              {/* Dimmed, not disabled, while autopilot runs: a selected row reads as "this is what
+                  I'm doing now", and right now it isn't. Still editable, because a parent setting
+                  this on their way out means it for when they get back. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9, opacity: autopilotOn ? 0.45 : 1 }}>
                 {NOTIFY_LEVELS.map(l => (
                   <LevelRow key={l.id} level={l} selected={notifyLevel === l.id} onClick={() => savePrefs({ notify_level: l.id })} />
                 ))}
@@ -569,7 +637,7 @@ export default function ParentDashboard() {
                   Turn one off and I'll approve it myself and add the gems. You'll still see it — I
                   just won't stop and ask.
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 13, opacity: autopilotOn ? 0.45 : 1 }}>
                   {APPROVAL_TYPES.map(t => {
                     const on = prefs?.approval_required?.[t.id] !== false
                     return (
