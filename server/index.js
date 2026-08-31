@@ -655,6 +655,11 @@ const WA_TEMPLATES = {
   },
 }
 
+// An approval request is a third thing to the gate below and the same thing to Meta: both
+// templates say only "name + one clause", and getting a new one approved takes days we have
+// no reason to spend.
+const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity' }
+
 // A newline, a tab or a run of spaces in a variable is rejected by WhatsApp, and it rejects
 // the whole send rather than the variable — so a stray line break in a book title would lose
 // the notification.
@@ -685,7 +690,7 @@ async function firstChildName(parentId) {
 
 async function sendWhatsAppTemplate(to, kind, lang, childName, detail) {
   if (!twilioClient || !TWILIO_WHATSAPP_NUMBER) throw new Error('Twilio not configured')
-  const contentSid = WA_TEMPLATES[kind]?.[lang]
+  const contentSid = WA_TEMPLATES[TEMPLATE_KIND[kind] || kind]?.[lang]
   if (!contentSid) throw new Error(`no ${kind}/${lang} template SID configured`)
   const toE164 = to.startsWith('+') ? to : `+${to}`
   await twilioClient.messages.create({
@@ -740,6 +745,50 @@ function textFromParts(parts) {
   return (parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim()
 }
 
+// ── The exit gate ─────────────────────────────────────────────────────────
+// Every proactive message leaves through here, and what it applies is a rule rather than a
+// judgement: the model decides what to say, this decides whether it goes out now. A parent
+// who asks for quiet gets quiet even if the model is sure this one is worth it.
+//
+// 'attention' is not in the parent's gift. It is how a safety screen reaches them about their
+// own child, so it passes both the level and the hours untouched.
+const NOTIFY_LEVEL_ALLOWS = {
+  quiet:    { attention: true, approval: false, activity: false },
+  required: { attention: true, approval: true,  activity: false },
+  all:      { attention: true, approval: true,  activity: true  },
+}
+
+// Quiet hours, and deliberately not the `allowed_hours` key already sitting in prefs. That one
+// says 08:00–21:30 in every row because it is a column default, not because anyone chose it —
+// so honouring it would silence twelve families' evenings the moment this deployed, before the
+// migration clearing it had run. A differently named key makes the deploy order stop mattering,
+// and states the window the way a parent says it out loud: don't write between nine and eight.
+function withinQuietHours(hours, tz) {
+  const parse = s => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(s ?? '').trim())
+    if (!m) return null
+    const h = Number(m[1]), min = Number(m[2])
+    return h < 24 && min < 60 ? h * 60 + min : null
+  }
+  const start = parse(hours?.start), end = parse(hours?.end)
+  // A half-written or nonsensical window means no quiet hours at all. The failure to avoid here
+  // is a parent who stops hearing about their child and cannot see why.
+  if (start === null || end === null || start === end) return false
+  const now = DateTime.now().setZone(tz || 'UTC')
+  const mins = now.hour * 60 + now.minute
+  return start < end ? (mins >= start && mins < end) : (mins >= start || mins < end)
+}
+
+function sendGate(prefs, notice, tz) {
+  const kind = notice?.kind || 'activity'
+  if (kind === 'attention') return { send: true }
+
+  const level = NOTIFY_LEVEL_ALLOWS[prefs?.notify_level] ? prefs.notify_level : 'all'
+  if (!NOTIFY_LEVEL_ALLOWS[level][kind]) return { send: false, reason: `level "${level}" does not carry ${kind}` }
+  if (withinQuietHours(prefs?.quiet_hours, tz)) return { send: false, reason: 'quiet hours' }
+  return { send: true }
+}
+
 async function sendNotification(parentId, message, notice) {
   // Every proactive notification (homework arrived, reward
   // claimed, ...) used to be invisible to Gemini — logMessage only ran for
@@ -751,9 +800,17 @@ async function sendNotification(parentId, message, notice) {
 
   const { data: parent } = await supabase
     .from('parents')
-    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs, timezone')
     .eq('id', parentId)
     .single()
+
+  // Held back, not lost: logMessage above already wrote the full text as a 'tuto' turn, so the
+  // next time the parent writes in, Gemini can tell them what happened while it was quiet.
+  const gate = sendGate(parent?.prefs, notice, parent?.timezone)
+  if (!gate.send) {
+    console.log(`[NOTIFY] 🤫 held for parent ${parentId} — ${gate.reason}`)
+    return
+  }
 
   const channel = parent?.notification_channel || 'none'
   console.log(`[NOTIFY] parent=${parentId} channel="${channel}" telegram_chat_id=${parent?.telegram_chat_id ?? 'null'} whatsapp_phone=${parent?.whatsapp_phone ?? 'null'}`)
@@ -799,9 +856,15 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
 
   const { data: parent } = await supabase
     .from('parents')
-    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs, timezone')
     .eq('id', parentId)
     .single()
+
+  const gate = sendGate(parent?.prefs, notice, parent?.timezone)
+  if (!gate.send) {
+    console.log(`[NOTIFY-PHOTO] 🤫 held for parent ${parentId} — ${gate.reason}`)
+    return
+  }
 
   const channel = parent?.notification_channel || 'none'
   console.log(`[NOTIFY-PHOTO] parent=${parentId} channel="${channel}" telegram_chat_id=${parent?.telegram_chat_id ?? 'null'} whatsapp_phone=${parent?.whatsapp_phone ?? 'null'}`)
@@ -869,9 +932,18 @@ async function sendNotificationWithPhotos(parentId, message, photoUrls, notice) 
 
   const { data: parent } = await supabase
     .from('parents')
-    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs')
+    .select('notification_channel, telegram_chat_id, whatsapp_phone, prefs, timezone')
     .eq('id', parentId)
     .single()
+
+  // Unlike the other two, this function logs inside each branch rather than at the top — so a
+  // held message has to be written here or it leaves no trace for Gemini to recall.
+  const gate = sendGate(parent?.prefs, notice, parent?.timezone)
+  if (!gate.send) {
+    logMessage(parentId, 'tuto', message).catch(() => {})
+    console.log(`[NOTIFY-PHOTOS] 🤫 held for parent ${parentId} — ${gate.reason}`)
+    return
+  }
 
   const channel = parent?.notification_channel || 'none'
   console.log(`[NOTIFY-PHOTOS] parent=${parentId} channel="${channel}" photos=${urls.length}`)
@@ -2466,7 +2538,10 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
       const msg = language === 'en'
         ? `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`
         : `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`
-      sendNotification(child.parent_id, msg, { kind: 'attention', child: child.name, detail: {
+      // An approval, not an alarm. 'attention' now means one thing only — a safety screen has
+      // something to say about this child — and it is the one kind the parent cannot silence,
+      // so a reward claim at ten at night must not borrow it.
+      sendNotification(child.parent_id, msg, { kind: 'approval', child: child.name, detail: {
         tr: `"${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem), onayını bekliyor`,
         en: `wants to claim "${reward.name}" (${reward.bt_cost} gems) and is waiting on you`,
       } }).catch(() => {})
@@ -2622,7 +2697,7 @@ app.post('/api/children/:childId/reward-suggestions', async (req, res) => {
       const msg = language === 'en'
         ? `${child.name} is asking for a new goal: "${label}"${price}. You decide what it actually costs — add it from the Tuto app, or tell me the number here.`
         : `${child.name} yeni bir hedef istiyor: "${label}"${price}. Kaç gem olacağına sen karar veriyorsun — Tuto uygulamasından ekleyebilir ya da buraya sayıyı yazabilirsin.`
-      sendNotification(child.parent_id, msg, { kind: 'attention', child: child.name, detail: {
+      sendNotification(child.parent_id, msg, { kind: 'approval', child: child.name, detail: {
         tr: `yeni bir hedef istiyor: "${label}"`,
         en: `is asking for a new goal: "${label}"`,
       } }).catch(() => {})
@@ -3285,7 +3360,7 @@ app.post('/api/contributions', async (req, res) => {
 
     try {
       const message = `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
-      const notice = { kind: 'activity', child: child.name, detail: {
+      const notice = { kind: 'approval', child: child.name, detail: {
         tr: `ev katkısı: "${trimmedLabel}", onayını bekliyor`,
         en: `a home contribution: "${trimmedLabel}", waiting for your OK`,
       } }
@@ -4056,7 +4131,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
 
       try {
         deferNotify('HOMEWORK', () => sendNotificationWithPhotos(child.parent_id, caption, photoUrls,
-          { kind: 'activity', child: child.name, detail: {
+          { kind: 'approval', child: child.name, detail: {
             tr: `ödev, ${photoUrls.length} sayfa fotoğrafı geldi`,
             en: `homework, ${photoUrls.length} page photo${photoUrls.length === 1 ? '' : 's'}`,
           } }))
@@ -4817,7 +4892,7 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
         `Onaylarsan ödülü ekleyeyim — "onayla" diyebilir ya da panelden bakabilirsin.`,
         photo_path,
         PAINTING_BUCKET,
-        { kind: 'activity', child: child.name, detail: {
+        { kind: 'approval', child: child.name, detail: {
           tr: `${what} bitirdi, fotoğrafı onayını bekliyor`,
           en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}, the photo is waiting for your OK`,
         } },
