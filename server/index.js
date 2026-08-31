@@ -1404,6 +1404,41 @@ const CONTRIBUTION_TOOLS = [{
         required: ['child_id', 'topic_id'],
       },
     },
+    {
+      name: 'update_preferences',
+      description:
+        'Changes how much you write to this parent and what you stop to ask them about. Call it when they say ' +
+        'so in any form: "bana her şeyi yazma", "sadece önemli olunca yaz", "akşam dokuzdan sonra yazma", ' +
+        '"ödevleri bana sormadan onayla", "çizimleri yine sor". Only send the fields they actually mentioned; ' +
+        'everything else is left alone.\n' +
+        'notify_level: "quiet" = you only write if something about the child worries you, "required" = that ' +
+        'plus anything waiting on their approval, "all" = that plus each finished activity.\n' +
+        'Quiet hours are a window you do not write in. Convert whatever they say into 24-hour HH:MM ' +
+        '("akşam dokuzdan sabah sekize" → quiet_start "21:00", quiet_end "08:00"). Send both or neither. ' +
+        'If you cannot tell which hours they mean, ask — do not guess a window.\n' +
+        'dont_ask_before means you approve those yourself and add the gems rather than asking. Say that ' +
+        'plainly when they turn one off; they may think it only stops the message. Reward claims and goal ' +
+        'requests are NOT in this list and cannot be switched off — those spend real money and real promises.\n' +
+        'Afterwards, tell them where things now stand in your own words, using the state the tool returns ' +
+        'rather than repeating what they asked for.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          notify_level: { type: 'STRING', description: 'One of: quiet, required, all.' },
+          quiet_start: { type: 'STRING', description: '24-hour HH:MM the quiet window starts, e.g. "21:00".' },
+          quiet_end: { type: 'STRING', description: '24-hour HH:MM the quiet window ends, e.g. "08:00".' },
+          quiet_off: { type: 'BOOLEAN', description: 'True to remove quiet hours entirely.' },
+          ask_before: {
+            type: 'ARRAY', items: { type: 'STRING' },
+            description: 'Types to go back to asking about: submission (homework), drawing, contribution (jobs around the house).',
+          },
+          dont_ask_before: {
+            type: 'ARRAY', items: { type: 'STRING' },
+            description: 'Types to approve automatically instead of asking: submission, drawing, contribution.',
+          },
+        },
+      },
+    },
   ],
 }]
 
@@ -1492,6 +1527,80 @@ async function setMathFocusTool(childId, topicId, parentId) {
   if (error) return { success: false, error: error.message }
   return { success: true, child: child.name, topic_name: topic.topic_name,
            clears_at: `${MASTERY_CLEARS_AT}% over the last ${MASTERY_WINDOW}` }
+}
+
+// The same three settings the dashboard writes, reachable from a message. The model reads what
+// the parent meant; every rule about what is allowed is applied here, including the clock format —
+// "nine at night" has to arrive as 21:00 or not at all, because a half-parsed window is the one
+// failure that silences a parent without telling them why.
+function parseClock(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s ?? '').trim())
+  if (!m) return null
+  const h = Number(m[1]), min = Number(m[2])
+  if (h > 23 || min > 59) return null
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
+
+async function updatePreferencesTool(parentId, args) {
+  const { data: parent } = await supabase.from('parents').select('prefs').eq('id', parentId).maybeSingle()
+  if (!parent) return { success: false, error: 'parent not found' }
+
+  const prefs = { ...(parent.prefs || {}) }
+  const changed = []
+
+  if (args.notify_level != null) {
+    if (!NOTIFY_LEVEL_ALLOWS[args.notify_level]) {
+      return { success: false, error: `notify_level must be one of: ${Object.keys(NOTIFY_LEVEL_ALLOWS).join(', ')}` }
+    }
+    prefs.notify_level = args.notify_level
+    changed.push('notify_level')
+  }
+
+  if (args.quiet_off === true) {
+    prefs.quiet_hours = null
+    changed.push('quiet_hours')
+  } else if (args.quiet_start != null || args.quiet_end != null) {
+    const start = parseClock(args.quiet_start), end = parseClock(args.quiet_end)
+    // Both or neither. A window with one end is not a smaller change, it is an unreadable one,
+    // and the gate would ignore it while the parent believed it was set.
+    if (!start || !end) return { success: false, error: 'quiet hours need both a start and an end as 24-hour HH:MM' }
+    if (start === end) return { success: false, error: 'the start and end of quiet hours cannot be the same time' }
+    prefs.quiet_hours = { start, end }
+    changed.push('quiet_hours')
+  }
+
+  const on = Array.isArray(args.ask_before) ? args.ask_before : []
+  const off = Array.isArray(args.dont_ask_before) ? args.dont_ask_before : []
+  const unknown = [...on, ...off].filter(t => !APPROVABLE.has(t))
+  if (unknown.length) {
+    return { success: false, error: `not switchable: ${unknown.join(', ')}`,
+             switchable: [...APPROVABLE],
+             note: 'Reward claims and goal requests always ask the parent — those spend real-world things.' }
+  }
+  if (on.length || off.length) {
+    const next = { ...(prefs.approval_required || {}) }
+    for (const t of on) next[t] = true
+    for (const t of off) next[t] = false
+    prefs.approval_required = next
+    changed.push('approval_required')
+  }
+
+  if (!changed.length) return { success: false, error: 'nothing to change' }
+
+  const { error } = await supabase.from('parents').update({ prefs }).eq('id', parentId)
+  if (error) return { success: false, error: error.message }
+
+  // The whole resulting state goes back, not just the delta, so the model reads the settings out
+  // as they now stand instead of describing what it thinks it did.
+  return {
+    success: true,
+    changed,
+    now: {
+      notify_level: prefs.notify_level ?? 'all',
+      quiet_hours: prefs.quiet_hours ?? null,
+      approval_required: Object.fromEntries([...APPROVABLE].map(t => [t, prefs.approval_required?.[t] !== false])),
+    },
+  }
 }
 
 // Approve a pending homework submission from a parent's free-text reply.
@@ -1909,6 +2018,23 @@ async function handleMessage(parentId, replyCb, text) {
     const userNow = DateTime.now().setZone(tz)
     const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
 
+    // Read questions ("bana ne kadar yazıyorsun?", "sessiz saatlerim ne?") need no tool — the
+    // answer is context. Only the write needs update_preferences.
+    const p = parentRow?.prefs || {}
+    const levelSaid = {
+      quiet: 'sadece bir şey seni endişelendirirse yazıyorsun',
+      required: 'endişe verici bir şey olduğunda ve onay bekleyen bir şey olduğunda yazıyorsun',
+      all: 'her şeyi yazıyorsun — biten her aktivite dahil',
+    }[NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all']
+    const settingsBlock =
+      `BU EBEVEYNİN BİLDİRİM AYARLARI (okuma sorusu gelirse buradan cevapla, tool çağırma):\n` +
+      `- Kademe: "${NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all'}" — ${levelSaid}.\n` +
+      `- Sessiz saatler: ${p.quiet_hours?.start && p.quiet_hours?.end ? `${p.quiet_hours.start}–${p.quiet_hours.end} (bu aralıkta yazmıyorsun)` : 'yok'}.\n` +
+      `- Onay sorulanlar: ` +
+      [...APPROVABLE].map(t => `${t}=${p.approval_required?.[t] !== false ? 'soruyorsun' : 'sormadan sen onaylıyorsun'}`).join(', ') + `.\n` +
+      `- Ödül talepleri ve hedef istekleri HER ZAMAN ebeveyne sorulur, kapatılamaz.\n` +
+      `- Değiştirmek isterlerse update_preferences çağır; ayarların bir de uygulamada ekranı var.`
+
     const children = childrenRows || []
     const childrenBlock =
       `AİLENİN ÇOCUKLARI (add_card için child_id'yi buradan al):\n` +
@@ -2037,6 +2163,7 @@ async function handleMessage(parentId, replyCb, text) {
             `olmasını düşünüyor. Kaç gem olacağına sen karar veriyorsun...' — parent bu bildirime belirsiz ` +
             `cevap verirse yukarıdaki listeden hangisi olduğunu bul ve açıkça anlat.`
           : 'Şu anda bekleyen hedef isteği yok.') + `\n\n` +
+        `${settingsBlock}\n\n` +
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
@@ -2226,6 +2353,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectSuggestionById(args.request_id, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
+      } else if (name === 'update_preferences') {
+        toolResult = await updatePreferencesTool(parentId, args)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
