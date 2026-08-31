@@ -658,7 +658,7 @@ const WA_TEMPLATES = {
 // An approval request is a third thing to the gate below and the same thing to Meta: both
 // templates say only "name + one clause", and getting a new one approved takes days we have
 // no reason to spend.
-const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity' }
+const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity', autopilot: 'activity' }
 
 // A newline, a tab or a run of spaces in a variable is rejected by WhatsApp, and it rejects
 // the whole send rather than the variable — so a stray line break in a book title would lose
@@ -752,10 +752,14 @@ function textFromParts(parts) {
 //
 // 'attention' is not in the parent's gift. It is how a safety screen reaches them about their
 // own child, so it passes both the level and the hours untouched.
+//
+// 'autopilot' is the one message a parent gets no matter how quiet they asked for, because it
+// says approvals have come back to them. A parent who never hears it cannot tell whether Tuto
+// is still deciding on their behalf, and that is not a detail to leave to inference.
 const NOTIFY_LEVEL_ALLOWS = {
-  quiet:    { attention: true, approval: false, activity: false },
-  required: { attention: true, approval: true,  activity: false },
-  all:      { attention: true, approval: true,  activity: true  },
+  quiet:    { attention: true, autopilot: true, approval: false, activity: false },
+  required: { attention: true, autopilot: true, approval: true,  activity: false },
+  all:      { attention: true, autopilot: true, approval: true,  activity: true  },
 }
 
 // Quiet hours, and deliberately not the `allowed_hours` key already sitting in prefs. That one
@@ -779,9 +783,25 @@ function withinQuietHours(hours, tz) {
   return start < end ? (mins >= start && mins < end) : (mins >= start || mins < end)
 }
 
+// Autopilot is the same decision as approval_required, made for an evening instead of for good:
+// the parent is at dinner, says take it from here for two hours, and gets their phone back. It
+// is stored as an end time rather than a flag so it cannot be left on by forgetting — a crashed
+// process, a missed message or a parent who never says "I'm back" all end the same way, on time.
+function autopilotUntil(prefs) {
+  const raw = prefs?.autopilot?.until
+  if (!raw) return null
+  const t = DateTime.fromISO(raw)
+  return t.isValid && t > DateTime.now() ? t : null
+}
+
 function sendGate(prefs, notice, tz) {
   const kind = notice?.kind || 'activity'
   if (kind === 'attention') return { send: true }
+
+  // Ahead of the level check, because autopilot is a louder instruction than the standing one:
+  // a parent on 'all' who asks for two hours of quiet means it for those two hours. The text is
+  // still logged, so the closing summary and the next reply can both draw on it.
+  if (kind !== 'autopilot' && autopilotUntil(prefs)) return { send: false, reason: 'autopilot' }
 
   const level = NOTIFY_LEVEL_ALLOWS[prefs?.notify_level] ? prefs.notify_level : 'all'
   if (!NOTIFY_LEVEL_ALLOWS[level][kind]) return { send: false, reason: `level "${level}" does not carry ${kind}` }
@@ -800,12 +820,21 @@ function sendGate(prefs, notice, tz) {
 // so there is nothing here to answer on the parent's behalf.
 const APPROVABLE = new Set(['contribution', 'submission', 'drawing'])
 
+// Returns why as well as whether, because the two reasons are different sentences to a parent:
+// one is a setting they chose once, the other is the evening they are out. Both notices are
+// logged even when the gate holds them, so a later "what happened while I was out?" is answered
+// from the record rather than from a guess.
 async function needsParentApproval(parentId, type) {
-  if (!APPROVABLE.has(type)) return true
+  if (!APPROVABLE.has(type)) return { ask: true }
   const { data } = await supabase.from('parents').select('prefs').eq('id', parentId).maybeSingle()
+  // The same three types either way. Autopilot widens when Tuto decides, never what it decides
+  // about: a reward claim spends the parent's money and a goal request is their promise, so a
+  // busy evening is not a reason for either to go through unasked.
+  if (autopilotUntil(data?.prefs)) return { ask: false, because: 'autopilot' }
   // Anything other than an explicit false asks the parent — a missing key, a null column or a
   // failed read all land on today's behaviour rather than on approving something unasked.
-  return data?.prefs?.approval_required?.[type] !== false
+  if (data?.prefs?.approval_required?.[type] === false) return { ask: false, because: 'setting' }
+  return { ask: true }
 }
 
 async function sendNotification(parentId, message, notice) {
@@ -1439,6 +1468,28 @@ const CONTRIBUTION_TOOLS = [{
         },
       },
     },
+    {
+      name: 'set_autopilot',
+      description:
+        'Takes the approvals off this parent for a while and keeps their phone quiet, then hands them back. ' +
+        'Call it when they say they are busy for a stretch: "iki saat meşgulüm, sen bak", "yemekteyiz, ' +
+        'otomatik pilota al", "akşam boyunca bana yazma sen hallet". Also call it with off:true when they ' +
+        'come back: "döndüm", "artık bana sor".\n' +
+        'Convert what they say into minutes ("iki saat" → 120, "akşam yemeği boyunca" → ask if you cannot ' +
+        'tell). Do not guess a length from a vague phrase; if there is no length in what they said, ask ' +
+        'them how long.\n' +
+        'While it runs you approve homework, drawings and jobs around the house yourself and add the gems, ' +
+        'and you send nothing except something a safety check flags. You do NOT decide reward claims or ' +
+        'goal requests — those wait. Say all of this plainly when you confirm, including the time it ends, ' +
+        'taken from the tool result rather than worked out yourself.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          minutes: { type: 'NUMBER', description: 'How long to run, in minutes. At least 15, at most 480.' },
+          off: { type: 'BOOLEAN', description: 'True to stop autopilot now because the parent is back.' },
+        },
+      },
+    },
   ],
 }]
 
@@ -1602,6 +1653,166 @@ async function updatePreferencesTool(parentId, args) {
     },
   }
 }
+
+// Eight hours is not a guess about attention spans, it is where "I'm busy" stops describing
+// anything. A parent who wants their approvals handled all week wants approval_required, which
+// is the same decision without an end time, and saying so is better than quietly granting it.
+const AUTOPILOT_MAX_MINUTES = 8 * 60
+
+// What happened while nobody was watching, taken from the ledger rather than from a running
+// tally: bt_ledger is append-only and timestamped, so a restart mid-window loses nothing, and
+// there is no second record of the truth to drift from the first.
+async function autopilotHandled(parentId, sinceISO) {
+  const { data: kids } = await supabase.from('children').select('id, name').eq('parent_id', parentId)
+  const ids = (kids || []).map(k => k.id)
+  if (!ids.length) return { earned: [], waiting: 0 }
+
+  const approvedIn = table => supabase.from(table).select('id')
+    .in('child_id', ids).eq('status', 'approved').gte('created_at', sinceISO)
+
+  const [{ data: rows }, { data: claims }, { data: goals }, subs, paints, contribs] = await Promise.all([
+    supabase.from('bt_ledger').select('child_id, amount, reason')
+      .in('child_id', ids).gte('created_at', sinceISO).gt('amount', 0),
+    // The two things autopilot deliberately did not decide. Reporting the window as handled
+    // while one of these sits pending would be the one dishonest sentence in the feature.
+    supabase.from('reward_claims').select('id')
+      .in('child_id', ids).eq('status', 'pending').gte('created_at', sinceISO),
+    supabase.from('reward_suggestions').select('id')
+      .in('child_id', ids).eq('status', 'pending').gte('created_at', sinceISO),
+    // Counted from the rows rather than tallied as they happen, and contributions have to be
+    // counted here at all because they carry no gems — the ledger cannot see them.
+    approvedIn('submissions'), approvedIn('paintings'), approvedIn('contribution_log'),
+  ])
+
+  const byChild = new Map()
+  for (const r of rows || []) {
+    const name = kids.find(k => k.id === r.child_id)?.name || '?'
+    const e = byChild.get(name) || { child: name, gems: 0, what: new Set() }
+    e.gems += r.amount || 0
+    e.what.add(r.reason || 'task')
+    byChild.set(name, e)
+  }
+  return {
+    earned: [...byChild.values()].map(e => ({ child: e.child, gems: e.gems, what: [...e.what] })),
+    approved: (subs.data?.length || 0) + (paints.data?.length || 0) + (contribs.data?.length || 0),
+    waiting: (claims?.length || 0) + (goals?.length || 0),
+  }
+}
+
+async function setAutopilotTool(parentId, args) {
+  const { data: parent } = await supabase.from('parents').select('prefs, timezone').eq('id', parentId).maybeSingle()
+  if (!parent) return { success: false, error: 'parent not found' }
+  const prefs = { ...(parent.prefs || {}) }
+  const tz = parent.timezone || 'UTC'
+  const running = autopilotUntil(prefs)
+
+  if (args.off === true) {
+    if (!running) return { success: false, error: 'autopilot is not running' }
+    const handled = await autopilotHandled(parentId, prefs.autopilot.started_at)
+    // Removed rather than set to null: a JSON null is still a present key, and the sweep below
+    // finds windows by asking which rows have one.
+    delete prefs.autopilot
+    const { error } = await supabase.from('parents').update({ prefs }).eq('id', parentId)
+    if (error) return { success: false, error: error.message }
+    // Handed back in the tool result rather than sent as its own message: the parent said
+    // "I'm back" and is waiting on a reply, and the sweep's summary would arrive on top of it.
+    return { success: true, autopilot: 'off', ...handled }
+  }
+
+  const minutes = Math.round(Number(args.minutes))
+  if (!Number.isFinite(minutes) || minutes < 15) {
+    return { success: false, error: 'autopilot needs a length of at least 15 minutes' }
+  }
+  if (minutes > AUTOPILOT_MAX_MINUTES) {
+    return { success: false, error: `autopilot can run for at most ${AUTOPILOT_MAX_MINUTES / 60} hours at a time`,
+             note: 'For longer than an evening, the parent wants approval_required via update_preferences — the same thing without an end time.' }
+  }
+
+  const now = DateTime.now()
+  const until = now.plus({ minutes })
+  // A second request restarts the clock rather than extending it, which is what "make it another
+  // hour" means said out loud.
+  prefs.autopilot = { started_at: now.toISO(), until: until.toISO() }
+  const { error } = await supabase.from('parents').update({ prefs }).eq('id', parentId)
+  if (error) return { success: false, error: error.message }
+
+  return {
+    success: true,
+    minutes,
+    until_local: until.setZone(tz).toFormat('HH:mm'),
+    restarted: !!running,
+    i_approve: [...APPROVABLE],
+    i_still_ask: ['reward claims', 'goal requests'],
+    still_reaches_you: 'anything a safety check flags',
+    then: 'At that time I stop, hand the approvals back and tell them what happened.',
+  }
+}
+
+// The closing message is written here rather than by the model, because it is the receipt for a
+// window in which Tuto spent the parent's authority. What it says has to match what happened
+// exactly, and "usually phrases it accurately" is not the standard for that.
+function autopilotClosingMessage(handled, language) {
+  const en = language === 'en'
+  const gems = handled.earned.map(e => `${e.child} +${e.gems}`).join(', ')
+  const head = en ? "Autopilot's done — approvals are back with you." : 'Otomatik pilot bitti — onaylar yine sende.'
+
+  const body = handled.approved > 0 || handled.earned.length
+    ? (en ? `While you were busy I approved ${handled.approved} thing${handled.approved === 1 ? '' : 's'}.`
+          : `Sen meşgulken ${handled.approved} şeyi ben onayladım.`) +
+      (gems ? (en ? ` Gems: ${gems} 💎` : ` Gem: ${gems} 💎`) : '')
+    : (en ? 'Nothing came in while you were busy.' : 'Sen meşgulken yeni bir şey gelmedi.')
+
+  const tail = handled.waiting > 0
+    ? (en ? `\n\n${handled.waiting} thing${handled.waiting === 1 ? ' is' : 's are'} still waiting on you — I don't decide those.`
+          : `\n\n${handled.waiting} şey hâlâ seni bekliyor — onlara ben karar vermiyorum.`)
+    : ''
+
+  return `${head}\n\n${body}${tail}`
+}
+
+// Once a minute, not on a timer set when the window opened: a timer dies with the process and
+// the parent would come back to a Tuto still approving on their behalf with nothing left to
+// stop it. The end time lives in the row, so a restart resumes the same deadline.
+const AUTOPILOT_SWEEP_MS = 60 * 1000
+
+async function closeExpiredAutopilots() {
+  const { data: parents, error } = await supabase
+    .from('parents').select('id, prefs, timezone').not('prefs->autopilot', 'is', null)
+  if (error) {
+    // Loud, because the failure mode is silent: no sweep means no window ever ends.
+    console.error(`[AUTOPILOT] sweep query failed: ${error.message}`)
+    return
+  }
+
+  for (const parent of parents || []) {
+    const started = parent.prefs?.autopilot?.started_at
+    if (!started || autopilotUntil(parent.prefs)) continue
+
+    const handled = await autopilotHandled(parent.id, started)
+    const prefs = { ...parent.prefs }
+    delete prefs.autopilot
+    const { error: updErr } = await supabase.from('parents').update({ prefs }).eq('id', parent.id)
+    if (updErr) {
+      // Left alone deliberately. Announcing the handover while the row still says autopilot
+      // would tell the parent they have the approvals back when they do not.
+      console.error(`[AUTOPILOT] could not close window for parent ${parent.id}: ${updErr.message}`)
+      continue
+    }
+
+    const language = parent.prefs?.language === 'en' ? 'en' : 'tr'
+    console.log(`[AUTOPILOT] window closed for parent ${parent.id} — approved ${handled.approved}, waiting ${handled.waiting}`)
+    sendNotification(parent.id, autopilotClosingMessage(handled, language), {
+      kind: 'autopilot',
+      detail: {
+        tr: `otomatik pilot bitti, ${handled.approved} onayı ben verdim`,
+        en: `autopilot has ended, I approved ${handled.approved} for you`,
+      },
+    }).catch(err => console.error(`[AUTOPILOT] closing message failed: ${err.message}`))
+  }
+}
+
+setInterval(() => { closeExpiredAutopilots().catch(err => console.error(`[AUTOPILOT] sweep: ${err.message}`)) },
+  AUTOPILOT_SWEEP_MS).unref()
 
 // Approve a pending homework submission from a parent's free-text reply.
 // Every rule here is DETERMINISTIC — the LLM only picks the id and (maybe) an
@@ -2033,6 +2244,11 @@ async function handleMessage(parentId, replyCb, text) {
       `- Onay sorulanlar: ` +
       [...APPROVABLE].map(t => `${t}=${p.approval_required?.[t] !== false ? 'soruyorsun' : 'sormadan sen onaylıyorsun'}`).join(', ') + `.\n` +
       `- Ödül talepleri ve hedef istekleri HER ZAMAN ebeveyne sorulur, kapatılamaz.\n` +
+      (autopilotUntil(p)
+        ? `- OTOMATİK PİLOT ŞU AN AÇIK, ${autopilotUntil(p).setZone(tz).toFormat('HH:mm')}'e kadar. Bu süre ` +
+          `boyunca ödev/çizim/katkı onaylarını sen veriyorsun ve güvenlik uyarısı dışında mesaj göndermiyorsun. ` +
+          `Ebeveyn döndüğünü söylerse set_autopilot'u off:true ile çağır.\n`
+        : `- Otomatik pilot kapalı. Ebeveyn bir süreliğine meşgul olduğunu söylerse set_autopilot çağır.\n`) +
       `- Değiştirmek isterlerse update_preferences çağır; ayarların bir de uygulamada ekranı var.`
 
     const children = childrenRows || []
@@ -2355,6 +2571,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
       } else if (name === 'update_preferences') {
         toolResult = await updatePreferencesTool(parentId, args)
+      } else if (name === 'set_autopilot') {
+        toolResult = await setAutopilotTool(parentId, args)
       } else {
         toolResult = { success: false, error: `unknown tool ${name}` }
       }
@@ -3509,7 +3727,7 @@ app.post('/api/contributions', async (req, res) => {
     // Approved before the response goes back, so the child's own screen never shows a "waiting"
     // state for something nobody is going to be asked about.
     let row = inserted
-    const ask = await needsParentApproval(child.parent_id, 'contribution')
+    const { ask, because } = await needsParentApproval(child.parent_id, 'contribution')
     if (!ask && (await approveContributionTool(inserted.id, child.parent_id)).success) {
       row = { ...row, status: 'approved' }
     }
@@ -3517,7 +3735,9 @@ app.post('/api/contributions', async (req, res) => {
     try {
       const message = ask
         ? `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nOnaylamak için uygulamadaki panelden bakabilirsin.`
-        : `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\nBunları sormadan geçmemi istemiştin, geçtim.`
+        : `🌱 ${child.name} bir katkı ekledi:\n"${trimmedLabel}"\n\n` + (because === 'autopilot'
+            ? 'Otomatik pilottasın, ben geçtim.'
+            : 'Bunları sormadan geçmemi istemiştin, geçtim.')
       const notice = ask
         ? { kind: 'approval', child: child.name, detail: {
             tr: `ev katkısı: "${trimmedLabel}", onayını bekliyor`,
@@ -4252,7 +4472,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     // Approved here rather than inside the notification, because the notification can be held for
     // 90 seconds waiting on the child's answer about the photo's date, and the child should not
     // wait on that for gems the parent already decided not to be asked about.
-    const askApproval = await needsParentApproval(child.parent_id, 'submission')
+    const { ask: askApproval, because: approvalBecause } = await needsParentApproval(child.parent_id, 'submission')
     const autoApproved = askApproval ? null : await approveSubmissionTool(submission.id, child.parent_id)
     const awardedGems = autoApproved?.success ? autoApproved.gems : null
 
@@ -4287,7 +4507,8 @@ app.post('/api/children/:childId/homework', async (req, res) => {
           const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
             contents: [{ parts: [{ text: homeworkCaptionPrompt({
               filteredObservation: filtered, childName: child.name, tone, language,
-              photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems, awarded: awardedGems,
+              photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems,
+              awarded: awardedGems, awardedBecause: approvalBecause,
             }) }] }],
           }))
           caption = textFromParts(capData.candidates?.[0]?.content?.parts)
@@ -5054,7 +5275,7 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
     // The photo still goes out either way. What the parent turned off is being asked, not being
     // shown their child's drawing — and the safety screen above ran before any of this, so an
     // unasked approval is still a screened one.
-    const ask = await needsParentApproval(child.parent_id, 'drawing')
+    const { ask } = await needsParentApproval(child.parent_id, 'drawing')
     const auto = ask ? null : await approvePaintingById(painting.id, child.parent_id)
     const approved = !!auto?.success
 

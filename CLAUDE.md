@@ -70,7 +70,12 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Biten: `prefs` şeması (2026-08-31 migration'ı), `sendGate` (notify_level + quiet_hours,
       `attention` her ikisini de deler), `approval_required` (kapalıysa "sorma" demektir —
       sunucu kendisi onaylar ve gem'i yatırır), parent dashboard'da ayar bölümü ve
-      `update_preferences` sohbet aracı. Kalan: giriş kapısı, sonra otomatik pilot.
+      `update_preferences` sohbet aracı. **Otomatik pilot da bitti**: `prefs.autopilot`
+      (`{ started_at, until }`) aynı iki noktayı kullanıyor — `needsParentApproval`
+      ödev/çizim/katkıyı sormadan onaylıyor, `sendGate` güvenlik uyarısı dışında her şeyi
+      tutuyor, dakikada bir dönen süpürme süresi dolan pencereyi kapatıp ne yaptığını
+      özetliyor (`set_autopilot` aracı, en fazla 8 saat). Ödül talebi ve hedef isteği
+      otomatik pilotta da ebeveyne sorulur. Kalan: giriş kapısı (mesaj sayacı).
 - [ ] Problem 3: ebeveyn mesajla story konusu ekler — function calling aracı
       (add_story_ideas), Telegram katmanı gelince.
 - [x] Güvenlik: VITE_GEMINI_API_KEY açığı kapandı — Gemini `/api/gemini/generate`'e proxy'lendi,

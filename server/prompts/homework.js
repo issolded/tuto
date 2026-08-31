@@ -117,11 +117,12 @@ export function filterForParent(obs) {
 // come from prefs. `staleNote` is a pre-built sentence about the photo date
 // (or '') — CODE decides whether the photo is old, the model just includes the
 // sentence verbatim if given.
-// `awarded` is set when the parent has said they don't want to be asked about homework: the
-// submission is already approved and the gems already paid by the time this runs. The closing
-// question has to go with it — a message that asks "shall we approve?" about something already
-// approved reads as Tuto not knowing what it has done.
-export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems, awarded }) {
+// `awarded` is set when the parent is not being asked about homework: the submission is already
+// approved and the gems already paid by the time this runs. The closing question has to go with
+// it — a message that asks "shall we approve?" about something already approved reads as Tuto
+// not knowing what it has done. `awardedBecause` separates the two ways that happens, because
+// "you told me not to ask" is the wrong sentence for a parent who is simply out for the evening.
+export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems, awarded, awardedBecause }) {
   const lang = languageName(language)
   const toneLine = tone
     ? `Ebeveynin tercih ettiği ton: "${tone}". Bu tona uy.\n`
@@ -145,7 +146,9 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
     `- Sadece mesaj metnini yaz. Başlık, JSON, tırnak, madde işareti yok.\n` +
     `- En fazla 3-4 cümle.\n` +
     (awarded != null
-      ? `- Ebeveyn ödevleri sormadan geçmeni istemiş; bu ödev onaylandı ve ${awarded} gem eklendi. ` +
+      ? `- ${awardedBecause === 'autopilot'
+            ? 'Ebeveyn şu an otomatik pilotta — bir süreliğine onayları sen veriyorsun'
+            : 'Ebeveyn ödevleri sormadan geçmeni istemiş'}; bu ödev onaylandı ve ${awarded} gem eklendi. ` +
         `Bunu doğal biçimde belirt. ONAY SORUSU SORMA — sorulacak bir şey kalmadı.\n`
       : `- MESAJI MUTLAKA ebeveynin kararını isteyen doğal bir soruyla bitir. Ödül, ebeveyn onaylayana kadar ` +
         `askıda bekliyor — ebeveyn bir karar beklendiğini anlamazsa gönderi askıda kalır ve çocuk ödülünü hiç almaz. ` +
