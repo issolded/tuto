@@ -1442,6 +1442,8 @@ const CONTRIBUTION_TOOLS = [{
         'everything else is left alone.\n' +
         'notify_level: "quiet" = you only write if something about the child worries you, "required" = that ' +
         'plus anything waiting on their approval, "all" = that plus each finished activity.\n' +
+        'If they say "her seansı yazma, günde bir yeter" or "hepsini duymak istiyorum", that is per_task — ' +
+        'it does not change the level. Three sessions in an afternoon is what makes a parent ask for this.\n' +
         'Quiet hours are a window you do not write in. Convert whatever they say into 24-hour HH:MM ' +
         '("akşam dokuzdan sabah sekize" → quiet_start "21:00", quiet_end "08:00"). Send both or neither. ' +
         'If you cannot tell which hours they mean, ask — do not guess a window.\n' +
@@ -1454,6 +1456,11 @@ const CONTRIBUTION_TOOLS = [{
         type: 'OBJECT',
         properties: {
           notify_level: { type: 'STRING', description: 'One of: quiet, required, all.' },
+          per_task: {
+            type: 'BOOLEAN',
+            description: 'True to hear about every finished session, false to hear only the first each day. ' +
+              'Only does anything at notify_level "all".',
+          },
           quiet_start: { type: 'STRING', description: '24-hour HH:MM the quiet window starts, e.g. "21:00".' },
           quiet_end: { type: 'STRING', description: '24-hour HH:MM the quiet window ends, e.g. "08:00".' },
           quiet_off: { type: 'BOOLEAN', description: 'True to remove quiet hours entirely.' },
@@ -1620,6 +1627,13 @@ async function updatePreferencesTool(parentId, args) {
     changed.push('quiet_hours')
   }
 
+  // Only meaningful at 'all' — the quieter levels never send a finished-activity message at all,
+  // so this decides how many of them go out, not whether any do.
+  if (args.per_task != null) {
+    prefs.notify_per_task = args.per_task === true
+    changed.push('notify_per_task')
+  }
+
   const on = Array.isArray(args.ask_before) ? args.ask_before : []
   const off = Array.isArray(args.dont_ask_before) ? args.dont_ask_before : []
   const unknown = [...on, ...off].filter(t => !APPROVABLE.has(t))
@@ -1648,6 +1662,7 @@ async function updatePreferencesTool(parentId, args) {
     changed,
     now: {
       notify_level: prefs.notify_level ?? 'all',
+      notify_per_task: prefs.notify_per_task !== false,
       quiet_hours: prefs.quiet_hours ?? null,
       approval_required: Object.fromEntries([...APPROVABLE].map(t => [t, prefs.approval_required?.[t] !== false])),
     },
@@ -2240,6 +2255,10 @@ async function handleMessage(parentId, replyCb, text) {
     const settingsBlock =
       `BU EBEVEYNİN BİLDİRİM AYARLARI (okuma sorusu gelirse buradan cevapla, tool çağırma):\n` +
       `- Kademe: "${NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all'}" — ${levelSaid}.\n` +
+      ((NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all') === 'all'
+        ? `- Biten seanslar: ${p.notify_per_task !== false ? 'her seansı yazıyorsun' : 'günün sadece ilkini yazıyorsun'}. ` +
+          `Değiştirmek için update_preferences'ı per_task ile çağır.\n`
+        : '') +
       `- Sessiz saatler: ${p.quiet_hours?.start && p.quiet_hours?.end ? `${p.quiet_hours.start}–${p.quiet_hours.end} (bu aralıkta yazmıyorsun)` : 'yok'}.\n` +
       `- Onay sorulanlar: ` +
       [...APPROVABLE].map(t => `${t}=${p.approval_required?.[t] !== false ? 'soruyorsun' : 'sormadan sen onaylıyorsun'}`).join(', ') + `.\n` +

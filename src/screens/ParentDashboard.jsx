@@ -298,6 +298,8 @@ export default function ParentDashboard() {
 
   const notifyLevel = NOTIFY_LEVELS.some(l => l.id === prefs?.notify_level) ? prefs.notify_level : 'all'
   const quiet = prefs?.quiet_hours || null
+  // Absent means on, matching the server: a parent who has never chosen hears about each session.
+  const perTask = prefs?.notify_per_task !== false
   const approvalOff = APPROVAL_TYPES.filter(t => prefs?.approval_required?.[t.id] === false)
 
   const autopilotEnds = prefs?.autopilot?.until ? new Date(prefs.autopilot.until).getTime() : null
@@ -595,6 +597,21 @@ export default function ParentDashboard() {
                   <LevelRow key={l.id} level={l} selected={notifyLevel === l.id} onClick={() => savePrefs({ notify_level: l.id })} />
                 ))}
               </div>
+
+              {/* Only under "Everything", because that is the only level that sends these at all.
+                  Ada does three maths sessions in an afternoon; this is the difference between one
+                  message and three, which is not the same question as which kinds of message. */}
+              {notifyLevel === 'all' && (
+                <div className="tc-fade" style={{ display: 'flex', alignItems: 'center', gap: 13, paddingLeft: 4, opacity: autopilotOn ? 0.45 : 1 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink }}>Every session</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1, lineHeight: 1.45 }}>
+                      Turn this off and I'll tell you about the first one each day, not all three.
+                    </div>
+                  </div>
+                  <Toggle on={perTask} onClick={() => savePrefs({ notify_per_task: !perTask })} />
+                </div>
+              )}
 
               {/* The trap this setting can walk a parent into, said out loud rather than
                   discovered three days later: at the quietest level an approval is still
