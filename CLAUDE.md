@@ -63,6 +63,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] Sınıra takılan seanslar gem history'de görünmüyor: günlük cap aşıldığında `gems = 0` ve
+      ledger satırı `if (gems > 0)` yüzünden hiç yazılmıyor; GemsScreen yalnızca `bt_ledger`
+      okuduğu için çocuk ana ekranda 4 seans, geçmişte 3 kayıt görüyor. Matematik, okuma ve
+      story'de aynı desen. Seans bitiş ekranı durumu zaten söylüyor (🌙) — eksik olan kalıcı
+      kayıt. Seçenekler: cap'e takılınca 0 tutarlı bir ledger satırı yazmak (tek insert, gem
+      sayan yerler zaten `amount > 0` filtreliyor), ya da history'nin capped seansları seans
+      tablolarından birleştirmesi. Kayıt "0 gem" değil "sınıra takıldı" diye okunmalı.
+      (2026-09-01, Ada'nın 4. matematiği.)
 - [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
       altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
