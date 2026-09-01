@@ -63,6 +63,12 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
+      altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
+      ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
+      must-revalidate, canlıda tarayıcı testi bölümü buluyor). Seçenekler: karta "Settings"
+      başlığı verip Notifications'ın üstüne almak, ya da üst özet şeridine atlama satırı.
+      Karar ertelendi (2026-09-01).
 - [ ] Stories çeşitlilik: 11+ üretimi tek kalıba (AI-duygu-kontrolü / kapalı-dome) çöküyor;
       üretim promptuna premise çeşitliliği + alt-tema rotasyonu, ya da embedding ile
       semantik dedup. (Güvenlik değil, kalite.)
