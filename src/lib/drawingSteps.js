@@ -461,6 +461,216 @@ export const DRAWING_STEPS = {
       'Çatıyı, kapıyı ve bacanın tuğlalarını gölgele, bahçeye çalılar ekle.',
     ],
   },
+
+  // ── The September 2026 batch ────────────────────────────────────────────────
+  // Built by server/scripts/prepare_drawing_set.py, which lists per set exactly
+  // which raw panels were kept. Four sets dropped a panel that went BACKWARDS
+  // (see that file); the wording below follows the panels that shipped, not the
+  // raw folder's numbering.
+
+  car: {
+    en: [
+      'Draw the car body as one long rounded shape, then the roof, the windscreen and a side window on top.',
+      'Add two round wheels under curved arches, and a bumper across the front.',
+      'Draw two round headlights, the door line with its handle, a wing mirror, and the slots under the bumper.',
+      'Put spokes in the wheels, add the small lights on the bumper, and draw the seats showing through the windows.',
+      'Shade the sides of the car, add a badge on the bonnet, and put a shadow on the ground underneath.',
+    ],
+    tr: [
+      'Arabanın gövdesini tek bir uzun yuvarlak şekil olarak çiz; üstüne çatıyı, ön camı ve yan camı ekle.',
+      'Kavisli çamurlukların altına iki yuvarlak tekerlek, önüne de bir tampon çiz.',
+      'İki yuvarlak far, kolu ile birlikte kapı çizgisi, bir yan ayna, tamponun altına da ızgara çizgileri çiz.',
+      'Tekerleklere jant kollarını koy, tampona küçük lambaları ekle, camların arkasından görünen koltukları çiz.',
+      'Arabanın yanlarını gölgele, kaputuna bir arma koy, altına da yere düşen gölgeyi çiz.',
+    ],
+  },
+
+  airplane: {
+    en: [
+      'Draw one long oval, tilted, for the plane’s body.',
+      'Add a wing going up on the left, a bigger wing coming towards you on the right, and the tail fin with a small tailplane.',
+      'Draw the round engine and a three-blade propeller at the nose, and a bubble canopy on top.',
+      'Add the landing wheels: two under the body and a small one under the far wing.',
+      'Draw the panel lines on the wings and tail, the rings around the engine, and shade the propeller and wheels.',
+      'Put a few clouds around the plane and a hill below it, then shade the body.',
+    ],
+    tr: [
+      'Uçağın gövdesi için eğik duran uzun bir oval çiz.',
+      'Sola yukarı giden bir kanat, sağa sana doğru gelen daha büyük bir kanat, bir de kuyruk ile küçük kuyruk kanadını ekle.',
+      'Burnuna yuvarlak motoru ve üç kanatlı pervaneyi çiz, üstüne de kabin camını koy.',
+      'İniş tekerleklerini ekle: gövdenin altına iki tane, uzaktaki kanadın altına küçük bir tane.',
+      'Kanatlardaki ve kuyruktaki panel çizgilerini, motorun etrafındaki halkaları çiz; pervaneyi ve tekerlekleri gölgele.',
+      'Uçağın çevresine birkaç bulut, altına da bir tepe çiz; sonra gövdeyi gölgele.',
+    ],
+  },
+
+  ship: {
+    en: [
+      'Draw the hull: a wide curved shape like a deep bowl.',
+      'Draw the deck line along the top and two short posts standing on it.',
+      'Add three tall masts with a lookout basket, a long pole pointing out of the front, and thin rigging ropes.',
+      'Hang the square sails on the masts and a triangle sail at the front.',
+      'Draw the raised cabin at the back with its windows, a row of round portholes, an anchor, and the plank lines on the hull.',
+      'Add wavy sea lines around the ship, a sun in the sky, and shade the sails.',
+    ],
+    tr: [
+      'Gövdeyi çiz: derin bir kâse gibi geniş ve kavisli bir şekil.',
+      'Üst tarafa boydan boya güverte çizgisini, üstüne de iki kısa direk çiz.',
+      'Üç uzun direk ve tepesine gözcü sepeti, önden dışarı uzanan uzun bir gönder, bir de ince halatlar ekle.',
+      'Direklere kare yelkenleri, öne de üçgen yelkeni as.',
+      'Arkadaki yüksek kamarayı pencereleriyle çiz; bir sıra yuvarlak lomboz, bir çapa ve gövdedeki tahta çizgilerini ekle.',
+      'Geminin çevresine dalgalı deniz çizgileri, gökyüzüne bir güneş çiz; yelkenleri gölgele.',
+    ],
+  },
+
+  'big-ben': {
+    en: [
+      'Draw a tall narrow rectangle for the tower, and a wide flat one under it for the base.',
+      'Run a line down the middle so you can see two sides, add the wider clock box near the top with a square panel on each face, then a sloping roof and a pointed spire.',
+      'Draw a big circle inside each square for the clock faces, and little spikes at the corners.',
+      'Add the numbers and hands to the clocks, rows of small arches above and below them, and long straight window lines down the tower.',
+      'Draw the columns under the spire, and cover the roof and the walls with fine lines.',
+      'Shade the right-hand face of the tower and darken the base so it looks solid.',
+      'Go over the whole tower with a darker pencil, leaving the clock faces pale.',
+    ],
+    tr: [
+      'Kule için uzun ve dar bir dikdörtgen, altına da taban için geniş ve yassı bir dikdörtgen çiz.',
+      'Ortasından bir çizgi indir ki iki yüzü görünsün; üst tarafa her yüzünde kare bir pano olan daha geniş saat kutusunu, üstüne de eğimli çatıyı ve sivri külahı ekle.',
+      'Her karenin içine saat için büyük bir daire çiz, köşelere de küçük sivri uçlar koy.',
+      'Saatlere rakamları ve akrep ile yelkovanı, altlarına ve üstlerine küçük kemer sıralarını, kuleye de uzun düz pencere çizgilerini ekle.',
+      'Külahın altındaki sütunları çiz, çatıyı ve duvarları ince çizgilerle kapla.',
+      'Kulenin sağ yüzünü gölgele, tabanı koyulaştır ki sağlam dursun.',
+      'Bütün kulenin üstünden daha koyu bir kalemle geç; saat kadranlarını açık bırak.',
+    ],
+  },
+
+  'galata-tower': {
+    en: [
+      'Draw a tall rectangle for the tower and a wide flat base under it.',
+      'Curve the lines across it so it looks round, then add two rings near the top and a narrower level above them.',
+      'Put a tall pointed cone on top for the roof.',
+      'Draw the arched windows all around the balcony, the railing above them, small windows on the wall below, and a few brick lines.',
+      'Cover the roof with tile lines and the wall with stone blocks, and add the little posts along the railing.',
+      'Shade the left side of the tower and under the balcony, and darken the base.',
+      'Press harder for the darkest shadows and leave the sunny side pale.',
+    ],
+    tr: [
+      'Kule için uzun bir dikdörtgen, altına da geniş ve yassı bir taban çiz.',
+      'Üstündeki çizgileri kavisli yap ki yuvarlak dursun; üst tarafa iki halka, onların üstüne de daha dar bir kat ekle.',
+      'Tepesine çatı için uzun ve sivri bir külah koy.',
+      'Balkonun çevresine kemerli pencereleri, üstlerine korkuluğu, aşağıdaki duvara küçük pencereleri ve birkaç tuğla çizgisini çiz.',
+      'Çatıyı kiremit çizgileriyle, duvarı taş bloklarla kapla; korkuluğa da küçük direkleri ekle.',
+      'Kulenin sol yanını ve balkonun altını gölgele, tabanı koyulaştır.',
+      'En koyu gölgeler için kaleme daha çok bastır, güneş alan yüzü açık bırak.',
+    ],
+  },
+
+  globe: {
+    en: [
+      'Draw one big circle for the Earth.',
+      'Draw the big lands inside it: Asia and Australia on the left, the Americas down the right.',
+      'Add the icy land along the bottom and scatter the tiny islands across the ocean.',
+      'Draw little waves on the sea, a ring around the planet, stars all around, and a small satellite on the left.',
+    ],
+    tr: [
+      'Dünya için kocaman bir daire çiz.',
+      'İçine büyük kıtaları çiz: solda Asya ve Avustralya, sağ boyunca Amerika kıtaları.',
+      'Alt kenara buzlu kıtayı ekle, okyanusa da minik adaları serpiştir.',
+      'Denize küçük dalgalar, gezegenin çevresine bir halka, etrafına yıldızlar, sola da küçük bir uydu çiz.',
+    ],
+  },
+
+  'adventure-map': {
+    en: [
+      'Draw a wobbly island shape with a second line following it all the way round.',
+      'Draw a row of mountains across the top and a patch of pointy trees on the right.',
+      'Wind a river down from the mountains and put a small castle beside it.',
+      'Add an empty banner at the top for the name, a second little wood, tufts of grass, and waves in the sea around the island.',
+    ],
+    tr: [
+      'Kıvrımlı bir ada şekli çiz, çevresini boydan boya ikinci bir çizgiyle takip et.',
+      'Üst tarafa sıra dağları, sağ tarafa da sivri ağaçlardan bir orman çiz.',
+      'Dağlardan aşağı kıvrılan bir nehir çiz, yanına da küçük bir kale koy.',
+      'Üste isim için boş bir şerit, ikinci bir küçük orman, çimen tutamları, adanın çevresine de deniz dalgaları ekle.',
+    ],
+  },
+
+  'bike-hero': {
+    en: [
+      'Draw a circle for the head, a curved back below it, and two big wheels with the bike frame between them.',
+      'Add a helmet, a t-shirt, the arms reaching to the handlebars, and the legs bent down to the pedal.',
+      'Draw the face — eyes, nose and a smile — the hair under the helmet, and a big cape flying out behind.',
+      'Fill both wheels with spokes, and add the pedal and the chain wheel.',
+      'Put a badge on the cape, add speed lines in the wheels, then clouds and the ground behind.',
+    ],
+    tr: [
+      'Kafa için bir daire, altına kavisli bir sırt, aralarında bisiklet iskeleti duran iki büyük tekerlek çiz.',
+      'Bir kask, bir tişört, gidona uzanan kollar ve pedala inen bükük bacaklar ekle.',
+      'Yüzü çiz — gözler, burun, gülümseme —, kaskın altından çıkan saçları ve arkada uçuşan büyük pelerini ekle.',
+      'İki tekerleği de tellerle doldur, pedalı ve zincir dişlisini ekle.',
+      'Pelerine bir arma koy, tekerleklere hız çizgileri, arkasına da bulutları ve yeri çiz.',
+    ],
+  },
+
+  'girl-reading': {
+    en: [
+      'Draw a circle for the head.',
+      'Add two big eyes with eyebrows above them, a tiny nose and a small smile.',
+      'Draw the wavy hair all around the head, then the neck and shoulders.',
+      'Draw an open book in front of her, with both hands holding its edges.',
+      'Add her crossed legs and bare feet sitting under the book.',
+      'Draw a wooden bench behind her and tufts of grass along the ground.',
+    ],
+    tr: [
+      'Kafa için bir daire çiz.',
+      'İki büyük göz ve üstlerine kaşları, minik bir burun ve küçük bir gülümseme ekle.',
+      'Kafanın çevresine dalgalı saçları çiz, sonra boynu ve omuzları ekle.',
+      'Önüne açık bir kitap çiz, kenarlarından tutan iki eli de ekle.',
+      'Kitabın altında bağdaş kurmuş bacaklarını ve çıplak ayaklarını çiz.',
+      'Arkasına tahta bir bank, yere de çimen tutamları çiz.',
+    ],
+  },
+
+  // Step 4 has a pot of pencils on the table that the finished drawing does not:
+  // the source panels swapped the props around. The picture still teaches the
+  // table legs, so it stays, and the wording leaves the pot out.
+  'desk-boy': {
+    en: [
+      'Draw a circle for the head, a curved shoulder under it, and a big flat rectangle for the table top.',
+      'Add the chair back behind him, both arms resting on the table, and a pencil in his hand.',
+      'Draw his hair and face, the collar of his t-shirt, and the sheet of paper under his hands.',
+      'Give the table four legs, and draw his legs and shoes underneath it.',
+      'Add a desk lamp, a window behind him, floorboards under the table, and the little drawing on his paper.',
+    ],
+    tr: [
+      'Kafa için bir daire, altına kavisli bir omuz, bir de masa tablası için büyük yassı bir dikdörtgen çiz.',
+      'Arkasına sandalyenin sırtını, masaya dayalı iki kolunu, eline de bir kalem ekle.',
+      'Saçını ve yüzünü, tişörtünün yakasını, ellerinin altına da kâğıdı çiz.',
+      'Masaya dört ayak yap, altına da çocuğun bacaklarını ve ayakkabılarını çiz.',
+      'Bir masa lambası, arkasına bir pencere, masanın altına döşeme tahtaları, kâğıdına da çizdiği küçük resmi ekle.',
+    ],
+  },
+
+  'forest-explorer': {
+    en: [
+      'Draw a circle for the head, a short neck, and a triangle under it for the body.',
+      'Add a wide round hat on top, with the hair falling out from under it.',
+      'Draw the shirt with its sleeves, the shorts, the boots, and a bag on a strap across the chest.',
+      'Draw the face under the hat: two big eyes, eyebrows, a small nose and a smile.',
+      'Draw two tall tree trunks behind, one on each side.',
+      'Fill the ground with bushes and leafy plants, and start shading the clothes.',
+      'Shade the whole forest darker behind, so she stands out in front of it.',
+    ],
+    tr: [
+      'Kafa için bir daire, kısa bir boyun, altına da gövde için bir üçgen çiz.',
+      'Üstüne geniş ve yuvarlak bir şapka koy, altından dökülen saçları ekle.',
+      'Kollarıyla birlikte gömleği, şortu, çizmeleri, bir de göğsünden geçen askılı çantayı çiz.',
+      'Şapkanın altına yüzü çiz: iki büyük göz, kaşlar, küçük bir burun ve bir gülümseme.',
+      'Arkasına, iki yana birer uzun ağaç gövdesi çiz.',
+      'Yeri çalılarla ve yapraklı bitkilerle doldur, kıyafetleri gölgelemeye başla.',
+      'Arkadaki ormanın tamamını koyulaştır ki o önde belirginleşsin.',
+    ],
+  },
 }
 
 // Only these are known to match their pictures. The rest are waiting on the same

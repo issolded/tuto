@@ -40,3 +40,8 @@ drawings/**/_source/
 # Zips handed over during asset work — not part of the project.
 tuto*.zip
 tuto drawings/
+
+# Raw drawing panels (153 MB of generated PNGs). The pipeline output —
+# drawings/<id>/step-NN.webp — is what the repo keeps; see
+# server/scripts/prepare_drawing_set.py.
+cizims_sep2026
