@@ -20,12 +20,13 @@ const HOMEWORK_DEFAULT_GEMS = 25
 // yet — mirrors src/lib/taskDefaults.js's TASK_DEFAULTS gems values (kept as
 // a separate copy since frontend and backend are deployed independently).
 const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20, puzzle: 30 }
-// How many of each a day pay, by default. Every type has one now: homework had none, so with
-// approval switched off, or on autopilot, every photo paid. A parent changes these per child from
-// the dashboard or the chat (update_task_reward); past the cap the work still counts, it just
-// does not pay. The per-type *_DEFAULTS further down read their caps from here.
+// How many sessions a day earn gems, per task type, when the parent hasn't set
+// their own number. Every gem-earning task has a cap now — the limit existed in
+// code for maths/reading/writing/drawing long before there was a dial for it,
+// and homework (which used to have none) joins them so the dashboard's setting
+// means the same thing everywhere. Mirrors src/lib/taskDefaults.js, same reason
+// as TASK_DEFAULT_GEMS: the two halves deploy independently.
 const TASK_DEFAULT_CAPS = { reading: 3, math: 3, writing: 3, homework: 3, drawing: 2, puzzle: 3 }
-const HOMEWORK_DEFAULTS = { gems: HOMEWORK_DEFAULT_GEMS, dailyCap: TASK_DEFAULT_CAPS.homework }
 
 // Scored tasks: the configured figure is the most a session can pay, not what it will pay.
 const VARIABLE_TASKS = new Set(['reading', 'math', 'writing', 'puzzle'])
@@ -312,19 +313,23 @@ async function getParentContext(parentId) {
       gemHistory: led.length ? led : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
-      // The CURRENT gem reward per task type — ground truth for "kaç gem
-      // veriyoruz" questions and the before/after numbers update_task_reward
-      // reports. Falls back to TASK_DEFAULT_GEMS for any type the parent
-      // hasn't customized yet.
+      // The CURRENT settings per task type — ground truth for "kaç gem veriyoruz"
+      // and "günde kaç tanesine gem gidiyor" questions, and the before/after
+      // numbers update_task_reward reports. Falls back to TASK_DEFAULT_GEMS /
+      // TASK_DEFAULT_CAPS for any type the parent hasn't customized yet.
       // Reading, maths and writing are scored, so the figure is a CEILING — the server pays it
       // scaled by how the child did, and again by a third if they took help. A bare number read
       // as a flat rate: asked what maths was worth, the model answered "exactly 30 gems every
       // time" for a session that had just paid 15.
+      // The daily limit belongs here for the same reason: it is enforced for every task type, so
+      // a parent asking why the fourth session paid nothing has an answer that isn't a guess.
       taskRewards: Object.fromEntries(
         Object.entries(TASK_DEFAULT_GEMS).map(([type, def]) => {
-          const gems = child.task_settings?.[type]?.gems ?? def
-          const cap = child.task_settings?.[type]?.daily_cap ?? TASK_DEFAULT_CAPS[type]
-          return [type, `${VARIABLE_TASKS.has(type) ? `up to ${gems} (scaled by score)` : `${gems}`}, ${cap} a day pay`]
+          const s = child.task_settings?.[type] || {}
+          const gems = s.gems ?? def
+          const cap = s.daily_cap ?? TASK_DEFAULT_CAPS[type]
+          const rate = VARIABLE_TASKS.has(type) ? `up to ${gems} gems (scaled by score)` : `${gems} gems`
+          return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
       pendingContributions: pendingError
@@ -1389,28 +1394,32 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'update_task_reward',
       description:
-        'Changes how many gems a TASK TYPE pays out going forward — completely different from gift_gems/' +
-        'deduct_gems, which move gems right now. This changes the future rate ("matematiğe 40 gem verelim", ' +
-        '"kitap okumayı 20 yap", "set homework to 15 gems"). The CURRENT rate for each ' +
-        'type is already in context under each child\'s taskRewards — use it to answer "kaç gem veriyoruz" ' +
-        'questions directly, with NO tool call, and to confirm the new number after a change.\n' +
+        'Changes what a TASK TYPE is worth going forward — completely different from gift_gems/' +
+        'deduct_gems, which move gems right now. Two separate dials, and you may set either or both:\n' +
+        '• gems — the rate one session pays ("matematiğe 40 gem verelim", "kitap okumayı 20 yap", "set ' +
+        'homework to 15 gems").\n' +
+        '• daily_cap — how many sessions A DAY earn gems, after which the child can keep going but stops ' +
+        'earning ("günde 3 matematikten fazlasına gem verme", "sadece 2 hikayeye gem versin", "ödevde günlük ' +
+        'sınır 1 olsun", "limit the drawings to 4 a day"). EVERY task type has this limit — it is not a ' +
+        'drawings-only thing.\n' +
+        'Both CURRENT values for each type are already in context under each child\'s taskRewards — use them ' +
+        'to answer "kaç gem veriyoruz" / "günde kaça gem gidiyor" questions directly, with NO tool call, and ' +
+        'to confirm the new number after a change.\n' +
         'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
         '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ödev"/"homework" ' +
         '→ homework, "çizim"/"resim"/"drawing" → drawing, "bulmaca"/"şekil bulmacası"/"puzzle"/"NVR" → puzzle. If you cannot tell which task type they mean, ASK — ' +
         'do not guess between two.\n' +
-        'It also changes the DAILY LIMIT — how many of that task pay gems in a day ("günde 5 ödev olsun", ' +
-        '"matematik günde 2 kere yeter", "let her do 4 drawings a day"). The current limit is in taskRewards too. ' +
-        'Pass gems, daily_cap, or both.\n' +
-        'The server enforces 1-500 for gems and 1-10 for daily_cap. Only call this when the parent explicitly states a task type AND a ' +
-        'specific new number — an unclear or partial request ("matematiği artıralım biraz") means asking for the ' +
-        'exact number, never picking one yourself.',
+        'The server enforces 1-500 for gems and 0-50 for daily_cap. Only call this when the parent explicitly ' +
+        'states a task type AND a specific new number — an unclear or partial request ("matematiği artıralım ' +
+        'biraz", "çok fazla resim yapıyor") means asking for the exact number, never picking one yourself. ' +
+        'Never send a dial the parent did not mention: changing the rate is not changing the limit.',
       parameters: {
         type: 'OBJECT',
         properties: {
-          child_id: { type: 'STRING', description: 'The exact id of the child whose task reward to change, from the children list in context.' },
+          child_id: { type: 'STRING', description: 'The exact id of the child whose task settings to change, from the children list in context.' },
           task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle.' },
-          gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Leave out if only the limit changes.' },
-          daily_cap: { type: 'NUMBER', description: 'The exact new number per day that pays (whole number, 1-10). Leave out if only the gems change.' },
+          gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Omit entirely if they only asked to change the daily limit.' },
+          daily_cap: { type: 'NUMBER', description: 'The exact new number of gem-earning sessions per day the parent said (whole number, 0-50). Omit entirely if they only asked to change the gem amount.' },
         },
         required: ['child_id', 'task_type'],
       },
@@ -1985,29 +1994,31 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
   const ts = child.task_settings || {}
   const configured = ts[sub.task_type]?.gems ?? (sub.task_type === 'homework' ? HOMEWORK_DEFAULT_GEMS : (sub.suggested_gems ?? HOMEWORK_DEFAULT_GEMS))
 
-  let awarded
-  if (gems === undefined || gems === null || Number.isNaN(Number(gems))) {
-    awarded = configured
-  } else {
-    awarded = Math.max(0, Math.min(Number(gems), configured * 2))
-  }
+  const namedAmount = !(gems === undefined || gems === null || Number.isNaN(Number(gems)))
+  let awarded = namedAmount
+    ? Math.max(0, Math.min(Number(gems), configured * 2))
+    : configured
   awarded = Math.round(awarded)
 
-  // Rule 4b — the day's cap, homework only (reading pays in its own route). Counted against the
-  // day the homework was SENT, not the day it is approved: a parent clearing a week's backlog on
-  // Sunday is approving five days of homework, not five pieces of one day's. Past the cap it is
-  // still approved — the work was done and the parent said yes — it just pays nothing.
-  let capped = false
-  if (sub.task_type === 'homework' && awarded > 0) {
-    const { dailyCap } = taskSettingsFor(child.task_settings, 'homework', HOMEWORK_DEFAULTS)
-    const tz = await tzForChild(sub.child_id)
-    const day = DateTime.fromISO(sub.created_at, { zone: 'utc' }).setZone(tz)
-    const { data: paid, error: capErr } = await supabase.from('submissions')
-      .select('id').eq('child_id', sub.child_id).eq('task_type', 'homework').eq('status', 'approved').gt('gems_earned', 0)
-      .gte('created_at', day.startOf('day').toUTC().toISO()).lte('created_at', day.endOf('day').toUTC().toISO())
-    // Fail closed, as every other cap does.
-    if (capErr || (paid || []).length >= dailyCap) { awarded = 0; capped = true }
-  }
+  // Rule 4b — the daily cap, applied at APPROVAL time because that is when gems
+  // move (same rule and same fail-closed stance as drawings). Homework used to
+  // be the one task with no limit at all, which mattered most under autopilot:
+  // with approval_required off the server approves by itself, so a stack of
+  // photos was a stack of gems. Over the limit the submission is still approved
+  // and still shown to the parent — it just pays nothing, and `capped` tells the
+  // caller to say so rather than report a silent zero.
+  //
+  // A parent who NAMES an amount overrides the cap: that is a person deciding on
+  // this one submission, not the automatic path the cap exists to bound. They are
+  // still told the limit is spent (capped comes back either way).
+  const capSettings = taskSettingsFor(ts, sub.task_type, {
+    gems: configured,
+    dailyCap: TASK_DEFAULT_CAPS[sub.task_type] ?? TASK_DEFAULT_CAPS.homework,
+  })
+  const tz = await tzForChild(sub.child_id)
+  const already = await rewardedToday(sub.child_id, tz, sub.task_type || 'task')
+  const capped = !capSettings.active || already === null || already >= capSettings.dailyCap
+  if (capped && !namedAmount) awarded = 0
 
   // Rule 5 — single ledger path, identical to the dashboard approve button:
   // flip status + write gems_earned, then one bt_ledger insert (reason=type).
@@ -2029,7 +2040,7 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
   }
 
   return { success: true, id: sub.id, childName: child.name, taskType: sub.task_type, gems: awarded,
-    ...(capped ? { capped: true, note: 'approved, but past today\'s homework limit, so it paid 0 gems — say so; the parent can raise the limit with update_task_reward' } : {}) }
+    capped, dailyCap: capSettings.dailyCap }
 }
 
 // Re-sends a submission's photos into the chat on request. Ownership is checked
@@ -2165,19 +2176,31 @@ async function deductGemsTool(childId, amount, parentId, note) {
   return { success: true, childName: child.name, amount: n, remainingGems: gems - n }
 }
 
-// Changes how many gems a task type pays out going forward — a DIFFERENT
-// thing from gift_gems/deduct_gems (those move gems now; this changes the
-// future rate). Merges into the existing task_settings JSONB rather than
-// overwriting it, so other types' settings (and drawing's daily_cap) survive.
+// Changes what a task type is worth going forward — a DIFFERENT thing from
+// gift_gems/deduct_gems (those move gems now; this changes the future rate).
+// Two dials, either or both: the gem amount, and how many sessions a day earn
+// gems. Merges into the existing task_settings JSONB rather than overwriting it,
+// so the other types' settings — and the dial that wasn't touched — survive.
 async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap) {
   if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
-  const hasGems = gems !== undefined && gems !== null
-  const hasCap = dailyCap !== undefined && dailyCap !== null
-  if (!hasGems && !hasCap) return { success: false, error: 'nothing to change — pass gems, daily_cap or both' }
-  const n = Math.round(Number(gems))
-  if (hasGems && (!Number.isFinite(n) || n < 1 || n > 500)) return { success: false, error: 'gems must be between 1 and 500' }
-  const c = Math.round(Number(dailyCap))
-  if (hasCap && (!Number.isFinite(c) || c < 1 || c > 10)) return { success: false, error: 'daily_cap must be between 1 and 10' }
+
+  const wantsGems = gems !== undefined && gems !== null
+  const wantsCap = dailyCap !== undefined && dailyCap !== null
+  if (!wantsGems && !wantsCap) return { success: false, error: 'nothing to change: give gems, daily_cap, or both' }
+
+  let n = null
+  if (wantsGems) {
+    n = Math.round(Number(gems))
+    if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'gems must be between 1 and 500' }
+  }
+
+  // 0 is a real answer here ("maths shouldn't pay at all today"), so the floor is
+  // 0, not 1 — unlike the gem amount, where 0 means "off" and the toggle says that.
+  let cap = null
+  if (wantsCap) {
+    cap = Math.round(Number(dailyCap))
+    if (!Number.isFinite(cap) || cap < 0 || cap > 50) return { success: false, error: 'daily_cap must be between 0 and 50' }
+  }
 
   const { data: child } = await supabase
     .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -2185,15 +2208,20 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap)
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
   const nextSettings = { ...(child.task_settings || {}) }
+  const current = nextSettings[taskType] || {}
   nextSettings[taskType] = {
-    ...(nextSettings[taskType] || {}), active: nextSettings[taskType]?.active ?? true,
-    ...(hasGems ? { gems: n } : {}), ...(hasCap ? { daily_cap: c } : {}),
+    ...current,
+    active: current.active ?? true,
+    gems: wantsGems ? n : (current.gems ?? TASK_DEFAULT_GEMS[taskType]),
+    daily_cap: wantsCap ? cap : (current.daily_cap ?? TASK_DEFAULT_CAPS[taskType]),
   }
 
   const { error } = await supabase.from('children').update({ task_settings: nextSettings }).eq('id', childId)
   if (error) return { success: false, error: error.message }
 
-  return { success: true, childName: child.name, taskType, ...(hasGems ? { gems: n } : {}), ...(hasCap ? { daily_cap: c } : {}) }
+  return { success: true, childName: child.name, taskType,
+    gems: nextSettings[taskType].gems, dailyCap: nextSettings[taskType].daily_cap,
+    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null].filter(Boolean) }
 }
 
 async function approveContributionTool(contributionId, parentId) {
@@ -3472,7 +3500,7 @@ app.get('/api/children/:childId/stories', async (req, res) => {
 // and the client passed it straight through to the ledger — so the parent's configured amount
 // was never consulted and the number moved with the model's mood. The model judges the writing
 // now; the amount is worked out here.
-const WRITING_DEFAULTS = { gems: 30, dailyCap: TASK_DEFAULT_CAPS.writing }
+const WRITING_DEFAULTS = { gems: TASK_DEFAULT_GEMS.writing, dailyCap: TASK_DEFAULT_CAPS.writing }
 
 // Words a child of each school year might reasonably write in one sitting. Not a target shown
 // to anyone: it is the point where the effort multiplier reaches its ceiling.
@@ -4637,7 +4665,10 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const { ask: askApproval, because: approvalBecause } = await needsParentApproval(child.parent_id, 'submission')
     const autoApproved = askApproval ? null : await approveSubmissionTool(submission.id, child.parent_id)
     const awardedGems = autoApproved?.success ? autoApproved.gems : null
-    const awardedCapped = !!autoApproved?.capped
+    // An auto-approval that landed past the day's homework limit pays 0. The caption has to say
+    // WHY, or the parent reads "onayladım, 0 gem ekledim" and thinks something broke.
+    const awardCapped = !!(autoApproved?.success && autoApproved.capped)
+    const homeworkDailyCap = autoApproved?.dailyCap ?? null
 
     // 6. Parent notification. Gemini writes the caption honoring tone+language;
     //    CODE filters low-confidence errors out and supplies the date sentence.
@@ -4665,21 +4696,22 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       try {
         const filtered = observation?.looks_like_homework ? filterForParent(observation) : null
         if (!filtered) {
-          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardedCapped })
+          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardCapped })
         } else {
           const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
             contents: [{ parts: [{ text: homeworkCaptionPrompt({
               filteredObservation: filtered, childName: child.name, tone, language,
               photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems,
-              awarded: awardedGems, awardedBecause: approvalBecause, capped: awardedCapped,
+              awarded: awardedGems, awardedBecause: approvalBecause,
+              capped: awardCapped, dailyCap: homeworkDailyCap,
             }) }] }],
           }))
           caption = textFromParts(capData.candidates?.[0]?.content?.parts)
-          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardedCapped })
+          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardCapped })
         }
       } catch (err) {
         console.error(`[HOMEWORK] caption failed: ${err.message}`)
-        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardedCapped })
+        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardCapped })
       }
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
@@ -4770,14 +4802,13 @@ app.get('/api/children/:childId/homework', async (req, res) => {
 // the client's opinion of it is never read. A free-draw upload is a photo of
 // anything at all, so the same daily cap covers it.
 
-const DRAWING_DEFAULTS = { gems: 20, dailyCap: TASK_DEFAULT_CAPS.drawing }
+const DRAWING_DEFAULTS = { gems: TASK_DEFAULT_GEMS.drawing, dailyCap: TASK_DEFAULT_CAPS.drawing }
 
-// Parent-tunable per child via children.task_settings.drawing.
+// Parent-tunable per child via children.task_settings.drawing. Reads the same
+// clamps as every other task — this used to be its own copy of taskSettingsFor,
+// which is how drawing ended up the only task with a dial for its cap.
 function drawingSettings(taskSettings) {
-  const s = taskSettings?.drawing || {}
-  const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : DRAWING_DEFAULTS.gems
-  const cap = Number.isFinite(s.daily_cap) ? Math.max(0, Math.min(50, Math.trunc(s.daily_cap))) : DRAWING_DEFAULTS.dailyCap
-  return { gems, dailyCap: cap, active: s.active !== false }
+  return taskSettingsFor(taskSettings, 'drawing', DRAWING_DEFAULTS)
 }
 
 // How many rewarded drawings this child already has today, in THEIR timezone.
@@ -4837,7 +4868,7 @@ app.get('/api/drawings', async (req, res) => {
 // the server to generate the questions and hold the answers, which is a larger change.
 // What it does fix is everything that follows from the score: the amount, the cap, the
 // settings and the write are all decided here now.
-const MATH_DEFAULTS = { gems: 30, dailyCap: TASK_DEFAULT_CAPS.math }
+const MATH_DEFAULTS = { gems: TASK_DEFAULT_GEMS.math, dailyCap: TASK_DEFAULT_CAPS.math }
 
 // What a rung practised, back when a rung practised one thing. Kept only so sessions posted
 // by a client that has not reloaded yet still record something sensible; the level no longer
@@ -4854,7 +4885,7 @@ const TOPIC_FOR_LEVEL = {
 // that ignored what the parent had configured, had no daily limit, told the parent nothing,
 // and wrote the ledger from the browser. It earns the same treatment, so the pieces below
 // are shared rather than copied — one settings reader and one cap counter for both.
-const READING_DEFAULTS = { gems: 30, dailyCap: TASK_DEFAULT_CAPS.reading }
+const READING_DEFAULTS = { gems: TASK_DEFAULT_GEMS.reading, dailyCap: TASK_DEFAULT_CAPS.reading }
 
 // What this session was about, for the column the parent's chat agent reads. A session now
 // spans several curriculum topics instead of drilling one, so it lists them — "Year 5:
@@ -5866,6 +5897,20 @@ app.post('/api/submissions/:id/approve', (req, res) => paintingActionRoute(req, 
 app.post('/api/submissions/:id/reject', (req, res) => paintingActionRoute(req, res,
   (id, parentId) => rejectSubmissionTool(id, parentId)))
 app.post('/api/paintings/:id/reject', (req, res) => paintingActionRoute(req, res, rejectPaintingById))
+
+// Homework approve/reject from the dashboard. Same route shape, same JWT and
+// ownership check, and — the reason these exist — the same server-side reward
+// decision the Telegram approval has always used. The dashboard used to write
+// submissions.gems_earned and the bt_ledger row straight from the browser with
+// a number it picked itself, so it paid the full amount past the daily limit
+// and would have paid whatever a tampered client asked for.
+// The amount is deliberately not taken from the request: the dashboard's approve
+// button means "yes", not "yes, for N gems", so the third argument is left off
+// and the configured reward (minus the cap) decides.
+app.post('/api/submissions/:id/approve', (req, res) =>
+  parentDecisionRoute(req, res, (id, parentId) => approveSubmissionTool(id, parentId)))
+app.post('/api/submissions/:id/reject', (req, res) =>
+  parentDecisionRoute(req, res, (id, parentId) => rejectSubmissionTool(id, parentId)))
 
 // Dashboard's "gift gems" button — same tool the Telegram agent calls, same
 // ownership check, just reached with a parent JWT instead of a chat-scoped id.

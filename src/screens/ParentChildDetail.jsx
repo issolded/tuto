@@ -782,6 +782,7 @@ export default function ParentChildDetail() {
   const [claims, setClaims] = useState([])
   const [suggestions, setSuggestions] = useState([])
   const [justApproved, setJustApproved] = useState(false)
+  const [capNotice, setCapNotice] = useState('')  // "approved, but the daily limit was already spent"
   const [lightbox, setLightbox] = useState(null) // { urls, index } — full-size photo viewer
   const [photoMap, setPhotoMap] = useState({})   // submissionId → signed URLs
   const [showPinModal,    setShowPinModal]    = useState(false)
@@ -947,35 +948,44 @@ export default function ParentChildDetail() {
   const pendingContributionGroups = groupByDate(pendingContributions, contributionsTodayDate)
   const pendingClaims = (claims || []).filter(c => c.status === 'pending')
 
-  // Through the server, which checks this parent owns the child, pays the configured amount and
-  // applies homework's daily cap. This wrote the submission and the ledger row from the browser,
-  // with an amount the page chose, so none of that applied to the button parents use most.
-  async function submissionAction(subId, action) {
+  // Homework decisions go through the server, like drawings do. The browser used
+  // to flip the status and write the bt_ledger row itself with a gem figure it
+  // chose — which meant it paid the full amount however many the child had
+  // already been rewarded for today, and believed whatever a tampered client
+  // sent. The button says "yes"; the amount, the daily limit and the ledger are
+  // the server's to decide.
+  async function submissionDecision(sub, verb) {
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
-    if (!token) return null
+    if (!token) return
+    const optimistic = verb === 'approve' ? 'approved' : 'rejected'
+    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: optimistic } : s))
     try {
-      const r = await fetch(`${SERVER}/api/submissions/${subId}/${action}`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      const r = await fetch(`${SERVER}/api/submissions/${sub.id}/${verb}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
       })
-      return r.ok ? await r.json() : null
-    } catch { return null }
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'failed')
+      const earnedGems = j.gems ?? 0
+      setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: optimistic, gems_earned: earnedGems } : s))
+      if (earnedGems > 0) {
+        setGems(prev => (prev ?? 0) + earnedGems)
+        setJustApproved(true)
+        setTimeout(() => setJustApproved(false), 2200)
+      } else if (verb === 'approve' && j.capped) {
+        // Approved, but the day's limit was already spent. Without this the card
+        // just disappears and the gem total doesn't move — which reads as a bug.
+        setCapNotice(`Today's limit of ${j.dailyCap} was already used up, so this one was approved without gems.`)
+        setTimeout(() => setCapNotice(''), 7000)
+      }
+    } catch {
+      setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'pending' } : s))
+    }
   }
 
-  async function handleApprove(sub) {
-    const r = await submissionAction(sub.id, 'approve')
-    if (!r) return
-    const earnedGems = r.gems ?? 0
-    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved', gems_earned: earnedGems } : s))
-    setGems(prev => (prev ?? 0) + earnedGems)
-    setJustApproved(true)
-    setTimeout(() => setJustApproved(false), 2200)
-  }
-
-  async function handleReject(subId) {
-    if (!(await submissionAction(subId, 'reject'))) return
-    setSubmissions(prev => prev.map(s => s.id === subId ? { ...s, status: 'rejected' } : s))
-  }
+  const handleApprove = (sub) => submissionDecision(sub, 'approve')
+  const handleReject = (subId) => submissionDecision({ id: subId }, 'reject')
 
   // Diary approvals never touch bt_ledger — gems for contributions are
   // computed separately in the end-of-month review, by design.
@@ -1106,6 +1116,13 @@ export default function ParentChildDetail() {
           <SectionHead>
             ⏳ Pending{pending.length > 0 ? ` (${pending.length})` : ''}
           </SectionHead>
+          {capNotice && (
+            <Card pad={12} style={{ marginBottom: 10, background: PC.peachBg, border: 'none' }}>
+              <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.45 }}>
+                🌙 {capNotice} You can raise the limit in Task settings.
+              </div>
+            </Card>
+          )}
           {pending.length === 0 ? (
             <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>
               All caught up! ✅
