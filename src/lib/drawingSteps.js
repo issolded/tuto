@@ -19,16 +19,22 @@
 // Adding a language: another field beside en/tr, same as src/lib/i18n.js.
 
 export const DRAWING_STEPS = {
-  // Audited against drawings/robot/*.webp. The old step 5 was removed: the ear knobs and knee
-  // circles drawn in step 4 vanished in it and came back in step 6, so it belonged to a
-  // different version of this robot. Remaining steps renumbered 1-6.
+  // Audited against drawings/robot/*.webp — SEVEN steps, which this list did not have.
+  //
+  // A panel was dropped from this set once, the folder was renumbered, and storage was
+  // corrected; the repo's copy of the folder was not. So the words here described the local
+  // six panels while the app served the seven in storage, and from step 5 on every child saw
+  // a tip belonging to the panel before the one on screen. The folder is now a copy of what
+  // storage actually serves, and step 6 — the bolts and knees, which no line described — has
+  // its own words.
   robot: {
     en: [
       'Draw a rectangle for the head.',
       'Add a square below it for the body.',
       'Add a short neck, curved arms with round hands, and two legs with feet.',
       'Put an antenna on top, two big round eyes, and little ears on each side.',
-      'Draw a screen and two buttons on the chest, then add fingers and bolts.',
+      'Draw a screen and two buttons on the chest, and give both hands fingers.',
+      'Add a bolt at each corner of the head and body, a knob on each ear, three lines under the screen, and a circle at each knee.',
       'Colour the eyes in, draw a line across the screen, and add joint lines to the arms and legs.',
     ],
     tr: [
@@ -36,7 +42,8 @@ export const DRAWING_STEPS = {
       'Altına gövde için bir kare ekle.',
       'Kısa bir boyun, yuvarlak elli kavisli kollar ve ayaklı iki bacak ekle.',
       'Tepesine anten, iki büyük yuvarlak göz ve iki yanına küçük kulak koy.',
-      'Göğsüne bir ekran ve iki düğme çiz, sonra parmakları ve vidaları ekle.',
+      'Göğsüne bir ekran ve iki düğme çiz, iki ele de parmakları ekle.',
+      'Kafanın ve gövdenin her köşesine birer vida, kulaklara birer topuz, ekranın altına üç çizgi, her dizine de birer daire ekle.',
       'Gözleri boya, ekranın üstüne bir çizgi çek, kollara ve bacaklara eklem çizgileri ekle.',
     ],
   },
