@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
-import { gemHint, TASK_DEFAULTS } from '../lib/taskDefaults'
+import { gemHint, CAP_RANGE, TASK_DEFAULTS } from '../lib/taskDefaults'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
   Btn, Card, Field, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
@@ -92,6 +92,38 @@ function ProgressBar({ step, total = 10 }) {
   )
 }
 
+// Step 3's per-day dial, one per chosen activity. It lives OUTSIDE the tile's <button> — a
+// button inside a button is invalid HTML, and every tap on − or + would toggle the tile off —
+// so the grid cell is a wrapper and the tile and this sit inside it.
+function CapStepper({ value, onChange, tint, disabled }) {
+  const btn = {
+    width: 26, height: 26, borderRadius: 9, border: `1.5px solid ${PC.line}`, background: '#fff',
+    cursor: disabled ? 'default' : 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 15,
+    color: PC.inkSoft, lineHeight: 1, padding: 0,
+  }
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
+      marginTop: 8, padding: '6px 9px', background: '#fff',
+      border: `1.5px solid ${PC.line}`, borderRadius: 14,
+      opacity: disabled ? 0.45 : 1, transition: 'opacity .16s',
+    }}>
+      <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkSoft, minWidth: 0 }}>
+        Per day
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <button type="button" disabled={disabled} style={btn}
+          onClick={() => onChange(Math.max(CAP_RANGE.min, value - 1))}>−</button>
+        <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: tint, minWidth: 14, textAlign: 'center' }}>
+          {value}
+        </span>
+        <button type="button" disabled={disabled} style={btn}
+          onClick={() => onChange(Math.min(CAP_RANGE.max, value + 1))}>+</button>
+      </div>
+    </div>
+  )
+}
+
 export default function ParentOnboarding() {
   const nav = useNavigate()
 
@@ -103,6 +135,12 @@ export default function ParentOnboarding() {
   // who speaks only Turkish got an English app with English questions.
   const [childLang,       setChildLang]       = useState('en')
   const [tasks,           setTasks]           = useState({ reading: true, math: true, writing: true, homework: true, drawing: true })
+  // How many of each a day earn gems. Set here rather than left to a default the parent meets
+  // later by surprise — the limit applies from the child's very first day, so it is chosen on
+  // the same screen as the activities. Changeable afterwards in Task settings or by asking Tuto.
+  const [caps,            setCaps]            = useState(
+    Object.fromEntries(Object.entries(TASK_DEFAULTS).map(([k, v]) => [k, v.daily_cap]))
+  )
   const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
   const [notifChannel,    setNotifChannel]    = useState(null)
   const [waCode,          setWaCode]          = useState(null)
@@ -242,7 +280,7 @@ export default function ParentOnboarding() {
         .insert({
           parent_id: uid.id, name: childName.trim(), age, pin_hash, language: childLang,
           task_settings: Object.fromEntries(
-            Object.keys(tasks).map(k => [k, { gems: TASK_DEFAULTS[k].gems, active: !!tasks[k] }])
+            Object.keys(tasks).map(k => [k, { gems: TASK_DEFAULTS[k].gems, active: !!tasks[k], daily_cap: caps[k] }])
           ),
         })
         .select()
@@ -379,7 +417,7 @@ export default function ParentOnboarding() {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div>
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 25, color: PC.ink, lineHeight: 1.25, letterSpacing: '-.4px' }}>Where will {childName} grow? 🌱</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: 7, lineHeight: 1.5 }}>Choose the activities that earn Gems. You can change these anytime.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: 7, lineHeight: 1.5 }}>Choose the activities that earn Gems, and how many a day count. You can change these anytime.</div>
             </div>
 
             {/* minmax(0, 1fr) rather than 1fr: a grid track's implicit min-width is auto, so it
@@ -391,8 +429,9 @@ export default function ParentOnboarding() {
               {STEP3_TASKS.map(t => {
                 const on = !!tasks[t.key]
                 return (
-                  <button key={t.key} className="tc-press tc-tap" onClick={() => setTasks(s => ({ ...s, [t.key]: !s[t.key] }))} style={{
-                    gridColumn: t.wide ? '1 / -1' : 'auto',
+                  <div key={t.key} style={{ gridColumn: t.wide ? '1 / -1' : 'auto', minWidth: 0 }}>
+                  <button className="tc-press tc-tap" onClick={() => setTasks(s => ({ ...s, [t.key]: !s[t.key] }))} style={{
+                    width: '100%',
                     position: 'relative', background: '#fff',
                     border: `2px solid ${on ? t.tint : PC.line}`,
                     borderRadius: 22, padding: '14px 14px 15px', cursor: 'pointer', textAlign: 'left',
@@ -422,6 +461,13 @@ export default function ParentOnboarding() {
                       fontFamily: FONT, fontSize: 12, fontWeight: 800, lineHeight: 1.35, maxWidth: '100%',
                     }}>💎 {gemHint(t.key)}</span>
                   </button>
+                  <CapStepper
+                    value={caps[t.key]}
+                    onChange={v => setCaps(s => ({ ...s, [t.key]: v }))}
+                    tint={t.tint}
+                    disabled={!on}
+                  />
+                  </div>
                 )
               })}
 

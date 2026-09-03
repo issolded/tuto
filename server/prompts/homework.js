@@ -122,7 +122,9 @@ export function filterForParent(obs) {
 // it — a message that asks "shall we approve?" about something already approved reads as Tuto
 // not knowing what it has done. `awardedBecause` separates the two ways that happens, because
 // "you told me not to ask" is the wrong sentence for a parent who is simply out for the evening.
-export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems, awarded, awardedBecause }) {
+// `capped` means the day's homework limit was already spent, so the approval paid nothing — an
+// awarded figure of 0 must never be read out as "0 gem eklendi"; the reason is the message.
+export function homeworkCaptionPrompt({ filteredObservation, childName, tone, language, photoCount, staleNote, gems, awarded, awardedBecause, capped, dailyCap }) {
   const lang = languageName(language)
   const toneLine = tone
     ? `Ebeveynin tercih ettiği ton: "${tone}". Bu tona uy.\n`
@@ -148,7 +150,13 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
     (awarded != null
       ? `- ${awardedBecause === 'autopilot'
             ? 'Ebeveyn şu an otomatik pilotta — bir süreliğine onayları sen veriyorsun'
-            : 'Ebeveyn ödevleri sormadan geçmeni istemiş'}; bu ödev onaylandı ve ${awarded} gem eklendi. ` +
+            : 'Ebeveyn ödevleri sormadan geçmeni istemiş'}; bu ödev onaylandı${
+            capped
+              ? ` ama günlük ödev sınırı (günde ${dailyCap ?? 'belirlenen sayıda'} ödev) bugün zaten dolmuştu, ` +
+                `bu yüzden gem eklenmedi. Ödev kaydedildi ve ${childName} yaptığı işi kaybetmedi — bunu suçlayıcı ` +
+                `olmayan, sakin bir cümleyle söyle. "0 gem" deme.`
+              : ` ve ${awarded} gem eklendi.`
+          } ` +
         `Bunu doğal biçimde belirt. ONAY SORUSU SORMA — sorulacak bir şey kalmadı.\n`
       : `- MESAJI MUTLAKA ebeveynin kararını isteyen doğal bir soruyla bitir. Ödül, ebeveyn onaylayana kadar ` +
         `askıda bekliyor — ebeveyn bir karar beklendiğini anlamazsa gönderi askıda kalır ve çocuk ödülünü hiç almaz. ` +
@@ -164,12 +172,16 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
 // notification must NEVER be lost, so this is deterministic and dependency-free.
 // Ends with the approval question too — the reward stays pending until the
 // parent decides, so no path may leave that unasked.
-export function fallbackCaption({ childName, language, staleNote, awarded }) {
+export function fallbackCaption({ childName, language, staleNote, awarded, capped }) {
   const base = language === 'en'
     ? `${childName} just sent a photo of their homework. 🌱 Take a look whenever you can.`
     : `${childName} az önce ödevinin fotoğrafını gönderdi. 🌱 Fırsatın olduğunda bir göz atabilirsin.`
   const close = awarded != null
-    ? (language === 'en' ? `I approved it for you and added ${awarded} gems.` : `Senin yerine onayladım, ${awarded} gem ekledim.`)
+    ? (capped
+        ? (language === 'en'
+            ? "I approved it for you. Today's homework limit was already used up, so this one didn't add gems — it's still saved."
+            : 'Senin yerine onayladım. Bugünkü ödev sınırı dolmuştu, bu yüzden gem eklenmedi — ödev yine de kaydedildi.')
+        : (language === 'en' ? `I approved it for you and added ${awarded} gems.` : `Senin yerine onayladım, ${awarded} gem ekledim.`))
     : (language === 'en' ? 'Shall we approve it?' : 'Onaylıyor muyuz?')
   return [base, staleNote, close].filter(Boolean).join(' ')
 }

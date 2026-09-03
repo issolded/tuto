@@ -66,8 +66,9 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - [ ] Sınıra takılan seanslar gem history'de görünmüyor: günlük cap aşıldığında `gems = 0` ve
       ledger satırı `if (gems > 0)` yüzünden hiç yazılmıyor; GemsScreen yalnızca `bt_ledger`
       okuduğu için çocuk ana ekranda 4 seans, geçmişte 3 kayıt görüyor. Matematik, okuma ve
-      story'de aynı desen. Seans bitiş ekranı durumu zaten söylüyor (🌙) — eksik olan kalıcı
-      kayıt. Seçenekler: cap'e takılınca 0 tutarlı bir ledger satırı yazmak (tek insert, gem
+      story'de aynı desen; ödev de artık capli olduğu için (2026-09-03) aynı boşluğa düşüyor:
+      sınırda onaylanan ödev `gems_earned = 0` yazıyor ama ledger satırı yok. Seans bitiş ekranı
+      durumu zaten söylüyor (🌙) — eksik olan kalıcı kayıt. Seçenekler: cap'e takılınca 0 tutarlı bir ledger satırı yazmak (tek insert, gem
       sayan yerler zaten `amount > 0` filtreliyor), ya da history'nin capped seansları seans
       tablolarından birleştirmesi. Kayıt "0 gem" değil "sınıra takıldı" diye okunmalı.
       (2026-09-01, Ada'nın 4. matematiği.)
@@ -96,6 +97,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       ölü env değişkeni silindi, proxy'ye child-id + rate limit kapısı kondu. Kalan: çocuğun
       Supabase session'ı yok, o yüzden kapı "gerçek child UUID + kota" seviyesinde; tam auth
       çocuk session'ı ister.
+- [x] Günlük gem sınırı artık her aktivitede ve her üç yerde ayarlanabiliyor: onboarding step 3
+      (tile başına dial), Task settings (her kart) ve Telegram'da `update_task_reward` (`gems` ve
+      `daily_cap` ayrı ayrı, ikisi de opsiyonel). Sunucuda tek kaynak `TASK_DEFAULT_CAPS`
+      (reading/math/writing/homework 3, drawing 2). Sınırı olmayan tek iş ödevdi; artık onay
+      anında capli — özellikle otomatik pilotta önemliydi, orada onayı sunucu veriyor. Bunun için
+      ödev onay/red dashboard'dan sunucuya taşındı (`/api/submissions/:id/approve|reject`,
+      ebeveyn JWT'si + sahiplik): tarayıcı artık `bt_ledger`'a kendi seçtiği tutarı yazmıyor.
+      (2026-09-03)
 - [ ] Stories generator otomasyonu: job hazır (jobs/generateStoryIdeas.js) ama henüz
       zamanlanmadı. Şimdilik elle `node jobs/generateStoryIdeas.js`. Otomatikleştirince
       ya Railway ayrı cron servisi ya da in-process node-cron (job'ı exit etmeyen

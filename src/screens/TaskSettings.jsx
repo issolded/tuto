@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, PCSS, TopBar, Card, Toggle, TaskIcon } from '../lib/parentUI'
-import { TASK_DEFAULTS } from '../lib/taskDefaults'
+import { CAP_RANGE, TASK_DEFAULTS, capNote } from '../lib/taskDefaults'
 
 const TASKS = [
   { key: 'reading', label: 'My Books' },
@@ -13,13 +13,14 @@ const TASKS = [
   { key: 'drawing', label: 'My Drawings' },
 ]
 
-// My Drawings rewards instantly, with no approval step — so it is the one task
-// with a daily cap. The cap is enforced on the SERVER; this is just the dial.
-const CAPPED_TASKS = { drawing: { min: 1, max: 10 } }
-
+// Every task has a daily cap and every one of them is set here. The dial was
+// drawing-only for a while, on the reasoning that drawing rewards instantly with
+// no approval step — but maths, reading and writing pay out unapproved too, and
+// the server was already holding all four to a limit the parent never chose and
+// could not see. The cap is enforced on the SERVER; this is just the dial.
 const DEFAULT_SETTINGS = Object.fromEntries(
   Object.entries(TASK_DEFAULTS).map(([key, { gems, daily_cap }]) => [
-    key, { active: true, gems, ...(daily_cap ? { daily_cap } : {}) },
+    key, { active: true, gems, daily_cap },
   ])
 )
 
@@ -134,11 +135,14 @@ export default function TaskSettings() {
         </Card>
 
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, marginBottom: 6, padding: '0 2px' }}>
-          Toggle tasks on/off and adjust gem rewards.
+          Toggle tasks on/off, adjust gem rewards, and set how many a day earn gems.
         </div>
 
         {TASKS.map(({ key, label }) => {
           const s = settings[key]
+          // A child row written before this screen existed has gems but no cap;
+          // fall back to the same default the server would use, not to a literal.
+          const cap = s.daily_cap ?? TASK_DEFAULTS[key].daily_cap
           const accent = PC[key] || PC.teal
           const pct = ((s.gems - 5) / (100 - 5)) * 100
           const trackBg = `linear-gradient(to right, ${accent} ${pct}%, ${PC.line} ${pct}%)`
@@ -181,23 +185,23 @@ export default function TaskSettings() {
                 </div>
               )}
 
-              {/* daily cap — only for tasks that reward without approval */}
-              {s.active && CAPPED_TASKS[key] && (
+              {/* daily cap */}
+              {s.active && (
                 <div style={{ marginTop: 14, borderTop: `1px solid ${PC.line}`, paddingTop: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>Rewarded per day</div>
                       <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 2 }}>
-                        Extra drawings are still saved, just without gems.
+                        {capNote(key)}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button onClick={() => setDailyCap(key, Math.max(CAPPED_TASKS[key].min, (s.daily_cap ?? 2) - 1))}
+                      <button onClick={() => setDailyCap(key, Math.max(CAP_RANGE.min, cap - 1))}
                         style={capBtn(PC)}>−</button>
                       <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: accent, minWidth: 18, textAlign: 'center' }}>
-                        {s.daily_cap ?? 2}
+                        {cap}
                       </span>
-                      <button onClick={() => setDailyCap(key, Math.min(CAPPED_TASKS[key].max, (s.daily_cap ?? 2) + 1))}
+                      <button onClick={() => setDailyCap(key, Math.min(CAP_RANGE.max, cap + 1))}
                         style={capBtn(PC)}>+</button>
                     </div>
                   </div>
