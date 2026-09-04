@@ -97,6 +97,11 @@ export default function GemsScreen() {
             {ledger.map((row, i) => {
               const key = row.reason || row.source || ''
               const isPositive = (row.amount || 0) >= 0
+              // A session that hit the day's limit. It earned nothing, but it happened —
+              // and the child was already told so at the end of it (🌙 "Bugünlük tamam").
+              // Shown as that same state rather than as "+0", which a seven-year-old reads
+              // as having failed at something.
+              const capped = !!row.capped
               // Free-text reasons (a reward's own name, a book title, a
               // parent's optional note on a deduction) aren't in the map by
               // design — show them as-is instead of flattening every one of
@@ -110,23 +115,28 @@ export default function GemsScreen() {
               const labelKey = TASK_KEYS[key] || REASON_KEYS[key]
               const label = labelKey ? t(labelKey, lang) : (key || t('gem_task', lang))
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
+              const day = row.created_at ? formatDate(row.created_at, lang) : ''
               return (
                 <div
                   key={row.id ?? i}
                   style={{ background: 'white', borderRadius: 18, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', animation: `fadeUp 0.35s ease ${Math.min(i, 8) * 0.05}s both` }}
                 >
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: capped ? '#F3EFE6' : '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, opacity: capped ? 0.75 : 1 }}>
                     {emoji}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: '#2D2D2D' }}>{label}</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#B0A090', marginTop: 2 }}>
-                      {row.created_at ? formatDate(row.created_at, lang) : ''}
+                      {capped ? `${day} · ${t('gems_capped', lang)}` : day}
                     </div>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: isPositive ? '#2EC486' : '#FF6B35', fontFamily: "'TrRound', 'Baloo 2', cursive", whiteSpace: 'nowrap' }}>
-                    {isPositive ? '+' : ''}{row.amount} 💎
-                  </div>
+                  {capped ? (
+                    <div style={{ fontSize: 20, flexShrink: 0 }} aria-label={t('gems_capped', lang)}>🌙</div>
+                  ) : (
+                    <div style={{ fontSize: 16, fontWeight: 900, color: isPositive ? '#2EC486' : '#FF6B35', fontFamily: "'TrRound', 'Baloo 2', cursive", whiteSpace: 'nowrap' }}>
+                      {isPositive ? '+' : ''}{row.amount} 💎
+                    </div>
+                  )}
                 </div>
               )
             })}

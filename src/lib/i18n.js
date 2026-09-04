@@ -310,7 +310,12 @@ const STRINGS = {
   tree_waiting:       { en: 'Waiting',       tr: 'Bekliyor' },
 
   // ── GemsScreen ──────────────────────────────────────────────────────────────
-  gems_history:       { en: 'History',       tr: 'Geçmiş' },
+  // The list is everything the child did, not only what it paid — a session that hit the
+  // day's limit is a line here too. "History" named a gem ledger; this names the days.
+  gems_history:       { en: 'What I did',    tr: 'Neler yaptım' },
+  // Same words the maths and reading end screens use when the limit is reached, so the
+  // history repeats what the child was already told rather than introducing a new idea.
+  gems_capped:        { en: 'All done today', tr: 'Bugünlük tamam' },
   gems_none_title:    { en: 'No gems yet!',  tr: 'Henüz gem yok!' },
   gems_none_body:     { en: 'Complete a task to earn your first gems! ⭐', tr: 'İlk gem’lerini kazanmak için bir görev tamamla! ⭐' },
   gems_today:         { en: 'Today',         tr: 'Bugün' },

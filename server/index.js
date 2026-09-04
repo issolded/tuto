@@ -29,6 +29,40 @@ const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWO
 // as TASK_DEFAULT_GEMS: the two halves deploy independently.
 const TASK_DEFAULT_CAPS = { reading: 3, math: 3, writing: 3, homework: 3, drawing: 2 }
 
+// The one place a finished activity becomes a line in the child's history. Every
+// caller used to write its own `if (gems > 0) insert` — which is exactly why a
+// session that hit the daily limit left no trace at all: the child saw four
+// sessions on the home screen and three rows in their history, and the missing
+// one was the one that needed explaining. A capped session is a row now, amount 0
+// and capped true, so the history can say "hit the limit" where it used to say
+// nothing. Readers are unaffected: they either sum `amount` (a zero changes
+// nothing) or filter `amount > 0` (the cap counters, the autopilot sweep).
+//
+// `capped` marks a session that earned nothing BECAUSE of the limit — not any
+// zero. A parent approving homework for 0 gems on purpose is a different thing
+// and must not read as the limit being spent.
+async function recordGems(childId, amount, reason, { capped = false } = {}) {
+  // A zero that isn't the limit is nobody's history: a parent approving homework for
+  // nothing has said their piece to the child directly, and a row saying "+0" would
+  // only confuse it. Rows exist for sessions that paid, and for sessions the limit
+  // stopped from paying.
+  if (!amount && !capped) return { ok: true, skipped: true }
+
+  const row = { child_id: childId, amount, reason }
+  let { error } = await supabase.from('bt_ledger').insert({ ...row, capped })
+
+  // Column not migrated yet: never let that cost a child their gems. The paid row
+  // is rewritten without the flag; a capped row is skipped instead, because
+  // without the flag it would show up as a bare "+0" — worse than the gap it fills.
+  if (error && /capped/i.test(error.message || '')) {
+    console.warn('[LEDGER] capped column missing — RUN THE MIGRATION (server/migrations/2026-09-04_ledger_capped.sql)')
+    if (capped) return { ok: false, skipped: true, error }
+    ;({ error } = await supabase.from('bt_ledger').insert(row))
+  }
+  if (error) console.error(`[LEDGER] ${reason} insert failed for ${childId}: ${error.message}`)
+  return { ok: !error, error }
+}
+
 // Scored tasks: the configured figure is the most a session can pay, not what it will pay.
 const VARIABLE_TASKS = new Set(['reading', 'math', 'writing'])
 
@@ -1963,15 +1997,11 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
     .eq('status', 'pending') // guard against a concurrent approval racing us
   if (updErr) return { success: false, error: updErr.message }
 
-  if (awarded > 0) {
-    const { error: ledErr } = await supabase
-      .from('bt_ledger')
-      .insert({ child_id: sub.child_id, amount: awarded, reason: sub.task_type || 'task' })
-    if (ledErr) {
-      console.error(`[SUBMISSION] ledger insert failed for ${sub.id}: ${ledErr.message}`)
-      return { success: false, error: 'reward could not be recorded' }
-    }
-  }
+  // A parent who named an amount is paid it even past the limit, so the row is only
+  // marked capped when the limit is what made it zero.
+  const led = await recordGems(sub.child_id, awarded, sub.task_type || 'task',
+    { capped: capped && awarded === 0 })
+  if (awarded > 0 && !led.ok) return { success: false, error: 'reward could not be recorded' }
 
   return { success: true, id: sub.id, childName: child.name, taskType: sub.task_type, gems: awarded,
     capped, dailyCap: capSettings.dailyCap }
@@ -3489,8 +3519,8 @@ app.post('/api/children/:childId/stories', async (req, res) => {
         // both land in the middle, which is the honest place for each of them.
         gemsAwarded = Math.round(settings.gems * rewardScale(q) * effortScale(words, kid?.age))
       }
+      await recordGems(childId, gemsAwarded, 'story', { capped })
       if (gemsAwarded > 0) {
-        await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
         await supabase.from('stories').update({ gems_earned: gemsAwarded }).eq('id', story.id)
       }
     }
@@ -5062,14 +5092,8 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       }
     }
 
-    if (gems > 0) {
-      const { error: ledErr } = await supabase
-        .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'math' })
-      if (ledErr) {
-        console.error(`[MATH] ledger insert failed for ${childId}: ${ledErr.message}`)
-        gems = 0
-      }
-    }
+    const mathLed = await recordGems(childId, gems, 'math', { capped })
+    if (gems > 0 && !mathLed.ok) gems = 0
 
     // Whether every rewarded session is announced or only the day's first. This was hardcoded
     // to the first — three in an afternoon says no more than one does — but a parent who did a
@@ -5174,14 +5198,8 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
     }).select('id').maybeSingle()
     if (subErr) return res.status(500).json({ error: subErr.message })
 
-    if (gems > 0) {
-      const { error: ledErr } = await supabase
-        .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'reading' })
-      if (ledErr) {
-        console.error(`[READING] ledger insert failed for ${childId}: ${ledErr.message}`)
-        gems = 0
-      }
-    }
+    const readLed = await recordGems(childId, gems, 'reading', { capped })
+    if (gems > 0 && !readLed.ok) gems = 0
 
     // current_page used to be incremented by one here, once per session, which made it a count
     // of sittings wearing the name of a page. The page now comes from the session itself —
@@ -5451,15 +5469,10 @@ async function approvePaintingById(paintingId, parentId) {
     .eq('status', 'pending')  // guard against a concurrent approval racing us
   if (updErr) return { success: false, error: updErr.message }
 
-  if (awarded > 0) {
-    const { error: ledErr } = await supabase
-      .from('bt_ledger')
-      .insert({ child_id: child.id, amount: awarded, reason: 'drawing' })
-    if (ledErr) {
-      console.error(`[DRAWING] ledger insert failed for ${painting.id}: ${ledErr.message}`)
-      await supabase.from('paintings').update({ reward_amount: 0 }).eq('id', painting.id)
-      return { success: false, error: 'reward could not be recorded' }
-    }
+  const led = await recordGems(child.id, awarded, 'drawing', { capped })
+  if (awarded > 0 && !led.ok) {
+    await supabase.from('paintings').update({ reward_amount: 0 }).eq('id', painting.id)
+    return { success: false, error: 'reward could not be recorded' }
   }
 
   return { success: true, id: painting.id, childName: child.name, gems: awarded, capped }
