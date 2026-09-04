@@ -2578,6 +2578,25 @@ async function handleMessage(parentId, replyCb, text) {
         `recurrence system yet, so that part of what the parent said is simply dropped, not stored. This ` +
         `stripping is ONLY for the label argument you pass into add_card — never apply it when reading, ` +
         `listing, or counting existing pending contributions elsewhere in this prompt.\n\n` +
+        `GÜNLÜK SINIRA TAKILAN SEANSLAR:\n` +
+        `- Her aktivitenin günlük bir sınırı var; taskRewards'ta her tip için hem tutar hem "günde kaç tanesi ` +
+        `gem kazandırır" yazıyor. Sınırdan sonraki seans yine YAPILDI ve kaydedildi, sadece gem kazandırmadı. ` +
+        `gemHistory'de capped=true olan satır tam olarak budur. Bunu "hiçbir şey yapmamış" ya da "0 gem ` +
+        `kazanmış" diye aktarma — çocuk çalışmış, ödül gitmemiş.\n` +
+        `- Bu durumu KENDİLİĞİNDEN fırsata çevirme: "istersen gem ekleyeyim mi", "sınırı artıralım mı" diye ` +
+        `ÖNERME. Sınırı ebeveyn koydu; her takılışta delmeyi teklif etmek sınırı anlamsızlaştırır ve seni ` +
+        `ısrarcı bir satıcıya çevirir. Ebeveyn sormadıkça sadece ne olduğunu söyle.\n` +
+        `- Ebeveyn KENDİSİ o seans için gem vermek isterse ("verelim buna da gem", "bu sayılsın"), bunun iki ` +
+        `ayrı şey olduğunu BİR KEZ sor: bu seferlik mi olsun, yoksa günlük sınır kalıcı olarak mı değişsin. ` +
+        `Sorarken mevcut sınırı söyle — örn. "şu an günde 3 matematiğe gem veriyoruz; bunu kalıcı olarak 4 ` +
+        `yapayım mı, yoksa sadece bugünküne mi ekleyeyim?". Tek soru, iki seçenek.\n` +
+        `- "Bu seferlik" → gift_gems. Tutar için o aktivitenin taskRewards'taki gem değeri makul bir ` +
+        `varsayılandır; ebeveyn bir sayı söylediyse onunkini kullan. note olarak seansı yaz (örn. "matematik ` +
+        `— günlük sınırdan sonra"). Bu durumda "açıklama ekleyeyim mi" diye AYRICA sorma, sebep zaten belli.\n` +
+        `- "Kalıcı olsun" → update_task_reward'ı SADECE daily_cap ile çağır, gems'e dokunma.\n` +
+        `- Kalıcı değişiklik geçmişe işlemez: sınırı artırmak bugün takılmış olan seansa gem EKLEMEZ. Ebeveyn ` +
+        `ikisini birden istiyorsa (hem bugünküne ver hem bundan sonrası için artır) iki ayrı çağrı gerekir — ` +
+        `ikisini de yap ve ikisini de yaptığını söyle. Tek çağrıyla ikisini yaptığını ASLA ima etme.\n\n` +
         `General guidelines:\n` +
         `- Respond in the SAME LANGUAGE as the parent's message\n` +
         `- Be conversational and warm, like a trusted friend who knows the kids\n` +
@@ -3509,6 +3528,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
     const firstCompletion = status === 'completed' && prevStatus !== 'completed'
     let gemsAwarded = 0
     let capped = false
+    let writingCap = null      // the limit that stopped it, for the sentence in the notification
     if (firstCompletion) {
       const { data: kid } = await supabase
         .from('children').select('age, task_settings').eq('id', childId).maybeSingle()
@@ -3523,6 +3543,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
 
       if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
         capped = true
+        if (settings.active) writingCap = settings.dailyCap
       } else {
         // Quality and effort multiply: a long story told poorly and a good story of two lines
         // both land in the middle, which is the honest place for each of them.
@@ -3541,6 +3562,13 @@ app.post('/api/children/:childId/stories', async (req, res) => {
           .from('children').select('name, parent_id').eq('id', childId).maybeSingle()
         if (child) {
           const storyText = corrected_text || transcribed_text || ''
+          // A story written past the day's limit is still shared — it is the story the parent
+          // wants to read, not the gems. But the message must not leave them assuming it earned
+          // something, so it carries the reason in one line. No offer to add gems: the limit is
+          // the parent's, and Tuto does not talk them out of it (see the chat prompt).
+          const capLine = capped && writingCap != null
+            ? `\n\nBugünkü hikaye sınırı (günde ${writingCap}) dolmuştu, bu yüzden gem eklenmedi. 🌙`
+            : ''
           let screening
           try { screening = await screenChildInput(storyText, child.age ?? 7) } catch { /* skip */ }
 
@@ -3549,7 +3577,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Screening failed — unknown safety status, stay calm (fail-closed)
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'attention', child: child.name, detail: {
                 tr: 'yazdığı hikayeye göz atmanda fayda olabilir',
                 en: 'the story they wrote may be worth a look',
@@ -3559,7 +3587,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Clean story — joyful share
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'activity', child: child.name, detail: {
                 tr: `bir hikaye yazdı: "${title || 'Hikaye'}"`,
                 en: `wrote a story: "${title || 'Story'}"`,
@@ -3569,7 +3597,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Inappropriate language — neutral share, no judgment
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'attention', child: child.name, detail: {
                 tr: 'bir hikaye yazdı, okumak istersin diye haber veriyorum',
                 en: 'wrote a story you may want to read yourself',
@@ -5129,6 +5157,26 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
           tr: `matematik, ${questions_correct}/${questions_total} doğru, +${gems} gem`,
           en: `maths, ${questions_correct}/${questions_total} correct, +${gems} gems`,
         } }).catch(() => {})
+    } else if (capped && settings.active && perTask) {
+      // The session that hit the day's limit is told too — a child who sat down for a fourth
+      // round did something, and a parent who hears nothing about it is being told, by silence,
+      // that it never happened. It goes out as an activity, so the same gate decides it: a
+      // parent on notify_level quiet/required never sees it, and one who asked for only the
+      // day's first session doesn't either (a capped session is never the day's first).
+      //
+      // Deliberately NOT an offer. Tuto does not propose gems or a higher limit here — the
+      // parent set that limit, and offering to break it every evening would empty it of
+      // meaning. If the parent asks, the agent knows what to do with it (see the prompt).
+      const language = prefsRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
+      const head = language === 'en'
+        ? `${child.name} did another maths session — ${questions_correct}/${questions_total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`
+        : `${child.name} bir matematik daha yaptı — ${questions_correct}/${questions_total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`
+      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
+        { kind: 'activity', child: child.name, detail: {
+          tr: `matematik, ${questions_correct}/${questions_total} doğru, günlük sınır dolduğu için gem yok`,
+          en: `maths, ${questions_correct}/${questions_total} correct, past the daily limit so no gems`,
+        } }).catch(() => {})
     }
 
     // A cleared focus is announced whatever else happened today. It is not routine progress —
@@ -5241,6 +5289,17 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `okuma${title ? ` — "${title}"` : ''}, sorularda ${correct}/${total}, +${gems} gem`,
         en: `reading${title ? ` — "${title}"` : ''}, ${correct}/${total} on the questions, +${gems} gems`,
+      } }).catch(() => {})
+    } else if (capped && settings.active && parentRow?.prefs?.notify_per_task !== false) {
+      // Same as maths: the session past the limit is reported, never offered a way around.
+      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const title = book_title ? String(book_title).slice(0, 120) : null
+      const msg = language === 'en'
+        ? `${child.name} read some more${title ? ` of "${title}"` : ''} — ${correct}/${total} on the questions. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`
+        : `${child.name} biraz daha okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `okuma${title ? ` — "${title}"` : ''}, günlük sınır dolduğu için gem yok`,
+        en: `reading${title ? ` — "${title}"` : ''}, past the daily limit so no gems`,
       } }).catch(() => {})
     }
 
