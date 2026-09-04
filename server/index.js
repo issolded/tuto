@@ -200,7 +200,7 @@ async function getParentContext(parentId) {
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
       supabase.from('math_progress').select('level, topic, accuracy, level_change, help_used, questions_total, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
-      supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('bt_ledger').select('*').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
@@ -309,7 +309,16 @@ async function getParentContext(parentId) {
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,
-      gemHistory: led.length ? led : `${child.name} has no gem history yet`,
+      // A row with amount 0 is a session that hit the day's limit: it happened, it was saved,
+      // it earned nothing. Handed over bare it reads as "0 gems" and the agent reports a
+      // session as worthless, so the row carries its own explanation. Row ids are dropped —
+      // nothing asks about them and twenty of them is twenty lines of noise.
+      gemHistory: led.length
+        ? led.map(({ id, child_id, capped, ...r }) => capped
+            ? { ...r, capped: true,
+                note: 'this session hit the daily limit for that activity — it was done and saved, it just earned nothing' }
+            : r)
+        : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
       // The CURRENT settings per task type — ground truth for "kaç gem veriyoruz"

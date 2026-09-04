@@ -806,7 +806,11 @@ export default function ParentChildDetail() {
     if (!id) return
     Promise.all([
       supabase.from('children').select('*').eq('id', id).single(),
-      supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', id),
+      // `*` rather than a column list because one of the columns read below (`capped`,
+      // marking a session that happened but earned nothing) may not exist yet: naming a
+      // missing column fails the whole request, and this one request carries the gem
+      // balance. With `*` the field is simply absent until the migration runs.
+      supabase.from('bt_ledger').select('*').eq('child_id', id),
       supabase.from('submissions').select('*').eq('child_id', id).order('created_at', { ascending: false }),
       supabase.from('rewards').select('*').eq('child_id', id).is('archived_at', null).order('bt_cost'),
       // scope=pending ignores period/month entirely — a pending contribution
@@ -920,9 +924,12 @@ export default function ParentChildDetail() {
   // parent adjustments ("chore", "adjustment") that would have vanished, and reading is
   // about to write another. Unknown reasons show under their own name instead.
   // Spends are negative, so they drop out; the welcome bonus is not something the child did.
+  // A session that hit the day's limit belongs here too. It earned nothing, and filtering on
+  // the amount alone hid it — so a parent whose child did four maths sessions was told about
+  // three, which is the one number here they could be misled by.
   const todayDone = (ledger || [])
-    .filter(e => e.amount > 0 && isToday(e.created_at) && e.reason !== 'Welcome bonus')
-    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, task_type: e.reason, gems_earned: e.amount, at: e.created_at }))
+    .filter(e => (e.amount > 0 || e.capped) && isToday(e.created_at) && e.reason !== 'Welcome bonus')
+    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))
 
   // Reading is the one activity that stores what actually happened — the questions it asked,
   // what the child answered, and the pages they photographed. That record was written from
@@ -1184,7 +1191,7 @@ export default function ParentChildDetail() {
                 const qa = Array.isArray(detail?.generated_questions) ? detail.generated_questions : []
                 const pages = photoMap[detail?.id] || []
                 return (
-                  <Card key={sub.id} pad={12} style={{ display: 'flex', flexDirection: 'column', gap: open ? 12 : 0 }}>
+                  <Card key={sub.id} pad={12} style={{ display: 'flex', flexDirection: 'column', gap: open ? 12 : 0, opacity: sub.capped ? 0.85 : 1 }}>
                     <div
                       onClick={detail ? () => setOpenReading(open ? null : sub.id) : undefined}
                       className={detail ? 'tc-tap' : undefined}
@@ -1199,8 +1206,15 @@ export default function ParentChildDetail() {
                             {detail.feedback} · {qa.filter(q => q.was_correct).length}/{qa.length} correct
                           </div>
                         )}
+                        {sub.capped && (
+                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1 }}>
+                            Past today's limit — done and saved, no gems
+                          </div>
+                        )}
                       </div>
-                      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.green }}>+{sub.gems_earned ?? 0} ⭐</div>
+                      {sub.capped
+                        ? <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.inkFaint }}>🌙</div>
+                        : <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.green }}>+{sub.gems_earned ?? 0} ⭐</div>}
                       {detail && (
                         <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkFaint }}>{open ? '▲' : '▼'}</span>
                       )}
@@ -1353,7 +1367,7 @@ export default function ParentChildDetail() {
           <SectionHead>Settings</SectionHead>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { icon: 'gear',  label: 'Task settings',  sub: 'Adjust gem amounts per task', onClick: () => nav(`/parent/child/${id}/settings`) },
+              { icon: 'gear',  label: 'Task settings',  sub: 'Gem amounts and daily limits', onClick: () => nav(`/parent/child/${id}/settings`) },
               { icon: 'edit',  label: 'Edit child',      sub: 'Change name, age or avatar',  onClick: () => setShowEditModal(true) },
               { icon: 'lock',  label: 'Change PIN',      sub: 'Set a new 4-digit PIN',        onClick: () => setShowPinModal(true) },
             ].map(({ icon, label, sub, onClick }) => (
