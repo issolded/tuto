@@ -73,9 +73,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       artık "Geçmiş" değil "Neler yaptım"; capped satır tutar değil durum gösteriyor (🌙
       "Bugünlük tamam" — seans bitiş ekranının kullandığı sözlerin aynısı). Bakiyeyi etkilemiyor
       (0 toplama girmiyor) ve cap sayaçları `amount > 0` filtrelediği için sayılmıyor.
-      (2026-09-01'de Ada'nın 4. matematiğiyle görülmüştü.)
-      Kalan: ebeveyn dashboard'undaki "Completed today" hâlâ `amount > 0` filtreliyor, yani
-      sınıra takılan seans orada görünmüyor.
+      Ebeveyn tarafında da aynısı: dashboard'daki "Completed today" capped seansı 🌙 + "Past
+      today's limit" satırıyla gösteriyor, Telegram context'indeki `gemHistory` satırı kendi
+      açıklamasını taşıyor (yoksa model "0 gem kazandı" diye okuyor). Ledger okuyan iki select
+      `*` kullanıyor: eksik `capped` sütununu isimle istemek isteği komple düşürürdü ve o
+      istek gem bakiyesini taşıyor. (2026-09-01'de Ada'nın 4. matematiğiyle görülmüştü.)
 - [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
       altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
