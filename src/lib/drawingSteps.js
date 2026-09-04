@@ -678,6 +678,108 @@ export const DRAWING_STEPS = {
       'Arkadaki ormanın tamamını koyulaştır ki o önde belirginleşsin.',
     ],
   },
+
+  // ── The second September drop ──────────────────────────────────────────────
+  // Butterfly, Alien, Rocket and Sun are the four names DrawingsScreen has been
+  // showing as locked "Soon" tiles since the module shipped; the LOCKED list is
+  // empty now because these are the drawings it was promising.
+
+  butterfly: {
+    en: [
+      'Draw a small circle for the head, an oval under it for the chest, and a long body below that, then two antennae with a ball on each tip.',
+      'Draw a big wing on each side — wide at the top, curving down to a point beside the body.',
+      'Add a smaller, rounder wing under each of the big ones.',
+      'Draw a long curved teardrop shape inside each top wing.',
+      'Add round spots — big ones in the top wings, a row of small circles in the lower ones — and thin lines fanning out from the body.',
+      'Fill the wings with more spots, dot the edges all the way round, and shade them lightly.',
+    ],
+    tr: [
+      'Kafa için küçük bir daire, altına göğüs için bir oval, onun da altına uzun bir gövde çiz; sonra uçlarında birer top olan iki anten ekle.',
+      'İki yana birer büyük kanat çiz — üstte geniş olsun, gövdenin yanına doğru sivrilerek insin.',
+      'Büyük kanatların her birinin altına daha küçük, daha yuvarlak birer kanat ekle.',
+      'Her üst kanadın içine uzun, kavisli bir damla şekli çiz.',
+      'Yuvarlak benekler ekle — üst kanatlara büyükleri, alt kanatlara sıra sıra küçük daireler — bir de gövdeden dışa yayılan ince çizgiler.',
+      'Kanatları daha çok benekle doldur, kenarlarını boydan boya noktala ve hafifçe gölgele.',
+    ],
+  },
+
+  alien: {
+    en: [
+      'Draw a big bean shape for the body, with a circle inside the top of it for the face.',
+      'Draw two big oval eyes with a shine in each, a tiny nose and a smile.',
+      'Add two antennae with a ring on each tip, and two arms with three fingers on each hand.',
+      'Draw a big round tummy, a few little spots beside it, and two short legs.',
+      'Add rosy cheeks and a small tuft of hair on top of its head.',
+      'Put a glass helmet with a tiny alien inside on its head, a small flying saucer in its hand, and stars all around.',
+    ],
+    tr: [
+      'Gövde için büyük bir fasulye şekli çiz, üst kısmının içine de yüz için bir daire.',
+      'Her birinde bir parıltı olan iki büyük oval göz, minik bir burun ve bir gülümseme çiz.',
+      'Uçlarında birer halka olan iki anten, bir de her elinde üç parmak bulunan iki kol ekle.',
+      'Kocaman yuvarlak bir karın, yanına birkaç küçük benek ve iki kısa bacak çiz.',
+      'Pembe yanaklar ve kafasının tepesine küçük bir saç tutamı ekle.',
+      'Kafasına içinde minik bir uzaylı olan cam bir kask, eline küçük bir uçan daire, çevresine de yıldızlar koy.',
+    ],
+  },
+
+  rocket: {
+    en: [
+      'Draw a tall body with a pointed nose on top, and a curved fin on each side.',
+      'Add a round window in the middle and a thin fin standing in front.',
+      'Draw a ring of little bolts around the window and a row of them down the body.',
+      'Add flames under the rocket and a puff of smoke on each side.',
+      'Shade the nose, the body and the fins, and fill the flames in dark.',
+    ],
+    tr: [
+      'Sivri burunlu uzun bir gövde çiz, iki yanına da birer kavisli kanatçık ekle.',
+      'Ortasına yuvarlak bir pencere, önüne de ince bir kanatçık ekle.',
+      'Pencerenin çevresine küçük perçinlerden bir halka, gövdeye de bir sıra perçin çiz.',
+      'Roketin altına alevleri, iki yanına da birer puf duman ekle.',
+      'Burnu, gövdeyi ve kanatçıkları gölgele, alevleri koyu doldur.',
+    ],
+  },
+
+  sun: {
+    en: [
+      'Draw a big circle for the sun.',
+      'Draw two circles inside it for the eyes.',
+      'Fill the eyes in, leaving a white dot in each, and add a big smile.',
+      'Draw a ring of pointed, wavy rays all the way around the circle.',
+      'Add a second, thinner ray in every gap so the ring is full.',
+      'Draw eyebrows and rosy cheeks, then start shading the face and the rays.',
+      'Shade the whole sun more deeply, keeping the middle of the face light.',
+      'Go over the darkest parts once more to finish.',
+    ],
+    tr: [
+      'Güneş için büyük bir daire çiz.',
+      'İçine gözler için iki daire çiz.',
+      'Gözleri doldur, her birinde beyaz bir nokta bırak, altına da kocaman bir gülümseme çiz.',
+      'Dairenin çevresine boydan boya sivri, dalgalı ışınlardan bir halka çiz.',
+      'Her boşluğa daha ince ikinci bir ışın ekle ki halka dolsun.',
+      'Kaşları ve pembe yanakları çiz, sonra yüzü ve ışınları gölgelemeye başla.',
+      'Bütün güneşi daha koyu gölgele, yüzün ortasını açık bırak.',
+      'En koyu yerlerin üstünden bir kez daha geçerek bitir.',
+    ],
+  },
+
+  koala: {
+    en: [
+      'Draw a circle for the head, and two long curved lines beside it for the tree trunk.',
+      'Add two big fluffy ears, a long oval nose, and the body curving down behind the trunk.',
+      'Draw two round eyes and a smile, then the arms and legs gripping the trunk, each with claws.',
+      'Add tufts of fur around the ears and body, and draw the bark lines down the trunk.',
+      'Shade the fur with lots of short strokes, and darken the nose.',
+      'Go over the whole koala again so the fur looks thick and soft.',
+    ],
+    tr: [
+      'Kafa için bir daire, yanına da ağaç gövdesi için iki uzun kavisli çizgi çiz.',
+      'İki büyük tüylü kulak, uzun oval bir burun, bir de ağacın arkasından aşağı kıvrılan gövdeyi ekle.',
+      'İki yuvarlak göz ve bir gülümseme çiz; sonra ağacı kavrayan kolları ve bacakları pençeleriyle birlikte ekle.',
+      'Kulakların ve gövdenin çevresine tüy tutamları ekle, ağaç gövdesine de kabuk çizgilerini çiz.',
+      'Kürkü kısa kısa çizgilerle gölgele, burnu koyulaştır.',
+      'Bütün koalanın üstünden bir kez daha geç ki kürkü kalın ve yumuşak görünsün.',
+    ],
+  },
 }
 
 // Only these are known to match their pictures. The rest are waiting on the same

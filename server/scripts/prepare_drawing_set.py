@@ -2,7 +2,7 @@
 """Turns a folder of raw guided-step PNGs into drawings/<id>/step-NN.webp.
 
 The raw sets arrive as one generated grid image sliced into panels named
-`..._parca_N.png`: white paper, opaque, sometimes with the step number printed
+`..._parca_N.png` or `..._adim_N.png`: white paper, opaque, sometimes with the step number printed
 in a corner, and each panel exported at a slightly different pixel size. What
 the app wants is the opposite of all of that — transparent line art, no
 numbers, every panel of a set cropped identically so the guided-steps screen
@@ -49,31 +49,42 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-RAW = ROOT / 'cizims_sep2026' / 'drawings'
+RAW = ROOT / 'cizims_sep2026'
 OUT = ROOT / 'drawings'
 MAX_EDGE = 1024
 MARGIN = 0.035          # of the long edge, so the ink never touches the frame
 ALPHA_FLOOR = 12        # below this, paper grain rather than pencil
 BBOX_INK = 40           # what counts as ink when deciding where to crop
 
-# id → (raw folder, panels to keep in order, corner-number erase box or None)
+# id → (raw folder under cizims_sep2026/, panels to keep in order,
+#        corner-number erase box or None)
+DRIVE = 'drive-download-20260904T060949Z-1-001'
 SETS = {
-    'car':             ('araba',            [1, 2, 3, 4, 5],          None),
-    'airplane':        ('ucak',             [1, 2, 3, 4, 5, 6],       None),
-    'ship':            ('gemi',             [1, 2, 3, 4, 5, 6],       None),
-    'big-ben':         ('bigben',           [1, 2, 3, 4, 6, 7, 8],    None),
-    'galata-tower':    ('galata',           [1, 2, 3, 5, 6, 7, 8],    None),
-    'globe':           ('dunya',            [1, 2, 4, 5],             (0.09, 0.16)),
-    'adventure-map':   ('harita2',          [1, 2, 3, 4],             (0.20, 0.28)),
-    'bike-hero':       ('bisikletli cocuk', [1, 2, 3, 4, 5],          None),
-    'girl-reading':    ('kitap okuyan kiz', [1, 2, 3, 4, 5, 6],       None),
-    'desk-boy':        ('masada cocuk',     [1, 2, 3, 4, 6],          (0.12, 0.16)),
-    'forest-explorer': ('girl standing',    [1, 2, 3, 4, 5, 6, 7],    None),
+    'car':             ('drawings/araba',            [1, 2, 3, 4, 5],          None),
+    'airplane':        ('drawings/ucak',             [1, 2, 3, 4, 5, 6],       None),
+    'ship':            ('drawings/gemi',             [1, 2, 3, 4, 5, 6],       None),
+    'big-ben':         ('drawings/bigben',           [1, 2, 3, 4, 6, 7, 8],    None),
+    'galata-tower':    ('drawings/galata',           [1, 2, 3, 5, 6, 7, 8],    None),
+    'globe':           ('drawings/dunya',            [1, 2, 4, 5],             (0.09, 0.16)),
+    'adventure-map':   ('drawings/harita2',          [1, 2, 3, 4],             (0.20, 0.28)),
+    'bike-hero':       ('drawings/bisikletli cocuk', [1, 2, 3, 4, 5],          None),
+    'girl-reading':    ('drawings/kitap okuyan kiz', [1, 2, 3, 4, 5, 6],       None),
+    'desk-boy':        ('drawings/masada cocuk',     [1, 2, 3, 4, 6],          (0.12, 0.16)),
+    'forest-explorer': ('drawings/girl standing',    [1, 2, 3, 4, 5, 6, 7],    None),
+
+    # Second drop, same morning. These four finally retire the "Soon" tiles that
+    # DrawingsScreen has been showing since the module shipped.
+    'butterfly':       (f'{DRIVE}/butterfly',        [1, 2, 3, 4, 5, 6],       None),
+    'alien':           (f'{DRIVE}/alien',            [1, 2, 3, 4, 5, 6],       None),
+    'rocket':          (f'{DRIVE}/roket',            [1, 2, 3, 4, 5],          None),
+    'sun':             (f'{DRIVE}/gunes',            [1, 2, 3, 4, 5, 6, 7, 8], None),
+    'koala':           (f'{DRIVE}/koala',            [1, 2, 3, 4, 5, 6],       None),
 }
 
 
 def panel_number(path):
-    m = re.search(r'parca_(\d+)', path.name)
+    # Two spellings so far: ..._parca_3.png and ..._adim_3.png.
+    m = re.search(r'(?:parca|adim)_(\d+)', path.name)
     return int(m.group(1)) if m else 0
 
 
