@@ -78,6 +78,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       açıklamasını taşıyor (yoksa model "0 gem kazandı" diye okuyor). Ledger okuyan iki select
       `*` kullanıyor: eksik `capped` sütununu isimle istemek isteği komple düşürürdü ve o
       istek gem bakiyesini taşıyor. (2026-09-01'de Ada'nın 4. matematiğiyle görülmüştü.)
+      Sınıra takılan seans artık ebeveyne de bildiriliyor (math + reading kendi mesajı,
+      story'nin paylaşım mesajına tek cümle). `activity` olarak gidiyor — yani quiet/required
+      seviyesindeki ebeveyn görmüyor, "günün sadece ilki" diyen de görmüyor (capped seans hiçbir
+      zaman günün ilki değil). **Mesaj gem teklif etmiyor**: sınırı ebeveyn koydu, her akşam
+      delmeyi önermek sınırı anlamsızlaştırır. Ebeveyn kendisi isterse promptta kural var:
+      tek seferlik mi (`gift_gems`) yoksa kalıcı mı (`update_task_reward` + `daily_cap`) diye
+      bir kez sorulur, mevcut sınır söylenerek. Sınırı artırmak geçmişe işlemez — ikisi birden
+      isteniyorsa iki ayrı çağrı.
 - [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
       altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
