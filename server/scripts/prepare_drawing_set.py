@@ -18,7 +18,11 @@ What this does, per set:
    the robot set already got.
 2. Erases a burned-in step number from the top-left corner (`erase`, as a
    fraction of width/height). Only some sets have one.
-3. White → transparent. The white point is the 97th percentile of the panel's
+3. Strips the scanner frame: some panels arrive with the page's own border
+   line along an edge (the sun and rocket sets have a 1px one, the koala five).
+   It is not part of the drawing, it drags the shared crop box out to the full
+   page, and it renders in the app as a stray line down the side of the panel.
+4. White → transparent. The white point is the 97th percentile of the panel's
    own luminance, so beige/textured paper (girl standing) normalises to clean
    white instead of leaving a faint rectangle of tint over the app's panel.
    Ink keeps its shape as ALPHA and the colour is left black: composited over
@@ -27,11 +31,11 @@ What this does, per set:
    original grey WITH that same alpha, which washes midtones out — a Big Ben
    drawn that way reads noticeably fainter. Not worth rewriting the old sets
    for, but not worth copying either.)
-4. Crops every panel of the set to ONE box — the union of their ink, plus a
+5. Crops every panel of the set to ONE box — the union of their ink, plus a
    small margin. A per-panel crop would silently re-register the artwork and
    turn the cross-fade into a slide. Panels whose exported size differs by a
    percent or two are resized to a common canvas first, for the same reason.
-5. Downscales so the long edge is at most 1024 and writes WebP.
+6. Downscales so the long edge is at most 1024 and writes WebP.
 
   python3 server/scripts/prepare_drawing_set.py [--dry] [id ...]
 
@@ -55,6 +59,8 @@ MAX_EDGE = 1024
 MARGIN = 0.035          # of the long edge, so the ink never touches the frame
 ALPHA_FLOOR = 12        # below this, paper grain rather than pencil
 BBOX_INK = 40           # what counts as ink when deciding where to crop
+FRAME_DEPTH = 8         # how far in from an edge a page border can sit
+FRAME_FILL = 0.5        # ink along that much of a line means border, not drawing
 
 # id → (raw folder under cizims_sep2026/, panels to keep in order,
 #        corner-number erase box or None)
@@ -101,13 +107,38 @@ def load_luma(path, canvas, erase):
     return a
 
 
+def strip_frame(alpha):
+    """Blanks the page-border line some scans carry along an edge.
+
+    Only the outermost few lines, and only while each one is inked across most
+    of its length — a real drawing does not run edge to edge that close to the
+    frame, and the sets that have no border are left untouched."""
+    h, w = alpha.shape
+    for _ in range(FRAME_DEPTH):
+        edges = {
+            'top':    (alpha[0, :], lambda: alpha.__setitem__((0, slice(None)), 0)),
+            'bottom': (alpha[-1, :], lambda: alpha.__setitem__((-1, slice(None)), 0)),
+            'left':   (alpha[:, 0], lambda: alpha.__setitem__((slice(None), 0), 0)),
+            'right':  (alpha[:, -1], lambda: alpha.__setitem__((slice(None), -1), 0)),
+        }
+        # Work on a shrinking view so "outermost" moves inward as lines are cleared.
+        hit = False
+        for line, clear in edges.values():
+            if (line > BBOX_INK).mean() > FRAME_FILL:
+                clear()
+                hit = True
+        if not hit:
+            break
+    return alpha
+
+
 def to_alpha(luma):
     """White → transparent, ink → black at the alpha its darkness earns."""
     white = np.percentile(luma, 97)
     norm = np.clip(luma * 255.0 / max(white, 1.0), 0, 255)
     alpha = 255.0 - norm
     alpha[alpha < ALPHA_FLOOR] = 0
-    return alpha
+    return strip_frame(alpha)
 
 
 def build(drawing_id, dry=False):
