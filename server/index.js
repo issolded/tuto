@@ -5303,6 +5303,12 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
     // short-lived and Telegram re-hosts the image immediately.
     try {
       const what = resolvedDrawing ? `"${resolvedDrawing.name_tr}" çizimini` : 'kendi çizimini'
+      // The English template said `their "Kedi" drawing` — the catalogue carries
+      // both names and only the Turkish one was ever read. `what` above stays
+      // name_tr: it is built into a Turkish sentence.
+      const whatEn = resolvedDrawing
+        ? `their "${resolvedDrawing.name_en || resolvedDrawing.name_tr}" drawing`
+        : 'a drawing of their own'
       const gemLine = auto?.capped
         ? 'Bugünün çizim ödülü dolmuştu, o yüzden gem eklemedim.'
         : `${auto?.gems} gem ekledim.`
@@ -5317,11 +5323,11 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
         approved
           ? { kind: 'activity', child: child.name, detail: {
               tr: `${what} bitirdi`,
-              en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}`,
+              en: `finished ${whatEn}`,
             } }
           : { kind: 'approval', child: child.name, detail: {
               tr: `${what} bitirdi, fotoğrafı onayını bekliyor`,
-              en: `finished ${resolvedDrawing ? `their "${resolvedDrawing.name_tr}" drawing` : 'a drawing of their own'}, the photo is waiting for your OK`,
+              en: `finished ${whatEn}, the photo is waiting for your OK`,
             } },
       ))
     } catch (err) {

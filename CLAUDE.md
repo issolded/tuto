@@ -88,8 +88,8 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       (panelleri kaydırıp ortak kırpmak) — o zaman `drawingAlign` da kimliğe düşer.
       Aynı desen daha hafif hâliyle big-ben ve alien'da da var.
 - [x] Drawings dil boşluğu kapandı: kart adı artık `name_<lang>`, hazırlık ekranı ve
-      ekrandaki bütün butonlar i18n'den geliyor. **Kalan tek yer ebeveyn bildirimi:**
-      İngilizce bildirim de `name_tr` okuyor (`their "Kedi" drawing`, server/index.js).
+      ekrandaki bütün butonlar i18n'den geliyor; ebeveynin İngilizce bildirimi de artık
+      `name_en` okuyor. Çocuk ekranında İngilizce metin kalmadı.
 - [ ] Stories çeşitlilik: 11+ üretimi tek kalıba (AI-duygu-kontrolü / kapalı-dome) çöküyor;
       üretim promptuna premise çeşitliliği + alt-tema rotasyonu, ya da embedding ile
       semantik dedup. (Güvenlik değil, kalite.)
