@@ -63,15 +63,19 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
-- [ ] Sınıra takılan seanslar gem history'de görünmüyor: günlük cap aşıldığında `gems = 0` ve
-      ledger satırı `if (gems > 0)` yüzünden hiç yazılmıyor; GemsScreen yalnızca `bt_ledger`
-      okuduğu için çocuk ana ekranda 4 seans, geçmişte 3 kayıt görüyor. Matematik, okuma ve
-      story'de aynı desen; ödev de artık capli olduğu için (2026-09-03) aynı boşluğa düşüyor:
-      sınırda onaylanan ödev `gems_earned = 0` yazıyor ama ledger satırı yok. Seans bitiş ekranı
-      durumu zaten söylüyor (🌙) — eksik olan kalıcı kayıt. Seçenekler: cap'e takılınca 0 tutarlı bir ledger satırı yazmak (tek insert, gem
-      sayan yerler zaten `amount > 0` filtreliyor), ya da history'nin capped seansları seans
-      tablolarından birleştirmesi. Kayıt "0 gem" değil "sınıra takıldı" diye okunmalı.
-      (2026-09-01, Ada'nın 4. matematiği.)
+- [x] Sınıra takılan seanslar artık gem history'de görünüyor (2026-09-04). Cap'e takılan her
+      seans `amount = 0, capped = true` ile tek bir `bt_ledger` satırı yazıyor; beş yazma yeri
+      (math, reading, story, drawing onayı, ödev onayı) tek `recordGems()` yardımcısından
+      geçiyor. `capped` ayrı bir sütun çünkü sıfır dürüstçe de gelebiliyor: ebeveyn bir ödevi
+      bilerek 0 gem'le onaylayabiliyor, o satır "sınıra takıldın" diye okunmamalı. Migration:
+      `server/migrations/2026-09-04_ledger_capped.sql` — sütun yokken capped satırı yazılmıyor
+      (yalın "+0" boşluktan kötü), ödenen satır yazılmaya devam ediyor. Ekran tarafında liste
+      artık "Geçmiş" değil "Neler yaptım"; capped satır tutar değil durum gösteriyor (🌙
+      "Bugünlük tamam" — seans bitiş ekranının kullandığı sözlerin aynısı). Bakiyeyi etkilemiyor
+      (0 toplama girmiyor) ve cap sayaçları `amount > 0` filtrelediği için sayılmıyor.
+      (2026-09-01'de Ada'nın 4. matematiğiyle görülmüştü.)
+      Kalan: ebeveyn dashboard'undaki "Completed today" hâlâ `amount > 0` filtreliyor, yani
+      sınıra takılan seans orada görünmüyor.
 - [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
       altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML

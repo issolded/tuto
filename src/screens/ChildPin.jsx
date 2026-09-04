@@ -6,10 +6,14 @@ import { supabase, getChildrenByFamilyCode } from '../lib/supabase'
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
 async function giveWelcomeBonus(childId) {
+  // Counts rows that actually moved gems. The ledger also carries sessions that hit
+  // the day's limit and earned nothing (amount 0), and one of those is not a reason
+  // to decide this child has already been welcomed.
   const { count } = await supabase
     .from('bt_ledger')
     .select('*', { count: 'exact', head: true })
     .eq('child_id', childId)
+    .neq('amount', 0)
   if (count === 0) {
     await supabase.from('bt_ledger').insert({ child_id: childId, amount: 10, reason: 'Welcome bonus' })
   }
