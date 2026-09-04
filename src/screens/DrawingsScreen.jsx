@@ -15,20 +15,20 @@ const SKINS = {
   young: {
     bg: 'linear-gradient(180deg,#FFF6E8 0%,#FFE9CF 100%)',
     accent: '#f79433', ink: '#20201e', radius: 22,
-    gemIcon: '⭐', stepWord: 'step',
-    readySay: "Grab some paper and a pencil.\nTap ready when you're set!",
+    gemIcon: '⭐', stepKey: 'dr_step_lower',
+    readyKey: 'dr_ready_young',
   },
   mid: {
     bg: 'linear-gradient(180deg,#F3EEFF 0%,#E4DBFB 100%)',
     accent: '#7c5cd6', ink: '#20201e', radius: 22,
-    gemIcon: '◆', stepWord: 'Step',
-    readySay: 'Get your paper and pencil ready. Take your time — no rush!',
+    gemIcon: '◆', stepKey: 'dr_step_upper',
+    readyKey: 'dr_ready_mid',
   },
   mature: {
     bg: 'linear-gradient(180deg,#F7F8FB 0%,#ECEEF5 100%)',
     accent: '#5860d8', ink: '#1b1f2a', radius: 14,
-    gemIcon: '✦', stepWord: 'Step',
-    readySay: "Grab paper and a pencil. When you're set, start the guided steps.",
+    gemIcon: '✦', stepKey: 'dr_step_upper',
+    readyKey: 'dr_ready_mature',
   },
 }
 
@@ -44,18 +44,35 @@ const AGE_GROUP = { young: '6-8', mid: '9-11', mature: '12-15' }
 
 
 
+// The chip VALUES are the catalogue's own words — they filter rows — so they
+// stay English here and are translated only on the way to the screen.
 const CATEGORIES = ['All', 'Animals', 'Characters', 'Objects', 'Nature']
+const CATEGORY_KEY = {
+  All: 'dr_all', Animals: 'dr_cat_animals', Characters: 'dr_cat_characters',
+  Objects: 'dr_cat_objects', Nature: 'dr_cat_nature',
+}
 const DIFFICULTIES = ['All', 'Easy', 'Medium', 'Hard']
 // Stars, not words — "Easy" reads as a judgment when a kid can't even draw it.
 // Keys stay 'Easy'/'Medium'/'Hard' to match the `difficulty` values already in
-// the drawings table; only the on-screen label changes.
-const DIFFICULTY_LABEL = { All: 'All', Easy: '★☆☆', Medium: '★★☆', Hard: '★★★' }
-const LOCKED = [
-  { name: 'Butterfly', category: 'Animals' },
-  { name: 'Alien', category: 'Characters' },
-  { name: 'Rocket', category: 'Objects' },
-  { name: 'Sun', category: 'Nature' },
-]
+// the drawings table; only the on-screen label changes. 'All' is the one that
+// is really a word, so it is the one that needs translating.
+const DIFFICULTY_LABEL = { Easy: '★☆☆', Medium: '★★☆', Hard: '★★★' }
+// Empty since the September batch: Butterfly, Alien, Rocket and Sun — the four
+// this list used to promise — are real drawings now. Kept (rather than deleted)
+// because the next set of names to tease goes here.
+const LOCKED = []
+
+// The catalogue carries a name column per language: name_en, name_tr. A missing
+// translation falls back to English rather than showing the child a raw id.
+function drawingName(d, lang) {
+  return d?.[`name_${lang}`] || d?.name_en || d?.id || ''
+}
+
+// t() with one placeholder — used for the strings that have to wrap a reward
+// amount, where the amount does not sit at the same point in every language.
+function tf(key, lang, values) {
+  return Object.entries(values).reduce((str, [k, v]) => str.replace(`%${k}%`, v), t(key, lang))
+}
 
 function fmtDate(iso, lang) {
   try {
@@ -114,10 +131,10 @@ function statusLabel(p, sk) {
   if (p.status === 'approved') {
     return p.reward_amount > 0
       ? { text: `${sk.gemIcon} +${p.reward_amount}`, color: sk.accent }
-      : { text: '✓ Approved', color: '#37a06f' }
+      : { text: t('dr_approved', lang), color: '#37a06f' }
   }
   if (p.status === 'rejected') return { text: t('dr_not_this_time', lang), color: '#9a93a8' }
-  return { text: '◷ Waiting', color: '#b9892f' }
+  return { text: t('dr_waiting', lang), color: '#b9892f' }
 }
 
 function PaintingStatus({ p, sk, compact }) {
@@ -154,7 +171,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
-        <Title sk={sk}>My Drawings</Title>
+        <Title sk={sk}>{t('dr_title', lang)}</Title>
         <button onClick={onLibrary} title={t('dr_my_paintings', lang)} style={{
           width: 42, height: 42, borderRadius: '50%', background: '#fff', border: 'none',
           boxShadow: '0 4px 12px rgba(40,30,70,.12)', cursor: 'pointer', fontSize: 18,
@@ -170,7 +187,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
             background: cat === c ? sk.accent : '#fff',
             color: cat === c ? '#fff' : '#6f6a64',
             fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 13,
-          }}>{c}</button>
+          }}>{t(CATEGORY_KEY[c], lang)}</button>
         ))}
       </div>
 
@@ -182,7 +199,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
             background: diff === d ? sk.ink : '#fff',
             color: diff === d ? '#fff' : '#8d83ad',
             fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5,
-          }}>{DIFFICULTY_LABEL[d]}</button>
+          }}>{DIFFICULTY_LABEL[d] ?? t('dr_all', lang)}</button>
         ))}
       </div>
 
@@ -208,7 +225,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           <button onClick={onRetry} style={{
             padding: '11px 22px', borderRadius: 999, border: 'none', background: sk.accent, color: '#fff',
             fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 13.5, cursor: 'pointer',
-          }}>Try again</button>
+          }}>{t('dr_try_again', lang)}</button>
         </div>
       ) : (
         /* Two fixed columns meant a card was half the screen wide whatever the
@@ -222,9 +239,9 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
             }}>
               <DrawingThumb id={d.id} ageGroup={d.age_group} stepCount={d.step_count}
                 category={d.category} radius={sk.radius - 8} />
-              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginTop: 9 }}>{d.name_en}</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink, marginTop: 9 }}>{drawingName(d, lang)}</div>
               <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: sk.accent, marginTop: 3 }}>
-                ✎ {d.step_count} {sk.stepWord}s
+                ✎ {d.step_count} {t('dr_steps_unit', lang)}
               </div>
             </button>
           ))}
@@ -238,7 +255,7 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
               }}>🔒</div>
               <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: '#8d83ad', marginTop: 9 }}>{l.name}</div>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11, color: '#b3a894', marginTop: 3 }}>SOON</div>
+              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11, color: '#b3a894', marginTop: 3 }}>{t('dr_soon', lang)}</div>
             </div>
           ))}
         </div>
@@ -273,12 +290,12 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
           boxShadow: '0 6px 16px rgba(40,30,70,.09)',
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink }}>My Paintings</span>
+            <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: sk.ink }}>{t('dr_my_paintings', lang)}</span>
             <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 12, color: '#8d83ad' }}>{paintings.length}</span>
             <button onClick={onLibrary} style={{
               marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
               fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 12.5, color: sk.accent, padding: 0,
-            }}>Open library ▸</button>
+            }}>{t('dr_open_library', lang)}</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {paintings.slice(0, 3).map(p => (
@@ -315,7 +332,7 @@ function Ready({ sk, target, ageGroup, onStart, onBack }) {
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
-        <Title sk={sk}>{target ? target.name_en : t('dr_my_own_idea', lang)}</Title>
+        <Title sk={sk}>{target ? drawingName(target, lang) : t('dr_my_own_idea', lang)}</Title>
         <div style={{ width: 42 }} />
       </div>
 
@@ -328,7 +345,7 @@ function Ready({ sk, target, ageGroup, onStart, onBack }) {
         boxShadow: '0 6px 16px rgba(40,30,70,.09)', textAlign: 'center',
         fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16.5, color: sk.ink, whiteSpace: 'pre-line',
       }}>
-        {sk.readySay}
+        {t(sk.readyKey, lang)}
       </div>
 
       {target && (
@@ -338,7 +355,7 @@ function Ready({ sk, target, ageGroup, onStart, onBack }) {
         </div>
       )}
 
-      <button onClick={onStart} style={ctaStyle(sk, false)}>I'm ready!</button>
+      <button onClick={onStart} style={ctaStyle(sk, false)}>{t('dr_im_ready', lang)}</button>
     </>
   )
 }
@@ -445,7 +462,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 10px' }}>
       <BackBtn onClick={() => setConfirmExit(true)} />
-      <Title sk={sk}>{target.name_en}</Title>
+      <Title sk={sk}>{drawingName(target, lang)}</Title>
       <div style={{ width: 42 }} />
     </div>
   )
@@ -455,7 +472,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
       textAlign: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 800,
       fontSize: 13, color: sk.accent, marginBottom: wide ? 0 : 8,
     }}>
-      {sk.stepWord} {step + 1}/{total}
+      {t(sk.stepKey, lang)} {step + 1}/{total}
     </div>
   )
 
@@ -488,7 +505,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
           : { position: 'relative', width: '100%', aspectRatio: '1' }}>
           <img
             src={drawingStepUrl(target.id, ageGroup, poorerStep + 1)}
-            alt={`${target.name_en} ${sk.stepWord} ${poorerStep + 1}`}
+            alt={`${drawingName(target, lang)} ${t(sk.stepKey, lang)} ${poorerStep + 1}`}
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
               // A couple of sets' source panels aren't perfectly registered
@@ -506,7 +523,7 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
             <img
               key={`${richerStep}-${forward ? 'in' : 'out'}`}
               src={drawingStepUrl(target.id, ageGroup, richerStep + 1)}
-              alt={`${target.name_en} ${sk.stepWord} ${richerStep + 1}`}
+              alt={`${drawingName(target, lang)} ${t(sk.stepKey, lang)} ${richerStep + 1}`}
               style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', borderRadius: sk.radius - 8,
                 transform: `translate(${richerAlign.dx}%, ${richerAlign.dy}%) scale(${richerAlign.scale})`,
@@ -540,20 +557,20 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
         background: '#fff', cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .45 : 1,
         fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14.5, color: '#6f6a64',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-      }}><span>←</span> Back</button>
+      }}><span>←</span> {t('dr_back', lang)}</button>
       <button onClick={() => (isLast ? onFinish() : setStep(step + 1))} style={{
         ...ctaStyle(sk, false), flex: 1, marginTop: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
       }}>
-        {isLast ? "I drew it!" : <>Next <span>→</span></>}
+        {isLast ? t('dr_i_drew_it', lang) : <>{t('dr_next', lang)} <span>→</span></>}
       </button>
     </div>
   )
 
   const exitModal = confirmExit && (
     <ConfirmModal sk={sk}
-      title={t('dr_leave_drawing', lang)} body="Your steps so far won't be saved."
-      cancelLabel="Keep drawing" confirmLabel="Leave"
+      title={t('dr_leave_drawing', lang)} body={t('dr_leave_body', lang)}
+      cancelLabel={t('dr_keep_drawing', lang)} confirmLabel={t('dr_leave', lang)}
       onCancel={() => setConfirmExit(false)} onConfirm={onBack} />
   )
 
@@ -597,7 +614,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
-        <Title sk={sk}>{target ? target.name_en : t('dr_my_own_idea', lang)}</Title>
+        <Title sk={sk}>{target ? drawingName(target, lang) : t('dr_my_own_idea', lang)}</Title>
         <div style={{ width: 42 }} />
       </div>
 
@@ -628,7 +645,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
           width: '100%', padding: '46px 16px', borderRadius: sk.radius,
           border: '3px dashed #c4bdd0', background: 'rgba(255,255,255,.6)', cursor: 'pointer',
           fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 16, color: '#8d83ad',
-        }}>📷<br />Add photo</button>
+        }}>📷<br />{t('dr_add_photo', lang)}</button>
       )}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = '' }} />
@@ -641,7 +658,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
       )}
 
       <button onClick={onSubmit} disabled={!photo || submitting} style={ctaStyle(sk, !photo || submitting)}>
-        {submitting ? 'Saving…' : t('dr_add_to_library', lang)}
+        {submitting ? t('dr_saving', lang) : t('dr_add_to_library', lang)}
       </button>
     </>
   )
@@ -654,17 +671,18 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
 // show a gem total — promising a number here and having the parent reject it
 // is exactly the let-down the approval flow is meant to avoid.
 function Reward({ sk, result, onLibrary, onAgain }) {
+  const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   return (
     <div style={{ textAlign: 'center', paddingTop: 20 }}>
       <TutoMascot size={140} />
       <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 25, color: sk.ink, marginTop: 12 }}>
-        Great job! 🎉
+        {t('dr_great_job', lang)}
       </div>
       <div style={{
         fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 14.5, color: '#6f6a64',
         margin: '10px 22px 18px', lineHeight: 1.45,
       }}>
-        I sent your drawing to your grown-up to look at.
+        {t('dr_sent_to_grownup', lang)}
       </div>
 
       <div style={{
@@ -672,7 +690,7 @@ function Reward({ sk, result, onLibrary, onAgain }) {
         boxShadow: '0 6px 16px rgba(40,30,70,.10)',
         fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 600, fontSize: 17, color: '#b9892f',
       }}>
-        ◷ Waiting for ✔ · then {sk.gemIcon}
+        {tf('dr_waiting_then', lang, { reward: sk.gemIcon })}
       </div>
 
       {result?.painting?.photo && (
@@ -681,12 +699,12 @@ function Reward({ sk, result, onLibrary, onAgain }) {
         }} />
       )}
 
-      <button onClick={onLibrary} style={ctaStyle(sk, false)}>See my library</button>
+      <button onClick={onLibrary} style={ctaStyle(sk, false)}>{t('dr_see_library', lang)}</button>
       <button onClick={onAgain} style={{
         width: '100%', marginTop: 9, padding: '13px', borderRadius: sk.radius - 4,
         border: '1.5px solid rgba(32,32,30,.14)', background: '#fff', cursor: 'pointer',
         fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14, color: '#6f6a64',
-      }}>Draw again</button>
+      }}>{t('dr_draw_again', lang)}</button>
     </div>
   )
 }
@@ -699,8 +717,9 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
   const [viewing, setViewing] = useState(null)
 
   const nameFor = p => {
-    if (!p.drawing_id) return 'My own drawing'
-    return drawings.find(d => d.id === p.drawing_id)?.name_en || p.drawing_id
+    if (!p.drawing_id) return t('dr_my_own_drawing', lang)
+    const d = drawings.find(x => x.id === p.drawing_id)
+    return d ? drawingName(d, lang) : p.drawing_id
   }
 
   async function confirmDelete() {
@@ -715,13 +734,13 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
         <BackBtn onClick={onBack} />
-        <Title sk={sk}>My Paintings</Title>
+        <Title sk={sk}>{t('dr_my_paintings', lang)}</Title>
         <div style={{ width: 42 }} />
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#8d83ad' }}>
-          Loading…
+          {t('dr_loading_short', lang)}
         </div>
       ) : paintings.length === 0 ? (
         <div style={{
@@ -729,7 +748,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
           boxShadow: '0 6px 16px rgba(40,30,70,.09)',
           fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5, color: '#8d83ad',
         }}>
-          Nothing here yet — draw something!
+          {t('dr_nothing_yet', lang)}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 11 }}>
@@ -761,7 +780,7 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
         </div>
       )}
 
-      <button onClick={onAgain} style={ctaStyle(sk, false)}>Draw again</button>
+      <button onClick={onAgain} style={ctaStyle(sk, false)}>{t('dr_draw_again', lang)}</button>
       <div style={{ height: 20 }} />
 
       {viewing && (
@@ -788,9 +807,9 @@ function Library({ sk, paintings, drawings, loading, onBack, onAgain, onDelete }
         <ConfirmModal sk={sk}
           title={t('dr_delete_painting', lang)}
           body={confirmTarget.reward_amount > 0
-            ? `This removes it from your library. The ${sk.gemIcon} +${confirmTarget.reward_amount} you already earned stays yours.`
-            : "This removes it from your library — you can't undo this."}
-          cancelLabel="Keep it" confirmLabel="Delete" confirmDanger
+            ? tf('dr_delete_body_kept', lang, { reward: `${sk.gemIcon} +${confirmTarget.reward_amount}` })
+            : t('dr_delete_body', lang)}
+          cancelLabel={t('dr_keep_it', lang)} confirmLabel={t('dr_delete', lang)} confirmDanger
           onCancel={() => setConfirmTarget(null)} onConfirm={confirmDelete} />
       )}
     </>
@@ -810,6 +829,7 @@ function ctaStyle(sk, disabled) {
 export default function DrawingsScreen() {
   const nav = useNavigate()
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const lang = childLang(child)
   const band = bandFor(child?.age)
   const sk = SKINS[band]
   const ageGroup = AGE_GROUP[band]
@@ -856,6 +876,11 @@ export default function DrawingsScreen() {
     setPhoto(null)
   }
 
+  // Read out here, not in the catch: scripts/i18n-check.mjs only sees locals of
+  // the function it is standing in, and a nested handler reading the screen's
+  // `lang` reads to it as an out-of-scope variable.
+  const saveFailed = t('dr_save_failed', lang)
+
   async function handleSubmit() {
     if (!photo || submitting) return
     setSubmitting(true)
@@ -871,7 +896,7 @@ export default function DrawingsScreen() {
       setView('reward')
       getPaintings(child.id).then(setPaintings)
     } catch (err) {
-      setError(err.message || "Couldn't save that — try again?")
+      setError(err.message || saveFailed)
     } finally {
       setSubmitting(false)
     }

@@ -241,6 +241,54 @@ const STRINGS = {
   dr_close:           { en: 'Close', tr: 'Kapat' },
   dr_delete_painting: { en: 'Delete this painting?', tr: 'Bu resmi sileyim mi?' },
 
+  // The rest of My Drawings. Until now the screen translated its dialogs and
+  // hints but not its headings, buttons or the drawing names themselves, so a
+  // Turkish child read Turkish step instructions under the title "Galata Tower"
+  // and pressed a button marked "Next". The catalogue has carried name_tr since
+  // day one; only the parent's notification was reading it.
+  dr_title:            { en: 'My Drawings', tr: 'Çizimlerim' },
+  // One per age skin: same instruction, three tones.
+  dr_ready_young:      { en: "Grab some paper and a pencil.\nTap ready when you're set!", tr: 'Bir kâğıtla kalem kap.\nHazır olunca düğmeye bas!' },
+  dr_ready_mid:        { en: 'Get your paper and pencil ready. Take your time — no rush!', tr: 'Kâğıdını ve kalemini hazırla. Acelen olmasın, zaman senin!' },
+  dr_ready_mature:     { en: "Grab paper and a pencil. When you're set, start the guided steps.", tr: 'Kâğıt ve kalem al. Hazır olduğunda adım adım başla.' },
+  dr_im_ready:         { en: "I'm ready!", tr: 'Hazırım!' },
+  dr_step_lower:       { en: 'step', tr: 'adım' },
+  dr_step_upper:       { en: 'Step', tr: 'Adım' },
+  // "8 steps" on a card. Turkish does not pluralise after a number.
+  dr_steps_unit:       { en: 'steps', tr: 'adım' },
+  dr_all:              { en: 'All', tr: 'Hepsi' },
+  dr_cat_animals:      { en: 'Animals', tr: 'Hayvanlar' },
+  dr_cat_characters:   { en: 'Characters', tr: 'Karakterler' },
+  dr_cat_objects:      { en: 'Objects', tr: 'Nesneler' },
+  dr_cat_nature:       { en: 'Nature', tr: 'Doğa' },
+  dr_try_again:        { en: 'Try again', tr: 'Tekrar dene' },
+  dr_soon:             { en: 'SOON', tr: 'YAKINDA' },
+  dr_back:             { en: 'Back', tr: 'Geri' },
+  dr_next:             { en: 'Next', tr: 'İleri' },
+  dr_i_drew_it:        { en: 'I drew it!', tr: 'Çizdim!' },
+  dr_leave_body:       { en: "Your steps so far won't be saved.", tr: 'Buraya kadar geldiğin adımlar kaydedilmeyecek.' },
+  dr_keep_drawing:     { en: 'Keep drawing', tr: 'Çizmeye devam' },
+  dr_leave:            { en: 'Leave', tr: 'Çık' },
+  dr_add_photo:        { en: 'Add photo', tr: 'Fotoğraf ekle' },
+  dr_saving:           { en: 'Saving…', tr: 'Kaydediliyor…' },
+  dr_save_failed:      { en: "Couldn't save that — try again?", tr: 'Kaydedemedim — tekrar deneyelim mi?' },
+  dr_great_job:        { en: 'Great job! 🎉', tr: 'Harika iş! 🎉' },
+  dr_sent_to_grownup:  { en: 'I sent your drawing to your grown-up to look at.', tr: 'Çizimini bakması için annene babana gönderdim.' },
+  // %reward% is the age skin's gem icon plus the amount, e.g. "⭐ +20".
+  // Percent signs rather than braces: scripts/i18n-check.mjs reads an entry with
+  // a regex that stops at the first "}".
+  dr_waiting_then:     { en: '◷ Waiting for ✔ · then %reward%', tr: '◷ ✔ bekleniyor · sonra %reward%' },
+  dr_see_library:      { en: 'See my library', tr: 'Kütüphaneme bak' },
+  dr_draw_again:       { en: 'Draw again', tr: 'Yine çiz' },
+  dr_loading_short:    { en: 'Loading…', tr: 'Yükleniyor…' },
+  dr_nothing_yet:      { en: 'Nothing here yet — draw something!', tr: 'Burada henüz bir şey yok — hadi bir şey çiz!' },
+  dr_my_own_drawing:   { en: 'My own drawing', tr: 'Kendi çizimim' },
+  dr_delete_body_kept: { en: 'This removes it from your library. The %reward% you already earned stays yours.', tr: 'Bu, resmi kütüphanenden siler. Kazandığın %reward% sende kalır.' },
+  dr_delete_body:      { en: "This removes it from your library — you can't undo this.", tr: 'Bu, resmi kütüphanenden siler — geri alamazsın.' },
+  dr_keep_it:          { en: 'Keep it', tr: 'Kalsın' },
+  dr_waiting:          { en: '◷ Waiting', tr: '◷ Bekliyor' },
+  dr_approved:         { en: '✓ Approved', tr: '✓ Onaylandı' },
+
   tree_add_with_photo:{ en: 'Add with photo', tr: 'Fotoğrafla ekle' },
   tree_sent_approval: { en: 'Sent for approval', tr: 'Onaya gönderildi' },
   tree_write_here:    { en: 'Did something else? Write it here', tr: 'Başka bir şey mi yaptın? Buraya yaz' },

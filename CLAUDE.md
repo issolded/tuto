@@ -77,20 +77,19 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       must-revalidate, canlıda tarayıcı testi bölümü buluyor). Seçenekler: karta "Settings"
       başlığı verip Notifications'ın üstüne almak, ya da üst özet şeridine atlama satırı.
       Karar ertelendi (2026-09-01).
-- [ ] Drawings, Eylül 2026 partisinden kalanlar (11 set eklendi, 2026-09-04):
-      **(a)** `cizims_sep2026/drawings/robot` yayınlanmadı — çizim Optimus Prime, omzunda
-      Autobot arması ve elinde silahla. Marka korumalı bir karakter; jenerik bir robot
-      çizdirip aynı boru hattından geçirmek gerek. **(b)** Bu partide hiç Easy set yok;
-      ★☆☆ rafı hâlâ yalnız cat/dog/axolotl/fish/dolphin/panda. **(c)** Galata'nın ilk
-      adımı panonun sağ kenarında küçücük duruyor: kaynak panellerde çizim adım adım sağa
-      kayıyor, hizalama son paneli sabit aldığı için erken adımlar oraya taşınıyor. Kalıcı
-      çözüm hizalamayı çalışma anında değil, görsele **pişirmek** (panelleri kaydırıp
-      ortak kırpmak) — o zaman `drawingAlign` da kimliğe düşer.
-- [ ] Drawings dil boşluğu: adım metinleri çocuğun diline uyuyor ama **kart adı ve "kâğıt
-      kalem hazırla" ekranı her zaman İngilizce** (`d.name_en`, `SKINS[].readySay`). Yani
-      Türkçe çocuk "Galata Tower" başlığının altında Türkçe adımlar okuyor. `name_tr` şu an
-      yalnızca ebeveyn bildiriminde geçiyor — İngilizce bildirimde bile (`their "Kedi"
-      drawing`). Tek satırlık düzeltme ama 24 eski seti de etkiliyor, o yüzden karar senin.
+- [ ] Drawings, Eylül 2026 partilerinden kalan tek şey: `cizims_sep2026/drawings/robot`
+      yayınlanmadı — çizim Optimus Prime, omzunda Autobot arması ve elinde silahla. Marka
+      korumalı bir karakter; jenerik bir robot çizdirip aynı boru hattından geçirmek gerek.
+      (Easy boşluğu ikinci partiyle kapandı: kelebek/uzaylı/roket/güneş ★☆☆, koala ★★☆;
+      "Soon" kilitli kartları da artık gerçek çizim, `LOCKED` boş.)
+- [ ] Galata'nın ilk adımı panonun sağ kenarında küçücük duruyor: kaynak panellerde çizim
+      adım adım sağa kayıyor, hizalama son paneli sabit aldığı için erken adımlar oraya
+      taşınıyor. Kalıcı çözüm hizalamayı çalışma anında değil, görsele **pişirmek**
+      (panelleri kaydırıp ortak kırpmak) — o zaman `drawingAlign` da kimliğe düşer.
+      Aynı desen daha hafif hâliyle big-ben ve alien'da da var.
+- [x] Drawings dil boşluğu kapandı: kart adı artık `name_<lang>`, hazırlık ekranı ve
+      ekrandaki bütün butonlar i18n'den geliyor. **Kalan tek yer ebeveyn bildirimi:**
+      İngilizce bildirim de `name_tr` okuyor (`their "Kedi" drawing`, server/index.js).
 - [ ] Stories çeşitlilik: 11+ üretimi tek kalıba (AI-duygu-kontrolü / kapalı-dome) çöküyor;
       üretim promptuna premise çeşitliliği + alt-tema rotasyonu, ya da embedding ile
       semantik dedup. (Güvenlik değil, kalite.)
