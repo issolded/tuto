@@ -1240,7 +1240,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 <path d={`M ${x1} ${lineY} Q ${mx} ${lineY - arcH} ${x2} ${lineY}`}
                   fill="none" stroke={ORANGE} strokeWidth={2} />
                 <text x={mx} y={lineY - arcH - 4} textAnchor="middle"
-                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{stepLabel(diff)}</text>
+                  fill={ORANGE} fontFamily={FRED} fontWeight="600" fontSize="12">{stepLabel(diff)}</text>
               </g>
             )
           })}
@@ -1252,13 +1252,13 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 <circle cx={cx} cy={lineY} r={dotR} fill={GREEN} opacity={0.18} />
                 <circle cx={cx} cy={lineY} r={dotR} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="4 2" />
                 <text x={cx} y={lineY + 4} textAnchor="middle"
-                  fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="11">?</text>
+                  fill={GREEN} fontFamily={FRED} fontWeight="700" fontSize="11">?</text>
               </g>
             ) : (
               <g key={i}>
                 <circle cx={cx} cy={lineY} r={dotR} fill={MATH} />
                 <text x={cx} y={lineY + 19} textAnchor="middle"
-                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{val}</text>
+                  fill={MATH} fontFamily={FRED} fontWeight="600" fontSize="12">{val}</text>
               </g>
             )
           })}
@@ -1275,13 +1275,13 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill={`${GREEN}22`} />
           <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill="none" stroke={GREEN} strokeWidth={2.5} strokeDasharray="6 3" />
           <text x={_svgW / 2} y={_barH / 2 + 6} textAnchor="middle"
-            fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>
+            fill={GREEN} fontFamily={FRED} fontWeight="700" fontSize="20">?</text>
           <rect x={0} y={_barH + _gap} width={blueW - 1} height={_barH} rx={_br} fill={MATH} />
           {blueW > 28 && <text x={(blueW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>}
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n0}</text>}
           <rect x={blueW + 1} y={_barH + _gap} width={orangeW - 1} height={_barH} rx={_br} fill={ORANGE} />
           {orangeW > 28 && <text x={blueW + 1 + (orangeW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n1}</text>}
         </svg>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
           <span style={{ color: MATH }}>{n0}</span>{' + '}
@@ -1299,14 +1299,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         <svg width={_svgW} height={_barH * 2 + _gap}>
           <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill={MATH} />
           <text x={_svgW / 2} y={_barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n0}</text>
           <rect x={0} y={_barH + _gap} width={orangeW - 1} height={_barH} rx={_br} fill={ORANGE} />
           {orangeW > 28 && <text x={(orangeW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n1}</text>}
           {greenW > 4 && <rect x={orangeW + 1} y={_barH + _gap} width={greenW - 1} height={_barH} rx={_br} fill={`${GREEN}22`} />}
           {greenW > 4 && <rect x={orangeW + 1} y={_barH + _gap} width={greenW - 1} height={_barH} rx={_br} fill="none" stroke={GREEN} strokeWidth={2.5} strokeDasharray="6 3" />}
           {greenW > 28 && <text x={orangeW + 1 + (greenW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>}
+            fill={GREEN} fontFamily={FRED} fontWeight="700" fontSize="20">?</text>}
         </svg>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
           <span style={{ color: MATH }}>{n0}</span>{' − '}

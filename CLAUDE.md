@@ -101,6 +101,23 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       **Açık kalan:** Year 1'e (5-6 yaş) 1/3 çıkıyor — o yılın müfredatı yarım ve çeyrek diyor
       (`mathTemplates.js:569`, band ≤2 için [2,3,4]); kesir sorularının %36'sı. Düzeltmesi band
       1 → [2,4]. Kullanıcı kararı bekliyor.
+- [x] Türkçe font denetimi (2026-09-05). Fredoka ve Fredoka One'da **ğ Ğ ş Ş ve İ** yok —
+      ölçüm gözle/genişlikle değil, Google'ın servis ettiği woff2 dosyalarının cmap'inden
+      (fontTools). `TrRound` bu yüzden var ama unicode-range'i yalnızca ğĞşŞ'yi kapsıyordu;
+      **İ atlanmıştı** (ilk denetim tarayıcıda genişlik karşılaştırmasıyla yapılmış ve o yöntem
+      İ'yi göremez — noktalı büyük I, fallback'in I'sıyla aynı genişlikte ölçülüyor). Sonuç:
+      İ, TrRound'un arkasındaki Baloo 2'den geliyordu — kelimenin ortasında başka bir yazı
+      karakteri, tam da TrRound'un önlemek için var olduğu şey. Range'e U+0130 eklendi.
+      İkinci bulgu: 10 yerde (MathScreen SVG yardımcıları ×9, TutoMascot ×1) stack yalnızca
+      `Fredoka, sans-serif`'ti — orada beş harf sistem fontuna düşüyordu. Bugün o düğümlerde
+      sadece rakam ve "?" çiziliyor, yani ekranda kırık bir şey yoktu; ama Türkçe bir etiket
+      eklendiği an sessizce bozulurdu. Hepsi FRED stack'ine çevrildi.
+      Tekrarını engellemek için `npm run font:check` (`scripts/font-check.mjs`): index.css'teki
+      unicode-range'i ve src'deki her font stack'ini tarıyor, Fredoka/Fredoka One içerip de
+      TrRound/Baloo 2/Nunito gibi tam kapsamlı bir aile içermeyen stack'i bulursa non-zero
+      dönüyor. Üç kırılma senaryosuyla (bare Fredoka, eksik rescue, range'den İ'nin düşmesi)
+      doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
+      tamamını taşıyor; Georgia ve monospace sistem fontu.
 - [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
       altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
