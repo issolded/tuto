@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "font:check": "node scripts/font-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

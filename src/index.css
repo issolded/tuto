@@ -10,17 +10,23 @@
    generic cursive. */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lexend:wght@400;600&family=Fredoka+One&display=swap');
 
-/* ğ Ğ ş Ş only. Fredoka has every other Turkish letter — measured in the browser by comparing
-   rendered widths against the generic fallback — but not these two, so they were falling
-   through to Nunito, whose lighter, narrower shapes sat badly between Fredoka's round ones.
+/* The five Turkish letters Fredoka does not have: ğ Ğ ş Ş and İ. Without this they fall
+   through to whatever comes next in the stack, which is a different typeface mid-word.
    Baloo 2 at 800 matches Fredoka's optical weight at the sizes we use it; the family sits in
-   FRONT of Fredoka in the stack, and the unicode-range means it only ever supplies these four
-   code points. Nothing else about the type changes. */
+   FRONT of Fredoka in the stack, and the unicode-range means it only ever supplies these five
+   code points. Nothing else about the type changes.
+
+   İ (U+0130) was missing from this range until it was checked properly. The first pass
+   measured rendered widths in the browser against the generic fallback, and that method
+   cannot see İ — a dotted capital I is close enough to the fallback's own I to measure the
+   same. The list here now comes from the fonts themselves: fontTools over the woff2 files
+   Google serves, reading each cmap. Anything added to a stack in future should be checked
+   the same way, not by eye and not by width. */
 @font-face {
   font-family: 'TrRound';
   src: url(https://fonts.gstatic.com/s/baloo2/v23/wXK0E3kTposypRydzVT08TS3JnAmtdiayppm_leP6HcMmzcCjA.woff2) format('woff2');
   font-display: swap;
-  unicode-range: U+011E-011F, U+015E-015F;
+  unicode-range: U+011E-011F, U+015E-015F, U+0130;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

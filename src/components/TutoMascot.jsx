@@ -2,6 +2,10 @@
 // Same API (size, expression, style) + optional `color`. Only the face swaps per expression.
 const INK = '#20201e'
 const PINK = '#f08bb0'
+// Same stack the child screens use. Only a "?" is drawn with it today, but a bare 'Fredoka'
+// here would drop ğ Ğ ş Ş İ to the system font the day anything Turkish is added — which is
+// exactly how those letters came to be mismatched elsewhere.
+const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 
 function Face({ expression }) {
   const e = expression
@@ -12,7 +16,7 @@ function Face({ expression }) {
         <circle cx="90" cy="110" r="5" fill={INK} />
         <circle cx="113" cy="110" r="5" fill={INK} />
         <path d="M95 128 q9 -5 18 -1" fill="none" stroke={INK} strokeWidth="4.5" strokeLinecap="round" />
-        <text x="132" y="78" fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="30" fill={INK}>?</text>
+        <text x="132" y="78" fontFamily={FRED} fontWeight="700" fontSize="30" fill={INK}>?</text>
         <circle cx="74" cy="124" r="6.5" fill={PINK} opacity=".55" />
         <circle cx="126" cy="124" r="6.5" fill={PINK} opacity=".55" />
       </g>
