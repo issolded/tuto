@@ -1510,10 +1510,16 @@ export default function MathScreen() {
     // enough; a Turkish division question came to 95 characters against a seven-year-old's 90.
     const cap = maxQuestionChars(age)
     const usedOperands = new Set(readSeen('keys', child?.id, lvl))
+    // The same sentence twice in one session reads as a stutter even when the numbers differ:
+    // a Year 1 session has six topics for ten slots, so "How many do you see?" came round
+    // twice over two different pictures. Operand keys cannot see that — they are about the
+    // numbers — so the wording is tracked alongside them.
+    const usedTexts = new Set()
     for (const slot of slots) {
       if (!slot.templateTopic) continue
-      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language, { maxChars: cap })
+      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language, { maxChars: cap, avoidText: usedTexts })
       usedOperands.add(p.operandKey)
+      usedTexts.add(p.question_text)
       slot.problem = p
       slot.question = p.question_text
       slot.answer = p.correct_answer
@@ -1638,9 +1644,10 @@ export default function MathScreen() {
       for (const slot of bad) {
         console.warn(`[VERIFY] dropped a question — ${whyDropped(slot, failed)}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
         const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
-        const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap }) : null
+        const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap, avoidText: usedTexts }) : null
         if (p) {
           usedOperands.add(p.operandKey)
+          usedTexts.add(p.question_text)
           slot.curriculum = spare.curriculum
           slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
           slot.format = p.format === 'choice' ? 'choice' : 'integer'; slot.hints = null
