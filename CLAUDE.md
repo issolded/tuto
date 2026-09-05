@@ -86,6 +86,21 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       tek seferlik mi (`gift_gems`) yoksa kalıcı mı (`update_task_reward` + `daily_cap`) diye
       bir kez sorulur, mevcut sınır söylenerek. Sınırı artırmak geçmişe işlemez — ikisi birden
       isteniyorsa iki ayrı çağrı.
+- [x] Matematik şablonlarında pedagojik denetim düzeltmeleri (2026-09-05). 5.600 soruluk taramada
+      (7 yaş × 2 dil × 40 seans) çıkan dört madde: (1) sayarak toplama/çıkarma ipucu ve sayı
+      merdiveni diziyi cevaba kadar yazıyordu — artık bir adım erken kesiliyor ve "?" ile
+      bitiyor, son sayıyı çocuk söylüyor; (2) ondalık ipucu "…, 0.25 diye yazılır" diyerek cevabı
+      veriyordu, artık parada duruyor ve İngilizcesi £/p yerine $ kullanıyor (promptun kendi
+      para kuralıyla aynı); (3) bir seansta aynı cümle iki kez sorulabiliyordu — `generateProblem`
+      artık operand anahtarının yanında SORU METNİNİ de dışlıyor (`avoidText`), buildSession
+      seans boyunca metinleri biriktiriyor; (4) Year 1'e beşgen/altıgen/sekizgen çıkıyordu,
+      artık o yıl yalnızca üçgen/kare/dikdörtgen (`shapePoolForLevel`), Year 3+ hepsi.
+      Ölçüm: cevabı veren ipucu 912 → 312 (kalanların hepsi cevabın bir operanda eşit düştüğü
+      tesadüfler: "1/4 of 16 → 4"), seans içi tekrar 65 → 0. Şablonların cevap doğruluğu
+      3.617/3.617 doğru, dil sızıntısı 0, okuma sınırı ihlali 0.
+      **Açık kalan:** Year 1'e (5-6 yaş) 1/3 çıkıyor — o yılın müfredatı yarım ve çeyrek diyor
+      (`mathTemplates.js:569`, band ≤2 için [2,3,4]); kesir sorularının %36'sı. Düzeltmesi band
+      1 → [2,4]. Kullanıcı kararı bekliyor.
 - [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
       altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML

@@ -245,12 +245,24 @@ function additionTemplate(level, lang, columnar = false) {
 // numbers are in the thousands — the old version listed every single number from a+1 to a+b,
 // which at this level would have written out two thousand of them. Past what a child would
 // ever count, it points at the method they are actually taught instead.
+// The run a count-on or count-back hint shows, stopping ONE SHORT of where it lands.
+//
+// It used to print the whole thing — "Count back 11 from 16: 15, 14, … 6, 5" — and the last
+// number in that list is the answer. That breaks the rule at the top of this file, and it is
+// the same rule the model is held to when it writes hints ("walk the child toward the answer
+// WITHOUT ever stating it"). The child now says the last number themselves, which is the
+// entire skill being practised.
+function countRun(from, steps, dir) {
+  const run = [from, ...Array.from({ length: Math.max(0, steps - 1) }, (_, i) => from + dir * (i + 1))]
+  return `${run.join(', ')}, ?`
+}
+
 function countingOnSteps(a, b, lang) {
   if (isCountable(a, b)) {
     return [
       tr(lang, `Try counting on from ${a}.`, `${a} sayısından ileri saymayı dene.`),
-      tr(lang, `Count ${b} more starting at ${a}: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`,
-              `${a} sayısından ${b} tane ileri say: ${a}, ${Array.from({ length: b }, (_, i) => a + i + 1).join(', ')}.`),
+      tr(lang, `Count ${b} more starting at ${a}: ${countRun(a, b, 1)}`,
+              `${a} sayısından ${b} tane ileri say: ${countRun(a, b, 1)}`),
     ]
   }
   // Which help a question gets is read off the number itself rather than passed in, so a
@@ -298,8 +310,8 @@ function countingBackSteps(a, b, lang) {
   if (isCountable(a, b)) {
     return [
       tr(lang, `Start at ${a} and take away ${b}.`, `${a} sayısından başla ve ${b} çıkar.`),
-      tr(lang, `Count back ${b} from ${a}: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`,
-              `${a} sayısından ${b} geri say: ${Array.from({ length: b }, (_, i) => a - i - 1).join(', ')}.`),
+      tr(lang, `Count back ${b} from ${a}: ${countRun(a, b, -1)}`,
+              `${a} sayısından ${b} geri say: ${countRun(a, b, -1)}`),
     ]
   }
   if (placeParts(b).length <= MENTAL_PARTS) return partitionSteps(a, b, false, lang)
@@ -473,8 +485,12 @@ function fractionDecimal(level, lang) {
     hint_steps: [
       tr(lang, 'A decimal is another way of writing part of one whole.',
                'Ondalık sayı, bir bütünün parçasını yazmanın başka bir yoludur.'),
-      tr(lang, `Think of money: ${n}/${d} of £1 is ${Math.round(Number(e.dec) * 100)}p, written ${e.dec}.`,
-               `Parayı düşün: 1 liranın ${n}/${d} kadarı ${Math.round(Number(e.dec) * 100)} kuruştur, ${e.dec} diye yazılır.`),
+      // Money is the anchor, but the hint stops at the money: writing "…, written 0.25" handed
+      // over the answer, which is exactly what these steps must not do. Dollars rather than
+      // pounds for English — the same choice the model's prompt makes, and for the same
+      // reason: these readers are not all in Britain.
+      tr(lang, `Think of money: $1 is 100 cents, and ${n}/${d} of it is ${Math.round(Number(e.dec) * 100)} cents.`,
+               `Parayı düşün: 1 lira 100 kuruştur, ${n}/${d} kadarı ${Math.round(Number(e.dec) * 100)} kuruş eder.`),
     ],
   }
 }
@@ -759,6 +775,16 @@ const SHAPES = {
   triangle: 3, square: 4, rectangle: 4, pentagon: 5, hexagon: 6, octagon: 8,
 }
 
+// Which of them a child of this year has actually met. Year 1's curriculum entry names
+// "rectangles, circles, triangles" and nothing else, so a five-year-old was being shown an
+// octagon and asked to count its eight sides — countable, but not their year's work, and
+// "Bu şeklin adı nedir? → Sekizgen" is not a Year 1 question at all. Circles are absent from
+// SHAPES on purpose: a shape with no sides has no place in a sides-and-corners question.
+function shapePoolForLevel(level) {
+  const all = Object.keys(SHAPES)
+  return bandForLevel(level) <= 1 ? all.filter(k => SHAPES[k] <= 4) : all
+}
+
 const SHAPE_NAMES = {
   triangle:  { en: 'triangle',  tr: 'üçgen' },
   square:    { en: 'square',    tr: 'kare' },
@@ -774,7 +800,7 @@ const SHAPE_NAMES = {
 // the shape is what stops that: the answer is countable, and a wrong option can say so back
 // ("a hexagon means six sides; count this one, it has five").
 function geometryName(level, lang) {
-  const pool = Object.keys(SHAPES)
+  const pool = shapePoolForLevel(level)
   const shown = pick(pool)
   const n = SHAPES[shown]
   const name = k => SHAPE_NAMES[k][lang === 'tr' ? 'tr' : 'en']
@@ -811,6 +837,9 @@ function geometryName(level, lang) {
       tr(lang, 'The name carries the number: penta is five, hexa is six, octa is eight.',
                'Adı sayıyı söyler: beşgen beş, altıgen altı, sekizgen sekiz.'),
     ],
+    // 'sides' rather than 'name': `ask` is what the DRAWING does, not what the question says,
+    // and counting the sides is exactly how a child settles which shape this is. The hint above
+    // asks for the same thing in words.
     visual: { kind: 'shapes', shapes: [shown], ask: 'sides' },
   }
 }
@@ -821,7 +850,7 @@ function geometryTemplate(level, lang) {
   // number — the rung presents its own whole range instead. Both askings, all six shapes,
   // and a mix of one shape and two: a pair tops out at 8 + 8, and since every mark is on
   // screen and countable, that stays within reach of a child who can count to sixteen.
-  const pool = Object.keys(SHAPES)
+  const pool = shapePoolForLevel(level)
   const askKey = pick(['sides', 'corners'])
   // `ask` is the word the question is written in; `askKey` is what the drawing switches on.
   // They were the same field, so a Turkish "kaç kenarı var?" carried ask:'kenarı', missed the
@@ -905,8 +934,11 @@ function countingTemplate(level, lang) {
     format: 'numeric',
     correct_answer: n + 1,
     operandKey: `after:${n}`,
+    // The ladder stops at the number asked about. Printed to ten it contained the answer —
+    // "what comes after 6?" with "1, 2, 3, 4, 5, 6, 7…" underneath is not a hint, it is the
+    // answer with extra steps.
     hint_steps: [tr(lang, `Start at ${n} and say the next number.`, `${n} sayısından başla ve sonraki sayıyı söyle.`),
-                 tr(lang, 'Counting up goes 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.', 'İleri sayma: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.')],
+                 tr(lang, `Counting up goes ${countRun(1, n, 1)}`, `İleri sayma: ${countRun(1, n, 1)}`)],
     visual: { kind: 'count', n, item: pick(COUNT_ITEMS), upTo: true },
   }
 }
@@ -1161,10 +1193,16 @@ export const TOPICS = Object.keys(REGISTRY)
 //   than the English it was written beside, so the limit belongs here too. A reroll usually
 //   lands a shorter name and object; if thirty do not, the question still goes out, because a
 //   question slightly over the limit beats a session one question shorter.
-export function generateProblem(topic, level, avoid = null, lang = 'en', { numericOnly = false, columnar = false, maxChars = 0 } = {}) {
+// `avoidText` is the same idea one level up: not the numbers, the WORDING. Operand keys alone
+// let a session ask "Kaç tane görüyorsun?" twice over two different pictures, and a child does
+// not experience that as two questions — the sentence they read is the one they had a moment
+// ago. Rerolled, the template lands on another of its shapes ("what comes after 6?", a
+// sequence) and the session reads as ten questions rather than eight and a stutter.
+export function generateProblem(topic, level, avoid = null, lang = 'en', { numericOnly = false, columnar = false, maxChars = 0, avoidText = null } = {}) {
   const template = REGISTRY[topic]
   if (!template) throw new Error(`Unknown math template topic: ${topic}`)
   const reject = p => (avoid ? avoid.has(p.operandKey) : false)
+    || (avoidText ? avoidText.has(String(p.question_text ?? '')) : false)
     || (numericOnly && p.format === 'choice')
     || (maxChars > 0 && String(p.question_text ?? '').length > maxChars)
 
