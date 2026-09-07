@@ -15,9 +15,20 @@ export const nextHour  = (h) => (clockHour(h) === 12 ? 1 : clockHour(h) + 1)
 export const digital = (hour, minute) =>
   `${clockHour(hour)}:${String(minute).padStart(2, '0')}`
 
+// Spanish says the hour with an article, and it is singular for one: "la una", "las dos".
+const esHour = (n) => (n === 1 ? 'la una' : `las ${n}`)
+
 export function timeWords(hour, minute, lang = 'en') {
   const h = clockHour(hour)
   const next = nextHour(h)
+  if (lang === 'es') {
+    if (minute === 0)  return `${esHour(h)} en punto`
+    if (minute === 15) return `${esHour(h)} y cuarto`
+    if (minute === 30) return `${esHour(h)} y media`
+    if (minute === 45) return `${esHour(next)} menos cuarto`
+    if (minute < 30)   return `${esHour(h)} y ${minute}`
+    return `${esHour(next)} menos ${60 - minute}`
+  }
   if (lang === 'tr') {
     if (minute === 0)  return `saat ${h}`
     if (minute === 15) return `${TR_ACC[h]} çeyrek geçiyor`

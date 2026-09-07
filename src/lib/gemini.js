@@ -1,4 +1,5 @@
 import { downscale, toBase64 } from './image'
+import { langName } from './i18n'
 
 // ── British National Curriculum ───────────────────────────────────────────────
 
@@ -210,7 +211,7 @@ export async function callGeminiJSON(prompt) {
 // by matching the word in that text.
 export async function readStory(photos, topic, age, language = 'en') {
   const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `You are an expert at reading young children's handwriting. A ${n}-year-old child has written a story on the topic: "${topic}". Read it, then judge it.
 
 First read the WHOLE page and understand the story the child is telling — its meaning and flow. THEN, for each part, infer the word the child most likely INTENDED, using sentence and story context.
@@ -257,14 +258,14 @@ Rules:
 // The language matters here or the check does harm: a Turkish title run through an English
 // spell check comes back "corrected" into nonsense.
 export async function checkTitleSpelling(title, language = 'en') {
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `Check this ${lang} story title for spelling errors: "${title}". The title is written in ${lang} — judge it as ${lang}, and if it is already correct return it unchanged. Return JSON only: { "corrected": "corrected title or same if no errors", "has_errors": true or false }`
   return callGemini([{ text: prompt }])
 }
 
 export async function generateStoryIdeas(age, language = 'en') {
   const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `Generate 4 creative and imaginative story ideas for a ${n}-year-old child in ${lang}. Each idea should be fun, age-appropriate, and spark curiosity. Return JSON only: { "ideas": [ { "emoji": string, "title": string, "topic": string, "description": string } ] }`
   return callGemini([{ text: prompt }])
 }
@@ -295,7 +296,7 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
   // answer "A baker has 1 kg of flour" however Turkish the buttons around it are. The topic
   // descriptions stay in English — they are curriculum text written for the model, not for the
   // child — and only the questions themselves change language.
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const list = topics.map((t, i) => `Q${i + 1} — "${t.name}": ${t.description}`).join('\n')
   const avoidClause = previousQuestions.length > 0
     ? `\nDo NOT repeat or lightly reword these recent questions: ${JSON.stringify(previousQuestions.slice(-20))}`
@@ -311,7 +312,12 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
   // amount was never the problem — the coin NAMES were, since "quarter" and "kuruş" only mean
   // something where they are spent. Dollars rather than pounds for English: these readers are not
   // all in Britain, and $ is the one symbol a child anywhere has seen.
-  const currency = language === 'tr' ? 'Turkish lira, written as "15 TL"' : 'dollars, written as "$15"'
+  // Spanish gets euros for the same reason English gets dollars rather than pounds: the symbol
+  // has to be one the reader has actually seen. It is the one place the choice is tied to a
+  // country rather than a language — see the es-ES note in i18n.js.
+  const currency = language === 'tr' ? 'Turkish lira, written as "15 TL"'
+    : language === 'es' ? 'euros, written as "15 €"'
+    : 'dollars, written as "$15"'
   // A minority, not none: the curriculum asks for reasoning as its own strand, and a session of
   // nothing but bare sums stops testing whether the child can find the sum in the first place.
   const wordBudget = Math.max(1, Math.round(topics.length * 0.3))
@@ -412,7 +418,7 @@ export async function evaluateMath(photos, questions, answers, age, level, langu
   // their Telegram message. Both follow the child's language — in a family where the two
   // differ the note arrives in the child's language, which is the lesser oddity of the two
   // and the one that keeps the child's own screen right.
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
   const questionsText = questions.map((q, i) => `Q${i + 1}: ${q} (correct answer: ${answers[i]})`).join('\n')
   const prompt = `Evaluate this ${age}-year-old child's math work photo.

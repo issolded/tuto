@@ -10,6 +10,7 @@ import crypto, { randomUUID } from 'crypto'
 import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
 import { imageSafetyPrompt, parseImageSafety } from './prompts/imageSafety.js'
 import { purgeOldPhotos } from './jobs/purgeOldPhotos.js'
+import { parentLang, say, PARENT_LANGS } from './lang.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -128,6 +129,7 @@ async function fetchGeminiOnce(body) {
 const GEMINI_FALLBACK_REPLY = {
   tr: 'Şu an yapay zeka platformumdaki bir teknik sorun nedeniyle mesajla yanıt veremiyorum. Bunu çözene kadar tüm ayarlara ve onaylara Tuto uygulaması üzerinden erişebilirsiniz.',
   en: "I'm currently unable to reply due to a technical issue with my AI platform. Until this is resolved, you can access all settings and approvals through the Tuto app.",
+  es: 'Ahora mismo no puedo responder por un problema técnico de mi plataforma de IA. Hasta que se resuelva, puedes ver todos los ajustes y las aprobaciones en la aplicación de Tuto.',
 }
 
 // Every timestamp handed to the model is a raw UTC ISO string, while the prompt tells it the
@@ -766,12 +768,19 @@ async function sendWhatsAppNotice(parentId, phone, notice, lang, tag) {
     console.log(`[${tag}] ⚠️ parent ${parentId} outside the 24h window and this notification has no template — dropped`)
     return false
   }
+  // The per-notice detail lines are written in tr and en only, and Spanish is not being added
+  // to them: this is the WhatsApp path, where the template itself has to be registered and
+  // approved by Meta per language. Writing a Spanish detail with no Spanish template behind it
+  // would be a translation that never reaches anyone. Spanish falls through to the generic
+  // line below, which is the same thing an untranslated notice kind already gets. Telegram —
+  // the only channel in use — never comes through here.
   const detail = typeof notice.detail === 'string' ? notice.detail : notice.detail?.[lang]
   const name = notice.child || await firstChildName(parentId)
   try {
     await sendWhatsAppTemplate(phone, notice.kind, lang,
-      templateVar(name, lang === 'en' ? 'your child' : 'çocuğunuz'),
-      templateVar(detail, lang === 'en' ? 'there is something new in the app' : 'uygulamada yeni bir şey var'))
+      templateVar(name, say(lang, 'your child', 'çocuğunuz', 'su hijo')),
+      templateVar(detail, say(lang, 'there is something new in the app', 'uygulamada yeni bir şey var',
+                                    'hay algo nuevo en la aplicación')))
     console.log(`[${tag}] ✅ Sent ${notice.kind}/${lang} template → parent ${parentId} (window shut)`)
     return true
   } catch (err) {
@@ -932,7 +941,7 @@ async function sendNotification(parentId, message, notice) {
 
   // ── WhatsApp (Twilio) ─────────────────────────────────────────────────────
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const lang = parentLang(parent?.prefs)
     if (await whatsappWindowOpen(parentId)) {
       try {
         await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
@@ -997,7 +1006,7 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
   // app — re-sending it once they reply would mean queueing images, which is a bigger thing
   // than it looks and not what this is.
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const lang = parentLang(parent?.prefs)
     if (await whatsappWindowOpen(parentId)) {
       try {
         await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
@@ -1066,7 +1075,7 @@ async function sendNotificationWithPhotos(parentId, message, photoUrls, notice) 
   }
 
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const lang = parentLang(parent?.prefs)
     if (!(await whatsappWindowOpen(parentId))) {
       if (await sendWhatsAppNotice(parentId, parent.whatsapp_phone, notice, lang, 'NOTIFY-PHOTOS')) {
         // The template deliberately does not carry the caption, so it is the caption sitting
@@ -1536,6 +1545,15 @@ const CONTRIBUTION_TOOLS = [{
             type: 'ARRAY', items: { type: 'STRING' },
             description: 'Types to approve automatically instead of asking: submission, drawing, contribution.',
           },
+          language: {
+            type: 'STRING',
+            description: 'The language YOU write to this parent in, as a code: tr, en or es. Set it when they ' +
+              'ask for it in words ("bana İngilizce yaz", "escríbeme en español", "can you write in English?"). ' +
+              'Do NOT set it just because they wrote to you in another language once — people switch languages ' +
+              'mid-conversation and you already reply in whichever they used. This changes the messages you send ' +
+              'on your own, which they may not be reading when it happens. It does not touch the language their ' +
+              'CHILD is taught in; that one is per child, in the app.',
+          },
         },
       },
     },
@@ -1678,6 +1696,15 @@ async function updatePreferencesTool(parentId, args) {
     changed.push('notify_level')
   }
 
+  if (args.language != null) {
+    const code = String(args.language).trim().toLowerCase()
+    if (!PARENT_LANGS.some(l => l.code === code)) {
+      return { success: false, error: `language must be one of: ${PARENT_LANGS.map(l => l.code).join(', ')}` }
+    }
+    prefs.language = code
+    changed.push('language')
+  }
+
   if (args.quiet_off === true) {
     prefs.quiet_hours = null
     changed.push('quiet_hours')
@@ -1725,6 +1752,7 @@ async function updatePreferencesTool(parentId, args) {
     success: true,
     changed,
     now: {
+      language: parentLang(prefs),
       notify_level: prefs.notify_level ?? 'all',
       notify_per_task: prefs.notify_per_task !== false,
       quiet_hours: prefs.quiet_hours ?? null,
@@ -1831,19 +1859,24 @@ async function setAutopilotTool(parentId, args) {
 // window in which Tuto spent the parent's authority. What it says has to match what happened
 // exactly, and "usually phrases it accurately" is not the standard for that.
 function autopilotClosingMessage(handled, language) {
-  const en = language === 'en'
+  const L = (en, tr, es) => say(language, en, tr, es)
   const gems = handled.earned.map(e => `${e.child} +${e.gems}`).join(', ')
-  const head = en ? "Autopilot's done — approvals are back with you." : 'Otomatik pilot bitti — onaylar yine sende.'
+  const head = L("Autopilot's done — approvals are back with you.",
+                 'Otomatik pilot bitti — onaylar yine sende.',
+                 'El piloto automático ha terminado: las aprobaciones vuelven a ser tuyas.')
 
   const body = handled.approved > 0 || handled.earned.length
-    ? (en ? `While you were busy I approved ${handled.approved} thing${handled.approved === 1 ? '' : 's'}.`
-          : `Sen meşgulken ${handled.approved} şeyi ben onayladım.`) +
-      (gems ? (en ? ` Gems: ${gems} 💎` : ` Gem: ${gems} 💎`) : '')
-    : (en ? 'Nothing came in while you were busy.' : 'Sen meşgulken yeni bir şey gelmedi.')
+    ? L(`While you were busy I approved ${handled.approved} thing${handled.approved === 1 ? '' : 's'}.`,
+        `Sen meşgulken ${handled.approved} şeyi ben onayladım.`,
+        `Mientras estabas ocupado aprobé ${handled.approved} cosa${handled.approved === 1 ? '' : 's'}.`) +
+      (gems ? L(` Gems: ${gems} 💎`, ` Gem: ${gems} 💎`, ` Gems: ${gems} 💎`) : '')
+    : L('Nothing came in while you were busy.', 'Sen meşgulken yeni bir şey gelmedi.',
+        'No llegó nada mientras estabas ocupado.')
 
   const tail = handled.waiting > 0
-    ? (en ? `\n\n${handled.waiting} thing${handled.waiting === 1 ? ' is' : 's are'} still waiting on you — I don't decide those.`
-          : `\n\n${handled.waiting} şey hâlâ seni bekliyor — onlara ben karar vermiyorum.`)
+    ? L(`\n\n${handled.waiting} thing${handled.waiting === 1 ? ' is' : 's are'} still waiting on you — I don't decide those.`,
+        `\n\n${handled.waiting} şey hâlâ seni bekliyor — onlara ben karar vermiyorum.`,
+        `\n\nQueda${handled.waiting === 1 ? '' : 'n'} ${handled.waiting} cosa${handled.waiting === 1 ? '' : 's'} esperándote: esas no las decido yo.`)
     : ''
 
   return `${head}\n\n${body}${tail}`
@@ -1878,7 +1911,7 @@ async function closeExpiredAutopilots() {
       continue
     }
 
-    const language = parent.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parent.prefs)
     console.log(`[AUTOPILOT] window closed for parent ${parent.id} — approved ${handled.approved}, waiting ${handled.waiting}`)
     sendNotification(parent.id, autopilotClosingMessage(handled, language), {
       kind: 'autopilot',
@@ -2343,7 +2376,7 @@ async function handleMessage(parentId, replyCb, text) {
       supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
       supabase.from('children').select('id, name').eq('parent_id', parentId),
     ])
-    language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+    language = parentLang(parentRow?.prefs)
     const tz = parentRow?.timezone || 'UTC'
     const userNow = DateTime.now().setZone(tz)
     const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
@@ -2358,6 +2391,12 @@ async function handleMessage(parentId, replyCb, text) {
     }[NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all']
     const settingsBlock =
       `BU EBEVEYNİN BİLDİRİM AYARLARI (okuma sorusu gelirse buradan cevapla, tool çağırma):\n` +
+      // The parent can ask which language the messages you SEND are in, and it is not the same
+      // question as which language this conversation is happening in — they can write to you in
+      // English and still be getting Turkish notifications at nine at night.
+      `- Kendiliğinden gönderdiğin mesajların dili: ${language} (tr/en/es). Cevaplarını her zaman ` +
+      `ebeveynin yazdığı dilde veriyorsun; bu ayar sadece senin başlattığın bildirimleri etkiliyor. ` +
+      `Değiştirmelerini isterlerse update_preferences'ı language ile çağır.\n` +
       `- Kademe: "${NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all'}" — ${levelSaid}.\n` +
       ((NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all') === 'all'
         ? `- Biten seanslar: ${p.notify_per_task !== false ? 'her seansı yazıyorsun' : 'günün sadece ilkini yazıyorsun'}. ` +
@@ -2657,9 +2696,10 @@ async function handleMessage(parentId, replyCb, text) {
       // parent something to DO instead of a dead end.
       if (!reply) reply = firstCallText
       if (!reply) {
-        reply = language === 'en'
-          ? "Sorry, I couldn't quite catch that — could you try rephrasing, or use the app to approve directly?"
-          : 'Üzgünüm, bunu tam anlayamadım — farklı bir şekilde söyler misin? Ya da uygulamadan doğrudan onaylayabilirsin.'
+        reply = say(language,
+          "Sorry, I couldn't quite catch that — could you try rephrasing, or use the app to approve directly?",
+          'Üzgünüm, bunu tam anlayamadım — farklı bir şekilde söyler misin? Ya da uygulamadan doğrudan onaylayabilirsin.',
+          'Perdona, no te he entendido del todo. ¿Puedes decírmelo de otra forma? También puedes aprobarlo directamente en la aplicación.')
       }
       await logMessage(parentId, 'tuto', reply)
       await replyCb(reply)
@@ -2953,16 +2993,18 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
       if (now - state.notifiedAt > PIN_NOTIFY_GAP_MS) {
         state.notifiedAt = now
         const { data: p } = await supabase.from('parents').select('prefs').eq('id', parent.id).maybeSingle()
-        const en = p?.prefs?.language === 'en'
-        sendNotification(parent.id, en
-          ? `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`
-          : `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
+        const lang = parentLang(p?.prefs)
+        sendNotification(parent.id, say(lang,
+          `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`,
+          `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
+          `Se han introducido ${PIN_MAX_FAILS} PIN incorrectos seguidos en el Tuto de tu familia. Lo he bloqueado 10 minutos. Si no ha sido ninguno de tus hijos, puedes cambiar su PIN en los ajustes. 🔒`),
           // No child name: a wrong PIN belongs to whoever typed it, and that is the one
           // thing a failed attempt cannot tell us. The template falls back to the family's
           // first child, which is the same guess the welcome message already makes.
           { kind: 'attention', detail: {
             tr: `art arda ${PIN_MAX_FAILS} yanlış PIN denemesi oldu, 10 dakika kilitledim`,
             en: `${PIN_MAX_FAILS} wrong PIN attempts in a row — locked for 10 minutes`,
+            es: `${PIN_MAX_FAILS} intentos de PIN incorrectos seguidos: bloqueado 10 minutos`,
           } }
         ).catch(() => {})
       }
@@ -3042,10 +3084,11 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
       // (every child gets 'en' there with no way to change it — using it here
       // sent this exact message in English to a parent who only reads Turkish).
       const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
-      const msg = language === 'en'
-        ? `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`
-        : `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`
+      const language = parentLang(parentRow?.prefs)
+      const msg = say(language,
+        `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`,
+        `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`,
+        `${child.name} quiere canjear «${reward.name}» (${reward.bt_cost} gems). Puedes aprobarlo desde la aplicación de Tuto.`)
       // An approval, not an alarm. 'attention' now means one thing only — a safety screen has
       // something to say about this child — and it is the one kind the parent cannot silence,
       // so a reward claim at ten at night must not borrow it.
@@ -3198,13 +3241,15 @@ app.post('/api/children/:childId/reward-suggestions', async (req, res) => {
 
     if (child.parent_id) {
       const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       const price = suggested
-        ? (language === 'en' ? ` — they think it should cost ${suggested} gems` : ` — ${suggested} gem olmasını düşünüyor`)
+        ? say(language, ` — they think it should cost ${suggested} gems`, ` — ${suggested} gem olmasını düşünüyor`,
+                        ` — cree que debería costar ${suggested} gems`)
         : ''
-      const msg = language === 'en'
-        ? `${child.name} is asking for a new goal: "${label}"${price}. You decide what it actually costs — add it from the Tuto app, or tell me the number here.`
-        : `${child.name} yeni bir hedef istiyor: "${label}"${price}. Kaç gem olacağına sen karar veriyorsun — Tuto uygulamasından ekleyebilir ya da buraya sayıyı yazabilirsin.`
+      const msg = say(language,
+        `${child.name} is asking for a new goal: "${label}"${price}. You decide what it actually costs — add it from the Tuto app, or tell me the number here.`,
+        `${child.name} yeni bir hedef istiyor: "${label}"${price}. Kaç gem olacağına sen karar veriyorsun — Tuto uygulamasından ekleyebilir ya da buraya sayıyı yazabilirsin.`,
+        `${child.name} pide una meta nueva: «${label}»${price}. Tú decides lo que cuesta de verdad: añádela desde la aplicación de Tuto o dime aquí el número.`)
       sendNotification(child.parent_id, msg, { kind: 'approval', child: child.name, detail: {
         tr: `yeni bir hedef istiyor: "${label}"`,
         en: `is asking for a new goal: "${label}"`,
@@ -3720,7 +3765,7 @@ app.get('/api/cards', async (req, res) => {
 async function screenContributionPhoto(photoPath, child) {
   const { data: parentRow } = await supabase
     .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-  const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+  const language = parentLang(parentRow?.prefs)
 
   let image = null
   try {
@@ -3761,12 +3806,14 @@ async function screenContributionPhoto(photoPath, child) {
 
   try {
     const canSee = heldId
-      ? (language === 'en' ? ' I have kept it for a week in case you want to see it — just ask.'
-                           : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
+      ? say(language, ' I have kept it for a week in case you want to see it — just ask.',
+                      ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.',
+                      ' La he guardado una semana por si quieres verla: solo tienes que pedírmela.')
       : ''
-    deferNotify('HOMEWORK', () => sendNotification(child.parent_id, (language === 'en'
-      ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`
-      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee,
+    deferNotify('HOMEWORK', () => sendNotification(child.parent_id, say(language,
+      `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`,
+      `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`,
+      `${child.name} ha intentado adjuntar a una tarea de casa una foto que no es apropiada para una aplicación infantil. No he reenviado la imagen.`) + canSee,
       { kind: 'attention', child: child.name, detail: {
         tr: 'uygun olmayan bir görsel yüklemeye çalıştı, ben paylaşmadım',
         en: 'tried to upload a photo that is not appropriate for a kids app — I did not forward it',
@@ -3775,9 +3822,10 @@ async function screenContributionPhoto(photoPath, child) {
     console.error(`[CONTRIBUTIONS] inappropriate alert failed: ${err.message}`)
   }
 
-  return language === 'en'
-    ? "I couldn't send that photo. Want to take another one?"
-    : 'Bu fotoğrafı gönderemedim. Başka bir tane çeker misin?'
+  return say(language,
+    "I couldn't send that photo. Want to take another one?",
+    'Bu fotoğrafı gönderemedim. Başka bir tane çeker misin?',
+    'No he podido enviar esa foto. ¿Quieres hacer otra?')
 }
 
 app.post('/api/contributions', async (req, res) => {
@@ -4393,7 +4441,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const { data: parentRow } = await supabase
       .from('parents').select('prefs, timezone').eq('id', child.parent_id).maybeSingle()
     const prefs = parentRow?.prefs || {}
-    const language = prefs.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(prefs)
     const tone = typeof prefs.tone === 'string' && prefs.tone ? prefs.tone : null
     const tz = parentRow?.timezone || 'UTC'
 
@@ -4495,9 +4543,10 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       if (heldErr) console.error(`[HOMEWORK] held-row insert failed: ${heldErr.message}`)
 
       try {
-        await sendNotification(child.parent_id, language === 'en'
-          ? `${child.name} sent something as homework that I hesitated to forward automatically — I may well be wrong. I've kept it: just say "show me" and I'll send it here so you can decide for yourself.`
-          : `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`,
+        await sendNotification(child.parent_id, say(language,
+          `${child.name} sent something as homework that I hesitated to forward automatically — I may well be wrong. I've kept it: just say "show me" and I'll send it here so you can decide for yourself.`,
+          `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`,
+          `${child.name} ha enviado como deberes algo que he dudado en reenviar automáticamente, y puede que me equivoque. Lo he guardado: dime «enséñamelo» y te lo mando aquí para que decidas tú.`),
           { kind: 'attention', child: child.name, detail: {
             tr: 'ödev olarak gönderdiği bir görseli iletmekte tereddüt ettim, kararı sana bırakıyorum',
             en: 'sent a homework photo I hesitated to forward — I would rather you decided',
@@ -4638,18 +4687,21 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     async function deliverHomeworkNotification(doneToday) {
       let dateNote = ''
       if (photoTakenAt && takenLocal !== todayLocal) {
-        dateNote = language === 'en'
-          ? "This photo doesn't look like it was taken today."
-          : 'Bu fotoğraf bugün çekilmiş görünmüyor.'
+        dateNote = say(language,
+          "This photo doesn't look like it was taken today.",
+          'Bu fotoğraf bugün çekilmiş görünmüyor.',
+          'Esta foto no parece hecha hoy.')
       } else if (!photoTakenAt) {
         // Couldn't read the date — relay the child's own answer, hedged. Name as
         // subject (no case suffix) so it reads right for any Turkish name.
-        if (doneToday === true) dateNote = language === 'en'
-          ? `I couldn't confirm the photo's date, but ${child.name} said they did this homework today — I could be wrong.`
-          : `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yaptığını söyledi. Yine de yanılıyor olabilirim.`
-        else if (doneToday === false) dateNote = language === 'en'
-          ? `I couldn't confirm the photo's date; ${child.name} said they did not do this homework today.`
-          : `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yapmadığını söyledi.`
+        if (doneToday === true) dateNote = say(language,
+          `I couldn't confirm the photo's date, but ${child.name} said they did this homework today — I could be wrong.`,
+          `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yaptığını söyledi. Yine de yanılıyor olabilirim.`,
+          `No he podido confirmar la fecha de la foto, pero ${child.name} dice que hizo estos deberes hoy. Puedo estar equivocado.`)
+        else if (doneToday === false) dateNote = say(language,
+          `I couldn't confirm the photo's date; ${child.name} said they did not do this homework today.`,
+          `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yapmadığını söyledi.`,
+          `No he podido confirmar la fecha de la foto; ${child.name} dice que estos deberes no los hizo hoy.`)
         // doneToday undefined (child never answered) → no date sentence
       }
 
@@ -5143,15 +5195,16 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     const perTask = prefsRow?.prefs?.notify_per_task !== false
     if (gems > 0 && (perTask || doneToday === 0)) {
       const parentRow = prefsRow
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       // Paper mode asks the model how the work actually went, and that read used to be
       // written to a column nothing has ever selected. "Strong at addition, word problems
       // need practice" is the sort of thing this product exists to tell a parent, so when
       // there is one it goes in the message rather than sitting in the table unread.
       const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
-      const head = language === 'en'
-        ? `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`
-        : `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`
+      const head = say(language,
+        `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`,
+        `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`,
+        `${child.name} ha hecho sus mates — ${questions_correct}/${questions_total} correctas. +${gems} gems 💎`)
       sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
         { kind: 'activity', child: child.name, detail: {
           tr: `matematik, ${questions_correct}/${questions_total} doğru, +${gems} gem`,
@@ -5167,11 +5220,12 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       // Deliberately NOT an offer. Tuto does not propose gems or a higher limit here — the
       // parent set that limit, and offering to break it every evening would empty it of
       // meaning. If the parent asks, the agent knows what to do with it (see the prompt).
-      const language = prefsRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(prefsRow?.prefs)
       const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
-      const head = language === 'en'
-        ? `${child.name} did another maths session — ${questions_correct}/${questions_total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`
-        : `${child.name} bir matematik daha yaptı — ${questions_correct}/${questions_total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`
+      const head = say(language,
+        `${child.name} did another maths session — ${questions_correct}/${questions_total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} bir matematik daha yaptı — ${questions_correct}/${questions_total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha hecho otra sesión de mates — ${questions_correct}/${questions_total} correctas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
       sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
         { kind: 'activity', child: child.name, detail: {
           tr: `matematik, ${questions_correct}/${questions_total} doğru, günlük sınır dolduğu için gem yok`,
@@ -5185,10 +5239,11 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     if (focusCleared) {
       const { data: parentRow } = await supabase
         .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
-      const msg = language === 'en'
-        ? `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`
-        : `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`
+      const language = parentLang(parentRow?.prefs)
+      const msg = say(language,
+        `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`,
+        `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`,
+        `${child.name} ya domina ${focusCleared.topic_name}: ${focusCleared.accuracy} % en las últimas ${focusCleared.attempts}. He dejado de darle prioridad. 🎉`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `${focusCleared.topic_name} artık oturdu, son ${focusCleared.attempts} soruda %${focusCleared.accuracy}`,
         en: `${focusCleared.topic_name} is solid now — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}`,
@@ -5281,22 +5336,24 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
     const { data: parentRow } = await supabase
       .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
     if (gems > 0 && (parentRow?.prefs?.notify_per_task !== false || doneToday === 0)) {
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       const title = book_title ? String(book_title).slice(0, 120) : null
-      const msg = language === 'en'
-        ? `${child.name} read${title ? ` "${title}"` : ''} — ${correct}/${total} on the questions. +${gems} gems 💎`
-        : `${child.name} kitap okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. +${gems} gem 💎`
+      const msg = say(language,
+        `${child.name} read${title ? ` "${title}"` : ''} — ${correct}/${total} on the questions. +${gems} gems 💎`,
+        `${child.name} kitap okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. +${gems} gem 💎`,
+        `${child.name} ha leído${title ? ` «${title}»` : ''} — ${correct}/${total} en las preguntas. +${gems} gems 💎`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `okuma${title ? ` — "${title}"` : ''}, sorularda ${correct}/${total}, +${gems} gem`,
         en: `reading${title ? ` — "${title}"` : ''}, ${correct}/${total} on the questions, +${gems} gems`,
       } }).catch(() => {})
     } else if (capped && settings.active && parentRow?.prefs?.notify_per_task !== false) {
       // Same as maths: the session past the limit is reported, never offered a way around.
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       const title = book_title ? String(book_title).slice(0, 120) : null
-      const msg = language === 'en'
-        ? `${child.name} read some more${title ? ` of "${title}"` : ''} — ${correct}/${total} on the questions. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`
-        : `${child.name} biraz daha okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`
+      const msg = say(language,
+        `${child.name} read some more${title ? ` of "${title}"` : ''} — ${correct}/${total} on the questions. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} biraz daha okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha leído un poco más${title ? ` de «${title}»` : ''} — ${correct}/${total} en las preguntas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `okuma${title ? ` — "${title}"` : ''}, günlük sınır dolduğu için gem yok`,
         en: `reading${title ? ` — "${title}"` : ''}, past the daily limit so no gems`,
@@ -5354,7 +5411,7 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
     // there is nothing to clean up and nothing to leak.
     const { data: parentRow } = await supabase
       .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-    const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parentRow?.prefs)
     const safety = await screenImageSafety({
       images: [{ buffer, mimeType: contentType }], kind: 'drawing', language,
     })
@@ -5383,13 +5440,14 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
 
       try {
         const canSee = heldPath
-          ? (language === 'en'
-              ? ' I have kept it for a week in case you want to see it — just ask.'
-              : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
+          ? say(language, ' I have kept it for a week in case you want to see it — just ask.',
+                          ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.',
+                          ' La he guardado una semana por si quieres verla: solo tienes que pedírmela.')
           : ''
-        deferNotify('DRAWING', () => sendNotification(child.parent_id, (language === 'en'
-          ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`
-          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee,
+        deferNotify('DRAWING', () => sendNotification(child.parent_id, say(language,
+          `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`,
+          `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`,
+          `${child.name} ha intentado subir como dibujo una foto que no es apropiada para una aplicación infantil. No la he guardado como dibujo ni se la he enseñado a nadie.`) + canSee,
           { kind: 'attention', child: child.name, detail: {
             tr: 'çizim olarak uygun olmayan bir görsel yüklemeye çalıştı, kaydetmedim',
             en: 'tried to upload a drawing photo that is not appropriate for a kids app — I did not save it',
@@ -5399,9 +5457,10 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
       }
       return res.status(400).json({
         error: 'photo_rejected',
-        message: language === 'en'
-          ? "I couldn't save that photo. Want to take another one?"
-          : 'Bu fotoğrafı kaydedemedim. Başka bir tane çeker misin?',
+        message: say(language,
+          "I couldn't save that photo. Want to take another one?",
+          'Bu fotoğrafı kaydedemedim. Başka bir tane çeker misin?',
+          'No he podido guardar esa foto. ¿Quieres hacer otra?'),
       })
     }
 
@@ -5737,11 +5796,12 @@ app.post('/api/send-welcome', async (req, res) => {
     ])
 
     const childName = children?.[0]?.name || 'your child'
-    const language = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parent?.prefs)
 
-    const message = language === 'en'
-      ? `👋 Hi! I'm Tuto, ${childName}'s learning companion!\n\nI'll keep you updated here as ${childName} completes tasks. 🎉\n\nFeel free to message me anytime — you can ask about ${childName}'s progress, earned Gems, and more! 💎`
-      : `👋 Merhaba! Ben Tuto, ${childName}'in öğrenme arkadaşı!\n\n${childName} görevlerini tamamladıkça sizi buradan haberdar edeceğim. 🎉\n\nBana istediğiniz zaman yazabilirsiniz — ${childName}'in gelişimini, kazandığı Gems'leri ve daha fazlasını sorabilirsiniz! 💎`
+    const message = say(language,
+      `👋 Hi! I'm Tuto, ${childName}'s learning companion!\n\nI'll keep you updated here as ${childName} completes tasks. 🎉\n\nFeel free to message me anytime — you can ask about ${childName}'s progress, earned Gems, and more! 💎`,
+      `👋 Merhaba! Ben Tuto, ${childName}'in öğrenme arkadaşı!\n\n${childName} görevlerini tamamladıkça sizi buradan haberdar edeceğim. 🎉\n\nBana istediğiniz zaman yazabilirsiniz — ${childName}'in gelişimini, kazandığı Gems'leri ve daha fazlasını sorabilirsiniz! 💎`,
+      `👋 ¡Hola! Soy Tuto, el compañero de aprendizaje de ${childName}.\n\nTe iré contando por aquí lo que ${childName} vaya completando. 🎉\n\nEscríbeme cuando quieras: puedes preguntarme por los avances de ${childName}, las gems que ha ganado y lo que necesites. 💎`)
 
     const channel = parent?.notification_channel
     if (channel === 'telegram' && parent?.telegram_chat_id) {
@@ -5890,7 +5950,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
     const { data: children } = await supabase.from('children').select('name').eq('parent_id', parent.id).order('created_at').limit(1)
     const childName = children?.[0]?.name || 'çocuğunuzun'
-    const language = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parent?.prefs)
 
     await supabase
       .from('parents')
@@ -5910,9 +5970,10 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
     // Says plainly that this moves the messages, since a parent who also had Telegram will
     // otherwise wonder why it went quiet.
-    const confirmMsg = language === 'en'
-      ? `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on — not on Telegram.`
-      : `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra Telegram yerine buradan haber vereceğim.`
+    const confirmMsg = say(language,
+      `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on — not on Telegram.`,
+      `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra Telegram yerine buradan haber vereceğim.`,
+      `¡Hola! Ya estás conectado a la cuenta de Tuto de ${childName} 🎉 A partir de ahora te escribiré por aquí, no por Telegram.`)
     await sendWhatsAppBusinessMessage(from, confirmMsg)
     console.log(`[WA] Connected parent ${parent.id} → ${from}`)
   } catch (err) {

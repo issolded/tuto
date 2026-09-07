@@ -60,9 +60,38 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - **Baileys / WhatsApp bırakıldı.** Test yalnızca Telegram, WhatsApp Business erişimi
   alınana kadar. Tekrar Baileys önerme.
 - Persona parametreleri (`bot_name`, `tone`) typing promptuna değil, `prefs` şemasına bağlı.
+- **İki ayrı dil ekseni var, birleştirme.** `children.language` çocuğun okuduğu dil (uygulama
+  metinleri, sorular, ipuçları); `parents.prefs.language` ebeveyne yazdığın mesajların dili.
+  Aynı ailede farklı olabilirler ve bir kez bunlar karıştırıldığı için Türkçe okuyan bir
+  ebeveyne İngilizce ödül mesajı gitti.
+- **Dil seçmek `lang === 'x' ? a : b` ile yapılmaz.** İkili ternary üçüncü dilde sessizce
+  İngilizceye düşer. Frontend'de `say(lang, en, tr, es)` (`src/lib/i18n.js`), sunucuda aynısı
+  (`server/lang.js`); dil listesi tek yerde (`LANGS` / `PARENT_LANGS`).
 
 ## Açık işler / yol haritası
 
+- [x] Üçüncü dil: İspanyolca (2026-09-07). Çocuk tarafı: 301 i18n anahtarının hepsinde `es`,
+      matematik şablonlarının 107 cümlesi + kelime bankaları, `numerals.js`'e İspanyolca sayı
+      sözcükleri (16-29 tek kelime, `y` bağlacı yalnız onluktan sonra bağlar, binlik ayıracı
+      nokta), `timeWords.js`'e saat okunuşu ("las 3 y cuarto", 1 için "la una"), yardım paneli
+      ve saat rehberi tablo hâline geldi. Ebeveyn tarafı: sunucudaki 46 mesaj `say()`'e geçti,
+      `parentLang()` tek kaynak, ve **ebeveyn artık kendi dilini seçebiliyor** — dashboard'da
+      ayar kartının başında ve mesajla (`update_preferences.language`). Bunu eklemek zorunluydu:
+      `prefs.language` sütun varsayılanıyla 'tr' geliyordu ve değiştirmenin hiçbir yolu yoktu,
+      yani İspanyolca yazılan mesajlar hiçbir zaman tetiklenmezdi.
+      **Dil seçimi İspanya (es-ES):** para birimi euro/céntimo, tarih `es-ES`. LatAm'a
+      dönülürse değişecek yerler: `LANGS`'taki locale, `gemini.js`'teki `currency`, ondalık
+      ipucundaki "1 € son 100 céntimos". Dilbilgisi için iki bilinçli karar: matematik
+      kelime bankaları (nesneler, kaplar) **tamamı dişil** seçildi ki "¿Cuántas…?" her zaman
+      uyumlu olsun; piktogram setleri sabit beş emoji olduğu için gerekli olan yerde tekil
+      biçim (`one`) ve soru sözcüğü (`many`) ayrı alan olarak taşınıyor.
+      Font tarafında iş yok: Baloo 2, Fredoka, Fredoka One, Lexend, Nunito ve Plus Jakarta
+      Sans'ın hepsi ñ Ñ á é í ó ú ü ¿ ¡ karakterlerini taşıyor (woff2 cmap'lerinden fontTools
+      ile ölçüldü), `npm run font:check` değişmeden geçiyor. `npm run i18n:check` artık
+      `say()` çağrılarının içini "çevrilmiş" sayıyor — yoksa bir cümleyi düzgün çevirmek
+      raporu üç bulgu kötüleştiriyordu.
+      Yan düzeltme: `tree_this_month` iki kez tanımlıydı, ikincisi kazanıyordu ve orman
+      arşivinin başlığı "THIS MONTH 🌳" diye çıkıyordu; başlık artık `tree_month_label`.
 - [x] Sınıra takılan seanslar artık gem history'de görünüyor (2026-09-04). Cap'e takılan her
       seans `amount = 0, capped = true` ile tek bir `bt_ledger` satırı yazıyor; beş yazma yeri
       (math, reading, story, drawing onayı, ödev onayı) tek `recordGems()` yardımcısından

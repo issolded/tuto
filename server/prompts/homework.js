@@ -6,9 +6,9 @@
 //      the (already low-confidence-filtered) observation JSON, honoring the
 //      parent's tone + language. Never a fixed template.
 
-function languageName(language) {
-  return language === 'en' ? 'English' : 'Turkish'
-}
+import { langName, say } from '../lang.js'
+
+const languageName = langName
 
 // The image safety gate lives in ./imageSafety.js — shared with the drawing
 // and home-contribution upload paths so they can't drift apart.
@@ -173,15 +173,19 @@ export function homeworkCaptionPrompt({ filteredObservation, childName, tone, la
 // Ends with the approval question too — the reward stays pending until the
 // parent decides, so no path may leave that unasked.
 export function fallbackCaption({ childName, language, staleNote, awarded, capped }) {
-  const base = language === 'en'
-    ? `${childName} just sent a photo of their homework. 🌱 Take a look whenever you can.`
-    : `${childName} az önce ödevinin fotoğrafını gönderdi. 🌱 Fırsatın olduğunda bir göz atabilirsin.`
+  const base = say(language,
+    `${childName} just sent a photo of their homework. 🌱 Take a look whenever you can.`,
+    `${childName} az önce ödevinin fotoğrafını gönderdi. 🌱 Fırsatın olduğunda bir göz atabilirsin.`,
+    `${childName} acaba de enviar una foto de sus deberes. 🌱 Échales un vistazo cuando puedas.`)
   const close = awarded != null
     ? (capped
-        ? (language === 'en'
-            ? "I approved it for you. Today's homework limit was already used up, so this one didn't add gems — it's still saved."
-            : 'Senin yerine onayladım. Bugünkü ödev sınırı dolmuştu, bu yüzden gem eklenmedi — ödev yine de kaydedildi.')
-        : (language === 'en' ? `I approved it for you and added ${awarded} gems.` : `Senin yerine onayladım, ${awarded} gem ekledim.`))
-    : (language === 'en' ? 'Shall we approve it?' : 'Onaylıyor muyuz?')
+        ? say(language,
+            "I approved it for you. Today's homework limit was already used up, so this one didn't add gems — it's still saved.",
+            'Senin yerine onayladım. Bugünkü ödev sınırı dolmuştu, bu yüzden gem eklenmedi — ödev yine de kaydedildi.',
+            'Lo he aprobado por ti. El límite de deberes de hoy ya estaba completo, así que no ha sumado gems, pero queda guardado.')
+        : say(language, `I approved it for you and added ${awarded} gems.`,
+                        `Senin yerine onayladım, ${awarded} gem ekledim.`,
+                        `Lo he aprobado por ti y he añadido ${awarded} gems.`))
+    : say(language, 'Shall we approve it?', 'Onaylıyor muyuz?', '¿Lo aprobamos?')
   return [base, staleNote, close].filter(Boolean).join(' ')
 }

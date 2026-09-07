@@ -7,7 +7,7 @@ import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
 import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
-import { t } from '../lib/i18n'
+import { t, say } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -585,12 +585,43 @@ const GUESS_ROUNDS = 3
 // the ordinary deal-it-out help takes the question.
 const GUESS_MAX_SLOTS = 48
 
-// Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
-// screen on demand — in a real session a given one turns up once in ten questions and only
-// after a wrong answer.
-export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
-  const tr = language === 'tr'
-  const t = tr ? {
+// What the draggable clock tells the child to do, per question shape and per language.
+const CLOCK_GUIDE = {
+  tr: {
+    hour:  'Aşağıdaki saati, yukarıdaki soruya benzeyene kadar çevir. Akrebin durduğu sayı saati söyler.',
+    halfPast: 'Önce soruya benzet. Sonra yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
+    past:  'Önce soruya benzet. Sonra yelkovanı 12\'ye geri getir ve beşer beşer sayarak kaç dakika döndüğünü bul.',
+    to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
+    span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
+    later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
+    h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
+  },
+  es: {
+    hour:  'Gira el reloj de abajo hasta que se parezca al de la pregunta. El número donde para la aguja corta es la hora.',
+    halfPast: 'Primero cópialo. Luego lleva la aguja larga al 12: la corta se queda justo encima de un número. Esa es la hora que has pasado.',
+    past:  'Primero cópialo. Luego lleva la aguja larga hacia atrás hasta el 12, contando de cinco en cinco los minutos que se mueve.',
+    to:    'Primero cópialo. Luego gira la aguja larga hacia adelante hasta el 12: ¿cuántos minutos han sido?',
+    span:  'Dale una vuelta entera a la aguja larga: la corta avanza una hora justa. Así que una hora son 60 minutos.',
+    later: 'Mueve la aguja corta de hora en hora y ve contando.',
+    h24:   'Primero cópialo. Después del mediodía seguimos contando en vez de empezar de nuevo: suma 12 a la hora que marca la aguja corta.',
+  },
+  en: {
+    hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
+    halfPast: 'Match the question first. Then take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
+    past:  'Match the question first. Then bring the long hand back to 12, counting round in fives to see how many minutes it moved.',
+    to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
+    span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
+    later: 'Move the short hand on one hour at a time, counting as you go.',
+    h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
+  },
+}
+
+// What the help panel says, in each language. It was two branches of a ternary; a third
+// language turns that shape into a silent English fallback, so it is a table now — the missing
+// key of a half-translated language shows up as `undefined` on screen rather than as English,
+// which is how a gap gets noticed.
+const HELP_WORDS = {
+  tr: {
     title:          'Haydi birlikte bakalım! 🧸',
     countTab:       'Sayalım',
     showTab:        'Göster',
@@ -613,7 +644,32 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     guessShort:     (n, short) => `Herkese ${n} tane yetmedi — ${short} tane eksik.`,
     guessOver:      (n, left) => `Herkes ${n} tane aldı ama elimizde hâlâ ${left} tane var.`,
     guessRetry:     'Başka bir sayı deneyeyim! 💪',
-  } : {
+  },
+  es: {
+    title:          '¡Vamos a verlo juntos! 🧸',
+    countTab:       'Contar',
+    showTab:        'Ver',
+    tapInstruction: '¿Cuántos vas a quitar?',
+    countInstruction: '¡Cuéntalos todos!',
+    ready:          '¡Ya lo veo, lo intento otra vez! 💪',
+    nowCount:       '¡Ahora cuenta los que quedan! 🔢',
+    whichNext:      '¿Qué número viene ahora?',
+    startLabel:     'inicio',
+    shareTap:       '¡Dale uno a cada uno! 👐',
+    shareDone:      '¡Todos tienen lo mismo! Ahora cuenta un grupo 🔢',
+    sharePick:      'Este es un grupo: ¿cuántos hay?',
+    shapeTap:       'Toca para contar: cada vez se enciende uno 👆',
+    shapeDone:      '¡Los has contado todos! ¿Cuántos eran?',
+    timesTap:       'Trae un grupo cada vez 👆',
+    timesDone:      '¡Mira, todos los grupos son iguales! ¿Cuántos hay en total?',
+    showHint:       'Ver la ayuda',
+    moreHint:       'Más ayuda',
+    guessTitle:     n => `Has dicho ${n} — ¿le damos ${n} a cada uno?`,
+    guessShort:     (n, short) => `No llega a ${n} para cada uno: faltan ${short}.`,
+    guessOver:      (n, left) => `Cada uno ha recibido ${n}, pero todavía quedan ${left}.`,
+    guessRetry:     '¡Voy a probar otro número! 💪',
+  },
+  en: {
     title:          'Let\'s look together! 🧸',
     countTab:       'Count',
     showTab:        'Show',
@@ -636,7 +692,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     guessShort:     (n, short) => `Not enough for ${n} each — ${short} short.`,
     guessOver:      (n, left) => `Everyone got ${n}, but there are still ${left} left over.`,
     guessRetry:     'Let me try another number! 💪',
-  }
+  },
+}
+
+// Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
+// screen on demand — in a real session a given one turns up once in ten questions and only
+// after a wrong answer.
+export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
+  const t = HELP_WORDS[language] ?? HELP_WORDS.en
 
   const nums    = question.match(/\d+/g)?.map(Number) || []
   const n0 = nums[0] ?? 0
@@ -745,23 +808,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     // Every other shape asks the child to READ a face, so the draggable one starts at 12:00
     // and the question's face sits beside it as the thing to copy.
     const seedFromQuestion = clock.ask === 'span' || clock.ask === 'later'
-    const guide = (tr ? {
-      hour:  'Aşağıdaki saati, yukarıdaki soruya benzeyene kadar çevir. Akrebin durduğu sayı saati söyler.',
-      halfPast: 'Önce soruya benzet. Sonra yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
-      past:  'Önce soruya benzet. Sonra yelkovanı 12\'ye geri getir ve beşer beşer sayarak kaç dakika döndüğünü bul.',
-      to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
-      span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
-      later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
-      h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
-    } : {
-      hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
-      halfPast: 'Match the question first. Then take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
-      past:  'Match the question first. Then bring the long hand back to 12, counting round in fives to see how many minutes it moved.',
-      to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
-      span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
-      later: 'Move the short hand on one hour at a time, counting as you go.',
-      h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
-    })[clock.ask]
+    const guide = (CLOCK_GUIDE[language] ?? CLOCK_GUIDE.en)[clock.ask]
 
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
@@ -770,12 +817,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
           textAlign: 'center', maxWidth: 280,
         }}>
-          {guide || (tr ? 'Kolları parmağınla çevir — saat seninle değişir.' : 'Turn the hands with your finger — the time changes with you.')}
+          {guide || say(language, 'Turn the hands with your finger — the time changes with you.',
+                                  'Kolları parmağınla çevir — saat seninle değişir.',
+                                  'Gira las agujas con el dedo: la hora cambia contigo.')}
         </div>
         {!seedFromQuestion && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT }}>
-              {tr ? 'Sorudaki saat' : 'The clock in the question'}
+              {say(language, 'The clock in the question', 'Sorudaki saat', 'El reloj de la pregunta')}
             </div>
             <ClockFace hour={clock.hour} minute={clock.minute} size={104} zoomable language={language} />
           </div>
@@ -811,9 +860,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           textAlign: 'center', maxWidth: 280,
         }}>
           {picto.each === 1
-            ? (tr ? 'Işıklı satırdaki sembolleri say.' : 'Count the symbols in the lit row.')
-            : (tr ? `Her sembol ${picto.each} demek — sayı sembolün altında yazıyor.`
-                  : `Each symbol is ${picto.each} — the running total is under each one.`)}
+            ? say(language, 'Count the symbols in the lit row.', 'Işıklı satırdaki sembolleri say.',
+                            'Cuenta los símbolos de la fila encendida.')
+            : say(language, `Each symbol is ${picto.each} — the running total is under each one.`,
+                            `Her sembol ${picto.each} demek — sayı sembolün altında yazıyor.`,
+                            `Cada símbolo vale ${picto.each}: la cuenta va debajo de cada uno.`)}
         </div>
         <Pictogram unit={picto.unit} each={picto.each} rows={picto.rows} highlight={picto.highlight} tally size={30} />
         {hintSteps?.length > 0 && (
@@ -966,9 +1017,10 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       // Turkish case suffixes on a number follow how the number is *said*, which digits do not
       // tell you: 3310'dan but 3315'ten, and no rule gets you there from the numeral. "X ile Y
       // arası" needs no suffix at all, so it is right for every number the dial can produce.
-      setTutoBubble(tr
-        ? `${from} ile ${toDisplay} arası kaç adım?`
-        : `${from} to ${toDisplay} — how many steps?`)
+      setTutoBubble(say(language,
+        `${from} to ${toDisplay} — how many steps?`,
+        `${from} ile ${toDisplay} arası kaç adım?`,
+        `De ${from} a ${toDisplay}: ¿cuántos pasos?`))
     }
 
     const confirmArrow = (i, input) => {
@@ -984,24 +1036,29 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         setActiveArrow(null)
         setArrowInput('')
         if (Object.keys(newSolved).length === arrowCount) {
-          setTutoBubble(tr
-            ? `Peki sırada hangi sayı var? Şimdi yaz! 💪`
-            : `So what comes after ${nums[nums.length - 1]}? Type it in! 💪`)
+          setTutoBubble(say(language,
+            `So what comes after ${nums[nums.length - 1]}? Type it in! 💪`,
+            `Peki sırada hangi sayı var? Şimdi yaz! 💪`,
+            `¿Y qué número viene después del ${nums[nums.length - 1]}? ¡Escríbelo! 💪`))
         } else {
           const nextTo = nums[i + 2]
-          setTutoBubble(tr
-            ? (nextTo !== undefined
-                ? `Evet! ${stepLabel(expected)}. Peki ${toNum} ile ${nextTo} arası?`
-                : `Evet! ${stepLabel(expected)}. O zaman sırada hangi sayı var?`)
-            : (nextTo !== undefined
-                ? `Yes! ${stepLabel(expected)}. Now ${toNum} to ${nextTo}?`
-                : `Yes! ${stepLabel(expected)}. So what comes after ${nums[nums.length - 1]}?`))
+          setTutoBubble(say(language,
+            nextTo !== undefined
+              ? `Yes! ${stepLabel(expected)}. Now ${toNum} to ${nextTo}?`
+              : `Yes! ${stepLabel(expected)}. So what comes after ${nums[nums.length - 1]}?`,
+            nextTo !== undefined
+              ? `Evet! ${stepLabel(expected)}. Peki ${toNum} ile ${nextTo} arası?`
+              : `Evet! ${stepLabel(expected)}. O zaman sırada hangi sayı var?`,
+            nextTo !== undefined
+              ? `¡Sí! ${stepLabel(expected)}. ¿Y de ${toNum} a ${nextTo}?`
+              : `¡Sí! ${stepLabel(expected)}. ¿Y qué número viene después?`))
         }
       } else {
         const toDisplay = toNum !== undefined ? toNum : '?'
-        setTutoBubble(tr
-          ? `Tekrar dene! ${from} ile ${toDisplay} arasını say 🔢`
-          : `Try again! Count from ${from} to ${toDisplay} 🔢`)
+        setTutoBubble(say(language,
+          `Try again! Count from ${from} to ${toDisplay} 🔢`,
+          `Tekrar dene! ${from} ile ${toDisplay} arasını say 🔢`,
+          `¡Inténtalo otra vez! Cuenta de ${from} a ${toDisplay} 🔢`))
         setArrowInput('')
       }
     }
@@ -1218,7 +1275,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         // tidy notation for "one of these groups", so it describes the picture instead —
         // the highlighted group is the answer.
         label={share.highlight
-          ? (tr ? `${share.total} sayısı ${share.groups} eşit grupta` : `${share.total} in ${share.groups} equal groups`)
+          ? say(language, `${share.total} in ${share.groups} equal groups`,
+                          `${share.total} sayısı ${share.groups} eşit grupta`,
+                          `${share.total} en ${share.groups} grupos iguales`)
           : `${share.total} ÷ ${share.groups} = ?`}
       />
     )
@@ -2377,7 +2436,7 @@ export default function MathScreen() {
                       <MathText text={flash.why} />
                       <div style={{ marginTop: 14, fontSize: 19, opacity: .92 }}>{t('math_almost', language)} <MathText text={flash.answer} /></div>
                       <div style={{ marginTop: 22, fontSize: 15, opacity: .78 }}>
-                        {language === 'tr' ? 'Devam etmek için dokun' : 'Tap to carry on'}
+                        {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
                       </div>
                     </>
                   : `${t('math_almost', language)} ${flash.answer} 💪`}
@@ -2491,7 +2550,7 @@ export default function MathScreen() {
                         boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
                       }}
                     >
-                      💡 {language === 'tr' ? 'İpucu' : 'Hint'} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+                      💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
                     </button>
                     {open && (
                       <div style={{
@@ -2515,7 +2574,7 @@ export default function MathScreen() {
                     fontFamily: FRED, fontWeight: 600, fontSize: 15,
                     boxShadow: '0 3px 10px rgba(60,120,200,.08)',
                   }}
-                >{language === 'tr' ? 'Bunu geç →' : 'Skip this one →'}</button>
+                >{say(language, 'Skip this one →', 'Bunu geç →', 'Saltar esta →')}</button>
               )}
 
               {answerFormats[qIdx] === 'choice' ? (

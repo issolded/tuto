@@ -1,3 +1,5 @@
+import { langName } from '../lang.js'
+
 // One server-side image safety gate shared by every module where a child
 // uploads a photo (homework, drawings, home contribution photos). Lives here
 // rather than inside a single module's prompts so the paths can't drift apart.
@@ -23,7 +25,7 @@ const KIND = {
 
 export function imageSafetyPrompt({ kind, language }) {
   const k = KIND[kind] || KIND.homework
-  const lang = language === 'en' ? 'English' : 'Turkish'
+  const lang = langName(language)
   return (
     `Bir çocuk, "${k.claim}" diyerek bu görsel(ler)i bir çocuk eğitim uygulamasına yükledi. ` +
     `Sen bir çocuk-güvenliği görsel sınıflandırıcısısın. Görselin NE GÖSTERDİĞİNİ değerlendir.\n\n` +

@@ -4,7 +4,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet, useIsTabletLandscape } from '../components/Shell'
 import { storageClient, submitReadingSession } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
-import { t, childLang } from '../lib/i18n'
+import { t, childLang, langName } from '../lib/i18n'
 
 const ACCENT = '#FF6B35'
 const BG = 'linear-gradient(160deg, #FFF3E8 0%, #FFDFC8 100%)'
@@ -57,7 +57,7 @@ async function identifyCover(file) {
 }
 
 async function readPagesAndAsk(files, title, age, language) {
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const imageParts = await Promise.all(
     files.map(async f => ({ inline_data: { mime_type: f.type, data: await toB64(f) } }))
   )

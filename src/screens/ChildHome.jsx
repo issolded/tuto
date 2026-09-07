@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { t, childLang } from '../lib/i18n'
+import { t, childLang, say } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import Shell, { useIsTablet } from '../components/Shell'
@@ -140,12 +140,17 @@ function activitySentence(activities, mature, lang) {
     // Turkish does not lower-case a list like this, and its words are already the plain form.
     return mature || lang === 'tr' ? n : n.toLowerCase()
   })
-  const list = names.length === 1
-    ? names[0]
-    : lang === 'tr'
-      ? `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}`
-      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-  return lang === 'tr' ? `${remaining.length} tane kaldı: ${list}` : `${remaining.length} left: ${list}`
+  const last = names[names.length - 1]
+  // Spanish "y" becomes "e" in front of a word that starts with an i sound, and one of the
+  // activity words could be translated into one — cheaper to handle than to remember.
+  const esAnd = /^h?i/i.test(last ?? '') ? 'e' : 'y'
+  const list = names.length === 1 ? names[0]
+    : say(lang, `${names.slice(0, -1).join(', ')} and ${last}`,
+                `${names.slice(0, -1).join(', ')} ve ${last}`,
+                `${names.slice(0, -1).join(', ')} ${esAnd} ${last}`)
+  return say(lang, `${remaining.length} left: ${list}`,
+                   `${remaining.length} tane kaldı: ${list}`,
+                   `Quedan ${remaining.length}: ${list}`)
 }
 
 function TodayPill({ emoji, text, color, bg }) {

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { timeWords, digital } from '../lib/timeWords'
+import { say } from '../lib/i18n'
 
 // An analogue clock, drawn once and used twice: still on the question card, and geared and
 // draggable inside the help panel.
@@ -88,7 +89,6 @@ function Hands({ mins, knobs, held }) {
 export default function ClockFace({ hour, minute, size = 150, minuteNumbers = false, zoomable = false, language = 'en' }) {
   const mins = wrap720((hour % 12) * 60 + minute)
   const [zoom, setZoom] = useState(false)
-  const tr = language === 'tr'
   const face = (
     <svg width={size} height={size} viewBox="0 0 220 220" style={{ display: 'block', flexShrink: 0 }}>
       <Face minuteNumbers={minuteNumbers} />
@@ -101,7 +101,7 @@ export default function ClockFace({ hour, minute, size = 150, minuteNumbers = fa
     <>
       <button
         onClick={() => setZoom(true)}
-        aria-label={tr ? 'Saati büyüt' : 'Enlarge the clock'}
+        aria-label={say(language, 'Enlarge the clock', 'Saati büyüt', 'Ampliar el reloj')}
         style={{ border: 'none', background: 'none', padding: 0, cursor: 'zoom-in', lineHeight: 0 }}
       >{face}</button>
       {zoom && createPortal(
@@ -124,7 +124,7 @@ export default function ClockFace({ hour, minute, size = 150, minuteNumbers = fa
             <Hands mins={mins} />
           </svg>
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: '#fffdf7' }}>
-            {tr ? 'Kapatmak için dokun' : 'Tap to close'}
+            {say(language, 'Tap to close', 'Kapatmak için dokun', 'Toca para cerrar')}
           </div>
         </div>,
         document.body,
@@ -149,7 +149,6 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
   // every frame instead would lose a fraction of a minute per move, so a slow drag right
   // round the face would come back short.
   const drag = useRef({ hand: null, lastDeg: 0, exact: start })
-  const tr = language === 'tr'
 
   const at = (e) => {
     const r = svgRef.current.getBoundingClientRect()
@@ -218,9 +217,9 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
       )}
 
       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: held ? GREEN : INK_SOFT, textAlign: 'center' }}>
-        {held === 'hour'   ? (tr ? 'Kısa kol — saati gösterir' : 'Short hand — it shows the hour')
-        : held === 'minute' ? (tr ? 'Uzun kol — dakikaları gösterir' : 'Long hand — it shows the minutes')
-        : (tr ? 'Kollardan tut ve çevir 👆' : 'Grab a hand and turn it 👆')}
+        {held === 'hour'   ? say(language, 'Short hand — it shows the hour', 'Kısa kol — saati gösterir', 'Aguja corta: marca la hora')
+        : held === 'minute' ? say(language, 'Long hand — it shows the minutes', 'Uzun kol — dakikaları gösterir', 'Aguja larga: marca los minutos')
+        : say(language, 'Grab a hand and turn it 👆', 'Kollardan tut ve çevir 👆', 'Agarra una aguja y gírala 👆')}
       </div>
 
       {moved && (
@@ -232,7 +231,7 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
             borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
             fontFamily: FRED, fontWeight: 600, fontSize: 13,
           }}
-        >↺ {tr ? 'Başa dön' : 'Start over'}</button>
+        >↺ {say(language, 'Start over', 'Başa dön', 'Empezar de nuevo')}</button>
       )}
     </div>
   )
