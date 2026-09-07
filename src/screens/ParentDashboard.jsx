@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
+import { LANGS } from '../lib/i18n'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
   TopBar, Btn, Card, Field, Toggle, Pill, Avatar, BottomSheet, Icon,
@@ -296,6 +297,9 @@ export default function ParentDashboard() {
     if (user) await supabase.from('parents').update({ prefs: next }).eq('id', user.id)
   }
 
+  // Turkish, not English, when nothing is set: that is what the server falls back to, and a
+  // picker showing a language the messages are not actually in would be worse than none.
+  const parentLanguage = LANGS.some(l => l.code === prefs?.language) ? prefs.language : 'tr'
   const notifyLevel = NOTIFY_LEVELS.some(l => l.id === prefs?.notify_level) ? prefs.notify_level : 'all'
   const quiet = prefs?.quiet_hours || null
   // Absent means on, matching the server: a parent who has never chosen hears about each session.
@@ -558,7 +562,39 @@ export default function ParentDashboard() {
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>How much I write</div>
             <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-              {/* autopilot — first, because while it runs it overrides everything below it */}
+              {/* Language first, because it applies to every message below — including the one
+                  autopilot sends when it ends. There was no way to set this at all until now:
+                  the column defaults to Turkish, and a parent who reads neither Turkish nor
+                  their child's language had nothing to change. Separate from the child's
+                  language on purpose — the app the child reads and the messages the parent
+                  gets are two different audiences, and in plenty of families two different
+                  languages. */}
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>The language I write to you in</div>
+                <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
+                  Just for these messages. Your child's app stays in the language you chose for them.
+                </div>
+                <div style={{ display: 'flex', gap: 9 }}>
+                  {LANGS.map(l => {
+                    const on = parentLanguage === l.code
+                    return (
+                      <button key={l.code} className="tc-press tc-tap" onClick={() => savePrefs({ language: l.code })}
+                        style={{
+                          flex: 1, padding: '10px 6px', cursor: 'pointer',
+                          background: on ? PC.tealBg : '#fff',
+                          border: `1.5px solid ${on ? PC.teal : PC.line}`, borderRadius: 14,
+                          fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.ink,
+                          transition: 'background .18s, border-color .18s',
+                        }}>{l.flag} {l.label}</button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: PC.line }} />
+
+              {/* autopilot — first of the message settings, because while it runs it overrides
+                  everything below it */}
               <div>
                 <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>I'm busy for a while</div>
                 <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>

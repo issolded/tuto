@@ -419,7 +419,7 @@ function ForestStrip({ monthForest, monthTreeCount }) {
     // which was clipping a tooltip that popped up *inside* the row.
     <div ref={containerRef} style={{ paddingBottom: 6, position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8 }}>
-        <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>{t('tree_this_month', lang)}</span>
+        <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 11, color: '#7a6a4c', letterSpacing: '.04em', textTransform: 'uppercase' }}>{t('tree_month_label', lang)}</span>
         <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 11.5, color: '#37a06f', background: 'rgba(76,182,133,.14)', padding: '4px 10px', borderRadius: 999 }}>
           🌳 {monthTreeCount} {t('tree_n_trees', lang)}
         </span>

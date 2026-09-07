@@ -1,4 +1,4 @@
-import { LANGS } from '../lib/i18n'
+import { LANGS, childLang as childLangOf } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -57,7 +57,7 @@ export default function TaskSettings() {
       .then(({ data }) => {
         if (!data) return
         setChildName(data.name)
-        setChildLang(data.language === 'tr' ? 'tr' : 'en')
+        setChildLang(childLangOf(data))
         if (data.task_settings) {
           setSettings({ ...DEFAULT_SETTINGS, ...data.task_settings })
         }

@@ -23,7 +23,7 @@ import { join } from 'path'
 
 const SRC = 'src'
 const DICT = 'src/lib/i18n.js'
-const EXPORTS = ['t', 'translator', 'childLang', 'formatDay', 'localeFor', 'LANGS']
+const EXPORTS = ['t', 'translator', 'childLang', 'formatDay', 'localeFor', 'LANGS', 'say']
 
 // Files whose strings are not read by a child: prompts sent to the model, parent-only
 // screens (the parent UI is not translated yet), and anything that never renders.
@@ -69,11 +69,47 @@ for (const [, key, fields] of entries) {
 const used = new Set()
 const dynamic = new Set()   // key prefixes built at runtime
 
+// Which lines of a file sit inside a say(lang, en, tr, es) call.
+//
+// say() is the OTHER way a string gets translated: a dictionary key cannot carry a sentence
+// with a number in the middle of it, so those are written out per language at the call site.
+// The scans below look for prose sitting loose in the source, and every argument of a say()
+// call looks exactly like that — so without this, adding a third language to a call made the
+// report three findings worse for a line that had just been translated properly. A checker
+// that gets noisier the more you translate is one people stop reading.
+//
+// Depth counting skips over quoted text, template literals included, so a `${cond ? 'a' : 'b'}`
+// inside an argument does not close the call early.
+function sayLines(src) {
+  const lines = new Set()
+  for (const m of src.matchAll(/\bsay\s*\(/g)) {
+    let depth = 1
+    let quote = null
+    let i = m.index + m[0].length
+    for (; i < src.length && depth > 0; i++) {
+      const c = src[i]
+      if (quote) {
+        if (c === '\\') i++
+        else if (c === quote) quote = null
+        continue
+      }
+      if (c === '\'' || c === '"' || c === '`') { quote = c; continue }
+      if (c === '(') depth++
+      else if (c === ')') depth--
+    }
+    const from = src.slice(0, m.index).split('\n').length
+    const to = src.slice(0, i).split('\n').length
+    for (let n = from; n <= to; n++) lines.add(n)
+  }
+  return lines
+}
+
 for (const file of walk(SRC)) {
   if (file.endsWith('i18n.js')) continue
   const childFacing = !NOT_CHILD_FACING.some(x => file.includes(x))
   const src = readFileSync(file, 'utf8')
   const lines = src.split('\n')
+  const translated = sayLines(src)
 
   const imported = new Set(
     [...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'[^']*i18n'/g)]
@@ -141,7 +177,7 @@ for (const file of walk(SRC)) {
     // ── 1 & 2. text a child would read, sitting in the source ────────────────
     // Bare text on its own line inside JSX is the shape that hid the library, and it is
     // the shape a regex over quoted strings can never see.
-    if (!childFacing || isComment) return
+    if (!childFacing || isComment || translated.has(n)) return
     const text = raw.trim()
     if (!text || text.startsWith('<') || text.startsWith('{') || text.startsWith('import')) return
     if (/^[^A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü]*$/.test(text)) return          // punctuation/emoji only
@@ -160,6 +196,7 @@ for (const file of walk(SRC)) {
   // keys had been written for strings that were still sitting here untranslated.
   if (childFacing) {
     lines.forEach((raw, i) => {
+      if (translated.has(i + 1)) return
       const text = raw.trim()
       if (/^(import|export|const [A-Z_]+ =)/.test(text)) return
       if (!/[{?:]/.test(text)) return
