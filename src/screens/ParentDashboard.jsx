@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
-import { LANGS } from '../lib/i18n'
+import { LangPicker } from '../lib/parentUI'
+import { useT, adoptAccountLang } from '../lib/parentI18n'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
   TopBar, Btn, Card, Field, Toggle, Pill, Avatar, BottomSheet, Icon,
@@ -15,6 +16,7 @@ let _childrenCache = null
 
 // ── Add child bottom sheet ────────────────────────────────────────────────────
 function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
+  const s = useT()
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [pin, setPin] = useState('')
@@ -34,9 +36,9 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
   }
 
   const save = async () => {
-    if (!name.trim()) return setError('Name is required.')
-    if (!age || isNaN(age) || +age < 1 || +age > 18) return setError('Enter a valid age (1–18).')
-    if (!/^\d{4}$/.test(pin)) return setError('PIN must be 4 digits.')
+    if (!name.trim()) return setError(s('db_err_name'))
+    if (!age || isNaN(age) || +age < 1 || +age > 18) return setError(s('db_err_age'))
+    if (!/^\d{4}$/.test(pin)) return setError(s('db_err_pin'))
     setLoading(true); setError('')
 
     let avatar_url = null
@@ -58,7 +60,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 
     const pin_hash = await hashPin(pin)
     if (siblings.some(c => c.pin_hash === pin_hash)) {
-      setError('This PIN is already used by another child. Choose a different one.')
+      setError(s('db_err_pin_dupe'))
       setLoading(false)
       return
     }
@@ -82,7 +84,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 
   return (
     <BottomSheet onClose={onClose}>
-      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 21, color: PC.ink }}>Add a child 🧒</div>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 21, color: PC.ink }}>{s('db_add_child')}</div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: 18 }}>
         <button className="tc-press" style={avatarBtnStyle(avatar === 'girl')} onClick={() => { setAvatar('girl'); setAvatarPreview(null) }}>👧</button>
@@ -95,17 +97,17 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
       </div>
 
-      <Field label="Child's name">
-        <input className="tc-input" type="text" placeholder="e.g. Emma" value={name}
+      <Field label={s('db_child_name')}>
+        <input className="tc-input" type="text" placeholder={s('db_child_name_ph')} value={name}
           onChange={e => { setName(e.target.value); setError('') }} />
       </Field>
 
-      <Field label="Age">
+      <Field label={s('db_age')}>
         <input className="tc-input" type="number" placeholder="8" min="1" max="18" value={age}
           onChange={e => { setAge(e.target.value); setError('') }} />
       </Field>
 
-      <Field label="4-digit PIN">
+      <Field label={s('db_pin')}>
         <input className="tc-input" type="password" placeholder="••••" maxLength={4} inputMode="numeric"
           value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setError('') }}
           style={{ letterSpacing: 6 }} />
@@ -113,20 +115,21 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
 
-      <Btn onClick={save} disabled={loading}>{loading ? 'Saving…' : 'Save'}</Btn>
-      <Btn variant="ghost" onClick={onClose} disabled={loading}>Cancel</Btn>
+      <Btn onClick={save} disabled={loading}>{loading ? s('saving') : s('save')}</Btn>
+      <Btn variant="ghost" onClick={onClose} disabled={loading}>{s('cancel')}</Btn>
     </BottomSheet>
   )
 }
 
 // ── Child row ────────────────────────────────────────────────────────────────
 function ChildRow({ child, onClick }) {
+  const s = useT()
   return (
     <Card onClick={onClick} pad={16} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
       <Avatar child={child} size={52} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16.5, color: PC.ink }}>{child.name}</div>
-        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{child.age} years old</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{s('years_old', { n: child.age })}</div>
         {child.gems != null && (
           <div style={{ marginTop: 7 }}>
             <Pill bg={PC.amberBg} color={PC.amber}>⭐ {child.gems ?? 0}</Pill>
@@ -156,28 +159,29 @@ function NotifRow({ icon, label, status, connected, action }) {
 // These three keys are read by the exit gate on the server (sendGate, server/index.js). Nothing
 // here is cosmetic: each row decides whether a message is sent at all.
 const NOTIFY_LEVELS = [
-  { id: 'quiet',    title: 'Only if something worries me', body: 'Nothing else. You look in the app when you want to.' },
-  { id: 'required', title: 'And when I need you',          body: 'Plus anything that is waiting on your approval.' },
-  { id: 'all',      title: 'Everything',                   body: 'Plus each activity as it is finished.' },
+  { id: 'quiet',    title: 'db_lvl_quiet', body: 'db_lvl_quiet_b' },
+  { id: 'required', title: 'db_lvl_req',   body: 'db_lvl_req_b' },
+  { id: 'all',      title: 'db_lvl_all',   body: 'db_lvl_all_b' },
 ]
 
 // Reward claims and goal requests are deliberately not here — those spend real-world things, so
 // there is nothing Tuto can decide on the parent's behalf.
 const APPROVAL_TYPES = [
-  { id: 'submission',   label: 'Homework',     body: 'Photos of finished homework' },
-  { id: 'drawing',      label: 'Drawings',     body: 'Photos of finished drawings' },
-  { id: 'contribution', label: 'Helping out',  body: 'Jobs done around the house' },
+  { id: 'submission',   label: 'db_ap_homework', body: 'db_ap_homework_b' },
+  { id: 'drawing',      label: 'db_ap_drawings', body: 'db_ap_drawings_b' },
+  { id: 'contribution', label: 'db_ap_helping',  body: 'db_ap_helping_b' },
 ]
 
 // Presets rather than a free field: the parent reaching for this is on their way out of the
 // door. The server caps a window at eight hours anyway, so nothing here can ask for more.
 const AUTOPILOT_PRESETS = [
-  { label: '1 hour', minutes: 60 },
-  { label: '2 hours', minutes: 120 },
-  { label: '4 hours', minutes: 240 },
+  { label: 'db_hour_1', minutes: 60 },
+  { label: 'db_hour_2', minutes: 120 },
+  { label: 'db_hour_4', minutes: 240 },
 ]
 
 function LevelRow({ level, selected, onClick }) {
+  const s = useT()
   return (
     <button className="tc-press tc-tap" onClick={onClick} style={{
       display: 'flex', alignItems: 'flex-start', gap: 11, textAlign: 'left', width: '100%',
@@ -193,8 +197,8 @@ function LevelRow({ level, selected, onClick }) {
         {selected && <div style={{ width: 10, height: 10, borderRadius: '50%', background: PC.tealDeep }} />}
       </div>
       <div>
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{level.title}</div>
-        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, lineHeight: 1.45 }}>{level.body}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{s(level.title)}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, lineHeight: 1.45 }}>{s(level.body)}</div>
       </div>
     </button>
   )
@@ -212,6 +216,7 @@ function TimeInput({ value, onChange }) {
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export default function ParentDashboard() {
+  const s = useT()
   const nav = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState(null)
@@ -282,6 +287,10 @@ export default function ParentDashboard() {
       channel: data?.notification_channel || null,
     })
     setPrefs(data?.prefs || {})
+    // The account is the truth; the device copy is a cache of it. Without this, logging in on a
+    // second device would show the screens in whatever that device happened to be set to while
+    // the messages arrived in the language the account says.
+    adoptAccountLang(data?.prefs?.language)
   }
 
   const updateChannel = async (ch) => {
@@ -297,9 +306,6 @@ export default function ParentDashboard() {
     if (user) await supabase.from('parents').update({ prefs: next }).eq('id', user.id)
   }
 
-  // Turkish, not English, when nothing is set: that is what the server falls back to, and a
-  // picker showing a language the messages are not actually in would be worse than none.
-  const parentLanguage = LANGS.some(l => l.code === prefs?.language) ? prefs.language : 'tr'
   const notifyLevel = NOTIFY_LEVELS.some(l => l.id === prefs?.notify_level) ? prefs.notify_level : 'all'
   const quiet = prefs?.quiet_hours || null
   // Absent means on, matching the server: a parent who has never chosen hears about each session.
@@ -383,7 +389,7 @@ export default function ParentDashboard() {
     setShowModal(false)
   }
 
-  const displayName = user?.user_metadata?.full_name || user?.email || 'Parent'
+  const displayName = user?.user_metadata?.full_name || user?.email || s('db_parent')
 
   return (
     <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
@@ -392,10 +398,10 @@ export default function ParentDashboard() {
         {/* greeting */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 2px 0' }}>
           <div>
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.inkSoft }}>Welcome back 👋</div>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.inkSoft }}>{s('db_welcome')}</div>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 26, color: PC.ink, letterSpacing: '-.5px', marginTop: 2 }}>{displayName}</div>
           </div>
-          <button className="tc-press tc-tap" onClick={logout} aria-label="Sign out"
+          <button className="tc-press tc-tap" onClick={logout} aria-label={s('db_signout')}
             style={{ width: 46, height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: SHADOW_SM }}>
             <Icon name="logout" size={21} color={PC.inkSoft} />
           </button>
@@ -404,10 +410,10 @@ export default function ParentDashboard() {
         {/* summary strip */}
         <Card pad={16} style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14, background: `linear-gradient(120deg, ${PC.teal}, ${PC.tealDeep})`, boxShadow: '0 16px 32px -14px rgba(63,183,172,.6)' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)' }}>Children</div>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)' }}>{s('db_children')}</div>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: '#fff', lineHeight: 1.1, marginTop: 2 }}>{children.length}</div>
             <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: 'rgba(255,255,255,.85)', marginTop: 3 }}>
-              {children.length === 1 ? 'child registered' : 'children registered'}
+              {children.length === 1 ? s('db_child_reg') : s('db_children_reg')}
             </div>
           </div>
           <div style={{ width: 62, height: 62, borderRadius: 20, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -417,18 +423,18 @@ export default function ParentDashboard() {
 
         {/* children section */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '24px 2px 12px' }}>
-          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>My children</div>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>{s('db_my_children')}</div>
           <button className="tc-press tc-tap" onClick={() => setShowModal(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 5, background: PC.tealBg, color: PC.tealDeep, border: 'none', borderRadius: 11, padding: '8px 13px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-            <Icon name="plus" size={16} color={PC.tealDeep} sw={2.4} /> Add
+            <Icon name="plus" size={16} color={PC.tealDeep} sw={2.4} /> {s('db_add')}
           </button>
         </div>
 
         {children.length === 0 ? (
           <Card pad={32} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, border: `2px dashed ${PC.line}`, boxShadow: 'none' }}>
             <div style={{ fontSize: 46 }}>🧒</div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>No children yet</div>
-            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, textAlign: 'center' }}>Add your child to start the learning journey.</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>{s('db_no_children')}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, textAlign: 'center' }}>{s('db_no_children_b')}</div>
           </Card>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -437,18 +443,18 @@ export default function ParentDashboard() {
         )}
 
         {/* device setup */}
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>Set up a device</div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_setup_device')}</div>
         <Card pad={18}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
             <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon name="qr" size={23} color={PC.tealDeep} />
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>Child device</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>Scan a QR code to connect it</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>{s('db_child_device')}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{s('db_scan_qr')}</div>
             </div>
             <Btn full={false} variant={showQR ? 'soft' : 'outline'} onClick={() => setShowQR(v => !v)} style={{ padding: '10px 16px', fontSize: 14 }}>
-              {showQR ? 'Hide' : 'Show QR'}
+              {showQR ? s('db_hide') : s('db_show_qr')}
             </Btn>
           </div>
           {showQR && familyCode && (
@@ -466,14 +472,14 @@ export default function ParentDashboard() {
                 <div style={{ background: PC.tealBg, borderRadius: 10, padding: '6px 14px' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PC.tealDeep, letterSpacing: 3 }}>{familyCode}</span>
                 </div>
-                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>manual code</span>
+                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>{s('db_manual_code')}</span>
               </div>
             </div>
           )}
         </Card>
 
         {/* notifications */}
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>Notifications</div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_notifications')}</div>
         <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
           {/* Connecting both is useful and the difference is not obvious: updates go to ONE
@@ -483,9 +489,11 @@ export default function ParentDashboard() {
             background: PC.tealBg, borderRadius: 14, padding: '12px 14px',
             fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5,
           }}>
-            Your <strong>primary</strong> channel is where {children.length === 1 ? `${children[0].name}'s` : "your children's"} updates
-            arrive. You can message Tuto on either one at any time — questions are always answered
-            where you asked them.
+            {s('db_primary_note', {
+              who: children.length === 1 ? s('db_who_named', { name: children[0].name })
+                 : children.length === 0 ? s('db_who_your_child')
+                 : s('db_who_children'),
+            })}
           </div>
 
           {/* Telegram */}
@@ -493,24 +501,24 @@ export default function ParentDashboard() {
             icon="✈️"
             label="Telegram"
             connected={!!notifData.telegramChatId}
-            status={notifData.telegramChatId ? 'Connected' : 'Not connected'}
+            status={notifData.telegramChatId ? s('db_connected') : s('db_not_connected')}
             action={!notifData.telegramChatId
-              ? <Btn full={false} variant="soft" onClick={() => setShowTelegramSetup(s => !s)} style={{ padding: '8px 13px', fontSize: 13 }}>{showTelegramSetup ? 'Cancel' : 'Connect'}</Btn>
+              ? <Btn full={false} variant="soft" onClick={() => setShowTelegramSetup(s => !s)} style={{ padding: '8px 13px', fontSize: 13 }}>{showTelegramSetup ? s('cancel') : s('db_connect')}</Btn>
               : waConnected
-                ? <button className="tc-press tc-tap" onClick={() => updateChannel('telegram')} style={{ background: notifData.channel === 'telegram' ? PC.teal : PC.tealBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'telegram' ? '#fff' : PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'telegram' ? '★ Primary' : 'Set primary'}</button>
+                ? <button className="tc-press tc-tap" onClick={() => updateChannel('telegram')} style={{ background: notifData.channel === 'telegram' ? PC.teal : PC.tealBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'telegram' ? '#fff' : PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'telegram' ? s('db_primary') : s('db_set_primary')}</button>
                 : null}
           />
 
           {showTelegramSetup && !notifData.telegramChatId && (
             <div className="tc-fade" style={{ background: PC.tealBg, borderRadius: 15, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: -6 }}>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.ink, lineHeight: 1.6 }}>
-                Message <b style={{ color: '#229ED9' }}>@TutoParentBot</b>, send <b>/start</b>, then paste your code:
+                {s('db_tg_steps_a')} <b style={{ color: '#229ED9' }}>@TutoParentBot</b>{s('db_tg_steps_b')} <b>/start</b>{s('db_tg_steps_c')}
               </div>
               {familyCode && (
                 <button className="tc-press" onClick={() => { navigator.clipboard.writeText(familyCode); setTelegramCodeCopied(true); setTimeout(() => setTelegramCodeCopied(false), 2000) }}
                   style={{ background: '#fff', border: `1.5px solid ${telegramCodeCopied ? PC.green : PC.teal}`, borderRadius: 13, padding: '12px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color .2s' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 800, color: PC.ink, letterSpacing: 3 }}>{familyCode}</span>
-                  <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: telegramCodeCopied ? PC.green : PC.tealDeep }}>{telegramCodeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                  <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: telegramCodeCopied ? PC.green : PC.tealDeep }}>{telegramCodeCopied ? s('db_copied') : s('db_copy')}</span>
                 </button>
               )}
             </div>
@@ -528,11 +536,11 @@ export default function ParentDashboard() {
             icon="💬"
             label="WhatsApp"
             connected={waConnected}
-            status={waConnected ? 'Connected' : 'Not connected'}
+            status={waConnected ? s('db_connected') : s('db_not_connected')}
             action={!waConnected
-              ? <Btn full={false} variant="soft" onClick={() => { setShowWaSetup(s => !s); if (!waLink) startWaConnect() }} style={{ padding: '8px 13px', fontSize: 13 }}>{showWaSetup ? 'Cancel' : 'Connect'}</Btn>
+              ? <Btn full={false} variant="soft" onClick={() => { setShowWaSetup(s => !s); if (!waLink) startWaConnect() }} style={{ padding: '8px 13px', fontSize: 13 }}>{showWaSetup ? s('cancel') : s('db_connect')}</Btn>
               : notifData.telegramChatId
-                ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? '★ Primary' : 'Set primary'}</button>
+                ? <button className="tc-press tc-tap" onClick={() => updateChannel('whatsapp')} style={{ background: notifData.channel === 'whatsapp' ? PC.green : PC.greenBg, border: 'none', borderRadius: 10, padding: '7px 12px', fontSize: 12, fontWeight: 700, color: notifData.channel === 'whatsapp' ? '#fff' : PC.green, cursor: 'pointer', fontFamily: FONT }}>{notifData.channel === 'whatsapp' ? s('db_primary') : s('db_set_primary')}</button>
                 : null}
           />
 
@@ -541,16 +549,16 @@ export default function ParentDashboard() {
               {waLink ? (
                 <>
                   <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.ink, lineHeight: 1.6 }}>
-                    Tap below to open WhatsApp with a pre-filled message, then hit send.
+                    {s('db_wa_steps')}
                   </div>
                   <a href={waLink} target="_blank" rel="noreferrer" className="tc-press"
                     style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '13px 16px', background: PC.green, borderRadius: 14, fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff' }}>
-                    Open WhatsApp 📲
+                    {s('db_wa_open')}
                   </a>
-                  <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkFaint, textAlign: 'center' }}>Waiting for your message…</div>
+                  <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkFaint, textAlign: 'center' }}>{s('db_wa_waiting')}</div>
                 </>
               ) : (
-                <div style={{ fontFamily: FONT, fontSize: 13, color: PC.inkFaint, textAlign: 'center' }}>{waError || 'Loading…'}</div>
+                <div style={{ fontFamily: FONT, fontSize: 13, color: PC.inkFaint, textAlign: 'center' }}>{waError || s('loading')}</div>
               )}
             </div>
           )}
@@ -559,7 +567,7 @@ export default function ParentDashboard() {
         {/* how much Tuto writes */}
         {prefs && (
           <>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>How much I write</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_how_much')}</div>
             <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
               {/* Language first, because it applies to every message below — including the one
@@ -570,25 +578,14 @@ export default function ParentDashboard() {
                   gets are two different audiences, and in plenty of families two different
                   languages. */}
               <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>The language I write to you in</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{s('db_lang_title')}</div>
                 <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
-                  Just for these messages. Your child's app stays in the language you chose for them.
+                  {s('db_lang_sub')}
                 </div>
-                <div style={{ display: 'flex', gap: 9 }}>
-                  {LANGS.map(l => {
-                    const on = parentLanguage === l.code
-                    return (
-                      <button key={l.code} className="tc-press tc-tap" onClick={() => savePrefs({ language: l.code })}
-                        style={{
-                          flex: 1, padding: '10px 6px', cursor: 'pointer',
-                          background: on ? PC.tealBg : '#fff',
-                          border: `1.5px solid ${on ? PC.teal : PC.line}`, borderRadius: 14,
-                          fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.ink,
-                          transition: 'background .18s, border-color .18s',
-                        }}>{l.flag} {l.label}</button>
-                    )
-                  })}
-                </div>
+                {/* The same control as the splash screen's, and it writes to both places: the
+                    device (so the screens change now) and the account (so the messages do, and
+                    so the choice follows them to their next device). */}
+                <LangPicker onPick={code => savePrefs({ language: code })} />
               </div>
 
               <div style={{ height: 1, background: PC.line }} />
@@ -596,28 +593,26 @@ export default function ParentDashboard() {
               {/* autopilot — first of the message settings, because while it runs it overrides
                   everything below it */}
               <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>I'm busy for a while</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{s('db_busy')}</div>
                 <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
-                  I'll approve homework, drawings and jobs myself and stay quiet until you're back.
-                  Reward claims and new goals still wait for you, and anything that worries me still
-                  comes through.
+                  {s('db_busy_sub')}
                 </div>
 
                 {autopilotOn ? (
                   <div className="tc-fade" style={{ background: PC.peachBg, borderRadius: 13, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink, lineHeight: 1.45 }}>
-                      On until {new Date(autopilotEnds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+                      {s('db_on_until', { time: new Date(autopilotEnds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
                       <div style={{ fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 2 }}>
-                        I'll tell you what I handled when it ends.
+                        {s('db_will_tell')}
                       </div>
                     </div>
-                    <Btn full={false} variant="soft" onClick={endAutopilot} style={{ padding: '8px 13px', fontSize: 13 }}>I'm back</Btn>
+                    <Btn full={false} variant="soft" onClick={endAutopilot} style={{ padding: '8px 13px', fontSize: 13 }}>{s('db_im_back')}</Btn>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: 9 }}>
                     {AUTOPILOT_PRESETS.map(p => (
                       <Btn key={p.minutes} full={false} variant="outline" onClick={() => startAutopilot(p.minutes)}
-                        style={{ flex: 1, padding: '9px 6px', fontSize: 13 }}>{p.label}</Btn>
+                        style={{ flex: 1, padding: '9px 6px', fontSize: 13 }}>{s(p.label)}</Btn>
                     ))}
                   </div>
                 )}
@@ -640,9 +635,9 @@ export default function ParentDashboard() {
               {notifyLevel === 'all' && (
                 <div className="tc-fade" style={{ display: 'flex', alignItems: 'center', gap: 13, paddingLeft: 4, opacity: autopilotOn ? 0.45 : 1 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink }}>Every session</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink }}>{s('db_every_session')}</div>
                     <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1, lineHeight: 1.45 }}>
-                      Turn this off and I'll tell you about the first one each day, not all three.
+                      {s('db_every_session_b')}
                     </div>
                   </div>
                   <Toggle on={perTask} onClick={() => savePrefs({ notify_per_task: !perTask })} />
@@ -654,8 +649,7 @@ export default function ParentDashboard() {
                   waiting, and the child's gems wait with it. */}
               {notifyLevel === 'quiet' && approvalOff.length < APPROVAL_TYPES.length && (
                 <div style={{ background: PC.peachBg, borderRadius: 13, padding: '11px 13px', fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.ink, lineHeight: 1.5 }}>
-                  I won't tell you when something needs approving — and until you open the app, the
-                  gems wait too. If you'd rather I just handled some of them, turn them off below.
+                  {s('db_quiet_warn')}
                 </div>
               )}
 
@@ -665,9 +659,9 @@ export default function ParentDashboard() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>Quiet hours</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{s('db_quiet_hours')}</div>
                     <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, lineHeight: 1.45 }}>
-                      I won't write between these hours. Anything that worries me still comes through.
+                      {s('db_quiet_hours_b')}
                     </div>
                   </div>
                   <Toggle on={!!quiet} onClick={() => savePrefs({ quiet_hours: quiet ? null : { start: '21:00', end: '08:00' } })} />
@@ -675,7 +669,7 @@ export default function ParentDashboard() {
                 {quiet && (
                   <div className="tc-fade" style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12 }}>
                     <TimeInput value={quiet.start || ''} onChange={v => savePrefs({ quiet_hours: { ...quiet, start: v } })} />
-                    <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>to</span>
+                    <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>{s('db_to')}</span>
                     <TimeInput value={quiet.end || ''} onChange={v => savePrefs({ quiet_hours: { ...quiet, end: v } })} />
                   </div>
                 )}
@@ -685,10 +679,9 @@ export default function ParentDashboard() {
 
               {/* per-type approvals */}
               <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>Ask me first</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{s('db_ask_first')}</div>
                 <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
-                  Turn one off and I'll approve it myself and add the gems. You'll still see it — I
-                  just won't stop and ask.
+                  {s('db_ask_first_b')}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 13, opacity: autopilotOn ? 0.45 : 1 }}>
                   {APPROVAL_TYPES.map(t => {
@@ -696,8 +689,8 @@ export default function ParentDashboard() {
                     return (
                       <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: PC.ink }}>{t.label}</div>
-                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1 }}>{t.body}</div>
+                          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: PC.ink }}>{s(t.label)}</div>
+                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1 }}>{s(t.body)}</div>
                         </div>
                         <Toggle on={on} onClick={() => savePrefs({
                           approval_required: { ...(prefs?.approval_required || {}), [t.id]: !on },
@@ -709,7 +702,7 @@ export default function ParentDashboard() {
               </div>
 
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint, lineHeight: 1.5, textAlign: 'center' }}>
-                You can change any of this by just telling me, too.
+                {s('db_tell_me')}
               </div>
             </Card>
           </>

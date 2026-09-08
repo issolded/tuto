@@ -33,21 +33,18 @@ export const CAP_RANGE = { min: 1, max: 10 }
 // shown to a parent. The per-day figure used to be glued onto the end of this
 // string ("Up to 30 gems · 3/day"); it is a control of its own now, next to the
 // badge, so the badge says what one session is worth and nothing else.
-export function gemHint(key) {
+//
+// Both of these take the caller's translator rather than returning English: this
+// file is data, and the two screens that read it already hold a bound `s`.
+export function gemHint(key, s) {
   const meta = TASK_DEFAULTS[key]
   if (!meta) return ''
-  return meta.variable ? `Up to ${meta.gems} gems` : `${meta.gems} gems`
+  return s(meta.variable ? 'gem_hint_upto' : 'gem_hint_flat', { n: meta.gems })
 }
 
 // The sentence under the per-day dial. Same promise every time — the child is
 // never blocked, the work is always kept — worded for what they actually made.
-export function capNote(key) {
-  return {
-    reading:  'Extra reading still counts, it just stops earning gems.',
-    math:     'Extra sessions still count, they just stop earning gems.',
-    writing:  'Extra stories are still saved, just without gems.',
-    homework: 'Extra homework is still saved, just without gems.',
-    drawing:  'Extra drawings are still saved, just without gems.',
-    puzzle:   'Extra puzzles still count, they just stop earning gems.',
-  }[key] || 'Anything past this is still saved, just without gems.'
+export function capNote(key, s) {
+  const known = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle']
+  return s(known.includes(key) ? `cap_note_${key}` : 'cap_note_other')
 }

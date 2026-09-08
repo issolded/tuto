@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, PCSS, TopBar, Btn, Field, GoogleMark } from '../lib/parentUI'
+import { useT, uiLang } from '../lib/parentI18n'
 
 export default function ParentSignup() {
   const nav = useNavigate()
+  const s = useT()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -31,7 +33,14 @@ export default function ParentSignup() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (signInError) { setError(signInError.message); setLoading(false); return }
     if (data.user) {
-      await supabase.from('parents').update({ full_name: name }).eq('id', data.user.id)
+      // The language they picked on the splash screen becomes the language Tuto writes to them
+      // in. Merged into prefs rather than replacing it: the row already carries the column
+      // default's other keys (notify_level, approval_required…) and overwriting the object
+      // would quietly reset settings this screen knows nothing about.
+      const { data: row } = await supabase.from('parents').select('prefs').eq('id', data.user.id).maybeSingle()
+      await supabase.from('parents')
+        .update({ full_name: name, prefs: { ...(row?.prefs || {}), language: uiLang() } })
+        .eq('id', data.user.id)
     }
     nav('/parent/onboarding')
   }
@@ -51,22 +60,22 @@ export default function ParentSignup() {
         {/* heading */}
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, letterSpacing: '-.5px', lineHeight: 1.15 }}>
-            Create your account 🌱
+            {s('su_title')}
           </div>
           <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, color: PC.inkSoft, marginTop: 6 }}>
-            Sign up for free, get started now
+            {s('su_sub')}
           </div>
         </div>
 
-        <Field label="Full name">
-          <input className="tc-input" type="text" placeholder="Your Name" value={name} onChange={e => setName(e.target.value)} />
+        <Field label={s('su_name')}>
+          <input className="tc-input" type="text" placeholder={s('su_name_ph')} value={name} onChange={e => setName(e.target.value)} />
         </Field>
 
-        <Field label="Email">
+        <Field label={s('li_email')}>
           <input className="tc-input" type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
         </Field>
 
-        <Field label="Password">
+        <Field label={s('li_password')}>
           <input className="tc-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
         </Field>
 
@@ -75,24 +84,24 @@ export default function ParentSignup() {
         )}
 
         <Btn onClick={signup} disabled={loading}>
-          {loading ? 'Creating account…' : 'Create account'}
+          {loading ? s('su_creating') : s('su_create')}
         </Btn>
 
         {/* divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, height: 1, background: PC.line }} />
-          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>or</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>{s('li_or')}</span>
           <div style={{ flex: 1, height: 1, background: PC.line }} />
         </div>
 
         <Btn variant="outline" onClick={googleSignup}>
-          <GoogleMark size={20} /> Continue with Google
+          <GoogleMark size={20} /> {s('li_google')}
         </Btn>
 
         <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft }}>
-          Already have an account?{' '}
+          {s('su_have_account')}{' '}
           <span style={{ color: PC.teal, fontWeight: 800, cursor: 'pointer' }} onClick={() => nav('/parent/login')}>
-            Sign in
+            {s('li_signin')}
           </span>
         </div>
       </div>

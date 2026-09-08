@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
+import { useT, useUiLang } from '../lib/parentI18n'
+import { t as childT, localeFor } from '../lib/i18n'
 import {
   PC, FONT, SHADOW_SM, PCSS,
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot,
@@ -10,15 +12,25 @@ import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
+// The label is the CHILD's own tile name — read from the child dictionary, in the parent's
+// language, so both are looking at the same word for the same activity. `bonus` is the one
+// row with no tile behind it, so it carries a parent key instead.
 const TASK_LABELS = {
-  math:     { label: 'My Math',     type: 'math' },
-  reading:  { label: 'My Books',    type: 'reading' },
-  writing:  { label: 'My Stories',  type: 'writing' },
-  story:    { label: 'My Stories',  type: 'writing' },
-  homework: { label: 'My Homework', type: null },
-  drawing:  { label: 'My Drawings', type: null },
-  puzzle:   { label: 'My Puzzles',  type: 'puzzle' },
-  bonus:    { label: 'Bonus Gift',  type: null },
+  math:     { key: 'task_math',     type: 'math' },
+  reading:  { key: 'task_reading',  type: 'reading' },
+  writing:  { key: 'task_writing',  type: 'writing' },
+  story:    { key: 'task_writing',  type: 'writing' },
+  homework: { key: 'task_homework', type: null },
+  drawing:  { key: 'task_drawing',  type: null },
+  puzzle:   { key: 'task_puzzle',   type: 'puzzle' },
+  bonus:    { parentKey: 'cd_bonus', type: null },
+}
+
+// Resolves one of those rows against whichever dictionary it points at.
+function taskLabel(taskType, lang, s) {
+  const meta = TASK_LABELS[taskType]
+  if (!meta) return taskType || s('cd_task')
+  return meta.parentKey ? s(meta.parentKey) : childT(meta.key, lang)
 }
 
 const REWARD_EMOJIS = ['🎮','🍦','🎬','🧸','📱','🎁','🏖️','🎨','🚲','⚽','🎤','📚','🍕','🎡','🛹']
@@ -43,16 +55,19 @@ function groupByDate(items, todayDate) {
 }
 
 // "June 29" style label for a past day's group header (yyyy-MM-dd, local).
-function formatGroupDate(dateStr) {
+function formatGroupDate(dateStr, lang) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
+  return new Date(y, m - 1, d).toLocaleDateString(localeFor(lang), { day: 'numeric', month: 'long' })
 }
 
 // ── Submission card ───────────────────────────────────────────────────────────
 function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) {
-  const meta = TASK_LABELS[sub.task_type] || { label: 'Task', type: null }
+  const s = useT()
+  const lang = useUiLang()
+  const meta = TASK_LABELS[sub.task_type] || { type: null }
+  const label = taskLabel(sub.task_type, lang, s)
   const displayGems = sub.gems_earned ?? sub.suggested_gems ?? 0
-  const time = sub.created_at ? new Date(sub.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''
+  const time = sub.created_at ? new Date(sub.created_at).toLocaleTimeString(localeFor(lang), { hour: '2-digit', minute: '2-digit' }) : ''
 
   return (
     <Card pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -67,7 +82,7 @@ function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) 
             : <span style={{ fontSize: 20 }}>⭐</span>}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{meta.label}</div>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{label}</div>
           {sub.task_description && (
             <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{sub.task_description}</div>
           )}
@@ -96,7 +111,7 @@ function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) 
               ))}
             </div>
             <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 4 }}>
-              {photos.length} pages · tap to enlarge
+              {s('cd_pages_tap', { n: photos.length })}
             </div>
           </div>
         )
@@ -107,8 +122,8 @@ function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) 
         </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <Btn onClick={onApprove} color={PC.green} style={{ flex: 1, padding: '11px', fontSize: 14 }}>✓ Approve</Btn>
-        <Btn onClick={onReject} variant="danger" style={{ flex: 1, padding: '11px', fontSize: 14 }}>✕ Reject</Btn>
+        <Btn onClick={onApprove} color={PC.green} style={{ flex: 1, padding: '11px', fontSize: 14 }}>{s('cd_approve')}</Btn>
+        <Btn onClick={onReject} variant="danger" style={{ flex: 1, padding: '11px', fontSize: 14 }}>{s('cd_reject')}</Btn>
       </div>
     </Card>
   )
@@ -120,6 +135,7 @@ function SubmissionCard({ sub, photos = [], onApprove, onReject, onOpenPhoto }) 
 // photographed, the parent can see. Photos arrive as signed URLs from the
 // server (the bucket is private and has no client read policy).
 function PaintingsCard({ paintings, name, onOpenPhoto, onApprove, onReject }) {
+  const s = useT()
   if (!paintings?.length) return null
   const pending = paintings.filter(p => p.status === 'pending')
   const settled = paintings.filter(p => p.status !== 'pending')
@@ -128,7 +144,7 @@ function PaintingsCard({ paintings, name, onOpenPhoto, onApprove, onReject }) {
   return (
     <div>
       <SectionHead>
-        🎨 {name}'in çizimleri{pending.length > 0 ? ` — ${pending.length} onay bekliyor` : ''}
+        {s('cd_drawings_of', { name })}{pending.length > 0 ? s('cd_awaiting', { n: pending.length }) : ''}
       </SectionHead>
 
       {/* Pending ones get the full photo and the decision, because approving is
@@ -141,7 +157,7 @@ function PaintingsCard({ paintings, name, onOpenPhoto, onApprove, onReject }) {
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
             <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink }}>
-              {p.drawing_id || 'Kendi çizimi'}
+              {p.drawing_id || s('cd_own_idea')}
             </div>
             <button className="tc-press tc-tap" onClick={() => onApprove(p)}
               style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '8px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
@@ -162,7 +178,7 @@ function PaintingsCard({ paintings, name, onOpenPhoto, onApprove, onReject }) {
                       style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, display: 'block', opacity: p.status === 'rejected' ? .45 : 1 }} />
                   : <div style={{ width: '100%', aspectRatio: '1', borderRadius: 10, background: PC.line }} />}
                 <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 10.5, marginTop: 3, color: p.reward_amount > 0 ? PC.amber : PC.inkFaint }}>
-                  {p.status === 'rejected' ? 'Reddedildi' : p.reward_amount > 0 ? `⭐ +${p.reward_amount}` : 'Onaylandı'}
+                  {p.status === 'rejected' ? s('cd_rejected') : p.reward_amount > 0 ? `⭐ +${p.reward_amount}` : s('cd_approved')}
                 </div>
               </button>
             ))}
@@ -178,6 +194,7 @@ function PaintingsCard({ paintings, name, onOpenPhoto, onApprove, onReject }) {
 // screen, so "how is the tree doing?" could only be asked of Tuto. Reads the
 // same /api/tree the child does, so all three surfaces agree.
 function TreeCard({ tree, name }) {
+  const s = useT()
   if (!tree) return null
   const dayFull = tree.dayFull || 4
   const today = tree.today || 0
@@ -186,22 +203,22 @@ function TreeCard({ tree, name }) {
 
   return (
     <div>
-      <SectionHead>🌳 {name}'in ağacı</SectionHead>
+      <SectionHead>{s('cd_tree_of', { name })}</SectionHead>
       <Card pad={14}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <TreeArt size={78} fruits={today} target={dayFull} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>
               {today >= dayFull
-                ? 'Bugünün ağacı tamamlandı 🎉'
-                : `Bugün ${today}/${dayFull} yaprak`}
+                ? s('cd_tree_full')
+                : s('cd_tree_today', { n: today, total: dayFull })}
             </div>
             <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkSoft, marginTop: 4 }}>
-              Bu ay {days} günün {trees} gününde ağaç yetişti
+              {s('cd_tree_month', { days, trees })}
             </div>
             {/* a leaf grows only on approval — say so where the pending list is */}
             <div style={{ marginTop: 8 }}>
-              <Pill bg={PC.greenBg} color={PC.green}>🌱 {tree.monthLeafCount ?? 0} yaprak bu ay</Pill>
+              <Pill bg={PC.greenBg} color={PC.green}>🌱 {s('cd_leaves_month', { n: tree.monthLeafCount ?? 0 })}</Pill>
             </div>
           </div>
         </div>
@@ -221,6 +238,7 @@ function TreeCard({ tree, name }) {
 // Tap a submission photo to see the original (the card only shows a cropped
 // thumbnail). Arrows page through multi-page homework.
 function PhotoLightbox({ urls, index, onClose, onIndex }) {
+  const s = useT()
   const many = urls.length > 1
   const navBtn = {
     position: 'absolute', top: '50%', transform: 'translateY(-50%)',
@@ -235,15 +253,15 @@ function PhotoLightbox({ urls, index, onClose, onIndex }) {
     }}>
       <img src={urls[index]} alt={`photo ${index + 1}`} onClick={e => e.stopPropagation()}
         style={{ maxWidth: '100%', maxHeight: '82vh', objectFit: 'contain', borderRadius: 12 }} />
-      <button onClick={onClose} aria-label="Close" style={{
+      <button onClick={onClose} aria-label={s('a_close')} style={{
         position: 'absolute', top: 14, right: 14, width: 40, height: 40, borderRadius: '50%',
         border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 18,
       }}>✕</button>
       {many && (
         <>
-          <button aria-label="Previous" onClick={e => { e.stopPropagation(); onIndex((index - 1 + urls.length) % urls.length) }}
+          <button aria-label={s('cd_prev')} onClick={e => { e.stopPropagation(); onIndex((index - 1 + urls.length) % urls.length) }}
             style={{ ...navBtn, left: 10 }}>‹</button>
-          <button aria-label="Next" onClick={e => { e.stopPropagation(); onIndex((index + 1) % urls.length) }}
+          <button aria-label={s('a_next')} onClick={e => { e.stopPropagation(); onIndex((index + 1) % urls.length) }}
             style={{ ...navBtn, right: 10 }}>›</button>
           <div style={{
             position: 'absolute', bottom: 22, left: 0, right: 0, textAlign: 'center',
@@ -264,9 +282,11 @@ const CONTRIBUTION_DOT_COLORS = {
 }
 
 function ContributionDateHeader({ isToday, dateStr }) {
+  const s = useT()
+  const lang = useUiLang()
   return (
     <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', color: PC.inkFaint, padding: '2px 2px' }}>
-      {isToday ? 'Today' : formatGroupDate(dateStr)}
+      {isToday ? s('cd_today') : formatGroupDate(dateStr, lang)}
     </div>
   )
 }
@@ -296,6 +316,7 @@ function ContributionCard({ c, photo, onApprove, onReject, onOpenPhoto }) {
 
 // ── Change PIN sheet ──────────────────────────────────────────────────────────
 function ChangePinSheet({ childId, parentId, onClose }) {
+  const s = useT()
   const [phase, setPhase] = useState('enter')
   const [pin, setPin]     = useState('')
   const [confirm, setConfirm] = useState('')
@@ -312,7 +333,7 @@ function ChangePinSheet({ childId, parentId, onClose }) {
         if (val === pin) {
           savePin(pin)
         } else {
-          setErrMsg("PINs don't match. Try again.")
+          setErrMsg(s('cd_pin_mismatch'))
           setTimeout(() => { setPin(''); setConfirm(''); setPhase('enter'); setErrMsg('') }, 900)
         }
       }
@@ -325,7 +346,7 @@ function ChangePinSheet({ childId, parentId, onClose }) {
       const { data: siblings } = await supabase
         .from('children').select('pin_hash').eq('parent_id', parentId).neq('id', childId)
       if (siblings?.some(s => s.pin_hash === pin_hash)) {
-        setErrMsg('This PIN is already used by another child. Choose a different one.')
+        setErrMsg(s('db_err_pin_dupe'))
         setTimeout(() => { setPin(''); setConfirm(''); setPhase('enter'); setErrMsg('') }, 1500)
         return
       }
@@ -339,23 +360,23 @@ function ChangePinSheet({ childId, parentId, onClose }) {
     <BottomSheet onClose={onClose}>
       {done ? (
         <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.green, padding: '16px 0' }}>
-          PIN updated! ✅
+          {s('cd_pin_updated')}
         </div>
       ) : (
         <>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>
-              {phase === 'enter' ? 'Enter new PIN 🔐' : 'Confirm PIN 🔁'}
+              {phase === 'enter' ? s('cd_pin_new') : s('cd_pin_confirm')}
             </div>
             <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 4 }}>
-              {phase === 'enter' ? 'Choose a 4-digit PIN' : 'Enter the same PIN again'}
+              {phase === 'enter' ? s('cd_pin_new_b') : s('cd_pin_again')}
             </div>
           </div>
           {errMsg && (
             <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 12, padding: '10px 16px', fontFamily: FONT, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{errMsg}</div>
           )}
           <PinPad value={phase === 'enter' ? pin : confirm} onChange={handleInput} />
-          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
         </>
       )}
     </BottomSheet>
@@ -364,6 +385,7 @@ function ChangePinSheet({ childId, parentId, onClose }) {
 
 // ── Edit child sheet ──────────────────────────────────────────────────────────
 function EditChildSheet({ child, onClose, onSaved }) {
+  const s = useT()
   const [name, setName] = useState(child.name)
   const [age,  setAge]  = useState(child.age)
   const [avatar, setAvatar] = useState(child.avatar_url || null)
@@ -382,8 +404,8 @@ function EditChildSheet({ child, onClose, onSaved }) {
   }
 
   const save = async () => {
-    if (!name.trim()) return setError('Name is required.')
-    if (!age || +age < 1 || +age > 18) return setError('Enter a valid age (1–18).')
+    if (!name.trim()) return setError(s('db_err_name'))
+    if (!age || +age < 1 || +age > 18) return setError(s('db_err_age'))
     setSaving(true); setError('')
 
     let avatar_url = child.avatar_url
@@ -418,7 +440,7 @@ function EditChildSheet({ child, onClose, onSaved }) {
 
   return (
     <BottomSheet onClose={onClose}>
-      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Edit child ✏️</div>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{s('cd_edit_child')}</div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
         <button className="tc-press" style={abtn(avatar === '👧')} onClick={() => { setAvatar('👧'); setPreview(null) }}>👧</button>
@@ -429,11 +451,11 @@ function EditChildSheet({ child, onClose, onSaved }) {
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
       </div>
 
-      <Field label="Name">
+      <Field label={s('cd_name')}>
         <input className="tc-input" type="text" value={name} onChange={e => { setName(e.target.value); setError('') }} />
       </Field>
 
-      <Field label="Age">
+      <Field label={s('db_age')}>
         <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 16px', gap: 14 }}>
           <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>−</button>
           <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 32, color: PC.ink }}>{age}</div>
@@ -442,8 +464,8 @@ function EditChildSheet({ child, onClose, onSaved }) {
       </Field>
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
-      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Btn>
-      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      <Btn onClick={save} disabled={saving}>{saving ? s('saving') : s('cd_save_changes')}</Btn>
+      <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
     </BottomSheet>
   )
 }
@@ -453,6 +475,7 @@ function EditChildSheet({ child, onClose, onSaved }) {
 // needed. Same endpoint the Telegram agent's gift_gems tool calls, so a
 // parent can do this from whichever surface is at hand.
 function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
+  const s = useT()
   const [amount, setAmount] = useState(50)
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
@@ -462,7 +485,7 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
     setSending(true); setError('')
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
-    if (!token) { setError('Session expired — please sign in again.'); setSending(false); return }
+    if (!token) { setError(s('cd_session_expired')); setSending(false); return }
     try {
       const res = await fetch(`${SERVER}/api/children/${childId}/gift-gems`, {
         method: 'POST',
@@ -483,12 +506,12 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
 
   return (
     <BottomSheet onClose={onClose}>
-      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Gift gems 🎁</div>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{s('cd_gift')}</div>
       <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: -8 }}>
-        No task attached — {childName} sees it right away as a bonus gift.
+        {s('cd_gift_b', { name: childName })}
       </div>
 
-      <Field label={`Amount — ⭐ ${amount} gems`}>
+      <Field label={s('cd_amount', { n: amount })}>
         <input type="range" min={5} max={500} step={5} value={amount}
           onChange={e => setAmount(Number(e.target.value))}
           className="tc-slider" style={{ background: trackBg }} />
@@ -498,14 +521,14 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
         </div>
       </Field>
 
-      <Field label="Reason (optional)">
+      <Field label={s('cd_reason')}>
         <input className="tc-input" type="text" value={note} onChange={e => setNote(e.target.value)}
-          placeholder="e.g. Birthday" maxLength={80} />
+          placeholder={s('cd_reason_gift_ph')} maxLength={80} />
       </Field>
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
-      <Btn onClick={send} disabled={sending}>{sending ? 'Sending…' : `Send ${amount} gems`}</Btn>
-      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      <Btn onClick={send} disabled={sending}>{sending ? s('cd_sending') : s('cd_send_n', { n: amount })}</Btn>
+      <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
     </BottomSheet>
   )
 }
@@ -515,6 +538,7 @@ function GiftGemsSheet({ childId, childName, onClose, onGifted }) {
 // without the child ever tapping Claim. Note is optional — shows in the
 // child's gem history in place of the generic label when given.
 function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted }) {
+  const s = useT()
   const [amount, setAmount] = useState(50)
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
@@ -524,7 +548,7 @@ function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted 
     setSending(true); setError('')
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
-    if (!token) { setError('Session expired — please sign in again.'); setSending(false); return }
+    if (!token) { setError(s('cd_session_expired')); setSending(false); return }
     try {
       const res = await fetch(`${SERVER}/api/children/${childId}/deduct-gems`, {
         method: 'POST',
@@ -546,12 +570,12 @@ function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted 
 
   return (
     <BottomSheet onClose={onClose}>
-      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Deduct gems ⚖️</div>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{s('cd_deduct')}</div>
       <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: -8 }}>
-        No task or claim attached — for when you already handled the reward yourself.
+        {s('cd_deduct_b')}
       </div>
 
-      <Field label={`Amount — ⭐ ${amount} gems (${currentGems} available)`}>
+      <Field label={s('cd_amount_avail', { n: amount, have: currentGems })}>
         <input type="range" min={5} max={max} step={5} value={Math.min(amount, max)}
           onChange={e => setAmount(Number(e.target.value))}
           className="tc-slider" style={{ background: trackBg }} />
@@ -561,14 +585,14 @@ function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted 
         </div>
       </Field>
 
-      <Field label="Reason (optional)">
+      <Field label={s('cd_reason')}>
         <input className="tc-input" type="text" value={note} onChange={e => setNote(e.target.value)}
-          placeholder="e.g. Toy purchase" maxLength={80} />
+          placeholder={s('cd_reason_ded_ph')} maxLength={80} />
       </Field>
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
-      <Btn onClick={send} disabled={sending || currentGems < 5} variant="danger">{sending ? 'Removing…' : `Remove ${Math.min(amount, max)} gems`}</Btn>
-      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      <Btn onClick={send} disabled={sending || currentGems < 5} variant="danger">{sending ? s('cd_removing') : s('cd_remove_n', { n: Math.min(amount, max) })}</Btn>
+      <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
     </BottomSheet>
   )
 }
@@ -576,6 +600,7 @@ function DeductGemsSheet({ childId, childName, currentGems, onClose, onDeducted 
 // Confirms a gift/deduct actually happened — the sheet closing on its own
 // wasn't a clear enough signal that gems really moved.
 function GemActionDoneModal({ verb, amount, childName, onClose }) {
+  const s = useT()
   const isGift = verb === 'gift'
   return (
     <div onClick={onClose} style={{
@@ -588,14 +613,14 @@ function GemActionDoneModal({ verb, amount, childName, onClose }) {
       }}>
         <div style={{ fontSize: 44, marginBottom: 10 }}>{isGift ? '🫴' : '🫳'}</div>
         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, marginBottom: 6 }}>
-          {isGift ? 'Gems sent!' : 'Gems removed'}
+          {isGift ? s('cd_gems_sent') : s('cd_gems_removed')}
         </div>
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, marginBottom: 22, lineHeight: 1.5 }}>
           {isGift
-            ? `${amount} gems were added to ${childName}'s balance.`
-            : `${amount} gems were removed from ${childName}'s balance.`}
+            ? s('cd_gems_added_to', { n: amount, name: childName })
+            : s('cd_gems_taken', { n: amount, name: childName })}
         </div>
-        <Btn onClick={onClose}>OK</Btn>
+        <Btn onClick={onClose}>{s('cd_ok')}</Btn>
       </div>
     </div>
   )
@@ -605,6 +630,7 @@ function GemActionDoneModal({ verb, amount, childName, onClose }) {
 // turned out wrong used to have to be deleted and retyped, which threw away the progress bar
 // the child had been watching.
 function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
+  const s = useT()
   const editing = !!reward
   const [icon,   setIcon]   = useState(reward?.icon ?? suggestion?.icon ?? '🎁')
   const [name,   setName]   = useState(reward?.name ?? suggestion?.name ?? '')
@@ -616,10 +642,10 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
   const [error,  setError]  = useState('')
 
   const save = async () => {
-    if (!name.trim()) return setError('Give this goal a name.')
+    if (!name.trim()) return setError(s('cd_goal_name_req'))
     // The cost is typed now, so it can be emptied. A goal costing nothing is claimable the
     // moment it is created.
-    if (!(btCost >= 10)) return setError('A goal needs to cost at least 10 gems.')
+    if (!(btCost >= 10)) return setError(s('cd_goal_min'))
     setSaving(true); setError('')
     const row = { icon, name: name.trim(), bt_cost: btCost, recurring }
 
@@ -628,7 +654,7 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
     if (suggestion) {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
-      if (!token) { setError('Please sign in again.'); setSaving(false); return }
+      if (!token) { setError(s('cd_sign_in_again')); setSaving(false); return }
       try {
         const r = await fetch(`${SERVER}/api/reward-suggestions/${suggestion.id}/approve`, {
           method: 'POST',
@@ -637,8 +663,8 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
         })
         const j = await r.json()
         if (!r.ok) throw new Error(j?.error === 'already_exists'
-          ? `There is already a goal called "${j.existing?.name}".`
-          : j?.error || 'Could not add this goal.')
+          ? s('cd_goal_exists', { name: j.existing?.name })
+          : j?.error || s('cd_goal_failed'))
       } catch (err) { setError(err.message); setSaving(false); return }
       onSaved()
       return
@@ -662,17 +688,17 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
   return (
     <BottomSheet onClose={onClose}>
       <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>
-        {suggestion ? 'Set the price 🙋' : editing ? 'Edit goal 🏆' : 'Add goal 🏆'}
+        {suggestion ? s('cd_set_price') : editing ? s('cd_edit_goal') : s('cd_add_goal')}
       </div>
       {suggestion && (
         <div style={{ background: PC.tealBg, borderRadius: 12, padding: '10px 12px', fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.5 }}>
           {suggestion.suggested_gems
-            ? `They asked for this and guessed ⭐ ${suggestion.suggested_gems} gems. What it really costs is up to you.`
-            : 'They asked for this. What it costs is up to you.'}
+            ? s('cd_asked_guessed', { n: suggestion.suggested_gems })
+            : s('cd_asked')}
         </div>
       )}
 
-      <Field label="Icon">
+      <Field label={s('cd_icon')}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {REWARD_EMOJIS.map(e => (
             <button key={e} className="tc-press" onClick={() => setIcon(e)}
@@ -683,12 +709,12 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
         </div>
       </Field>
 
-      <Field label="Goal name">
+      <Field label={s('cd_goal_name')}>
         <input className="tc-input" type="text" value={name} onChange={e => { setName(e.target.value); setError('') }}
-          placeholder="e.g. Video game time, Ice cream…" />
+          placeholder={s('cd_goal_name_ph')} />
       </Field>
 
-      <Field label="Gem cost">
+      <Field label={s('cd_gem_cost')}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: PC.amberBg, borderRadius: 12, padding: '6px 11px', width: 'fit-content', marginBottom: 10 }}>
           <input type="number" min={10} value={btCost}
             onChange={e => setBtCost(parseInt(e.target.value) || 0)}
@@ -710,11 +736,11 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
           list the next morning. Screen time is worth earning again every week; a toy is bought
           once. Nothing in the app could tell the two apart, so every goal behaved like screen
           time. */}
-      <Field label="How often">
+      <Field label={s('cd_how_often')}>
         <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { on: true,  title: 'Again and again', sub: 'Screen time, an outing — they can earn it repeatedly' },
-            { on: false, title: 'Just once',       sub: 'A toy, a book — it disappears once you approve it' },
+            { on: true,  title: s('cd_again'), sub: s('cd_again_b') },
+            { on: false, title: s('cd_once'),  sub: s('cd_once_b') },
           ].map(o => (
             <button key={String(o.on)} className="tc-press" onClick={() => setRecurring(o.on)}
               style={{
@@ -730,14 +756,15 @@ function AddRewardSheet({ childId, reward, suggestion, onClose, onSaved }) {
       </Field>
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
-      <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : suggestion ? 'Add this goal' : editing ? 'Save changes' : 'Add goal'}</Btn>
-      <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      <Btn onClick={save} disabled={saving}>{saving ? s('saving') : suggestion ? s('cd_add_this_goal') : editing ? s('cd_save_changes') : s('cd_add_goal')}</Btn>
+      <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
     </BottomSheet>
   )
 }
 
 // ── Remove confirm sheet ──────────────────────────────────────────────────────
 function RemoveSheet({ child, onClose, onConfirm }) {
+  const s = useT()
   const [removing, setRemoving] = useState(false)
 
   const doRemove = async () => {
@@ -750,21 +777,23 @@ function RemoveSheet({ child, onClose, onConfirm }) {
     <BottomSheet onClose={onClose}>
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
         <div style={{ fontSize: 44 }}>⚠️</div>
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Remove {child.name}?</div>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{s('cd_remove_q', { name: child.name })}</div>
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, lineHeight: 1.6 }}>
-          This will permanently delete {child.name}'s profile, gems, and all activity. This cannot be undone.
+          {s('cd_remove_b', { name: child.name })}
         </div>
       </div>
       <Btn variant="danger" onClick={doRemove} disabled={removing}>
-        {removing ? 'Removing…' : `Yes, remove ${child.name}`}
+        {removing ? s('cd_removing') : s('cd_remove_yes', { name: child.name })}
       </Btn>
-      <Btn variant="outline" onClick={onClose}>Cancel</Btn>
+      <Btn variant="outline" onClick={onClose}>{s('cancel')}</Btn>
     </BottomSheet>
   )
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ParentChildDetail() {
+  const s = useT()
+  const lang = useUiLang()
   const { id } = useParams()
   const nav = useNavigate()
   const [child, setChild] = useState(null)
@@ -983,7 +1012,7 @@ export default function ParentChildDetail() {
       } else if (verb === 'approve' && j.capped) {
         // Approved, but the day's limit was already spent. Without this the card
         // just disappears and the gem total doesn't move — which reads as a bug.
-        setCapNotice(`Today's limit of ${j.dailyCap} was already used up, so this one was approved without gems.`)
+        setCapNotice(s('cd_cap_notice', { n: j.dailyCap }))
         setTimeout(() => setCapNotice(''), 7000)
       }
     } catch {
@@ -1093,7 +1122,7 @@ export default function ParentChildDetail() {
 
       <TopBar
         title={child.name}
-        sub={`${child.age} years old`}
+        sub={s('years_old', { n: child.age })}
         onBack={() => nav('/parent/dashboard', { state: { updatedChild: child } })}
       />
 
@@ -1105,14 +1134,14 @@ export default function ParentChildDetail() {
           <div>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>{child.name}</div>
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Pill bg={PC.amberBg} color={PC.amber}>⭐ {gems} gems</Pill>
+              <Pill bg={PC.amberBg} color={PC.amber}>⭐ {s('cd_gems_pill', { n: gems })}</Pill>
               <button className="tc-press tc-tap" onClick={() => setShowGiftGems(true)}
                 style={{ background: 'none', border: `1.5px solid ${PC.line}`, borderRadius: 999, padding: '5px 12px', cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkSoft }}>
-                🎁 Gift gems
+                {s('cd_gift_btn')}
               </button>
               <button className="tc-press tc-tap" onClick={() => setShowDeductGems(true)} disabled={gems < 5}
                 style={{ background: 'none', border: `1.5px solid ${PC.line}`, borderRadius: 999, padding: '5px 12px', cursor: gems < 5 ? 'default' : 'pointer', opacity: gems < 5 ? 0.5 : 1, fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkSoft }}>
-                ⚖️ Deduct
+                {s('cd_deduct_btn')}
               </button>
             </div>
           </div>
@@ -1121,18 +1150,18 @@ export default function ParentChildDetail() {
         {/* pending approvals */}
         <div>
           <SectionHead>
-            ⏳ Pending{pending.length > 0 ? ` (${pending.length})` : ''}
+            {s('cd_pending')}{pending.length > 0 ? ` (${pending.length})` : ''}
           </SectionHead>
           {capNotice && (
             <Card pad={12} style={{ marginBottom: 10, background: PC.peachBg, border: 'none' }}>
               <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.45 }}>
-                🌙 {capNotice} You can raise the limit in Task settings.
+                🌙 {capNotice} {s('cd_raise_limit')}
               </div>
             </Card>
           )}
           {pending.length === 0 ? (
             <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>
-              All caught up! ✅
+              {s('cd_all_caught_up')}
             </Card>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1156,11 +1185,11 @@ export default function ParentChildDetail() {
         {/* diary contributions — every open pending, any month, grouped by day */}
         <div>
           <SectionHead>
-            🌱 Ev katkıları{pendingContributions.length > 0 ? ` (${pendingContributions.length})` : ''}
+            {s('cd_contributions')}{pendingContributions.length > 0 ? ` (${pendingContributions.length})` : ''}
           </SectionHead>
           {pendingContributionGroups.length === 0 ? (
             <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>
-              Bekleyen katkı yok.
+              {s('cd_no_pending_c')}
             </Card>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1180,13 +1209,14 @@ export default function ParentChildDetail() {
 
         {/* completed today */}
         <div>
-          <SectionHead>✅ Completed today</SectionHead>
+          <SectionHead>{s('cd_completed')}</SectionHead>
           {todayDone.length === 0 ? (
-            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>Nothing completed yet today.</Card>
+            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>{s('cd_nothing_today')}</Card>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {todayDone.map(sub => {
-                const meta = TASK_LABELS[sub.task_type] || { label: sub.task_type || 'Task', type: null }
+                const meta = TASK_LABELS[sub.task_type] || { type: null }
+                const label = taskLabel(sub.task_type, lang, s)
                 const detail = readingDetailFor(sub)
                 const open = detail && openReading === sub.id
                 const qa = Array.isArray(detail?.generated_questions) ? detail.generated_questions : []
@@ -1201,15 +1231,15 @@ export default function ParentChildDetail() {
                         {meta.type ? <TaskIcon type={meta.type} size={20} /> : <span style={{ fontSize: 18 }}>⭐</span>}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{meta.label}</div>
+                        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{label}</div>
                         {detail && (
                           <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 1 }}>
-                            {detail.feedback} · {qa.filter(q => q.was_correct).length}/{qa.length} correct
+                            {detail.feedback} · {s('cd_n_correct', { n: qa.filter(q => q.was_correct).length, total: qa.length })}
                           </div>
                         )}
                         {sub.capped && (
                           <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 1 }}>
-                            Past today's limit — done and saved, no gems
+                            {s('cd_past_limit')}
                           </div>
                         )}
                       </div>
@@ -1232,7 +1262,7 @@ export default function ParentChildDetail() {
                           </div>
                         )}
                         {qa.length === 0 ? (
-                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint }}>No questions recorded.</div>
+                          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkFaint }}>{s('cd_no_questions')}</div>
                         ) : qa.map((q, i) => (
                           <div key={i} style={{ background: PC.readingBg, borderRadius: 12, padding: '10px 12px' }}>
                             <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.ink, lineHeight: 1.35 }}>
@@ -1243,7 +1273,7 @@ export default function ParentChildDetail() {
                             </div>
                             {q.type === 'mc' && !q.was_correct && q.correct_answer && (
                               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 2 }}>
-                                Answer: {q.correct_answer}
+                                {s('cd_answer')} {q.correct_answer}
                               </div>
                             )}
                           </div>
@@ -1260,22 +1290,24 @@ export default function ParentChildDetail() {
         {/* goal requests — child asked for a goal, you set what it costs */}
         {suggestions.length > 0 && (
           <div>
-            <SectionHead>🙋 Goal requests ({suggestions.length})</SectionHead>
+            <SectionHead>{s('cd_goal_requests', { n: suggestions.length })}</SectionHead>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {suggestions.map(s => (
-                <Card key={s.id} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* `sg`, not `s`: the translator is called inside this row, and a map parameter
+                  named `s` would shadow it. */}
+              {suggestions.map(sg => (
+                <Card key={sg.id} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                    {s.icon || '🎁'}
+                    {sg.icon || '🎁'}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{s.name}</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{sg.name}</div>
                     <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.inkSoft }}>
-                      {s.suggested_gems ? `${child.name} thinks ⭐ ${s.suggested_gems} — you decide` : `${child.name} asked for this`}
+                      {sg.suggested_gems ? s('cd_thinks', { name: child.name, n: sg.suggested_gems }) : s('cd_asked_for', { name: child.name })}
                     </div>
                   </div>
-                  <button className="tc-press tc-tap" onClick={() => setApproveSuggestion(s)}
+                  <button className="tc-press tc-tap" onClick={() => setApproveSuggestion(sg)}
                     style={{ background: PC.greenBg, color: PC.green, border: 'none', borderRadius: 11, padding: '9px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✓</button>
-                  <button className="tc-press tc-tap" onClick={() => handleRejectSuggestion(s)}
+                  <button className="tc-press tc-tap" onClick={() => handleRejectSuggestion(sg)}
                     style={{ background: PC.dangerBg, color: PC.danger, border: 'none', borderRadius: 11, padding: '9px 14px', fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>✕</button>
                 </Card>
               ))}
@@ -1286,7 +1318,7 @@ export default function ParentChildDetail() {
         {/* reward claims — child tapped "Claim", waiting on you */}
         {pendingClaims.length > 0 && (
           <div>
-            <SectionHead>🎁 Reward claims ({pendingClaims.length})</SectionHead>
+            <SectionHead>{s('cd_claims', { n: pendingClaims.length })}</SectionHead>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pendingClaims.map(c => (
                 <Card key={c.id} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1312,12 +1344,12 @@ export default function ParentChildDetail() {
           <SectionHead action={
             <button className="tc-press tc-tap" onClick={() => setShowAddReward(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 5, background: PC.amberBg, color: PC.amber, border: 'none', borderRadius: 11, padding: '7px 12px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-              <Icon name="plus" size={14} color={PC.amber} sw={2.4} /> Add
+              <Icon name="plus" size={14} color={PC.amber} sw={2.4} /> {s('db_add')}
             </button>
-          }>🏆 Reward goals</SectionHead>
+          }>{s('cd_reward_goals')}</SectionHead>
 
           {rewards.length === 0 ? (
-            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>No reward goals set yet.</Card>
+            <Card pad={14} style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkSoft }}>{s('cd_no_goals')}</Card>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {rewards.map(r => {
@@ -1334,9 +1366,9 @@ export default function ParentChildDetail() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{r.name}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.amber }}>⭐ {r.bt_cost} gems needed</span>
+                          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: PC.amber }}>{s('cd_gems_needed', { n: r.bt_cost })}</span>
                           {r.recurring === false && (
-                            <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 10.5, color: PC.inkSoft, background: PC.line, borderRadius: 7, padding: '2px 6px' }}>just once</span>
+                            <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 10.5, color: PC.inkSoft, background: PC.line, borderRadius: 7, padding: '2px 6px' }}>{s('cd_just_once')}</span>
                           )}
                         </div>
                       </div>
@@ -1354,7 +1386,7 @@ export default function ParentChildDetail() {
                       <div style={{ width: `${pct}%`, height: '100%', background: ready ? PC.green : `linear-gradient(90deg, ${PC.teal}, ${PC.peach})`, borderRadius: 8, transition: 'width .6s ease' }} />
                     </div>
                     <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12, color: ready ? PC.green : PC.inkSoft }}>
-                      {awaitingDecision ? 'Claimed — see above ⬆️' : ready ? 'Ready to claim! 🎉' : `${Math.max(0, r.bt_cost - gems)} more gems to go`}
+                      {awaitingDecision ? s('cd_claimed') : ready ? s('cd_ready') : s('cd_more_to_go', { n: Math.max(0, r.bt_cost - gems) })}
                     </div>
                   </Card>
                 )
@@ -1365,12 +1397,12 @@ export default function ParentChildDetail() {
 
         {/* settings */}
         <div>
-          <SectionHead>Settings</SectionHead>
+          <SectionHead>{s('cd_settings')}</SectionHead>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { icon: 'gear',  label: 'Task settings',  sub: 'Gem amounts and daily limits', onClick: () => nav(`/parent/child/${id}/settings`) },
-              { icon: 'edit',  label: 'Edit child',      sub: 'Change name, age or avatar',  onClick: () => setShowEditModal(true) },
-              { icon: 'lock',  label: 'Change PIN',      sub: 'Set a new 4-digit PIN',        onClick: () => setShowPinModal(true) },
+              { icon: 'gear',  label: s('cd_task_settings'), sub: s('cd_task_settings_b'), onClick: () => nav(`/parent/child/${id}/settings`) },
+              { icon: 'edit',  label: s('cd_edit_child').replace(' ✏️', ''), sub: s('cd_edit_child_b'), onClick: () => setShowEditModal(true) },
+              { icon: 'lock',  label: s('cd_change_pin'),     sub: s('cd_change_pin_b'),     onClick: () => setShowPinModal(true) },
             ].map(({ icon, label, sub, onClick }) => (
               <Card key={label} onClick={onClick} pad={14} style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                 <div style={{ width: 42, height: 42, borderRadius: 13, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1387,7 +1419,7 @@ export default function ParentChildDetail() {
             <button className="tc-press tc-tap" onClick={() => setShowRemoveModal(true)}
               style={{ background: PC.dangerBg, border: 'none', borderRadius: 16, padding: '13px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginTop: 2 }}>
               <Icon name="trash" size={18} color={PC.danger} />
-              <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.danger }}>Remove child</span>
+              <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.danger }}>{s('cd_remove_child')}</span>
             </button>
           </div>
         </div>

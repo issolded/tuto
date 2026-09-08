@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PC, FONT, SHADOW, PCSS, Icon, TutoMascot } from '../lib/parentUI'
+import { PC, FONT, SHADOW, PCSS, Icon, TutoMascot, LangPicker } from '../lib/parentUI'
+import { useT } from '../lib/parentI18n'
 
 export default function Opening() {
   const nav = useNavigate()
+  const s = useT()
 
   useEffect(() => {
     const el = document.createElement('style')
@@ -41,7 +43,7 @@ export default function Opening() {
         fontFamily: FONT, fontWeight: 600, fontSize: 15.5, color: PC.inkSoft,
         textAlign: 'center', lineHeight: 1.55, marginBottom: 52,
       }}>
-        Learn, earn, have fun!<br />Every task brings you closer to a reward.
+        {s('op_tagline')}<br />{s('op_tagline2')}
       </div>
 
       {/* role cards */}
@@ -59,8 +61,8 @@ export default function Opening() {
             <Icon name="user" size={26} color={PC.teal} />
           </div>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 17, color: PC.ink }}>Parent Login</div>
-            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 2 }}>Manage &amp; approve tasks</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 17, color: PC.ink }}>{s('op_parent')}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 2 }}>{s('op_parent_sub')}</div>
           </div>
           <Icon name="chevron" size={20} color={PC.inkFaint} />
         </button>
@@ -80,11 +82,22 @@ export default function Opening() {
             <Icon name="sparkle" size={26} color={PC.amber} />
           </div>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 17, color: PC.ink }}>Child Login</div>
-            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 2 }}>Complete tasks, earn Gems!</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 17, color: PC.ink }}>{s('op_child')}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 2 }}>{s('op_child_sub')}</div>
           </div>
           <Icon name="chevron" size={20} color={PC.inkFaint} />
         </button>
+      </div>
+
+      {/* Under the two cards rather than above them: this is the first thing a parent who does
+          not read English needs, and also the thing nobody came here to tap. Quiet, findable,
+          and it changes the screen it is on — which is the only reason to put it here at all
+          rather than in settings. */}
+      <div style={{ marginTop: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, letterSpacing: '.6px', textTransform: 'uppercase' }}>
+          {s('op_lang')}
+        </div>
+        <LangPicker variant="bare" />
       </div>
     </div>
   )
