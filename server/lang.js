@@ -16,9 +16,13 @@ export const PARENT_LANGS = [
 
 const KNOWN = new Set(PARENT_LANGS.map(l => l.code))
 
-// Turkish is the default for the same reason the column default is: these are the families
-// already on the system, and none of them chose anything.
-export const DEFAULT_PARENT_LANG = 'tr'
+// English, and it is a product decision rather than a technical one: Turkish was the default
+// because the first family was Turkish, which stops being a good reason the moment anyone else
+// signs up. Every parent on the system today has 'tr' written into their row explicitly (the
+// column default put it there), so changing this moves nobody — see
+// server/migrations/2026-09-08_parent_language_default.sql, which backfills any row that
+// somehow lacks the key before the column default flips too.
+export const DEFAULT_PARENT_LANG = 'en'
 
 export function parentLang(prefs) {
   const code = prefs?.language

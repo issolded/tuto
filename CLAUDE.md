@@ -61,15 +61,48 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
   alınana kadar. Tekrar Baileys önerme.
 - Persona parametreleri (`bot_name`, `tone`) typing promptuna değil, `prefs` şemasına bağlı.
 - **İki ayrı dil ekseni var, birleştirme.** `children.language` çocuğun okuduğu dil (uygulama
-  metinleri, sorular, ipuçları); `parents.prefs.language` ebeveyne yazdığın mesajların dili.
-  Aynı ailede farklı olabilirler ve bir kez bunlar karıştırıldığı için Türkçe okuyan bir
-  ebeveyne İngilizce ödül mesajı gitti.
+  metinleri, sorular, ipuçları); `parents.prefs.language` hem ebeveyne yazdığın mesajların
+  hem de ebeveyn ekranlarının dili. Aynı ailede farklı olabilirler ve bir kez bunlar
+  karıştırıldığı için Türkçe okuyan bir ebeveyne İngilizce ödül mesajı gitti.
+- **İki sözlük var.** Çocuğun okuduğu `src/lib/i18n.js`, ebeveynin okuduğu
+  `src/lib/parentI18n.js`. Ebeveyn ekranında `const s = useT()`, sonra `s('key')`.
+  Ekranda hem çocuğun hem ebeveynin gördüğü tek şey **görev/tile adları** — onlar tek
+  kopya, çocuk sözlüğünden okunuyor (`childT('task_math', lang)`), ki ikisi aynı şeyden
+  aynı kelimeyle bahsedebilsin.
+- **Ebeveyn arayüzünün dili localStorage'da (`tuto_ui_lang`), hesap onun üstüne biniyor.**
+  Splash ekranında henüz hesap yok; kayıt olurken cihazın seçimi `prefs.language`'a yazılıyor,
+  giriş yapınca `prefs` cihazı eziyor (`adoptAccountLang`), dashboard'daki seçici ikisini de
+  yazıyor. Yani seçim ilk dokunuşta gerçek ve sonraki cihaza da taşınıyor.
 - **Dil seçmek `lang === 'x' ? a : b` ile yapılmaz.** İkili ternary üçüncü dilde sessizce
   İngilizceye düşer. Frontend'de `say(lang, en, tr, es)` (`src/lib/i18n.js`), sunucuda aynısı
   (`server/lang.js`); dil listesi tek yerde (`LANGS` / `PARENT_LANGS`).
+- **Mantık UI metnine bakmaz.** Onboarding'de oyun ödülü `label.includes('video game')` ile
+  bulunuyordu; etiket çevrilir çevrilmez o adım sessizce atlanırdı. Artık `kind: 'game'`.
 
 ## Açık işler / yol haritası
 
+- [x] Ebeveyn arayüzü de üç dilli, ve dil seçimi ilk ekranda (2026-09-08). İki parça:
+      **(1) Varsayılan artık İngilizce.** `prefs.language` sütun varsayılanı 'tr' idi çünkü ilk
+      aile Türk'tü; ikinci aile kaydolduğu an bu bir gerekçe olmaktan çıkıyor. `server/lang.js`
+      `DEFAULT_PARENT_LANG = 'en'`, sütun varsayılanı migration'la değişiyor
+      (`server/migrations/2026-09-08_parent_language_default.sql`). Migration önce anahtarı
+      olmayan satırlara açıkça 'tr' yazıyor: mevcut aileler bugün kodun fallback'i üzerinden
+      Türkçe alıyor ve fallback değişince sessizce İngilizceye dönerlerdi.
+      **(2) Ebeveyn ekranlarının tamamı çevrildi** — Opening, Login, Signup, Onboarding (10 adım),
+      Dashboard, ChildDetail, TaskSettings, FamilySetup, ChildPin ve paylaşılan parentUI.
+      ~330 anahtar, ayrı sözlükte: `src/lib/parentI18n.js`. Splash ekranındaki seçici gerçek —
+      ilk dokunuşta ekranı değiştiriyor — çünkü ekranların dili cihazda (`tuto_ui_lang`),
+      hesap onun üstüne biniyor (bkz. Sabit kararlar).
+      Bu iş üç eski hatayı da ortaya çıkardı ve düzeltti: ChildDetail'de çizim/ağaç/ev katkısı
+      bölümleri **sadece Türkçe** yazılmıştı (İngilizce bir ekranın ortasında); onboarding oyun
+      ödülünü `label.includes('video game')` ile buluyordu (etiket çevrilince 8. adım sessizce
+      atlanırdı — artık `kind: 'game'`); FamilySetup'ta kod alanı `minWidth: 0` olmadığı için
+      "Bağlan" düğmesi ekrandan taşıyordu (İngilizcede 20px, İspanyolcada 26px).
+      `npm run i18n:check` artık iki sözlüğü birden okuyor ve ebeveyn ekranlarını da tarıyor —
+      eskiden "parent UI çevrilmedi" diye muaftılar, o Türkçe cümleler öyle kaçmıştı.
+      Doğrulama: 9 ekran × 3 dil tarayıcıda render edildi, 390px'te yatay taşma 0, dil sızıntısı
+      0, runtime hatası 0. (Sızıntı testinin ilk hâli Türkçeyi kaçırıyordu: JS'te `\b` yalnız
+      ASCII sınırı, `\bÇocuklar\b` hiç eşleşmiyor.)
 - [x] Üçüncü dil: İspanyolca (2026-09-07). Çocuk tarafı: 301 i18n anahtarının hepsinde `es`,
       matematik şablonlarının 107 cümlesi + kelime bankaları, `numerals.js`'e İspanyolca sayı
       sözcükleri (16-29 tek kelime, `y` bağlacı yalnız onluktan sonra bağlar, binlik ayıracı
@@ -152,7 +185,8 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
       must-revalidate, canlıda tarayıcı testi bölümü buluyor). Seçenekler: karta "Settings"
       başlığı verip Notifications'ın üstüne almak, ya da üst özet şeridine atlama satırı.
-      Karar ertelendi (2026-09-01).
+      Karar ertelendi (2026-09-01). **Not:** dil seçici bu kartın en başında ama asıl yeri
+      splash ekranı — orada bulunması bu maddeye bağlı değil.
 - [ ] Stories çeşitlilik: 11+ üretimi tek kalıba (AI-duygu-kontrolü / kapalı-dome) çöküyor;
       üretim promptuna premise çeşitliliği + alt-tema rotasyonu, ya da embedding ile
       semantik dedup. (Güvenlik değil, kalite.)

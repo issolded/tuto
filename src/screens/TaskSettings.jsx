@@ -1,17 +1,14 @@
-import { LANGS, childLang as childLangOf } from '../lib/i18n'
+import { LANGS, childLang as childLangOf, t as childT } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, PCSS, TopBar, Card, Toggle, TaskIcon } from '../lib/parentUI'
 import { CAP_RANGE, TASK_DEFAULTS, capNote } from '../lib/taskDefaults'
+import { useT, useUiLang } from '../lib/parentI18n'
 
-const TASKS = [
-  { key: 'reading', label: 'My Books' },
-  { key: 'math',    label: 'My Math' },
-  { key: 'writing', label: 'My Stories' },
-  { key: 'homework', label: 'My Homework' },
-  { key: 'drawing', label: 'My Drawings' },
-]
+// Keys only. The names are the CHILD's tile names, read from the child dictionary at render
+// so the parent and the child are looking at the same word for the same thing.
+const TASKS = ['reading', 'math', 'writing', 'homework', 'drawing']
 
 // Every task has a daily cap and every one of them is set here. The dial was
 // drawing-only for a while, on the reasoning that drawing rewards instantly with
@@ -34,6 +31,8 @@ function capBtn(PC) {
 export default function TaskSettings() {
   const { id } = useParams()
   const nav = useNavigate()
+  const s = useT()
+  const lang = useUiLang()
   const [childName, setChildName] = useState('')
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   // Lives on the child row, not in task_settings: it is not a task and task_settings is
@@ -100,21 +99,21 @@ export default function TaskSettings() {
   return (
     <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       <TopBar
-        title="Task settings"
+        title={s('ts_title')}
         sub={childName || undefined}
         onBack={() => nav(`/parent/child/${id}`)}
         right={saving
-          ? <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkFaint }}>Saving…</span>
+          ? <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PC.inkFaint }}>{s('saving')}</span>
           : null}
       />
 
       <div style={{ flex: 1, padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Card pad={16} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>
-            Language {childName ? `for ${childName}` : ''}
+            {childName ? s('ts_lang_for', { name: childName }) : s('ts_lang')}
           </div>
           <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, lineHeight: 1.45, marginTop: -4 }}>
-            The language {childName || 'your child'} sees — questions, hints and Tuto's replies.
+            {s('ts_lang_sub', { name: childName || s('ts_your_child') })}
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
             {LANGS.map(l => ({ id: l.code, label: l.label, flag: l.flag })).map(o => {
@@ -135,20 +134,20 @@ export default function TaskSettings() {
         </Card>
 
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, marginBottom: 6, padding: '0 2px' }}>
-          Toggle tasks on/off, adjust gem rewards, and set how many a day earn gems.
+          {s('ts_intro')}
         </div>
 
-        {TASKS.map(({ key, label }) => {
-          const s = settings[key]
+        {TASKS.map((key) => {
+          const cfg = settings[key]
           // A child row written before this screen existed has gems but no cap;
           // fall back to the same default the server would use, not to a literal.
-          const cap = s.daily_cap ?? TASK_DEFAULTS[key].daily_cap
+          const cap = cfg.daily_cap ?? TASK_DEFAULTS[key].daily_cap
           const accent = PC[key] || PC.teal
-          const pct = ((s.gems - 5) / (100 - 5)) * 100
+          const pct = ((cfg.gems - 5) / (100 - 5)) * 100
           const trackBg = `linear-gradient(to right, ${accent} ${pct}%, ${PC.line} ${pct}%)`
 
           return (
-            <Card key={key} pad={16} style={{ opacity: s.active ? 1 : 0.55, transition: 'opacity .2s' }}>
+            <Card key={key} pad={16} style={{ opacity: cfg.active ? 1 : 0.55, transition: 'opacity .2s' }}>
               {/* top row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                 <div style={{
@@ -159,21 +158,21 @@ export default function TaskSettings() {
                   <TaskIcon type={key} size={24} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{label}</div>
-                  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: s.active ? accent : PC.inkFaint, marginTop: 2 }}>
-                    {s.active ? `+${s.gems} gems per session` : 'Disabled'}
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{childT(`task_${key}`, lang)}</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: cfg.active ? accent : PC.inkFaint, marginTop: 2 }}>
+                    {cfg.active ? s('ts_per_session', { n: cfg.gems }) : s('ts_disabled')}
                   </div>
                 </div>
-                <Toggle on={s.active} onClick={() => toggleTask(key)} />
+                <Toggle on={cfg.active} onClick={() => toggleTask(key)} />
               </div>
 
               {/* slider — only when active */}
-              {s.active && (
+              {cfg.active && (
                 <div style={{ marginTop: 14 }}>
                   <input
                     type="range"
                     min={5} max={100} step={5}
-                    value={s.gems}
+                    value={cfg.gems}
                     onChange={e => setGems(key, Number(e.target.value))}
                     className="tc-slider"
                     style={{ background: trackBg }}
@@ -186,13 +185,13 @@ export default function TaskSettings() {
               )}
 
               {/* daily cap */}
-              {s.active && (
+              {cfg.active && (
                 <div style={{ marginTop: 14, borderTop: `1px solid ${PC.line}`, paddingTop: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>Rewarded per day</div>
+                      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>{s('ts_per_day')}</div>
                       <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 2 }}>
-                        {capNote(key)}
+                        {capNote(key, s)}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

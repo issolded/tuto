@@ -1,5 +1,7 @@
 // Tuto Care — parent-side design kit (shared tokens + primitives)
 import TutoMascotComponent from '../components/TutoMascot'
+import { LANGS } from './i18n'
+import { useUiLang, setUiLang, useT } from './parentI18n'
 
 export const PC = {
   bg:       '#F4F6F7',
@@ -112,10 +114,11 @@ export function TaskIcon({ type, size = 24, color }) {
 
 // ── TopBar ────────────────────────────────────────────────────────────────────
 export function TopBar({ title, onBack, right, sub }) {
+  const s = useT()
   return (
     <div style={{ flexShrink: 0, padding: '6px 18px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
       {onBack !== undefined ? (
-        <button className="tc-press tc-tap" onClick={onBack} aria-label="Back" style={{
+        <button className="tc-press tc-tap" onClick={onBack} aria-label={s('a_back')} style={{
           width: 42, height: 42, flexShrink: 0, borderRadius: 14,
           background: '#fff', border: `1.5px solid ${PC.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -324,6 +327,64 @@ export function SectionHead({ children, action }) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '2px 2px 11px' }}>
       <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16.5, color: PC.ink, whiteSpace: 'nowrap' }}>{children}</div>
       {action}
+    </div>
+  )
+}
+
+// ── Language picker ───────────────────────────────────────────────────────────
+// Two shapes of the same control, because it appears twice and the two places want different
+// weight. `chips` is the row of full-width buttons the dashboard's settings card uses, where
+// language is one setting among several. `bare` is the quiet flag row on the splash screen,
+// where it must be findable without competing with the two things a person came to tap.
+//
+// `onPick` is optional: without it the control only moves the device's language, which is all
+// the splash can do — there is no account yet. The dashboard passes one so the choice is also
+// written to the account.
+export function LangPicker({ variant = 'chips', onPick }) {
+  const lang = useUiLang()
+  const choose = (code) => { setUiLang(code); onPick?.(code) }
+
+  if (variant === 'bare') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {LANGS.map(l => {
+          const on = lang === l.code
+          return (
+            <button key={l.code} className="tc-tap" onClick={() => choose(l.code)}
+              aria-label={l.label} aria-pressed={on}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                background: on ? '#fff' : 'transparent',
+                border: `1.5px solid ${on ? PC.line : 'transparent'}`,
+                boxShadow: on ? SHADOW_SM : 'none',
+                borderRadius: 999, padding: '7px 12px',
+                fontFamily: FONT, fontWeight: 700, fontSize: 13,
+                color: on ? PC.ink : PC.inkFaint,
+                transition: 'background .18s, border-color .18s, color .18s',
+              }}>
+              <span style={{ fontSize: 15, lineHeight: 1 }}>{l.flag}</span>{l.label}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 9 }}>
+      {LANGS.map(l => {
+        const on = lang === l.code
+        return (
+          <button key={l.code} className="tc-press tc-tap" onClick={() => choose(l.code)} aria-pressed={on}
+            style={{
+              flex: 1, padding: '10px 6px', cursor: 'pointer',
+              background: on ? PC.tealBg : '#fff',
+              border: `1.5px solid ${on ? PC.teal : PC.line}`, borderRadius: 14,
+              fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.ink,
+              transition: 'background .18s, border-color .18s',
+            }}>{l.flag} {l.label}</button>
+        )
+      })}
     </div>
   )
 }

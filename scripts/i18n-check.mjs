@@ -4,7 +4,9 @@
 // rather than by anything automatic:
 //
 //   1. English text left in JSX          — "Books from Other Authors" on a Turkish screen
-//   2. Turkish text hardcoded in JSX     — the whole forest archive, on an English screen
+//   2. Turkish text hardcoded in JSX     — the whole forest archive, on an English screen;
+//                                          and, on the parent side, "Kendi çizimi" and the
+//                                          whole tree card, sitting in an English-only screen
 //   3. t() called without importing t    — the chores screen opened blank
 //   4. t(key, lang) where lang is not in scope — four blank screens in one week
 //   5. a key that is not in the dictionary — renders as the key itself, silently
@@ -22,14 +24,23 @@ import { readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 
 const SRC = 'src'
+// Two dictionaries, two audiences: what the CHILD reads and what the PARENT reads. They are
+// separate files for the reason set out at the top of each, and both are checked here — the
+// parent screens used to be exempt from the prose scan ("not translated yet"), which is how
+// four Turkish sentences ended up living in an otherwise English screen.
 const DICT = 'src/lib/i18n.js'
-const EXPORTS = ['t', 'translator', 'childLang', 'formatDay', 'localeFor', 'LANGS', 'say']
+const PARENT_DICT = 'src/lib/parentI18n.js'
+const EXPORTS = ['t', 'translator', 'childLang', 'formatDay', 'localeFor', 'LANGS', 'say', 'useT', 'pt']
 
-// Files whose strings are not read by a child: prompts sent to the model, parent-only
-// screens (the parent UI is not translated yet), and anything that never renders.
-const NOT_CHILD_FACING = [
+// Files whose strings nobody reads on a screen: prompts sent to the model, and anything that
+// never renders.
+const NOT_USER_FACING = [
   'lib/gemini.js', 'lib/supabase.js', 'lib/mathTemplates.js', 'lib/mathCurriculum.js',
-  'screens/Parent', 'lib/parentUI.jsx', 'screens/TaskSettings.jsx', 'screens/ReadingFlow.jsx', 'screens/ChildPin.jsx', 'screens/FamilySetup.jsx', 'main.jsx', 'App.jsx',
+  'lib/mathVerify.js', 'main.jsx', 'App.jsx',
+  // Not a screen exemption so much as a prompt one: ReadingFlow builds the model's
+  // instructions inline, and forty lines of English addressed to Gemini is not UI text.
+  // Its child-facing strings all go through t() and are covered by the unknown-key check.
+  'screens/ReadingFlow.jsx',
 ]
 
 function walk(dir, out = []) {
@@ -43,21 +54,36 @@ function walk(dir, out = []) {
 
 const dictSrc = readFileSync(DICT, 'utf8')
 const langs = [...dictSrc.matchAll(/code: '(\w+)'/g)].map(m => m[1])
-const body = dictSrc.slice(dictSrc.indexOf('const STRINGS'), dictSrc.indexOf('\n}\n'))
-const entries = [...body.matchAll(/^ {2}(\w+):\s*\{([^}]*)\}/gm)]
+
+// An entry can span several lines, so the field text runs to the closing brace rather than to
+// the end of the line: a three-language entry wrapped for width was being read as one-language
+// and reported missing two.
+function readDict(src, marker) {
+  const body = src.slice(src.indexOf(marker))
+  return [...body.matchAll(/^ {2}(\w+):\s*\{([\s\S]*?)\},?$/gm)]
+}
+
+const entries = readDict(dictSrc, 'const STRINGS')
 const keys = new Set(entries.map(e => e[1]))
+
+const parentSrc = readFileSync(PARENT_DICT, 'utf8')
+const parentEntries = readDict(parentSrc, 'const P = {')
+const parentKeys = new Set(parentEntries.map(e => e[1]))
 
 const findings = []
 const add = (kind, file, line, detail) => findings.push({ kind, file, line, detail })
 
-// ── 6. every entry carries every language ────────────────────────────────────
-for (const [, key, fields] of entries) {
-  for (const lang of langs) {
-    if (!new RegExp(`\\b${lang}:`).test(fields)) add('missing-translation', DICT, 0, `${key} → ${lang}`)
+// ── 6. every entry carries every language, in both dictionaries ──────────────
+for (const [dict, rows] of [[DICT, entries], [PARENT_DICT, parentEntries]]) {
+  for (const [, key, fields] of rows) {
+    for (const lang of langs) {
+      if (!new RegExp(`\\b${lang}:`).test(fields)) add('missing-translation', dict, 0, `${key} → ${lang}`)
+    }
   }
 }
 
 const used = new Set()
+const parentUsed = new Set()
 const dynamic = new Set()   // key prefixes built at runtime
 
 // Which lines of a file sit inside a say(lang, en, tr, es) call.
@@ -96,14 +122,14 @@ function sayLines(src) {
 }
 
 for (const file of walk(SRC)) {
-  if (file.endsWith('i18n.js')) continue
-  const childFacing = !NOT_CHILD_FACING.some(x => file.includes(x))
+  if (/i18n\.js$|parentI18n\.js$/.test(file)) continue
+  const userFacing = !NOT_USER_FACING.some(x => file.includes(x))
   const src = readFileSync(file, 'utf8')
   const lines = src.split('\n')
   const translated = sayLines(src)
 
   const imported = new Set(
-    [...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'[^']*i18n'/g)]
+    [...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'[^']*[iI]18n'/g)]
       .flatMap(m => m[1].split(',').map(s => s.trim()))
   )
 
@@ -146,6 +172,18 @@ for (const file of walk(SRC)) {
       // report does not accuse a key that is reached this way.
       for (const m of code.matchAll(/\bt\(\s*`(\w+?)\$\{/g)) dynamic.add(m[1])
 
+      // A bound translator: `const s = useT()` on a parent screen, `translator(lang)` on a
+      // child one. Both are called the same way, so the key has to exist in one dictionary or
+      // the other — in neither, it renders as the key itself, which is the same silent failure
+      // an unknown t() key is.
+      for (const m of code.matchAll(/(?<![\w.])s\(\s*[`'](\w+)[`']/g)) {
+        parentUsed.add(m[1]); used.add(m[1])
+        if (!parentKeys.has(m[1]) && !keys.has(m[1])) add('unknown-key', file, n, `${m[1]} (via s())`)
+      }
+      // Any key built from a template — s(`cap_note_${key}`), childT(`task_${key}`, lang) —
+      // is the same runtime-built shape as t(`score_${band}`) and gets the same exemption.
+      for (const m of code.matchAll(/`(\w+?)\$\{/g)) dynamic.add(m[1])
+
       for (const m of code.matchAll(/\bt\(\s*'(\w+)'\s*,\s*(\w+)\s*\)/g)) {
         used.add(m[1])
         // ── 5. key exists ──────────────────────────────────────────────────
@@ -168,7 +206,7 @@ for (const file of walk(SRC)) {
     // ── 1 & 2. text a child would read, sitting in the source ────────────────
     // Bare text on its own line inside JSX is the shape that hid the library, and it is
     // the shape a regex over quoted strings can never see.
-    if (!childFacing || isComment || translated.has(n)) return
+    if (!userFacing || isComment || translated.has(n)) return
     const text = raw.trim()
     if (!text || text.startsWith('<') || text.startsWith('{') || text.startsWith('import')) return
     if (/^[^A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü]*$/.test(text)) return          // punctuation/emoji only
@@ -185,7 +223,7 @@ for (const file of walk(SRC)) {
   // Prose in a quoted string inside a JSX expression — {busy ? 'Sending…' : 'Add'}.
   // This shape defeated both earlier scans, and the unused-key report is what exposed it:
   // keys had been written for strings that were still sitting here untranslated.
-  if (childFacing) {
+  if (userFacing) {
     lines.forEach((raw, i) => {
       if (translated.has(i + 1)) return
       const text = raw.trim()
@@ -197,7 +235,7 @@ for (const file of walk(SRC)) {
         // to let through only what reads like a sentence a child would see.
         if (/[:;(){}<>=|#\\]|^,|,$/.test(v)) continue                     // style / code
         if (/\d/.test(v)) continue                                       // 12px 28px, 1fr
-        if (/sans-serif|serif|cursive|monospace|Fredoka|Baloo|Nunito|Georgia/.test(v)) continue
+        if (/sans-serif|serif|cursive|monospace|Fredoka|Baloo|Nunito|Georgia|Jakarta|Lexend/.test(v)) continue
         const words = v.split(/\s+/).filter(w => /^[A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü'’.,!?…-]+$/.test(w)
                                                 && /[A-Za-zÀ-ÿĞğŞşİıÇçÖöÜü]{2}/.test(w))
         if (words.length !== v.split(/\s+/).length) continue             // something unwordy
@@ -210,9 +248,13 @@ for (const file of walk(SRC)) {
   }
 
   // Quoted prose passed to a prop that renders — title=, placeholder=, aria-label=
-  if (childFacing) {
+  if (userFacing) {
     lines.forEach((raw, i) => {
       for (const m of raw.matchAll(/(?:title|placeholder|aria-label)="([^"]{4,})"/g)) {
+        // A mask, not a sentence: placeholder="XXXXXXXX" and the like have nothing to translate.
+        if (!/[a-zà-ÿğşıçöü]/.test(m[1]) && !/\s/.test(m[1])) continue
+        // An address or a URL is the same in every language; there is nothing to translate.
+        if (/^\S+@\S+\.\S+$/.test(m[1]) || /^https?:\/\//.test(m[1])) continue
         add('hardcoded-attr', file, i + 1, m[1].slice(0, 60))
       }
     })
@@ -220,18 +262,16 @@ for (const file of walk(SRC)) {
 }
 
 // ── unused keys: not a failure, but they rot ─────────────────────────────────
-const allSrc = walk(SRC).filter(f => !f.endsWith('i18n.js')).map(f => readFileSync(f, 'utf8')).join('\n')
-const unused = [...keys].filter(k =>
-  !used.has(k) &&
-  !new RegExp(`'${k}'`).test(allSrc) &&
-  ![...dynamic].some(p => k.startsWith(p))
-)
+const allSrc = walk(SRC).filter(f => !/i18n\.js$|parentI18n\.js$/.test(f)).map(f => readFileSync(f, 'utf8')).join('\n')
+const isUnused = (k, seen) => !seen.has(k) && !new RegExp(`'${k}'`).test(allSrc) && ![...dynamic].some(p => k.startsWith(p))
+const unused = [...keys].filter(k => isUnused(k, used))
+const parentUnused = [...parentKeys].filter(k => isUnused(k, parentUsed))
 
 const order = ['missing-import', 'lang-out-of-scope', 'unknown-key', 'hardcoded-text', 'hardcoded-expr', 'hardcoded-attr', 'missing-translation']
 findings.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
 
 if (!findings.length) {
-  console.log(`i18n ok — ${keys.size} keys, ${langs.length} languages (${langs.join(', ')})`)
+  console.log(`i18n ok — ${keys.size} child keys + ${parentKeys.size} parent keys, ${langs.length} languages (${langs.join(', ')})`)
 } else {
   let last = ''
   for (const f of findings) {
@@ -240,7 +280,8 @@ if (!findings.length) {
   }
   console.log(`\n${findings.length} findings`)
 }
-if (unused.length) console.log(`\nunused keys (${unused.length}): ${unused.join(', ')}`)
+if (unused.length) console.log(`\nunused child keys (${unused.length}): ${unused.join(', ')}`)
+if (parentUnused.length) console.log(`\nunused parent keys (${parentUnused.length}): ${parentUnused.join(', ')}`)
 
 // A hardcoded string renders; a missing import does not. Only fail on the ones that break.
 const fatal = findings.filter(f => ['missing-import', 'lang-out-of-scope', 'unknown-key'].includes(f.kind))

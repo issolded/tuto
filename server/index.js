@@ -10,7 +10,7 @@ import crypto, { randomUUID } from 'crypto'
 import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
 import { imageSafetyPrompt, parseImageSafety } from './prompts/imageSafety.js'
 import { purgeOldPhotos } from './jobs/purgeOldPhotos.js'
-import { parentLang, say, PARENT_LANGS } from './lang.js'
+import { parentLang, say, PARENT_LANGS, DEFAULT_PARENT_LANG } from './lang.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -2366,7 +2366,7 @@ async function handleMessage(parentId, replyCb, text) {
   // Declared here (not inside try) so the catch block can still send a
   // localized fallback reply if we made it far enough to know the parent's
   // language before something failed.
-  let language = 'tr'
+  let language = DEFAULT_PARENT_LANG
   try {
     const historyContents = await fetchConversationHistory(parentId)
     await logMessage(parentId, 'parent', text)
@@ -3079,8 +3079,8 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
     const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', childId).maybeSingle()
     if (child?.parent_id) {
       // Parent's own language preference, not the child's — every other
-      // notification in this file reads it the same way (parents.prefs.language,
-      // defaulting to 'tr'). child.language is a different, unrelated field
+      // notification in this file reads it the same way, through parentLang().
+      // child.language is a different, unrelated field
       // (every child gets 'en' there with no way to change it — using it here
       // sent this exact message in English to a parent who only reads Turkish).
       const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()

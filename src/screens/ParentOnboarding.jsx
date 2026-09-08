@@ -1,4 +1,5 @@
-import { LANGS } from '../lib/i18n'
+import { LANGS, t as childT } from '../lib/i18n'
+import { useT, useUiLang, uiLang, pt } from '../lib/parentI18n'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
@@ -12,43 +13,42 @@ import {
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
+// The presets carry dictionary keys, resolved once the translator exists. `kind` is what the
+// auto-launch step matches on: it used to find this row by looking for "video game" inside the
+// label, which is a rule that holds only while the label is English — the first translated
+// preset would have skipped step 8 in silence.
 const DEFAULT_REWARDS = [
-  { emoji: '🎮', label: 'Video Game 30min', gems: 30,  lockTitle: true,  hint: '💡 30 mins of playtime' },
-  { emoji: '📺', label: 'TV 1 hour',        gems: 60,  lockTitle: true,  hint: '💡 1 hour of screen time' },
+  { emoji: '🎮', kind: 'game', labelKey: 'ob_rw_game', gems: 30,  lockTitle: true,  hintKey: 'ob_rw_game_h' },
+  { emoji: '📺',               labelKey: 'ob_rw_tv',   gems: 60,  lockTitle: true,  hintKey: 'ob_rw_tv_h' },
   // A toy is bought once. Screen time comes round again every week — that difference is a
   // column on the reward now, and the presets are where a family first meets it.
-  { emoji: '🧸', label: 'New toy',          gems: 500, lockTitle: false, hint: '💡 Something special to save up for!', recurring: false },
+  { emoji: '🧸',               labelKey: 'ob_rw_toy',  gems: 500, lockTitle: false, hintKey: 'ob_rw_toy_h', recurring: false },
 ]
 
 // Natural phrasing for the "if {child} does X and Y" example on the rewards
 // step — separate from the task label ("My Math") since a sentence needs a
 // verb, not a nav-item name.
 const TASK_EXAMPLE_PHRASE = {
-  reading:  'reads a few pages of a book',
-  math:     'does 1 math practice',
-  writing:  'writes a story',
-  homework: 'finishes homework',
-  drawing:  'draws a picture',
+  reading: 'ob_ex_reading', math: 'ob_ex_math', writing: 'ob_ex_writing',
+  homework: 'ob_ex_homework', drawing: 'ob_ex_drawing',
 }
 
 const TASKS_META = [
-  { key: 'reading',  label: 'My Books' },
-  { key: 'math',     label: 'My Math' },
-  { key: 'writing',  label: 'My Stories' },
-  { key: 'homework', label: 'My Homework' },
-  { key: 'drawing',  label: 'My Drawings' },
+  { key: 'reading' }, { key: 'math' }, { key: 'writing' }, { key: 'homework' }, { key: 'drawing' },
 ]
 
 // Step 3's activity-picker tile grid — per design_handoff_onboarding_step3/.
 // Separate from TASKS_META (which Step 4's earning example still uses) since
 // these tiles carry extra design-only fields (desc, tint, bg) that step
 // doesn't need.
+// The tile NAME is the child's own tile name, read from the child dictionary at render; only
+// the blurb under it belongs to the parent.
 const STEP3_TASKS = [
-  { key: 'reading',  name: 'My Books',    desc: 'Builds a daily reading habit.',     tint: '#8f74d6', bg: '#E8E0FF' },
-  { key: 'math',     name: 'My Math',     desc: 'Keeps number skills sharp.',        tint: '#4f97dd', bg: '#D4EDFF' },
-  { key: 'writing',  name: 'My Stories',  desc: 'Grows writing & imagination.',      tint: '#46ac7d', bg: '#D4F5E0' },
-  { key: 'homework', name: 'My Homework', desc: 'Makes homework a routine.',         tint: '#e0952f', bg: '#FFF1CF' },
-  { key: 'drawing',  name: 'My Drawings', desc: 'Encourages creativity every day.',  tint: '#c96aa8', bg: '#EFE3FF', wide: true },
+  { key: 'reading',  desc: 'ob_t_reading',  tint: '#8f74d6', bg: '#E8E0FF' },
+  { key: 'math',     desc: 'ob_t_math',     tint: '#4f97dd', bg: '#D4EDFF' },
+  { key: 'writing',  desc: 'ob_t_writing',  tint: '#46ac7d', bg: '#D4F5E0' },
+  { key: 'homework', desc: 'ob_t_homework', tint: '#e0952f', bg: '#FFF1CF' },
+  { key: 'drawing',  desc: 'ob_t_drawing',  tint: '#c96aa8', bg: '#EFE3FF', wide: true },
 ]
 
 // Chunky filled icons matching ChildHome.jsx's TaskIcon (reading/math/writing
@@ -75,10 +75,11 @@ function Step3Icon({ type, c }) {
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 function ProgressBar({ step, total = 10 }) {
+  const s = useT()
   return (
     <div style={{ padding: '52px 24px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint, letterSpacing: '.6px' }}>STEP {step} OF {total}</span>
+        <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint, letterSpacing: '.6px' }}>{s('ob_step_of', { n: step, total })}</span>
         <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: PC.inkFaint }}>{Math.round(step / total * 100)}%</span>
       </div>
       <div style={{ height: 6, background: PC.tealBg, borderRadius: 8, overflow: 'hidden' }}>
@@ -96,6 +97,7 @@ function ProgressBar({ step, total = 10 }) {
 // button inside a button is invalid HTML, and every tap on − or + would toggle the tile off —
 // so the grid cell is a wrapper and the tile and this sit inside it.
 function CapStepper({ value, onChange, tint, disabled }) {
+  const s = useT()
   const btn = {
     width: 26, height: 26, borderRadius: 9, border: `1.5px solid ${PC.line}`, background: '#fff',
     cursor: disabled ? 'default' : 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 15,
@@ -109,7 +111,7 @@ function CapStepper({ value, onChange, tint, disabled }) {
       opacity: disabled ? 0.45 : 1, transition: 'opacity .16s',
     }}>
       <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkSoft, minWidth: 0 }}>
-        Per day
+        {s('ob_per_day')}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <button type="button" disabled={disabled} style={btn}
@@ -125,6 +127,8 @@ function CapStepper({ value, onChange, tint, disabled }) {
 }
 
 export default function ParentOnboarding() {
+  const s = useT()
+  const lang = useUiLang()
   const nav = useNavigate()
 
   const [step,            setStep]            = useState(1)
@@ -141,7 +145,10 @@ export default function ParentOnboarding() {
   const [caps,            setCaps]            = useState(
     Object.fromEntries(Object.entries(TASK_DEFAULTS).map(([k, v]) => [k, v.daily_cap]))
   )
-  const [rewards,         setRewards]         = useState(DEFAULT_REWARDS.map(r => ({ ...r })))
+  // Resolved once, at mount, rather than on every render: from here on the label is a value the
+  // parent can edit, and re-deriving it from the key would throw their edit away.
+  const [rewards, setRewards] = useState(() =>
+    DEFAULT_REWARDS.map(r => ({ ...r, label: pt(r.labelKey, uiLang()), hint: pt(r.hintKey, uiLang()) })))
   const [notifChannel,    setNotifChannel]    = useState(null)
   const [waCode,          setWaCode]          = useState(null)
   const [waLink,          setWaLink]          = useState(null)
@@ -189,7 +196,7 @@ export default function ParentOnboarding() {
     load()
   }, [step, user])
 
-  const videoGameReward = rewards.find(r => r.label.toLowerCase().includes('video game'))
+  const videoGameReward = rewards.find(r => r.kind === 'game')
 
   const startWaConnect = async () => {
     if (!user || waLink) return // already have a code for this session
@@ -201,7 +208,7 @@ export default function ParentOnboarding() {
         body: JSON.stringify({ parentId: user.id }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Server error')
+      if (!res.ok) throw new Error(data.error || s('ob_server_error'))
       setWaCode(data.code)
       setWaLink(data.waLink)
     } catch (e) {
@@ -245,14 +252,14 @@ export default function ParentOnboarding() {
             const { data: existing } = await supabase
               .from('children').select('pin_hash').eq('parent_id', user.id)
             if (existing?.some(c => c.pin_hash === pin_hash)) {
-              setPinError('This PIN is already used by another child. Choose a different one.')
+              setPinError(s('db_err_pin_dupe'))
               setTimeout(() => { setPin(''); setPinConfirm(''); setPinPhase('enter'); setPinError('') }, 1500)
               return
             }
           }
           setTimeout(next, 300)
         } else {
-          setPinError("PINs don't match — try again.")
+          setPinError(s('ob_pin_mismatch'))
           setTimeout(() => { setPin(''); setPinConfirm(''); setPinPhase('enter'); setPinError('') }, 900)
         }
       }
@@ -268,7 +275,7 @@ export default function ParentOnboarding() {
         const { data: { user: u } } = await supabase.auth.getUser()
         uid = u; setUser(u)
       }
-      if (!uid) throw new Error('Not logged in. Please sign in and try again.')
+      if (!uid) throw new Error(s('ob_not_logged_in'))
 
       const pin_hash = await hashPin(pin)
       const { data: child, error: cErr } = await supabase
@@ -295,8 +302,14 @@ export default function ParentOnboarding() {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
       // timezone matters more than it looks: quiet hours are read in it, so a parent who
       // never reaches this line gets their evening measured in UTC.
+      // prefs.language as well as the timezone: a Google sign-up never passes through
+      // ParentSignup, so this is the only place that path can carry the splash screen's choice
+      // onto the account. Read-modify-write, because the column holds keys this screen does not
+      // know about.
+      const { data: prow } = await supabase.from('parents').select('prefs').eq('id', uid.id).maybeSingle()
       await supabase.from('parents').update({
         timezone,
+        prefs: { ...(prow?.prefs || {}), language: uiLang() },
         ...(notifChannel && { notification_channel: notifChannel }),
       }).eq('id', uid.id)
 
@@ -313,7 +326,7 @@ export default function ParentOnboarding() {
         nav('/parent/dashboard')
       }
     } catch (err) {
-      setSaveError(err.message || 'Something went wrong. Please try again.')
+      setSaveError(err.message || s('ob_went_wrong'))
       setSaving(false)
     }
   }
@@ -361,13 +374,13 @@ export default function ParentOnboarding() {
             </div>
             <div className="tc-up">
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 32, color: PC.ink, lineHeight: 1.2, letterSpacing: '-.5px' }}>
-                Welcome to Tuto! 🎉
+                {s('ob_welcome')}
               </div>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, color: PC.inkSoft, marginTop: 10, lineHeight: 1.6 }}>
-                Let's set things up for your child.<br />Takes about 2 minutes.
+                {s('ob_welcome_b')}<br />{s('ob_welcome_c')}
               </div>
             </div>
-            <Btn onClick={next} style={{ maxWidth: 280, marginTop: 4 }}>Get Started →</Btn>
+            <Btn onClick={next} style={{ maxWidth: 280, marginTop: 4 }}>{s('ob_get_started')}</Btn>
           </div>
         )}
 
@@ -375,19 +388,19 @@ export default function ParentOnboarding() {
         {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>
-              Tell me about your child! 👶
+              {s('ob_about_child')}
             </div>
-            <Field label="Child's name">
-              <input className="tc-input" value={childName} onChange={e => setChildName(e.target.value)} placeholder="e.g. Zeynep" />
+            <Field label={s('db_child_name')}>
+              <input className="tc-input" value={childName} onChange={e => setChildName(e.target.value)} placeholder={s('ob_child_name_ph')} />
             </Field>
-            <Field label="Age">
+            <Field label={s('db_age')}>
               <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 18px', gap: 16 }}>
                 <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>−</button>
                 <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 36, color: PC.ink }}>{age}</div>
                 <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>+</button>
               </div>
             </Field>
-            <Field label="Which language should I speak to them in?">
+            <Field label={s('ob_child_lang_q')}>
               <div style={{ display: 'flex', gap: 10 }}>
                 {LANGS.map(l => ({ id: l.code, label: l.label, flag: l.flag })).map(o => {
                   const on = childLang === o.id
@@ -405,10 +418,10 @@ export default function ParentOnboarding() {
                 })}
               </div>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 8, lineHeight: 1.45 }}>
-                Questions, hints and Tuto's replies to {childName.trim() || 'your child'} will be in this language.
+                {s('ob_child_lang_b', { name: childName.trim() || s('ts_your_child') })}
               </div>
             </Field>
-            <Btn onClick={next} disabled={!childName.trim()}>Next →</Btn>
+            <Btn onClick={next} disabled={!childName.trim()}>{s('ob_next')}</Btn>
           </div>
         )}
 
@@ -416,8 +429,8 @@ export default function ParentOnboarding() {
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 25, color: PC.ink, lineHeight: 1.25, letterSpacing: '-.4px' }}>Where will {childName} grow? 🌱</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: 7, lineHeight: 1.5 }}>Choose the activities that earn Gems, and how many a day count. You can change these anytime.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 25, color: PC.ink, lineHeight: 1.25, letterSpacing: '-.4px' }}>{s('ob_where_grow', { name: childName })}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: 7, lineHeight: 1.5 }}>{s('ob_where_grow_b')}</div>
             </div>
 
             {/* minmax(0, 1fr) rather than 1fr: a grid track's implicit min-width is auto, so it
@@ -430,7 +443,7 @@ export default function ParentOnboarding() {
                 const on = !!tasks[t.key]
                 return (
                   <div key={t.key} style={{ gridColumn: t.wide ? '1 / -1' : 'auto', minWidth: 0 }}>
-                  <button className="tc-press tc-tap" onClick={() => setTasks(s => ({ ...s, [t.key]: !s[t.key] }))} style={{
+                  <button className="tc-press tc-tap" onClick={() => setTasks(prev => ({ ...prev, [t.key]: !prev[t.key] }))} style={{
                     width: '100%',
                     position: 'relative', background: '#fff',
                     border: `2px solid ${on ? t.tint : PC.line}`,
@@ -453,17 +466,17 @@ export default function ParentOnboarding() {
                       </span>
                       <Step3Icon type={t.key} c={t.tint} />
                     </div>
-                    <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 800, color: PC.ink }}>{t.name}</div>
-                    <div style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.4, marginTop: -2 }}>{t.desc}</div>
+                    <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 800, color: PC.ink }}>{childT(`task_${t.key}`, lang)}</div>
+                    <div style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.4, marginTop: -2 }}>{s(t.desc)}</div>
                     <span style={{
                       alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
                       background: t.bg, color: t.tint, borderRadius: 11, padding: '4px 10px',
                       fontFamily: FONT, fontSize: 12, fontWeight: 800, lineHeight: 1.35, maxWidth: '100%',
-                    }}>💎 {gemHint(t.key)}</span>
+                    }}>💎 {gemHint(t.key, s)}</span>
                   </button>
                   <CapStepper
                     value={caps[t.key]}
-                    onChange={v => setCaps(s => ({ ...s, [t.key]: v }))}
+                    onChange={v => setCaps(prev => ({ ...prev, [t.key]: v }))}
                     tint={t.tint}
                     disabled={!on}
                   />
@@ -488,16 +501,16 @@ export default function ParentOnboarding() {
                   </svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>My Tree 🌳</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>{s('ob_tree')}</div>
                   <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 3, lineHeight: 1.45 }}>
-                    Every kind thing they do grows a leaf — no gems, so kindness stays its own reward.
+                    {s('ob_tree_b')}
                   </div>
-                  <span style={{ display: 'inline-block', marginTop: 6, fontFamily: FONT, fontSize: 11, fontWeight: 800, color: '#3a9d72', background: '#E6F5EC', borderRadius: 8, padding: '2px 8px' }}>Always on</span>
+                  <span style={{ display: 'inline-block', marginTop: 6, fontFamily: FONT, fontSize: 11, fontWeight: 800, color: '#3a9d72', background: '#E6F5EC', borderRadius: 8, padding: '2px 8px' }}>{s('ob_always_on')}</span>
                 </div>
               </div>
             </div>
 
-            <Btn onClick={next} disabled={!Object.values(tasks).some(Boolean)} style={{ marginTop: 26 }}>Next →</Btn>
+            <Btn onClick={next} disabled={!Object.values(tasks).some(Boolean)} style={{ marginTop: 26 }}>{s('ob_next')}</Btn>
           </div>
         )}
 
@@ -505,8 +518,8 @@ export default function ParentOnboarding() {
         {step === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Set up {childName}'s rewards! 🎁</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Adjust the Gems needed for each reward.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>{s('ob_rewards', { name: childName })}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>{s('ob_rewards_b')}</div>
               {(() => {
                 const enabled = TASKS_META.filter(t => tasks[t.key]).slice(0, 2)
                 if (enabled.length < 2) return null
@@ -518,7 +531,7 @@ export default function ParentOnboarding() {
                       display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
                       padding: 0, cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.tealDeep,
                     }}>
-                      <span>❓ How much can {childName} earn per day?</span>
+                      <span>{s('ob_earn_q', { name: childName })}</span>
                       <span style={{ transform: showEarnExample ? 'rotate(90deg)' : 'none', transition: 'transform .18s', display: 'flex' }}>
                         <Icon name="chevron" size={14} color={PC.tealDeep} />
                       </span>
@@ -528,8 +541,13 @@ export default function ParentOnboarding() {
                         fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.5,
                         marginTop: 8, background: PC.tealBg, borderRadius: 14, padding: '10px 12px',
                       }}>
-                        If {childName} {TASK_EXAMPLE_PHRASE[enabled[0].key]} and {TASK_EXAMPLE_PHRASE[enabled[1].key]} in a day,
-                        that's {variable ? 'up to ' : ''}{total} gems — use that to gauge what each reward should cost.
+                        {s('ob_earn_ex', {
+                          name: childName,
+                          a: s(TASK_EXAMPLE_PHRASE[enabled[0].key]),
+                          b: s(TASK_EXAMPLE_PHRASE[enabled[1].key]),
+                          upto: variable ? s('ob_upto') : '',
+                          total,
+                        })}
                       </div>
                     )}
                   </div>
@@ -557,12 +575,12 @@ export default function ParentOnboarding() {
                       ) : isEditingLabel ? (
                         <input autoFocus value={r.label} onChange={e => updateReward(i, 'label', e.target.value)}
                           onBlur={() => setEditingLabelIdx(null)} onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
-                          placeholder="e.g. Lego set, new game..."
+                          placeholder={s('ob_name_ph')}
                           style={{ flex: 1, border: 'none', borderBottom: `2px solid ${PC.teal}`, outline: 'none', fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.ink, background: 'transparent', minWidth: 0, paddingBottom: 2 }} />
                       ) : (
                         <span onClick={() => !r.lockTitle && setEditingLabelIdx(i)}
                           style={{ flex: 1, fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.ink, cursor: 'text', borderBottom: `2px dashed ${PC.line}`, paddingBottom: 2 }}>
-                          {r.label || <span style={{ color: PC.inkFaint }}>Tap to name…</span>}
+                          {r.label || <span style={{ color: PC.inkFaint }}>{s('ob_tap_to_name')}</span>}
                         </span>
                       )}
 
@@ -603,9 +621,9 @@ export default function ParentOnboarding() {
               background: 'none', border: `2px dashed ${PC.line}`, borderRadius: 18,
               padding: '12px 16px', cursor: 'pointer', color: PC.tealDeep,
               fontFamily: FONT, fontSize: 14, fontWeight: 800,
-            }}>+ Add reward</button>
+            }}>{s('ob_add_reward')}</button>
 
-            <Btn onClick={next}>Next →</Btn>
+            <Btn onClick={next}>{s('ob_next')}</Btn>
           </div>
         )}
 
@@ -613,8 +631,8 @@ export default function ParentOnboarding() {
         {step === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Chat with Tuto, anytime 💬</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>No need to dig through an app — just message Tuto like you would a friend who knows {childName || 'your child'}, day or night.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>{s('ob_chat')}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>{s('ob_chat_b', { name: childName || s('ts_your_child') })}</div>
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
@@ -667,19 +685,19 @@ export default function ParentOnboarding() {
             {notifChannel === 'telegram' && (
               <Card pad={20} className="tc-fade" style={{ border: `2px solid #229ED9` }}>
                 <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.ink, lineHeight: 1.6, marginBottom: 14 }}>
-                  1. Open Telegram and message <span style={{ color: '#229ED9', fontWeight: 800 }}>@TutoParentBot</span><br />
-                  2. Send <strong>/start</strong>, then enter your family code:
+                  1. {s('ob_tg_1')} <span style={{ color: '#229ED9', fontWeight: 800 }}>@TutoParentBot</span><br />
+                  2. {s('ob_tg_2')} <strong>/start</strong>{s('ob_tg_3')}
                 </div>
                 {familyCode ? (
                   <button className="tc-press" onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) }}
                     style={{ background: '#E3F2FD', border: `1.5px solid ${codeCopied ? PC.green : '#229ED9'}`, borderRadius: 14, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%' }}>
                     <span style={{ fontFamily: 'monospace', fontSize: 26, fontWeight: 900, color: PC.ink, letterSpacing: 4 }}>{familyCode}</span>
-                    <span style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 800, color: codeCopied ? PC.green : '#229ED9' }}>{codeCopied ? '✅ Copied!' : '📋 Copy'}</span>
+                    <span style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 800, color: codeCopied ? PC.green : '#229ED9' }}>{codeCopied ? s('db_copied') : s('db_copy')}</span>
                   </button>
                 ) : (
-                  <div style={{ background: '#E3F2FD', borderRadius: 14, padding: 14, textAlign: 'center', fontFamily: FONT, fontSize: 13, color: '#229ED9', fontWeight: 700 }}>Loading code…</div>
+                  <div style={{ background: '#E3F2FD', borderRadius: 14, padding: 14, textAlign: 'center', fontFamily: FONT, fontSize: 13, color: '#229ED9', fontWeight: 700 }}>{s('ob_loading_code')}</div>
                 )}
-                <Btn onClick={next} style={{ marginTop: 14 }}>I've connected Telegram ✅</Btn>
+                <Btn onClick={next} style={{ marginTop: 14 }}>{s('ob_tg_done')}</Btn>
               </Card>
             )}
 
@@ -690,25 +708,25 @@ export default function ParentOnboarding() {
                   <>
                     <div style={{ textAlign: 'center', fontSize: 36, marginBottom: 12 }}>🎉</div>
                     <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: PC.green, textAlign: 'center', lineHeight: 1.7, marginBottom: 14 }}>
-                      Connected! You'll get updates here from now on.
+                      {s('ob_wa_connected')}
                     </div>
-                    <Btn onClick={next}>Continue →</Btn>
+                    <Btn onClick={next}>{s('ob_continue')}</Btn>
                   </>
                 ) : waLink ? (
                   <>
                     <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.ink, lineHeight: 1.6, marginBottom: 14 }}>
-                      Tap below to open WhatsApp with a pre-filled message, then hit send.
+                      {s('db_wa_steps')}
                     </div>
                     <a href={waLink} target="_blank" rel="noreferrer" className="tc-press"
                       style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '14px 16px', background: PC.green, borderRadius: 14, fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff' }}>
-                      Open WhatsApp 📲
+                      {s('db_wa_open')}
                     </a>
                     <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: PC.inkFaint, textAlign: 'center', marginTop: 12 }}>
-                      Waiting for your message…
+                      {s('db_wa_waiting')}
                     </div>
                   </>
                 ) : (
-                  <div style={{ fontFamily: FONT, fontSize: 13, color: PC.inkFaint, textAlign: 'center' }}>{waError || 'Loading…'}</div>
+                  <div style={{ fontFamily: FONT, fontSize: 13, color: PC.inkFaint, textAlign: 'center' }}>{waError || s('loading')}</div>
                 )}
               </Card>
             )}
@@ -721,12 +739,11 @@ export default function ParentOnboarding() {
                 asking. How much Tuto writes is a real choice, but not one anybody can make
                 before they have heard from it once. */}
             <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.6, textAlign: 'center' }}>
-              You can tell me how often to write, and the hours to leave you alone, whenever you
-              like — from settings, or just by saying so.
+              {s('ob_settings_later')}
             </div>
 
             {!notifChannel && (
-              <Btn variant="ghost" onClick={next}>Skip for now</Btn>
+              <Btn variant="ghost" onClick={next}>{s('ob_skip')}</Btn>
             )}
           </div>
         )}
@@ -736,10 +753,10 @@ export default function ParentOnboarding() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, letterSpacing: '-.3px' }}>
-                {pinPhase === 'enter' ? 'Create a PIN for your child 🔐' : 'Confirm the PIN 🔁'}
+                {pinPhase === 'enter' ? s('ob_pin_create') : s('ob_pin_confirm')}
               </div>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>
-                {pinPhase === 'enter' ? 'Your child will enter this to log in.' : 'Enter the same 4 digits again.'}
+                {pinPhase === 'enter' ? s('ob_pin_create_b') : s('ob_pin_confirm_b')}
               </div>
             </div>
             {pinError && (
@@ -755,7 +772,7 @@ export default function ParentOnboarding() {
         {step === 7 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>
-              How will {childName} use Tuto? 📱
+              {s('ob_device_q', { name: childName })}
             </div>
 
             <button className="tc-press tc-tap" onClick={() => { setDeviceMode('separate'); setStep(videoGameReward ? 8 : 9) }} style={{
@@ -768,8 +785,8 @@ export default function ParentOnboarding() {
                 <Icon name="phone" size={24} color={deviceMode === 'separate' ? '#fff' : PC.inkSoft} />
               </div>
               <div>
-                <div style={{ fontFamily: FONT, fontSize: 16, fontWeight: 800, color: PC.ink, marginBottom: 4 }}>Separate device</div>
-                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.5 }}>I'll scan a QR code to connect {childName}'s device</div>
+                <div style={{ fontFamily: FONT, fontSize: 16, fontWeight: 800, color: PC.ink, marginBottom: 4 }}>{s('ob_dev_separate')}</div>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.5 }}>{s('ob_dev_separate_b', { name: childName })}</div>
               </div>
             </button>
 
@@ -783,8 +800,8 @@ export default function ParentOnboarding() {
                 <Icon name="swap" size={24} color={deviceMode === 'same' ? '#fff' : PC.inkSoft} />
               </div>
               <div>
-                <div style={{ fontFamily: FONT, fontSize: 16, fontWeight: 800, color: PC.ink, marginBottom: 4 }}>Same device</div>
-                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.5 }}>{childName} will switch to their profile from here</div>
+                <div style={{ fontFamily: FONT, fontSize: 16, fontWeight: 800, color: PC.ink, marginBottom: 4 }}>{s('ob_dev_same')}</div>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: PC.inkSoft, lineHeight: 1.5 }}>{s('ob_dev_same_b', { name: childName })}</div>
               </div>
             </button>
           </div>
@@ -795,18 +812,18 @@ export default function ParentOnboarding() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div style={{ fontSize: 64, textAlign: 'center', marginTop: 8 }}>🎮</div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 22, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Want me to open the game automatically?</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>I'll add screen time when your child earns enough Gems.</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 22, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>{s('ob_game_q')}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6, lineHeight: 1.5 }}>{s('ob_game_b')}</div>
             </div>
             <Card pad={16} style={{ background: PC.tealBg, width: '100%', boxShadow: 'none' }}>
-              <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 800, color: PC.tealDeep, marginBottom: 4 }}>How it works</div>
-              <div style={{ fontFamily: FONT, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5 }}>When your child spends Gems on "{videoGameReward?.label ?? 'Video Game'}", Tuto will automatically launch the game and start a countdown timer.</div>
+              <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 800, color: PC.tealDeep, marginBottom: 4 }}>{s('ob_how_works')}</div>
+              <div style={{ fontFamily: FONT, fontSize: 13, color: PC.tealDeep, lineHeight: 1.5 }}>{s('ob_how_works_b', { reward: videoGameReward?.label ?? s('ob_rw_game') })}</div>
             </Card>
             <div style={{ width: '100%' }}>
-              <Btn variant="outline" disabled style={{ opacity: 0.4 }}>Yes, connect</Btn>
-              <div style={{ textAlign: 'center', fontFamily: FONT, fontSize: 11, color: PC.inkFaint, fontWeight: 600, marginTop: 6 }}>Coming soon</div>
+              <Btn variant="outline" disabled style={{ opacity: 0.4 }}>{s('ob_yes_connect')}</Btn>
+              <div style={{ textAlign: 'center', fontFamily: FONT, fontSize: 11, color: PC.inkFaint, fontWeight: 600, marginTop: 6 }}>{s('ob_coming_soon')}</div>
             </div>
-            <Btn variant="ghost" onClick={next}>Skip for now</Btn>
+            <Btn variant="ghost" onClick={next}>{s('ob_skip')}</Btn>
           </div>
         )}
 
@@ -818,16 +835,16 @@ export default function ParentOnboarding() {
               <TutoMascot size={180} color={PC.teal} />
             </div>
             <div className="tc-up">
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, lineHeight: 1.2, letterSpacing: '-.5px' }}>All set! 🎉</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, lineHeight: 1.2, letterSpacing: '-.5px' }}>{s('ob_all_set')}</div>
               <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 700, color: PC.teal, marginTop: 10 }}>
-                {childName || 'Your child'} is ready to start earning Gems!
+                {s('ob_ready', { name: childName || s('ob_your_child') })}
               </div>
             </div>
             {saveError && (
               <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 14, padding: '10px 20px', fontFamily: FONT, fontSize: 13, fontWeight: 700 }}>{saveError}</div>
             )}
             <Btn onClick={handleFinish} disabled={saving} style={{ maxWidth: 280 }}>
-              {saving ? 'Saving…' : "Let's Go! 🚀"}
+              {saving ? s('saving') : s('ob_lets_go')}
             </Btn>
           </div>
         )}
@@ -836,8 +853,8 @@ export default function ParentOnboarding() {
         {step === 10 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>Connect {childName}'s device 📲</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>Scan this on {childName}'s device to connect it</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 24, color: PC.ink, lineHeight: 1.3, letterSpacing: '-.3px' }}>{s('ob_connect_dev', { name: childName })}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 6 }}>{s('ob_connect_dev_b', { name: childName })}</div>
             </div>
             {familyCode ? (
               <div style={{ background: '#fff', borderRadius: 22, padding: 20, boxShadow: SHADOW }}>
@@ -851,7 +868,7 @@ export default function ParentOnboarding() {
               </div>
             ) : (
               <div style={{ width: 260, height: 260, background: PC.tealBg, borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.tealDeep }}>Loading…</div>
+                <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: PC.tealDeep }}>{s('loading')}</div>
               </div>
             )}
             {familyCode && (
@@ -859,10 +876,10 @@ export default function ParentOnboarding() {
                 <div style={{ background: PC.tealBg, borderRadius: 10, padding: '6px 14px' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PC.tealDeep, letterSpacing: 2 }}>{familyCode}</span>
                 </div>
-                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>manual code</span>
+                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>{s('db_manual_code')}</span>
               </div>
             )}
-            <Btn onClick={() => nav('/parent/dashboard')}>Go to Dashboard →</Btn>
+            <Btn onClick={() => nav('/parent/dashboard')}>{s('ob_go_dashboard')}</Btn>
           </div>
         )}
       </div>
@@ -870,19 +887,19 @@ export default function ParentOnboarding() {
       {/* ── Add reward sheet ──────────────────────────────────────────────────── */}
       {addingReward && (
         <BottomSheet onClose={() => setAddingReward(false)}>
-          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>Add a reward 🎁</div>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{s('ob_add_reward_t')}</div>
           <div style={{ display: 'flex', gap: 12 }}>
             <input value={newReward.emoji} onChange={e => setNewReward(r => ({ ...r, emoji: e.target.value }))}
               style={{ width: 56, padding: '12px 4px', border: `1.5px solid ${PC.line}`, borderRadius: 14, fontSize: 24, textAlign: 'center', outline: 'none', background: PC.tealBg, fontFamily: FONT }} />
-            <input value={newReward.label} onChange={e => setNewReward(r => ({ ...r, label: e.target.value }))} placeholder="Reward name"
+            <input value={newReward.label} onChange={e => setNewReward(r => ({ ...r, label: e.target.value }))} placeholder={s('ob_reward_name')}
               className="tc-input" style={{ flex: 1 }} />
           </div>
-          <Field label="Gems required 💎">
+          <Field label={s('ob_gems_required')}>
             <input className="tc-input" type="number" placeholder="30" value={newReward.gems}
               onChange={e => setNewReward(r => ({ ...r, gems: e.target.value }))} />
           </Field>
-          <Btn onClick={confirmAddReward} disabled={!newReward.label.trim()}>Add reward</Btn>
-          <Btn variant="ghost" onClick={() => setAddingReward(false)}>Cancel</Btn>
+          <Btn onClick={confirmAddReward} disabled={!newReward.label.trim()}>{s('ob_add')}</Btn>
+          <Btn variant="ghost" onClick={() => setAddingReward(false)}>{s('cancel')}</Btn>
         </BottomSheet>
       )}
     </div>
