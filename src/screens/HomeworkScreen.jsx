@@ -3,6 +3,7 @@ import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 import { submitHomework, getHomeworkSubmissions, confirmHomeworkDate } from '../lib/supabase'
 
 // My Homework — child photographs finished homework (up to 15 pages) and
@@ -72,6 +73,16 @@ export default function HomeworkScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const fileRef = useRef(null)
   const [photos, setPhotos] = useState([]) // { file, url }
+  // Homework is the one place a child can pick several photos at once, and asking a
+  // seven-year-old to frame fifteen of them in a row is worse than not asking at all. So the
+  // crop step runs for a single photo — which is what the camera hands back, one page at a
+  // time — and a multiple selection out of the library goes straight in, already framed.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, lang),
+    inputRef: fileRef,
+    accent: ORANGE,
+    onReady: blob => addFiles([blob]),
+  })
   const [screen, setScreen] = useState('upload') // 'upload' | 'sent'
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -191,7 +202,12 @@ export default function HomeworkScreen() {
         capture="environment"
         multiple
         style={{ display: 'none' }}
-        onChange={e => { addFiles(e.target.files); e.target.value = '' }}
+        onChange={e => {
+          const picked = Array.from(e.target.files || [])
+          if (picked.length === 1) offerPhoto(picked[0])
+          else addFiles(picked)
+          e.target.value = ''
+        }}
       />
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px 22px 0' }}>
@@ -307,6 +323,7 @@ export default function HomeworkScreen() {
           </div>
         </div>
       )}
+      {cropNode}
     </div>
   )
 }
