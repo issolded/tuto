@@ -152,9 +152,14 @@ for (const file of walk(SRC)) {
     const code = raw.split('//')[0]
     // Block comments carry prose that looks exactly like UI text, so track them properly
     // rather than matching the first line and letting the body through.
+    // Delimiters are only delimiters outside a string. `accept="image/*"` on the photo input
+    // in DrawingsScreen opened a comment that nothing ever closed, and the next 113 lines —
+    // the whole reward screen and half the library — were skipped as if they were prose. The
+    // untranslated string that hid there only surfaced when an unrelated edit moved the lines.
+    const bare = raw.replace(/'[^']*'|"[^"]*"|`[^`]*`/g, '""')
     const wasInBlock = inBlockComment
-    if (inBlockComment && raw.includes('*/')) inBlockComment = false
-    else if (!inBlockComment && /\/\*/.test(raw) && !raw.includes('*/')) inBlockComment = true
+    if (inBlockComment && bare.includes('*/')) inBlockComment = false
+    else if (!inBlockComment && /\/\*/.test(bare) && !bare.includes('*/')) inBlockComment = true
     const isComment = wasInBlock || inBlockComment || /^\s*(\/\/|\*|\/\*)/.test(raw)
 
     if (!isComment) {
