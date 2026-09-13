@@ -6,6 +6,7 @@ import { readStory, checkTitleSpelling } from '../lib/gemini'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
 import BookOpenTransition from '../components/BookOpenTransition'
@@ -159,6 +160,16 @@ export default function StoriesScreen() {
   const [storyTitle, setStoryTitle] = useState('')
   const [photos, setPhotos] = useState([])
   const fileRef = useRef(null)
+
+  // These pages are transcribed by the model, word for word, and what it cannot read it
+  // guesses (uncertain_words) or marks as a spelling mistake the child never made. Framing the
+  // page is the cheapest thing we can do about that.
+  const pagePhoto = usePhotoCrop({
+    translate: k => t(k, language),
+    inputRef: fileRef,
+    accent: '#2EC486',
+    onReady: blob => setPhotos(prev => [...prev, blob]),
+  })
   const [evalResult, setEvalResult] = useState(null)
   const [spellingState, setSpellingState] = useState([])
   const [activeError, setActiveError] = useState(null)
@@ -501,7 +512,6 @@ export default function StoriesScreen() {
 
   // ── STEP: WRITE ────────────────────────────────────────────────────────────
   if (step === 'write') {
-    const addPhoto = (file) => setPhotos(prev => [...prev, file])
     const removePhoto = (i) => setPhotos(prev => prev.filter((_, idx) => idx !== i))
 
     return (
@@ -535,7 +545,7 @@ export default function StoriesScreen() {
             style={{ display: 'none' }}
             onChange={e => {
               const file = e.target.files?.[0]
-              if (file) addPhoto(file)
+              if (file) pagePhoto.offerPhoto(file)
               e.target.value = ''
             }}
           />
@@ -592,6 +602,7 @@ export default function StoriesScreen() {
             </button>
           )}
         </div>
+        {pagePhoto.cropNode}
       </div>
     )
   }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet, useIsTabletLandscape } from '../components/Shell'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 import { storageClient, submitReadingSession } from '../lib/supabase'
 import { currentChildId } from '../lib/gemini'
 import { t, childLang, langName } from '../lib/i18n'
@@ -310,6 +311,13 @@ export default function ReadingFlow() {
   const [pendingCoverPreview, setPendingCoverPreview] = useState(null)
   const coverRef = useRef()
   const pageRef = useRef()
+
+  // Both photos here are read by a model, not filed: the cover is what identifyCover matches a
+  // title against, and the pages are what gets transcribed. Gemini works from a 768px tile of
+  // whatever it is sent, so the shelf behind the book and the table around the page cost
+  // reading accuracy directly.
+  const cover = usePhotoCrop({ translate: s, inputRef: coverRef, accent: ACCENT, onReady: blob => submitCover(blob) })
+  const page = usePhotoCrop({ translate: s, inputRef: pageRef, accent: ACCENT, onReady: blob => addPhoto(blob) })
   const pendingFile = useRef(null)
   const fromLibrary = useRef(!!location.state?.book)
 
@@ -585,8 +593,9 @@ export default function ReadingFlow() {
         accept="image/*"
 
         style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) submitCover(f) }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) cover.offerPhoto(f); e.target.value = '' }}
       />
+      {cover.cropNode}
     </Screen>
   )
 
@@ -1008,10 +1017,11 @@ export default function ReadingFlow() {
         style={{ display: 'none' }}
         onChange={e => {
           const f = e.target.files?.[0]
-          if (f) addPhoto(f)
+          if (f) page.offerPhoto(f)
           e.target.value = ''
         }}
       />
+      {page.cropNode}
     </Screen>
   )
 

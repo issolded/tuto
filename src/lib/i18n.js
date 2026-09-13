@@ -282,6 +282,16 @@ const STRINGS = {
   dr_take_photo:      { en: 'Take a photo of your finished drawing!', tr: 'Bitirdiğin çizimin fotoğrafını çek!',
                         es: '¡Haz una foto del dibujo que has terminado!' },
   dr_my_paintings:    { en: 'My Paintings', tr: 'Resimlerim', es: 'Mis Cuadros' },
+
+  // The crop step (components/PhotoCrop.jsx). The same six keys exist in parentI18n.js, since
+  // the same component runs on parent screens and those read a different dictionary.
+  crop_title:         { en: 'Drag the corners to frame it', tr: 'Köşelerden çekip çerçeveye al',
+                        es: 'Arrastra las esquinas para encuadrarlo' },
+  crop_retake:        { en: 'Retake', tr: 'Yeniden çek', es: 'Repetir' },
+  crop_use:           { en: 'Use this', tr: 'Bunu kullan', es: 'Usar esto' },
+  crop_use_all:       { en: 'Use the photo', tr: 'Fotoğrafı kullan', es: 'Usar la foto' },
+  crop_working:       { en: 'One moment…', tr: 'Bir saniye…', es: 'Un momento…' },
+  crop_cancel:        { en: 'Cancel', tr: 'Vazgeç', es: 'Cancelar' },
   dr_leave_drawing:   { en: 'Leave this drawing?', tr: 'Bu çizimden çıkalım mı?', es: '¿Salimos de este dibujo?' },
   dr_delete:          { en: 'Delete', tr: 'Sil', es: 'Borrar' },
   dr_close:           { en: 'Close', tr: 'Kapat', es: 'Cerrar' },
