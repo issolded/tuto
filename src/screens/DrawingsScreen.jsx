@@ -6,6 +6,7 @@ import TutoMascot from '../components/TutoMascot'
 import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
 import { drawingAlign } from '../lib/drawingAlign'
 import Shell, { useIsTabletLandscape } from '../components/Shell'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 
 // ── Age skins ────────────────────────────────────────────────────────────────
 // Same flow, three presentations (see SKINS in the design prototype). The
@@ -593,6 +594,14 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
 function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, error, onBack }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const fileRef = useRef(null)
+  // The photo goes through the crop step before it becomes the preview, so what the child
+  // confirms here is what their grown-up sees — the drawing, not the table it was lying on.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, lang),
+    inputRef: fileRef,
+    accent: sk.accent,
+    onReady: blob => onPick(blob),
+  })
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
@@ -642,7 +651,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
         }}>📷<br />Add photo</button>
       )}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = '' }} />
+        onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }} />
 
       {error && (
         <div style={{
@@ -654,6 +663,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
       <button onClick={onSubmit} disabled={!photo || submitting} style={ctaStyle(sk, !photo || submitting)}>
         {submitting ? 'Saving…' : t('dr_add_to_library', lang)}
       </button>
+      {cropNode}
     </>
   )
 }

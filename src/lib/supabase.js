@@ -271,11 +271,16 @@ export async function deleteChildStory(childId, storyId) {
 }
 
 export async function uploadStoryCover(childId, file) {
-  const imageBase64 = await toBase64(file)
+  // Shrunk first, like every other photo that leaves this app. This one was going up at the
+  // camera's full resolution and then base64 on top of that, which inflates it by a third —
+  // for a picture that is drawn 180px wide on a book cover.
+  let payload
+  try { payload = await downscale(file) } catch { payload = file }
+  const imageBase64 = await toBase64(payload)
   const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories/cover`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg' }),
+    body: JSON.stringify({ imageBase64, mimeType: payload.type || 'image/jpeg' }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)

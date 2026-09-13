@@ -199,6 +199,18 @@ export default function StoriesScreen() {
 
   // cover composition
   const coverFileRef = useRef(null)
+
+  // The cover photo goes into a fixed panel on the book: 180px across by roughly 250 down,
+  // inside the 200×300 card (the exact height moves with how many lines the title takes, so
+  // the frame is close rather than pinned). It was being fitted with object-fit: cover, which
+  // means the child drew a cover and the CSS decided which part of it was the cover.
+  const coverPhoto = usePhotoCrop({
+    translate: k => t(k, language),
+    inputRef: coverFileRef,
+    accent: '#2EC486',
+    ratio: 0.72,
+    onReady: blob => handleCoverPhoto(blob),
+  })
   const [coverColor, setCoverColor] = useState(COVER_COLORS[0])
   const [coverImageUrl, setCoverImageUrl] = useState(null)
   const [coverUploading, setCoverUploading] = useState(false)
@@ -1088,8 +1100,9 @@ export default function StoriesScreen() {
             accept="image/*"
             capture="environment"
             style={{ display: 'none' }}
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverPhoto(f); e.target.value = '' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) coverPhoto.offerPhoto(f); e.target.value = '' }}
           />
+          {coverPhoto.cropNode}
 
           {/* Color swatches */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
