@@ -81,6 +81,42 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Fotoğraf yüklenen her yere kırpma adımı (2026-09-13). Simply Draw'daki "Edit image"
+      ekranından geldi. Sekiz ekrandaki **on iki fotoğraf girişinin hepsi** artık
+      `components/PhotoCrop.jsx`'ten geçiyor (`usePhotoCrop` ile üç satırda bağlanıyor).
+      **Neden sadece süs değil:** üç yol fotoğrafı saklamıyor, **modele okutuyor** — matematik
+      kağıt modu, okuma (kapak `identifyCover` + sayfalar), hikâye (el yazısı sayfaları).
+      Gemini görseli içeride 768px'lik karoya indiriyor, yani masanın/kolun/karşı sayfanın
+      kapladığı her piksel el yazısından çalınmış piksel. İki yol da zaten kırpılıyordu ama
+      kırpmayı **CSS yapıyordu**: avatar 52px'lik karede `object-fit: cover` (çocuğun yüzü
+      ortada değilse kesiliyordu), hikâye kapağı kitabın sabit panelinde aynısı. Bu ikisi
+      `ratio` ile şekle kilitli (avatar 1:1, kapak 0.72 — panelin yüksekliği başlık kaç satır
+      olduğuna göre oynadığı için birebir değil yakın).
+      **Kararlar:** çerçeve fotoğrafın TAMAMI olarak açılıyor (kenardan kırpan varsayılan,
+      sıkı çerçevelenmiş bir sayfanın son satırını sessizce keser); `cropToBlob` küçültmüyor ve
+      0.95'te kodluyor, çünkü çıkışta zaten `downscale()` var ve iki kayıplı geçiş çocuğun el
+      yazısına yapılacak şey değil; kırpılmamış çerçeve orijinali aynen döndürüyor; RETAKE
+      aynı tıklamanın içinde açılıyor (iOS dosya seçiciyi yalnız gerçek kullanıcı jestinde
+      açar, `setTimeout` o jesti öldürür); ödevde **tek fotoğrafta** kırpma var, çoklu seçimde
+      yok (yedi yaşındaki birine on beş fotoğrafı arka arkaya çerçeveletmek hiç sormamaktan
+      kötü). Etiketler `translate` propundan: bir bileşen, iki sözlük.
+      **Yanında iki eksik kapandı:** avatar ve `uploadStoryCover` `downscale()`'i atlıyordu —
+      biri 52px'lik resim için kameranın tam karesini Storage'a, diğeri ham dosyayı base64'le
+      (%33 şişerek) POST'a gönderiyordu.
+      **Tarayıcıda bulunan üç hata** (hepsi düzeltildi): `<img>`'e `max-height:100%` vermek,
+      yüksekliği auto olan sarmalayıcıya karşı hiçbir şeye çözülüyor — yatay iPad'de çerçeve
+      ekrandan taşan bir resmin üstündeydi ve her köşe başka yeri kırpıyordu (kutu artık
+      ResizeObserver + doğal boyutla ölçülüyor); tutamaklar içeri alınınca köşeye basmak
+      "taşı" oluyordu ve tam çerçevede taşımak hiçbir şey yapmıyor (karartma tek box-shadow
+      halkası değil dört bant, kutu kırpmıyor); telefonda sağdaki iki tutamak ekran kenarında
+      kesiliyordu (fotoğraf artık tutamak payı bırakıyor).
+      Doğrulama: 12 serbest kırpma + 9 kilitli oran + çizim akışı uçtan uca (kırpılan çeyrek
+      1200×1600 olarak gidiyor) + ödev/ağaç bağlantısı = 26 tarayıcı testi, gerçek pointer
+      sürüklemesiyle, yatay iPad ve telefonda.
+      **Açık:** kırpmanın Gemini transkripsiyon doğruluğuna etkisi ÖLÇÜLMEDİ — elimde gerçek
+      el yazısı fotoğrafı yok. Ada'nın birkaç sayfasıyla kırpılmış/kırpılmamış karşılaştırması
+      yapılmalı.
+
 - [x] iPad'de çizim ekranında aşağı kaydıramama (2026-09-13). İki ayrı sebep vardı.
       **(1) Resmin üstünde parmak kaydırmıyor.** iPadOS, bir görselin üstünde başlayıp hareket
       eden dokunuşu kaydırma değil **görseli sürükleme** (sistem drag-and-drop) sayıyor; sayfa

@@ -5,6 +5,7 @@ import { supabase, storageClient, PHOTO_BUCKET } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
 import { TreeArt, Sprig } from '../components/TreeArt'
 import { useIsTablet } from '../components/Shell'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -78,6 +79,9 @@ function EntryRow({ category, label, status, fresh, photoUrl, canAddPhoto, onAtt
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const C = CATS[category] || CATS.outside
   const fileRef = useRef()
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, lang), inputRef: fileRef, accent: '#2f8f6b', onReady: blob => onAttachPhoto(blob),
+  })
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px',
@@ -103,7 +107,8 @@ function EntryRow({ category, label, status, fresh, photoUrl, canAddPhoto, onAtt
               {attaching ? t('tree_sending_photo', lang) : '📷 Add a photo'}
             </button>
             <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-              onChange={e => { const f = e.target.files?.[0]; if (f) onAttachPhoto(f); e.target.value = '' }} />
+              onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }} />
+            {cropNode}
           </>
         )}
       </div>
@@ -127,6 +132,9 @@ function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const fileRef = useRef()
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, lang), inputRef: fileRef, accent: '#2f8f6b', onReady: blob => setFile(blob),
+  })
 
   useEffect(() => {
     if (!file) { setPreview(null); return }
@@ -170,7 +178,8 @@ function CardPhotoSheet({ card, onCancel, onAdd, busy }) {
           }}>📷 Take a photo</button>
         )}
         <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f); e.target.value = '' }} />
+          onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }} />
+        {cropNode}
 
         <div style={{ display: 'flex', gap: 9, marginTop: 16 }}>
           <button onClick={onCancel} disabled={busy} style={{
@@ -262,6 +271,9 @@ function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemo
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const [text, setText] = useState('')
   const fileRef = useRef()
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, lang), inputRef: fileRef, accent: '#2f8f6b', onReady: blob => onAttachPhoto(blob),
+  })
   const busy = submitting || uploading
 
   const submit = () => {
@@ -292,7 +304,8 @@ function FreeTextComposer({ prominent, onSubmit, photoUrl, onAttachPhoto, onRemo
           <button onClick={() => fileRef.current?.click()} disabled={busy} title={t('tree_photo_opt', lang)}
             style={{ background: 'none', border: 'none', cursor: busy ? 'default' : 'pointer', fontSize: 16, opacity: 0.6, flexShrink: 0 }}>📷</button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-            onChange={e => { const f = e.target.files?.[0]; if (f) onAttachPhoto(f) }} />
+            onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }} />
+          {cropNode}
         </div>
         {prominent && (
           <button onClick={submit} disabled={!text.trim() || busy} style={{
