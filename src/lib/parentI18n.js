@@ -207,6 +207,16 @@ const P = {
   ts_per_day:        { en: 'Rewarded per day', tr: 'Günde ödüllendirilen', es: 'Con premio al día' },
 
   // ── ParentDashboard ─────────────────────────────────────────────────────────
+  // The crop step (components/PhotoCrop.jsx), shared with the child screens. The same six
+  // keys are in i18n.js: one component, two dictionaries, so each side reads its own.
+  crop_title:        { en: 'Drag the corners to frame it', tr: 'Köşelerden çekip çerçeveye al',
+                       es: 'Arrastra las esquinas para encuadrarlo' },
+  crop_retake:       { en: 'Retake', tr: 'Yeniden çek', es: 'Repetir' },
+  crop_use:          { en: 'Use this', tr: 'Bunu kullan', es: 'Usar esto' },
+  crop_use_all:      { en: 'Use the photo', tr: 'Fotoğrafı kullan', es: 'Usar la foto' },
+  crop_working:      { en: 'One moment…', tr: 'Bir saniye…', es: 'Un momento…' },
+  crop_cancel:       { en: 'Cancel', tr: 'Vazgeç', es: 'Cancelar' },
+
   db_welcome:        { en: 'Welcome back 👋', tr: 'Tekrar hoş geldin 👋', es: 'Bienvenido de nuevo 👋' },
   db_parent:         { en: 'Parent', tr: 'Ebeveyn', es: 'Madre o padre' },
   db_signout:        { en: 'Sign out', tr: 'Çıkış yap', es: 'Cerrar sesión' },

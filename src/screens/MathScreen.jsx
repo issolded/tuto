@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock } from '../components/ClockFace'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
@@ -36,6 +37,13 @@ function readSavedSession(childId) {
 
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
+
+// Out here rather than inline in buildSession: Math.random() inside a component body is
+// flagged as impure by the React rules even when, as here, it only ever runs inside an async
+// call. Same pick, named, and the lint stays quiet about a real rule for a real reason.
+function pickOne(list) {
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null
+}
 const MATH_DEEP = '#3d8fcf'
 const INK       = '#241f3a'
 const INK_SOFT  = '#8d83ad'
@@ -1537,6 +1545,15 @@ export default function MathScreen() {
   }, [qIdx, helpVisible])
 
   const fileRef    = useRef(null)
+  // The photo of the worked page goes through the crop step first. Gemini tiles an image down
+  // to 768px before reading it, so the desk around the page is resolution taken away from the
+  // handwriting it has to mark.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, language),
+    inputRef: fileRef,
+    accent: MATH,
+    onReady: blob => doPaperEval(blob),
+  })
   const flashTimer = useRef(null)
   const pendingAdvance = useRef(null)  // lets a tap skip the rest of a flash that is showing a sentence
   const prefetch   = useRef(null)   // a session being built ahead of the child choosing a mode
@@ -1702,7 +1719,7 @@ export default function MathScreen() {
       const spares = slots.filter(s => s.templateTopic && s.problem)
       for (const slot of bad) {
         console.warn(`[VERIFY] dropped a question — ${whyDropped(slot, failed)}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
-        const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
+        const spare = pickOne(spares)
         const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap, avoidText: usedTexts }) : null
         if (p) {
           usedOperands.add(p.operandKey)
@@ -2371,7 +2388,7 @@ export default function MathScreen() {
           type="file"
           accept="image/*"
           style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) doPaperEval(f) }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }}
         />
         <button
           className="math-press"
@@ -2385,6 +2402,7 @@ export default function MathScreen() {
           {t('math_paper_ready', language)}
         </button>
       </div>
+      {cropNode}
     </div>
     </>
   )
