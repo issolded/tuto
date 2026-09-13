@@ -81,6 +81,23 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Matematik seansı bitişindeki bekleme (2026-09-13). "Cevaplarını inceliyorum" ekranı uzun
+      sürüyordu; sebep sorgu yavaşlığı değil **sorgu sayısı**: `/api/children/:childId/math-session`
+      art arda **11 Supabase gidiş-dönüşü** yapıyordu (focus konusu varsa 18), ve dördü zaten
+      elde olan satırı yeniden okuyordu — `children` üç kez (endpoint, `tzForChild`, `math_focus`),
+      `parents` iki kez (timezone, sonra prefs). İndeksler doğruydu, düzeltme tamamen tur sayısında:
+      tek `children` okuması `math_focus`'u da taşıyor, tek `parents` okuması timezone+prefs'i;
+      `previousLevelAccuracy` saf bir karşılaştırmaya indi (`recentAttempts()` ayrıldı) ki sorgusu
+      paralel gidebilsin; üç bağımsız okuma (`rewardedToday` + son `math_progress` + son denemeler)
+      tek `Promise.all`, üç bağımsız yazma (attempts insert + `clearFocusIfMastered` + `recordGems`)
+      bir diğeri. 11 sıralı adım → 5. Ölçüm (sorgu başına 60ms gecikme simülasyonuyla, TTFB):
+      702ms → 340ms (focus yok), 849ms → 367ms (focus var).
+      İki not: ölçüm **TTFB** olmalı — `.json()` sonrası ölçmek, await edilmeyen ebeveyn
+      bildirimini kritik yolda gösteriyor (A/B ile doğrulandı: bildirim engellemiyor). Ve bu
+      sayılar yalnız ekran modu için; kağıt modunda Gemini vision çağrısı bunun hepsini gölgede
+      bırakır. **Daha büyük bir kazanım duruyor:** gem/level belli olur olmaz cevap dönüp
+      attempts insert'i ve focus temizliğini arkaya atmak (~5 tur → 3) — hata semantiğini
+      değiştirdiği için uygulanmadı.
 - [x] Ebeveyn arayüzü de üç dilli, ve dil seçimi ilk ekranda (2026-09-08). İki parça:
       **(1) Varsayılan artık İngilizce.** `prefs.language` sütun varsayılanı 'tr' idi çünkü ilk
       aile Türk'tü; ikinci aile kaydolduğu an bu bir gerekçe olmaktan çıkıyor. `server/lang.js`
