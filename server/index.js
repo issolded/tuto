@@ -5148,35 +5148,77 @@ function weightedAccuracy(rows) {
 // recomputed from that session's own attempt rows, which already record help_used per
 // question. Falls back to the stored figure for sessions that have no rows — history from
 // before per-question records existed, or a session whose attempts write failed.
-async function previousLevelAccuracy(childId, lastProgressRow) {
-  if (!lastProgressRow) return null
+// Clears a parent-set focus topic once the child has actually mastered it. Takes the focus the
+// caller already has rather than reading the child row again, and answers null when there is
+// nothing to check, so it can sit inside a Promise.all with the writes beside it.
+async function clearFocusIfMastered(childId, focus, hasNewAttempts) {
+  if (!hasNewAttempts || !focus?.topic_id) return null
+  const standing = await topicStanding(childId)
+  const t = standing?.find(x => x.topic_id === focus.topic_id)
+  if (!t || t.attempts < MASTERY_MIN_ATTEMPTS || t.accuracy < MASTERY_CLEARS_AT) return null
+  await supabase.from('children').update({ math_focus: null }).eq('id', childId)
+  return { topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
+}
+
+// Split in two so the read can go out alongside the other reads this request needs: the query
+// does not depend on the previous progress row, only the comparison does.
+async function recentAttempts(childId) {
   const { data } = await supabase
     .from('math_attempts')
     .select('session_id, correct, help_used, created_at')
     .eq('child_id', childId)
     .order('created_at', { ascending: false })
     .limit(60)
-  const newest = data?.[0]
+  return data || []
+}
+
+function previousLevelAccuracy(rows, lastProgressRow) {
+  if (!lastProgressRow) return null
+  const newest = rows?.[0]
   if (!newest) return lastProgressRow.accuracy
   // Both rows are written by the same request seconds apart. If the newest attempts belong to
   // some older session the two are not describing the same sitting, and pairing them would
   // silently judge the ladder on the wrong evidence.
   const drift = Math.abs(new Date(newest.created_at) - new Date(lastProgressRow.created_at))
   if (!Number.isFinite(drift) || drift > 10 * 60 * 1000) return lastProgressRow.accuracy
-  return weightedAccuracy(data.filter(r => r.session_id === newest.session_id)) ?? lastProgressRow.accuracy
+  return weightedAccuracy(rows.filter(r => r.session_id === newest.session_id)) ?? lastProgressRow.accuracy
 }
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
   const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
   try {
+    // Finishing a session used to cost eleven database round trips in a row, and four of them
+    // re-read a row the request already had in hand: the child row three times (here, inside
+    // tzForChild, and again for math_focus) and the parent row twice (timezone, then prefs).
+    // Against Supabase from Railway that is most of a second the child spends watching
+    // "Checking your work". One read each, and everything that does not depend on another
+    // read goes out together.
     const { data: child } = await supabase
-      .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+      .from('children').select('id, name, parent_id, task_settings, math_focus').eq('id', childId).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
     const settings = taskSettingsFor(child.task_settings, 'math', MATH_DEFAULTS)
-    const tz = await tzForChild(childId)
-    const doneToday = await rewardedToday(childId, tz, 'math')
+
+    // Timezone and prefs come off the same row. tzForChild would fetch the child again just to
+    // learn parent_id, which this already has.
+    const { data: parentRow } = await supabase
+      .from('parents').select('timezone, prefs').eq('id', child.parent_id).maybeSingle()
+    const tz = parentRow?.timezone || 'UTC'
+
+    // Three different tables, none depending on the others: today's rewarded count, the last
+    // session row, and the attempts behind it. One wall-clock step instead of three.
+    const [doneToday, { data: prevRows }, recentRows] = await Promise.all([
+      rewardedToday(childId, tz, 'math'),
+      supabase
+        .from('math_progress')
+        .select('level, accuracy, level_change, created_at')
+        .eq('child_id', childId)
+        .order('created_at', { ascending: false })
+        .limit(1),
+      recentAttempts(childId),
+    ])
+    const last = prevRows?.[0]
 
     // Maths is declared `variable` in taskDefaults, and the parent is shown "up to N" —
     // but only paper mode ever scaled, via whatever figure the model returned, while
@@ -5206,14 +5248,6 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // A stored row records the level the child ENDED on but the accuracy they earned at the
     // one before it, so a row that advanced cannot also count as the first of the next
     // pair — otherwise "twice in a row" would collapse back into "every session".
-    const { data: prevRows } = await supabase
-      .from('math_progress')
-      .select('level, accuracy, level_change, created_at')
-      .eq('child_id', childId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-    const last = prevRows?.[0]
-
     // A right answer found only after the help panel was shown is not the same evidence as one
     // the child produced unaided, but it used to score identically — so "wrong, open help,
     // read the answer off the picture" was indistinguishable from "knew it", and the ladder
@@ -5224,7 +5258,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // gems are scaled by, and neither should change — the point is an honest level, not a
     // punishment the child can feel.
     const levelAcc = weightedAccuracy(attempts) ?? acc
-    const lastLevelAcc = await previousLevelAccuracy(childId, last)
+    const lastLevelAcc = previousLevelAccuracy(recentRows, last)
     const earnedHereBefore = !!last && last.level === level && lastLevelAcc >= 80 && last.level_change !== 'up'
 
     let newLevel = level
@@ -5264,30 +5298,22 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
         correct: !!a.correct,
         help_used: !!a.help_used,
       }))
-    if (rows.length) {
-      const { error: attErr } = await supabase.from('math_attempts').insert(rows)
-      if (attErr) console.error(`[MATH] attempts insert failed for ${childId}: ${attErr.message}`)
-    }
-
-    // A focus the parent asked for lasts until the child masters it, not for a fixed run of
-    // sessions — so the parent hears the outcome of what they asked for, which is the whole
-    // point of their having asked.
-    let focusCleared = null
-    if (rows.length) {
-      const { data: focusRow } = await supabase
-        .from('children').select('math_focus').eq('id', childId).maybeSingle()
-      const focus = focusRow?.math_focus
-      if (focus?.topic_id) {
-        const standing = await topicStanding(childId)
-        const t = standing?.find(x => x.topic_id === focus.topic_id)
-        if (t && t.attempts >= MASTERY_MIN_ATTEMPTS && t.accuracy >= MASTERY_CLEARS_AT) {
-          await supabase.from('children').update({ math_focus: null }).eq('id', childId)
-          focusCleared = { topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
-        }
-      }
-    }
-
-    const mathLed = await recordGems(childId, gems, 'math', { capped })
+    // The attempts insert, the mastery check and the ledger write touch three different tables
+    // and none reads what another writes, so they go together. The ordering the old comment
+    // above cares about is kept: math_progress is already written, and each of these still
+    // fails on its own terms — a lost attempts row costs the history, never the gems.
+    const [, focusCleared, mathLed] = await Promise.all([
+      rows.length
+        ? supabase.from('math_attempts').insert(rows)
+            .then(({ error }) => { if (error) console.error(`[MATH] attempts insert failed for ${childId}: ${error.message}`) })
+        : null,
+      // A focus the parent asked for lasts until the child masters it, not for a fixed run of
+      // sessions — so the parent hears the outcome of what they asked for, which is the whole
+      // point of their having asked. math_focus came off the child row this request already
+      // read; it used to be fetched again here.
+      clearFocusIfMastered(childId, child.math_focus, rows.length),
+      recordGems(childId, gems, 'math', { capped }),
+    ])
     if (gems > 0 && !mathLed.ok) gems = 0
 
     // Whether every rewarded session is announced or only the day's first. This was hardcoded
@@ -5296,11 +5322,8 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // prefs.notify_per_task has existed all along for exactly this decision with nothing
     // reading it. Default true: a parent who has never chosen hears about each session, which
     // is the behaviour they expect before they know there is a choice.
-    const { data: prefsRow } = await supabase
-      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    const perTask = parentRow?.prefs?.notify_per_task !== false
     if (gems > 0 && (perTask || doneToday === 0)) {
-      const parentRow = prefsRow
       const language = parentLang(parentRow?.prefs)
       // Paper mode asks the model how the work actually went, and that read used to be
       // written to a column nothing has ever selected. "Strong at addition, word problems
@@ -5326,7 +5349,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       // Deliberately NOT an offer. Tuto does not propose gems or a higher limit here — the
       // parent set that limit, and offering to break it every evening would empty it of
       // meaning. If the parent asks, the agent knows what to do with it (see the prompt).
-      const language = parentLang(prefsRow?.prefs)
+      const language = parentLang(parentRow?.prefs)
       const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
       const head = say(language,
         `${child.name} did another maths session — ${questions_correct}/${questions_total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
@@ -5343,8 +5366,6 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // it is the answer to something the parent asked for, and the once-a-day rule exists to
     // stop routine progress becoming noise, not to swallow this.
     if (focusCleared) {
-      const { data: parentRow } = await supabase
-        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
       const language = parentLang(parentRow?.prefs)
       const msg = say(language,
         `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`,
