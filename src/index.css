@@ -31,6 +31,20 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* On an iPad a finger held on a picture and then moved does not scroll the list — iPadOS reads
+   it as picking the image up (system drag-and-drop out of Safari), and the page stays put. On
+   the drawing screens the picture IS most of the screen — the guided panel, the photo of the
+   finished drawing, the library thumbnails — so a child who puts her finger where she is
+   looking cannot scroll at all, while an adult flicking from the margin happens to get away
+   with it. Nothing here wants an image dragged out or saved from the page, so no image is
+   draggable and none carries the long-press callout. */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 :root {
   --cream: #FFF8F0;
   --orange: #FF6B35;

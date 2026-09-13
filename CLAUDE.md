@@ -81,6 +81,41 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] iPad'de çizim ekranında aşağı kaydıramama (2026-09-13). İki ayrı sebep vardı.
+      **(1) Resmin üstünde parmak kaydırmıyor.** iPadOS, bir görselin üstünde başlayıp hareket
+      eden dokunuşu kaydırma değil **görseli sürükleme** (sistem drag-and-drop) sayıyor; sayfa
+      yerinde kalıyor. Çizim ekranlarında ekranın neredeyse tamamı görsel (adım paneli, çekilen
+      fotoğraf, kütüphane küçük resimleri), yani çocuk baktığı yere dokunduğunda hiç
+      kaydıramıyor — kenardan hızlı savuran bir yetişkin ise kaydırabiliyor, bu yüzden hata
+      "bazen" görünüyor. Düzeltme tek yerde, `src/index.css`'te bir `img` kuralı
+      (`-webkit-user-drag: none` + `user-select` + `-webkit-touch-callout`). ReadingFlow ve
+      LibraryScreen'de zaten tek tek `draggable={false}` vardı — aynı sorunun daha önce
+      görülüp noktasal yamandığının kanıtı; DrawingsScreen hiç almamıştı.
+      **(2) Fotoğraf kendi düğmesini ekrandan atıyor.** Upload ekranındaki önizleme
+      `width: '100%'` idi; yatay iPad'de sütun 1148px, iPad'in kendi kamerasından gelen 3:4
+      dikey fotoğraf **1148×1531** çıkıyordu ve altındaki "Kütüphaneme ekle" düğmesi 700px'lik
+      ekranda **1705px** aşağıda kalıyordu (2,5 ekran). Önizleme artık yükseğinden ölçülüyor
+      (`max-height: 55dvh`, `max-width: min(100%, 430px)`); ödül ekranındaki fotoğrafta da
+      aynısı (40dvh). Ölçüm: dört cihaz şekli × dikey/yatay fotoğraf, düğme her seferinde
+      ekranda, kaydırma gereksiz (0px).
+      Doğrulama: altı görünüm (browse/ready/steps/upload/reward/library) × dört şekil
+      (1194×700, 1194×834, 810×1080, 390×664) tarayıcıda gezildi; hiçbir düğme/görsel
+      "ekranın altında ve hiçbir kaydırıcıyla ulaşılamaz" durumda değil.
+      **Not:** (1) tarayıcıda kanıtlanamaz (headless Chromium'da iPadOS sürükleme jesti yok);
+      ölçülen kısım (2). Ada'nın gerçek iPad'inde teyit edilmeli.
+- [x] `i18n:check`'te 113 satırlık kör nokta (2026-09-13). Blok yorum takibi `accept="image/*"`
+      içindeki `/*`'ı yorum başlangıcı sayıyordu; sonraki `*/`'a kadar (DrawingsScreen'de 113
+      satır — ödül ekranının tamamı ve kütüphanenin yarısı) her şey "yorum" diye atlanıyordu.
+      Repoda on tane `accept="image/*"` var, sekiz ekranda. Tarayıcı artık sınırlayıcıları
+      string dışında arıyor. Ortaya çıkan 4 gerçek bulgu: DrawingsScreen'de "Great job! 🎉",
+      "I sent your drawing to your grown-up to look at.", "Nothing here yet — draw something!",
+      MyTree'de "📷 Photo attached".
+- [ ] DrawingsScreen çevrilmedi. Yukarıdaki 4 bulgu buzdağının görünen kısmı: ekranda ~20
+      sabit İngilizce metin var ("My Drawings", "Draw again", "I drew it!", "Next", "Add photo",
+      "See my library", `SKINS[*].readySay`, `statusLabel` metinleri…). Tarayıcı bunların
+      çoğunu hâlâ göremiyor, çünkü etiketle aynı satırdaki JSX metnini (`<Title>My Drawings</Title>`)
+      atlıyor. Türkçe okuyan bir çocuk bugün bu ekranda İngilizce görüyor. Ayrı bir iş:
+      `dr_*` anahtarları zaten var, eksikleri `src/lib/i18n.js`'e eklenip ekran `t()`'ye geçirilecek.
 - [x] Matematik seansı bitişindeki bekleme (2026-09-13). "Cevaplarını inceliyorum" ekranı uzun
       sürüyordu; sebep sorgu yavaşlığı değil **sorgu sayısı**: `/api/children/:childId/math-session`
       art arda **11 Supabase gidiş-dönüşü** yapıyordu (focus konusu varsa 18), ve dördü zaten

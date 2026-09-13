@@ -632,13 +632,24 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
       </div>
 
       {photo ? (
-        <div style={{ position: 'relative' }}>
-          <img src={photo.url} alt="" style={{ width: '100%', borderRadius: sk.radius, display: 'block' }} />
-          <button onClick={onClear} disabled={submitting} style={{
-            position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%',
-            border: 'none', background: 'rgba(30,30,25,.66)', color: '#fff', fontWeight: 800, fontSize: 15,
-            cursor: submitting ? 'default' : 'pointer',
-          }}>✕</button>
+        /* Sized from its HEIGHT, not the column's width. A photo taken on the iPad itself is
+           portrait 3:4, and at width:100% of a sideways iPad's 1148px column that came out
+           1148×1531 — the picture alone was two screenfuls and the button below it sat 1705px
+           down a 700px screen. The child is looking at a photo she has just taken and has no
+           reason to think there is anything under it. Half the screen is plenty to check a
+           photo by; the button stays in sight. */
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', maxWidth: '100%' }}>
+            <img src={photo.url} alt="" style={{
+              maxWidth: 'min(100%, 430px)', maxHeight: '55dvh', width: 'auto', height: 'auto',
+              borderRadius: sk.radius, display: 'block',
+            }} />
+            <button onClick={onClear} disabled={submitting} style={{
+              position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%',
+              border: 'none', background: 'rgba(30,30,25,.66)', color: '#fff', fontWeight: 800, fontSize: 15,
+              cursor: submitting ? 'default' : 'pointer',
+            }}>✕</button>
+          </div>
         </div>
       ) : (
         <button onClick={() => fileRef.current?.click()} style={{
@@ -693,9 +704,12 @@ function Reward({ sk, result, onLibrary, onAgain }) {
         {tf('dr_waiting_then', lang, { reward: sk.gemIcon })}
       </div>
 
+      {/* Same as the preview above: height-capped, or the two buttons under it are off the
+          bottom of a sideways iPad. */}
       {result?.painting?.photo && (
         <img src={result.painting.photo} alt="" style={{
-          width: '100%', borderRadius: sk.radius, marginTop: 20, display: 'block',
+          maxWidth: '100%', maxHeight: '40dvh', width: 'auto', height: 'auto',
+          borderRadius: sk.radius, margin: '20px auto 0', display: 'block',
         }} />
       )}
 
