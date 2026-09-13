@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 import { useT, useUiLang } from '../lib/parentI18n'
+import { usePhotoCrop } from '../components/usePhotoCrop'
+import { downscale } from '../lib/image'
 import { t as childT, localeFor } from '../lib/i18n'
 import {
   PC, FONT, SHADOW_SM, PCSS,
@@ -394,13 +396,25 @@ function EditChildSheet({ child, onClose, onSaved }) {
   const [error,  setError]    = useState('')
   const fileRef = useRef(null)
 
+  // Square: see the same wiring in ParentDashboard's AddChildSheet. The avatar is only ever
+  // drawn in a square box, so the frame is chosen here rather than by object-fit.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: s,
+    inputRef: fileRef,
+    accent: PC.teal,
+    ratio: 1,
+    onReady: blob => {
+      setAvatar(blob)
+      const reader = new FileReader()
+      reader.onload = ev => setPreview(ev.target.result)
+      reader.readAsDataURL(blob)
+    },
+  })
+
   const handleFile = (e) => {
     const file = e.target.files[0]
-    if (!file) return
-    setAvatar(file)
-    const reader = new FileReader()
-    reader.onload = ev => setPreview(ev.target.result)
-    reader.readAsDataURL(file)
+    if (file) offerPhoto(file)
+    e.target.value = ''
   }
 
   const save = async () => {
@@ -409,11 +423,12 @@ function EditChildSheet({ child, onClose, onSaved }) {
     setSaving(true); setError('')
 
     let avatar_url = child.avatar_url
-    if (avatar instanceof File) {
+    if (avatar instanceof Blob) {
       try {
-        const ext = avatar.name.split('.').pop() || 'jpg'
+        const shrunk = await downscale(avatar, 512).catch(() => avatar)
+        const ext = (shrunk.type || 'image/jpeg').split('/')[1] || 'jpg'
         const path = `avatars/${crypto.randomUUID()}.${ext}`
-        const { error: upErr } = await supabase.storage.from('submissions').upload(path, avatar, { upsert: true })
+        const { error: upErr } = await supabase.storage.from('submissions').upload(path, shrunk, { upsert: true })
         if (!upErr) {
           const { data: urlData } = supabase.storage.from('submissions').getPublicUrl(path)
           avatar_url = urlData.publicUrl
@@ -428,7 +443,7 @@ function EditChildSheet({ child, onClose, onSaved }) {
     onSaved({ ...child, name: name.trim(), age: +age, avatar_url })
   }
 
-  const isPhoto = avatar instanceof File || (typeof avatar === 'string' && avatar?.startsWith('http'))
+  const isPhoto = avatar instanceof Blob || (typeof avatar === 'string' && avatar?.startsWith('http'))
   const abtn = (active) => ({
     width: 68, height: 68, borderRadius: '50%',
     border: `2.5px solid ${active ? PC.teal : PC.line}`,
@@ -466,6 +481,7 @@ function EditChildSheet({ child, onClose, onSaved }) {
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
       <Btn onClick={save} disabled={saving}>{saving ? s('saving') : s('cd_save_changes')}</Btn>
       <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
+      {cropNode}
     </BottomSheet>
   )
 }

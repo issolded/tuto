@@ -25,7 +25,7 @@ const MIN = 0.12          // a crop can never be smaller than this fraction of t
 const HANDLE = 30         // touch target, px
 const CORNERS = [['x', 'y'], ['x2', 'y'], ['x', 'y2'], ['x2', 'y2']]
 
-export default function PhotoCrop({ file, translate: label, onDone, onRetake, onCancel, accent = '#7c5cd6' }) {
+export default function PhotoCrop({ file, translate: label, onDone, onRetake, onCancel, accent = '#7c5cd6', ratio = null }) {
   const [rect, setRect] = useState(FULL)
   const [busy, setBusy] = useState(false)
   const [area, setArea] = useState(null)     // the space the photo may use, in px
@@ -56,6 +56,11 @@ export default function PhotoCrop({ file, translate: label, onDone, onRetake, on
   // HANDLE of slack, half a handle on each side: the corner grips straddle the edge of the
   // photo, and a photo fitted to the very edge of the screen puts half of each of them past
   // it — on a phone the two right-hand grips were cut off by the viewport.
+  // A frame locked to a shape is measured in the photo's pixels, not in fractions: the
+  // fractions are of a 3024×4032 photo, so a square frame is 1 : 1 in pixels and 4 : 3 in
+  // fractions. `fr` is that shape expressed the way rect is stored.
+  const fr = ratio && nat ? ratio * (nat.h / nat.w) : null
+
   const fit = area && nat
     ? (() => {
         const k = Math.min(
@@ -99,12 +104,28 @@ export default function PhotoCrop({ file, translate: label, onDone, onRetake, on
     if (d.kind === 'corner') {
       const [hx, hy] = d.corner
       setRect(r => {
-        const next = { ...r }
-        if (hx === 'x') next.x = Math.min(p.fx, r.x2 - MIN)
-        else next.x2 = Math.max(p.fx, r.x + MIN)
-        if (hy === 'y') next.y = Math.min(p.fy, r.y2 - MIN)
-        else next.y2 = Math.max(p.fy, r.y + MIN)
-        return next
+        if (!fr) {
+          const next = { ...r }
+          if (hx === 'x') next.x = Math.min(p.fx, r.x2 - MIN)
+          else next.x2 = Math.max(p.fx, r.x + MIN)
+          if (hy === 'y') next.y = Math.min(p.fy, r.y2 - MIN)
+          else next.y2 = Math.max(p.fy, r.y + MIN)
+          return next
+        }
+        // Locked shape: the opposite corner stays put and the dragged one is pulled back to
+        // whichever of the two directions allows the shape, so the frame never leaves the photo.
+        const ax = hx === 'x' ? r.x2 : r.x
+        const ay = hy === 'y' ? r.y2 : r.y
+        let w = Math.abs(p.fx - ax)
+        let h = Math.abs(p.fy - ay)
+        w = Math.min(w, h * fr)
+        w = Math.min(w, hx === 'x' ? ax : 1 - ax)
+        h = Math.min(w / fr, hy === 'y' ? ay : 1 - ay)
+        w = h * fr
+        if (w < MIN * fr || h < MIN) { h = MIN; w = MIN * fr }
+        const x = hx === 'x' ? ax - w : ax
+        const y = hy === 'y' ? ay - h : ay
+        return { x, y, x2: x + w, y2: y + h }
       })
     } else {
       // Moving the whole frame stops at the edges of the photo instead of shrinking against
@@ -131,7 +152,7 @@ export default function PhotoCrop({ file, translate: label, onDone, onRetake, on
   }
 
   const pct = v => `${v * 100}%`
-  const untouched = rect.x === 0 && rect.y === 0 && rect.x2 === 1 && rect.y2 === 1
+  const untouched = !fr && rect.x === 0 && rect.y === 0 && rect.x2 === 1 && rect.y2 === 1
 
   return (
     <div style={{
@@ -163,7 +184,19 @@ export default function PhotoCrop({ file, translate: label, onDone, onRetake, on
         }}>
           <img
             src={url} alt=""
-            onLoad={e => setNat({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+            onLoad={e => {
+              const w = e.currentTarget.naturalWidth
+              const h = e.currentTarget.naturalHeight
+              setNat({ w, h })
+              // A locked frame needs the photo's own proportions to know its shape, and those
+              // only exist once it has loaded — so it opens here rather than from an effect.
+              if (ratio) {
+                const f = ratio * (h / w)
+                const fw = f >= 1 ? 1 : f
+                const fh = f >= 1 ? 1 / f : 1
+                setRect({ x: (1 - fw) / 2, y: (1 - fh) / 2, x2: (1 + fw) / 2, y2: (1 + fh) / 2 })
+              }
+            }}
             style={{ display: 'block', width: '100%', height: '100%' }}
           />
 

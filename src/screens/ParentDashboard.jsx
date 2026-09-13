@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 import { LangPicker } from '../lib/parentUI'
 import { useT, adoptAccountLang } from '../lib/parentI18n'
+import { usePhotoCrop } from '../components/usePhotoCrop'
+import { downscale } from '../lib/image'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
   TopBar, Btn, Card, Field, Toggle, Pill, Avatar, BottomSheet, Icon,
@@ -26,13 +28,27 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
   const [avatarPreview, setAvatarPreview] = useState(null)
   const fileRef = useRef(null)
 
+  // Square, because that is the only shape an avatar is ever shown in (parentUI's Avatar is a
+  // square box with object-fit: cover). Without this the frame was chosen by the CSS, which
+  // centre-crops whatever it is handed — a child whose face is not in the middle of the photo
+  // lost it, and nobody was ever asked.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: s,
+    inputRef: fileRef,
+    accent: PC.teal,
+    ratio: 1,
+    onReady: blob => {
+      setAvatar(blob)
+      const reader = new FileReader()
+      reader.onload = ev => setAvatarPreview(ev.target.result)
+      reader.readAsDataURL(blob)
+    },
+  })
+
   const handleFileChange = (e) => {
     const file = e.target.files[0]
-    if (!file) return
-    setAvatar(file)
-    const reader = new FileReader()
-    reader.onload = ev => setAvatarPreview(ev.target.result)
-    reader.readAsDataURL(file)
+    if (file) offerPhoto(file)
+    e.target.value = ''
   }
 
   const save = async () => {
@@ -42,11 +58,16 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
     setLoading(true); setError('')
 
     let avatar_url = null
-    if (avatar instanceof File) {
+    if (avatar instanceof Blob) {
       try {
-        const ext = avatar.name.split('.').pop() || 'jpg'
+        // Shrunk on the way out. This path was sending the camera's full capture — several MB,
+        // for a picture that is never drawn larger than 52px — while every other photo in the
+        // app already went through downscale(). The extension now comes from the blob's type:
+        // a cropped photo has no filename to read one off.
+        const shrunk = await downscale(avatar, 512).catch(() => avatar)
+        const ext = (shrunk.type || 'image/jpeg').split('/')[1] || 'jpg'
         const path = `avatars/${crypto.randomUUID()}.${ext}`
-        const { error: upErr } = await supabase.storage.from('submissions').upload(path, avatar, { upsert: true })
+        const { error: upErr } = await supabase.storage.from('submissions').upload(path, shrunk, { upsert: true })
         if (!upErr) {
           const { data: urlData } = supabase.storage.from('submissions').getPublicUrl(path)
           avatar_url = urlData.publicUrl
@@ -89,7 +110,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
       <div style={{ display: 'flex', justifyContent: 'center', gap: 18 }}>
         <button className="tc-press" style={avatarBtnStyle(avatar === 'girl')} onClick={() => { setAvatar('girl'); setAvatarPreview(null) }}>👧</button>
         <button className="tc-press" style={avatarBtnStyle(avatar === 'boy')}  onClick={() => { setAvatar('boy');  setAvatarPreview(null) }}>👦</button>
-        <button className="tc-press" style={avatarBtnStyle(avatar instanceof File)} onClick={() => fileRef.current?.click()}>
+        <button className="tc-press" style={avatarBtnStyle(avatar instanceof Blob)} onClick={() => fileRef.current?.click()}>
           {avatarPreview
             ? <img src={avatarPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <Icon name="camera" size={26} color={PC.inkSoft} />}
@@ -117,6 +138,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 
       <Btn onClick={save} disabled={loading}>{loading ? s('saving') : s('save')}</Btn>
       <Btn variant="ghost" onClick={onClose} disabled={loading}>{s('cancel')}</Btn>
+      {cropNode}
     </BottomSheet>
   )
 }
