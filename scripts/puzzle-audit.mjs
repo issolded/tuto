@@ -139,6 +139,31 @@ for (const band of BAND_KEYS) {
     if (why) { fail(band, 'answer', `${q.type} (rule ${q.rule.attr}): ${why}`); break }
   }
 
+  // ── the `why` label on each wrong option names an attribute that is real ────
+  // Nothing reads these yet; a help panel will, and a label naming the wrong attribute teaches
+  // a child the wrong lesson about their own mistake — worse than saying nothing. The sentence
+  // differs by type (see the note in puzzleTemplates), so the test does too: in `identical` a
+  // labelled option must DIFFER from the target on that attribute, while in `odd-one-out` it
+  // must MATCH the other non-answers on it — the first check written here got that backwards
+  // and reported three sound questions.
+  for (const q of qs) {
+    const ans = q.options[q.correct_index].spec
+    if (ans.kind) continue
+    let wrong = null
+    if (q.options[q.correct_index].why) wrong = 'the correct option carries a why label'
+    q.options.forEach((o, k) => {
+      if (wrong || k === q.correct_index || !o.why || o.why === 'both') return
+      if (!(o.why in o.spec)) { wrong = `"${o.why}" is not an attribute`; return }
+      if (q.type === 'identical') {
+        if (val(o.spec[o.why]) === val(ans[o.why])) wrong = `"${o.why}" matches the target on a distractor`
+      } else if (q.type === 'odd-one-out') {
+        const peer = q.options.find((_, j) => j !== k && j !== q.correct_index)?.spec
+        if (peer && val(o.spec[o.why]) !== val(peer[o.why])) wrong = `"${o.why}" differs between two non-answers`
+      }
+    })
+    if (wrong) { fail(band, 'why-label', `${q.type}: ${wrong}`); break }
+  }
+
   // ── what a child actually meets, rather than a long synthetic run ────────────
   const seen = new Set()
   let sameDay = 0, total = 0

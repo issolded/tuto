@@ -16,10 +16,22 @@
 //   { seed, band, type, stem_key, layout, prompt: [spec|null], options: [{ spec, why }],
 //     correct_index, rule: { attr, from, to } }
 //
-// `why` names the attribute each distractor moved, which is what lets a help panel say "bunun
-// çizgileri ters yönde" instead of "yanlış". It is the same shape mathTemplates gives its
-// choice-format options, and for the same reason: a child who picks one particular wrong
-// answer has made one particular mistake.
+// `why` names the ATTRIBUTE a wrong option is judged on — what lets a help panel say "bunun
+// çizgileri ters yönde" instead of "yanlış". Same shape mathTemplates gives its choice-format
+// options, and for the same reason: a child who picks one particular wrong answer has made one
+// particular mistake.
+//
+// The sentence built around that attribute differs by type, and a panel has to know which it
+// is holding, because the two are opposites:
+//
+//   identical, sequence, grid-complete, analogy — the option MOVED that attribute away from
+//     what the question wanted. "Bunun dolgusu farklı."
+//   odd-one-out — the option SHARES that attribute with the others, which is exactly why it is
+//     not the odd one. "Bunun dolgusu diğerleriyle aynı."
+//   belongs, and the glyph/icon families — the option does not share it, which is why it does
+//     not belong. "Bu, diğerleriyle aynı gruptan değil."
+//
+// `why` is null on the correct option, and 'both' where two attributes are wrong at once.
 //
 // Nothing here calls a model. The answer is not proposed and then checked, it is the thing the
 // generator built the question around — so unlike the maths path there is no mathVerify step,
