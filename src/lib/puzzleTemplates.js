@@ -28,18 +28,21 @@
 // options are not four different pictures, or whose rule turns out to be invisible. A question
 // that fails is discarded and regenerated; a child never sees one.
 
+// Explicit .js on these three, as in puzzleGlyphs and puzzleIcons, so the whole engine stays
+// importable by plain node: scripts/puzzle-audit.mjs runs every check against it without a
+// bundler, and anything server-side would need the same.
 import {
   SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, ATTRIBUTES,
-  makeSpec, geometryKey, attrVisible, renderFigure,
-} from './puzzleFigures'
+  makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure,
+} from './puzzleFigures.js'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph, fontReady,
-} from './puzzleGlyphs'
+} from './puzzleGlyphs.js'
 import {
   ICON_GROUPS, ICON_GROUP_KEYS, ICON_ATTRIBUTES, ICON_FILLS,
   makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady,
-} from './puzzleIcons'
+} from './puzzleIcons.js'
 
 export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy']
 
@@ -151,7 +154,11 @@ export const BANDS = {
     stretches: STRETCHES,
     halves: [null, ...HALVES.slice(1)],
     inners: [null, ...INNER_NODES.slice(1)],
-    dots: [0, 1, 2, 3, 4, 5],
+    // Weighted toward none. A figure carries dots or a corner mark, never both, so a pool that
+    // is five-sixths dotted starves `corner` out entirely — over 4000 draws it never once
+    // carried a rule, which is a dial in the config that does nothing. It also keeps the
+    // hardest band's figures from being uniformly busy.
+    dots: [0, 0, 0, 1, 2, 3, 4, 5],
     corners: CORNERS,
     seqPeriod: 4,
     seqLength: 5,
@@ -301,7 +308,30 @@ function genSequence(r, band, seed) {
   const attrs = usableAttrs(r, band, base)
   if (!attrs.length) return null
   const ruleAttr = pick(r, attrs)
-  const values = pool(band, ruleAttr).filter(v => v === base[ruleAttr] || attrVisible(base, ruleAttr, v))
+  // The cycle's values must be distinct AS PICTURES, and pairwise — not merely distinct from
+  // the base figure, which is all attrVisible can tell you. Two ways that went wrong, both
+  // shipped, both invisible to every check downstream because nothing else in the pipeline
+  // ever looks at the prompt:
+  //
+  //   A band pool may REPEAT a value to weight it — `half` and `inner` carry three nulls each
+  //   in band 5-6 so structural devices stay rare. Every other caller reads the pool through
+  //   otherValue, where a repeat just makes that value likelier, which is the point. Building a
+  //   cycle out of it drew [null, null] and produced four identical figures.
+  //
+  //   And a square rotated 45°, 135°, 225° and 315° is four times the same picture. Each of
+  //   them differs from a base at 0°, so each passed attrVisible individually, and the run came
+  //   out constant.
+  //
+  // Keying on the rendered figure settles both at once.
+  const seen = new Set()
+  const values = []
+  for (const v of pool(band, ruleAttr)) {
+    if (v !== base[ruleAttr] && !attrVisible(base, ruleAttr, v)) continue
+    const k = geometryKey({ ...base, [ruleAttr]: v })
+    if (seen.has(k)) continue
+    seen.add(k)
+    values.push(v)
+  }
   const period = Math.min(band.seqPeriod, values.length)
   if (period < 2) return null
 
@@ -721,6 +751,22 @@ export function validateQuestion(q) {
     }
     if (['odd-one-out', 'glyph-odd', 'icon-odd'].includes(q.type) && splits !== 1) {
       return `${splits} attributes split 3-1`
+    }
+  }
+
+  // The rule attribute has to SURVIVE on every option. Noise is chosen to be harmless, but
+  // some attributes suppress others when the figure is normalised — a `half` split owns the
+  // interior, so it erases an `inner` node — and noise landing on `half` while the rule was
+  // `inner` left two options showing no inner at all. The raw specs still split 3-1, so the
+  // check above passed, while the picture on screen split 1-1-2 and had no single answer.
+  const ruleAttr = q.rule?.attr
+  if (ruleAttr && !ruleAttr.includes('+') && !ruleAttr.startsWith('relation')) {
+    for (const o of q.options) {
+      if (o.spec.kind) break              // glyph and icon specs are not normalised this way
+      if (!(ruleAttr in o.spec)) break    // `identity` and friends name no attribute
+      if (valueKey(normalizeSpec(o.spec)[ruleAttr]) !== valueKey(o.spec[ruleAttr])) {
+        return `the rule attribute ${ruleAttr} is suppressed on one option`
+      }
     }
   }
 

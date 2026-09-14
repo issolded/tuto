@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "i18n:check": "node scripts/i18n-check.mjs",
     "fonts": "node scripts/fetch-puzzle-fonts.mjs",
-    "fonts:check": "node scripts/fetch-puzzle-fonts.mjs --check"
+    "fonts:check": "node scripts/fetch-puzzle-fonts.mjs --check",
+    "puzzle:check": "node scripts/puzzle-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",
