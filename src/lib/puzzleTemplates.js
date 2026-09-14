@@ -32,8 +32,17 @@ import {
   SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, ATTRIBUTES,
   makeSpec, geometryKey, attrVisible, renderFigure,
 } from './puzzleFigures'
+import {
+  GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
+  makeGlyphSpec, glyphKey, groupOf, renderGlyph,
+} from './puzzleGlyphs'
 
 export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy']
+
+// The pictorial family. Kept as its own list because it is a different KIND of question — it
+// asks what a child knows about the world, not what they can see in a pattern — and the two
+// should stay separable in the attempt log and in what a parent is told.
+export const GLYPH_TYPES = ['glyph-odd', 'glyph-belongs', 'glyph-analogy']
 
 export const STEM_KEYS = {
   'odd-one-out': 'puzzle_stem_odd',
@@ -42,7 +51,14 @@ export const STEM_KEYS = {
   belongs: 'puzzle_stem_belongs',
   'grid-complete': 'puzzle_stem_pattern',
   analogy: 'puzzle_stem_analogy',
+  'glyph-odd': 'puzzle_stem_odd',
+  'glyph-belongs': 'puzzle_stem_belongs',
+  'glyph-analogy': 'puzzle_stem_analogy',
 }
+
+// One fingerprint for either kind of figure, so the validator does not care which it is
+// holding. The two guarantees behind them differ — see the header of puzzleGlyphs.js.
+export const figureKey = (spec) => (spec.kind === 'glyph' ? glyphKey(spec) : geometryKey(spec))
 
 // The age dial. Every field here is a difficulty decision, and every one of them is the same
 // decision at every age — only its value moves.
@@ -61,6 +77,7 @@ export const STEM_KEYS = {
 export const BANDS = {
   '5-6': {
     types: ['odd-one-out', 'identical', 'sequence'],
+    glyphTypes: ['glyph-odd', 'glyph-belongs'],   // relations wait for 7-8
     attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'hexagon'],
@@ -77,6 +94,7 @@ export const BANDS = {
   },
   '7-8': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete'],
+    glyphTypes: GLYPH_TYPES,
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
@@ -93,6 +111,7 @@ export const BANDS = {
   },
   '9-11': {
     types: TYPES,
+    glyphTypes: GLYPH_TYPES,
     attributes: ATTRIBUTES,
     noise: 2,
     shapes: SHAPES,
@@ -401,6 +420,90 @@ function genAnalogy(r, band, seed) {
   }
 }
 
+// ── glyph generators ──────────────────────────────────────────────────────────
+// A separate small family rather than the six bent to fit. A glyph cannot be hatched, split
+// or nested — the only things that can vary are WHICH glyph, how many, how big and which way
+// up — so the geometric generators would spend most of their attribute vocabulary finding
+// nothing to move. What glyphs bring instead is the two families the shapes cannot reach:
+// category membership, and relations between things in the world.
+
+function genGlyphCategory(r, band, seed, type) {
+  const groups = shuffle(r, GROUP_KEYS.slice())
+  const [inKey, outKey] = groups
+  const inSet = shuffle(r, GLYPH_GROUPS[inKey].glyphs.slice())
+  const outSet = shuffle(r, GLYPH_GROUPS[outKey].glyphs.slice())
+  if (inSet.length < 4 || outSet.length < 3) return null
+
+  const spec = (glyph) => makeGlyphSpec({ glyph, group: groupOf(glyph) })
+
+  if (type === 'glyph-belongs') {
+    // Three of a kind on show, and the child picks the fourth member. The three wrong options
+    // all come from ONE other group, for the same reason the shape version does it: three
+    // different wrong groups would leave every option isolated on the rule and the set with
+    // no single defensible answer.
+    const prompt = inSet.slice(0, 3).map(spec)
+    const options = [spec(inSet[3]), ...outSet.slice(0, 3).map(spec)]
+    const order = shuffle(r, [0, 1, 2, 3])
+    return {
+      seed, type, layout: 'row', prompt,
+      options: order.map(i => ({ spec: options[i], why: i === 0 ? null : 'group' })),
+      correct_index: order.indexOf(0),
+      rule: { attr: 'group', from: inKey, to: outKey },
+    }
+  }
+
+  const oddIndex = Math.floor(r() * 4)
+  const specs = inSet.slice(0, 4).map(spec)
+  specs[oddIndex] = spec(outSet[0])
+  return {
+    seed, type: 'glyph-odd', layout: 'options-only', prompt: [],
+    options: specs.map((s, i) => ({ spec: s, why: i === oddIndex ? null : 'group' })),
+    correct_index: oddIndex,
+    rule: { attr: 'group', from: inKey, to: outKey },
+  }
+}
+
+function genGlyphAnalogy(r, band, seed) {
+  const relKey = pick(r, RELATION_KEYS)
+  const rel = GLYPH_RELATIONS[relKey]
+  const pairs = shuffle(r, rel.pairs.slice())
+  if (pairs.length < 2) return null
+  const [[a, b], [c, answer]] = pairs
+
+  // Distractors are drawn from the OTHER halves of the same relation, so a child cannot get
+  // there by noticing that three options are food and one is not — every option is the kind of
+  // thing the relation produces, and only one is what THIS pair produces.
+  const others = pairs.slice(2).map(p => p[1])
+    .concat(RELATION_KEYS.filter(k => k !== relKey).flatMap(k => GLYPH_RELATIONS[k].pairs.map(p => p[1])))
+
+  // …but "other half of another pair" is not far enough. The tables chain: 🐔→🥚 is `produces`
+  // and 🥚→🐣 is `becomes`, so offering 🐣 against 🐔 gives a child a second answer they can
+  // defend. Anything reachable from the prompt term in two steps across ALL relations is out.
+  // The tables are meant to be edited by hand, and this is the ambiguity hand-editing creates.
+  const reach = new Set([c])
+  for (let step = 0; step < 2; step++) {
+    for (const key of RELATION_KEYS) {
+      for (const [from, to] of GLYPH_RELATIONS[key].pairs) {
+        if (reach.has(from)) reach.add(to)
+      }
+    }
+  }
+  const pool = shuffle(r, [...new Set(others)]
+    .filter(g => g !== answer && g !== b && g !== a && !reach.has(g)))
+  if (pool.length < 3) return null
+
+  const spec = (glyph) => makeGlyphSpec({ glyph, group: groupOf(glyph) })
+  const options = [spec(answer), ...pool.slice(0, 3).map(spec)]
+  const order = shuffle(r, [0, 1, 2, 3])
+  return {
+    seed, type: 'glyph-analogy', layout: 'analogy',
+    prompt: [spec(a), spec(b), spec(c), null],
+    options: order.map(i => ({ spec: options[i], why: i === 0 ? null : 'relation' })),
+    correct_index: order.indexOf(0),
+    rule: { attr: `relation:${relKey}`, from: a, to: answer },
+  }
+}
+
 function shuffle(r, arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(r() * (i + 1));
@@ -416,6 +519,9 @@ const GENERATORS = {
   belongs: genBelongs,
   'grid-complete': genGridComplete,
   analogy: genAnalogy,
+  'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
+  'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),
+  'glyph-analogy': genGlyphAnalogy,
 }
 
 // ── validation ────────────────────────────────────────────────────────────────
@@ -427,24 +533,39 @@ export function validateQuestion(q) {
   if (!q || !Array.isArray(q.options) || q.options.length !== 4) return 'options != 4'
   if (!(q.correct_index >= 0 && q.correct_index < 4)) return 'correct_index out of range'
 
-  const keys = q.options.map(o => geometryKey(o.spec))
+  const keys = q.options.map(o => figureKey(o.spec))
   if (new Set(keys).size !== 4) return 'two options draw the same picture'
 
   // A prompt cell that is already the answer makes the question a memory test, and in
   // `identical` it would put the target next to its own copy.
   if (q.type === 'identical') {
-    const target = geometryKey(q.prompt[0])
+    const target = figureKey(q.prompt[0])
     if (target !== keys[q.correct_index]) return 'target does not match the answer'
     if (keys.filter(k => k === target).length !== 1) return 'more than one option matches the target'
+  }
+
+  // A glyph analogy is sound when the answer is the only option the relation actually reaches;
+  // the distractors are the other halves of other pairs, so the test is that none of them is
+  // this pair's partner by a second route.
+  if (q.type === 'glyph-analogy') {
+    const [a, , c] = q.prompt
+    if (!a || !c) return 'analogy is missing a term'
+    if (q.options.some((o, i) => i !== q.correct_index && o.spec.glyph === q.options[q.correct_index].spec.glyph)) {
+      return 'a distractor repeats the answer'
+    }
   }
 
   // Odd-one-out is the only type whose soundness is a property of the option SET rather than
   // of the answer: exactly one attribute may split 3-1, and no other attribute may isolate a
   // single option, or the question has two defensible answers.
-  if (q.type === 'odd-one-out' || q.type === 'belongs') {
+  if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-belongs'].includes(q.type)) {
     const specs = q.options.map(o => o.spec)
     let splits = 0
-    for (const attr of ATTRIBUTES) {
+    // Glyph figures carry none of the geometric attributes, so counting over the shape list
+    // would find one undefined value four times, register no split at all, and fail every
+    // glyph question for the wrong reason.
+    const attrs = specs[0].kind === 'glyph' ? GLYPH_ATTRIBUTES : ATTRIBUTES
+    for (const attr of attrs) {
       const counts = {}
       // `inner` holds a node, not a scalar, and String() flattens every one of them to
       // "[object Object]" — which would have made four different nested figures look like one
@@ -455,13 +576,19 @@ export function validateQuestion(q) {
       }
       const singles = Object.values(counts).filter(c => c === 1).length
       if (singles === 1 && Object.keys(counts).length === 2) splits++
-      else if (singles > 0 && Object.keys(counts).length > 2) return `attribute ${attr} isolates an option`
+      // `glyph` is the identity of the picture, so in a glyph question every option differs on
+      // it by design — that is not an ambiguity, it is what makes four distinct pictures.
+      else if (singles > 0 && Object.keys(counts).length > 2 && attr !== 'glyph') {
+        return `attribute ${attr} isolates an option`
+      }
     }
-    if (q.type === 'odd-one-out' && splits !== 1) return `${splits} attributes split 3-1`
+    if ((q.type === 'odd-one-out' || q.type === 'glyph-odd') && splits !== 1) {
+      return `${splits} attributes split 3-1`
+    }
   }
 
   for (const cell of q.prompt) {
-    if (cell && !geometryKey(cell)) return 'unrenderable prompt cell'
+    if (cell && !figureKey(cell)) return 'unrenderable prompt cell'
   }
   return null
 }
@@ -471,7 +598,14 @@ export function validateQuestion(q) {
 export function generateQuestion(bandKey, type, seed) {
   const band = BANDS[bandKey]
   if (!band) throw new Error(`unknown band ${bandKey}`)
-  const types = type && band.types.includes(type) ? [type] : band.types
+  // Glyph questions are drawn from the same pool but in a fixed minority: they are the loud,
+  // easy-to-like ones, and a sheet that is mostly emoji stops being a reasoning test and
+  // becomes a picture quiz. One in four, which is roughly the papers' own ratio — the first
+  // two of Bond's eight papers carry none at all.
+  const all = [...band.types, ...band.glyphTypes]
+  const types = type && all.includes(type)
+    ? [type]
+    : (rng(seed + 13)() < 0.25 ? band.glyphTypes : band.types)
 
   // A rejected draw costs nothing but a retry, so the loop is generous. It has never needed
   // more than a handful of rounds in the lab; the cap exists so a future band that is too
@@ -493,7 +627,7 @@ export function generateSession(bandKey, count = 10, seed = Date.now()) {
     if (!q) continue
     // Two questions built on the same rule and the same base figure read as the same question
     // even when every number behind them differs.
-    const sig = `${q.type}|${q.rule.attr}|${geometryKey(q.options[q.correct_index].spec)}`
+    const sig = `${q.type}|${q.rule.attr}|${figureKey(q.options[q.correct_index].spec)}`
     if (seen.has(sig)) continue
     seen.add(sig)
     out.push(q)
@@ -501,4 +635,4 @@ export function generateSession(bandKey, count = 10, seed = Date.now()) {
   return out
 }
 
-export { renderFigure }
+export { renderFigure, renderGlyph }

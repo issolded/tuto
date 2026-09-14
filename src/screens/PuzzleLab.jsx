@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
 import {
-  BANDS, BAND_KEYS, TYPES, generateQuestion, generateSession, validateQuestion,
+  BANDS, BAND_KEYS, TYPES, GLYPH_TYPES, generateQuestion, generateSession, validateQuestion,
 } from '../lib/puzzleTemplates'
 import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
+import { renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS } from '../lib/puzzleGlyphs'
 
 // Isolated pilot for the non-verbal reasoning engine (src/lib/puzzleFigures.js +
 // src/lib/puzzleTemplates.js). Not linked from any menu, not wired to gems, levels or the
@@ -22,7 +23,13 @@ import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES }
 // the paper the questions are modelled on is white, and judging a figure against anything
 // else at this stage means judging two things at once.
 
-const FIG = (spec, px) => ({ __html: renderFigure(spec, { px, bg: '#FFFFFF' }) })
+// One entry point for either kind of figure. A glyph is not drawn by us — see the header of
+// puzzleGlyphs.js for why the emoji font has to be pinned, and the <link> below for where.
+const FIG = (spec, px) => ({
+  __html: spec.kind === 'glyph'
+    ? renderGlyph(spec, { px })
+    : renderFigure(spec, { px, bg: '#FFFFFF' }),
+})
 
 const C = {
   bg: '#0F1320', panel: '#181D2E', line: '#2A3149', text: '#EDEBF6',
@@ -151,6 +158,14 @@ function VocabularySheet() {
         ['circle', 'square'].map(shape => makeSpec({ shape, inner }))))}
       {row('stretch', STRETCHES.flatMap(stretch =>
         SHAPES.map(shape => makeSpec({ shape, stretch }))))}
+      <div style={{ height: 8 }} />
+      {Object.entries(GLYPH_GROUPS).map(([key, g]) =>
+        row(`${key} (${g.tr})`, g.glyphs.map(glyph => makeGlyphSpec({ glyph }))))}
+      {Object.entries(GLYPH_RELATIONS).map(([key, rel]) =>
+        row(`${key} (${rel.tr})`, rel.pairs.flat().map(glyph => makeGlyphSpec({ glyph }))))}
+      <div style={{ fontSize: 11, color: C.dim, paddingTop: 6 }}>
+        {ALL_GLYPHS.length} glyphs in the table · font pinned to Noto Color Emoji
+      </div>
     </div>
   )
 }
@@ -204,6 +219,9 @@ export default function PuzzleLab() {
       minHeight: '100vh', background: C.bg, color: C.text,
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', padding: '22px 18px 70px',
     }}>
+      {/* Pins the emoji font. Without it the glyph figures fall back to the device's own set,
+          and the answer key stops describing what the child is looking at. */}
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" />
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>🧩 Puzzle engine — pilot</h1>
         <div style={{ fontSize: 12, color: C.dim, marginBottom: 18 }}>
@@ -216,14 +234,17 @@ export default function PuzzleLab() {
           ))}
           <span style={{ width: 14 }} />
           <button style={btn(type === '')} onClick={() => setType('')}>all types</button>
-          {TYPES.map(ty => (
-            <button
-              key={ty}
-              disabled={!cfg.types.includes(ty)}
-              style={{ ...btn(type === ty), opacity: cfg.types.includes(ty) ? 1 : 0.3 }}
-              onClick={() => setType(ty)}
-            >{ty}</button>
-          ))}
+          {[...TYPES, ...GLYPH_TYPES].map(ty => {
+            const on = cfg.types.includes(ty) || cfg.glyphTypes.includes(ty)
+            return (
+              <button
+                key={ty}
+                disabled={!on}
+                style={{ ...btn(type === ty), opacity: on ? 1 : 0.3 }}
+                onClick={() => setType(ty)}
+              >{ty}</button>
+            )
+          })}
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
@@ -244,7 +265,8 @@ export default function PuzzleLab() {
           {' '}inners: {cfg.inners.length} ·
           {' '}stretches: {cfg.stretches.join('/')} ·
           {' '}dots: {cfg.dots.join('/')} ·
-          {' '}sequence: length {cfg.seqLength}, period {cfg.seqPeriod}
+          {' '}sequence: length {cfg.seqLength}, period {cfg.seqPeriod} ·
+          {' '}glyph types: {cfg.glyphTypes.join(', ')}
         </div>
 
         {audit && (
