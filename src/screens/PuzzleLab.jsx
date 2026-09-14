@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+// Pins both pictorial fonts, served by us. Without them the figures fall back to the device's
+// own set and the answer key stops describing what the child is looking at — which is why the
+// generator withholds those questions entirely until they have loaded.
+import '../styles/puzzleFonts.css'
 import { childLang, t } from '../lib/i18n'
 import {
   BANDS, BAND_KEYS, TYPES, GLYPH_TYPES, ICON_TYPES,
@@ -9,8 +13,7 @@ import {
   renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS, fontReady, ensureEmojiFont,
 } from '../lib/puzzleGlyphs'
 import {
-  renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, ICON_FONT_HREF,
-  iconFontReady, ensureIconFont,
+  renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, iconFontReady, ensureIconFont,
 } from '../lib/puzzleIcons'
 
 // Isolated pilot for the non-verbal reasoning engine (src/lib/puzzleFigures.js +
@@ -249,10 +252,6 @@ export default function PuzzleLab() {
       minHeight: '100vh', background: C.bg, color: C.text,
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', padding: '22px 18px 70px',
     }}>
-      {/* Pins the emoji font. Without it the glyph figures fall back to the device's own set,
-          and the answer key stops describing what the child is looking at. */}
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=block" />
-      <link rel="stylesheet" href={ICON_FONT_HREF} />
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>🧩 Puzzle engine — pilot</h1>
         <div style={{ fontSize: 12, color: C.dim, marginBottom: 18 }}>

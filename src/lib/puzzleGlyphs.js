@@ -21,9 +21,12 @@
 // plainly — the geometric key is COMPUTED from geometry we drew, while the glyph key is
 // GUARANTEED BY A FONT WE SHIP. It holds exactly as long as the font is actually loaded.
 //
-// The cost is smaller than it looks. Google serves Noto Color Emoji split into ten
-// unicode-range subsets of roughly 118KB each, so a browser downloads only the subsets our
-// table's glyphs actually fall in, once, and caches them.
+// The cost is smaller than it looks, and the font is ours to serve: `npm run fonts` subsets
+// Noto Color Emoji down to exactly the table below — 52KB — into public/fonts/, declared by
+// src/styles/puzzleFonts.css. Self-hosted rather than fetched from fonts.googleapis.com
+// because the gate further down WITHHOLDS these questions when the font has not arrived, so a
+// slow or blocked third-party host does not degrade the look, it quietly removes a third of
+// the question types.
 //
 // ── Two content rules, deliberately narrow ───────────────────────────────────────────────
 //
@@ -35,6 +38,11 @@
 // The tables are content, not code, and they are culture-bound. A relation that is obvious in
 // English can be a shrug in Turkish, so every row carries its Turkish reading and is meant to
 // be reviewed in both languages rather than trusted because it scans in one.
+
+// The .js extension is explicit here and in puzzleIcons so both files stay importable by plain
+// node — scripts/fetch-puzzle-fonts.mjs reads their tables to subset the fonts, and Vite is
+// happy either way.
+import { fontLoaded, ensureFont } from './fontGate.js'
 
 // Categories for "which is the odd one out" and "which one belongs". They must be mutually
 // exclusive: a table where 🍎 is both a fruit and a food gives a child two defensible answers.
@@ -116,47 +124,26 @@ export const ALL_GLYPHS = [
   ]),
 ]
 
-// The stack is what pins the font. 'Noto Color Emoji' must be loaded by the page — see the
-// <link> in PuzzleLab — or the browser silently falls back to the system set and the guarantee
-// above quietly stops holding.
+// The stack a figure is drawn in. The first family is the pinned one; the rest exist only so
+// that a glyph still shows SOMETHING if it is reached before the gate below has been consulted
+// — which should never happen, and is why the gate is the real answer rather than this list.
 export const EMOJI_FONT = "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif"
 
 // Whether the pinned font is actually loaded and usable RIGHT NOW.
 //
 // This is not a nicety. The failure mode was found by accident, in a browser that could not
 // reach Google Fonts at all: a glyph whose font has not arrived does not render as a blank or
-// a placeholder, it renders as fallback text — an English word sitting in the middle of a
-// Turkish puzzle, or a device's own emoji, which is the platform variance this module pins the
-// font to avoid. Both are worse than not asking the question.
+// a placeholder, it renders as fallback — a device's own emoji, which is the platform variance
+// this module pins the font to avoid. That is worse than not asking the question.
 //
 // So it is a gate, not a hope: a session builder calls this and drops the pictorial types when
 // it returns false, leaving a sheet of geometric questions, which need no font at all. The
 // same reflex as the two gates on the Telegram side — the rule is enforced in code rather than
-// left to whether the network behaved.
-export function fontReady() {
-  if (typeof document === 'undefined' || !document.fonts) return false
-  try {
-    // A size must be given or check() always answers false; the family is the one that matters.
-    return document.fonts.check(`32px ${EMOJI_FONT.split(',')[0]}`)
-  } catch {
-    return false
-  }
-}
-
-// A font is only fetched when something on the page actually USES it, which sets a deadlock
-// against the gate above — and the preview page walked straight into it: no pictorial questions
-// were offered because the font was not loaded, and the font was never loaded because nothing
-// on the page used it. The gate answered false forever and the whole family silently vanished
-// from every sheet, with no error anywhere.
-//
-// So the load is requested explicitly, once, before the gate is ever consulted. A screen that
-// shows puzzles calls this on mount and re-reads the gate when the promise settles.
-export function ensureEmojiFont() {
-  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
-  return document.fonts.load(`32px ${EMOJI_FONT.split(',')[0]}`)
-    .then(() => fontReady())
-    .catch(() => false)
-}
+// left to whether the network behaved. See fontGate.js for why document.fonts.check alone is
+// not enough to answer it.
+export const EMOJI_FAMILY = 'Noto Color Emoji'
+export const fontReady = () => fontLoaded(EMOJI_FAMILY)
+export const ensureEmojiFont = () => ensureFont(EMOJI_FAMILY)
 
 export function makeGlyphSpec(over = {}) {
   return { kind: 'glyph', glyph: '🍎', count: 1, size: 1, rotation: 0, ...over }

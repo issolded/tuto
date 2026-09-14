@@ -24,10 +24,14 @@
 // the middle of a Turkish puzzle. puzzleGlyphs.fontReady() is the gate that keeps that off the
 // screen, and it covers this font too — see iconFontReady below.
 //
-// Self-hosting is the other half of that answer and is a deployment decision, not a code one:
-// the font is Apache 2.0, and depending on fonts.googleapis.com means the gate closes whenever
-// that host is slow or blocked.
+// Self-hosting is the other half of that answer, and is now done: the font is Apache 2.0 and
+// ships in public/fonts/ with its licence, because depending on fonts.googleapis.com means
+// the gate closes whenever that host is slow or blocked — silently, since a withheld question
+// looks exactly like a session that happened to have none.
 
+import { fontLoaded, ensureFont } from './fontGate.js'
+
+export const ICON_FAMILY = 'Material Symbols Outlined'
 export const ICON_FONT = "'Material Symbols Outlined'"
 
 // Mutually exclusive categories, same rule as the emoji table: a table where one icon belongs
@@ -78,19 +82,10 @@ export function iconGroupOf(name) {
 
 export const ALL_ICONS = Object.values(ICON_GROUPS).flatMap(g => g.icons)
 
-// The font request the page must make. Exported so the lab, the child screen and the preview
-// all ask for exactly the icons the table holds and nothing else — the subset is the reason
-// this costs kilobytes instead of half a megabyte.
-export const ICON_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined'
-  + ':opsz,wght,FILL,GRAD@24,400,0..1,0'
-  + `&icon_names=${[...new Set(ALL_ICONS)].sort().join(',')}`
-  + '&display=block'
-
-// `display=block` rather than `swap` on purpose: swap paints the fallback first, and here the
-// fallback is the icon's own name in English. Block shows nothing until the font arrives,
-// which is the lesser of the two, and fontReady() is what actually decides whether the
-// question is asked at all.
+// The font itself is served by the app, not by fonts.googleapis.com: it is subset to exactly
+// this table by `npm run fonts` and declared in src/styles/puzzleFonts.css. `npm run
+// fonts:check` fails if this table is edited without re-fetching, because a name missing from
+// the subset renders as its own text — see the failure note above.
 
 export const ICON_ATTRIBUTES = ['icon', 'group', 'fill', 'count', 'size', 'rotation']
 
@@ -118,23 +113,11 @@ export function iconKey(spec) {
     + `|r${((spec.rotation % 360) + 360) % 360}`
 }
 
-// See ensureEmojiFont: the gate cannot be consulted until something has asked for the font,
-// and nothing asks for it until the gate opens. The request has to be made explicitly.
-export function ensureIconFont() {
-  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
-  return document.fonts.load(`32px ${ICON_FONT}`)
-    .then(() => iconFontReady())
-    .catch(() => false)
-}
-
-export function iconFontReady() {
-  if (typeof document === 'undefined' || !document.fonts) return false
-  try {
-    return document.fonts.check(`32px ${ICON_FONT}`)
-  } catch {
-    return false
-  }
-}
+// See fontGate.js: document.fonts.check passes an undeclared family, so a missing stylesheet
+// would wave these questions through drawn in the device's fallback — the exact failure the
+// pinning exists to prevent.
+export const iconFontReady = () => fontLoaded(ICON_FAMILY)
+export const ensureIconFont = () => ensureFont(ICON_FAMILY)
 
 export function renderIcon(spec, opts = {}) {
   const px = opts.px || 84

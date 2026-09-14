@@ -1,0 +1,34 @@
+/* The two fonts the puzzle module draws its pictorial figures with, served by us rather than
+   by fonts.googleapis.com.
+
+   Self-hosted for a reason specific to this module: it WITHHOLDS its pictorial questions
+   whenever the font that draws them has not loaded (puzzleGlyphs.fontReady). A third-party
+   host that is slow or blocked therefore does not merely degrade the look — it silently
+   removes a third of the question types and hands a child a smaller session, with no error
+   anywhere to say so.
+
+   The files are subset to exactly the tables in puzzleGlyphs.js and puzzleIcons.js — 52KB and
+   9KB — and are refreshed by `npm run fonts`. `npm run fonts:check` fails if a table has been
+   edited since, because a glyph missing from the subset falls back to the device's own emoji,
+   which is the platform variance the pinning exists to remove.
+
+   font-display: block, not swap. Swap paints the fallback first, and here the fallback is the
+   icon's own name in English — "umbrella" sitting in the middle of a Turkish puzzle. Block
+   shows nothing until the font arrives, which is the lesser of the two; the gate above is what
+   actually decides whether the question is asked at all. */
+
+@font-face {
+  font-family: 'Noto Color Emoji';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/fonts/puzzle-emoji.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/fonts/puzzle-icons.woff2') format('woff2');
+}

@@ -161,6 +161,12 @@ export function normalizeSpec(spec) {
   } else if (s.inner) {
     s.fill = 'none'; s.dots = 0; s.corner = null
   } else if (s.dots > 0 || s.corner) {
+    // A corner mark and a dot cluster are the same ink. Together they read as one crowd: the
+    // lab turned up a five-dot circle carrying a sixth dot in the corner, posed as "which
+    // corner is it in", and nothing on the card said which of the six was the one being asked
+    // about. Dots win, because they are the countable rule and the corner is the positional
+    // one — a figure can carry either, never both.
+    if (s.dots > 0) s.corner = null
     if (s.fill !== 'solid') s.fill = 'none'
   }
   return s
