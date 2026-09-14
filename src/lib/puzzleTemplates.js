@@ -34,7 +34,7 @@ import {
 } from './puzzleFigures'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
-  makeGlyphSpec, glyphKey, groupOf, renderGlyph,
+  makeGlyphSpec, glyphKey, groupOf, renderGlyph, fontReady,
 } from './puzzleGlyphs'
 
 export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy']
@@ -602,10 +602,13 @@ export function generateQuestion(bandKey, type, seed) {
   // easy-to-like ones, and a sheet that is mostly emoji stops being a reasoning test and
   // becomes a picture quiz. One in four, which is roughly the papers' own ratio — the first
   // two of Bond's eight papers carry none at all.
-  const all = [...band.types, ...band.glyphTypes]
+  // A pictorial question is only offered when the font that draws it has arrived. Without the
+  // gate the fallback is not a missing picture but a wrong one — see fontReady().
+  const glyphTypes = fontReady() ? band.glyphTypes : []
+  const all = [...band.types, ...glyphTypes]
   const types = type && all.includes(type)
     ? [type]
-    : (rng(seed + 13)() < 0.25 ? band.glyphTypes : band.types)
+    : (glyphTypes.length && rng(seed + 13)() < 0.25 ? glyphTypes : band.types)
 
   // A rejected draw costs nothing but a retry, so the loop is generous. It has never needed
   // more than a handful of rounds in the lab; the cap exists so a future band that is too

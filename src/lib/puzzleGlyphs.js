@@ -121,6 +121,28 @@ export const ALL_GLYPHS = [
 // above quietly stops holding.
 export const EMOJI_FONT = "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif"
 
+// Whether the pinned font is actually loaded and usable RIGHT NOW.
+//
+// This is not a nicety. The failure mode was found by accident, in a browser that could not
+// reach Google Fonts at all: a glyph whose font has not arrived does not render as a blank or
+// a placeholder, it renders as fallback text — an English word sitting in the middle of a
+// Turkish puzzle, or a device's own emoji, which is the platform variance this module pins the
+// font to avoid. Both are worse than not asking the question.
+//
+// So it is a gate, not a hope: a session builder calls this and drops the pictorial types when
+// it returns false, leaving a sheet of geometric questions, which need no font at all. The
+// same reflex as the two gates on the Telegram side — the rule is enforced in code rather than
+// left to whether the network behaved.
+export function fontReady() {
+  if (typeof document === 'undefined' || !document.fonts) return false
+  try {
+    // A size must be given or check() always answers false; the family is the one that matters.
+    return document.fonts.check(`32px ${EMOJI_FONT.split(',')[0]}`)
+  } catch {
+    return false
+  }
+}
+
 export function makeGlyphSpec(over = {}) {
   return { kind: 'glyph', glyph: '🍎', count: 1, size: 1, rotation: 0, ...over }
 }
