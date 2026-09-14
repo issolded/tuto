@@ -1,10 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
 import {
-  BANDS, BAND_KEYS, TYPES, GLYPH_TYPES, generateQuestion, generateSession, validateQuestion,
+  BANDS, BAND_KEYS, TYPES, GLYPH_TYPES, ICON_TYPES,
+  generateQuestion, generateSession, validateQuestion,
 } from '../lib/puzzleTemplates'
 import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
-import { renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS } from '../lib/puzzleGlyphs'
+import { renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS, fontReady } from '../lib/puzzleGlyphs'
+import {
+  renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, ICON_FONT_HREF, iconFontReady,
+} from '../lib/puzzleIcons'
 
 // Isolated pilot for the non-verbal reasoning engine (src/lib/puzzleFigures.js +
 // src/lib/puzzleTemplates.js). Not linked from any menu, not wired to gems, levels or the
@@ -26,9 +30,9 @@ import { renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS }
 // One entry point for either kind of figure. A glyph is not drawn by us — see the header of
 // puzzleGlyphs.js for why the emoji font has to be pinned, and the <link> below for where.
 const FIG = (spec, px) => ({
-  __html: spec.kind === 'glyph'
-    ? renderGlyph(spec, { px })
-    : renderFigure(spec, { px, bg: '#FFFFFF' }),
+  __html: spec.kind === 'glyph' ? renderGlyph(spec, { px })
+    : spec.kind === 'icon' ? renderIcon(spec, { px })
+      : renderFigure(spec, { px, bg: '#FFFFFF' }),
 })
 
 const C = {
@@ -163,8 +167,13 @@ function VocabularySheet() {
         row(`${key} (${g.tr})`, g.glyphs.map(glyph => makeGlyphSpec({ glyph }))))}
       {Object.entries(GLYPH_RELATIONS).map(([key, rel]) =>
         row(`${key} (${rel.tr})`, rel.pairs.flat().map(glyph => makeGlyphSpec({ glyph }))))}
+      <div style={{ height: 8 }} />
+      {Object.entries(ICON_GROUPS).map(([key, g]) =>
+        row(`${key} (${g.tr})`, g.icons.flatMap(icon =>
+          ICON_FILLS.map(fill => makeIconSpec({ icon, fill })))))}
       <div style={{ fontSize: 11, color: C.dim, paddingTop: 6 }}>
-        {ALL_GLYPHS.length} glyphs in the table · font pinned to Noto Color Emoji
+        {ALL_GLYPHS.length} emoji (Noto Color Emoji) · {ALL_ICONS.length} icons × FILL 0/1
+        (Material Symbols) · both pinned
       </div>
     </div>
   )
@@ -185,6 +194,16 @@ export default function PuzzleLab() {
   const [seed, setSeed] = useState(1)
   const [audit, setAudit] = useState(null)
   const [view, setView] = useState('questions')
+  // Re-read after the fonts settle: the gate is evaluated at generation time, so a sheet built
+  // before they arrive is correctly all-geometric, and this line says why.
+  const [fontsOk, setFontsOk] = useState({ emoji: fontReady(), icon: iconFontReady() })
+  useEffect(() => {
+    let alive = true
+    document.fonts?.ready?.then(() => {
+      if (alive) setFontsOk({ emoji: fontReady(), icon: iconFontReady() })
+    })
+    return () => { alive = false }
+  }, [])
 
   const questions = useMemo(() => {
     if (type) {
@@ -192,7 +211,12 @@ export default function PuzzleLab() {
         .filter(Boolean)
     }
     return generateSession(band, 12, seed * 1000)
-  }, [band, type, seed])
+    // `fontsOk` is not read in here, but generateQuestion reads the font gate at CALL time, so
+    // the same arguments produce a different sheet once the fonts arrive. The dependency is
+    // what re-runs this then; without it the page keeps showing the all-geometric sheet it
+    // built before they loaded, which is the bug this line exists to prevent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [band, type, seed, fontsOk])
 
   // The audit is the part that makes this more than a preview: it runs the same gate the
   // child path runs, over a few thousand draws, and reports what got through. A number here
@@ -221,7 +245,8 @@ export default function PuzzleLab() {
     }}>
       {/* Pins the emoji font. Without it the glyph figures fall back to the device's own set,
           and the answer key stops describing what the child is looking at. */}
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=block" />
+      <link rel="stylesheet" href={ICON_FONT_HREF} />
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>🧩 Puzzle engine — pilot</h1>
         <div style={{ fontSize: 12, color: C.dim, marginBottom: 18 }}>
@@ -234,8 +259,8 @@ export default function PuzzleLab() {
           ))}
           <span style={{ width: 14 }} />
           <button style={btn(type === '')} onClick={() => setType('')}>all types</button>
-          {[...TYPES, ...GLYPH_TYPES].map(ty => {
-            const on = cfg.types.includes(ty) || cfg.glyphTypes.includes(ty)
+          {[...TYPES, ...GLYPH_TYPES, ...ICON_TYPES].map(ty => {
+            const on = cfg.types.includes(ty) || cfg.glyphTypes.includes(ty) || cfg.iconTypes.includes(ty)
             return (
               <button
                 key={ty}
@@ -267,6 +292,16 @@ export default function PuzzleLab() {
           {' '}dots: {cfg.dots.join('/')} ·
           {' '}sequence: length {cfg.seqLength}, period {cfg.seqPeriod} ·
           {' '}glyph types: {cfg.glyphTypes.join(', ')}
+        </div>
+
+        <div style={{ fontSize: 11, marginBottom: 14, color: C.dim }}>
+          fonts —{' '}
+          <span style={{ color: fontsOk.emoji ? C.ok : C.bad }}>
+            emoji {fontsOk.emoji ? 'loaded' : 'MISSING → glyph questions withheld'}
+          </span>{' · '}
+          <span style={{ color: fontsOk.icon ? C.ok : C.bad }}>
+            icons {fontsOk.icon ? 'loaded' : 'MISSING → icon questions withheld'}
+          </span>
         </div>
 
         {audit && (

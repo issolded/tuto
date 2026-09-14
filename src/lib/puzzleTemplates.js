@@ -36,6 +36,10 @@ import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph, fontReady,
 } from './puzzleGlyphs'
+import {
+  ICON_GROUPS, ICON_GROUP_KEYS, ICON_ATTRIBUTES, ICON_FILLS,
+  makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady,
+} from './puzzleIcons'
 
 export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy']
 
@@ -43,6 +47,12 @@ export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-c
 // asks what a child knows about the world, not what they can see in a pattern — and the two
 // should stay separable in the attempt log and in what a parent is told.
 export const GLYPH_TYPES = ['glyph-odd', 'glyph-belongs', 'glyph-analogy']
+
+// The line-drawn pictorial family. Separate from GLYPH_TYPES because it is drawn from a
+// different font with a different vocabulary — and because it can do something emoji cannot:
+// `icon-sequence` runs on the FILL axis, the same outline-to-solid alternation the geometric
+// sequences use, on a picture of a real thing.
+export const ICON_TYPES = ['icon-odd', 'icon-belongs', 'icon-sequence']
 
 export const STEM_KEYS = {
   'odd-one-out': 'puzzle_stem_odd',
@@ -54,11 +64,20 @@ export const STEM_KEYS = {
   'glyph-odd': 'puzzle_stem_odd',
   'glyph-belongs': 'puzzle_stem_belongs',
   'glyph-analogy': 'puzzle_stem_analogy',
+  'icon-odd': 'puzzle_stem_odd',
+  'icon-belongs': 'puzzle_stem_belongs',
+  'icon-sequence': 'puzzle_stem_next',
 }
 
 // One fingerprint for either kind of figure, so the validator does not care which it is
 // holding. The two guarantees behind them differ — see the header of puzzleGlyphs.js.
-export const figureKey = (spec) => (spec.kind === 'glyph' ? glyphKey(spec) : geometryKey(spec))
+export const figureKey = (spec) =>
+  (spec.kind === 'glyph' ? glyphKey(spec)
+    : spec.kind === 'icon' ? iconKey(spec)
+      : geometryKey(spec))
+
+const attributesFor = (spec) =>
+  (spec.kind === 'glyph' ? GLYPH_ATTRIBUTES : spec.kind === 'icon' ? ICON_ATTRIBUTES : ATTRIBUTES)
 
 // The age dial. Every field here is a difficulty decision, and every one of them is the same
 // decision at every age — only its value moves.
@@ -78,6 +97,7 @@ export const BANDS = {
   '5-6': {
     types: ['odd-one-out', 'identical', 'sequence'],
     glyphTypes: ['glyph-odd', 'glyph-belongs'],   // relations wait for 7-8
+    iconTypes: ICON_TYPES,
     attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'hexagon'],
@@ -95,6 +115,7 @@ export const BANDS = {
   '7-8': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete'],
     glyphTypes: GLYPH_TYPES,
+    iconTypes: ICON_TYPES,
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
@@ -112,6 +133,7 @@ export const BANDS = {
   '9-11': {
     types: TYPES,
     glyphTypes: GLYPH_TYPES,
+    iconTypes: ICON_TYPES,
     attributes: ATTRIBUTES,
     noise: 2,
     shapes: SHAPES,
@@ -504,6 +526,86 @@ function genGlyphAnalogy(r, band, seed) {
   }
 }
 
+// ── icon generators ───────────────────────────────────────────────────────────
+
+function genIconCategory(r, band, seed, type) {
+  const [inKey, outKey] = shuffle(r, ICON_GROUP_KEYS.slice())
+  const inSet = shuffle(r, ICON_GROUPS[inKey].icons.slice())
+  const outSet = shuffle(r, ICON_GROUPS[outKey].icons.slice())
+  if (inSet.length < 4 || outSet.length < 3) return null
+
+  // One fill across the whole set. Letting it vary here would put a second attribute in play
+  // on a question whose rule is category, and the validator would rightly call that ambiguous.
+  const fill = pick(r, ICON_FILLS)
+  const spec = (icon) => makeIconSpec({ icon, fill, group: iconGroupOf(icon) })
+
+  if (type === 'icon-belongs') {
+    const prompt = inSet.slice(0, 3).map(spec)
+    const options = [spec(inSet[3]), ...outSet.slice(0, 3).map(spec)]
+    const order = shuffle(r, [0, 1, 2, 3])
+    return {
+      seed, type, layout: 'row', prompt,
+      options: order.map(i => ({ spec: options[i], why: i === 0 ? null : 'group' })),
+      correct_index: order.indexOf(0),
+      rule: { attr: 'group', from: inKey, to: outKey },
+    }
+  }
+
+  const oddIndex = Math.floor(r() * 4)
+  const specs = inSet.slice(0, 4).map(spec)
+  specs[oddIndex] = spec(outSet[0])
+  return {
+    seed, type: 'icon-odd', layout: 'options-only', prompt: [],
+    options: specs.map((s, i) => ({ spec: s, why: i === oddIndex ? null : 'group' })),
+    correct_index: oddIndex,
+    rule: { attr: 'group', from: inKey, to: outKey },
+  }
+}
+
+// The one the emoji family cannot do. A picture of a real thing, alternating outline and
+// solid — the same device the 5-6 papers open with, on a candle instead of a circle.
+function genIconSequence(r, band, seed) {
+  const group = pick(r, ICON_GROUP_KEYS)
+  const icons = shuffle(r, ICON_GROUPS[group].icons.slice())
+  if (icons.length < 2) return null
+
+  // Two rules are offered and one is picked, because a sheet where every icon sequence is the
+  // same alternation reads as one question asked four times.
+  const onFill = r() < 0.6
+  const n = band.seqLength
+  const at = (i) => (onFill
+    ? makeIconSpec({ icon: icons[0], fill: ICON_FILLS[i % 2], group })
+    : makeIconSpec({ icon: icons[i % 2], fill: 0, group }))
+
+  const prompt = Array.from({ length: n }, (_, i) => at(i))
+  const answer = at(n)
+  const near = at(n - 1)
+
+  const options = [{ spec: answer, why: null }, { spec: near, why: onFill ? 'fill' : 'icon' }]
+  const alt = icons[2] ?? icons[1]
+  options.push({
+    spec: onFill
+      ? makeIconSpec({ icon: alt, fill: answer.fill, group })
+      : makeIconSpec({ icon: answer.icon, fill: 1, group }),
+    why: onFill ? 'icon' : 'fill',
+  })
+  options.push({
+    spec: onFill
+      ? makeIconSpec({ icon: alt, fill: near.fill, group })
+      : makeIconSpec({ icon: near.icon, fill: 1, group }),
+    why: 'both',
+  })
+  if (new Set(options.map(o => iconKey(o.spec))).size !== 4) return null
+
+  const order = shuffle(r, [0, 1, 2, 3])
+  return {
+    seed, type: 'icon-sequence', layout: 'row', prompt,
+    options: order.map(i => options[i]),
+    correct_index: order.indexOf(0),
+    rule: { attr: onFill ? 'fill' : 'icon', from: null, to: null },
+  }
+}
+
 function shuffle(r, arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(r() * (i + 1));
@@ -522,6 +624,9 @@ const GENERATORS = {
   'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
   'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),
   'glyph-analogy': genGlyphAnalogy,
+  'icon-odd': (r, band, seed) => genIconCategory(r, band, seed, 'icon-odd'),
+  'icon-belongs': (r, band, seed) => genIconCategory(r, band, seed, 'icon-belongs'),
+  'icon-sequence': genIconSequence,
 }
 
 // ── validation ────────────────────────────────────────────────────────────────
@@ -558,13 +663,13 @@ export function validateQuestion(q) {
   // Odd-one-out is the only type whose soundness is a property of the option SET rather than
   // of the answer: exactly one attribute may split 3-1, and no other attribute may isolate a
   // single option, or the question has two defensible answers.
-  if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-belongs'].includes(q.type)) {
+  if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-belongs', 'icon-odd', 'icon-belongs'].includes(q.type)) {
     const specs = q.options.map(o => o.spec)
     let splits = 0
     // Glyph figures carry none of the geometric attributes, so counting over the shape list
     // would find one undefined value four times, register no split at all, and fail every
     // glyph question for the wrong reason.
-    const attrs = specs[0].kind === 'glyph' ? GLYPH_ATTRIBUTES : ATTRIBUTES
+    const attrs = attributesFor(specs[0])
     for (const attr of attrs) {
       const counts = {}
       // `inner` holds a node, not a scalar, and String() flattens every one of them to
@@ -578,11 +683,11 @@ export function validateQuestion(q) {
       if (singles === 1 && Object.keys(counts).length === 2) splits++
       // `glyph` is the identity of the picture, so in a glyph question every option differs on
       // it by design — that is not an ambiguity, it is what makes four distinct pictures.
-      else if (singles > 0 && Object.keys(counts).length > 2 && attr !== 'glyph') {
+      else if (singles > 0 && Object.keys(counts).length > 2 && attr !== 'glyph' && attr !== 'icon') {
         return `attribute ${attr} isolates an option`
       }
     }
-    if ((q.type === 'odd-one-out' || q.type === 'glyph-odd') && splits !== 1) {
+    if (['odd-one-out', 'glyph-odd', 'icon-odd'].includes(q.type) && splits !== 1) {
       return `${splits} attributes split 3-1`
     }
   }
@@ -605,10 +710,12 @@ export function generateQuestion(bandKey, type, seed) {
   // A pictorial question is only offered when the font that draws it has arrived. Without the
   // gate the fallback is not a missing picture but a wrong one — see fontReady().
   const glyphTypes = fontReady() ? band.glyphTypes : []
-  const all = [...band.types, ...glyphTypes]
+  const iconTypes = iconFontReady() ? band.iconTypes : []
+  const pictorial = [...glyphTypes, ...iconTypes]
+  const all = [...band.types, ...pictorial]
   const types = type && all.includes(type)
     ? [type]
-    : (glyphTypes.length && rng(seed + 13)() < 0.25 ? glyphTypes : band.types)
+    : (pictorial.length && rng(seed + 13)() < 0.3 ? pictorial : band.types)
 
   // A rejected draw costs nothing but a retry, so the loop is generous. It has never needed
   // more than a handful of rounds in the lab; the cap exists so a future band that is too
@@ -638,4 +745,4 @@ export function generateSession(bandKey, count = 10, seed = Date.now()) {
   return out
 }
 
-export { renderFigure, renderGlyph }
+export { renderFigure, renderGlyph, renderIcon }
