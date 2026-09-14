@@ -368,10 +368,18 @@ function genBelongs(r, band, seed) {
   const promptKeys = new Set(prompt.map(geometryKey))
   if (promptKeys.has(geometryKey(specs[keepIndex]))) return null
 
+  // Shuffled, and that is not cosmetic. The prompt and the options are dealt the same noise
+  // patterns over the same indices, so the option at slot k carried the same combination as
+  // prompt[k] — and whenever the kept option was one of the first three, the guard above threw
+  // the whole draw away. Only slot 3 reliably survived. Measured over 4000 draws the answer
+  // landed 0% / 36% / 15% / 49%: a child who learned "never the first one" would have scored
+  // well above chance without reading a single figure, and the attempt log would have recorded
+  // that as understanding.
+  const order = shuffle(r, [0, 1, 2, 3])
   return {
     seed, type: 'belongs', layout: 'row', prompt,
-    options: specs.map((spec, i) => ({ spec, why: i === keepIndex ? null : ruleAttr })),
-    correct_index: keepIndex,
+    options: order.map(i => ({ spec: specs[i], why: i === keepIndex ? null : ruleAttr })),
+    correct_index: order.indexOf(keepIndex),
     rule: { attr: ruleAttr, from: base[ruleAttr], to: oddValue },
   }
 }
