@@ -428,6 +428,17 @@ const STRINGS = {
                         tr: 'Matematik gücünü artırma zamanı! ⚡\nHaydi göster kendini!' },
   math_welcome_older: { en: "Ready for a challenge? 🔥\nLet's see those math skills!",
                         tr: 'Zorlu bir şeye hazır mısın? 🔥\nBakalım matematiğin nasıl!' },
+
+  // ── Puzzles: one stem per question type ─────────────────────────────────────
+  // The six stems are the whole text of the module — the figures carry everything else, which
+  // is the point of a non-verbal test. They live here rather than with the generator so the
+  // generator stays free of language entirely: it returns a stem_key, the screen reads it.
+  puzzle_stem_odd:    { en: 'Which one is different?',        tr: 'Hangisi farklı?' },
+  puzzle_stem_same:   { en: 'Which one is the same as this?', tr: 'Hangisi bunun aynısı?' },
+  puzzle_stem_next:   { en: 'Which one comes next?',          tr: 'Sırada hangisi gelir?' },
+  puzzle_stem_belongs:{ en: 'Which one belongs with these?',  tr: 'Hangisi bunlarla birlikte olur?' },
+  puzzle_stem_pattern:{ en: 'Which one completes the pattern?', tr: 'Örüntüyü hangisi tamamlar?' },
+  puzzle_stem_analogy:{ en: 'Which one finishes it the same way?', tr: 'Hangisi aynı şekilde tamamlar?' },
 }
 
 // ── Adding a language ────────────────────────────────────────────────────────

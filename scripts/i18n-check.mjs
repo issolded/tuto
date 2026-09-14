@@ -30,6 +30,9 @@ const EXPORTS = ['t', 'translator', 'childLang', 'formatDay', 'localeFor', 'LANG
 const NOT_CHILD_FACING = [
   'lib/gemini.js', 'lib/supabase.js', 'lib/mathTemplates.js', 'lib/mathCurriculum.js',
   'screens/Parent', 'lib/parentUI.jsx', 'screens/TaskSettings.jsx', 'screens/ReadingFlow.jsx', 'screens/ChildPin.jsx', 'screens/FamilySetup.jsx', 'main.jsx', 'App.jsx',
+  // Developer sandboxes. No child reaches them — they are unlisted routes whose whole content
+  // is attribute names and audit counters, and translating that would hide what it reports.
+  'screens/PuzzleLab.jsx',
 ]
 
 function walk(dir, out = []) {
