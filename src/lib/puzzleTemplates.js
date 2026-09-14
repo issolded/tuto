@@ -29,7 +29,7 @@
 // that fails is discarded and regenerated; a child never sees one.
 
 import {
-  SHAPES, FILLS, ROTATIONS, CORNERS, SIZES, ATTRIBUTES,
+  SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, ATTRIBUTES,
   makeSpec, geometryKey, attrVisible, renderFigure,
 } from './puzzleFigures'
 
@@ -47,6 +47,12 @@ export const STEM_KEYS = {
 // The age dial. Every field here is a difficulty decision, and every one of them is the same
 // decision at every age — only its value moves.
 //
+// A pool may REPEAT a value to weight it. `half` and `inner` are structural devices that take
+// over the whole interior, and drawn from a flat pool they landed on two questions out of
+// three — a sheet where nearly every figure is split or nested, which is not what the papers
+// look like. Repeating `null` is how a band says "use this sparingly" without any generator
+// needing to know which attributes are the loud ones.
+//
 // `noise` is the attribute count that varies among the options WITHOUT carrying the rule,
 // split evenly so it can never single an option out. Without it, three of the four figures in
 // an odd-one-out are literally identical, which both looks wrong and gives the answer away by
@@ -55,12 +61,15 @@ export const STEM_KEYS = {
 export const BANDS = {
   '5-6': {
     types: ['odd-one-out', 'identical', 'sequence'],
-    attributes: ['shape', 'fill', 'dots', 'corner'],
+    attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'hexagon'],
     fills: ['none', 'solid'],
     rotations: [0, 90, 180, 270],
     sizes: [1],
+    stretches: [1],           // "same sides, different proportions" is a 7-8 idea
+    halves: [null, null, null, 'tl', 'br'],
+    inners: [null, null, null, ...INNER_NODES.slice(1, 4)],
     dots: [0, 2, 4],          // a 2-vs-4 difference is countable at a glance; 3-vs-4 is not
     corners: [null, 'tl', 'br'],
     seqPeriod: 2,             // dolu / boş / dolu / boş — the alternation the 5-6 papers open on
@@ -68,12 +77,15 @@ export const BANDS = {
   },
   '7-8': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete'],
-    attributes: ['shape', 'fill', 'rotation', 'dots', 'corner', 'size'],
+    attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
     fills: ['none', 'solid', 'hatch-45', 'hatch-90'],
     rotations: [0, 90, 180, 270],
     sizes: [0.82, 1],
+    stretches: [1, 1, 0.62],
+    halves: [null, null, ...HALVES.slice(1)],
+    inners: [null, null, ...INNER_NODES.slice(1)],
     dots: [0, 1, 2, 3],
     corners: [null, 'tl', 'tr', 'bl', 'br'],
     seqPeriod: 3,
@@ -87,6 +99,9 @@ export const BANDS = {
     fills: FILLS,
     rotations: ROTATIONS,
     sizes: SIZES,
+    stretches: STRETCHES,
+    halves: [null, ...HALVES.slice(1)],
+    inners: [null, ...INNER_NODES.slice(1)],
     dots: [0, 1, 2, 3, 4, 5],
     corners: CORNERS,
     seqPeriod: 4,
@@ -118,9 +133,14 @@ function rng(seed) {
 }
 
 const pick = (r, arr) => arr[Math.floor(r() * arr.length)]
+
+// Attribute values are mostly scalars, but `inner` is a node. Anywhere values are counted or
+// compared as strings, they go through here.
+const valueKey = (v) => (v && typeof v === 'object' ? JSON.stringify(v) : String(v))
 const pool = (band, attr) => ({
   shape: band.shapes, fill: band.fills, rotation: band.rotations,
-  size: band.sizes, dots: band.dots, corner: band.corners,
+  size: band.sizes, stretch: band.stretches, half: band.halves,
+  inner: band.inners, dots: band.dots, corner: band.corners,
 }[attr])
 
 // Another value for `attr` that is guaranteed to change the picture of `spec`. Returns null
@@ -139,6 +159,9 @@ function randomSpec(r, band) {
     fill: pick(r, band.fills),
     rotation: pick(r, band.rotations),
     size: pick(r, band.sizes),
+    stretch: pick(r, band.stretches),
+    half: pick(r, band.halves),
+    inner: pick(r, band.inners),
     dots: pick(r, band.dots),
     corner: pick(r, band.corners),
   })
@@ -423,7 +446,13 @@ export function validateQuestion(q) {
     let splits = 0
     for (const attr of ATTRIBUTES) {
       const counts = {}
-      for (const s of specs) counts[String(s[attr])] = (counts[String(s[attr])] || 0) + 1
+      // `inner` holds a node, not a scalar, and String() flattens every one of them to
+      // "[object Object]" — which would have made four different nested figures look like one
+      // value and quietly disabled this whole check for the attribute that needs it most.
+      for (const s of specs) {
+        const k = valueKey(s[attr])
+        counts[k] = (counts[k] || 0) + 1
+      }
       const singles = Object.values(counts).filter(c => c === 1).length
       if (singles === 1 && Object.keys(counts).length === 2) splits++
       else if (singles > 0 && Object.keys(counts).length > 2) return `attribute ${attr} isolates an option`

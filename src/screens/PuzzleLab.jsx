@@ -3,7 +3,7 @@ import { childLang, t } from '../lib/i18n'
 import {
   BANDS, BAND_KEYS, TYPES, generateQuestion, generateSession, validateQuestion,
 } from '../lib/puzzleTemplates'
-import { renderFigure, makeSpec, SHAPES, FILLS } from '../lib/puzzleFigures'
+import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
 
 // Isolated pilot for the non-verbal reasoning engine (src/lib/puzzleFigures.js +
 // src/lib/puzzleTemplates.js). Not linked from any menu, not wired to gems, levels or the
@@ -131,18 +131,26 @@ function QuestionCard({ q, lang }) {
 // The claim the whole module rests on, printed: every picture the renderer is capable of
 // producing at one size, in one place. Anything a child ever sees is one of these, rotated.
 function VocabularySheet() {
+  const row = (label, specs) => (
+    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ width: 96, fontSize: 12, color: C.dim }}>{label}</span>
+      {specs.map((s, i) => <Figure key={i} spec={s} px={54} />)}
+    </div>
+  )
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      {SHAPES.map(shape => (
-        <div key={shape} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ width: 78, fontSize: 12, color: C.dim }}>{shape}</span>
-          {FILLS.map(fill => <Figure key={fill} spec={makeSpec({ shape, fill })} px={56} />)}
-          {[1, 3, 5].map(dots => (
-            <Figure key={`d${dots}`} spec={makeSpec({ shape, dots })} px={56} />
-          ))}
-          <Figure spec={makeSpec({ shape, corner: 'tl' })} px={56} />
-        </div>
-      ))}
+      {SHAPES.map(shape => row(shape, [
+        ...FILLS.map(fill => makeSpec({ shape, fill })),
+        ...[1, 3, 5].map(dots => makeSpec({ shape, dots })),
+        makeSpec({ shape, corner: 'tl' }),
+        makeSpec({ shape, fill: 'solid', dots: 2 }),
+      ]))}
+      {row('half', HALVES.filter(Boolean).flatMap(half =>
+        ['circle', 'square', 'triangle', 'pentagon'].map(shape => makeSpec({ shape, half }))))}
+      {row('inner', INNER_NODES.filter(Boolean).flatMap(inner =>
+        ['circle', 'square'].map(shape => makeSpec({ shape, inner }))))}
+      {row('stretch', STRETCHES.flatMap(stretch =>
+        SHAPES.map(shape => makeSpec({ shape, stretch }))))}
     </div>
   )
 }
@@ -232,6 +240,9 @@ export default function PuzzleLab() {
           {' '}noise: {cfg.noise} ·
           {' '}fills: {cfg.fills.length} ·
           {' '}rotations: {cfg.rotations.join('/')} ·
+          {' '}halves: {cfg.halves.length} ·
+          {' '}inners: {cfg.inners.length} ·
+          {' '}stretches: {cfg.stretches.join('/')} ·
           {' '}dots: {cfg.dots.join('/')} ·
           {' '}sequence: length {cfg.seqLength}, period {cfg.seqPeriod}
         </div>
