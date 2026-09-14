@@ -94,6 +94,30 @@ export const ICON_ATTRIBUTES = ['icon', 'group', 'fill', 'count', 'size', 'rotat
 // a child cannot see is the failure this engine spends most of its effort avoiding.
 export const ICON_FILLS = [0, 1]
 
+// …and for eight of these icons the FILL axis does nothing at all: the font has no solid form
+// for them, so FILL 0 and FILL 1 draw the identical glyph. Sequences were being built as
+// outline → solid → outline → solid in which every single figure looked the same, and the key
+// waved them through because the SPECS differed.
+//
+// Measured rather than guessed, by rasterising every icon at both ends of the axis and
+// comparing pixel by pixel (96px, luminance, share of inked pixels differing). The eight below
+// came back at 0%; the rest range from 20% to 79%. To redo it after editing the table, render
+// each icon at FILL 0 and FILL 1 into a canvas and compare — and note the font must be
+// EMBEDDED in the SVG, because a data-URI SVG is an isolated document with no access to the
+// page's fonts, and without that every icon reads 0% and the measurement looks unanimous.
+const FILL_DOES_NOTHING = new Set([
+  'flight', 'directions_bike', 'ac_unit', 'umbrella',
+  'grass', 'music_note', 'piano', 'sports_soccer',
+])
+
+// Making it a fact about the PICTURE rather than a rule for generators to remember is what
+// makes it safe: with fill pinned, two options that differed only in fill now produce the same
+// key, validateQuestion rejects the question as "two options draw the same picture", and the
+// draw is retried. Nothing else had to change.
+export function normalizeIconSpec(spec) {
+  return FILL_DOES_NOTHING.has(spec.icon) && spec.fill !== 0 ? { ...spec, fill: 0 } : spec
+}
+
 const ICON_LAYOUT = {
   1: [[50, 50]],
   2: [[32, 50], [68, 50]],
@@ -108,7 +132,8 @@ export function makeIconSpec(over = {}) {
 
 // Like glyphKey, this is a contract with a pinned font rather than a measurement of drawn
 // geometry — the identity of the icon plus the transforms we apply ourselves.
-export function iconKey(spec) {
+export function iconKey(rawSpec) {
+  const spec = normalizeIconSpec(rawSpec)
   return `i:${spec.icon}|f${spec.fill}|n${spec.count}|s${spec.size}`
     + `|r${((spec.rotation % 360) + 360) % 360}`
 }
@@ -119,7 +144,8 @@ export function iconKey(spec) {
 export const iconFontReady = () => fontLoaded(ICON_FAMILY)
 export const ensureIconFont = () => ensureFont(ICON_FAMILY)
 
-export function renderIcon(spec, opts = {}) {
+export function renderIcon(rawSpec, opts = {}) {
+  const spec = normalizeIconSpec(rawSpec)
   const px = opts.px || 84
   const size = (ICON_FONT_SIZE[spec.count] || 34) * spec.size
   const style = `font-family:${ICON_FONT};font-variation-settings:'FILL' ${spec.fill},'wght' 400,'GRAD' 0,'opsz' 24;font-feature-settings:'liga';`
@@ -128,6 +154,7 @@ export function renderIcon(spec, opts = {}) {
       `<text x="${x}" y="${y}" font-size="${size.toFixed(1)}" text-anchor="middle"`
       + ` dominant-baseline="central" fill="currentColor" style="${style}">${spec.icon}</text>`)
     .join('')
-  return `<svg viewBox="0 0 100 100" width="${px}" height="${px}" aria-hidden="true" focusable="false">`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}"`
+    + ' aria-hidden="true" focusable="false">'
     + `<g transform="rotate(${spec.rotation} 50 50)">${marks}</g></svg>`
 }

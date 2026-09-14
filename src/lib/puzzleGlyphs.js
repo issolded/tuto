@@ -179,6 +179,7 @@ export function renderGlyph(spec, opts = {}) {
       `<text x="${x}" y="${y}" font-size="${size.toFixed(1)}" text-anchor="middle"`
       + ` dominant-baseline="central" font-family="${EMOJI_FONT.replace(/"/g, '&quot;')}">${spec.glyph}</text>`)
     .join('')
-  return `<svg viewBox="0 0 100 100" width="${px}" height="${px}" aria-hidden="true" focusable="false">`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}"`
+    + ' aria-hidden="true" focusable="false">'
     + `<g transform="rotate(${spec.rotation} 50 50)">${marks}</g></svg>`
 }

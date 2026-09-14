@@ -256,8 +256,18 @@ function fillKey(fill, size, root) {
 // construction rather than by two implementations happening to match.
 function collect(spec, radius, depth, out) {
   const pts = shapePoints(spec.shape, radius, spec.stretch)
-  if (pts) for (const p of pts) out.points.push([`s${depth}`, p])
-  else out.points.push([`o${depth}`, [radius, 0]])
+  if (pts) {
+    for (const p of pts) out.points.push([`s${depth}`, p])
+  } else {
+    // A true circle has no orientation, so it contributes a SIZE and not a position. Writing it
+    // as the point [radius, 0] and letting the transform rotate it — which is what this did —
+    // gave a rotationally symmetric figure a different key at every angle. attrVisible then
+    // reported `rotation` as visible on a circle, generators built rules on it, and a child
+    // could be asked which one had been turned when nothing on the card had turned at all.
+    // Found by rasterising options and comparing them pixel by pixel; every check made of
+    // specs agreed the four were different.
+    out.marks.push(`o${depth}@${radius.toFixed(1)}`)
+  }
   out.fills.push(`${depth}:${fillKey(spec.fill, spec.size, out.root)}`)
 
   if (spec.half) {
@@ -284,9 +294,10 @@ function collect(spec, radius, depth, out) {
 // fields say.
 export function geometryKey(rawSpec) {
   const spec = normalizeSpec(rawSpec)
-  const out = { points: [], fills: [], root: spec }
+  const out = { points: [], marks: [], fills: [], root: spec }
   collect(spec, 38 * spec.size, 0, out)
   const parts = out.points.map(([tag, p]) => tag + fmt(transform(p, spec)))
+  parts.push(...out.marks)   // orientation-free; never transformed
   parts.sort()
   return `${out.fills.join('/')}|${dotRadius(spec).toFixed(1)}|${parts.join(' ')}`
 }
@@ -368,11 +379,17 @@ function nodeMarkup(spec, radius, ctx) {
 
 // Returns an SVG string rather than React elements so the same module drives the lab, the
 // child screen and the standalone preview page without a React dependency.
+//
+// The xmlns matters even though nothing reads it when the markup is injected into HTML: without
+// it the output is only valid INLINE, and a browser refuses to load it as an image. That is
+// what a standalone SVG document needs to be rasterised — which is how the figures are checked
+// for being visually distinguishable, a thing geometryKey cannot judge.
 export function renderFigure(rawSpec, opts = {}) {
   const spec = normalizeSpec(rawSpec)
   const px = opts.px || 84
   const ctx = { bg: opts.bg || '#FFFFFF' }
   const tf = `rotate(${spec.rotation} 50 50)${spec.flip ? ' translate(100 0) scale(-1 1)' : ''}`
-  return `<svg viewBox="0 0 100 100" width="${px}" height="${px}" aria-hidden="true" focusable="false">`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}"`
+    + ' aria-hidden="true" focusable="false">'
     + `<g transform="${tf}">${nodeMarkup(spec, 38 * spec.size, ctx)}</g></svg>`
 }
