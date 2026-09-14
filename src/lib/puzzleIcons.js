@@ -118,6 +118,15 @@ export function iconKey(spec) {
     + `|r${((spec.rotation % 360) + 360) % 360}`
 }
 
+// See ensureEmojiFont: the gate cannot be consulted until something has asked for the font,
+// and nothing asks for it until the gate opens. The request has to be made explicitly.
+export function ensureIconFont() {
+  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
+  return document.fonts.load(`32px ${ICON_FONT}`)
+    .then(() => iconFontReady())
+    .catch(() => false)
+}
+
 export function iconFontReady() {
   if (typeof document === 'undefined' || !document.fonts) return false
   try {

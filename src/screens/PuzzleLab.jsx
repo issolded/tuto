@@ -5,9 +5,12 @@ import {
   generateQuestion, generateSession, validateQuestion,
 } from '../lib/puzzleTemplates'
 import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
-import { renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS, fontReady } from '../lib/puzzleGlyphs'
 import {
-  renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, ICON_FONT_HREF, iconFontReady,
+  renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS, fontReady, ensureEmojiFont,
+} from '../lib/puzzleGlyphs'
+import {
+  renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, ICON_FONT_HREF,
+  iconFontReady, ensureIconFont,
 } from '../lib/puzzleIcons'
 
 // Isolated pilot for the non-verbal reasoning engine (src/lib/puzzleFigures.js +
@@ -199,8 +202,11 @@ export default function PuzzleLab() {
   const [fontsOk, setFontsOk] = useState({ emoji: fontReady(), icon: iconFontReady() })
   useEffect(() => {
     let alive = true
-    document.fonts?.ready?.then(() => {
-      if (alive) setFontsOk({ emoji: fontReady(), icon: iconFontReady() })
+    // Ask for both fonts first. Waiting on document.fonts.ready alone resolves without ever
+    // fetching them, because at that point nothing on the page has used one — see
+    // ensureEmojiFont for the deadlock that creates.
+    Promise.all([ensureEmojiFont(), ensureIconFont()]).then(([emoji, icon]) => {
+      if (alive) setFontsOk({ emoji, icon })
     })
     return () => { alive = false }
   }, [])
@@ -291,7 +297,7 @@ export default function PuzzleLab() {
           {' '}stretches: {cfg.stretches.join('/')} ·
           {' '}dots: {cfg.dots.join('/')} ·
           {' '}sequence: length {cfg.seqLength}, period {cfg.seqPeriod} ·
-          {' '}glyph types: {cfg.glyphTypes.join(', ')}
+          {' '}sources: {Object.entries(cfg.sources).map(([k, v]) => `${k} ${v}`).join(' / ')}
         </div>
 
         <div style={{ fontSize: 11, marginBottom: 14, color: C.dim }}>

@@ -143,6 +143,21 @@ export function fontReady() {
   }
 }
 
+// A font is only fetched when something on the page actually USES it, which sets a deadlock
+// against the gate above — and the preview page walked straight into it: no pictorial questions
+// were offered because the font was not loaded, and the font was never loaded because nothing
+// on the page used it. The gate answered false forever and the whole family silently vanished
+// from every sheet, with no error anywhere.
+//
+// So the load is requested explicitly, once, before the gate is ever consulted. A screen that
+// shows puzzles calls this on mount and re-reads the gate when the promise settles.
+export function ensureEmojiFont() {
+  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
+  return document.fonts.load(`32px ${EMOJI_FONT.split(',')[0]}`)
+    .then(() => fontReady())
+    .catch(() => false)
+}
+
 export function makeGlyphSpec(over = {}) {
   return { kind: 'glyph', glyph: '🍎', count: 1, size: 1, rotation: 0, ...over }
 }

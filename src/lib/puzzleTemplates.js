@@ -88,6 +88,11 @@ const attributesFor = (spec) =>
 // look like. Repeating `null` is how a band says "use this sparingly" without any generator
 // needing to know which attributes are the loud ones.
 //
+// `sources` is the mix of vocabularies, as plain weights: 7/2/1 reads as "of ten questions,
+// seven are shapes, two icons, one emoji". Written as a ratio you can hold against the book
+// rather than a probability — the papers open with two entirely abstract sets and bring
+// pictures in later, and the 9-11 band tilts further that way for the same reason.
+//
 // `noise` is the attribute count that varies among the options WITHOUT carrying the rule,
 // split evenly so it can never single an option out. Without it, three of the four figures in
 // an odd-one-out are literally identical, which both looks wrong and gives the answer away by
@@ -98,6 +103,7 @@ export const BANDS = {
     types: ['odd-one-out', 'identical', 'sequence'],
     glyphTypes: ['glyph-odd', 'glyph-belongs'],   // relations wait for 7-8
     iconTypes: ICON_TYPES,
+    sources: { geometric: 7, icon: 2, glyph: 1 },
     attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'hexagon'],
@@ -116,6 +122,7 @@ export const BANDS = {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete'],
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
+    sources: { geometric: 7, icon: 2, glyph: 1 },
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
     noise: 2,
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
@@ -134,6 +141,7 @@ export const BANDS = {
     types: TYPES,
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
+    sources: { geometric: 8, icon: 1, glyph: 1 },   // the older the child, the more abstract
     attributes: ATTRIBUTES,
     noise: 2,
     shapes: SHAPES,
@@ -638,6 +646,22 @@ export function validateQuestion(q) {
   if (!q || !Array.isArray(q.options) || q.options.length !== 4) return 'options != 4'
   if (!(q.correct_index >= 0 && q.correct_index < 4)) return 'correct_index out of range'
 
+  // ONE QUESTION, ONE MATERIAL. All three vocabularies are in use, but they mix at the level of
+  // a SHEET, never inside a single question — three line icons and one emoji is answered
+  // correctly by "the colourful one", which is true and has nothing to do with the rule. The
+  // material would be the loudest attribute on screen and drown whatever the question was
+  // about, which is the failure `noise` prevents among attributes, one level up.
+  //
+  // It is checked here rather than left to generators because the check BELOW cannot see it:
+  // attributesFor() reads the kind off the first spec, so a mixed set is counted against one
+  // vocabulary and the other three options contribute `undefined` to every column. Mixed sets
+  // are in fact rejected today, but by accident — `undefined` happens to split 3-1 and the
+  // error names an innocent attribute. The next person to write a generator that mixes kinds
+  // would be sent hunting the wrong thing.
+  const kinds = new Set([...q.options.map(o => o.spec), ...q.prompt.filter(Boolean)]
+    .map(s => s.kind ?? 'figure'))
+  if (kinds.size !== 1) return `question mixes figure kinds: ${[...kinds].join(' + ')}`
+
   const keys = q.options.map(o => figureKey(o.spec))
   if (new Set(keys).size !== 4) return 'two options draw the same picture'
 
@@ -709,13 +733,27 @@ export function generateQuestion(bandKey, type, seed) {
   // two of Bond's eight papers carry none at all.
   // A pictorial question is only offered when the font that draws it has arrived. Without the
   // gate the fallback is not a missing picture but a wrong one — see fontReady().
-  const glyphTypes = fontReady() ? band.glyphTypes : []
-  const iconTypes = iconFontReady() ? band.iconTypes : []
-  const pictorial = [...glyphTypes, ...iconTypes]
-  const all = [...band.types, ...pictorial]
-  const types = type && all.includes(type)
-    ? [type]
-    : (pictorial.length && rng(seed + 13)() < 0.3 ? pictorial : band.types)
+  const available = [
+    { types: band.types, weight: band.sources.geometric },
+    { types: iconFontReady() ? band.iconTypes : [], weight: band.sources.icon },
+    { types: fontReady() ? band.glyphTypes : [], weight: band.sources.glyph },
+  ].filter(s => s.types.length && s.weight > 0)
+
+  const all = available.flatMap(s => s.types)
+  if (type && all.includes(type)) return buildOne(bandKey, band, [type], seed)
+  if (!all.length) return null
+
+  // Weighted by SOURCE, then uniform within it. Drawing uniformly over the pooled type list
+  // instead would let the mix be decided by how many types each vocabulary happens to have —
+  // band 5-6 has two emoji types and three icon types, so emoji would quietly get less of the
+  // sheet than icons for no reason anyone chose.
+  const roll = rng(seed + 13)() * available.reduce((t, s) => t + s.weight, 0)
+  let acc = 0
+  const source = available.find(s => (acc += s.weight) > roll) ?? available[0]
+  return buildOne(bandKey, band, source.types, seed)
+}
+
+function buildOne(bandKey, band, types, seed) {
 
   // A rejected draw costs nothing but a retry, so the loop is generous. It has never needed
   // more than a handful of rounds in the lab; the cap exists so a future band that is too
