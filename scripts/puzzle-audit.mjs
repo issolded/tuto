@@ -24,7 +24,7 @@ import { installStubFonts } from './lib/stub-fonts.mjs'
 // FontFaceSet faithful enough for src/lib/fontGate.js — see the note there.
 installStubFonts()
 
-const { BANDS, BAND_KEYS, generateQuestion, generateSession, validateQuestion } =
+const { BANDS, BAND_KEYS, generateQuestion, generateSession, validateQuestion, questionSignature } =
   await import('../src/lib/puzzleTemplates.js')
 const { groupOf, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
@@ -251,13 +251,18 @@ for (const band of BAND_KEYS) {
   }
 
   // ── what a child actually meets, rather than a long synthetic run ────────────
+  // Measured with the engine's OWN signature, which is the point: this is a check on the
+  // deduplication, and it used to build a rival signature out of JSON.stringify(spec). A
+  // geometric spec stringifies with all its noise attributes and a glyph spec has none, so that
+  // version rated a shapes-heavy band far more varied than a pictures-heavy one for a reason no
+  // child would recognise — and made inverting 7-8 look like it cut variety by a third.
   const seen = new Set()
   let sameDay = 0, total = 0
   for (let day = 0; day < 30; day++) {
     const today = new Set()
     for (let s = 0; s < 2; s++) {
       for (const q of generateSession(band, 10, day * 1000 + s * 37 + 5)) {
-        const sig = `${q.type}|${q.rule.attr}|${JSON.stringify(q.options[q.correct_index].spec)}`
+        const sig = questionSignature(q)
         total++
         if (today.has(sig)) sameDay++
         today.add(sig); seen.add(sig)
@@ -275,6 +280,13 @@ delete globalThis.document
 const closed = generateSession('7-8', 40, 3)
 if (!closed.every(q => sourceOf(q.type) === 'geometric')) {
   findings.push('[gate] pictorial questions leaked through with no font loaded')
+}
+// And it fails closed to SOMETHING. `every` on an empty array is true, so this check would have
+// passed a band that produced no questions at all — which stopped being hypothetical when 7-8
+// was inverted to four-fifths pictures, since every pictorial type sits behind the gate this
+// check closes. A child with a slow font is owed an abstract sheet, not an empty one.
+if (closed.length < 40) {
+  findings.push(`[gate] only ${closed.length} of 40 questions survived with no font loaded`)
 }
 
 if (findings.length) {

@@ -106,8 +106,13 @@ const attributesFor = (spec) =>
 //   5-6   — read against Bond Assessment Papers 5-6. The six types, the distractor logic, the
 //           filled/outline alternation and the "one attribute at a time" rule all come from
 //           those papers and were checked question by question.
-//   7-8   — extrapolated. The same six types with the dial turned up. Nobody has held it
-//           against the 7-8 papers.
+//   7-8   — read against Bond 11+ Assessment Papers 7-8. What that reading changed is recorded
+//           at the band itself and under `sources`: the material is pictures almost end to end
+//           where this band had been 70% abstract shapes, its odd-one-out questions turn on a
+//           property rather than a category, and its sequences cycle whole pictures. The types
+//           that came out of it — glyph-trait, glyph-sequence, reflection — are all from that
+//           book. What is still missing from it: hidden shapes (paper 1 questions 25-27), and
+//           reflections on pictures rather than on abstract figures.
 //   9-11  — extrapolated, and known to fall well short of the real thing. Bond's 10-11
 //           material covers six categories: analogies, codes and sequences, cubes, hidden
 //           shapes, similarities and symmetry. This engine reaches parts of three of them.
@@ -129,8 +134,23 @@ const attributesFor = (spec) =>
 //
 // `sources` is the mix of vocabularies, as plain weights: 7/2/1 reads as "of ten questions,
 // seven are shapes, two icons, one emoji". Written as a ratio you can hold against the book
-// rather than a probability — the papers open with two entirely abstract sets and bring
-// pictures in later, and the 9-11 band tilts further that way for the same reason.
+// rather than a probability, and each band's is held against a different book — because the
+// balance is NOT a progression from pictures to shapes, which is what this file assumed until
+// the 5-6 and 7-8 papers were read side by side.
+//
+// It goes abstract, then pictorial, then abstract again.
+//
+//   5-6   is the most abstract material in the series bar the oldest: hatched circles, hexagons,
+//         arrow grids, noughts-and-crosses, flags on poles. Paper 5 is ten abstract questions and
+//         five pictorial, and all five pictorial ones are in the ANALOGY section.
+//   7-8   is pictures almost end to end. Of the thirty questions in paper 1, one is abstract.
+//         Everything else is a drawing of a real thing — tools, instruments, glasses, animals,
+//         scenes of someone doing something.
+//   9-11  goes back to shapes, and further: codes, cube nets, symmetry, hidden figures.
+//
+// Which reads as a real teaching order rather than a drift. The youngest child is shown pure
+// pattern, with pictures used only where the question needs world knowledge. Then at seven the
+// material moves into the world and asks what things are for. Then it abstracts again, harder.
 //
 // `options` is how many answers a question offers. The 5-6 papers use a–d and every band above
 // them a–e, which is not a cosmetic difference: the noise that keeps the options distinct
@@ -144,9 +164,16 @@ const attributesFor = (spec) =>
 export const BANDS = {
   '5-6': {
     types: ['odd-one-out', 'identical', 'sequence'],
-    // Relations wait for 7-8; a picture cycle does not -- the 5-6 papers open on alternation.
-    glyphTypes: ['glyph-odd', 'glyph-belongs', 'glyph-sequence'],
+    // Every pictorial type this band has, and glyph-analogy is here on the book's authority
+    // rather than a guess. It used to be held back with a note saying relations wait for 7-8;
+    // paper 5 question 11 is a bee, a jar of honey, a hen, and what a hen gives you, which is
+    // the `produces` relation exactly, and question 14 is a sun-hat for the sun and a helmet for
+    // a bicycle. The 5-6 analogy section is where this book puts its pictures, and it is half
+    // the section.
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-trait'),
     iconTypes: ICON_TYPES,
+    // Left where it was, and now for a reason rather than by default: paper 5 runs ten abstract
+    // questions to five pictorial, which is what 7/2/1 already says.
     sources: { geometric: 7, icon: 2, glyph: 1 },
     options: 4,               // the 5-6 papers offer a–d; every band above them offers a–e
     attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
@@ -166,7 +193,17 @@ export const BANDS = {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'reflection'],
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
-    sources: { geometric: 7, icon: 2, glyph: 1 },
+    // Inverted. This band ran at 70% abstract shapes, which is the 5-6 balance applied to the
+    // one age where the book does the opposite: twenty-nine of paper 1's thirty questions are
+    // drawings of real things. A seven-year-old working here was being given the wrong material
+    // with the right difficulty dial on it.
+    //
+    // Not the book's own 97%, though, and the 20% held back is doing a job rather than hedging.
+    // Reflections and grid-completion exist in this engine only in the geometric vocabulary, and
+    // both are 7-8 categories in the book — paper 1 closes on three reflections. So the abstract
+    // fifth is carrying pictorial categories we cannot yet draw, not adding abstraction. When a
+    // pictorial reflection exists, this moves again.
+    sources: { geometric: 2, icon: 3, glyph: 5 },
     options: 5,
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
@@ -1051,6 +1088,15 @@ export function generateQuestion(bandKey, type, seed) {
     { types: fontReady() ? band.glyphTypes : [], weight: band.sources.glyph },
   ].filter(s => s.types.length && s.weight > 0)
 
+  // Geometric is the FLOOR, whatever weight the band gives it. This became load-bearing the
+  // moment 7-8 was inverted: that band is four-fifths pictures, and the pictorial types are
+  // exactly the ones behind the font gate. A band that leaned entirely on them would hand back
+  // nothing at all when a font failed to arrive — not a smaller session, an empty one, and the
+  // gate that exists to protect the answer key would have become the thing that broke the
+  // screen. Shapes need no font, so they carry the sheet when nothing else can, and the child
+  // gets an abstract session instead of a blank one.
+  if (!available.length) available.push({ types: band.types, weight: 1 })
+
   const all = available.flatMap(s => s.types)
   if (type && all.includes(type)) return buildOne(bandKey, band, [type], seed)
   if (!all.length) return null
@@ -1079,15 +1125,35 @@ function buildOne(bandKey, band, types, seed) {
   return null
 }
 
+// What makes two questions THE SAME QUESTION, rather than the same numbers. Two built on the
+// same rule with the same answer read alike even when everything behind them differs, so this is
+// deliberately coarser than the drawn figures — as drawn, essentially every question in a month
+// is unique, which is true and says nothing about whether a sheet feels repetitive.
+//
+// Exported because the audit measures the repeat rate and must measure the thing that is
+// actually deduplicated. It did not: it built its own signature out of JSON.stringify(spec)
+// while this one used figureKey. A geometric spec carries its noise attributes into
+// stringification and a glyph spec has none to carry, so the audit's version counted a
+// shapes-heavy band as far more varied than a pictures-heavy one for no reason a child would
+// recognise. Read that way, inverting 7-8 looked like it cut variety from 549 to 357; read the
+// way the deduper reads it, 7-8 sits at 354 against 5-6's 356, which is the same sheet.
+//
+// `from` and `to` belong in it. Without them every glyph-odd with the same answer was one
+// question, so four vehicles and an apple blocked four instruments and an apple from the same
+// session — different questions about the same picture. Including them puts 7-8 at 449.
+export function questionSignature(q) {
+  const v = (x) => (x && typeof x === 'object' ? JSON.stringify(x) : String(x))
+  return `${q.type}|${q.rule.attr}|${v(q.rule.from)}>${v(q.rule.to)}`
+    + `|${figureKey(q.options[q.correct_index].spec)}`
+}
+
 export function generateSession(bandKey, count = 10, seed = Date.now()) {
   const out = []
   const seen = new Set()
   for (let i = 0; out.length < count && i < count * 40; i++) {
     const q = generateQuestion(bandKey, null, seed + i * 104729)
     if (!q) continue
-    // Two questions built on the same rule and the same base figure read as the same question
-    // even when every number behind them differs.
-    const sig = `${q.type}|${q.rule.attr}|${figureKey(q.options[q.correct_index].spec)}`
+    const sig = questionSignature(q)
     if (seen.has(sig)) continue
     seen.add(sig)
     out.push(q)
