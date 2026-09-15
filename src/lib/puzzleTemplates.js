@@ -203,6 +203,7 @@ export const BANDS = {
     // moving element rather than a set. The pool still exists because randomSpec draws from
     // every pool; a band turns an attribute off by offering it nothing else to be.
     positions: [null],
+    analogySteps: 1,
     seqPeriod: 2,             // dolu / boş / dolu / boş — the alternation the 5-6 papers open on
     seqLength: 4,
   },
@@ -233,6 +234,7 @@ export const BANDS = {
     dots: [0, 1, 2, 3],
     corners: [null, 'tl', 'tr', 'bl', 'br'],
     positions: [null, null, ...POSITIONS.slice(1)],
+    analogySteps: 1,
     seqPeriod: 3,
     seqLength: 5,
   },
@@ -264,6 +266,7 @@ export const BANDS = {
     dots: [0, 0, 1, 2, 3, 4],
     corners: CORNERS,
     positions: [null, null, ...POSITIONS.slice(1)],
+    analogySteps: 1,
     seqPeriod: 4,
     seqLength: 6,
   },
@@ -293,6 +296,7 @@ export const BANDS = {
     dots: [0, 0, 1, 2, 3, 4],
     corners: CORNERS,
     positions: [null, null, ...POSITIONS.slice(1)],
+    analogySteps: 2,
     seqPeriod: 4,
     seqLength: 6,
   },
@@ -326,6 +330,7 @@ export const BANDS = {
     dots: [0, 0, 0, 1, 2, 3, 4, 5],
     corners: CORNERS,
     positions: [null, null, ...POSITIONS.slice(1)],
+    analogySteps: 2,
     seqPeriod: 4,
     // Six shown rather than five, as the 8-9 book does it. A period-4 cycle shown five long
     // gives the child exactly one element of confirmation that the run has begun again; the
@@ -364,15 +369,14 @@ export const BOOK_COVERAGE = {
   '8-9': {
     book: 'Bond 11+ Assessment Papers: Non-verbal Reasoning 8-9 (Andrew Baines)',
     missing: [
-      'story sequences (paper 1 q13-17)',
-      'symbol cycles — the papers cycle ×, ✓, £, = as readily as shapes',
+      'story sequences (paper 1 q13-17) — five drawings of someone doing something in order',
     ],
   },
   '9-10': {
     book: 'Bond 10 Minute Tests: Non-verbal Reasoning 9-10 (Alison Primrose)',
     missing: [
-      'composite figures — its shapes are assemblies of parts where ours are one outline',
-      'analogies that compose two or three changes at once',
+      'composite figures — its shapes are assemblies of parts where ours are one outline with\n'
+      + '        four satellites, so a part cannot have its own shape, fill or size',
     ],
   },
   '10-11': {
@@ -786,17 +790,45 @@ function genAnalogy(r, band, seed) {
   const to = otherValue(r, band, a, ruleAttr)
   if (to === null) return null
 
-  // The transform has to mean the same thing on both sides, so it is "set this attribute to
-  // this value" rather than "change it somehow" — otherwise A→B and C→? are two different
+  // A SECOND change, where the band asks for one. Bond's analogies at 9-10 and above do not move
+  // one thing — they turn a figure and shade it and shrink it, and the child has to carry all of
+  // it across to the second pair. Ours moved exactly one attribute at every age, which is the
+  // 5-6 form of the question wearing an older band's pools.
+  //
+  // The second attribute must not be one that would SUPPRESS the first, or applying both leaves
+  // the first invisible and the analogy silently becomes a one-step question again.
+  const steps = [{ attr: ruleAttr, to }]
+  if (band.analogySteps > 1) {
+    const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || [])]
+    const second = usableAttrs(r, band, a, barred)
+      .filter(x => !(NEEDS_CLEAR[x] || []).includes(ruleAttr))
+      .map(x => [x, otherValue(r, band, a, x)])
+      .find(([, v]) => v !== null)
+    if (!second) return null
+    steps.push({ attr: second[0], to: second[1] })
+  }
+  const apply = (spec) => {
+    const out = { ...spec }
+    for (const s of steps) out[s.attr] = s.to
+    return out
+  }
+  const moved = steps.map(s => s.attr)
+
+  // The transform has to mean the same thing on both sides, so it is "set these attributes to
+  // these values" rather than "change them somehow" — otherwise A→B and C→? are two different
   // rules that happen to look alike.
-  const b = { ...a, [ruleAttr]: to }
-  const cAttrs = usableAttrs(r, band, a, [ruleAttr])
+  const b = apply(a)
+  const cAttrs = usableAttrs(r, band, a, moved)
   if (!cAttrs.length) return null
   const cShift = otherValue(r, band, a, cAttrs[0])
   if (cShift === null) return null
   const c = { ...a, [cAttrs[0]]: cShift }
-  if (c[ruleAttr] !== a[ruleAttr]) return null
-  const answer = { ...c, [ruleAttr]: to }
+  if (moved.some(x => valueKey(c[x]) !== valueKey(a[x]))) return null
+  const answer = apply(c)
+  // Both steps have to SURVIVE on the answer. One can still erase the other through a route
+  // NEEDS_CLEAR does not name — the shape carrying them changed too — and then the pair shows
+  // two changes while the answer shows one.
+  if (moved.some(x => valueKey(normalizeSpec(answer)[x]) !== valueKey(answer[x]))) return null
 
   const options = [
     { spec: answer, why: null },
@@ -804,8 +836,16 @@ function genAnalogy(r, band, seed) {
     { spec: { ...b }, why: cAttrs[0] },         // transform applied to the wrong figure
     { spec: { ...a }, why: 'both' },
   ]
+  // With two steps there is a mistake that does not exist with one: carrying half the transform
+  // across. It is the strongest distractor in the set, so it is offered before the spares below.
+  if (steps.length > 1) {
+    const half = { ...c, [steps[0].attr]: steps[0].to }
+    if (!options.some(o => geometryKey(o.spec) === geometryKey(half))) {
+      options.push({ spec: half, why: steps[1].attr })
+    }
+  }
   while (options.length < band.options) {
-    const spare = usableAttrs(r, band, answer, [ruleAttr])
+    const spare = usableAttrs(r, band, answer, moved)
       .map(at => [at, otherValue(r, band, answer, at)])
       .find(([, v]) => v !== null)
     if (!spare) return null
@@ -820,7 +860,7 @@ function genAnalogy(r, band, seed) {
     seed, type: 'analogy', layout: 'analogy', prompt: [a, b, c, null],
     options: order.map(i => options[i]),
     correct_index: order.indexOf(0),
-    rule: { attr: ruleAttr, from: a[ruleAttr], to },
+    rule: { attr: moved.join('+'), from: a[ruleAttr], to },
   }
 }
 

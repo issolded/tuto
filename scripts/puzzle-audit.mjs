@@ -29,7 +29,7 @@ const { BANDS, BAND_KEYS, BOOK_COVERAGE, generateQuestion, generateSession, vali
 const { groupOf, GLYPH_GROUPS, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
 const { iconGroupOf, ICON_GROUPS } = await import('../src/lib/puzzleIcons.js')
-const { geometryKey } = await import('../src/lib/puzzleFigures.js')
+const { geometryKey, normalizeSpec } = await import('../src/lib/puzzleFigures.js')
 
 const DRAWS = Number(process.env.PUZZLE_AUDIT_DRAWS || 4000)
 const findings = []
@@ -198,6 +198,19 @@ for (const band of BAND_KEYS) {
       const v = (s) => val(s[q.rule.attr])
       if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
       else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
+    } else if (q.type === 'analogy') {
+      // The transform must mean the same thing on both pairs, and be measured on the DRAWN
+      // figure — normalizeSpec can erase a step that the spec still claims, and the analogy then
+      // shows two changes on the left and one on the right. Three ways to be wrong: a step that
+      // does not change A→B at all, a step that lands somewhere else on C→?, and a C that
+      // already differs from A on a step, which makes the second pair a different question.
+      const [a, b, c] = q.prompt
+      const n = (s) => normalizeSpec(s)
+      for (const x of q.rule.attr.split('+')) {
+        if (val(n(b)[x]) === val(n(a)[x])) { why = `the step ${x} does not change A into B`; break }
+        if (val(n(ans)[x]) !== val(n(b)[x])) { why = `the step ${x} lands differently on the second pair`; break }
+        if (val(n(c)[x]) !== val(n(a)[x])) { why = `C already differs from A on ${x}`; break }
+      }
     } else if (q.type === 'symmetry') {
       // Re-derived from the drawn figure, not from the flag the generator set: a figure has a
       // line of symmetry exactly when mirroring it produces the same picture.
