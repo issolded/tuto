@@ -62,6 +62,16 @@ function Figure({ spec, px = 76, state }) {
   )
 }
 
+// A rule's value is usually a scalar and sometimes an `inner` node, and template interpolation
+// turns every node into "[object Object]" — so the debug line read `rule: inner → [object
+// Object]` on exactly the attribute whose nesting once hid a real bug. Nodes are named by their
+// shape and fill, which is what distinguishes them in INNER_NODES.
+function ruleValue(v) {
+  if (v === null) return 'none'
+  if (typeof v !== 'object') return String(v)
+  return `${v.fill === 'none' ? '' : v.fill + ' '}${v.shape}${v.inner ? ' + inner' : ''}`
+}
+
 function Blank({ px = 76 }) {
   return (
     <div style={{
@@ -156,7 +166,7 @@ function QuestionCard({ q, lang }) {
       <div style={{ fontSize: 11, color: problem ? C.bad : C.dim, marginTop: 10 }}>
         {problem
           ? `INVALID: ${problem}`
-          : `rule: ${q.rule.attr}${q.rule.to != null ? ` → ${q.rule.to}` : ''} · seed ${q.seed}`}
+          : `rule: ${q.rule.attr}${q.rule.to != null ? ` → ${ruleValue(q.rule.to)}` : ''} · seed ${q.seed}`}
       </div>
     </div>
   )

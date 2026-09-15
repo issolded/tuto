@@ -645,10 +645,16 @@ function genReflection(r, band, seed) {
   ]
   // The last distractor is a true mirror with something else moved, which is the one that asks
   // whether the child checked the figure as well as its handedness.
+  //
+  // Not its SHAPE, though, unless there is nothing else to move. A square among four hexagons is
+  // eliminated without thinking about mirrors at all, so it costs the question one of its five
+  // options and teaches nothing — and it is what this picked, being the first attribute in the
+  // list. Every other attribute keeps the same object and asks the child to look at it.
   while (options.length < band.options) {
-    const spare = usableAttrs(r, band, answer)
+    const movable = usableAttrs(r, band, answer)
       .map(a => [a, otherValue(r, band, answer, a)])
-      .find(([, v]) => v !== null)
+      .filter(([, v]) => v !== null)
+    const spare = movable.find(([a]) => a !== 'shape') ?? movable[0]
     if (!spare) return null
     options.push({ spec: makeSpec({ ...answer, [spare[0]]: spare[1] }), why: spare[0] })
   }
