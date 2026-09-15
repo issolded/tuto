@@ -49,6 +49,7 @@ import {
 } from './puzzleFigures.js'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
+  GLYPH_TRAITS, TRAIT_KEYS, traitValue, traitConflict,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph, fontReady,
 } from './puzzleGlyphs.js'
 import {
@@ -61,7 +62,7 @@ export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-c
 // The pictorial family. Kept as its own list because it is a different KIND of question — it
 // asks what a child knows about the world, not what they can see in a pattern — and the two
 // should stay separable in the attempt log and in what a parent is told.
-export const GLYPH_TYPES = ['glyph-odd', 'glyph-belongs', 'glyph-sequence', 'glyph-analogy']
+export const GLYPH_TYPES = ['glyph-odd', 'glyph-trait', 'glyph-belongs', 'glyph-sequence', 'glyph-analogy']
 
 // The line-drawn pictorial family. Separate from GLYPH_TYPES because it is drawn from a
 // different font with a different vocabulary — and because it can do something emoji cannot:
@@ -77,6 +78,7 @@ export const STEM_KEYS = {
   'grid-complete': 'puzzle_stem_pattern',
   analogy: 'puzzle_stem_analogy',
   'glyph-odd': 'puzzle_stem_odd',
+  'glyph-trait': 'puzzle_stem_odd',
   'glyph-belongs': 'puzzle_stem_belongs',
   'glyph-sequence': 'puzzle_stem_next',
   'glyph-analogy': 'puzzle_stem_analogy',
@@ -618,6 +620,61 @@ function genGlyphCategory(r, band, seed, type) {
   }
 }
 
+// Odd one out on a PROPERTY rather than a category, which is how the 7-8 papers nearly always
+// ask it: five things of the same kind, one of which does something the others do not. Four
+// vehicles that stay on the ground and an aeroplane; four instruments you do not blow and a
+// trumpet. The existing glyph-odd — four fruit and a bus — is the easier question and belongs to
+// the younger band; this is the one a seven-year-old is being taught to see.
+//
+// Both directions are posed. Four with the property and one without reads as "which one cannot",
+// four without and one with as "which one can", and they are not the same question to a child.
+function genGlyphTrait(r, band, seed) {
+  const want = band.options
+  // Whichever side has enough members to fill the question is the majority; the odd one comes
+  // from the other. A trait whose sides are both big enough offers the question in both
+  // directions and they are listed separately, so neither is the default.
+  const candidates = shuffle(r, TRAIT_KEYS.flatMap((key) => {
+    const t = GLYPH_TRAITS[key]
+    return [[t.yes, t.no], [t.no, t.yes]]
+      .filter(([many, few]) => many.length >= want - 1 && few.length >= 1)
+      .map(([many, few]) => ({ key, many, few }))
+  }))
+
+  for (const { key, many, few } of candidates) {
+    // Several draws per candidate rather than one, because rejection here is not rare and the
+    // cost of it falling to the caller is a rule that quietly disappears. `flies` has three
+    // fliers against seven that do not, and of the thirty-five ways to pick four non-fliers only
+    // five avoid a collision with another trait — so one draw per question put it on 3% of the
+    // sheet against an even share of 12%, which is the dead rule the audit exists to catch,
+    // arriving by a route the audit was not looking at. Re-drawing the SET instead of the
+    // question leaves the choice of trait where it was made.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const majority = shuffle(r, many.slice()).slice(0, want - 1)
+      const odd = pick(r, few)
+      const glyphs = [...majority, odd]
+
+      // The reason traits are written as total partitions. A second property of the same group
+      // that singles out a DIFFERENT picture gives the child a second defensible answer, and
+      // they would be marked wrong for giving it.
+      if (traitConflict(glyphs, key, odd)) continue
+
+      const trait = GLYPH_TRAITS[key]
+      const spec = (glyph) => makeGlyphSpec({
+        glyph, group: trait.group, trait: traitValue(key, glyph),
+      })
+      const order = shuffle(r, indices(want))
+      const oddAt = glyphs.length - 1
+      return {
+        seed, type: 'glyph-trait', layout: 'options-only', prompt: [],
+        options: order.map(i => ({ spec: spec(glyphs[i]), why: i === oddAt ? null : 'trait' })),
+        correct_index: order.indexOf(oddAt),
+        rule: { attr: `trait:${key}`, from: traitValue(key, majority[0]), to: traitValue(key, odd) },
+      }
+    }
+  }
+  return null
+}
+
 // A cycle of pictures. This is Bond 7-8 paper 1 question 16 almost exactly — recorder, guitar,
 // saxophone, piano, recorder, guitar, and what comes next — and paper 1 question 14 with a
 // period of two. It is worth naming what makes it different from the geometric `sequence`
@@ -810,6 +867,7 @@ const GENERATORS = {
   'grid-complete': genGridComplete,
   analogy: genAnalogy,
   'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
+  'glyph-trait': genGlyphTrait,
   'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),
   'glyph-sequence': genGlyphSequence,
   'glyph-analogy': genGlyphAnalogy,
@@ -872,7 +930,7 @@ export function validateQuestion(q) {
   // Odd-one-out is the only type whose soundness is a property of the option SET rather than
   // of the answer: exactly one attribute may split 3-1, and no other attribute may isolate a
   // single option, or the question has two defensible answers.
-  if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-belongs', 'icon-odd', 'icon-belongs'].includes(q.type)) {
+  if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-trait', 'glyph-belongs', 'icon-odd', 'icon-belongs'].includes(q.type)) {
     const specs = q.options.map(o => o.spec)
     let splits = 0
     // Glyph figures carry none of the geometric attributes, so counting over the shape list
@@ -898,7 +956,7 @@ export function validateQuestion(q) {
         return `attribute ${attr} isolates an option`
       }
     }
-    if (['odd-one-out', 'glyph-odd', 'icon-odd'].includes(q.type) && splits !== 1) {
+    if (['odd-one-out', 'glyph-odd', 'glyph-trait', 'icon-odd'].includes(q.type) && splits !== 1) {
       return `${splits} attributes split ${n - 1}-1`
     }
   }

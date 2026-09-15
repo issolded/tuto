@@ -26,7 +26,8 @@ installStubFonts()
 
 const { BANDS, BAND_KEYS, generateQuestion, generateSession, validateQuestion } =
   await import('../src/lib/puzzleTemplates.js')
-const { groupOf, GLYPH_RELATIONS } = await import('../src/lib/puzzleGlyphs.js')
+const { groupOf, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
+  await import('../src/lib/puzzleGlyphs.js')
 const { iconGroupOf } = await import('../src/lib/puzzleIcons.js')
 const { geometryKey } = await import('../src/lib/puzzleFigures.js')
 
@@ -111,6 +112,32 @@ for (const band of BAND_KEYS) {
     }
   }
 
+  // ── and so is every trait, which is a separate question ──────────────────────
+  // A trait can be starved by something no attribute can be: the conflict filter. `flies` was
+  // configured, correct, and reachable, and still landed on 3% of its own type against an even
+  // share of 12% -- because of the thirty-five ways to pick four non-fliers only five avoid
+  // colliding with another vehicle trait, and one draw per question threw the rest away. That is
+  // a rule a child would meet once in several hundred sessions, which is the same as not having
+  // it, and nothing above would have said so. Measured per type, not over the sheet, for the
+  // reason the position check is.
+  if (BANDS[band].glyphTypes.includes('glyph-trait')) {
+    const byTrait = {}
+    let n = 0
+    for (let i = 0; i < 4000; i++) {
+      const q = generateQuestion(band, 'glyph-trait', 61_000 + i * 11)
+      if (!q) continue
+      n++
+      byTrait[q.rule.attr.slice(6)] = (byTrait[q.rule.attr.slice(6)] || 0) + 1
+    }
+    for (const key of TRAIT_KEYS) {
+      const share = (byTrait[key] || 0) / n
+      // A third of an even share. Below that a trait is configured rather than used.
+      if (share < (1 / TRAIT_KEYS.length) / 3) {
+        fail(band, 'starved-trait', `${key} carries ${(share * 100).toFixed(1)}% of glyph-trait, even is ${(100 / TRAIT_KEYS.length).toFixed(0)}%`)
+      }
+    }
+  }
+
   // ── the answer really answers the question ───────────────────────────────────
   for (const q of qs) {
     const ans = q.options[q.correct_index].spec
@@ -121,6 +148,23 @@ for (const band of BAND_KEYS) {
       const v = (s) => val(s[q.rule.attr])
       if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
       else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
+    } else if (q.type === 'glyph-trait') {
+      // The category reading and the property reading are both checked, because the question is
+      // only about the property while the category says nothing. Then every OTHER trait of that
+      // group is asked whether it singles out a different picture — the second defensible answer
+      // that total partitions exist to make findable.
+      const key = q.rule.attr.split(':')[1]
+      const v = (s) => traitValue(key, s.glyph)
+      const glyphs = q.options.map(o => o.spec.glyph)
+      if (v(ans) === null) why = `the answer ${ans.glyph} is outside trait ${key}`
+      else if (others.some(s => v(s) === v(ans))) why = 'a distractor is on the answer\'s side of the trait'
+      else if (new Set(others.map(v)).size !== 1) why = 'the non-answers do not agree on the trait'
+      else if (new Set(q.options.map(o => grp(o.spec))).size !== 1) {
+        why = 'the options are not all one group, so the category answers it'
+      } else {
+        const clash = traitConflict(glyphs, key, ans.glyph)
+        if (clash) why = `trait ${clash} singles out a different option`
+      }
     } else if (q.type === 'glyph-odd' || q.type === 'icon-odd') {
       if (others.some(s => grp(s) === grp(ans))) why = `the answer's group ${grp(ans)} is shared`
       else if (new Set(others.map(grp)).size !== 1) why = 'the three non-answers are not one group'

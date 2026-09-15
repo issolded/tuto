@@ -48,9 +48,11 @@ import { fontLoaded, ensureFont } from './fontGate.js'
 // exclusive: a table where 🍎 is both a fruit and a food gives a child two defensible answers.
 export const GLYPH_GROUPS = {
   fruit:   { tr: 'meyve',  en: 'fruit',   glyphs: ['🍎', '🍐', '🍓', '🍌', '🍇', '🍒'] },
-  vehicle: { tr: 'taşıt',  en: 'vehicle', glyphs: ['🚗', '🚌', '🚲', '🚂', '✈️', '🚁'] },
-  animal:  { tr: 'hayvan', en: 'animal',  glyphs: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊'] },
-  bug:     { tr: 'böcek',  en: 'bug',     glyphs: ['🐝', '🐛', '🦋', '🐞', '🐜'] },
+  vehicle: { tr: 'taşıt',  en: 'vehicle', glyphs: ['🚗', '🚌', '🚲', '🚂', '✈️', '🚁', '🚚', '🛵', '⛵', '🚀'] },
+  // Mammals, and the label says so in both languages rather than 'animal' — a bee is an animal
+  // too, and this group sits next to `bug` in every odd-one-out the module can pose.
+  animal:  { tr: 'memeli', en: 'mammal',  glyphs: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊', '🐴', '🐷', '🐹', '🐭', '🐄', '🐑'] },
+  bug:     { tr: 'böcek',  en: 'bug',     glyphs: ['🐝', '🐛', '🦋', '🐞', '🐜', '🦟', '🪰'] },
   // ⛈️ was here and is not, because 🌧️ and ⛈️ are the same picture at puzzle size: rasterised
   // at 64px they differ in 16.7% of their ink, against 34% for the next closest pair in any
   // group and 45-55% typically. With four options they rarely met; with five they land together
@@ -61,11 +63,101 @@ export const GLYPH_GROUPS = {
   // with the font EMBEDDED in the SVG. Worth redoing whenever a group gains a member.
   weather: { tr: 'hava',   en: 'weather', glyphs: ['☀️', '🌧️', '❄️', '🌪️', '🌈'] },
   plant:   { tr: 'bitki',  en: 'plant',   glyphs: ['🌱', '🌳', '🌻', '🌵', '🍃'] },
-  tool:    { tr: 'araç',   en: 'tool',    glyphs: ['✏️', '📏', '✂️', '📎', '🖍️'] },
-  music:   { tr: 'müzik',  en: 'music',   glyphs: ['🎸', '🥁', '🎺', '🎹', '🎻'] },
+  tool:    { tr: 'kırtasiye', en: 'desk thing', glyphs: ['✏️', '📏', '✂️', '📎', '🖍️', '🖊️', '🖌️', '📐'] },
+  music:   { tr: 'müzik',  en: 'music',   glyphs: ['🎸', '🥁', '🎺', '🎹', '🎻', '🪕', '🎷', '🪈'] },
 }
 
 export const GROUP_KEYS = Object.keys(GLYPH_GROUPS)
+
+// The second way a set of pictures can have an odd one out, and the one the 7-8 papers actually
+// lean on. Their odd-one-out questions are rarely "four fruit and a bus": paper 2 opens with a
+// rhino, a goat, a bear, a sheep and a deer (only the bear has no horns), then five load-carrying
+// vehicles of which one is a ship, then four aeroplanes and a helicopter, then a stool, an
+// armchair, a chair, a table and a director's chair. Every option is the same KIND of thing, and
+// what separates one of them is a PROPERTY — what it does, where it goes, what it is for.
+//
+// So a trait is a property, written as the partition it induces on one group. Two constraints
+// make a question built on one sound, and both are checked below rather than trusted:
+//
+//   A trait belongs to exactly ONE group, and every option comes from that group. If the options
+//   were not all the same kind, the category reading would answer the question and the property
+//   would never be looked at — which is the easier question this one exists not to be.
+//
+//   A trait is TOTAL over its group: every glyph in the group is on one side or the other. A
+//   partial list looks harmless and is not. With `on_water` listing only ⛵ against the road
+//   vehicles, a question about flying could deal ⛵ into the four non-fliers, and a child could
+//   answer "the boat, it is the only one on water" — perfectly defensible, and marked wrong.
+//   Totality is what lets a generator see that collision coming; see traitConflict().
+export const GLYPH_TRAITS = {
+  flies:    { group: 'vehicle', tr: 'uçar', en: 'flies',
+    yes: ['✈️', '🚁', '🚀'], no: ['🚗', '🚌', '🚲', '🚂', '🚚', '🛵', '⛵'] },
+  on_water: { group: 'vehicle', tr: 'suda gider', en: 'goes on water',
+    yes: ['⛵'], no: ['🚗', '🚌', '🚲', '🚂', '✈️', '🚁', '🚚', '🛵', '🚀'] },
+  engine:   { group: 'vehicle', tr: 'motoru var', en: 'has an engine',
+    yes: ['🚗', '🚌', '🚂', '✈️', '🚁', '🚚', '🛵', '🚀'], no: ['🚲', '⛵'] },
+  // One trait for the mammals, deliberately. `pet` was the obvious second one and it does not
+  // survive translation: Turkish `evcil hayvan` covers the cow and the sheep as readily as the
+  // cat, so a set built on the English sense would have two defensible answers for a child
+  // reading it in Turkish and one in English. Exactly the failure the note at the top of this
+  // file warns about, found by writing the row out in both languages.
+  farm:     { group: 'animal', tr: 'çiftlik hayvanı', en: 'farm animal',
+    yes: ['🐴', '🐷', '🐄', '🐑'], no: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊', '🐹', '🐭'] },
+  wings:    { group: 'bug', tr: 'kanatlı', en: 'has wings',
+    yes: ['🐝', '🦋', '🐞', '🦟', '🪰'], no: ['🐛', '🐜'] },
+  marks:    { group: 'tool', tr: 'iz bırakır', en: 'leaves a mark',
+    yes: ['✏️', '🖍️', '🖊️', '🖌️'], no: ['📏', '✂️', '📎', '📐'] },
+  strings:  { group: 'music', tr: 'telli', en: 'has strings',
+    yes: ['🎸', '🎻', '🪕'], no: ['🥁', '🎺', '🎹', '🎷', '🪈'] },
+  blow:     { group: 'music', tr: 'üflenir', en: 'you blow it',
+    yes: ['🎺', '🎷', '🪈'], no: ['🎸', '🥁', '🎹', '🎻', '🪕'] },
+}
+
+export const TRAIT_KEYS = Object.keys(GLYPH_TRAITS)
+
+// Both constraints above, enforced at import. The tables are meant to be edited by hand, and a
+// trait that has quietly stopped covering its group is not visible by reading it.
+{
+  for (const [key, t] of Object.entries(GLYPH_TRAITS)) {
+    const group = GLYPH_GROUPS[t.group]
+    if (!group) throw new Error(`puzzleGlyphs: trait ${key} names no group ${t.group}`)
+    const both = t.yes.filter(g => t.no.includes(g))
+    if (both.length) throw new Error(`puzzleGlyphs: trait ${key} has ${both.join('')} on both sides`)
+    const covered = new Set([...t.yes, ...t.no])
+    const missing = group.glyphs.filter(g => !covered.has(g))
+    const extra = [...covered].filter(g => !group.glyphs.includes(g))
+    if (missing.length) throw new Error(`puzzleGlyphs: trait ${key} does not say ${missing.join('')}`)
+    if (extra.length) throw new Error(`puzzleGlyphs: trait ${key} lists ${extra.join('')}, not in ${t.group}`)
+  }
+}
+
+// true, false, or null when the glyph is outside the trait's group. Totality means null and
+// "outside the group" are the same thing.
+export function traitValue(key, glyph) {
+  const t = GLYPH_TRAITS[key]
+  if (!t) return null
+  return t.yes.includes(glyph) ? true : t.no.includes(glyph) ? false : null
+}
+
+export const traitsOfGroup = (group) => TRAIT_KEYS.filter(k => GLYPH_TRAITS[k].group === group)
+
+// Whether any trait OTHER than the one the question is built on also singles out an option — and
+// if so, which glyph, because a second trait pointing at the SAME picture is two reasons for one
+// answer and perfectly sound. It is only a conflict when it points somewhere else.
+//
+// The case this catches: four vehicles that do not fly plus an aeroplane is a question about
+// flying, unless ⛵ is one of the four, in which case "the only one on water" is just as good an
+// answer and the child who gives it is marked wrong. Returns the offending trait key or null.
+export function traitConflict(glyphs, ruleKey, answer) {
+  const group = groupOf(glyphs[0])
+  for (const key of traitsOfGroup(group)) {
+    if (key === ruleKey) continue
+    const yes = glyphs.filter(g => traitValue(key, g) === true)
+    const no = glyphs.filter(g => traitValue(key, g) === false)
+    const lone = yes.length === 1 ? yes[0] : no.length === 1 ? no[0] : null
+    if (lone && lone !== answer) return key
+  }
+  return null
+}
 
 // Semantic pairs, grouped by the RELATION that connects them — which is the part that makes an
 // analogy work. A:B :: C:? only has one answer if both pairs are joined by the same relation,
@@ -157,7 +249,11 @@ export function makeGlyphSpec(over = {}) {
   return { kind: 'glyph', glyph: '🍎', count: 1, size: 1, rotation: 0, ...over }
 }
 
-export const GLYPH_ATTRIBUTES = ['glyph', 'group', 'count', 'size', 'rotation']
+// `trait` is the boolean side a glyph falls on for whichever trait the question is built on —
+// undefined on every question that is not. It earns its place in this list because the validator
+// counts how many attributes split (n-1)-to-1, and a trait question is one where `group` is
+// constant across all the options and the only thing that splits is the property.
+export const GLYPH_ATTRIBUTES = ['glyph', 'group', 'trait', 'count', 'size', 'rotation']
 
 // Where copies sit when a figure carries more than one, in the same 100-unit box the geometric
 // figures use so a glyph question lines up with a shape question on the same sheet.
