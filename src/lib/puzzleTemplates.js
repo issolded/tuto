@@ -57,7 +57,7 @@ import {
   makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady,
 } from './puzzleIcons.js'
 
-export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection', 'code']
+export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection', 'symmetry', 'code']
 
 // The pictorial family. Kept as its own list because it is a different KIND of question — it
 // asks what a child knows about the world, not what they can see in a pattern — and the two
@@ -79,6 +79,7 @@ export const STEM_KEYS = {
   analogy: 'puzzle_stem_analogy',
   reflection: 'puzzle_stem_mirror',
   code: 'puzzle_stem_code',
+  symmetry: 'puzzle_stem_symmetry',
   'glyph-odd': 'puzzle_stem_odd',
   'glyph-trait': 'puzzle_stem_odd',
   'glyph-belongs': 'puzzle_stem_belongs',
@@ -114,18 +115,23 @@ const attributesFor = (spec) =>
 //           that came out of it — glyph-trait, glyph-sequence, reflection — are all from that
 //           book. What is still missing from it: hidden shapes (paper 1 questions 25-27), and
 //           reflections on pictures rather than on abstract figures.
-//   9-11  — extrapolated, and known to fall well short of the real thing. Bond's 10-11
-//           material covers six categories: analogies, codes and sequences, cubes, hidden
-//           shapes, similarities and symmetry. This engine reaches parts of three of them.
-//           It has no codes (two of that book's ten topic tests), no cube nets, no hidden
-//           shapes and no symmetry; its analogies and sequences move one attribute where the
-//           real ones compose two or three; and its figures are one shape with nesting where
-//           the real ones are composite line drawings. Its questions also offer four options
-//           against the papers' five.
+//   8-9   — read against Bond 11+ Assessment Papers 8-9. The turn in the series: half picture
+//           story-sequences and analogies, half abstract shape cycles, arrows through 45° and
+//           circles in four shadings. Position, period-4 cycles and the 45° dial all arrive
+//           here because that paper has them.
+//   9-10  — read against Bond NVR 10 Minute Tests 9-10. Its Test 2 is Coded Shapes, which is
+//           where `code` comes from and why codes are not held back to 10-11.
+//   10-11 — read against Bond NVR 10 Minute Tests 10-11, and still the band that falls
+//           furthest short. That book covers analogies, codes and sequences, cubes, hidden
+//           shapes, similarities and symmetry. Codes now exist; cube nets, hidden shapes and
+//           symmetry now exist; cube nets and hidden shapes do not, and hidden shapes needs
+//           composite line drawings we cannot draw. Its figures are composite where ours are one shape
+//           with nesting and four satellites, and its analogies compose two or three changes
+//           where ours move one.
 //
-//           So this band is nearer 7-8 in difficulty than 10-11. bandForAge sends every child
-//           of nine and over to it, which is the right structure and the wrong content, and
-//           the gap is worth closing before anyone that age uses it.
+//           So this band is still nearer 9-10 in difficulty than 10-11, and the gap is worth
+//           closing before anyone that age uses it. What it no longer is: the only band above
+//           eight. It used to be, under the name 9-11, answering to two books at once.
 //
 // A pool may REPEAT a value to weight it. `half` and `inner` are structural devices that take
 // over the whole interior, and drawn from a flat pool they landed on two questions out of
@@ -147,7 +153,8 @@ const attributesFor = (spec) =>
 //   7-8   is pictures almost end to end. Of the thirty questions in paper 1, one is abstract.
 //         Everything else is a drawing of a real thing — tools, instruments, glasses, animals,
 //         scenes of someone doing something.
-//   9-11  goes back to shapes, and further: codes, cube nets, symmetry, hidden figures.
+//   9-11  goes back to shapes, and further: codes, cube nets, symmetry, hidden figures. The
+//         two 10 Minute Tests books split that range and this file follows them.
 //
 // Which reads as a real teaching order rather than a drift. The youngest child is shown pure
 // pattern, with pictures used only where the question needs world knowledge. Then at seven the
@@ -164,7 +171,11 @@ const attributesFor = (spec) =>
 // by reasoning.
 export const BANDS = {
   '5-6': {
-    types: ['odd-one-out', 'identical', 'sequence'],
+    // `analogy` and `grid-complete` are here because the book has them and this band did not.
+    // Paper 5 question 11 is a 2×2 grid of noughts and crosses with one cell missing, and
+    // questions 12 and 13 are abstract analogies — a pentagon of dots to a column of dots, an
+    // outlined triangle to a filled one. Both were reaching only the oldest band.
+    types: ['odd-one-out', 'identical', 'sequence', 'grid-complete', 'analogy'],
     // Every pictorial type this band has, and glyph-analogy is here on the book's authority
     // rather than a guess. It used to be held back with a note saying relations wait for 7-8;
     // paper 5 question 11 is a bee, a jar of honey, a hen, and what a hen gives you, which is
@@ -196,7 +207,7 @@ export const BANDS = {
     seqLength: 4,
   },
   '7-8': {
-    types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'reflection'],
+    types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection'],
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
     // Inverted. This band ran at 70% abstract shapes, which is the 5-6 balance applied to the
@@ -225,9 +236,67 @@ export const BANDS = {
     seqPeriod: 3,
     seqLength: 5,
   },
-  '9-11': {
-    // Codes are here and nowhere below: they are two of the ten topic tests in the 10-11 book
-    // and appear in none of the younger ones.
+  // The turn. Read against Bond 11+ Assessment Papers 8-9, and it is the band where the series
+  // changes direction: paper 1 runs five picture sequences (a post office queue, a wash going
+  // out, biscuits going in the oven) straight into a shape cycle, a run of arrows turning
+  // through 45°, squares divided four ways and circles in four shadings. Half pictures, half
+  // abstract, which is what `sources` says.
+  //
+  // It is also where several things this engine had reach their real age. Question 18 is two
+  // diamonds arranged differently — Position, on abstract figures. Questions 19, 20 and 24 are
+  // period-4 cycles of shape, of symbol and of shading. Question 21 turns an arrow through 45°
+  // rather than 90°. So the dial goes up on all four at once, and the pools here are the 7-8
+  // ones with the ceilings taken off.
+  '8-9': {
+    types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection'],
+    glyphTypes: GLYPH_TYPES,
+    iconTypes: ICON_TYPES,
+    sources: { geometric: 5, icon: 3, glyph: 2 },
+    options: 5,
+    attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner', 'position'],
+    shapes: SHAPES,
+    fills: FILLS,
+    rotations: ROTATIONS,
+    sizes: [0.82, 1],
+    stretches: [1, 1, 0.62],
+    halves: [null, null, ...HALVES.slice(1)],
+    inners: [null, null, ...INNER_NODES.slice(1)],
+    dots: [0, 0, 1, 2, 3, 4],
+    corners: CORNERS,
+    positions: [null, null, ...POSITIONS.slice(1)],
+    seqPeriod: 4,
+    seqLength: 6,
+  },
+  // Split in two, because one band was answering to two books and neither of them properly.
+  // bandForAge used to send every child of nine and over here, to a dial calibrated against
+  // nothing in particular — and the two 10 Minute Tests books are not the same material.
+  //
+  // Codes begin HERE, not at 10-11: Test 2 of the 9-10 book is called Coded Shapes, six of its
+  // ten tests work on composite figures, and the 10-11 book carries the same category harder.
+  // The difference between the two bands is how fine a distinction the child has to see, which
+  // is what the pools say: 9-10 offers two sizes and 10-11 offers three, so telling 0.82 from 1
+  // becomes telling 0.65 from 0.82 from 1.
+  '9-10': {
+    types: TYPES,
+    glyphTypes: GLYPH_TYPES,
+    iconTypes: ICON_TYPES,
+    sources: { geometric: 7, icon: 2, glyph: 1 },
+    options: 5,
+    attributes: ATTRIBUTES,
+    shapes: SHAPES,
+    fills: FILLS,
+    rotations: ROTATIONS,
+    sizes: [0.82, 1],
+    stretches: [1, 1, 0.62],
+    halves: [null, null, ...HALVES.slice(1)],
+    inners: [null, null, ...INNER_NODES.slice(1)],
+    dots: [0, 0, 1, 2, 3, 4],
+    corners: CORNERS,
+    positions: [null, null, ...POSITIONS.slice(1)],
+    seqPeriod: 4,
+    seqLength: 6,
+  },
+  '10-11': {
     types: TYPES,
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
@@ -258,17 +327,71 @@ export const BANDS = {
     corners: CORNERS,
     positions: [null, null, ...POSITIONS.slice(1)],
     seqPeriod: 4,
-    seqLength: 5,
+    // Six shown rather than five, as the 8-9 book does it. A period-4 cycle shown five long
+    // gives the child exactly one element of confirmation that the run has begun again; the
+    // papers give two, and at a period this long that is the difference between reading a cycle
+    // and guessing one.
+    seqLength: 6,
   },
 }
 
 export const BAND_KEYS = Object.keys(BANDS)
 
+// What each band answers to, and what it still cannot do — as data rather than prose, so the
+// audit can check it. A note in a comment saying "no symmetry yet" stays there forever after
+// symmetry ships; a `missing` entry naming a type that now exists fails the run.
+//
+// `missing` is one-directional: what the BOOK has and this engine does not. It is the honest
+// half of the calibration, since `types` already says what a band poses and nothing said what it
+// was leaving out. It is NOT a list of differences — a band may also pose something its book
+// does not, and the 5-6 band does: the papers never ask "which one belongs with these", and it
+// is offered there anyway as odd-one-out read backwards, which a five-year-old can do.
+export const BOOK_COVERAGE = {
+  '5-6': {
+    book: 'Bond Assessment Papers: Non-verbal Reasoning 5-6 (J M Bond)',
+    // Nothing. Every category in these papers is posed, which is what "calibrated question by
+    // question" was supposed to mean and now has a check behind it.
+    missing: [],
+  },
+  '7-8': {
+    book: 'Bond 11+ Assessment Papers: Non-verbal Reasoning 7-8 (Andrew Baines)',
+    missing: [
+      'hidden shapes (paper 1 q25-27) — a small shape embedded in the lines of a bigger picture',
+      'reflections of PICTURES rather than of abstract figures (paper 1 q28-30)',
+      'story sequences — five drawings of someone doing something in order',
+    ],
+  },
+  '8-9': {
+    book: 'Bond 11+ Assessment Papers: Non-verbal Reasoning 8-9 (Andrew Baines)',
+    missing: [
+      'story sequences (paper 1 q13-17)',
+      'symbol cycles — the papers cycle ×, ✓, £, = as readily as shapes',
+    ],
+  },
+  '9-10': {
+    book: 'Bond 10 Minute Tests: Non-verbal Reasoning 9-10 (Alison Primrose)',
+    missing: [
+      'composite figures — its shapes are assemblies of parts where ours are one outline',
+      'analogies that compose two or three changes at once',
+    ],
+  },
+  '10-11': {
+    book: 'Bond 10 Minute Tests: Non-verbal Reasoning 10-11 (Alison Primrose)',
+    missing: [
+      'cube nets — which folded cube matches this net',
+      'hidden shapes',
+      'composite figures, as at 9-10',
+    ],
+  },
+}
+
 export function bandForAge(age) {
   const n = Number(age) || 7
   if (n <= 6) return '5-6'
   if (n <= 8) return '7-8'
-  return '9-11'
+  if (n <= 9) return '8-9'
+  if (n <= 10) return '9-10'
+  return '10-11'
 }
 
 // Seeded so a question is reproducible from its seed alone. When a child hits a figure that
@@ -360,7 +483,7 @@ const NEEDS_FIXED = { position: ['rotation', 'flip'] }
 // Drawing a figure first and asking what it can vary sounds neutral and is not: an attribute
 // that works on any figure is offered every time, and one with prerequisites is offered only on
 // the rare figure that happens to meet them. `corner` needs a ground that is not split, not
-// nested and not dotted, and with 9-11's pools that came to under half a percent of draws.
+// nested and not dotted, and with the oldest band's pools that came to under half a percent.
 // Measured over 4000 draws per band, `stretch` carried 744 rules and `corner` carried 2; the
 // three bands starved corner at 19, 1 and 2, and dots at 298, 9 and 20. Every one of those is a
 // dial in the config that does nothing, and the dead-attribute check could not see it because
@@ -698,6 +821,49 @@ function genAnalogy(r, band, seed) {
     options: order.map(i => options[i]),
     correct_index: order.indexOf(0),
     rule: { attr: ruleAttr, from: a[ruleAttr], to },
+  }
+}
+
+// Which one of these has a line of symmetry? Symmetry is one of the six categories the 10-11
+// book covers and the engine reached none of it.
+//
+// It costs almost nothing, because the test already exists in the negative: `reflection` throws
+// away any figure whose mirror image is itself, since there is then nothing to see. That
+// discarded set IS the answer set here. One predicate, read the other way round.
+//
+// Both directions are posed. Four symmetrical figures and one that is not asks the child to spot
+// the broken one, which is the harder reading; one symmetrical among four that are not is the
+// plainer one. The papers use both.
+const isSymmetric = (spec) => geometryKey(spec) === geometryKey({ ...spec, flip: !spec.flip })
+
+function genSymmetry(r, band, seed) {
+  const want = band.options
+  // Draw a pool of figures and sort them by the predicate, rather than trying to construct a
+  // symmetrical figure directly — whether a figure comes out symmetrical depends on its shape,
+  // rotation, fill angle, split, marks and satellites all at once, and geometryKey is the only
+  // thing that knows.
+  const yes = []
+  const no = []
+  for (let i = 0; i < 90 && (yes.length < want || no.length < want); i++) {
+    const spec = randomSpec(r, band)
+    const bucket = isSymmetric(spec) ? yes : no
+    if (bucket.some(s => geometryKey(s) === geometryKey(spec))) continue
+    bucket.push(spec)
+  }
+  const oddIsSymmetric = r() < 0.5
+  const [few, many] = oddIsSymmetric ? [yes, no] : [no, yes]
+  if (!few.length || many.length < want - 1) return null
+
+  const specs = [...many.slice(0, want - 1), few[0]]
+  if (new Set(specs.map(geometryKey)).size !== want) return null
+
+  const order = shuffle(r, indices(want))
+  const oddAt = want - 1
+  return {
+    seed, type: 'symmetry', layout: 'options-only', prompt: [],
+    options: order.map(i => ({ spec: specs[i], why: i === oddAt ? null : 'symmetry' })),
+    correct_index: order.indexOf(oddAt),
+    rule: { attr: 'symmetry', from: !oddIsSymmetric, to: oddIsSymmetric },
   }
 }
 
@@ -1093,9 +1259,15 @@ function genIconSequence(r, band, seed) {
   // same alternation reads as one question asked four times.
   const onFill = r() < 0.6
   const n = band.seqLength
+  // The icon axis honours the band's period. It used to alternate between two icons at every
+  // age, whatever the band declared, so a 10-year-old and a 5-year-old got the same run — while
+  // Bond 8-9 question 20 cycles four symbols and question 19 four shapes. The fill axis stays at
+  // two because outline and solid are all there is; a period is only as long as its pool.
+  const period = onFill ? 2 : Math.min(band.seqPeriod, icons.length)
+  if (period < 2) return null
   const at = (i) => (onFill
     ? makeIconSpec({ icon: icons[0], fill: ICON_FILLS[i % 2], group })
-    : makeIconSpec({ icon: icons[i % 2], fill: 0, group }))
+    : makeIconSpec({ icon: icons[i % period], fill: 0, group }))
 
   const prompt = Array.from({ length: n }, (_, i) => at(i))
   const answer = at(n)
@@ -1150,6 +1322,7 @@ const GENERATORS = {
   analogy: genAnalogy,
   reflection: genReflection,
   code: genCode,
+  symmetry: genSymmetry,
   'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
   'glyph-trait': genGlyphTrait,
   'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),

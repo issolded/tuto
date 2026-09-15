@@ -441,6 +441,7 @@ const STRINGS = {
   puzzle_stem_analogy:{ en: 'Which one finishes it the same way?', tr: 'Hangisi aynı şekilde tamamlar?' },
   puzzle_stem_mirror: { en: 'Which one is it in the mirror?',  tr: 'Aynadaki hâli hangisi?' },
   puzzle_stem_code:   { en: 'Which code goes with the last picture?', tr: 'Son resmin kodu hangisi?' },
+  puzzle_stem_symmetry: { en: 'Which one has a line of symmetry?', tr: 'Hangisinin simetri ekseni var?' },
 }
 
 // ── Adding a language ────────────────────────────────────────────────────────

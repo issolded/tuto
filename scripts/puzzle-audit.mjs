@@ -24,7 +24,7 @@ import { installStubFonts } from './lib/stub-fonts.mjs'
 // FontFaceSet faithful enough for src/lib/fontGate.js — see the note there.
 installStubFonts()
 
-const { BANDS, BAND_KEYS, generateQuestion, generateSession, validateQuestion, questionSignature } =
+const { BANDS, BAND_KEYS, BOOK_COVERAGE, generateQuestion, generateSession, validateQuestion, questionSignature } =
   await import('../src/lib/puzzleTemplates.js')
 const { groupOf, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
@@ -38,6 +38,9 @@ const fail = (band, kind, detail) => findings.push(`[${band}] ${kind}: ${detail}
 const val = (v) => (v && typeof v === 'object' ? JSON.stringify(v) : String(v))
 const grp = (s) => (s.kind === 'glyph' ? groupOf(s.glyph) : s.kind === 'icon' ? iconGroupOf(s.icon) : null)
 const sourceOf = (t) => (t.startsWith('glyph') ? 'glyph' : t.startsWith('icon') ? 'icon' : 'geometric')
+
+// `why` labels that name a property computed from the figure rather than a field stored on it.
+const DERIVED_LABELS = new Set(['symmetry', 'flip', 'group', 'trait', 'relation', 'order'])
 
 for (const band of BAND_KEYS) {
   const qs = []
@@ -69,8 +72,12 @@ for (const band of BAND_KEYS) {
   // sweep deals types in the band's declared mix and the rare ones come out too thin to judge.
   // Read off a 4000-draw sweep, glyph-belongs got about 140 draws, where one slot landing at 12%
   // against an even 20% is under three of its own standard deviations — noise, reported as a
-  // finding. Asked directly for 4000 of its own it is flat to a tenth of a percent.
-  const PER_TYPE = 4000
+  // finding. Asked directly for its own sample it is flat to a tenth of a percent.
+  //
+  // 2500 is enough to judge a slot bias well outside noise — at five options a seven-point
+  // deviation is nine standard deviations — without the run growing without limit as bands are
+  // added. Five bands times fourteen types is already a third of a million questions.
+  const PER_TYPE = 2500
   for (const t of [...BANDS[band].types, ...BANDS[band].glyphTypes, ...BANDS[band].iconTypes]) {
     let built = 0
     const counts = new Array(BANDS[band].options).fill(0)
@@ -168,6 +175,12 @@ for (const band of BAND_KEYS) {
       const v = (s) => val(s[q.rule.attr])
       if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
       else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
+    } else if (q.type === 'symmetry') {
+      // Re-derived from the drawn figure, not from the flag the generator set: a figure has a
+      // line of symmetry exactly when mirroring it produces the same picture.
+      const sym = (s) => geometryKey(s) === geometryKey({ ...s, flip: !s.flip })
+      if (others.some(s => sym(s) === sym(ans))) why = 'a distractor is on the answer\'s side of the predicate'
+      else if (new Set(others.map(sym)).size !== 1) why = 'the non-answers do not agree'
     } else if (q.type === 'code') {
       // Rebuilt from the page alone, the way a child has to: read each shown figure's two
       // attribute values off its label, then look up the figure being asked about. Three ways
@@ -283,6 +296,13 @@ for (const band of BAND_KEYS) {
     if (q.options[q.correct_index].why) wrong = 'the correct option carries a why label'
     q.options.forEach((o, k) => {
       if (wrong || k === q.correct_index || !o.why || o.why === 'both') return
+      // A label may name a DERIVED property rather than a stored one. `symmetry` is not a field
+      // on any spec — it is a question asked of the drawn figure, whether mirroring it gives the
+      // same picture — so requiring it to be a spec key reported every symmetry question as
+      // broken. The glyph and icon families have labels like this too (`group`, `trait`,
+      // `relation`, `order`) and escape only because their specs carry a `kind` and are skipped
+      // above; the geometric ones had no such exit.
+      if (DERIVED_LABELS.has(o.why)) return
       if (!(o.why in o.spec)) { wrong = `"${o.why}" is not an attribute`; return }
       if (q.type === 'identical') {
         if (val(o.spec[o.why]) === val(ans[o.why])) wrong = `"${o.why}" matches the target on a distractor`
@@ -315,6 +335,23 @@ for (const band of BAND_KEYS) {
   }
   if (sameDay > total * 0.02) fail(band, 'repeats', `${sameDay} repeats within a day over ${total} questions`)
   console.log(`${band.padEnd(6)} ${qs.length} draws · mix ${Object.entries(mix).map(([k, v]) => `${k} ${(v / qs.length * 100).toFixed(0)}%`).join(' ')} · 30 days: ${seen.size} distinct of ${total}, ${sameDay} same-day repeat`)
+}
+
+// ── what each band says it cannot do is still true ───────────────────────────
+// BOOK_COVERAGE records, per band, what its book has that this engine does not. Written as a
+// comment it would outlive the gap — a note saying "no symmetry yet" reads the same the day
+// symmetry ships and for years afterwards. Written as data it can be checked: every band must
+// name its book, and no `missing` line may name a type the band now poses.
+for (const band of BAND_KEYS) {
+  const cover = BOOK_COVERAGE[band]
+  if (!cover?.book) { findings.push(`[${band}] coverage: no book recorded`); continue }
+  const posed = [...BANDS[band].types, ...BANDS[band].glyphTypes, ...BANDS[band].iconTypes]
+  for (const line of cover.missing) {
+    const claimed = line.split('—')[0].trim().split(/[ (]/)[0].toLowerCase()
+    if (posed.some(t => t === claimed || t.endsWith(`-${claimed}`))) {
+      findings.push(`[${band}] coverage: "${line}" is listed as missing, but ${claimed} is posed`)
+    }
+  }
 }
 
 // ── the gate fails closed ─────────────────────────────────────────────────────
