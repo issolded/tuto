@@ -61,7 +61,7 @@ export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-c
 // The pictorial family. Kept as its own list because it is a different KIND of question — it
 // asks what a child knows about the world, not what they can see in a pattern — and the two
 // should stay separable in the attempt log and in what a parent is told.
-export const GLYPH_TYPES = ['glyph-odd', 'glyph-belongs', 'glyph-analogy']
+export const GLYPH_TYPES = ['glyph-odd', 'glyph-belongs', 'glyph-sequence', 'glyph-analogy']
 
 // The line-drawn pictorial family. Separate from GLYPH_TYPES because it is drawn from a
 // different font with a different vocabulary — and because it can do something emoji cannot:
@@ -78,6 +78,7 @@ export const STEM_KEYS = {
   analogy: 'puzzle_stem_analogy',
   'glyph-odd': 'puzzle_stem_odd',
   'glyph-belongs': 'puzzle_stem_belongs',
+  'glyph-sequence': 'puzzle_stem_next',
   'glyph-analogy': 'puzzle_stem_analogy',
   'icon-odd': 'puzzle_stem_odd',
   'icon-belongs': 'puzzle_stem_belongs',
@@ -140,7 +141,8 @@ const attributesFor = (spec) =>
 export const BANDS = {
   '5-6': {
     types: ['odd-one-out', 'identical', 'sequence'],
-    glyphTypes: ['glyph-odd', 'glyph-belongs'],   // relations wait for 7-8
+    // Relations wait for 7-8; a picture cycle does not -- the 5-6 papers open on alternation.
+    glyphTypes: ['glyph-odd', 'glyph-belongs', 'glyph-sequence'],
     iconTypes: ICON_TYPES,
     sources: { geometric: 7, icon: 2, glyph: 1 },
     options: 4,               // the 5-6 papers offer a–d; every band above them offers a–e
@@ -616,6 +618,52 @@ function genGlyphCategory(r, band, seed, type) {
   }
 }
 
+// A cycle of pictures. This is Bond 7-8 paper 1 question 16 almost exactly — recorder, guitar,
+// saxophone, piano, recorder, guitar, and what comes next — and paper 1 question 14 with a
+// period of two. It is worth naming what makes it different from the geometric `sequence`
+// beside it, because they look like the same question: there, the run moves ONE ATTRIBUTE of
+// one figure and the child reads a property changing; here the figures are unrelated pictures
+// and the only thing to read is the ORDER. A child can be fluent at one and blank at the other,
+// which is a distinction the attempt log should keep.
+//
+// Every option comes from the group the cycle is drawn from, which is what the papers do and is
+// not decoration: one instrument among four fruit would be answerable by category, and the
+// question would stop being about order at all.
+function genGlyphSequence(r, band, seed) {
+  const group = pick(r, GROUP_KEYS)
+  const members = shuffle(r, GLYPH_GROUPS[group].glyphs.slice())
+  const want = band.options
+  // The cycle needs its own members and the option set needs enough pictures to fill itself
+  // without repeating one, and the two draw from the same group.
+  if (members.length < want) return null
+  const period = Math.min(band.seqPeriod, members.length - 1)
+  if (period < 2) return null
+
+  const cycle = members.slice(0, period)
+  const spec = (glyph) => makeGlyphSpec({ glyph, group })
+  const n = band.seqLength
+  const prompt = Array.from({ length: n }, (_, i) => spec(cycle[i % period]))
+  const answer = cycle[n % period]
+  // The same strongest distractor as every other sequence: the picture that just went past,
+  // which is where a child reading the run as "more of the same" lands.
+  const near = cycle[(n - 1) % period]
+
+  // Cycle members first, then the group's non-members. A distractor from inside the cycle is
+  // the harder one — it is in the run, just at the wrong point — so it is offered before a
+  // picture that has not been seen at all.
+  const rest = [...cycle.filter(g => g !== answer && g !== near), ...members.slice(period)]
+  const glyphs = [answer, near, ...rest].slice(0, want)
+  if (new Set(glyphs).size !== want) return null
+
+  const order = shuffle(r, indices(want))
+  return {
+    seed, type: 'glyph-sequence', layout: 'row', prompt,
+    options: order.map(i => ({ spec: spec(glyphs[i]), why: i === 0 ? null : 'order' })),
+    correct_index: order.indexOf(0),
+    rule: { attr: 'order', from: cycle[0], to: answer },
+  }
+}
+
 function genGlyphAnalogy(r, band, seed) {
   const relKey = pick(r, RELATION_KEYS)
   const rel = GLYPH_RELATIONS[relKey]
@@ -763,6 +811,7 @@ const GENERATORS = {
   analogy: genAnalogy,
   'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
   'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),
+  'glyph-sequence': genGlyphSequence,
   'glyph-analogy': genGlyphAnalogy,
   'icon-odd': (r, band, seed) => genIconCategory(r, band, seed, 'icon-odd'),
   'icon-belongs': (r, band, seed) => genIconCategory(r, band, seed, 'icon-belongs'),

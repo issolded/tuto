@@ -147,11 +147,26 @@ for (const band of BAND_KEYS) {
         if (!partner) why = `${c.glyph} has no partner under ${rel}`
         else if (ans.glyph !== partner) why = `the answer is ${ans.glyph} but ${rel} gives ${partner}`
       }
-    } else if (q.type === 'sequence' || q.type === 'icon-sequence') {
+    } else if (q.type === 'sequence' || q.type === 'icon-sequence' || q.type === 'glyph-sequence') {
       // Nothing else in the pipeline ever looks at the prompt, so a run with no visible rule in
       // it reaches a child unchallenged.
       const keys = q.prompt.map(c => (c.kind ? JSON.stringify(c) : geometryKey(c)))
       if (new Set(keys).size < 2) why = `the prompt is ${q.prompt.length} identical figures`
+
+      // A picture cycle is the one sequence whose answer can be re-derived from the prompt
+      // alone, so it is, rather than taken on the generator's word. The period is read back off
+      // the run — the smallest p that the whole prompt repeats on — and the next term is then
+      // the one p places before the end. It also catches a prompt that is not periodic at all,
+      // which would leave a child with a run that has no next term.
+      if (!why && q.type === 'glyph-sequence') {
+        const g = q.prompt.map(c => c.glyph)
+        const p = g.map((_, k) => k).slice(2).find(k => g.every((c, i) => i < k || c === g[i - k]))
+        if (!p) why = `the prompt ${g.join('')} does not repeat on any period`
+        else if (ans.glyph !== g[g.length - p]) why = `the cycle of ${p} gives ${g[g.length - p]}, not ${ans.glyph}`
+        else if (new Set(q.options.map(o => grp(o.spec))).size !== 1) {
+          why = 'the options are not all from one group, so the run is answerable by category'
+        }
+      }
     }
 
     if (why) { fail(band, 'answer', `${q.type} (rule ${q.rule.attr}): ${why}`); break }
