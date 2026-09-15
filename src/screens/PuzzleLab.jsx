@@ -150,13 +150,19 @@ function Prompt({ q }) {
       </div>
     )
   }
+  // The bands above 7-8 show six figures in a run rather than four, and at 60px that wrapped and
+  // left the question mark alone on a third line, reading as a separate thing rather than the
+  // end of the sequence. Shrinking the figures fixes that; taking the wrap away as well did not
+  // fix it, it just clipped the sixth figure at the edge of the card, which is worse — a run
+  // with a figure missing is a different question. Wrap stays, the figures get smaller.
+  const px = q.prompt.length >= 6 ? 42 : 60
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-      {q.prompt.map((cell, i) => <Figure key={i} spec={cell} px={60} />)}
+      {q.prompt.map((cell, i) => <Figure key={i} spec={cell} px={px} />)}
       {/* Every "what comes next" run ends in the blank, not just the geometric one — this
           checked the type and so icon-sequence and glyph-sequence drew a row with no question
           mark on the end of it. The stem is what the question is, so that is what it asks. */}
-      {q.layout === 'row' && q.stem_key === 'puzzle_stem_next' && <Blank px={60} />}
+      {q.layout === 'row' && q.stem_key === 'puzzle_stem_next' && <Blank px={px} />}
     </div>
   )
 }
