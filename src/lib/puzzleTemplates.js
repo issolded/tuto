@@ -763,7 +763,7 @@ function genGridComplete(r, band, seed) {
     { spec: cell(0, 0), why: 'both' },    // neither
   ]
   while (options.length < band.options) {
-    const spare = usableAttrs(r, band, answer, [rowAttr, colAttr])
+    const spare = shuffle(r, usableAttrs(r, band, answer, [rowAttr, colAttr]))
       .map(a => [a, otherValue(r, band, answer, a)])
       .find(([, v]) => v !== null)
     if (!spare) return null
@@ -800,8 +800,12 @@ function genAnalogy(r, band, seed) {
   const steps = [{ attr: ruleAttr, to }]
   if (band.analogySteps > 1) {
     const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || [])]
-    const second = usableAttrs(r, band, a, barred)
-      .filter(x => !(NEEDS_CLEAR[x] || []).includes(ruleAttr))
+    // Shuffled, not taken in order. `usableAttrs` returns the band's list in the band's order and
+    // `shape` heads it, so picking the first usable one put `shape` in essentially every two-step
+    // rule — twelve analogies rendered, twelve of them `something+shape`. The same slip is one
+    // line down, where the attribute that makes C differ from A was also always the first.
+    const second = shuffle(r, usableAttrs(r, band, a, barred)
+      .filter(x => !(NEEDS_CLEAR[x] || []).includes(ruleAttr)))
       .map(x => [x, otherValue(r, band, a, x)])
       .find(([, v]) => v !== null)
     if (!second) return null
@@ -818,12 +822,20 @@ function genAnalogy(r, band, seed) {
   // these values" rather than "change them somehow" — otherwise A→B and C→? are two different
   // rules that happen to look alike.
   const b = apply(a)
-  const cAttrs = usableAttrs(r, band, a, moved)
+  // What makes C differ from A may not be something that SUPPRESSES a step. Shift `half` on an
+  // analogy whose rule moves `dots` and normalizeSpec takes the dots off C, so the second pair
+  // starts from a figure that already differs from A on the very thing being carried across —
+  // and the child is asked to apply a change that has nowhere to land.
+  const cAttrs = shuffle(r, usableAttrs(r, band, a, moved))
+    .filter(x => !moved.some(m => (NEEDS_CLEAR[m] || []).includes(x)))
   if (!cAttrs.length) return null
   const cShift = otherValue(r, band, a, cAttrs[0])
   if (cShift === null) return null
   const c = { ...a, [cAttrs[0]]: cShift }
-  if (moved.some(x => valueKey(c[x]) !== valueKey(a[x]))) return null
+  // Compared on the DRAWN figure, not the raw spec. The table above names the suppressions it
+  // knows; this catches the ones it does not, which is how the audit found this in the first
+  // place — the specs agreed on `dots` while the pictures did not.
+  if (moved.some(x => valueKey(normalizeSpec(c)[x]) !== valueKey(normalizeSpec(a)[x]))) return null
   const answer = apply(c)
   // Both steps have to SURVIVE on the answer. One can still erase the other through a route
   // NEEDS_CLEAR does not name — the shape carrying them changed too — and then the pair shows
@@ -845,7 +857,7 @@ function genAnalogy(r, band, seed) {
     }
   }
   while (options.length < band.options) {
-    const spare = usableAttrs(r, band, answer, moved)
+    const spare = shuffle(r, usableAttrs(r, band, answer, moved))
       .map(at => [at, otherValue(r, band, answer, at)])
       .find(([, v]) => v !== null)
     if (!spare) return null
@@ -1046,7 +1058,7 @@ function genReflection(r, band, seed) {
   // options and teaches nothing — and it is what this picked, being the first attribute in the
   // list. Every other attribute keeps the same object and asks the child to look at it.
   while (options.length < band.options) {
-    const movable = usableAttrs(r, band, answer)
+    const movable = shuffle(r, usableAttrs(r, band, answer))
       .map(a => [a, otherValue(r, band, answer, a)])
       .filter(([, v]) => v !== null)
     const spare = movable.find(([a]) => a !== 'shape') ?? movable[0]
