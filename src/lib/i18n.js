@@ -439,6 +439,7 @@ const STRINGS = {
   puzzle_stem_belongs:{ en: 'Which one belongs with these?',  tr: 'Hangisi bunlarla birlikte olur?' },
   puzzle_stem_pattern:{ en: 'Which one completes the pattern?', tr: 'Örüntüyü hangisi tamamlar?' },
   puzzle_stem_analogy:{ en: 'Which one finishes it the same way?', tr: 'Hangisi aynı şekilde tamamlar?' },
+  puzzle_stem_mirror: { en: 'Which one is it in the mirror?',  tr: 'Aynadaki hâli hangisi?' },
 }
 
 // ── Adding a language ────────────────────────────────────────────────────────

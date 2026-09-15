@@ -148,6 +148,15 @@ for (const band of BAND_KEYS) {
       const v = (s) => val(s[q.rule.attr])
       if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
       else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
+    } else if (q.type === 'reflection') {
+      // Re-derived rather than taken on trust, and the second line is the one that matters: a
+      // figure symmetric about the vertical axis IS its own mirror image, so the question would
+      // have a correct answer and four distractors that are all equally correct-looking, with
+      // nothing on screen to tell them apart.
+      const base = q.prompt[0]
+      if (geometryKey(ans) !== geometryKey({ ...base, flip: !base.flip })) {
+        why = 'the answer is not the mirror of the prompt'
+      } else if (geometryKey(ans) === geometryKey(base)) why = 'the figure is its own mirror image'
     } else if (q.type === 'glyph-trait') {
       // The category reading and the property reading are both checked, because the question is
       // only about the property while the category says nothing. Then every OTHER trait of that

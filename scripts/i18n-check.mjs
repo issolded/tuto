@@ -33,6 +33,12 @@ const NOT_CHILD_FACING = [
   // Developer sandboxes. No child reaches them — they are unlisted routes whose whole content
   // is attribute names and audit counters, and translating that would hide what it reports.
   'screens/PuzzleLab.jsx',
+  // The puzzle vocabulary tables. Their Turkish is not a string waiting to be translated, it is
+  // one of the two readings a row already carries — every group, trait and relation is written
+  // in both languages on purpose, because a relation that is obvious in English can be a shrug
+  // in Turkish and the table is meant to be reviewed in both. Routing them through the
+  // dictionary would put that side by side with UI copy and lose the pairing.
+  'lib/puzzleGlyphs.js', 'lib/puzzleIcons.js',
 ]
 
 function walk(dir, out = []) {

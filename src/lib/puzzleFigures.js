@@ -42,11 +42,17 @@
 // after stretch, flip and rotation, rounded and sorted, plus each fill's effective angle.
 // Every generated question is checked against it before a child can see it.
 //
-// `flip` is supported by the renderer and the key, but is not in ATTRIBUTES: mirror-image
-// questions are a real NVR category and belong here eventually, but a flip interacts with
-// rotation in ways that need their own pass (a right-arrow flipped IS the same picture as one
-// rotated 180°). For now only the analogy transform uses it, where the pairing makes the
-// intent explicit.
+// `flip` is supported by the renderer and the key, and is still not in ATTRIBUTES. The reason
+// has not changed: a flip interacts with rotation, and a right-pointing arrow flipped IS the
+// same picture as one turned through 180°, so dealt as noise among other attributes it would
+// silently collapse options into each other.
+//
+// What has changed is that the mirror-image questions it was being saved for now exist, as the
+// `reflection` generator. They are safe because there a flip is not noise — it is the whole
+// question, one figure against its mirror, and every case of the interaction is settled by
+// asking geometryKey about the drawn result rather than the spec. A figure whose mirror image
+// is itself is discarded for having no visible answer; a distractor that collides with the
+// answer takes its draw with it. The analogy transform uses it on the same terms.
 
 export const SHAPES = ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow']
 export const FILLS = ['none', 'solid', 'hatch-45', 'hatch-90', 'cross']

@@ -57,7 +57,7 @@ import {
   makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady,
 } from './puzzleIcons.js'
 
-export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy']
+export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection']
 
 // The pictorial family. Kept as its own list because it is a different KIND of question — it
 // asks what a child knows about the world, not what they can see in a pattern — and the two
@@ -77,6 +77,7 @@ export const STEM_KEYS = {
   belongs: 'puzzle_stem_belongs',
   'grid-complete': 'puzzle_stem_pattern',
   analogy: 'puzzle_stem_analogy',
+  reflection: 'puzzle_stem_mirror',
   'glyph-odd': 'puzzle_stem_odd',
   'glyph-trait': 'puzzle_stem_odd',
   'glyph-belongs': 'puzzle_stem_belongs',
@@ -162,7 +163,7 @@ export const BANDS = {
     seqLength: 4,
   },
   '7-8': {
-    types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete'],
+    types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'reflection'],
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
     sources: { geometric: 7, icon: 2, glyph: 1 },
@@ -576,6 +577,55 @@ function genAnalogy(r, band, seed) {
   }
 }
 
+// Which of these five is the figure on the left, seen in the mirror? Bond 7-8 closes paper 1
+// with three of them and every band above it carries the category, and the engine had none —
+// puzzleFigures has supported `flip` since the beginning and nothing but the analogy transform
+// ever used it.
+//
+// The note there explains why it is not in ATTRIBUTES and the reason still holds: a flip
+// interacts with rotation, and a right-pointing arrow flipped is the same picture as one turned
+// through 180°. What makes it safe HERE is that it is not being dealt as noise among other
+// attributes — it is the whole question, and geometryKey settles every case of the interaction
+// by looking at the drawn result. A figure whose mirror image is itself gives no question and is
+// discarded; a distractor that collides with the answer takes the draw with it.
+function genReflection(r, band, seed) {
+  const base = randomSpec(r, band)
+  const answer = makeSpec({ ...base, flip: !base.flip })
+  // Symmetric about the vertical axis — a circle, an unmarked square — and there is nothing to
+  // see. This is the whole gate, and it is the drawn figure that is asked rather than the spec.
+  if (geometryKey(answer) === geometryKey(base)) return null
+
+  const turned = (spec, by) => makeSpec({ ...spec, rotation: (spec.rotation + by + 360) % 360 })
+
+  // The mistakes the question is about, in the order the papers make them. Turning instead of
+  // mirroring is the big one and it gets two entries, since a child who does it may turn either
+  // way; not transforming at all is the next.
+  const options = [
+    { spec: answer, why: null },
+    { spec: makeSpec({ ...base }), why: 'flip' },
+    { spec: turned(base, 180), why: 'flip' },
+    { spec: turned(answer, 90), why: 'rotation' },
+  ]
+  // The last distractor is a true mirror with something else moved, which is the one that asks
+  // whether the child checked the figure as well as its handedness.
+  while (options.length < band.options) {
+    const spare = usableAttrs(r, band, answer)
+      .map(a => [a, otherValue(r, band, answer, a)])
+      .find(([, v]) => v !== null)
+    if (!spare) return null
+    options.push({ spec: makeSpec({ ...answer, [spare[0]]: spare[1] }), why: spare[0] })
+  }
+  if (new Set(options.map(o => geometryKey(o.spec))).size !== options.length) return null
+
+  const order = shuffle(r, indices(options.length))
+  return {
+    seed, type: 'reflection', layout: 'mirror', prompt: [base],
+    options: order.map(i => options[i]),
+    correct_index: order.indexOf(0),
+    rule: { attr: 'flip', from: base.flip, to: answer.flip },
+  }
+}
+
 // ── glyph generators ──────────────────────────────────────────────────────────
 // A separate small family rather than the six bent to fit. A glyph cannot be hatched, split
 // or nested — the only things that can vary are WHICH glyph, how many, how big and which way
@@ -866,6 +916,7 @@ const GENERATORS = {
   belongs: genBelongs,
   'grid-complete': genGridComplete,
   analogy: genAnalogy,
+  reflection: genReflection,
   'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
   'glyph-trait': genGlyphTrait,
   'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),

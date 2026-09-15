@@ -81,6 +81,17 @@ function Prompt({ q }) {
       </div>
     )
   }
+  if (q.layout === 'mirror') {
+    // The dashed line is the question. Without it on screen this is a figure next to a blank
+    // and nothing says which way the mirror faces, so it is drawn here rather than described.
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <Figure spec={q.prompt[0]} px={60} />
+        <div style={{ width: 0, alignSelf: 'stretch', borderLeft: `3px dashed ${C.dim}` }} />
+        <Blank px={60} />
+      </div>
+    )
+  }
   if (q.layout === 'analogy') {
     const [a, b, c] = q.prompt
     return (
@@ -98,7 +109,10 @@ function Prompt({ q }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
       {q.prompt.map((cell, i) => <Figure key={i} spec={cell} px={60} />)}
-      {q.layout === 'row' && q.type === 'sequence' && <Blank px={60} />}
+      {/* Every "what comes next" run ends in the blank, not just the geometric one — this
+          checked the type and so icon-sequence and glyph-sequence drew a row with no question
+          mark on the end of it. The stem is what the question is, so that is what it asks. */}
+      {q.layout === 'row' && q.stem_key === 'puzzle_stem_next' && <Blank px={60} />}
     </div>
   )
 }
