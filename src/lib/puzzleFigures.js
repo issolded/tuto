@@ -107,6 +107,10 @@ export const POSITIONS = [null, 'tl', 'tr', 'bl', 'br']
 const SATELLITE_SHAPES = new Set(['circle', 'square', 'hexagon'])
 const SATELLITE_HALF = 7
 
+// The smallest a countable mark may be, in the 100-unit box — about 5px across at the size a
+// child sees a figure. Below this normalizeSpec drops the marks rather than drawing specks.
+const MIN_MARK = 3
+
 // The attributes a question rule may be built on. Order matters only for stable output.
 export const ATTRIBUTES = ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'dots', 'corner', 'inner', 'position']
 
@@ -218,6 +222,20 @@ export function normalizeSpec(spec) {
     if (s.dots > 0) s.corner = null
     if (s.fill !== 'solid') s.fill = 'none'
   }
+
+  // A mark too small to count is not a mark. `dots` is the one attribute a child has to COUNT
+  // rather than merely notice, and its size is the product of four things that all shrink it:
+  // the shape's usable area (a triangle gets 45% of a circle's), the figure's size, its
+  // narrowing, and a further reduction above three dots so they do not crowd each other. At the
+  // bottom of that stack — five dots on a small narrowed triangle — the marks came out at 1.6
+  // units, which is under a pixel and a half on screen. Measured across real questions, 14% of
+  // the oldest band's dotted figures were under 2.5 and its smallest was 1.62.
+  //
+  // So the figure declines the marks, the same way a triangle declines a corner mark: geometryKey
+  // agrees because it calls this too, attrVisible then reports `dots` as invisible there, and
+  // generators simply pose the question on a figure with room. Nothing is starved — the rule is
+  // chosen first and the figure drawn to fit it.
+  if (s.dots > 0 && dotRadius(s) < MIN_MARK) s.dots = 0
   return s
 }
 
