@@ -82,8 +82,41 @@ function Blank({ px = 76 }) {
   )
 }
 
+// The one option that is not a picture. A code question offers five two-letter strings, so it
+// gets a chip the same size as a figure tile — a row of letters at body size next to a row of
+// drawings reads as a different kind of control rather than the same choice.
+function CodeChip({ code, state }) {
+  const border = state === 'ok' ? C.ok : state === 'bad' ? C.bad : '#DCD9EA'
+  return (
+    <div style={{
+      width: 76 + 12, height: 76 + 12, borderRadius: 12, background: '#fff', color: '#12131A',
+      border: `3px solid ${border}`, display: 'grid', placeItems: 'center',
+      font: '700 26px ui-monospace, monospace', letterSpacing: 1,
+    }}>{code}</div>
+  )
+}
+
 function Prompt({ q }) {
   if (q.layout === 'options-only') return null
+  if (q.layout === 'code') {
+    // Each figure carries its label under it, and the last one carries the question mark. The
+    // labels ARE the question — without them the row is six unrelated drawings.
+    return (
+      {/* Six across, so the figure being asked about stays at the end of the run the labels
+          explain. At 56px they wrapped and the `?` began a second row beside an unrelated
+          label, which reads as a different question. */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+        {q.prompt.map((cell, i) => (
+          <div key={i} style={{ textAlign: 'center' }}>
+            <Figure spec={cell} px={40} />
+            <div style={{
+              font: '700 13px ui-monospace, monospace', color: C.dim, marginTop: 3, letterSpacing: 1,
+            }}>{q.promptLabels[i]}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
   if (q.layout === 'grid2x2') {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, max-content)', gap: 6, marginBottom: 12 }}>
@@ -154,7 +187,7 @@ function QuestionCard({ q, lang }) {
               style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
               title={o.why ? `moved: ${o.why}` : 'answer'}
             >
-              <Figure spec={o.spec} state={state} />
+              {o.spec ? <Figure spec={o.spec} state={state} /> : <CodeChip code={o.code} state={state} />}
               <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
                 {LETTERS[i]}{picked != null && o.why ? ` · ${o.why}` : ''}
               </div>

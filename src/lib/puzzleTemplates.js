@@ -57,7 +57,7 @@ import {
   makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady,
 } from './puzzleIcons.js'
 
-export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection']
+export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection', 'code']
 
 // The pictorial family. Kept as its own list because it is a different KIND of question — it
 // asks what a child knows about the world, not what they can see in a pattern — and the two
@@ -78,6 +78,7 @@ export const STEM_KEYS = {
   'grid-complete': 'puzzle_stem_pattern',
   analogy: 'puzzle_stem_analogy',
   reflection: 'puzzle_stem_mirror',
+  code: 'puzzle_stem_code',
   'glyph-odd': 'puzzle_stem_odd',
   'glyph-trait': 'puzzle_stem_odd',
   'glyph-belongs': 'puzzle_stem_belongs',
@@ -219,6 +220,8 @@ export const BANDS = {
     seqLength: 5,
   },
   '9-11': {
+    // Codes are here and nowhere below: they are two of the ten topic tests in the 10-11 book
+    // and appear in none of the younger ones.
     types: TYPES,
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
@@ -230,12 +233,21 @@ export const BANDS = {
     rotations: ROTATIONS,
     sizes: SIZES,
     stretches: STRETCHES,
-    halves: [null, ...HALVES.slice(1)],
-    inners: [null, ...INNER_NODES.slice(1)],
-    // Weighted toward none. A figure carries dots or a corner mark, never both, so a pool that
-    // is five-sixths dotted starves `corner` out entirely — over 4000 draws it never once
-    // carried a rule, which is a dial in the config that does nothing. It also keeps the
-    // hardest band's figures from being uniformly busy.
+    // All three pools weight "nothing" the way the younger bands do, and for the same reason
+    // twice over.
+    //
+    // `corner` needs a PLAIN interior: normalizeSpec gives a half-split and a nested node the
+    // whole inside, so a corner mark survives only on a figure that is neither split nor nested
+    // nor dotted. Weighting dots alone was not enough — with one null in nine inners and one in
+    // five halves, the chance of a plain ground was under half a percent, and over 4000 draws
+    // `corner` carried no rule at all. It was configured and did nothing, which is what the
+    // dead-attribute check is for; the check found it the moment codes took a share of the band
+    // and pushed it over the line, but it had been dying for a while.
+    //
+    // And a band where eight figures in nine are nested and four in five are split is uniformly
+    // busy, which is not what the papers look like at any age.
+    halves: [null, null, ...HALVES.slice(1)],
+    inners: [null, null, null, ...INNER_NODES.slice(1)],
     dots: [0, 0, 0, 1, 2, 3, 4, 5],
     corners: CORNERS,
     seqPeriod: 4,
@@ -307,6 +319,44 @@ function usableAttrs(r, band, spec, exclude = []) {
   return band.attributes.filter(a => !exclude.includes(a) && otherValue(r, band, spec, a) !== null)
 }
 
+// normalizeSpec resolves unreadable combinations by precedence — a half-split owns the whole
+// interior, then a nested node, then marks. Read backwards, that is a list of what must be OUT
+// OF THE WAY for each attribute to be visible at all, and it is needed in two places, so it is
+// written once here.
+const NEEDS_CLEAR = {
+  fill: ['half', 'inner', 'dots', 'corner'],
+  dots: ['half', 'inner', 'corner'],
+  corner: ['half', 'inner', 'dots'],
+  inner: ['half'],
+}
+const EMPTY = { half: null, inner: null, dots: 0, corner: null }
+const clearedFor = (attr) => Object.fromEntries((NEEDS_CLEAR[attr] || []).map(a => [a, EMPTY[a]]))
+
+// Pick the RULE FIRST, then draw a figure that can carry it — which is the opposite of what
+// every generator here used to do, and the difference is not subtle.
+//
+// Drawing a figure first and asking what it can vary sounds neutral and is not: an attribute
+// that works on any figure is offered every time, and one with prerequisites is offered only on
+// the rare figure that happens to meet them. `corner` needs a ground that is not split, not
+// nested and not dotted, and with 9-11's pools that came to under half a percent of draws.
+// Measured over 4000 draws per band, `stretch` carried 744 rules and `corner` carried 2; the
+// three bands starved corner at 19, 1 and 2, and dots at 298, 9 and 20. Every one of those is a
+// dial in the config that does nothing, and the dead-attribute check could not see it because
+// "did it happen at all" is true at 1 in 4000.
+//
+// So the wanted attribute is chosen evenly, its suppressors are cleared rather than waited for,
+// and only the shape is left to chance — a corner needs a shape with a corner, and a third of
+// the pool has one.
+function ruleAndBase(r, band, exclude = []) {
+  for (const attr of shuffle(r, band.attributes.filter(a => !exclude.includes(a)))) {
+    for (let i = 0; i < 12; i++) {
+      const base = makeSpec({ ...randomSpec(r, band), ...clearedFor(attr) })
+      if (otherValue(r, band, base, attr) !== null) return { base, attr }
+    }
+  }
+  return null
+}
+
 // How noise is dealt across the options, as one binary vector per option.
 //
 // Two properties have to hold at once, and getting them both is why this is a table rather
@@ -339,7 +389,13 @@ function applyNoise(r, band, specs, ruleAttr) {
   if (!vectors) return 0
   const want = vectors[0].length
   let used = 0
-  for (const attr of usableAttrs(r, band, specs[0], [ruleAttr])) {
+  // Noise may not land on anything that would HIDE the rule. A corner question is posed on a
+  // figure deliberately cleared of splits and nesting, and noise dealing `half` across the
+  // options puts the split straight back on two of them — where normalizeSpec then removes the
+  // corner, and the picture no longer splits the way the specs say. validateQuestion catches
+  // that and throws the draw away, so before this the cost was not a broken question but a
+  // rejected one, over and over, on exactly the attributes that were already rarest.
+  for (const attr of usableAttrs(r, band, specs[0], [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || [])])) {
     if (used >= want) break
     const alt = otherValue(r, band, specs[0], attr)
     if (alt === null) continue
@@ -360,10 +416,9 @@ const indices = (n) => Array.from({ length: n }, (_, i) => i)
 // draw did not offer a rule that could be seen, and generateQuestion simply draws again.
 
 function genOddOneOut(r, band, seed) {
-  const base = randomSpec(r, band)
-  const attrs = usableAttrs(r, band, base)
-  if (!attrs.length) return null
-  const ruleAttr = pick(r, attrs)
+  const drawn = ruleAndBase(r, band)
+  if (!drawn) return null
+  const { base, attr: ruleAttr } = drawn
   const oddValue = otherValue(r, band, base, ruleAttr)
   if (oddValue === null) return null
 
@@ -407,10 +462,9 @@ function genIdentical(r, band, seed) {
 }
 
 function genSequence(r, band, seed) {
-  const base = randomSpec(r, band)
-  const attrs = usableAttrs(r, band, base)
-  if (!attrs.length) return null
-  const ruleAttr = pick(r, attrs)
+  const drawn = ruleAndBase(r, band)
+  if (!drawn) return null
+  const { base, attr: ruleAttr } = drawn
   // The cycle's values must be distinct AS PICTURES, and pairwise — not merely distinct from
   // the base figure, which is all attrVisible can tell you. Two ways that went wrong, both
   // shipped, both invisible to every check downstream because nothing else in the pipeline
@@ -476,10 +530,9 @@ function genSequence(r, band, seed) {
 }
 
 function genBelongs(r, band, seed) {
-  const base = randomSpec(r, band)
-  const attrs = usableAttrs(r, band, base)
-  if (!attrs.length) return null
-  const ruleAttr = pick(r, attrs)
+  const drawn = ruleAndBase(r, band)
+  if (!drawn) return null
+  const { base, attr: ruleAttr } = drawn
 
   // Three figures that share the rule value and differ in noise; the child picks the fourth
   // member of that set. It is odd-one-out read from the other end, which is exactly how the
@@ -569,10 +622,9 @@ function genGridComplete(r, band, seed) {
 }
 
 function genAnalogy(r, band, seed) {
-  const a = randomSpec(r, band)
-  const attrs = usableAttrs(r, band, a)
-  if (!attrs.length) return null
-  const ruleAttr = pick(r, attrs)
+  const drawn = ruleAndBase(r, band)
+  if (!drawn) return null
+  const { base: a, attr: ruleAttr } = drawn
   const to = otherValue(r, band, a, ruleAttr)
   if (to === null) return null
 
@@ -611,6 +663,108 @@ function genAnalogy(r, band, seed) {
     options: order.map(i => options[i]),
     correct_index: order.indexOf(0),
     rule: { attr: ruleAttr, from: a[ruleAttr], to },
+  }
+}
+
+// Codes. Two of the ten topic tests in Bond's 10-11 book, and the engine had none of it.
+//
+// Five figures are shown, each labelled with a two-letter code. The first letter says what one
+// attribute is doing and the second says what another is doing, drawn from DISJOINT alphabets so
+// a child can tell which letter is about which — that is the book's own convention and it is
+// what makes the question readable at all. Then a sixth figure, and the child picks its code.
+//
+// This is the one question type whose OPTIONS ARE NOT PICTURES. Everything else in this file
+// offers five figures; a code question offers five strings. The alternative was to invert it —
+// show a code and ask which figure it describes — which keeps the shape of every other question
+// and is not what the book asks, because it only ever tests the mapping in one direction.
+//
+// Two conditions make it reasoning rather than recall, and both are enforced rather than hoped
+// for:
+//
+//   Every value the answer uses must already be on display with its letter. Otherwise the child
+//   is asked for a letter nothing on the page could have taught them, which is not a hard
+//   question, it is an unanswerable one.
+//
+//   The answer's COMBINATION must be one the prompt does not show. If it were shown, the child
+//   finds the matching picture and copies its code, and the question measures whether they can
+//   spot two identical drawings. The whole point is to learn each letter from a different figure
+//   and put them together.
+//
+// Nine combinations, five shown, and the answer from the four that are not.
+const CODE_LETTERS = [['A', 'B', 'C'], ['X', 'Y', 'Z']]
+
+function genCode(r, band, seed) {
+  const base = randomSpec(r, band)
+  const attrs = shuffle(r, usableAttrs(r, band, base))
+  if (attrs.length < 2) return null
+
+  // Each axis needs three values that are three different pictures, not merely three different
+  // spec fields — the same requirement `sequence` has, for the same reason.
+  const valuesFor = (attr) => {
+    const seen = new Set([geometryKey(base)])
+    const out = [base[attr]]
+    for (const v of pool(band, attr)) {
+      if (out.length >= 3) break
+      if (!attrVisible(base, attr, v)) continue
+      const k = geometryKey({ ...base, [attr]: v })
+      if (seen.has(k)) continue
+      seen.add(k)
+      out.push(v)
+    }
+    return out.length === 3 ? out : null
+  }
+
+  let axes = null
+  for (let i = 0; i < attrs.length && !axes; i++) {
+    for (let j = i + 1; j < attrs.length && !axes; j++) {
+      const a = valuesFor(attrs[i])
+      const b = valuesFor(attrs[j])
+      if (a && b) axes = [{ attr: attrs[i], values: a }, { attr: attrs[j], values: b }]
+    }
+  }
+  if (!axes) return null
+
+  const figure = (i, j) => makeSpec({
+    ...base, [axes[0].attr]: axes[0].values[i], [axes[1].attr]: axes[1].values[j],
+  })
+  const codeOf = (i, j) => CODE_LETTERS[0][i] + CODE_LETTERS[1][j]
+
+  const cells = shuffle(r, [0, 1, 2].flatMap(i => [0, 1, 2].map(j => [i, j])))
+  const shown = cells.slice(0, 5)
+  const rest = cells.slice(5)
+
+  // Coverage, checked and not assumed: five of nine cells can easily miss a whole row, and then
+  // one of the three letters never appears on the page.
+  const covers = (k) => new Set(shown.map(c => c[k])).size === 3
+  if (!covers(0) || !covers(1)) return null
+
+  const [ai, aj] = pick(r, rest)
+  const answer = codeOf(ai, aj)
+
+  // The near misses, which are the mistakes the question is about: the right first letter with
+  // the wrong second, and the wrong first with the right second. A child who read only one of
+  // the two axes lands on exactly these.
+  const wrong = shuffle(r, [
+    ...[0, 1, 2].filter(j => j !== aj).map(j => ({ code: codeOf(ai, j), why: 'second' })),
+    ...[0, 1, 2].filter(i => i !== ai).map(i => ({ code: codeOf(i, aj), why: 'first' })),
+    ...cells.filter(([i, j]) => i !== ai && j !== aj).map(([i, j]) => ({ code: codeOf(i, j), why: 'both' })),
+  ])
+  const options = [{ code: answer, why: null }]
+  for (const w of wrong) {
+    if (options.length >= band.options) break
+    if (options.some(o => o.code === w.code)) continue
+    options.push(w)
+  }
+  if (options.length < band.options) return null
+
+  const order = shuffle(r, indices(band.options))
+  return {
+    seed, type: 'code', layout: 'code',
+    prompt: [...shown.map(([i, j]) => figure(i, j)), figure(ai, aj)],
+    promptLabels: [...shown.map(([i, j]) => codeOf(i, j)), '?'],
+    options: order.map(i => options[i]),
+    correct_index: order.indexOf(0),
+    rule: { attr: `code:${axes[0].attr}+${axes[1].attr}`, from: null, to: answer },
   }
 }
 
@@ -960,6 +1114,7 @@ const GENERATORS = {
   'grid-complete': genGridComplete,
   analogy: genAnalogy,
   reflection: genReflection,
+  code: genCode,
   'glyph-odd': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-odd'),
   'glyph-trait': genGlyphTrait,
   'glyph-belongs': (r, band, seed) => genGlyphCategory(r, band, seed, 'glyph-belongs'),
@@ -982,6 +1137,23 @@ export function validateQuestion(q) {
   const n = q.options?.length
   if (!q || !Array.isArray(q.options) || !NOISE_VECTORS[n] || n < 4) return `options: ${n}`
   if (!(q.correct_index >= 0 && q.correct_index < n)) return 'correct_index out of range'
+
+  // A code question's options are STRINGS, not figures, so every check below — which is about
+  // pictures being distinguishable — has nothing to hold. It gets its own short list instead of
+  // an exemption, because the same properties still matter: the options must be different from
+  // each other, every figure on display must be drawable, and each figure must carry its label.
+  if (q.type === 'code') {
+    const codes = q.options.map(o => o.code)
+    if (codes.some(c => typeof c !== 'string')) return 'a code option carries no code'
+    if (new Set(codes).size !== n) return 'two options offer the same code'
+    if (q.promptLabels?.length !== q.prompt.length) return 'a prompt figure has no label'
+    if (q.prompt.some(c => !c || !geometryKey(c))) return 'unrenderable prompt cell'
+    // Two figures on display with the same picture but different labels is a contradiction the
+    // child cannot resolve; with the SAME label it is a freebie. Either way the page is wrong.
+    const keys = q.prompt.map(geometryKey)
+    if (new Set(keys).size !== keys.length) return 'two figures in the prompt draw the same picture'
+    return null
+  }
 
   // ONE QUESTION, ONE MATERIAL. All three vocabularies are in use, but they mix at the level of
   // a SHEET, never inside a single question — three line icons and one emoji is answered
@@ -1149,8 +1321,12 @@ function buildOne(bandKey, band, types, seed) {
 // session — different questions about the same picture. Including them puts 7-8 at 449.
 export function questionSignature(q) {
   const v = (x) => (x && typeof x === 'object' ? JSON.stringify(x) : String(x))
-  return `${q.type}|${q.rule.attr}|${v(q.rule.from)}>${v(q.rule.to)}`
-    + `|${figureKey(q.options[q.correct_index].spec)}`
+  const answer = q.options[q.correct_index]
+  // A code question's answer is a string and has no figure. Its identity is the pair of
+  // attributes it encodes plus the figure being asked about, which is the last prompt cell —
+  // the letters themselves say nothing, since A means a different thing in every question.
+  const id = answer.spec ? figureKey(answer.spec) : figureKey(q.prompt[q.prompt.length - 1])
+  return `${q.type}|${q.rule.attr}|${v(q.rule.from)}>${v(q.rule.to)}|${id}`
 }
 
 export function generateSession(bandKey, count = 10, seed = Date.now()) {

@@ -104,11 +104,31 @@ for (const band of BAND_KEYS) {
     }
   }
 
-  // ── every attribute the band lists is actually used for something ────────────
-  const rules = new Set(qs.map(q => q.rule.attr))
+  // ── every attribute the band lists carries a real share of the rules ────────
+  // This asked "did it happen at all", which is true at one draw in four thousand — and that is
+  // what `corner` was doing in two of the three bands, with `dots` at nine. An attribute a child
+  // meets once a year is configured, not used, and the check passed it for years.
+  //
+  // The bar is a TENTH of an even share rather than a third, because these attributes are not
+  // equals and should not be forced to be. `corner` needs a ground that is not split, nested or
+  // dotted, so it will always be rarer than `size`, which works on anything. A tenth is low
+  // enough to allow that and high enough that one-in-four-thousand fails it by a hundredfold.
+  const attrCount = {}
+  let attrTotal = 0
+  for (const q of qs) {
+    for (const attr of BANDS[band].attributes) {
+      if (q.rule.attr === attr || q.rule.attr.split(/[+:]/).includes(attr)) {
+        attrCount[attr] = (attrCount[attr] || 0) + 1
+        attrTotal++
+      }
+    }
+  }
+  const evenShare = 1 / BANDS[band].attributes.length
   for (const attr of BANDS[band].attributes) {
-    if (![...rules].some(r => r === attr || r.includes(attr))) {
-      fail(band, 'dead-attribute', `${attr} is configured but never carries a rule`)
+    const share = (attrCount[attr] || 0) / attrTotal
+    if (share < evenShare / 10) {
+      fail(band, 'starved-attribute',
+        `${attr} carries ${(share * 100).toFixed(2)}% of the rules, even is ${(evenShare * 100).toFixed(0)}%`)
     }
   }
 
@@ -148,6 +168,28 @@ for (const band of BAND_KEYS) {
       const v = (s) => val(s[q.rule.attr])
       if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
       else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
+    } else if (q.type === 'code') {
+      // Rebuilt from the page alone, the way a child has to: read each shown figure's two
+      // attribute values off its label, then look up the figure being asked about. Three ways
+      // this can be wrong and all three are silent — the letters are not a function of the
+      // attribute (the same value labelled two ways), a value in the answer never appears
+      // labelled anywhere (unanswerable, not hard), or the figure being asked about is already
+      // on display (a lookup, not reasoning).
+      const [a1, a2] = q.rule.attr.slice(5).split('+')
+      const ask = q.prompt[q.prompt.length - 1]
+      const shown = q.prompt.slice(0, -1)
+      const labels = q.promptLabels.slice(0, -1)
+      const m1 = new Map(); const m2 = new Map()
+      shown.forEach((s, k) => { m1.set(val(s[a1]), labels[k][0]); m2.set(val(s[a2]), labels[k][1]) })
+      const clash = shown.find((s, k) => m1.get(val(s[a1])) !== labels[k][0] || m2.get(val(s[a2])) !== labels[k][1])
+      if (clash) why = 'a letter is not a function of the attribute it encodes'
+      else if (!m1.has(val(ask[a1]))) why = `the answer's ${a1} value never appears with a letter`
+      else if (!m2.has(val(ask[a2]))) why = `the answer's ${a2} value never appears with a letter`
+      else if (q.options[q.correct_index].code !== m1.get(val(ask[a1])) + m2.get(val(ask[a2]))) {
+        why = `the answer is ${q.options[q.correct_index].code}, the prompt implies ${m1.get(val(ask[a1])) + m2.get(val(ask[a2]))}`
+      } else if (shown.some(s => geometryKey(s) === geometryKey(ask))) {
+        why = 'the figure being asked about is already on display, so its code can be copied'
+      }
     } else if (q.type === 'reflection') {
       // Re-derived rather than taken on trust, and the second line is the one that matters: a
       // figure symmetric about the vertical axis IS its own mirror image, so the question would
@@ -234,7 +276,9 @@ for (const band of BAND_KEYS) {
   // and reported three sound questions.
   for (const q of qs) {
     const ans = q.options[q.correct_index].spec
-    if (ans.kind) continue
+    // A code question's options are strings and have no spec at all, so there is no attribute
+    // for a label to name. Checked before `ans.kind`, which would throw on undefined.
+    if (!ans || ans.kind) continue
     let wrong = null
     if (q.options[q.correct_index].why) wrong = 'the correct option carries a why label'
     q.options.forEach((o, k) => {
