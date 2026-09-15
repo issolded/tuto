@@ -63,11 +63,31 @@ for (const band of BAND_KEYS) {
     }
   }
 
-  // ── every type the band declares can actually be built ───────────────────────
+  // ── every type can be built, and none of them favours a slot ─────────────────
+  // Both questions are asked of each type DIRECTLY rather than of the sweep above, because the
+  // sweep deals types in the band's declared mix and the rare ones come out too thin to judge.
+  // Read off a 4000-draw sweep, glyph-belongs got about 140 draws, where one slot landing at 12%
+  // against an even 20% is under three of its own standard deviations — noise, reported as a
+  // finding. Asked directly for 4000 of its own it is flat to a tenth of a percent.
+  const PER_TYPE = 4000
   for (const t of [...BANDS[band].types, ...BANDS[band].glyphTypes, ...BANDS[band].iconTypes]) {
     let built = 0
-    for (let i = 0; i < 200; i++) if (generateQuestion(band, t, 50_000 + i * 17)) built++
-    if (built < 200) fail(band, 'type', `${t} built ${built}/200`)
+    const counts = new Array(BANDS[band].options).fill(0)
+    for (let i = 0; i < PER_TYPE; i++) {
+      const q = generateQuestion(band, t, 50_000 + i * 17)
+      if (q) { built++; counts[q.correct_index]++ }
+    }
+    if (built < PER_TYPE) { fail(band, 'type', `${t} built ${built}/${PER_TYPE}`); continue }
+
+    // Even is 1/n, and a slot is suspicious when it is half again above that or a third below —
+    // 25%/12.5% at four options, 20%/10% at five, rather than one pair of numbers pretending to
+    // fit both. At this sample either bound is a long way outside noise.
+    const even = 1 / counts.length
+    const hi = Math.max(...counts) / built
+    const lo = Math.min(...counts) / built
+    if (hi > even * 1.5 || lo < even * 0.65) {
+      fail(band, 'answer-position', `${t}: ${counts.map(c => (c / built * 100).toFixed(0) + '%').join('/')} of ${built}`)
+    }
   }
 
   // ── the mix matches what the band declares ───────────────────────────────────
@@ -80,19 +100,6 @@ for (const band of BAND_KEYS) {
     const got = (mix[src] || 0) / qs.length
     if (Math.abs(got - want) > 0.05) {
       fail(band, 'mix', `${src} is ${(got * 100).toFixed(0)}%, declared ${(want * 100).toFixed(0)}%`)
-    }
-  }
-
-  // ── the answer does not favour a slot ────────────────────────────────────────
-  const slots = {}
-  for (const q of qs) (slots[q.type] ??= [0, 0, 0, 0])[q.correct_index]++
-  for (const [type, counts] of Object.entries(slots)) {
-    const n = counts.reduce((a, c) => a + c, 0)
-    if (n < 60) continue
-    const hi = Math.max(...counts) / n
-    const lo = Math.min(...counts) / n
-    if (hi > 0.35 || lo < 0.15) {
-      fail(band, 'answer-position', `${type}: ${counts.map(c => (c / n * 100).toFixed(0) + '%').join('/')} of ${n}`)
     }
   }
 
