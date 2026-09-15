@@ -54,13 +54,19 @@ export const GLYPH_GROUPS = {
   animal:  { tr: 'memeli', en: 'mammal',  glyphs: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊', '🐴', '🐷', '🐹', '🐭', '🐄', '🐑'] },
   bug:     { tr: 'böcek',  en: 'bug',     glyphs: ['🐝', '🐛', '🦋', '🐞', '🐜', '🦟', '🪰'] },
   // ⛈️ was here and is not, because 🌧️ and ⛈️ are the same picture at puzzle size: rasterised
-  // at 64px they differ in 16.7% of their ink, against 34% for the next closest pair in any
-  // group and 45-55% typically. With four options they rarely met; with five they land together
-  // often, and a child would have been asked to tell apart two clouds. It stays in the
-  // `protects` relation, where it is only ever a prompt term and never an option.
+  // at 64px they differ in 26% of their ink, against 44% for the next closest pair in any group.
+  // With four options they rarely met; with five they land together often, and a child would
+  // have been asked to tell apart two clouds. It stays in the `protects` relation, where it is
+  // only ever a prompt term and never an option.
   //
-  // Measured the same way as the icon FILL axis — render each glyph, compare pixel by pixel,
-  // with the font EMBEDDED in the SVG. Worth redoing whenever a group gains a member.
+  // Measured like the icon FILL axis — render each glyph, compare pixel by pixel, with the font
+  // EMBEDDED so it is the pinned face being compared and not a fallback. Worth redoing whenever
+  // a group gains a member, and COMPARE COLOUR, not luminance. The first pass of this measured
+  // brightness alone and, once the mammals arrived, called 🐱/🐷 the closest pair in the tables
+  // at 22%. They are both round faces with ears in the same places, so by brightness they nearly
+  // agree — and they differ in 89% of their ink by colour, because one is pink and one is
+  // orange, which is what a child actually sees. On that metric no surviving pair is nearer than
+  // 44%, and the one that was removed sits at 26%.
   weather: { tr: 'hava',   en: 'weather', glyphs: ['☀️', '🌧️', '❄️', '🌪️', '🌈'] },
   plant:   { tr: 'bitki',  en: 'plant',   glyphs: ['🌱', '🌳', '🌻', '🌵', '🍃'] },
   tool:    { tr: 'kırtasiye', en: 'desk thing', glyphs: ['✏️', '📏', '✂️', '📎', '🖍️', '🖊️', '🖌️', '📐'] },
