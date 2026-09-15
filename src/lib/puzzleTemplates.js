@@ -54,7 +54,7 @@ import {
 } from './puzzleGlyphs.js'
 import {
   ICON_GROUPS, ICON_GROUP_KEYS, ICON_ATTRIBUTES, ICON_FILLS,
-  makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady,
+  makeIconSpec, iconKey, iconGroupOf, renderIcon, iconFontReady, fillIsLive,
 } from './puzzleIcons.js'
 
 export const TYPES = ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection', 'symmetry', 'code']
@@ -1308,8 +1308,12 @@ function genIconSequence(r, band, seed) {
   if (icons.length < 2) return null
 
   // Two rules are offered and one is picked, because a sheet where every icon sequence is the
-  // same alternation reads as one question asked four times.
-  const onFill = r() < 0.6
+  // same alternation reads as one question asked four times. The fill axis is only offered when
+  // the icon carrying it HAS a solid form — the whole `symbol` group is strokes, and a run built
+  // on filling a × would be six identical figures. validateQuestion would reject it, so this is
+  // not a correctness fix; it stops a tenth of the draws being spent discovering the same thing
+  // over and over.
+  const onFill = fillIsLive(icons[0]) && r() < 0.6
   const n = band.seqLength
   // The icon axis honours the band's period. It used to alternate between two icons at every
   // age, whatever the band declared, so a 10-year-old and a 5-year-old got the same run — while

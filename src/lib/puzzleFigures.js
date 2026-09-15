@@ -268,9 +268,17 @@ export function cornerPoint(spec) {
 // Marks shrink with the room they have: full size in a circle or square, two thirds of it in
 // a triangle. Four or five of them crowd each other before they crowd the outline, so they
 // come down again on top of that.
+//
+// And a NARROWED figure has less room across than a round one. Where a mark sits is stretched
+// with the outline, but how big it is was not, so on a 0.62 figure the mark kept its full width
+// inside a shape two thirds as wide and hung over the edge. Scaling by the narrowing — and only
+// the narrowing, since a widened figure has room to spare — keeps the mark the same size
+// RELATIVE to the shape carrying it, which is what decides whether a child can see it.
+export const markScale = (spec) => spec.size * Math.min(1, spec.stretch)
+
 export function dotRadius(spec) {
   const s = DOT_AREA[spec.shape]?.[2] ?? 1
-  return 6.5 * spec.size * (0.55 + 0.45 * s) * (spec.dots >= 4 ? 0.82 : 1)
+  return 6.5 * markScale(spec) * (0.55 + 0.45 * s) * (spec.dots >= 4 ? 0.82 : 1)
 }
 
 // stretch is already baked into the points; flip first, then rotate — the same order the SVG
@@ -418,7 +426,16 @@ function nodeMarkup(spec, radius, ctx) {
     .join('')
   const c = cornerPoint(spec)
   const corner = c
-    ? `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(5.5 * spec.size).toFixed(1)}" fill="${markFill}"/>`
+    // 8 rather than 5.5, which is the difference between a question and an eye test. A corner
+    // mark on a SOLID figure is punched out of it, so at 5.5 a filled circle carrying one and a
+    // filled circle carrying none differed in 2% of their ink at the size a child sees — two
+    // drawings that are the same drawing for all practical purposes, waved through by every
+    // check because the specs and the key genuinely differ. Found by rasterising whole questions
+    // and looking at the closest pair; see scripts/puzzle-pixels.mjs.
+    //
+    // 8 is the largest that still sits inside the outline: the mark sits 28.3 units from the
+    // centre of a 38-unit figure, so its edge lands at 36.3. markScale carries the narrowing.
+    ? `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(8 * markScale(spec)).toFixed(1)}" fill="${markFill}"/>`
     : ''
 
   // Squares rather than circles, so they read as parts of the figure — windows and a door —
@@ -428,7 +445,7 @@ function nodeMarkup(spec, radius, ctx) {
   // question stopped being about where the mark is and started being about what shape it had
   // become. Bond's houses keep the same windows and move the door; that is the whole point.
   const sats = satellites(spec).map(([[x, y], filled]) => {
-    const h = SATELLITE_HALF * spec.size
+    const h = SATELLITE_HALF * markScale(spec)
     return `<rect x="${(x - h).toFixed(1)}" y="${(y - h).toFixed(1)}"`
       + ` width="${(h * 2).toFixed(1)}" height="${(h * 2).toFixed(1)}"`
       + ` fill="${filled ? 'currentColor' : ctx.bg}" stroke="currentColor" stroke-width="1.6"/>`

@@ -107,21 +107,31 @@ export const ICON_ATTRIBUTES = ['icon', 'group', 'fill', 'count', 'size', 'rotat
 // a child cannot see is the failure this engine spends most of its effort avoiding.
 export const ICON_FILLS = [0, 1]
 
-// …and for eight of these icons the FILL axis does nothing at all: the font has no solid form
+// …and for fourteen of these icons the FILL axis does nothing at all: the font has no solid form
 // for them, so FILL 0 and FILL 1 draw the identical glyph. Sequences were being built as
 // outline → solid → outline → solid in which every single figure looked the same, and the key
 // waved them through because the SPECS differed.
 //
-// Measured rather than guessed, by rasterising every icon at both ends of the axis and
-// comparing pixel by pixel (96px, luminance, share of inked pixels differing). The eight below
-// came back at 0%; the rest range from 20% to 79%. To redo it after editing the table, render
-// each icon at FILL 0 and FILL 1 into a canvas and compare — and note the font must be
-// EMBEDDED in the SVG, because a data-URI SVG is an isolated document with no access to the
-// page's fonts, and without that every icon reads 0% and the measurement looks unanimous.
+// THIS LIST GOES STALE THE MOMENT THE TABLE ABOVE GAINS AN ICON, and a stale entry is invisible
+// — the question is well formed, the key says five different pictures, and two of them are the
+// same drawing. It was eight icons, measured when the table had 35. Adding twelve brought six
+// more dead ones with it, every one of the new `symbol` group: ×, ✓, +, −, %, £ are strokes and
+// a stroke has no inside to fill. A sweep of rendered questions turned up options differing in
+// 0% of their ink in every band, which is what that looks like from the outside.
+//
+// So it is measured, not guessed, by `npm run puzzle:pixels` — which exists because this needs a
+// browser and cannot live in puzzle:check. RUN IT AFTER EDITING THE TABLE. The fourteen below
+// come back at 0%; the rest range from 20% to 81%.
 const FILL_DOES_NOTHING = new Set([
   'flight', 'directions_bike', 'ac_unit', 'umbrella',
   'grass', 'music_note', 'piano', 'sports_soccer',
+  'add', 'check', 'close', 'currency_pound', 'percent', 'remove',
 ])
+
+// Whether asking for a solid version of this icon will draw anything different. A generator that
+// builds a run on the FILL axis needs to know before it starts, rather than discovering it when
+// validateQuestion rejects the finished question.
+export const fillIsLive = (icon) => !FILL_DOES_NOTHING.has(icon)
 
 // Making it a fact about the PICTURE rather than a rule for generators to remember is what
 // makes it safe: with fill pinned, two options that differed only in fill now produce the same
