@@ -80,8 +80,35 @@ export const INNER_NODES = [
   }),
 ]
 
+// POSITION, the one variable on the papers' own SPANSS checklist this engine could not pose.
+//
+// Bond's example is five identical houses, each with three square windows and one rectangular
+// door. Everything about them agrees — same outline, same parts, same number, same shading, same
+// size — except that four have the door on the right and one has it on the left. Nothing but
+// WHERE A PART SITS distinguishes the odd one, and no attribute here could express that: `dots`
+// counts marks, `corner` puts a single mark in a corner, and neither can say "the same parts,
+// arranged differently".
+//
+// So a figure may carry SATELLITES: four small squares in a grid inside the outline, three of
+// them outlined and one filled. `position` names the slot the filled one sits in, which makes it
+// a plain scalar like every other attribute rather than an array the rest of the engine would
+// have to learn about. null means no satellites, exactly as null means no split for `half`.
+//
+// Rotation and flip move satellites with the figure, because they are points in the same
+// untransformed space as everything else — so a house turned through 90° puts its door where a
+// turned house would, and geometryKey says so without being told.
+export const POSITION_SLOTS = { tl: [34, 34], tr: [66, 34], bl: [34, 66], br: [66, 66] }
+export const POSITIONS = [null, 'tl', 'tr', 'bl', 'br']
+
+// Satellites need an interior wide enough to hold a 2×2 grid without the corners of the grid
+// falling outside the outline. A triangle's interior is a wedge, a pentagon's top corners are
+// cut off and an arrow has no interior at all — the same three shapes that cannot carry a
+// corner mark, for the same reason.
+const SATELLITE_SHAPES = new Set(['circle', 'square', 'hexagon'])
+const SATELLITE_HALF = 7
+
 // The attributes a question rule may be built on. Order matters only for stable output.
-export const ATTRIBUTES = ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'dots', 'corner', 'inner']
+export const ATTRIBUTES = ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'dots', 'corner', 'inner', 'position']
 
 // Regular polygons, as [sides, starting angle]. The starting angle is what makes a shape sit
 // the way a child expects it at rotation 0 — a triangle point-up, a square axis-aligned
@@ -146,9 +173,19 @@ const HALF_DIR = { tl: [-1, -1], tr: [1, -1], br: [1, 1], bl: [-1, 1] }
 export function makeSpec(over = {}) {
   return {
     shape: 'square', fill: 'none', rotation: 0, size: 1, stretch: 1,
-    half: null, dots: 0, corner: null, inner: null, flip: false,
+    half: null, dots: 0, corner: null, inner: null, position: null, flip: false,
     ...over,
   }
+}
+
+// The four satellites in untransformed space, as [centre, isTheFilledOne]. Shared by the key and
+// the renderer so the two cannot drift.
+function satellites(spec) {
+  if (!spec.position || !SATELLITE_SHAPES.has(spec.shape)) return []
+  return Object.entries(POSITION_SLOTS).map(([slot, [x, y]]) => [
+    stretchX([50 + (x - 50) * spec.size, 50 + (y - 50) * spec.size], spec.stretch),
+    slot === spec.position,
+  ])
 }
 
 // Resolves the combinations that would draw an unreadable figure, in one place that both the
@@ -161,8 +198,14 @@ export function normalizeSpec(spec) {
   if (!canCorner) s.corner = null
   if (!DOT_AREA[s.shape]) s.dots = 0
   if (!HALF_SHAPES.has(s.shape)) s.half = null
+  if (!SATELLITE_SHAPES.has(s.shape)) s.position = null
 
   if (s.half) {
+    s.fill = 'none'; s.inner = null; s.dots = 0; s.corner = null; s.position = null
+  } else if (s.position) {
+    // Satellites fill the interior the way a nested node does, so they sit at the same level of
+    // the precedence: a figure carrying four of them has no room left for a fifth mark, a nested
+    // shape behind them, or a ground tone to count them against.
     s.fill = 'none'; s.inner = null; s.dots = 0; s.corner = null
   } else if (s.inner) {
     s.fill = 'none'; s.dots = 0; s.corner = null
@@ -284,6 +327,12 @@ function collect(spec, radius, depth, out) {
   const c = cornerPoint(spec)
   if (c) out.points.push(['c', c])
 
+  // The filled satellite is tagged apart from the other three, which is the whole of what
+  // `position` says. Tagged identically they would sort into the same four points whichever slot
+  // held the filled one, every arrangement would share a key, and attrVisible would report
+  // position as invisible on every figure that has it.
+  for (const [p, filled] of satellites(spec)) out.points.push([filled ? 'P' : 'p', p])
+
   if (spec.inner) {
     // The inner node inherits the parent's orientation and proportions; only its own shape,
     // fill and relative size are its own.
@@ -372,6 +421,19 @@ function nodeMarkup(spec, radius, ctx) {
     ? `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(5.5 * spec.size).toFixed(1)}" fill="${markFill}"/>`
     : ''
 
+  // Squares rather than circles, so they read as parts of the figure — windows and a door —
+  // rather than as more of the dots the same figure could have been carrying.
+  // The satellites stay SQUARE however the outline is stretched — only where they sit moves with
+  // it. Stretched with the figure they came out as narrow slots on a 0.62 figure, and the
+  // question stopped being about where the mark is and started being about what shape it had
+  // become. Bond's houses keep the same windows and move the door; that is the whole point.
+  const sats = satellites(spec).map(([[x, y], filled]) => {
+    const h = SATELLITE_HALF * spec.size
+    return `<rect x="${(x - h).toFixed(1)}" y="${(y - h).toFixed(1)}"`
+      + ` width="${(h * 2).toFixed(1)}" height="${(h * 2).toFixed(1)}"`
+      + ` fill="${filled ? 'currentColor' : ctx.bg}" stroke="currentColor" stroke-width="1.6"/>`
+  }).join('')
+
   const inner = spec.inner
     ? nodeMarkup(
       { ...makeSpec(spec.inner), stretch: spec.stretch, size: spec.size * spec.inner.size },
@@ -380,7 +442,7 @@ function nodeMarkup(spec, radius, ctx) {
     )
     : ''
 
-  return defs + body + half + dots + corner + inner
+  return defs + body + half + dots + corner + sats + inner
 }
 
 // Returns an SVG string rather than React elements so the same module drives the lab, the

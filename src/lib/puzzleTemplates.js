@@ -44,7 +44,7 @@
 // importable by plain node: scripts/puzzle-audit.mjs runs every check against it without a
 // bundler, and anything server-side would need the same.
 import {
-  SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, ATTRIBUTES,
+  SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, POSITIONS, ATTRIBUTES,
   makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure,
 } from './puzzleFigures.js'
 import {
@@ -187,6 +187,11 @@ export const BANDS = {
     inners: [null, null, null, ...INNER_NODES.slice(1, 4)],
     dots: [0, 2, 4],          // a 2-vs-4 difference is countable at a glance; 3-vs-4 is not
     corners: [null, 'tl', 'br'],
+    // No satellites at this age. Four parts inside one outline, three alike and one not, is a
+    // lot of figure to hold at once, and the 5-6 papers put their Position questions on a single
+    // moving element rather than a set. The pool still exists because randomSpec draws from
+    // every pool; a band turns an attribute off by offering it nothing else to be.
+    positions: [null],
     seqPeriod: 2,             // dolu / boş / dolu / boş — the alternation the 5-6 papers open on
     seqLength: 4,
   },
@@ -206,7 +211,7 @@ export const BANDS = {
     // pictorial reflection exists, this moves again.
     sources: { geometric: 2, icon: 3, glyph: 5 },
     options: 5,
-    attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
+    attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner', 'position'],
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
     fills: ['none', 'solid', 'hatch-45', 'hatch-90'],
     rotations: [0, 90, 180, 270],
@@ -216,6 +221,7 @@ export const BANDS = {
     inners: [null, null, ...INNER_NODES.slice(1)],
     dots: [0, 1, 2, 3],
     corners: [null, 'tl', 'tr', 'bl', 'br'],
+    positions: [null, null, ...POSITIONS.slice(1)],
     seqPeriod: 3,
     seqLength: 5,
   },
@@ -250,6 +256,7 @@ export const BANDS = {
     inners: [null, null, null, ...INNER_NODES.slice(1)],
     dots: [0, 0, 0, 1, 2, 3, 4, 5],
     corners: CORNERS,
+    positions: [null, null, ...POSITIONS.slice(1)],
     seqPeriod: 4,
     seqLength: 5,
   },
@@ -286,7 +293,7 @@ const valueKey = (v) => (v && typeof v === 'object' ? JSON.stringify(v) : String
 const pool = (band, attr) => ({
   shape: band.shapes, fill: band.fills, rotation: band.rotations,
   size: band.sizes, stretch: band.stretches, half: band.halves,
-  inner: band.inners, dots: band.dots, corner: band.corners,
+  inner: band.inners, dots: band.dots, corner: band.corners, position: band.positions,
 }[attr])
 
 // Another value for `attr` that is guaranteed to change the picture of `spec`. Returns null
@@ -310,6 +317,7 @@ function randomSpec(r, band) {
     inner: pick(r, band.inners),
     dots: pick(r, band.dots),
     corner: pick(r, band.corners),
+    position: pick(r, band.positions),
   })
 }
 
@@ -324,13 +332,27 @@ function usableAttrs(r, band, spec, exclude = []) {
 // OF THE WAY for each attribute to be visible at all, and it is needed in two places, so it is
 // written once here.
 const NEEDS_CLEAR = {
-  fill: ['half', 'inner', 'dots', 'corner'],
-  dots: ['half', 'inner', 'corner'],
-  corner: ['half', 'inner', 'dots'],
-  inner: ['half'],
+  fill: ['half', 'position', 'inner', 'dots', 'corner'],
+  dots: ['half', 'position', 'inner', 'corner'],
+  corner: ['half', 'position', 'inner', 'dots'],
+  inner: ['half', 'position'],
+  position: ['half'],
 }
-const EMPTY = { half: null, inner: null, dots: 0, corner: null }
+const EMPTY = { half: null, inner: null, dots: 0, corner: null, position: null }
 const clearedFor = (attr) => Object.fromEntries((NEEDS_CLEAR[attr] || []).map(a => [a, EMPTY[a]]))
+
+// A different kind of dependency, and one the engine had no way to say. NEEDS_CLEAR is about an
+// attribute ERASING another. This is about an attribute being MEANINGLESS unless another is held
+// still — the figures have to share a frame before "where is it" can be compared at all.
+//
+// `position` names a slot in the figure's own space, so a mark at `bl` on a figure turned 90° is
+// drawn where `br` would be on an upright one. Deal rotation as noise across five options and
+// the four that share a slot show their mark in four different places, while the odd one may
+// land exactly where one of them did. Every check passed such a question: all five are different
+// pictures, and the specs really do split 4-1 on position. Only the child, looking at it, could
+// tell there was nothing to see. Over 60000 draws, 1242 of the 1244 position questions were like
+// this — not an edge case, the normal case.
+const NEEDS_FIXED = { position: ['rotation', 'flip'] }
 
 // Pick the RULE FIRST, then draw a figure that can carry it — which is the opposite of what
 // every generator here used to do, and the difference is not subtle.
@@ -395,10 +417,23 @@ function applyNoise(r, band, specs, ruleAttr) {
   // corner, and the picture no longer splits the way the specs say. validateQuestion catches
   // that and throws the draw away, so before this the cost was not a broken question but a
   // rejected one, over and over, on exactly the attributes that were already rarest.
-  for (const attr of usableAttrs(r, band, specs[0], [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || [])])) {
+  // A noise value has to leave the rule INTACT ON THE DRAWN FIGURE, not merely avoid the
+  // attributes that obviously erase it. Noise dealing `shape` a triangle on a `position`
+  // question takes the satellites away with it, because only three of the six shapes have an
+  // interior wide enough to hold them — the attribute is not in NEEDS_CLEAR and erases the rule
+  // anyway. Asking normalizeSpec settles every such case at once, including ones nobody has
+  // thought of, and turns what used to be a rejected draw into a noise value not chosen.
+  const keepsRule = (attr, v) => {
+    const s = specs[0]
+    if (!ruleAttr || !(ruleAttr in s)) return true
+    return valueKey(normalizeSpec({ ...s, [attr]: v })[ruleAttr]) === valueKey(s[ruleAttr])
+  }
+
+  const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || [])]
+  for (const attr of usableAttrs(r, band, specs[0], barred)) {
     if (used >= want) break
     const alt = otherValue(r, band, specs[0], attr)
-    if (alt === null) continue
+    if (alt === null || !keepsRule(attr, alt)) continue
     const values = [specs[0][attr], alt]
     specs.forEach((s, i) => { s[attr] = values[vectors[i][used]] })
     used++
@@ -1197,7 +1232,18 @@ export function validateQuestion(q) {
   // of the answer: exactly one attribute may split 3-1, and no other attribute may isolate a
   // single option, or the question has two defensible answers.
   if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-trait', 'glyph-belongs', 'icon-odd', 'icon-belongs'].includes(q.type)) {
-    const specs = q.options.map(o => o.spec)
+    // Counted on the NORMALIZED spec — the picture — and not the raw one. The two disagree
+    // whenever an attribute is suppressed on some options and not others, and the raw reading
+    // then describes a set that was never drawn. A `position` question makes this routine: only
+    // three of the six shapes have an interior wide enough for satellites, so noise dealing
+    // `shape` leaves specs that all say position 'bl' while two figures show satellites and
+    // three show none.
+    //
+    // Today's noise vectors happen to keep that harmless — no noise column has a singleton, so a
+    // suppressed column cannot isolate an option either. But that is an argument about the
+    // current table, not a property of the check, and the same argument was made before about
+    // `half` erasing `inner` and was wrong. Counting the drawn figure needs no argument.
+    const specs = q.options.map(o => (o.spec.kind ? o.spec : normalizeSpec(o.spec)))
     let splits = 0
     // Glyph figures carry none of the geometric attributes, so counting over the shape list
     // would find one undefined value four times, register no split at all, and fail every
