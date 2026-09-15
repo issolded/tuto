@@ -101,10 +101,11 @@ function Prompt({ q }) {
   if (q.layout === 'code') {
     // Each figure carries its label under it, and the last one carries the question mark. The
     // labels ARE the question — without them the row is six unrelated drawings.
+    //
+    // All six on one line, so the figure being asked about stays at the end of the run the
+    // labels explain. At 56px they wrapped and the `?` began a second row beside an unrelated
+    // label, which reads as a different question.
     return (
-      {/* Six across, so the figure being asked about stays at the end of the run the labels
-          explain. At 56px they wrapped and the `?` began a second row beside an unrelated
-          label, which reads as a different question. */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
         {q.prompt.map((cell, i) => (
           <div key={i} style={{ textAlign: 'center' }}>
