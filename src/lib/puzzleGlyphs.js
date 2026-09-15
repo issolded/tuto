@@ -51,7 +51,15 @@ export const GLYPH_GROUPS = {
   vehicle: { tr: 'taşıt',  en: 'vehicle', glyphs: ['🚗', '🚌', '🚲', '🚂', '✈️', '🚁'] },
   animal:  { tr: 'hayvan', en: 'animal',  glyphs: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊'] },
   bug:     { tr: 'böcek',  en: 'bug',     glyphs: ['🐝', '🐛', '🦋', '🐞', '🐜'] },
-  weather: { tr: 'hava',   en: 'weather', glyphs: ['☀️', '🌧️', '❄️', '⛈️', '🌈'] },
+  // ⛈️ was here and is not, because 🌧️ and ⛈️ are the same picture at puzzle size: rasterised
+  // at 64px they differ in 16.7% of their ink, against 34% for the next closest pair in any
+  // group and 45-55% typically. With four options they rarely met; with five they land together
+  // often, and a child would have been asked to tell apart two clouds. It stays in the
+  // `protects` relation, where it is only ever a prompt term and never an option.
+  //
+  // Measured the same way as the icon FILL axis — render each glyph, compare pixel by pixel,
+  // with the font EMBEDDED in the SVG. Worth redoing whenever a group gains a member.
+  weather: { tr: 'hava',   en: 'weather', glyphs: ['☀️', '🌧️', '❄️', '🌪️', '🌈'] },
   plant:   { tr: 'bitki',  en: 'plant',   glyphs: ['🌱', '🌳', '🌻', '🌵', '🍃'] },
   tool:    { tr: 'araç',   en: 'tool',    glyphs: ['✏️', '📏', '✂️', '📎', '🖍️'] },
   music:   { tr: 'müzik',  en: 'music',   glyphs: ['🎸', '🥁', '🎺', '🎹', '🎻'] },
