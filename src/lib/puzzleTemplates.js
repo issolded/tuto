@@ -97,6 +97,26 @@ const attributesFor = (spec) =>
 // The age dial. Every field here is a difficulty decision, and every one of them is the same
 // decision at every age — only its value moves.
 //
+// WHAT EACH BAND IS CALIBRATED AGAINST, because the names overclaim otherwise:
+//
+//   5-6   — read against Bond Assessment Papers 5-6. The six types, the distractor logic, the
+//           filled/outline alternation and the "one attribute at a time" rule all come from
+//           those papers and were checked question by question.
+//   7-8   — extrapolated. The same six types with the dial turned up. Nobody has held it
+//           against the 7-8 papers.
+//   9-11  — extrapolated, and known to fall well short of the real thing. Bond's 10-11
+//           material covers six categories: analogies, codes and sequences, cubes, hidden
+//           shapes, similarities and symmetry. This engine reaches parts of three of them.
+//           It has no codes (two of that book's ten topic tests), no cube nets, no hidden
+//           shapes and no symmetry; its analogies and sequences move one attribute where the
+//           real ones compose two or three; and its figures are one shape with nesting where
+//           the real ones are composite line drawings. Its questions also offer four options
+//           against the papers' five.
+//
+//           So this band is nearer 7-8 in difficulty than 10-11. bandForAge sends every child
+//           of nine and over to it, which is the right structure and the wrong content, and
+//           the gap is worth closing before anyone that age uses it.
+//
 // A pool may REPEAT a value to weight it. `half` and `inner` are structural devices that take
 // over the whole interior, and drawn from a flat pool they landed on two questions out of
 // three — a sheet where nearly every figure is split or nested, which is not what the papers
