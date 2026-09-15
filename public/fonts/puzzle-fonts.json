@@ -10,8 +10,8 @@
     "puzzle-icons.woff2": {
       "family": "Material Symbols Outlined",
       "license": "Apache License 2.0",
-      "contents": "ac_unit,bakery_dining,bed,cake,chair,cloud,coffee,directions_bike,directions_boat,directions_car,door_front,egg,flight,forest,grass,headphones,home,icecream,key,lightbulb,local_florist,local_pizza,local_shipping,music_note,park,piano,potted_plant,sports_basketball,sports_soccer,sports_tennis,thunderstorm,train,umbrella,water_drop,wb_sunny",
-      "bytes": 9176
+      "contents": "ac_unit,add,album,bakery_dining,bed,cake,chair,check,close,cloud,coffee,currency_pound,directions_bike,directions_boat,directions_car,door_front,egg,flight,forest,grass,headphones,home,icecream,key,lightbulb,local_florist,local_pizza,local_shipping,mic,music_note,park,percent,piano,potted_plant,radio,remove,sports_baseball,sports_basketball,sports_football,sports_soccer,sports_tennis,sports_volleyball,thunderstorm,train,umbrella,water_drop,wb_sunny",
+      "bytes": 11032
     }
   }
 }

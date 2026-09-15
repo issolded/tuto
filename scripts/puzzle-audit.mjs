@@ -26,9 +26,9 @@ installStubFonts()
 
 const { BANDS, BAND_KEYS, BOOK_COVERAGE, generateQuestion, generateSession, validateQuestion, questionSignature } =
   await import('../src/lib/puzzleTemplates.js')
-const { groupOf, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
+const { groupOf, GLYPH_GROUPS, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
-const { iconGroupOf } = await import('../src/lib/puzzleIcons.js')
+const { iconGroupOf, ICON_GROUPS } = await import('../src/lib/puzzleIcons.js')
 const { geometryKey } = await import('../src/lib/puzzleFigures.js')
 
 const DRAWS = Number(process.env.PUZZLE_AUDIT_DRAWS || 4000)
@@ -136,6 +136,29 @@ for (const band of BAND_KEYS) {
     if (share < evenShare / 10) {
       fail(band, 'starved-attribute',
         `${attr} carries ${(share * 100).toFixed(2)}% of the rules, even is ${(evenShare * 100).toFixed(0)}%`)
+    }
+  }
+
+  // ── every GROUP can actually be the subject of a question ───────────────────
+  // A category question needs as many members inside the group as the band offers options, and
+  // one fewer outside it. A group with three members can therefore be neither the set nor the
+  // foil once a band offers five — and `music` and `sport` sat out every band above 5-6 on
+  // exactly that arithmetic, for as long as those bands have existed.
+  //
+  // Nothing saw it. The type check asks whether icon-odd can be built, and it can, out of the
+  // other five groups; the mix check counts icons, not which icons. A vocabulary the config
+  // lists and no question can reach is the same failure as a dead attribute, one level up.
+  for (const [label, groups, types] of [
+    ['glyph', GLYPH_GROUPS, BANDS[band].glyphTypes.filter(t => t === 'glyph-odd' || t === 'glyph-belongs')],
+    ['icon', ICON_GROUPS, BANDS[band].iconTypes.filter(t => t === 'icon-odd' || t === 'icon-belongs')],
+  ]) {
+    if (!types.length) continue
+    for (const [key, g] of Object.entries(groups)) {
+      const members = (g.glyphs ?? g.icons).length
+      if (members < BANDS[band].options) {
+        fail(band, 'unreachable-group',
+          `${label} group ${key} has ${members} members, so it can never be the set in a band of ${BANDS[band].options}`)
+      }
     }
   }
 

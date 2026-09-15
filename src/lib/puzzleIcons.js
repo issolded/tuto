@@ -60,13 +60,26 @@ export const ICON_GROUPS = {
     tr: 'ev', en: 'home',
     icons: ['home', 'chair', 'bed', 'key', 'door_front', 'lightbulb'],
   },
+  // Six each, and the two that used to have three were not merely thin — they were unreachable.
+  // A category question needs `options` members inside the group and one fewer outside it, so at
+  // five options a group of three can be neither the set nor the foil, and music and sport sat
+  // out every band above 5-6 entirely. Nothing reported it: the audit asked whether each TYPE
+  // could be built, and it could, out of the other five groups.
   music: {
     tr: 'müzik', en: 'music',
-    icons: ['music_note', 'piano', 'headphones'],
+    icons: ['music_note', 'piano', 'headphones', 'radio', 'mic', 'album'],
   },
   sport: {
     tr: 'spor', en: 'sport',
-    icons: ['sports_soccer', 'sports_basketball', 'sports_tennis'],
+    icons: ['sports_soccer', 'sports_basketball', 'sports_tennis',
+      'sports_football', 'sports_volleyball', 'sports_baseball'],
+  },
+  // Bond 8-9 paper 1 question 20 cycles ×, ✓, £ and = — a run of bare symbols with no picture in
+  // it at all, which is a different thing to read from a run of drawings and the papers use it
+  // from that age up. `currency_pound` is literally the book's third term.
+  symbol: {
+    tr: 'işaret', en: 'symbol',
+    icons: ['close', 'check', 'add', 'remove', 'percent', 'currency_pound'],
   },
 }
 
