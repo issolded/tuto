@@ -52,6 +52,17 @@ for (const band of BAND_KEYS) {
     if (why) { fail(band, 'invalid', `${q.type}: ${why}`); break }
   }
 
+  // ── every question offers the number of options the band declares ───────────
+  // The 5-6 papers use a–d and every band above them a–e. A generator that quietly produces
+  // four where the band says five is not caught anywhere else: every other check reads the
+  // length off the question itself and agrees with whatever it finds.
+  for (const q of qs) {
+    if (q.options.length !== BANDS[band].options) {
+      fail(band, 'options', `${q.type} offers ${q.options.length}, band declares ${BANDS[band].options}`)
+      break
+    }
+  }
+
   // ── every type the band declares can actually be built ───────────────────────
   for (const t of [...BANDS[band].types, ...BANDS[band].glyphTypes, ...BANDS[band].iconTypes]) {
     let built = 0

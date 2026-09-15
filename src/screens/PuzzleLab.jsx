@@ -41,6 +41,9 @@ const FIG = (spec, px) => ({
       : renderFigure(spec, { px, bg: '#FFFFFF' }),
 })
 
+// a–d at 5-6, a–e above it — the count comes from the band, so the label list has to reach.
+const LETTERS = 'abcde'
+
 const C = {
   bg: '#0F1320', panel: '#181D2E', line: '#2A3149', text: '#EDEBF6',
   dim: '#8D83AD', ok: '#3FBF7F', bad: '#E2586A', accent: '#7C6BF5',
@@ -129,7 +132,7 @@ function QuestionCard({ q, lang }) {
             >
               <Figure spec={o.spec} state={state} />
               <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
-                {'abcd'[i]}{picked != null && o.why ? ` · ${o.why}` : ''}
+                {LETTERS[i]}{picked != null && o.why ? ` · ${o.why}` : ''}
               </div>
             </button>
           )

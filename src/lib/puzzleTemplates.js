@@ -37,7 +37,7 @@
 // generator built the question around — so unlike the maths path there is no mathVerify step,
 // because there is no second opinion to reconcile. What IS checked is the picture:
 // validateQuestion() re-derives every option's visual fingerprint and rejects a question whose
-// options are not four different pictures, or whose rule turns out to be invisible. A question
+// options are not all different pictures, or whose rule turns out to be invisible. A question
 // that fails is discarded and regenerated; a child never sees one.
 
 // Explicit .js on these three, as in puzzleGlyphs and puzzleIcons, so the whole engine stays
@@ -128,19 +128,23 @@ const attributesFor = (spec) =>
 // rather than a probability — the papers open with two entirely abstract sets and bring
 // pictures in later, and the 9-11 band tilts further that way for the same reason.
 //
-// `noise` is the attribute count that varies among the options WITHOUT carrying the rule,
-// split evenly so it can never single an option out. Without it, three of the four figures in
-// an odd-one-out are literally identical, which both looks wrong and gives the answer away by
-// layout rather than by reasoning. With it, a 2-2 split is provably unable to produce a second
-// valid answer.
+// `options` is how many answers a question offers. The 5-6 papers use a–d and every band above
+// them a–e, which is not a cosmetic difference: the noise that keeps the options distinct
+// without competing with the rule has to be dealt differently for five — see NOISE_VECTORS.
+//
+// The number of NOISE attributes each band needs follows from that count rather than being
+// stated: noise varies among the options without carrying the rule, and it takes two attributes
+// to keep four options apart and three to keep five apart. Without it, the non-answers are
+// literally identical, which both looks wrong and gives the answer away by layout rather than
+// by reasoning.
 export const BANDS = {
   '5-6': {
     types: ['odd-one-out', 'identical', 'sequence'],
     glyphTypes: ['glyph-odd', 'glyph-belongs'],   // relations wait for 7-8
     iconTypes: ICON_TYPES,
     sources: { geometric: 7, icon: 2, glyph: 1 },
+    options: 4,               // the 5-6 papers offer a–d; every band above them offers a–e
     attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
-    noise: 2,
     shapes: ['circle', 'triangle', 'square', 'hexagon'],
     fills: ['none', 'solid'],
     rotations: [0, 90, 180, 270],
@@ -158,8 +162,8 @@ export const BANDS = {
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
     sources: { geometric: 7, icon: 2, glyph: 1 },
+    options: 5,
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner'],
-    noise: 2,
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
     fills: ['none', 'solid', 'hatch-45', 'hatch-90'],
     rotations: [0, 90, 180, 270],
@@ -177,8 +181,8 @@ export const BANDS = {
     glyphTypes: GLYPH_TYPES,
     iconTypes: ICON_TYPES,
     sources: { geometric: 8, icon: 1, glyph: 1 },   // the older the child, the more abstract
+    options: 5,
     attributes: ATTRIBUTES,
-    noise: 2,
     shapes: SHAPES,
     fills: FILLS,
     rotations: ROTATIONS,
@@ -261,30 +265,53 @@ function usableAttrs(r, band, spec, exclude = []) {
   return band.attributes.filter(a => !exclude.includes(a) && otherValue(r, band, spec, a) !== null)
 }
 
-// The two patterns noise is dealt out in. Both are even splits, which is the whole point — a
-// 2-2 distribution cannot make any single option the odd one, so noise can never compete with
-// the rule for the answer. They are also ORTHOGONAL, which matters just as much and is less
-// obvious: dealing two noise attributes with the same pattern leaves two options identical in
-// every field, and four options that are not four different pictures is a broken question
-// however sound the rule is. Crossed, they give every option its own combination while each
-// attribute on its own still splits evenly.
-const NOISE_PATTERNS = [i => i % 2, i => Math.floor(i / 2) % 2]
+// How noise is dealt across the options, as one binary vector per option.
+//
+// Two properties have to hold at once, and getting them both is why this is a table rather
+// than a formula. Every COLUMN — one noise attribute across all the options — must have no
+// singleton, or that attribute singles an option out and competes with the rule for the
+// answer. Every ROW must be distinct, or two options are the same picture.
+//
+// With four options that is easy: two attributes split 2-2 and cross to give four combinations.
+// With FIVE it is not, and the obvious extension fails. Five cannot be split evenly in two, so
+// a column is 3-2 at best; and two binary columns only offer four combinations, so one pair of
+// options always collides. It takes three columns, chosen so that each sums to 3 and all five
+// rows differ — which the papers get away with informally because a reader judges an
+// odd-one-out on the one property the others SHARE, and treats incidental differences as
+// scenery. This engine cannot rely on that judgement, so it builds sets where there is nothing
+// to judge.
+const NOISE_VECTORS = {
+  // Three is the PROMPT row of a `belongs` question rather than an option set. Those figures
+  // are on display, not answerable, so they only have to be three different pictures — the
+  // no-singleton rule exists to stop noise competing for an answer, and nothing here is
+  // answering. With three rows and binary columns it could not hold anyway.
+  3: [[0, 0], [0, 1], [1, 0]],
+  4: [[0, 0], [0, 1], [1, 0], [1, 1]],
+  5: [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]],
+}
 
 // Returns how many noise attributes it managed to place — callers that need their options to
-// be visibly distinct check it rather than assuming.
+// be visibly distinct check it against what their option count requires.
 function applyNoise(r, band, specs, ruleAttr) {
+  const vectors = NOISE_VECTORS[specs.length]
+  if (!vectors) return 0
+  const want = vectors[0].length
   let used = 0
   for (const attr of usableAttrs(r, band, specs[0], [ruleAttr])) {
-    if (used >= Math.min(band.noise, NOISE_PATTERNS.length)) break
+    if (used >= want) break
     const alt = otherValue(r, band, specs[0], attr)
     if (alt === null) continue
     const values = [specs[0][attr], alt]
-    const pattern = NOISE_PATTERNS[used]
-    specs.forEach((s, i) => { s[attr] = values[pattern(i)] })
+    specs.forEach((s, i) => { s[attr] = values[vectors[i][used]] })
     used++
   }
   return used
 }
+
+// How many noise attributes a set of this size needs before its options are all different.
+const noiseNeeded = (n) => (NOISE_VECTORS[n]?.[0].length ?? 2)
+
+const indices = (n) => Array.from({ length: n }, (_, i) => i)
 
 // ── generators ────────────────────────────────────────────────────────────────
 // Each returns a question or null. Returning null is normal and cheap: it means the random
@@ -298,12 +325,13 @@ function genOddOneOut(r, band, seed) {
   const oddValue = otherValue(r, band, base, ruleAttr)
   if (oddValue === null) return null
 
-  const specs = [0, 1, 2, 3].map(() => ({ ...base }))
-  const oddIndex = Math.floor(r() * 4)
-  // Two crossed noise attributes are what make the three non-odd figures three different
-  // pictures rather than three copies. Without both, the question is either malformed or
-  // gives itself away by layout, so a draw that cannot place them is discarded.
-  if (applyNoise(r, band, specs, ruleAttr) < 2) return null
+  const n = band.options
+  const specs = indices(n).map(() => ({ ...base }))
+  const oddIndex = Math.floor(r() * n)
+  // Crossed noise attributes are what make the non-odd figures different pictures rather than
+  // copies of each other. Without the full set, the question is either malformed or gives
+  // itself away by layout, so a draw that cannot place them is discarded.
+  if (applyNoise(r, band, specs, ruleAttr) < noiseNeeded(n)) return null
   specs[oddIndex][ruleAttr] = oddValue
 
   return {
@@ -315,17 +343,18 @@ function genOddOneOut(r, band, seed) {
 }
 
 function genIdentical(r, band, seed) {
+  const n = band.options
   const target = randomSpec(r, band)
   const attrs = usableAttrs(r, band, target)
-  if (attrs.length < 3) return null
-  const chosen = attrs.slice().sort(() => r() - 0.5).slice(0, 3)
+  if (attrs.length < n - 1) return null
+  const chosen = shuffle(r, attrs.slice()).slice(0, n - 1)
   const options = [{ spec: { ...target }, why: null }]
   for (const attr of chosen) {
     const alt = otherValue(r, band, target, attr)
     if (alt === null) return null
     options.push({ spec: { ...target, [attr]: alt }, why: attr })
   }
-  const order = shuffle(r, [0, 1, 2, 3])
+  const order = shuffle(r, indices(n))
   const shuffled = order.map(i => options[i])
   return {
     seed, type: 'identical', layout: 'target', prompt: [target],
@@ -376,17 +405,18 @@ function genSequence(r, band, seed) {
   const prompt = Array.from({ length: n }, (_, i) => at(i))
   const answer = at(n)
 
+  const want = band.options
   const options = [{ spec: answer, why: null }]
   // The strongest distractor in a sequence is the item that just went past — a child reading
   // the run as "more of the same" lands exactly there.
   const near = at(n - 1)
   if (geometryKey(near) !== geometryKey(answer)) options.push({ spec: near, why: ruleAttr })
   for (const attr of usableAttrs(r, band, answer, [ruleAttr])) {
-    if (options.length >= 4) break
+    if (options.length >= want) break
     const alt = otherValue(r, band, answer, attr)
     if (alt !== null) options.push({ spec: { ...answer, [attr]: alt }, why: attr })
   }
-  while (options.length < 4) {
+  while (options.length < want) {
     const alt = otherValue(r, band, answer, ruleAttr)
     if (alt === null) return null
     const cand = { ...answer, [ruleAttr]: alt }
@@ -394,7 +424,7 @@ function genSequence(r, band, seed) {
     options.push({ spec: cand, why: ruleAttr })
   }
 
-  const order = shuffle(r, [0, 1, 2, 3])
+  const order = shuffle(r, indices(want))
   return {
     seed, type: 'sequence', layout: 'row', prompt,
     options: order.map(i => options[i]),
@@ -417,12 +447,13 @@ function genBelongs(r, band, seed) {
   const oddValue = otherValue(r, band, base, ruleAttr)
   if (oddValue === null) return null
 
+  const n = band.options
   const prompt = [0, 1, 2].map(() => ({ ...base }))
   if (applyNoise(r, band, prompt, ruleAttr) < 2) return null
 
-  const specs = [0, 1, 2, 3].map(() => ({ ...base }))
-  const keepIndex = Math.floor(r() * 4)
-  if (applyNoise(r, band, specs, ruleAttr) < 2) return null
+  const specs = indices(n).map(() => ({ ...base }))
+  const keepIndex = Math.floor(r() * n)
+  if (applyNoise(r, band, specs, ruleAttr) < noiseNeeded(n)) return null
   specs.forEach((s, i) => { if (i !== keepIndex) s[ruleAttr] = oddValue })
 
   // The answer must be a NEW member of the set, not one of the three already on display —
@@ -437,7 +468,7 @@ function genBelongs(r, band, seed) {
   // landed 0% / 36% / 15% / 49%: a child who learned "never the first one" would have scored
   // well above chance without reading a single figure, and the attempt log would have recorded
   // that as understanding.
-  const order = shuffle(r, [0, 1, 2, 3])
+  const order = shuffle(r, indices(n))
   return {
     seed, type: 'belongs', layout: 'row', prompt,
     options: order.map(i => ({ spec: specs[i], why: i === keepIndex ? null : ruleAttr })),
@@ -465,16 +496,28 @@ function genGridComplete(r, band, seed) {
   const answer = cell(1, 1)
   const prompt = [cell(0, 0), cell(0, 1), cell(1, 0), null]
 
+  // A 2×2 grid only offers four cells, so a fifth option has to come from somewhere else: the
+  // answer with a third attribute moved. It is a weaker distractor than the three cell
+  // confusions, which is the right shape — those are the mistakes the question is about.
   const options = [
     { spec: answer, why: null },
     { spec: cell(0, 1), why: rowAttr },   // right column, wrong row
     { spec: cell(1, 0), why: colAttr },   // right row, wrong column
     { spec: cell(0, 0), why: 'both' },    // neither
   ]
+  while (options.length < band.options) {
+    const spare = usableAttrs(r, band, answer, [rowAttr, colAttr])
+      .map(a => [a, otherValue(r, band, answer, a)])
+      .find(([, v]) => v !== null)
+    if (!spare) return null
+    const cand = { ...answer, [spare[0]]: spare[1] }
+    if (options.some(o => geometryKey(o.spec) === geometryKey(cand))) return null
+    options.push({ spec: cand, why: spare[0] })
+  }
   const keys = options.map(o => geometryKey(o.spec))
-  if (new Set(keys).size !== 4) return null
+  if (new Set(keys).size !== options.length) return null
 
-  const order = shuffle(r, [0, 1, 2, 3])
+  const order = shuffle(r, indices(options.length))
   return {
     seed, type: 'grid-complete', layout: 'grid2x2', prompt,
     options: order.map(i => options[i]),
@@ -509,9 +552,18 @@ function genAnalogy(r, band, seed) {
     { spec: { ...b }, why: cAttrs[0] },         // transform applied to the wrong figure
     { spec: { ...a }, why: 'both' },
   ]
-  if (new Set(options.map(o => geometryKey(o.spec))).size !== 4) return null
+  while (options.length < band.options) {
+    const spare = usableAttrs(r, band, answer, [ruleAttr])
+      .map(at => [at, otherValue(r, band, answer, at)])
+      .find(([, v]) => v !== null)
+    if (!spare) return null
+    const cand = { ...answer, [spare[0]]: spare[1] }
+    if (options.some(o => geometryKey(o.spec) === geometryKey(cand))) return null
+    options.push({ spec: cand, why: spare[0] })
+  }
+  if (new Set(options.map(o => geometryKey(o.spec))).size !== options.length) return null
 
-  const order = shuffle(r, [0, 1, 2, 3])
+  const order = shuffle(r, indices(options.length))
   return {
     seed, type: 'analogy', layout: 'analogy', prompt: [a, b, c, null],
     options: order.map(i => options[i]),
@@ -530,9 +582,10 @@ function genAnalogy(r, band, seed) {
 function genGlyphCategory(r, band, seed, type) {
   const groups = shuffle(r, GROUP_KEYS.slice())
   const [inKey, outKey] = groups
+  const n = band.options
   const inSet = shuffle(r, GLYPH_GROUPS[inKey].glyphs.slice())
   const outSet = shuffle(r, GLYPH_GROUPS[outKey].glyphs.slice())
-  if (inSet.length < 4 || outSet.length < 3) return null
+  if (inSet.length < n || outSet.length < n - 1) return null
 
   const spec = (glyph) => makeGlyphSpec({ glyph, group: groupOf(glyph) })
 
@@ -542,8 +595,8 @@ function genGlyphCategory(r, band, seed, type) {
     // different wrong groups would leave every option isolated on the rule and the set with
     // no single defensible answer.
     const prompt = inSet.slice(0, 3).map(spec)
-    const options = [spec(inSet[3]), ...outSet.slice(0, 3).map(spec)]
-    const order = shuffle(r, [0, 1, 2, 3])
+    const options = [spec(inSet[3]), ...outSet.slice(0, n - 1).map(spec)]
+    const order = shuffle(r, indices(n))
     return {
       seed, type, layout: 'row', prompt,
       options: order.map(i => ({ spec: options[i], why: i === 0 ? null : 'group' })),
@@ -552,8 +605,8 @@ function genGlyphCategory(r, band, seed, type) {
     }
   }
 
-  const oddIndex = Math.floor(r() * 4)
-  const specs = inSet.slice(0, 4).map(spec)
+  const oddIndex = Math.floor(r() * n)
+  const specs = inSet.slice(0, n).map(spec)
   specs[oddIndex] = spec(outSet[0])
   return {
     seed, type: 'glyph-odd', layout: 'options-only', prompt: [],
@@ -588,13 +641,14 @@ function genGlyphAnalogy(r, band, seed) {
       }
     }
   }
+  const n = band.options
   const pool = shuffle(r, [...new Set(others)]
     .filter(g => g !== answer && g !== b && g !== a && !reach.has(g)))
-  if (pool.length < 3) return null
+  if (pool.length < n - 1) return null
 
   const spec = (glyph) => makeGlyphSpec({ glyph, group: groupOf(glyph) })
-  const options = [spec(answer), ...pool.slice(0, 3).map(spec)]
-  const order = shuffle(r, [0, 1, 2, 3])
+  const options = [spec(answer), ...pool.slice(0, n - 1).map(spec)]
+  const order = shuffle(r, indices(n))
   return {
     seed, type: 'glyph-analogy', layout: 'analogy',
     prompt: [spec(a), spec(b), spec(c), null],
@@ -608,9 +662,10 @@ function genGlyphAnalogy(r, band, seed) {
 
 function genIconCategory(r, band, seed, type) {
   const [inKey, outKey] = shuffle(r, ICON_GROUP_KEYS.slice())
+  const n = band.options
   const inSet = shuffle(r, ICON_GROUPS[inKey].icons.slice())
   const outSet = shuffle(r, ICON_GROUPS[outKey].icons.slice())
-  if (inSet.length < 4 || outSet.length < 3) return null
+  if (inSet.length < n || outSet.length < n - 1) return null
 
   // One fill across the whole set. Letting it vary here would put a second attribute in play
   // on a question whose rule is category, and the validator would rightly call that ambiguous.
@@ -619,8 +674,8 @@ function genIconCategory(r, band, seed, type) {
 
   if (type === 'icon-belongs') {
     const prompt = inSet.slice(0, 3).map(spec)
-    const options = [spec(inSet[3]), ...outSet.slice(0, 3).map(spec)]
-    const order = shuffle(r, [0, 1, 2, 3])
+    const options = [spec(inSet[3]), ...outSet.slice(0, n - 1).map(spec)]
+    const order = shuffle(r, indices(n))
     return {
       seed, type, layout: 'row', prompt,
       options: order.map(i => ({ spec: options[i], why: i === 0 ? null : 'group' })),
@@ -629,8 +684,8 @@ function genIconCategory(r, band, seed, type) {
     }
   }
 
-  const oddIndex = Math.floor(r() * 4)
-  const specs = inSet.slice(0, 4).map(spec)
+  const oddIndex = Math.floor(r() * n)
+  const specs = inSet.slice(0, n).map(spec)
   specs[oddIndex] = spec(outSet[0])
   return {
     seed, type: 'icon-odd', layout: 'options-only', prompt: [],
@@ -673,9 +728,16 @@ function genIconSequence(r, band, seed) {
       : makeIconSpec({ icon: near.icon, fill: 1, group }),
     why: 'both',
   })
-  if (new Set(options.map(o => iconKey(o.spec))).size !== 4) return null
+  // Two icons and two fills give exactly four distinct options; a fifth needs a third icon.
+  while (options.length < band.options) {
+    const extra = icons[options.length - 1] ?? icons[(options.length + 1) % icons.length]
+    const cand = makeIconSpec({ icon: extra, fill: ICON_FILLS[options.length % 2], group })
+    if (options.some(o => iconKey(o.spec) === iconKey(cand))) return null
+    options.push({ spec: cand, why: onFill ? 'icon' : 'fill' })
+  }
+  if (new Set(options.map(o => iconKey(o.spec))).size !== options.length) return null
 
-  const order = shuffle(r, [0, 1, 2, 3])
+  const order = shuffle(r, indices(options.length))
   return {
     seed, type: 'icon-sequence', layout: 'row', prompt,
     options: order.map(i => options[i]),
@@ -713,8 +775,12 @@ const GENERATORS = {
 // generated bank cannot: the rule is known here, so it can be checked rather than trusted.
 // Returns null when the question is sound, or a string naming what is wrong with it.
 export function validateQuestion(q) {
-  if (!q || !Array.isArray(q.options) || q.options.length !== 4) return 'options != 4'
-  if (!(q.correct_index >= 0 && q.correct_index < 4)) return 'correct_index out of range'
+  // The count itself is a band decision (a–d at 5-6, a–e above it), so what is checked is that
+  // it is one the noise tables can actually keep distinct — anything else means a generator
+  // built a set nothing downstream can reason about.
+  const n = q.options?.length
+  if (!q || !Array.isArray(q.options) || !NOISE_VECTORS[n] || n < 4) return `options: ${n}`
+  if (!(q.correct_index >= 0 && q.correct_index < n)) return 'correct_index out of range'
 
   // ONE QUESTION, ONE MATERIAL. All three vocabularies are in use, but they mix at the level of
   // a SHEET, never inside a single question — three line icons and one emoji is answered
@@ -733,7 +799,7 @@ export function validateQuestion(q) {
   if (kinds.size !== 1) return `question mixes figure kinds: ${[...kinds].join(' + ')}`
 
   const keys = q.options.map(o => figureKey(o.spec))
-  if (new Set(keys).size !== 4) return 'two options draw the same picture'
+  if (new Set(keys).size !== n) return 'two options draw the same picture'
 
   // A prompt cell that is already the answer makes the question a memory test, and in
   // `identical` it would put the target next to its own copy.
@@ -773,6 +839,8 @@ export function validateQuestion(q) {
         const k = valueKey(s[attr])
         counts[k] = (counts[k] || 0) + 1
       }
+      // An (n-1)-to-1 split: one option alone on this attribute, the rest agreed. That is what
+      // being the odd one out means, and with five options it is 4-1 rather than 3-1.
       const singles = Object.values(counts).filter(c => c === 1).length
       if (singles === 1 && Object.keys(counts).length === 2) splits++
       // `glyph` is the identity of the picture, so in a glyph question every option differs on
@@ -782,7 +850,7 @@ export function validateQuestion(q) {
       }
     }
     if (['odd-one-out', 'glyph-odd', 'icon-odd'].includes(q.type) && splits !== 1) {
-      return `${splits} attributes split 3-1`
+      return `${splits} attributes split ${n - 1}-1`
     }
   }
 
