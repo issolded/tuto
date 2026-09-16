@@ -16,7 +16,7 @@ Package: `app.tuto.mobile.preview` (separate preview identity).
 CI builds on the `mobile/native-tablet-preview` branch only. No deployment or production secrets.
 
 ## Implemented
-- Kotlin/Jetpack Compose UI, no WebView.
+- Android Kotlin/Jetpack Compose and iOS SwiftUI clients; no WebView.
 - Classic pastel and reference-inspired Morph Studio design, persistent user selection.
 - Native vector mascot: original simplified illustration, not a reproduction of the reference's 3D artwork.
 - Width-based tablet rail / phone bottom navigation, expanded two-column home, flexible question grid, scrollable content, no orientation lock.
@@ -32,7 +32,8 @@ Preview content and rewards are explicitly separate from production. No authenti
 account integration, AI conversation UI, camera/homework upload, books/stories/drawings,
 full mathematics engine, parent approval or actual screen-time enforcement yet.
 The sample generator is not a port of mathTemplates and is not a claim of full curriculum coverage.
-No iOS app or signed iOS build has been produced. iOS UI and Screen Time integration remain platform-specific work.
+The iPhone/iPad SwiftUI client lives in `iosApp/`. See its README for simulator builds.
+No signed device IPA or TestFlight distribution has been produced; Screen Time integration remains outstanding.
 Do not release this package as a production client.
 
 ## Migration boundary
@@ -43,7 +44,7 @@ Production code remains intact. Next development should use a staging backend im
 4. Reward entitlement distinct from measured minutes and platform enforcement.
 5. Typed API responses for native renderers. Reuse existing JS generators server-side rather than maintaining a second production learning engine.
 
-iOS: reuse `shared` models, session rules and platform interfaces with a SwiftUI client.
+iOS: the SwiftUI client uses `shared` generation, scoring and wallet rules through PreviewBridge.
 On macOS: `gradle :shared:linkDebugFrameworkIosSimulatorArm64`.
 Android-specific settings and usage APIs stay in androidApp.
 
