@@ -45,7 +45,7 @@ jobs:
           for kind in iPhone iPad; do
             device=$(cat "$kind.id")
             xcodebuild -project TutoPreview.xcodeproj -scheme TutoPreview -configuration Debug -destination "platform=iOS Simulator,id=$device" -derivedDataPath build -resultBundlePath "$kind.xcresult" CODE_SIGNING_ALLOWED=NO test-without-building
-            xcrun simctl io "$device" screenshot "$kind.png"
+            xcrun xcresulttool export attachments --path "$kind.xcresult" --output-path "screenshots/$kind"
             xcrun simctl shutdown "$device" || true
           done
       - name: Package simulator app
@@ -63,5 +63,5 @@ jobs:
           name: ios-test-results
           path: |
             mobile/iosApp/*.xcresult
-            mobile/iosApp/*.png
+            mobile/iosApp/screenshots/
             mobile/shared/build/reports/
