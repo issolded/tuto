@@ -13,6 +13,12 @@
 //     cycle was drawn from a pool that repeats values to weight them
 //   · noise landed on an attribute that suppresses the rule attribute, so the picture split
 //     1-1-2 while the raw specs split 3-1
+//   · three in four mirror questions marked a figure that was not the mirror image, and half the
+//     symmetry questions asked for the figure WITH a line and marked the one without. Both
+//     passed here, because the checks re-derived the answer with the generator's own idea of a
+//     mirror. Found by a review from outside the code (Codex), not by this file — which is why
+//     the answer checks now read the drawing (scripts/lib/drawn-geometry.mjs), and why every
+//     one of them is itself tested by moving the key to a wrong option and expecting a finding.
 //
 // Nothing here calls a model or a network. It is deterministic: the same seeds every run, so a
 // regression is a diff and not a coin flip.
@@ -24,12 +30,13 @@ import { installStubFonts } from './lib/stub-fonts.mjs'
 // FontFaceSet faithful enough for src/lib/fontGate.js — see the note there.
 installStubFonts()
 
-const { BANDS, BAND_KEYS, BOOK_COVERAGE, generateQuestion, generateSession, validateQuestion, questionSignature } =
+const { BANDS, BAND_KEYS, BOOK_COVERAGE, figureKey, generateQuestion, generateSession, validateQuestion, questionSignature } =
   await import('../src/lib/puzzleTemplates.js')
 const { groupOf, GLYPH_GROUPS, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
 const { iconGroupOf, ICON_GROUPS } = await import('../src/lib/puzzleIcons.js')
-const { geometryKey, normalizeSpec } = await import('../src/lib/puzzleFigures.js')
+const { ATTRIBUTES, geometryKey, normalizeSpec } = await import('../src/lib/puzzleFigures.js')
+const { drawn, mirrorImage, sameDrawing, hasLineOfSymmetry } = await import('./lib/drawn-geometry.mjs')
 
 const DRAWS = Number(process.env.PUZZLE_AUDIT_DRAWS || 4000)
 const findings = []
@@ -41,6 +48,182 @@ const sourceOf = (t) => (t.startsWith('glyph') ? 'glyph' : t.startsWith('icon') 
 
 // `why` labels that name a property computed from the figure rather than a field stored on it.
 const DERIVED_LABELS = new Set(['symmetry', 'flip', 'group', 'trait', 'relation', 'order'])
+
+// Whether the marked answer is the one the page implies, read the way a child has to read it.
+// Returns null when it is, or what is wrong.
+function answerProblem(q) {
+  const ans = q.options[q.correct_index].spec
+  const others = q.options.filter((_, k) => k !== q.correct_index).map(o => o.spec)
+  let why = null
+
+  if (q.type === 'odd-one-out') {
+    const v = (s) => val(s[q.rule.attr])
+    if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
+    else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
+  } else if (q.type === 'analogy') {
+    // Read off the page. Whatever changes from A to B, as drawn, is the transform; the answer is
+    // C with that carried across, and it must be the only option that is. The rule is then held
+    // to the picture: a step it names has to be one of the changes the child can see, and the
+    // picture may not change anything the rule does not name. The old check compared the named
+    // steps' fields and nothing else, so an option that got the steps right and moved a third
+    // attribute passed as the answer too.
+    const [a, b, c] = q.prompt
+    const n = (s) => normalizeSpec(s)
+    const diff = (x, y) => ATTRIBUTES.filter(k => val(n(x)[k]) !== val(n(y)[k]))
+    const across = diff(a, b)
+    const steps = q.rule.attr.split('+')
+    const blank = { ...c }
+    for (const k of across) blank[k] = b[k]
+    if (across.slice().sort().join() !== steps.slice().sort().join()) {
+      why = `the rule says ${steps.join('+')} and A→B shows ${across.join('+') || 'nothing'}`
+    } else if (diff(c, ans).sort().join() !== across.slice().sort().join()) {
+      why = `A→B shows ${across.join('+')} and C→answer shows ${diff(c, ans).join('+') || 'nothing'}`
+    } else if (geometryKey(ans) !== geometryKey(blank)) why = 'the answer is not C with the A→B change carried across'
+    else if (others.some(s => geometryKey(s) === geometryKey(blank))) why = 'a distractor is also C with the change carried across'
+    else {
+      // Each step has to be visible by itself — a field can change on two specs that draw the
+      // same picture, and then the step is in the rule and not on the page.
+      for (const x of steps) {
+        if (geometryKey({ ...b, [x]: a[x] }) === geometryKey(b)) { why = `the step ${x} is not visible between A and B`; break }
+        if (geometryKey({ ...ans, [x]: c[x] }) === geometryKey(ans)) { why = `the step ${x} is not visible between C and the answer`; break }
+      }
+    }
+  } else if (q.type === 'symmetry') {
+    // Read against the STEM, which is what the child reads — not against `rule`, which only the
+    // generator reads. The check used to compare the answer with the distractors and never
+    // asked which side the question was on, so "which one has a line of symmetry?" with the one
+    // figure WITHOUT a line marked correct passed every time.
+    //
+    // And the line is any line. The old predicate toggled `flip`, which tests one axis — the
+    // figure's own vertical — and filed a hexagon turned 45° as having no symmetry at all.
+    const wantSymmetric = { puzzle_stem_symmetry: true, puzzle_stem_symmetry_none: false }[q.stem_key]
+    const sym = (s) => hasLineOfSymmetry(s)
+    if (wantSymmetric === undefined) why = `stem ${q.stem_key} does not say which side is asked`
+    else if (sym(ans) !== wantSymmetric) why = `the stem asks for ${wantSymmetric ? 'a figure with' : 'the figure without'} a line of symmetry and the answer is not one`
+    else if (others.some(s => sym(s) === wantSymmetric)) why = 'a distractor also answers the stem'
+  } else if (q.type === 'code') {
+    // Rebuilt from the page alone, the way a child has to: read each shown figure's two
+    // attribute values off its label, then look up the figure being asked about. Three ways
+    // this can be wrong and all three are silent — the letters are not a function of the
+    // attribute (the same value labelled two ways), a value in the answer never appears
+    // labelled anywhere (unanswerable, not hard), or the figure being asked about is already
+    // on display (a lookup, not reasoning).
+    const [a1, a2] = q.rule.attr.slice(5).split('+')
+    const ask = q.prompt[q.prompt.length - 1]
+    const shown = q.prompt.slice(0, -1)
+    const labels = q.promptLabels.slice(0, -1)
+    const m1 = new Map(); const m2 = new Map()
+    shown.forEach((s, k) => { m1.set(val(s[a1]), labels[k][0]); m2.set(val(s[a2]), labels[k][1]) })
+    const clash = shown.find((s, k) => m1.get(val(s[a1])) !== labels[k][0] || m2.get(val(s[a2])) !== labels[k][1])
+    if (clash) why = 'a letter is not a function of the attribute it encodes'
+    else if (!m1.has(val(ask[a1]))) why = `the answer's ${a1} value never appears with a letter`
+    else if (!m2.has(val(ask[a2]))) why = `the answer's ${a2} value never appears with a letter`
+    else if (q.options[q.correct_index].code !== m1.get(val(ask[a1])) + m2.get(val(ask[a2]))) {
+      why = `the answer is ${q.options[q.correct_index].code}, the prompt implies ${m1.get(val(ask[a1])) + m2.get(val(ask[a2]))}`
+    } else if (shown.some(s => geometryKey(s) === geometryKey(ask))) {
+      why = 'the figure being asked about is already on display, so its code can be copied'
+    }
+  } else if (q.type === 'reflection') {
+    // Re-derived rather than taken on trust, and the second line is the one that matters: a
+    // figure symmetric about the vertical axis IS its own mirror image, so the question would
+    // have a correct answer and four distractors that are all equally correct-looking, with
+    // nothing on screen to tell them apart.
+    //
+    // The mirror is taken in SCREEN space, across the dashed vertical line the lab draws — see
+    // scripts/lib/drawn-geometry.mjs for why it may not be `flip` toggled on the spec.
+    const want = mirrorImage(drawn(q.prompt[0]))
+    if (!sameDrawing(drawn(ans), want)) why = 'the answer is not the prompt seen in a vertical mirror'
+    else if (others.some(s => sameDrawing(drawn(s), want))) why = 'a distractor is also the mirror image'
+    else if (sameDrawing(drawn(q.prompt[0]), want)) why = 'the figure is its own mirror image'
+  } else if (q.type === 'glyph-trait') {
+    // The category reading and the property reading are both checked, because the question is
+    // only about the property while the category says nothing. Then every OTHER trait of that
+    // group is asked whether it singles out a different picture — the second defensible answer
+    // that total partitions exist to make findable.
+    const key = q.rule.attr.split(':')[1]
+    const v = (s) => traitValue(key, s.glyph)
+    const glyphs = q.options.map(o => o.spec.glyph)
+    if (v(ans) === null) why = `the answer ${ans.glyph} is outside trait ${key}`
+    else if (others.some(s => v(s) === v(ans))) why = 'a distractor is on the answer\'s side of the trait'
+    else if (new Set(others.map(v)).size !== 1) why = 'the non-answers do not agree on the trait'
+    else if (new Set(q.options.map(o => grp(o.spec))).size !== 1) {
+      why = 'the options are not all one group, so the category answers it'
+    } else {
+      const clash = traitConflict(glyphs, key, ans.glyph)
+      if (clash) why = `trait ${clash} singles out a different option`
+    }
+  } else if (q.type === 'glyph-odd' || q.type === 'icon-odd') {
+    if (others.some(s => grp(s) === grp(ans))) why = `the answer's group ${grp(ans)} is shared`
+    else if (new Set(others.map(grp)).size !== 1) why = 'the three non-answers are not one group'
+  } else if (q.type === 'belongs') {
+    const want = val(q.prompt[0][q.rule.attr])
+    if (val(ans[q.rule.attr]) !== want) why = 'the answer does not match the prompt'
+    else if (others.some(s => val(s[q.rule.attr]) === want)) why = 'a distractor also belongs'
+  } else if (q.type === 'glyph-belongs' || q.type === 'icon-belongs') {
+    const want = grp(q.prompt[0])
+    if (q.prompt.some(c => grp(c) !== want)) why = 'the prompt figures are not one group'
+    else if (grp(ans) !== want) why = `the answer is ${grp(ans)}, the prompt is ${want}`
+    else if (others.some(s => grp(s) === want)) why = 'a distractor is also in the group'
+  } else if (q.type === 'identical') {
+    const target = geometryKey(q.prompt[0])
+    if (geometryKey(ans) !== target) why = 'the answer is not the target'
+    else if (others.some(s => geometryKey(s) === target)) why = 'a distractor also matches the target'
+  } else if (q.type === 'glyph-analogy') {
+    const [a, b, c] = q.prompt
+    const rel = Object.entries(GLYPH_RELATIONS)
+      .find(([, r]) => r.pairs.some(([x, y]) => x === a.glyph && y === b.glyph))?.[0]
+    if (!rel) why = 'the shown pair is in no relation'
+    else {
+      const partner = GLYPH_RELATIONS[rel].pairs.find(([x]) => x === c.glyph)?.[1]
+      if (!partner) why = `${c.glyph} has no partner under ${rel}`
+      else if (ans.glyph !== partner) why = `the answer is ${ans.glyph} but ${rel} gives ${partner}`
+    }
+  } else if (q.type === 'grid-complete') {
+    // Read off the three cells the way a child does: whatever changes along the top row is what
+    // a column means, whatever changes down the left column is what a row means, and the blank
+    // is the top-left cell with both carried in. If one attribute changes both ways the grid has
+    // no single reading.
+    const [tl, tr, bl] = q.prompt
+    const n = (s) => normalizeSpec(s)
+    const across = Object.keys(tl).filter(k => val(n(tr)[k]) !== val(n(tl)[k]))
+    const down = Object.keys(tl).filter(k => val(n(bl)[k]) !== val(n(tl)[k]))
+    const blank = { ...tl }
+    for (const k of across) blank[k] = tr[k]
+    for (const k of down) blank[k] = bl[k]
+    if (!across.length || !down.length) why = 'a row or column of the grid shows no change'
+    else if (across.some(k => down.includes(k))) why = 'one attribute changes both across and down'
+    else if (geometryKey(ans) !== geometryKey(blank)) why = 'the answer is not what the row and column imply'
+    else if (others.some(s => geometryKey(s) === geometryKey(blank))) why = 'a distractor is also what the grid implies'
+  } else if (q.type === 'sequence' || q.type === 'icon-sequence' || q.type === 'glyph-sequence') {
+    // Nothing else in the pipeline ever looks at the prompt, so a run with no visible rule in
+    // it reaches a child unchallenged.
+    const keys = q.prompt.map(figureKey)
+    if (new Set(keys).size < 2) why = `the prompt is ${q.prompt.length} identical figures`
+
+    // A picture cycle is the one sequence whose answer can be re-derived from the prompt
+    // alone, so it is, rather than taken on the generator's word. The period is read back off
+    // the run — the smallest p that the whole prompt repeats on — and the next term is then
+    // the one p places before the end. It also catches a prompt that is not periodic at all,
+    // which would leave a child with a run that has no next term.
+    //
+    // Read off the drawn pictures, so it holds for every sequence family and not only glyphs —
+    // shape and icon runs had no answer check at all until the mutation check below asked.
+    if (!why) {
+      const p = keys.map((_, k) => k).slice(1).find(k => keys.every((c, i) => i < k || c === keys[i - k]))
+      const next = p && keys[keys.length - p]
+      if (!p) why = 'the prompt does not repeat on any period'
+      else if (figureKey(ans) !== next) why = `the cycle of ${p} gives a different picture from the answer`
+      else if (others.some(s => figureKey(s) === next)) why = 'a distractor is also the next term'
+    }
+    if (!why && q.type === 'glyph-sequence') {
+      if (new Set(q.options.map(o => grp(o.spec))).size !== 1) {
+        why = 'the options are not all from one group, so the run is answerable by category'
+      }
+    }
+  }
+
+  return why
+}
 
 for (const band of BAND_KEYS) {
   const qs = []
@@ -190,130 +373,35 @@ for (const band of BAND_KEYS) {
 
   // ── the answer really answers the question ───────────────────────────────────
   for (const q of qs) {
-    const ans = q.options[q.correct_index].spec
-    const others = q.options.filter((_, k) => k !== q.correct_index).map(o => o.spec)
-    let why = null
+    const why = answerProblem(q)
+    if (why) { fail(band, 'answer', `${q.type} (rule ${q.rule.attr}): ${why}`); break }
+  }
 
-    if (q.type === 'odd-one-out') {
-      const v = (s) => val(s[q.rule.attr])
-      if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
-      else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
-    } else if (q.type === 'analogy') {
-      // The transform must mean the same thing on both pairs, and be measured on the DRAWN
-      // figure — normalizeSpec can erase a step that the spec still claims, and the analogy then
-      // shows two changes on the left and one on the right. Three ways to be wrong: a step that
-      // does not change A→B at all, a step that lands somewhere else on C→?, and a C that
-      // already differs from A on a step, which makes the second pair a different question.
-      const [a, b, c] = q.prompt
-      const n = (s) => normalizeSpec(s)
-      for (const x of q.rule.attr.split('+')) {
-        if (val(n(b)[x]) === val(n(a)[x])) { why = `the step ${x} does not change A into B`; break }
-        if (val(n(ans)[x]) !== val(n(b)[x])) { why = `the step ${x} lands differently on the second pair`; break }
-        if (val(n(c)[x]) !== val(n(a)[x])) { why = `C already differs from A on ${x}`; break }
-      }
-    } else if (q.type === 'symmetry') {
-      // Re-derived from the drawn figure, not from the flag the generator set: a figure has a
-      // line of symmetry exactly when mirroring it produces the same picture.
-      const sym = (s) => geometryKey(s) === geometryKey({ ...s, flip: !s.flip })
-      if (others.some(s => sym(s) === sym(ans))) why = 'a distractor is on the answer\'s side of the predicate'
-      else if (new Set(others.map(sym)).size !== 1) why = 'the non-answers do not agree'
-    } else if (q.type === 'code') {
-      // Rebuilt from the page alone, the way a child has to: read each shown figure's two
-      // attribute values off its label, then look up the figure being asked about. Three ways
-      // this can be wrong and all three are silent — the letters are not a function of the
-      // attribute (the same value labelled two ways), a value in the answer never appears
-      // labelled anywhere (unanswerable, not hard), or the figure being asked about is already
-      // on display (a lookup, not reasoning).
-      const [a1, a2] = q.rule.attr.slice(5).split('+')
-      const ask = q.prompt[q.prompt.length - 1]
-      const shown = q.prompt.slice(0, -1)
-      const labels = q.promptLabels.slice(0, -1)
-      const m1 = new Map(); const m2 = new Map()
-      shown.forEach((s, k) => { m1.set(val(s[a1]), labels[k][0]); m2.set(val(s[a2]), labels[k][1]) })
-      const clash = shown.find((s, k) => m1.get(val(s[a1])) !== labels[k][0] || m2.get(val(s[a2])) !== labels[k][1])
-      if (clash) why = 'a letter is not a function of the attribute it encodes'
-      else if (!m1.has(val(ask[a1]))) why = `the answer's ${a1} value never appears with a letter`
-      else if (!m2.has(val(ask[a2]))) why = `the answer's ${a2} value never appears with a letter`
-      else if (q.options[q.correct_index].code !== m1.get(val(ask[a1])) + m2.get(val(ask[a2]))) {
-        why = `the answer is ${q.options[q.correct_index].code}, the prompt implies ${m1.get(val(ask[a1])) + m2.get(val(ask[a2]))}`
-      } else if (shown.some(s => geometryKey(s) === geometryKey(ask))) {
-        why = 'the figure being asked about is already on display, so its code can be copied'
-      }
-    } else if (q.type === 'reflection') {
-      // Re-derived rather than taken on trust, and the second line is the one that matters: a
-      // figure symmetric about the vertical axis IS its own mirror image, so the question would
-      // have a correct answer and four distractors that are all equally correct-looking, with
-      // nothing on screen to tell them apart.
-      const base = q.prompt[0]
-      if (geometryKey(ans) !== geometryKey({ ...base, flip: !base.flip })) {
-        why = 'the answer is not the mirror of the prompt'
-      } else if (geometryKey(ans) === geometryKey(base)) why = 'the figure is its own mirror image'
-    } else if (q.type === 'glyph-trait') {
-      // The category reading and the property reading are both checked, because the question is
-      // only about the property while the category says nothing. Then every OTHER trait of that
-      // group is asked whether it singles out a different picture — the second defensible answer
-      // that total partitions exist to make findable.
-      const key = q.rule.attr.split(':')[1]
-      const v = (s) => traitValue(key, s.glyph)
-      const glyphs = q.options.map(o => o.spec.glyph)
-      if (v(ans) === null) why = `the answer ${ans.glyph} is outside trait ${key}`
-      else if (others.some(s => v(s) === v(ans))) why = 'a distractor is on the answer\'s side of the trait'
-      else if (new Set(others.map(v)).size !== 1) why = 'the non-answers do not agree on the trait'
-      else if (new Set(q.options.map(o => grp(o.spec))).size !== 1) {
-        why = 'the options are not all one group, so the category answers it'
-      } else {
-        const clash = traitConflict(glyphs, key, ans.glyph)
-        if (clash) why = `trait ${clash} singles out a different option`
-      }
-    } else if (q.type === 'glyph-odd' || q.type === 'icon-odd') {
-      if (others.some(s => grp(s) === grp(ans))) why = `the answer's group ${grp(ans)} is shared`
-      else if (new Set(others.map(grp)).size !== 1) why = 'the three non-answers are not one group'
-    } else if (q.type === 'belongs') {
-      const want = val(q.prompt[0][q.rule.attr])
-      if (val(ans[q.rule.attr]) !== want) why = 'the answer does not match the prompt'
-      else if (others.some(s => val(s[q.rule.attr]) === want)) why = 'a distractor also belongs'
-    } else if (q.type === 'glyph-belongs' || q.type === 'icon-belongs') {
-      const want = grp(q.prompt[0])
-      if (q.prompt.some(c => grp(c) !== want)) why = 'the prompt figures are not one group'
-      else if (grp(ans) !== want) why = `the answer is ${grp(ans)}, the prompt is ${want}`
-      else if (others.some(s => grp(s) === want)) why = 'a distractor is also in the group'
-    } else if (q.type === 'identical') {
-      const target = geometryKey(q.prompt[0])
-      if (geometryKey(ans) !== target) why = 'the answer is not the target'
-      else if (others.some(s => geometryKey(s) === target)) why = 'a distractor also matches the target'
-    } else if (q.type === 'glyph-analogy') {
-      const [a, b, c] = q.prompt
-      const rel = Object.entries(GLYPH_RELATIONS)
-        .find(([, r]) => r.pairs.some(([x, y]) => x === a.glyph && y === b.glyph))?.[0]
-      if (!rel) why = 'the shown pair is in no relation'
-      else {
-        const partner = GLYPH_RELATIONS[rel].pairs.find(([x]) => x === c.glyph)?.[1]
-        if (!partner) why = `${c.glyph} has no partner under ${rel}`
-        else if (ans.glyph !== partner) why = `the answer is ${ans.glyph} but ${rel} gives ${partner}`
-      }
-    } else if (q.type === 'sequence' || q.type === 'icon-sequence' || q.type === 'glyph-sequence') {
-      // Nothing else in the pipeline ever looks at the prompt, so a run with no visible rule in
-      // it reaches a child unchallenged.
-      const keys = q.prompt.map(c => (c.kind ? JSON.stringify(c) : geometryKey(c)))
-      if (new Set(keys).size < 2) why = `the prompt is ${q.prompt.length} identical figures`
-
-      // A picture cycle is the one sequence whose answer can be re-derived from the prompt
-      // alone, so it is, rather than taken on the generator's word. The period is read back off
-      // the run — the smallest p that the whole prompt repeats on — and the next term is then
-      // the one p places before the end. It also catches a prompt that is not periodic at all,
-      // which would leave a child with a run that has no next term.
-      if (!why && q.type === 'glyph-sequence') {
-        const g = q.prompt.map(c => c.glyph)
-        const p = g.map((_, k) => k).slice(2).find(k => g.every((c, i) => i < k || c === g[i - k]))
-        if (!p) why = `the prompt ${g.join('')} does not repeat on any period`
-        else if (ans.glyph !== g[g.length - p]) why = `the cycle of ${p} gives ${g[g.length - p]}, not ${ans.glyph}`
-        else if (new Set(q.options.map(o => grp(o.spec))).size !== 1) {
-          why = 'the options are not all from one group, so the run is answerable by category'
+  // ── and every check above can tell the answer from a wrong option ───────────
+  // A check that passes a question whose key has been moved to a distractor is not checking
+  // the answer. That is how the mirror questions got through: the check toggled `flip` the way
+  // the generator did, so it agreed with whatever the generator marked. Asked per type, directly,
+  // for the reason the position check is — and a type with no answer check at all fails here
+  // rather than passing silently, which is what sequences and grids were doing.
+  //
+  // Only the generator's OWN answer has to pass first; the mutation is then every other slot.
+  const PER_TYPE_ANSWER = 400
+  for (const t of [...BANDS[band].types, ...BANDS[band].glyphTypes, ...BANDS[band].iconTypes]) {
+    let wrong = null
+    for (let i = 0; i < PER_TYPE_ANSWER && !wrong; i++) {
+      const q = generateQuestion(band, t, 70_000 + i * 23)
+      if (!q) continue
+      const why = answerProblem(q)
+      if (why) { wrong = `seed ${q.seed}: ${why}`; fail(band, 'answer', `${t} (rule ${q.rule.attr}) ${wrong}`); break }
+      for (let k = 0; k < q.options.length; k++) {
+        if (k === q.correct_index) continue
+        if (!answerProblem({ ...q, correct_index: k })) {
+          wrong = `seed ${q.seed}: the check also accepts option ${k} as the answer`
+          fail(band, 'answer-check', `${t} (rule ${q.rule.attr}) ${wrong}`)
+          break
         }
       }
     }
-
-    if (why) { fail(band, 'answer', `${q.type} (rule ${q.rule.attr}): ${why}`); break }
   }
 
   // ── the `why` label on each wrong option names an attribute that is real ────

@@ -53,6 +53,10 @@
 // asking geometryKey about the drawn result rather than the spec. A figure whose mirror image
 // is itself is discarded for having no visible answer; a distractor that collides with the
 // answer takes its draw with it. The analogy transform uses it on the same terms.
+//
+// What `flip` is NOT is a mirror on the screen. It flips the figure about its own axis before
+// the figure is turned, so on a turned figure toggling it mirrors about a tilted line. The
+// mirror a child is shown is mirrorSpec() below, and it moves the rotation too.
 
 export const SHAPES = ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow']
 export const FILLS = ['none', 'solid', 'hatch-45', 'hatch-90', 'cross']
@@ -204,6 +208,26 @@ export function normalizeSpec(spec) {
   if (!HALF_SHAPES.has(s.shape)) s.half = null
   if (!SATELLITE_SHAPES.has(s.shape)) s.position = null
 
+  // A mark too small to count is not a mark. `dots` is the one attribute a child has to COUNT
+  // rather than merely notice, and its size is the product of four things that all shrink it:
+  // the shape's usable area (a triangle gets 45% of a circle's), the figure's size, its
+  // narrowing, and a further reduction above three dots so they do not crowd each other. At the
+  // bottom of that stack — five dots on a small narrowed triangle — the marks came out at 1.6
+  // units, which is under a pixel and a half on screen. Measured across real questions, 14% of
+  // the oldest band's dotted figures were under 2.5 and its smallest was 1.62.
+  //
+  // So the figure declines the marks, the same way a triangle declines a corner mark: geometryKey
+  // agrees because it calls this too, attrVisible then reports `dots` as invisible there, and
+  // generators simply pose the question on a figure with room. Nothing is starved — the rule is
+  // chosen first and the figure drawn to fit it.
+  //
+  // And it is declined FIRST, before anything reads `dots`. It used to run last, after the
+  // precedence below had already cleared the ground tone and the corner mark to make room for
+  // marks that were then dropped — so a hatched hexagon with three specks came out as a plain
+  // hexagon, neither hatched nor dotted. An analogy moving `dots` then showed its A→B step as a
+  // change of shading, which is what a review by Codex caught.
+  if (s.dots > 0 && dotRadius(s) < MIN_MARK) s.dots = 0
+
   if (s.half) {
     s.fill = 'none'; s.inner = null; s.dots = 0; s.corner = null; s.position = null
   } else if (s.position) {
@@ -222,20 +246,6 @@ export function normalizeSpec(spec) {
     if (s.dots > 0) s.corner = null
     if (s.fill !== 'solid') s.fill = 'none'
   }
-
-  // A mark too small to count is not a mark. `dots` is the one attribute a child has to COUNT
-  // rather than merely notice, and its size is the product of four things that all shrink it:
-  // the shape's usable area (a triangle gets 45% of a circle's), the figure's size, its
-  // narrowing, and a further reduction above three dots so they do not crowd each other. At the
-  // bottom of that stack — five dots on a small narrowed triangle — the marks came out at 1.6
-  // units, which is under a pixel and a half on screen. Measured across real questions, 14% of
-  // the oldest band's dotted figures were under 2.5 and its smallest was 1.62.
-  //
-  // So the figure declines the marks, the same way a triangle declines a corner mark: geometryKey
-  // agrees because it calls this too, attrVisible then reports `dots` as invisible there, and
-  // generators simply pose the question on a figure with room. Nothing is starved — the rule is
-  // chosen first and the figure drawn to fit it.
-  if (s.dots > 0 && dotRadius(s) < MIN_MARK) s.dots = 0
   return s
 }
 
@@ -309,6 +319,35 @@ function transform([x, y], spec) {
   return [50 + dx * Math.cos(a) - dy * Math.sin(a), 50 + dx * Math.sin(a) + dy * Math.cos(a)]
 }
 
+// The figure as it looks in a VERTICAL mirror standing beside it — the dashed line the lab draws.
+//
+// Not `flip` toggled. The renderer flips first and turns second, so a figure is R(θ)·F; a mirror
+// on the screen is F applied after that, and F·R(θ) = R(−θ)·F. The mirror image therefore turns
+// the other way. Toggling `flip` alone is only right at 0° and 180°, which is why three in four
+// mirror questions at 10-11 marked a figure that was not the reflection.
+export function mirrorSpec(spec) {
+  return { ...spec, flip: !spec.flip, rotation: (360 - spec.rotation) % 360 }
+}
+
+// Whether some line reflects the drawn figure onto itself.
+//
+// Every figure is drawn about the centre of the box, so a line of symmetry runs through it, and
+// a reflection in the line at angle α turns R(θ)·Fᵇ into R(2α − θ)·Fᵇ⁺¹: the same spec with
+// `flip` toggled and the rotation moved. So the test is a scan over rotations, each compared with the
+// drawn figure. 6° steps reach every axis the vocabulary has — a pentagon's axes are 36° apart, a
+// triangle's and a hexagon's 60°, a square's 45° — and the audit checks this against a
+// derivation that knows none of that (scripts/lib/drawn-geometry.mjs).
+//
+// It used to toggle `flip` and nothing else, which tests one axis: the figure's own vertical.
+// A hexagon turned 45° was filed as having no symmetry at all.
+export function hasLineOfSymmetry(spec) {
+  const self = drawnParts(spec)
+  for (let d = 0; d < 360; d += 6) {
+    if (partsMatch(self, drawnParts({ ...spec, flip: !spec.flip, rotation: (spec.rotation + d) % 360 }))) return true
+  }
+  return false
+}
+
 // `+ 0` turns -0 into 0; without it two identical pictures can produce different keys.
 const fmt = ([x, y]) => `${(Math.round(x * 10) / 10 + 0).toFixed(1)},${(Math.round(y * 10) / 10 + 0).toFixed(1)}`
 
@@ -374,13 +413,47 @@ function collect(spec, radius, depth, out) {
 // The visual fingerprint. Two specs with the same key draw the same picture, whatever their
 // fields say.
 export function geometryKey(rawSpec) {
+  const { head, points, marks } = drawnParts(rawSpec)
+  const parts = points.map(([tag, p]) => tag + fmt(p))
+  parts.push(...marks)   // orientation-free; never transformed
+  parts.sort()
+  return `${head}|${parts.join(' ')}`
+}
+
+// Whether two specs draw the same picture, without the key's rounding. Two keys can differ in a
+// last digit for one picture reached by two routes — a stretched hexagon at 90° and its mirror at
+// 270° came out 37.7 and 37.6 — so "the keys differ" does not prove "the pictures differ". Use
+// this wherever the question is whether a child would see two of the same thing.
+export function samePicture(a, b) {
+  return partsMatch(drawnParts(a), drawnParts(b))
+}
+
+// The key before rounding: the transformed points as floats, and everything else as the string
+// the key carries. Rounding to a tenth is right for telling pictures apart and wrong for asking
+// whether two routes reach the same one — a rectangle turned 135° and its reflection land a
+// hundredth either side of a rounding boundary, and an exact comparison calls it asymmetric.
+function drawnParts(rawSpec) {
   const spec = normalizeSpec(rawSpec)
   const out = { points: [], marks: [], fills: [], root: spec }
   collect(spec, 38 * spec.size, 0, out)
-  const parts = out.points.map(([tag, p]) => tag + fmt(transform(p, spec)))
-  parts.push(...out.marks)   // orientation-free; never transformed
-  parts.sort()
-  return `${out.fills.join('/')}|${dotRadius(spec).toFixed(1)}|${parts.join(' ')}`
+  return {
+    head: `${out.fills.join('/')}|${dotRadius(spec).toFixed(1)}`,
+    points: out.points.map(([tag, p]) => [tag, transform(p, spec)]),
+    marks: out.marks.slice().sort().join(' '),
+  }
+}
+
+// Same picture, compared with a tolerance far below any real difference in the vocabulary and
+// far above floating-point error.
+function partsMatch(p, q) {
+  if (p.head !== q.head || p.marks !== q.marks || p.points.length !== q.points.length) return false
+  const left = q.points.slice()
+  for (const [tag, [x, y]] of p.points) {
+    const k = left.findIndex(([t, [u, v]]) => t === tag && Math.abs(u - x) < 0.05 && Math.abs(v - y) < 0.05)
+    if (k < 0) return false
+    left.splice(k, 1)
+  }
+  return true
 }
 
 // Whether changing one attribute to `value` would actually change the picture. A rule built on
