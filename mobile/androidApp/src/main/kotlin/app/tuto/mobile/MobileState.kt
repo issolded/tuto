@@ -22,9 +22,9 @@ class MobileState(application: Application) : AndroidViewModel(application) {
     var message by mutableStateOf<String?>(null)
     init { if (session != null) page = if (session!!.finished) "result" else "quiz" }
     fun text(tr: String, en: String) = if (turkish) tr else en
-    fun setTheme(value: ThemeChoice) { theme = value; prefs.edit().putString("theme", value.name).apply() }
+    fun chooseTheme(value: ThemeChoice) { theme = value; prefs.edit().putString("theme", value.name).apply() }
     fun setLanguage(value: Boolean) { turkish = value; prefs.edit().putBoolean("tr", value).apply() }
-    fun setName(value: String) { name = value.take(30); prefs.edit().putString("name", name).apply() }
+    fun updateName(value: String) { name = value.take(30); prefs.edit().putString("name", name).apply() }
     fun start(subject: Subject) {
         session = Practice.start(UUID.randomUUID().toString(), subject, System.nanoTime().toInt(), turkish)
         selected = null; helped = false; feedback = null; page = "quiz"; persist()

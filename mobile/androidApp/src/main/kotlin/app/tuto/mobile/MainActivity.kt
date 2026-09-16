@@ -209,19 +209,19 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
     Text(vm.text("Senin Tuto'n, senin stilin", "Your Tuto, your style"), fontSize = 30.sp, fontWeight = FontWeight.Black)
     ThemeChoice.entries.forEach { choice ->
         val sample = palette(choice)
-        Surface(onClick = { vm.setTheme(choice) }, color = sample.paper, shape = RoundedCornerShape(24.dp), border = BorderStroke(if (vm.theme == choice) 3.dp else 1.dp, if (vm.theme == choice) p.accent else Color.LightGray)) {
+        Surface(onClick = { vm.chooseTheme(choice) }, color = sample.paper, shape = RoundedCornerShape(24.dp), border = BorderStroke(if (vm.theme == choice) 3.dp else 1.dp, if (vm.theme == choice) p.accent else Color.LightGray)) {
             Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Mascot(choice, Modifier.size(100.dp))
                 Column(Modifier.weight(1f).padding(16.dp)) {
                     Text(if (choice == ThemeChoice.CLASSIC) vm.text("Klasik", "Classic") else "Morph Studio", fontWeight = FontWeight.Black, fontSize = 24.sp)
                     Text(if (choice == ThemeChoice.CLASSIC) vm.text("Pastel renkler, tanıdık Tuto", "Pastel colours, familiar Tuto") else vm.text("Krem, kobalt ve büyük fikirler", "Cream, cobalt and big ideas"))
                 }
-                RadioButton(selected = vm.theme == choice, onClick = { vm.setTheme(choice) })
+                RadioButton(selected = vm.theme == choice, onClick = { vm.chooseTheme(choice) })
             }
         }
     }
     Panel {
-        OutlinedTextField(value = vm.name, onValueChange = vm::setName, label = { Text(vm.text("Adın", "Your name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = vm.name, onValueChange = vm::updateName, label = { Text(vm.text("Adın", "Your name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Türkçe", Modifier.weight(1f)); Switch(checked = vm.turkish, onCheckedChange = vm::setLanguage); Text(" / English")
         }
