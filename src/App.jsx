@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 import Opening from './screens/Opening'
@@ -18,7 +18,10 @@ import ParentOnboarding from './screens/ParentOnboarding'
 import ParentChildDetail from './screens/ParentChildDetail'
 import MathScreen from './screens/MathScreen'
 import MathLab from './screens/MathLab'
-import PuzzleLab from './screens/PuzzleLab'
+// Loaded only when the page is opened. It is a developer page no child reaches, and it pulls
+// the whole puzzle engine and its font gate with it — none of which belongs in the bundle every
+// child downloads to open their home screen.
+const PuzzleLab = lazy(() => import('./screens/PuzzleLab'))
 import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 import HomeworkScreen from './screens/HomeworkScreen'
@@ -61,7 +64,7 @@ export default function App() {
         <Route path="/child/task" element={<MyTree />} />
         <Route path="/child/math" element={<MathScreen />} />
         <Route path="/math-lab" element={<MathLab />} />
-        <Route path="/puzzle-lab" element={<PuzzleLab />} />
+        <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
