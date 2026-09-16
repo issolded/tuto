@@ -58,7 +58,7 @@ fun drawingFiles(c:Context,id:String)=c.assets.list("drawings/$id")?.filter{it.e
         val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
         context.assets.open(path).use{BitmapFactory.decodeStream(it,null,bounds)}
         var sample=1
-        while(maxOf(bounds.outWidth,bounds.outHeight)/sample>maxSide*2)sample*=2
+        while(maxOf(bounds.outWidth,bounds.outHeight)/sample>maxSide)sample*=2
         val options=BitmapFactory.Options().apply{inSampleSize=sample}
         context.assets.open(path).use{BitmapFactory.decodeStream(it,null,options)}?.asImageBitmap()
     }.getOrNull()}

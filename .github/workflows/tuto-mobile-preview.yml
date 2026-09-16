@@ -69,9 +69,7 @@ jobs:
           arch: x86_64
           profile: pixel_tablet
           disable-animations: true
-          script: |
-            cd mobile && gradle :androidApp:connectedDebugAndroidTest --stacktrace
-            adb pull /sdcard/Android/data/app.tuto.mobile.preview/files/screenshots mobile-screenshots
+          script: bash mobile/run-device-tests.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

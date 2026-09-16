@@ -14,7 +14,7 @@ class TabletTest {
         compose.waitForIdle()
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val dir=File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
-        instrumentation.uiAutomation.takeScreenshot().let { bitmap->File(dir,"$name.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle() }
+        requireNotNull(instrumentation.uiAutomation.takeScreenshot()).let { bitmap->File(dir,"$name.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle() }
     }
     @Test fun englishStudioNavigationAndSavedContent() {
         compose.onNodeWithText("Home",useUnmergedTree=true).assertIsDisplayed()
@@ -50,7 +50,7 @@ class TabletTest {
         compose.onNodeWithText("Create").performClick()
         compose.onNodeWithText("Draw something").performScrollTo().performClick()
         compose.onNodeWithText("Find a drawing").performTextInput("cat")
-        compose.onNodeWithText("Cat",useUnmergedTree=true).performClick()
+        compose.onNodeWithText("Cat").performScrollTo().performClick()
         compose.onNodeWithText("Next step →").performScrollTo().performClick()
         compose.onNodeWithText("Step 2 of",substring=true).performScrollTo().assertIsDisplayed()
         shot("05-drawing")

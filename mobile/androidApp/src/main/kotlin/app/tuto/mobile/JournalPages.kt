@@ -62,12 +62,31 @@ import androidx.compose.ui.unit.*
     Row(verticalAlignment=Alignment.CenterVertically){Text("My forest journal",style=MaterialTheme.typography.titleLarge,modifier=Modifier.weight(1f));FilterChip(archive,{archive=!archive},label={Text(if(archive)"All days" else "Today")})}
     s.contributions.filter{archive||it.date==java.time.LocalDate.now().toString()}.reversed().forEach{c->Panel{Text(c.title,style=MaterialTheme.typography.titleMedium);Text("${c.category} · ${c.date} · Self-recorded",style=MaterialTheme.typography.bodySmall);TextButton(onClick={s.removeContribution(c.id)}){Text("Undo this record")}}}
 }
-@Composable fun TreeScene(growth:Int) {
-    Canvas(Modifier.fillMaxWidth().height(210.dp)) {
-        val c=center;val ground=size.height*.88f;drawOval(Color(0xFFA7D7B8),androidx.compose.ui.geometry.Offset(c.x-120,ground-12),androidx.compose.ui.geometry.Size(240f,25f))
-        val h=55f+growth*22f;drawLine(Color(0xFF9A654E),androidx.compose.ui.geometry.Offset(c.x,ground),androidx.compose.ui.geometry.Offset(c.x,ground-h),18f,androidx.compose.ui.graphics.StrokeCap.Round)
-        val leaves=listOf(androidx.compose.ui.geometry.Offset(-32f,-12f),androidx.compose.ui.geometry.Offset(30f,-18f),androidx.compose.ui.geometry.Offset(0f,-40f),androidx.compose.ui.geometry.Offset(-51f,8f),androidx.compose.ui.geometry.Offset(51f,8f))
-        leaves.take(growth+1).forEachIndexed{i,o->drawCircle(listOf(Color(0xFF52A982),Color(0xFF70BD84),Color(0xFF3A956E))[i%3],38f+growth*4,androidx.compose.ui.geometry.Offset(c.x+o.x,ground-h+o.y))}
-        repeat(growth){i->drawCircle(Butter,7f,androidx.compose.ui.geometry.Offset(c.x-32+i*22,ground-h-5+(i%2)*18))}
+@Composable fun TreeScene(growth: Int) {
+    Canvas(Modifier.fillMaxWidth().height(240.dp)) {
+        val unit = size.height / 240f
+        val x = size.width / 2
+        fun point(dx: Float, y: Float) = androidx.compose.ui.geometry.Offset(x + dx * unit, y * unit)
+        drawCircle(Butter, 22 * unit, point(135f, 40f))
+        drawOval(Color(0xFFBFE4CD), point(-175f, 195f), androidx.compose.ui.geometry.Size(350 * unit, 37 * unit))
+        drawOval(Color(0xFF8FCCA8), point(-100f, 211f), androidx.compose.ui.geometry.Size(200 * unit, 12 * unit))
+        val top = 200f - (48f + growth * 23f)
+        drawLine(Color(0xFF976145), point(0f, 214f), point(0f, top), 15 * unit, androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(Color(0xFFBD8966), point(-3f, 207f), point(-3f, top + 10), 3 * unit, androidx.compose.ui.graphics.StrokeCap.Round)
+        if (growth > 0) {
+            drawLine(Color(0xFF976145), point(0f, top + 36), point(-36f, top + 5), 8 * unit, androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(Color(0xFF976145), point(0f, top + 28), point(38f, top - 3), 8 * unit, androidx.compose.ui.graphics.StrokeCap.Round)
+        }
+        val leaves = listOf(-26f to 0f, 29f to -5f, 0f to -28f, -49f to 18f, 50f to 14f)
+        leaves.take(growth + 1).forEachIndexed { i, (dx, dy) ->
+            val center = point(dx, top + dy)
+            drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color(0xFF8BCC8A), Color(0xFF3D936C)), center - androidx.compose.ui.geometry.Offset(10*unit,10*unit), 60*unit), (30 + growth * 3) * unit, center)
+            drawOval(Color(0xFFBDE4A1).copy(alpha=.5f), center - androidx.compose.ui.geometry.Offset(12*unit,18*unit), androidx.compose.ui.geometry.Size(20*unit,10*unit))
+        }
+        repeat(growth) { i -> drawCircle(Coral, 6*unit, point(-27f+i*19, top+5+(i%2)*15)) }
+        for (dx in listOf(-125f, -100f, 105f, 125f)) {
+            drawLine(Color(0xFF5B9C70),point(dx,217f),point(dx-3,203f),3*unit)
+            drawCircle(if(dx<0)Lilac else Butter,5*unit,point(dx-3,201f))
+        }
     }
 }
