@@ -16,17 +16,17 @@
 // questions about a drawing we never inspected — and two glyphs that read as clearly
 // different on the machine we tested on can be near-identical on a phone.
 //
-// So the font is PINNED: the app loads Noto Color Emoji and renders every glyph in it. That
-// restores a sound contract, though a different one, and the difference is worth stating
-// plainly — the geometric key is COMPUTED from geometry we drew, while the glyph key is
-// GUARANTEED BY A FONT WE SHIP. It holds exactly as long as the font is actually loaded.
+// So the drawing is PINNED: every glyph is drawn from Noto's own SVG artwork, shipped with the
+// app (src/lib/puzzleArt.generated.js, written by `npm run fonts`). That restores a sound
+// contract, though a different one, and the difference is worth stating plainly — the geometric
+// key is COMPUTED from geometry we drew, while the glyph key is GUARANTEED BY ARTWORK WE SHIP.
 //
-// The cost is smaller than it looks, and the font is ours to serve: `npm run fonts` subsets
-// Noto Color Emoji down to exactly the table below — 52KB — into public/fonts/, declared by
-// src/styles/puzzleFonts.css. Self-hosted rather than fetched from fonts.googleapis.com
-// because the gate further down WITHHOLDS these questions when the font has not arrived, so a
-// slow or blocked third-party host does not degrade the look, it quietly removes a third of
-// the question types.
+// It was a font until 2026-09-16: Noto Color Emoji, subset by Google and self-hosted. Google
+// serves that font by browser, and the file it gives Chrome is COLRv1, which WebKit does not
+// draw — so on every iPhone and iPad (all WebKit, whatever the browser) most glyphs rendered as
+// nothing and a few as the device's own emoji. Every check ran in Chromium and passed. A drawing
+// is the same picture in every engine and has nothing to wait for, so the font gate these
+// questions used to hang on is gone with it.
 //
 // ── Two content rules, deliberately narrow ───────────────────────────────────────────────
 //
@@ -40,9 +40,9 @@
 // be reviewed in both languages rather than trusted because it scans in one.
 
 // The .js extension is explicit here and in puzzleIcons so both files stay importable by plain
-// node — scripts/fetch-puzzle-fonts.mjs reads their tables to subset the fonts, and Vite is
+// node — scripts/fetch-puzzle-fonts.mjs reads their tables to fetch the art, and Vite is
 // happy either way.
-import { fontLoaded, ensureFont } from './fontGate.js'
+import { EMOJI_ART } from './puzzleArt.generated.js'
 
 // Categories for "which is the odd one out" and "which one belongs". They must be mutually
 // exclusive: a table where 🍎 is both a fruit and a food gives a child two defensible answers.
@@ -230,27 +230,6 @@ export const ALL_GLYPHS = [
   ]),
 ]
 
-// The stack a figure is drawn in. The first family is the pinned one; the rest exist only so
-// that a glyph still shows SOMETHING if it is reached before the gate below has been consulted
-// — which should never happen, and is why the gate is the real answer rather than this list.
-export const EMOJI_FONT = "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif"
-
-// Whether the pinned font is actually loaded and usable RIGHT NOW.
-//
-// This is not a nicety. The failure mode was found by accident, in a browser that could not
-// reach Google Fonts at all: a glyph whose font has not arrived does not render as a blank or
-// a placeholder, it renders as fallback — a device's own emoji, which is the platform variance
-// this module pins the font to avoid. That is worse than not asking the question.
-//
-// So it is a gate, not a hope: a session builder calls this and drops the pictorial types when
-// it returns false, leaving a sheet of geometric questions, which need no font at all. The
-// same reflex as the two gates on the Telegram side — the rule is enforced in code rather than
-// left to whether the network behaved. See fontGate.js for why document.fonts.check alone is
-// not enough to answer it.
-export const EMOJI_FAMILY = 'Noto Color Emoji'
-export const fontReady = () => fontLoaded(EMOJI_FAMILY)
-export const ensureEmojiFont = () => ensureFont(EMOJI_FAMILY)
-
 export function makeGlyphSpec(over = {}) {
   return { kind: 'glyph', glyph: '🍎', count: 1, size: 1, rotation: 0, ...over }
 }
@@ -270,11 +249,13 @@ const LAYOUT = {
   4: [[32, 32], [68, 32], [32, 68], [68, 68]],
 }
 
-const FONT_SIZE = { 1: 62, 2: 40, 3: 34, 4: 34 }
+// The side of each copy's drawing, in the 100-unit box. Same numbers as the font sizes these
+// were, since an emoji's drawing fills its em square — so the sheet did not change size.
+const ART_SIZE = { 1: 62, 2: 40, 3: 34, 4: 34 }
 
 // The fingerprint. Unlike geometryKey this is not measured from anything drawn — it is the
 // identity of the glyph plus the transforms we apply ourselves, and it is only as true as the
-// pinned font. Named differently from geometryKey on purpose, so the weaker guarantee is
+// pinned artwork. Named differently from geometryKey on purpose, so the weaker guarantee is
 // visible at every call site.
 export function glyphKey(spec) {
   return `g:${[...spec.glyph].map(c => c.codePointAt(0).toString(16)).join('-')}`
@@ -283,11 +264,15 @@ export function glyphKey(spec) {
 
 export function renderGlyph(spec, opts = {}) {
   const px = opts.px || 84
-  const size = (FONT_SIZE[spec.count] || 34) * spec.size
+  const size = (ART_SIZE[spec.count] || 34) * spec.size
+  const art = EMOJI_ART[spec.glyph]
+  // A glyph with no shipped drawing would silently render as nothing; the tables and the
+  // generated module are checked against each other by `npm run fonts:check`, so this is a bug.
+  if (!art) throw new Error(`no drawing shipped for ${spec.glyph} — run npm run fonts`)
   const marks = (LAYOUT[spec.count] || LAYOUT[1])
     .map(([x, y]) =>
-      `<text x="${x}" y="${y}" font-size="${size.toFixed(1)}" text-anchor="middle"`
-      + ` dominant-baseline="central" font-family="${EMOJI_FONT.replace(/"/g, '&quot;')}">${spec.glyph}</text>`)
+      `<image href="${art}" x="${(x - size / 2).toFixed(1)}" y="${(y - size / 2).toFixed(1)}"`
+      + ` width="${size.toFixed(1)}" height="${size.toFixed(1)}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}"`
     + ' aria-hidden="true" focusable="false">'

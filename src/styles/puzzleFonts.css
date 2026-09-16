@@ -1,29 +1,20 @@
-/* The two fonts the puzzle module draws its pictorial figures with, served by us rather than
-   by fonts.googleapis.com.
+/* The font the puzzle module draws its icon figures with, served by us rather than by
+   fonts.googleapis.com. (Emoji were a second font here until 2026-09-16; they are now Noto's SVG
+   drawings shipped in src/lib/puzzleArt.generated.js, because the COLRv1 font Google served
+   draws nothing in WebKit — see scripts/fetch-puzzle-fonts.mjs.)
 
-   Self-hosted for a reason specific to this module: it WITHHOLDS its pictorial questions
-   whenever the font that draws them has not loaded (puzzleGlyphs.fontReady). A third-party
-   host that is slow or blocked therefore does not merely degrade the look — it silently
-   removes a third of the question types and hands a child a smaller session, with no error
-   anywhere to say so.
+   Self-hosted for a reason specific to this module: it WITHHOLDS its icon questions whenever the
+   font has not loaded (puzzleIcons.iconFontReady). A third-party host that is slow or blocked
+   therefore does not merely degrade the look — it silently removes question types and hands a
+   child a smaller session, with no error anywhere to say so.
 
-   The files are subset to exactly the tables in puzzleGlyphs.js and puzzleIcons.js — 52KB and
-   9KB — and are refreshed by `npm run fonts`. `npm run fonts:check` fails if a table has been
-   edited since, because a glyph missing from the subset falls back to the device's own emoji,
-   which is the platform variance the pinning exists to remove.
+   The file is subset to exactly the table in puzzleIcons.js — ~11KB — and refreshed by
+   `npm run fonts`. `npm run fonts:check` fails if the table has been edited since, because an
+   icon missing from the subset has no glyph to draw.
 
-   font-display: block, not swap. Swap paints the fallback first, and here the fallback is the
-   icon's own name in English — "umbrella" sitting in the middle of a Turkish puzzle. Block
-   shows nothing until the font arrives, which is the lesser of the two; the gate above is what
-   actually decides whether the question is asked at all. */
-
-@font-face {
-  font-family: 'Noto Color Emoji';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url('/fonts/puzzle-emoji.woff2') format('woff2');
-}
+   font-display: block, not swap. Icons are private-use codepoints, so the fallback is a box or
+   nothing; block shows nothing until the font arrives, and the gate is what actually decides
+   whether the question is asked at all. */
 
 @font-face {
   font-family: 'Material Symbols Outlined';

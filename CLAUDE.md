@@ -93,6 +93,9 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - [ ] Bulmaca (NVR) çocuğa açılışı: motor ve cevap doğruluğu düzeltmeleri main'de (2026-09-16);
       `/puzzle-lab` canlıda public ama hiçbir menüden linkli değil, lazy yükleniyor, yazma yok.
       PR #1 Codex incelemesi için açık bırakıldı — çıkan bulgular main'e ayrı düzeltme olarak gelir.
+      Emoji artık font değil, Noto'nun SVG çizimleri (`puzzleArt.generated.js`); ikonlar ligature değil
+      kod noktasıyla — ikisi de iOS/WebKit'te boş çıkıyordu (2026-09-16). Pictorial bir şey
+      değişince `npm run puzzle:webkit`.
       Sıra: PR #1 incelemesi → tek bantta çocuk ekranı + cevap kayıtları → aile raporu/Gem. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı

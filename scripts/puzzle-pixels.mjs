@@ -44,14 +44,12 @@ installStubFonts()
 const T = await import('../src/lib/puzzleTemplates.js')
 const I = await import('../src/lib/puzzleIcons.js')
 
-// The fonts are EMBEDDED in each SVG, and that is not optional: a data-URI SVG is an isolated
-// document with no access to the page's fonts, so without this every glyph falls back and the
-// measurement is of the container's system font rather than the one the app pins. The first
-// version of this reported all 35 icons as having a dead FILL axis for exactly that reason.
-const emoji = readFileSync('public/fonts/puzzle-emoji.woff2').toString('base64')
+// The icon font is EMBEDDED in each SVG, and that is not optional: a data-URI SVG is an isolated
+// document with no access to the page's fonts, so without this every icon draws as nothing and
+// the measurement is meaningless. The first version of this reported all 35 icons as having a
+// dead FILL axis for exactly that reason. Emoji need nothing: their art is in the SVG itself.
 const icons = readFileSync('public/fonts/puzzle-icons.woff2').toString('base64')
 const FACES = '<defs><style>'
-  + `@font-face{font-family:'Noto Color Emoji';src:url(data:font/woff2;base64,${emoji}) format('woff2')}`
   + `@font-face{font-family:'Material Symbols Outlined';src:url(data:font/woff2;base64,${icons}) format('woff2')}`
   + '</style></defs>'
 

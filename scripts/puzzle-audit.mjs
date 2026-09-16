@@ -479,17 +479,17 @@ for (const band of BAND_KEYS) {
 }
 
 // ── the gate fails closed ─────────────────────────────────────────────────────
-// With no fonts, every pictorial type must disappear rather than render in whatever the device
-// happened to have.
+// With no font, every icon type must disappear rather than render as empty boxes. Glyph questions
+// stay: their art ships in the bundle and needs no font (puzzleArt.generated.js).
 delete globalThis.document
 const closed = generateSession('7-8', 40, 3)
-if (!closed.every(q => sourceOf(q.type) === 'geometric')) {
-  findings.push('[gate] pictorial questions leaked through with no font loaded')
+if (closed.some(q => sourceOf(q.type) === 'icon')) {
+  findings.push('[gate] icon questions leaked through with no font loaded')
 }
 // And it fails closed to SOMETHING. `every` on an empty array is true, so this check would have
 // passed a band that produced no questions at all — which stopped being hypothetical when 7-8
 // was inverted to four-fifths pictures, since every pictorial type sits behind the gate this
-// check closes. A child with a slow font is owed an abstract sheet, not an empty one.
+// check closes. A child with a slow font is owed a smaller sheet, not an empty one.
 if (closed.length < 40) {
   findings.push(`[gate] only ${closed.length} of 40 questions survived with no font loaded`)
 }

@@ -10,7 +10,7 @@
 // It mirrors what the gate actually reads: iterable faces carrying `family` and `status`, and
 // a load() on the FACE rather than on the set.
 export function installStubFonts() {
-  const faces = ['Noto Color Emoji', 'Material Symbols Outlined'].map(family => ({
+  const faces = ['Material Symbols Outlined'].map(family => ({
     family,
     status: 'loaded',
     load() { this.status = 'loaded'; return Promise.resolve(this) },

@@ -50,7 +50,7 @@ import {
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
   GLYPH_TRAITS, TRAIT_KEYS, traitValue, traitConflict,
-  makeGlyphSpec, glyphKey, groupOf, renderGlyph, fontReady,
+  makeGlyphSpec, glyphKey, groupOf, renderGlyph,
 } from './puzzleGlyphs.js'
 import {
   ICON_GROUPS, ICON_GROUP_KEYS, ICON_ATTRIBUTES, ICON_FILLS,
@@ -1591,12 +1591,13 @@ export function generateQuestion(bandKey, type, seed) {
   // easy-to-like ones, and a sheet that is mostly emoji stops being a reasoning test and
   // becomes a picture quiz. One in four, which is roughly the papers' own ratio — the first
   // two of Bond's eight papers carry none at all.
-  // A pictorial question is only offered when the font that draws it has arrived. Without the
-  // gate the fallback is not a missing picture but a wrong one — see fontReady().
+  // An icon question is only offered when the font that draws it has arrived. Without the gate
+  // the fallback is not a missing picture but a wrong one — see iconFontReady(). Glyphs are
+  // drawings shipped in the bundle (puzzleArt.generated.js) and have nothing to wait for.
   const available = [
     { types: band.types, weight: band.sources.geometric },
     { types: iconFontReady() ? band.iconTypes : [], weight: band.sources.icon },
-    { types: fontReady() ? band.glyphTypes : [], weight: band.sources.glyph },
+    { types: band.glyphTypes, weight: band.sources.glyph },
   ].filter(s => s.types.length && s.weight > 0)
 
   // Geometric is the FLOOR, whatever weight the band gives it. This became load-bearing the

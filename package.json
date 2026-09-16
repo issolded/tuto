@@ -12,7 +12,8 @@
     "fonts": "node scripts/fetch-puzzle-fonts.mjs",
     "fonts:check": "node scripts/fetch-puzzle-fonts.mjs --check",
     "puzzle:check": "node scripts/puzzle-audit.mjs",
-    "puzzle:pixels": "node scripts/puzzle-pixels.mjs"
+    "puzzle:pixels": "node scripts/puzzle-pixels.mjs",
+    "puzzle:webkit": "node scripts/puzzle-webkit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

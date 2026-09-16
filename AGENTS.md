@@ -24,7 +24,10 @@ buraya ekleme.
 ## Doğrulama araçları
 
 - Bulmaca (NVR) motoru: `npm run puzzle:check`. Tarayıcı gerektiren kontroller için
-  `npm run puzzle:pixels`. İkisi de şimdilik yalnızca `claude/modest-thompson-6l8y8p` dalında var.
+  `npm run puzzle:pixels`.
+- iOS/iPad (WebKit): `npm run puzzle:webkit` her emoji ve ikonu WebKit ve Chromium'da çizip boş
+  çıkanı yakalar (Playwright + webkit gerekir, `PLAYWRIGHT_CORE` ile yol verilebilir). Chromium'da
+  geçen bir çizim iOS'ta boş olabiliyor; bir kez tam bu oldu. Ada iPad kullanıyor.
 - Frontend i18n: `npm run i18n:check`. Önceden var olan bulgular var; kontrol edilecek şey yeni bir
   bulgu eklenmemiş olması.
 - Build: `npx vite build`. Sonucu çıktıdaki "error" kelimesine bakarak değil, **exit code** ile

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-// Pins both pictorial fonts, served by us. Without them the figures fall back to the device's
-// own set and the answer key stops describing what the child is looking at — which is why the
-// generator withholds those questions entirely until they have loaded.
+// Pins the icon font, served by us. Without it an icon falls back to nothing recognisable and the
+// answer key stops describing what the child is looking at — which is why the generator withholds
+// icon questions until it has loaded. Emoji are drawings in the bundle and need no font.
 import '../styles/puzzleFonts.css'
 import { childLang, t } from '../lib/i18n'
 import {
@@ -10,7 +10,7 @@ import {
 } from '../lib/puzzleTemplates'
 import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
 import {
-  renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS, fontReady, ensureEmojiFont,
+  renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS,
 } from '../lib/puzzleGlyphs'
 import {
   renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, iconFontReady, ensureIconFont,
@@ -33,8 +33,8 @@ import {
 // the paper the questions are modelled on is white, and judging a figure against anything
 // else at this stage means judging two things at once.
 
-// One entry point for either kind of figure. A glyph is not drawn by us — see the header of
-// puzzleGlyphs.js for why the emoji font has to be pinned, and the <link> below for where.
+// One entry point for any kind of figure. A glyph is not drawn by us — see the header of
+// puzzleGlyphs.js for why its artwork is shipped rather than left to the device.
 const FIG = (spec, px) => ({
   __html: spec.kind === 'glyph' ? renderGlyph(spec, { px })
     : spec.kind === 'icon' ? renderIcon(spec, { px })
@@ -245,7 +245,7 @@ function VocabularySheet() {
         row(`${key} (${g.tr})`, g.icons.flatMap(icon =>
           ICON_FILLS.map(fill => makeIconSpec({ icon, fill })))))}
       <div style={{ fontSize: 11, color: C.dim, paddingTop: 6 }}>
-        {ALL_GLYPHS.length} emoji (Noto Color Emoji) · {ALL_ICONS.length} icons × FILL 0/1
+        {ALL_GLYPHS.length} emoji (Noto art) · {ALL_ICONS.length} icons × FILL 0/1
         (Material Symbols) · both pinned
       </div>
     </div>
@@ -267,16 +267,16 @@ export default function PuzzleLab() {
   const [seed, setSeed] = useState(1)
   const [audit, setAudit] = useState(null)
   const [view, setView] = useState('questions')
-  // Re-read after the fonts settle: the gate is evaluated at generation time, so a sheet built
-  // before they arrive is correctly all-geometric, and this line says why.
-  const [fontsOk, setFontsOk] = useState({ emoji: fontReady(), icon: iconFontReady() })
+  // Re-read after the font settles: the gate is evaluated at generation time, so a sheet built
+  // before it arrives correctly has no icon questions, and the status line says why.
+  const [fontsOk, setFontsOk] = useState({ icon: iconFontReady() })
   useEffect(() => {
     let alive = true
-    // Ask for both fonts first. Waiting on document.fonts.ready alone resolves without ever
-    // fetching them, because at that point nothing on the page has used one — see
-    // ensureEmojiFont for the deadlock that creates.
-    Promise.all([ensureEmojiFont(), ensureIconFont()]).then(([emoji, icon]) => {
-      if (alive) setFontsOk({ emoji, icon })
+    // Ask for the font first. Waiting on document.fonts.ready alone resolves without ever
+    // fetching it, because at that point nothing on the page has used it — see ensureFont in
+    // fontGate.js for the deadlock that creates.
+    ensureIconFont().then((icon) => {
+      if (alive) setFontsOk({ icon })
     })
     return () => { alive = false }
   }, [])
@@ -368,9 +368,7 @@ export default function PuzzleLab() {
 
         <div style={{ fontSize: 11, marginBottom: 14, color: C.dim }}>
           fonts —{' '}
-          <span style={{ color: fontsOk.emoji ? C.ok : C.bad }}>
-            emoji {fontsOk.emoji ? 'loaded' : 'MISSING → glyph questions withheld'}
-          </span>{' · '}
+          <span style={{ color: C.ok }}>emoji drawn from shipped art</span>{' · '}
           <span style={{ color: fontsOk.icon ? C.ok : C.bad }}>
             icons {fontsOk.icon ? 'loaded' : 'MISSING → icon questions withheld'}
           </span>
