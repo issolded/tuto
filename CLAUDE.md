@@ -90,9 +90,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - [x] Drawings dil boşluğu kapandı: kart adı artık `name_<lang>`, hazırlık ekranı ve
       ekrandaki bütün butonlar i18n'den geliyor; ebeveynin İngilizce bildirimi de artık
       `name_en` okuyor. Çocuk ekranında İngilizce metin kalmadı.
-- [ ] Bulmaca (NVR) çocuğa açılışı: motor `claude/modest-thompson-6l8y8p` dalında, cevap doğruluğu
-      düzeltmeleri PR #1'de (Codex incelemesi). Sıra: PR #1 → tek bantta çocuk ekranı + cevap
-      kayıtları → aile raporu/Gem. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
+- [ ] Bulmaca (NVR) çocuğa açılışı: motor ve cevap doğruluğu düzeltmeleri main'de (2026-09-16);
+      `/puzzle-lab` canlıda public ama hiçbir menüden linkli değil, lazy yükleniyor, yazma yok.
+      PR #1 Codex incelemesi için açık bırakıldı — çıkan bulgular main'e ayrı düzeltme olarak gelir.
+      Sıra: PR #1 incelemesi → tek bantta çocuk ekranı + cevap kayıtları → aile raporu/Gem. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,
