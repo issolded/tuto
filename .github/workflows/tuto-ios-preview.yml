@@ -1,0 +1,67 @@
+name: Tuto iOS preview
+on:
+  push:
+    branches: [mobile/native-tablet-preview]
+    paths: ['mobile/iosApp/**', 'mobile/shared/**', 'mobile/*.gradle.kts', '.github/workflows/tuto-ios-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tuto-ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Select Xcode and install project generator
+        run: |
+          if [ -d /Applications/Xcode_16.4.app ]; then sudo xcode-select -s /Applications/Xcode_16.4.app; fi
+          xcodebuild -version
+          brew install xcodegen
+      - name: Build native simulator app and tests
+        run: bash mobile/iosApp/build-simulator.sh
+      - name: Test iPhone and iPad
+        working-directory: mobile/iosApp
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, pathlib
+          data=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))['devices']
+          runtimes=[(k,v) for k,v in data.items() if 'iOS' in k and any('iPhone' in d['name'] for d in v) and any('iPad' in d['name'] for d in v)]
+          devices=sorted(runtimes)[-1][1]
+          for kind in ['iPhone','iPad']:
+              device=next(d for d in devices if kind in d['name'])
+              pathlib.Path(kind+'.id').write_text(device['udid'])
+              print(kind,device['name'],device['udid'])
+          PY
+          for kind in iPhone iPad; do
+            device=$(cat "$kind.id")
+            xcodebuild -project TutoPreview.xcodeproj -scheme TutoPreview -configuration Debug -destination "platform=iOS Simulator,id=$device" -derivedDataPath build -resultBundlePath "$kind.xcresult" CODE_SIGNING_ALLOWED=NO test-without-building
+            xcrun simctl io "$device" screenshot "$kind.png"
+            xcrun simctl shutdown "$device" || true
+          done
+      - name: Package simulator app
+        if: success()
+        working-directory: mobile/iosApp
+        run: ditto -c -k --sequesterRsrc --keepParent build/Build/Products/Debug-iphonesimulator/TutoPreview.app Tuto-iOS-Simulator.zip
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tuto-ios-simulator
+          path: mobile/iosApp/Tuto-iOS-Simulator.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-test-results
+          path: |
+            mobile/iosApp/*.xcresult
+            mobile/iosApp/*.png
+            mobile/shared/build/reports/
