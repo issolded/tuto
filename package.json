@@ -8,7 +8,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "fonts": "node scripts/fetch-puzzle-fonts.mjs",
+    "fonts:check": "node scripts/fetch-puzzle-fonts.mjs --check",
+    "puzzle:check": "node scripts/puzzle-audit.mjs",
+    "puzzle:pixels": "node scripts/puzzle-pixels.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",
