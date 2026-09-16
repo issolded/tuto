@@ -45,7 +45,7 @@
 // bundler, and anything server-side would need the same.
 import {
   SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, POSITIONS, ATTRIBUTES,
-  makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure,
+  makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure, mirrorSpec, hasLineOfSymmetry, samePicture,
 } from './puzzleFigures.js'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
@@ -417,6 +417,18 @@ const pick = (r, arr) => arr[Math.floor(r() * arr.length)]
 // Attribute values are mostly scalars, but `inner` is a node. Anywhere values are counted or
 // compared as strings, they go through here.
 const valueKey = (v) => (v && typeof v === 'object' ? JSON.stringify(v) : String(v))
+
+// Which attributes differ between two figures AS DRAWN, sorted. A transform question — analogy,
+// grid — names the attributes it moves, and the picture has to move exactly those: setting one
+// can suppress another (a half-split clears a nested node, a new shape drops satellites it has
+// no room for), and then the child sees a second change the rule never mentions. Compared on
+// the normalised spec, so a suppressed field counts as changed, which is what the child sees.
+const drawnDiff = (a, b) => {
+  const na = normalizeSpec(a)
+  const nb = normalizeSpec(b)
+  return ATTRIBUTES.filter(x => valueKey(na[x]) !== valueKey(nb[x])).sort().join('+')
+}
+const sameAttrs = (list) => list.slice().sort().join('+')
 const pool = (band, attr) => ({
   shape: band.shapes, fill: band.fills, rotation: band.rotations,
   size: band.sizes, stretch: band.stretches, half: band.halves,
@@ -738,18 +750,37 @@ function genGridComplete(r, band, seed) {
   const base = randomSpec(r, band)
   const attrs = usableAttrs(r, band, base)
   if (attrs.length < 2) return null
-  const [rowAttr, colAttr] = shuffle(r, attrs.slice()).slice(0, 2)
-  const rowAlt = otherValue(r, band, base, rowAttr)
-  const colAlt = otherValue(r, band, base, colAttr)
-  if (rowAlt === null || colAlt === null) return null
 
   // 2×2: one attribute is what the row means, the other is what the column means, and the
   // missing cell is the only combination not yet shown.
-  const cell = (ri, ci) => makeSpec({
+  const cellOf = (rowAttr, rowAlt, colAttr, colAlt) => (ri, ci) => makeSpec({
     ...base,
     [rowAttr]: ri ? rowAlt : base[rowAttr],
     [colAttr]: ci ? colAlt : base[colAttr],
   })
+  // Along the top row only the column attribute may change on the page, down the left column
+  // only the row attribute, and the same into the blank. A shape that cannot hold the satellites
+  // or the corner mark the base carried drops them as a side effect, and a grid whose top row
+  // changes two things has no single reading. Pairs are tried in turn rather than the draw
+  // thrown away, because at 5-6 the pools are narrow enough that a whole redraw often lands on
+  // the same kind of base again.
+  let found = null
+  const tries = shuffle(r, attrs.slice())
+  for (let i = 0; i < tries.length && !found; i++) {
+    for (let j = 0; j < tries.length && !found; j++) {
+      if (i === j) continue
+      const [rowAttr, colAttr] = [tries[i], tries[j]]
+      const rowAlt = otherValue(r, band, base, rowAttr)
+      const colAlt = otherValue(r, band, base, colAttr)
+      if (rowAlt === null || colAlt === null) continue
+      const cell = cellOf(rowAttr, rowAlt, colAttr, colAlt)
+      if (drawnDiff(cell(0, 0), cell(0, 1)) !== colAttr || drawnDiff(cell(1, 0), cell(1, 1)) !== colAttr) continue
+      if (drawnDiff(cell(0, 0), cell(1, 0)) !== rowAttr || drawnDiff(cell(0, 1), cell(1, 1)) !== rowAttr) continue
+      found = { rowAttr, colAttr, cell }
+    }
+  }
+  if (!found) return null
+  const { rowAttr, colAttr, cell } = found
   const answer = cell(1, 1)
   const prompt = [cell(0, 0), cell(0, 1), cell(1, 0), null]
 
@@ -841,6 +872,15 @@ function genAnalogy(r, band, seed) {
   // NEEDS_CLEAR does not name — the shape carrying them changed too — and then the pair shows
   // two changes while the answer shows one.
   if (moved.some(x => valueKey(normalizeSpec(answer)[x]) !== valueKey(answer[x]))) return null
+  // And on BOTH pairs the drawing changes in exactly the steps — no fewer, no more — and each
+  // step is visible on its own. The checks above look at the steps' own fields; this looks at
+  // the picture. It is what was missing when a `dots+rotation` rule drew an A with no dots (too
+  // small to count, and they took the hatching with them) beside a B with none either, so the
+  // child saw a shading change the rule did not name and a dot change that was not there.
+  const shown = sameAttrs(moved)
+  if (drawnDiff(a, b) !== shown || drawnDiff(c, answer) !== shown) return null
+  if (steps.some(st => geometryKey({ ...b, [st.attr]: a[st.attr] }) === geometryKey(b)
+    || geometryKey({ ...answer, [st.attr]: c[st.attr] }) === geometryKey(answer))) return null
 
   const options = [
     { spec: answer, why: null },
@@ -885,8 +925,14 @@ function genAnalogy(r, band, seed) {
 //
 // Both directions are posed. Four symmetrical figures and one that is not asks the child to spot
 // the broken one, which is the harder reading; one symmetrical among four that are not is the
-// plainer one. The papers use both.
-const isSymmetric = (spec) => geometryKey(spec) === geometryKey({ ...spec, flip: !spec.flip })
+// plainer one. The papers use both — and each direction carries ITS OWN STEM. There was one
+// stem, "which one has a line of symmetry?", and in the harder direction it marked the one
+// figure that had none, so half of these questions told a child the right answer was wrong.
+//
+// "A line of symmetry" is any line, not the figure's own vertical. The predicate here used to be
+// "toggling flip gives the same picture", which is that one axis, so a hexagon turned 45° could
+// sit among the "no symmetry" options. See hasLineOfSymmetry.
+const isSymmetric = hasLineOfSymmetry
 
 function genSymmetry(r, band, seed) {
   const want = band.options
@@ -913,6 +959,7 @@ function genSymmetry(r, band, seed) {
   const oddAt = want - 1
   return {
     seed, type: 'symmetry', layout: 'options-only', prompt: [],
+    stem_key: oddIsSymmetric ? 'puzzle_stem_symmetry' : 'puzzle_stem_symmetry_none',
     options: order.map(i => ({ spec: specs[i], why: i === oddAt ? null : 'symmetry' })),
     correct_index: order.indexOf(oddAt),
     rule: { attr: 'symmetry', from: !oddIsSymmetric, to: oddIsSymmetric },
@@ -1032,12 +1079,15 @@ function genCode(r, band, seed) {
 // attributes — it is the whole question, and geometryKey settles every case of the interaction
 // by looking at the drawn result. A figure whose mirror image is itself gives no question and is
 // discarded; a distractor that collides with the answer takes the draw with it.
+//
+// The answer is mirrorSpec(base), not `flip` toggled — those agree only at 0° and 180°, and this
+// generator used to pose the second as the first. See the note on mirrorSpec.
 function genReflection(r, band, seed) {
   const base = randomSpec(r, band)
-  const answer = makeSpec({ ...base, flip: !base.flip })
+  const answer = makeSpec(mirrorSpec(base))
   // Symmetric about the vertical axis — a circle, an unmarked square — and there is nothing to
   // see. This is the whole gate, and it is the drawn figure that is asked rather than the spec.
-  if (geometryKey(answer) === geometryKey(base)) return null
+  if (samePicture(answer, base)) return null
 
   const turned = (spec, by) => makeSpec({ ...spec, rotation: (spec.rotation + by + 360) % 360 })
 
@@ -1437,6 +1487,14 @@ export function validateQuestion(q) {
 
   const keys = q.options.map(o => figureKey(o.spec))
   if (new Set(keys).size !== n) return 'two options draw the same picture'
+  // And without the key's rounding, for figures: two keys a tenth apart can be one picture. See
+  // samePicture.
+  const figs = q.options.map(o => o.spec).filter(sp => !sp.kind)
+  for (let i = 0; i < figs.length; i++) {
+    for (let j = i + 1; j < figs.length; j++) {
+      if (samePicture(figs[i], figs[j])) return 'two options draw the same picture'
+    }
+  }
 
   // A prompt cell that is already the answer makes the question a memory test, and in
   // `identical` it would put the target next to its own copy.
@@ -1573,7 +1631,8 @@ function buildOne(bandKey, band, types, seed) {
     const r = rng(seed + i * 7919)
     const t = types[Math.floor(rng(seed + i)() * types.length)]
     const q = GENERATORS[t](r, band, seed + i * 7919)
-    if (q && !validateQuestion(q)) return { ...q, band: bandKey, stem_key: STEM_KEYS[q.type] }
+    // A generator may pick the stem itself when one type is asked two ways (symmetry).
+    if (q && !validateQuestion(q)) return { ...q, band: bandKey, stem_key: q.stem_key ?? STEM_KEYS[q.type] }
   }
   return null
 }
