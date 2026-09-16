@@ -94,8 +94,16 @@ val Rose = Color(0xFFFFDDD9)
     TileGrid(false,listOf({ActivityTile("My homework","Keep your work together","write",Sky){vm.page="homework"}},{ActivityTile("My goals","Plan your well-earned breaks","goal",Butter){vm.page="goals"}}))
     if(vm.session?.finished==false) OutlinedButton(onClick=vm::resume){Text("Continue my practice →")}
 }
-@Composable fun AgeChoice(s:StudioState) {
-    Panel {Text("Learning age",style=MaterialTheme.typography.titleLarge);Text("Science activities adapt to ages 6–8, 9–10 and 11–13. Maths and puzzles are starter samples in this preview.");Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){(6..13).forEach{age->FilterChip(selected=s.age==age,onClick={s.age(age)},label={Text("$age")})}} 
+@Composable fun AgeChoice(s: StudioState) {
+    Panel {
+        Text("Learning age", style = MaterialTheme.typography.titleLarge)
+        Text("Science activities adapt to ages 6–8, 9–10 and 11–13. Maths and puzzles are starter samples in this preview.")
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            (6..13).forEach { age ->
+                FilterChip(selected = s.age == age, onClick = { s.age(age) }, label = { Text("$age") })
+            }
+        }
+    }
 }
 @Composable fun MorePage(vm:MobileState,s:StudioState,p:Palette) {
     PageTitle("Your space","A little more Tuto","Your goals, your style and your progress.")

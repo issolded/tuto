@@ -45,16 +45,23 @@ import org.json.JSONObject
         val current=s.step.coerceIn(0,(files.size-1).coerceAtLeast(0))
         TextButton(onClick={selected=false}){Text("← All drawings")}
         Text(s.drawing.replace('-',' ').replaceFirstChar{it.uppercase()},style=MaterialTheme.typography.headlineMedium)
-        Panel {Text("Step ${current+1} of ${files.size}",style=MaterialTheme.typography.labelLarge);files.getOrNull(current)?.let{AssetArt("drawings/${s.drawing}/$it",Modifier.fillMaxWidth().height(if(wide)340.dp else 260.dp))};descriptions?.optString(current)?.takeIf{it.isNotBlank()}?.let{Text(it)};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){OutlinedButton(onClick={s.step(current-1)},enabled=current>0){Text("Previous")};Button(onClick={s.step(current+1)},enabled=current<files.lastIndex){Text("Next step →")}}}
+        Panel {Text("Step ${current+1} of ${files.size}",style=MaterialTheme.typography.labelLarge);files.getOrNull(current)?.let{AssetArt("drawings/${s.drawing}/$it",Modifier.fillMaxWidth().height(if(wide)340.dp else 260.dp), maxSide=1400)};descriptions?.optString(current)?.takeIf{it.isNotBlank()}?.let{Text(it)};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){OutlinedButton(onClick={s.step(current-1)},enabled=current>0){Text("Previous")};Button(onClick={s.step(current+1)},enabled=current<files.lastIndex){Text("Next step →")}}}
         Text("Your sketchbook",style=MaterialTheme.typography.titleLarge)
         Text("Draw with your finger or stylus below, or follow the guide on paper.")
         key(s.drawing){DrawingPad(s.drawing,p)}
     }
 }
 fun drawingFiles(c:Context,id:String)=c.assets.list("drawings/$id")?.filter{it.endsWith(".webp")&&it.startsWith("step-") }?.sorted()?:emptyList()
-@Composable fun AssetArt(path:String,modifier:Modifier) {
+@Composable fun AssetArt(path:String,modifier:Modifier,maxSide:Int=480) {
     val context=LocalContext.current
-    val bitmap=remember(path){runCatching{context.assets.open(path).use{BitmapFactory.decodeStream(it)}?.asImageBitmap()}.getOrNull()}
+    val bitmap=remember(path,maxSide){runCatching{
+        val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+        context.assets.open(path).use{BitmapFactory.decodeStream(it,null,bounds)}
+        var sample=1
+        while(maxOf(bounds.outWidth,bounds.outHeight)/sample>maxSide*2)sample*=2
+        val options=BitmapFactory.Options().apply{inSampleSize=sample}
+        context.assets.open(path).use{BitmapFactory.decodeStream(it,null,options)}?.asImageBitmap()
+    }.getOrNull()}
     if(bitmap!=null)Image(bitmap,null,modifier.clip(RoundedCornerShape(16.dp)).background(Color.White),contentScale=ContentScale.Fit)
 }
 data class InkStroke(val color:Int,val points:List<Offset>)

@@ -64,5 +64,20 @@ class TabletTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithText("Read").performClick()
         compose.onNodeWithText("The Explorer").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Home").performClick()
+        val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun shell(command:String) { android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() } }
+        try {
+            shell("wm size 1080x1920")
+            shell("wm density 420")
+            android.os.SystemClock.sleep(1500)
+            compose.waitForIdle()
+            compose.onNodeWithText("Read").assertIsDisplayed()
+            compose.onNodeWithText("More").assertIsDisplayed()
+            shot("07-phone-layout")
+        } finally {
+            shell("wm size reset")
+            shell("wm density reset")
+        }
     }
 }

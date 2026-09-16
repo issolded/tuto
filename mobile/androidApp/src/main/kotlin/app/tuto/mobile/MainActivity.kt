@@ -42,7 +42,7 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
     MaterialTheme(colorScheme = lightColorScheme(primary = p.accent, secondary = p.action, background = p.paper, surface = Color.White, onSurface = p.ink, onBackground = p.ink), typography = studioTypography()) {
         BackHandler(vm.page != "home") { vm.leavePractice() }
         Surface(color = p.paper, modifier = Modifier.fillMaxSize()) {
-            BoxWithConstraints(Modifier.safeDrawingPadding()) {
+            BoxWithConstraints(Modifier.safeDrawingPadding().imePadding()) {
                 val expanded = maxWidth >= 720.dp
                 Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
