@@ -37,47 +37,51 @@ private fun palette(theme: ThemeChoice) = if (theme == ThemeChoice.MORPH)
     Palette(Color(0xFFFFF8E9), Color(0xFF17134E), Color(0xFF5225CF), Color(0xFFE95350), Color(0xFFE7DAFF))
 else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFFF79433), Color(0xFFD4EDFF))
 
-@Composable fun TutoApp(vm: MobileState = viewModel()) {
+@Composable fun TutoApp(vm: MobileState = viewModel(), studio: StudioState = viewModel()) {
     val p = palette(vm.theme)
-    MaterialTheme(colorScheme = lightColorScheme(primary = p.accent, secondary = p.action, background = p.paper, surface = Color.White, onSurface = p.ink, onBackground = p.ink)) {
+    MaterialTheme(colorScheme = lightColorScheme(primary = p.accent, secondary = p.action, background = p.paper, surface = Color.White, onSurface = p.ink, onBackground = p.ink), typography = studioTypography()) {
         BackHandler(vm.page != "home") { vm.leavePractice() }
         Surface(color = p.paper, modifier = Modifier.fillMaxSize()) {
             BoxWithConstraints(Modifier.safeDrawingPadding()) {
-                val expanded = maxWidth >= 840.dp
-                Row(Modifier.fillMaxSize()) {
-                    if (expanded) Column(Modifier.width(180.dp).fillMaxHeight().background(p.pastel).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                        Text("tuto", fontSize = 42.sp, fontWeight = FontWeight.Black, color = p.ink)
-                        Text(if (vm.theme == ThemeChoice.MORPH) "/ Morph Studio" else "/ Classic", color = p.ink)
-                        Spacer(Modifier.height(24.dp))
-                        Navigation(vm, vertical = true)
+                val expanded = maxWidth >= 720.dp
+                Column(Modifier.fillMaxSize()) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("tuto", style = MaterialTheme.typography.headlineLarge, color = p.ink)
+                        Text(" / " + if(vm.theme == ThemeChoice.MORPH) "Morph Studio" else "Classic", style = MaterialTheme.typography.labelLarge)
                         Spacer(Modifier.weight(1f))
-                        Mascot(vm.theme, Modifier.size(130.dp))
-                        Text(vm.text("Küçük adımlar. Büyük fikirler.", "Small steps. Big ideas."), color = p.ink)
-                    }
-                    Column(Modifier.weight(1f).fillMaxHeight()) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (vm.page != "home") TextButton(onClick = { vm.leavePractice() }) { Text(vm.text("← Ana sayfa", "← Home")) }
-                            else Text(if (expanded) vm.text("Bugün senin günün", "Make today yours") else "tuto", fontSize = 26.sp, fontWeight = FontWeight.Black)
-                            Spacer(Modifier.weight(1f))
-                            Surface(shape = RoundedCornerShape(24.dp), color = p.pastel, onClick = { vm.page = "gems" }) {
-                                Text("◆ ${vm.wallet.balance}", Modifier.padding(horizontal = 20.dp, vertical = 10.dp), fontWeight = FontWeight.Bold)
-                            }
+                        Surface(onClick = { vm.page = "gems" }, color = p.pastel, shape = RoundedCornerShape(24.dp)) {
+                            Text("◆ ${vm.wallet.balance}", Modifier.padding(12.dp), fontWeight = FontWeight.Bold)
                         }
-                        Text(vm.text("ÖNİZLEME · Bu cihazdaki örnek çalışmalar ve Gem'ler", "PREVIEW · Practice and Gems on this device"), Modifier.padding(horizontal = 24.dp), fontSize = 12.sp, color = p.ink.copy(alpha = .65f))
-                        Box(Modifier.weight(1f).fillMaxWidth()) {
-                            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 1160.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                                when (vm.page) {
-                                    "home" -> Home(vm, p, expanded)
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        key(vm.page) {
+                            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 1200.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(if(expanded) 24.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                                if(vm.page !in listOf("home", "library", "create", "tree", "more")) TextButton(onClick = { vm.leavePractice() }) { Text("← Home") }
+                                when(vm.page) {
+                                    "home" -> StudioHome(vm, studio, p, expanded)
+                                    "library" -> LibraryPage(studio, p)
+                                    "create" -> CreatePage(vm, studio, p, expanded)
+                                    "tree" -> TreePage(studio, p)
+                                    "science" -> SciencePage(studio, p)
+                                    "drawings" -> DrawingPage(studio, p, expanded)
+                                    "stories" -> StoryPage(studio, p)
+                                    "homework" -> HomeworkPage(studio, p)
+                                    "goals" -> GoalsPage(vm, studio, p)
+                                    "more" -> MorePage(vm, studio, p)
                                     "quiz" -> Quiz(vm, p, expanded)
                                     "result" -> Result(vm, p)
                                     "gems" -> Gems(vm, p)
-                                    "settings" -> Settings(vm, p)
+                                    "settings" -> { Settings(vm, p); AgeChoice(studio) }
                                     "screen" -> ScreenTime(vm)
                                 }
                                 Spacer(Modifier.height(16.dp))
                             }
                         }
-                        if (!expanded) Row(Modifier.fillMaxWidth().background(Color.White).padding(6.dp), horizontalArrangement = Arrangement.SpaceEvenly) { Navigation(vm, false) }
+                    }
+                    NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
+                        listOf(Triple("home","Home","home"),Triple("library","Read","book"),Triple("create","Create","draw"),Triple("tree","My tree","tree"),Triple("more","More","more")).forEach { (page,label,icon) ->
+                            NavigationBarItem(selected = vm.page == page, onClick = { vm.page = page }, icon = { StudioIcon(icon, Modifier.size(26.dp), p.accent) }, label = { Text(label) })
+                        }
                     }
                 }
             }
@@ -85,59 +89,18 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
     }
 }
 
-@Composable private fun Navigation(vm: MobileState, vertical: Boolean) {
-    listOf("home" to vm.text("⌂  Keşfet", "⌂  Discover"), "gems" to vm.text("◆  Gem'ler", "◆  Gems"), "screen" to vm.text("◷  Ekran", "◷  Screen"), "settings" to vm.text("✦  Stilim", "✦  My style")).forEach { (page, label) ->
-        TextButton(onClick = { vm.page = page }, modifier = if (vertical) Modifier.fillMaxWidth() else Modifier) { Text(label, fontWeight = if (vm.page == page) FontWeight.Black else FontWeight.Medium, fontSize = 14.sp) }
-    }
-}
-
-@Composable private fun Panel(color: Color = Color.White, content: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun Panel(color: Color = Color.White, content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(28.dp), color = color, modifier = Modifier.fillMaxWidth(), tonalElevation = 0.dp) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
     }
 }
-@Composable private fun Action(label: String, color: Color, enabled: Boolean = true, action: () -> Unit) {
+@Composable internal fun Action(label: String, color: Color, enabled: Boolean = true, action: () -> Unit) {
     Button(onClick = action, enabled = enabled, colors = ButtonDefaults.buttonColors(containerColor = color), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
         Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
-@Composable private fun Home(vm: MobileState, p: Palette, wide: Boolean) {
-    val hero: @Composable () -> Unit = {
-        Panel(p.pastel.copy(alpha = .6f)) {
-            Text(vm.text("Bugünü keşfet,\n${vm.name}!", "Make today\nyours, ${vm.name}!"), fontSize = if (wide) 40.sp else 34.sp, fontWeight = FontWeight.Black, lineHeight = 44.sp)
-            Text(vm.text("Şekiller, sayılar ve büyük fikirler.", "Shapes, numbers and big ideas."), fontSize = 17.sp)
-            Mascot(vm.theme, Modifier.fillMaxWidth().height(if (wide) 250.dp else 190.dp))
-            Text(vm.text("Öğren. Kazan. Birlikte planla.", "Learn. Earn. Plan together."), fontWeight = FontWeight.Bold)
-        }
-    }
-    val activities: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(vm.text("Oyun alanını seç", "Choose your playground"), fontSize = 25.sp, fontWeight = FontWeight.Bold)
-            Panel(Color(0xFFDDEDFC)) {
-                Text(vm.text("123  Matematik", "123  Maths playground"), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(vm.text("20 içinde toplama ve çıkarma · 5 soru", "Addition and subtraction within 20 · 5 questions"))
-                Action(vm.text("Hadi başlayalım →", "Let's explore →"), p.action) { vm.start(Subject.MATH) }
-            }
-            Panel(Color(0xFFFFEDB0)) {
-                Text(vm.text("● ▲ ■  Örüntü oyunu", "● ▲ ■  Pattern play"), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(vm.text("Tekrar eden şekilleri keşfet · 5 soru", "Discover repeating shapes · 5 questions"))
-                Action(vm.text("Şekilleri keşfet →", "Play with shapes →"), p.accent) { vm.start(Subject.PATTERNS) }
-            }
-            if (vm.session != null && vm.session?.finished == false) OutlinedButton(onClick = vm::resume, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(vm.text("Kaldığım yerden devam et", "Continue my practice")) }
-        }
-    }
-    if (wide) Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        Box(Modifier.weight(1f)) { hero() }; Box(Modifier.weight(1f)) { activities() }
-    } else { hero(); activities() }
-    Panel {
-        Text(vm.text("Bir sonraki küçük hedefin", "Your next little goal"), fontWeight = FontWeight.Bold, fontSize = 22.sp)
-        Text(vm.text("20 Gem → aileyle planlanan 15 dakika oyun isteği", "20 Gems → request 15 minutes of play with your family"))
-        LinearProgressIndicator(progress = { (vm.wallet.balance / 20f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = p.accent)
-    }
-}
-
-@Composable private fun Quiz(vm: MobileState, p: Palette, wide: Boolean) {
+@Composable internal fun Quiz(vm: MobileState, p: Palette, wide: Boolean) {
     val s = vm.session ?: return
     val q = if (vm.feedback != null) s.questions.getOrNull(s.attempts.size - 1) else s.current
     if (q == null) { Result(vm, p); return }
@@ -175,7 +138,7 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
     }
 }
 
-@Composable private fun Result(vm: MobileState, p: Palette) {
+@Composable internal fun Result(vm: MobileState, p: Palette) {
     val s = vm.session ?: return
     Panel(p.pastel) {
         Mascot(vm.theme, Modifier.fillMaxWidth().height(180.dp))
@@ -186,7 +149,7 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
         Action(vm.text("Ana sayfaya dön", "Back to home"), p.accent) { vm.page = "home" }
     }
 }
-@Composable private fun Gems(vm: MobileState, p: Palette) {
+@Composable internal fun Gems(vm: MobileState, p: Palette) {
     Text(vm.text("Emeklerin burada", "Your efforts, collected"), fontSize = 32.sp, fontWeight = FontWeight.Black)
     Panel(p.pastel) {
         Text("◆ ${vm.wallet.balance}", fontSize = 48.sp, fontWeight = FontWeight.Black)
@@ -205,7 +168,7 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
         }
     }
 }
-@Composable private fun Settings(vm: MobileState, p: Palette) {
+@Composable internal fun Settings(vm: MobileState, p: Palette) {
     Text(vm.text("Senin Tuto'n, senin stilin", "Your Tuto, your style"), fontSize = 30.sp, fontWeight = FontWeight.Black)
     ThemeChoice.entries.forEach { choice ->
         val sample = palette(choice)
@@ -229,7 +192,7 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
     }
 }
 
-@Composable private fun ShapeTile(kind: Int, modifier: Modifier) {
+@Composable internal fun ShapeTile(kind: Int, modifier: Modifier) {
     Canvas(modifier.semantics { contentDescription = listOf("Circle", "Triangle", "Square", "Pentagon")[kind % 4] }) {
         val side = size.minDimension * .75f; val origin = Offset((size.width-side)/2, (size.height-side)/2)
         when (kind % 4) {
@@ -241,7 +204,7 @@ else Palette(Color(0xFFF5F0FF), Color(0xFF241F3A), Color(0xFF408DC5), Color(0xFF
     }
 }
 
-@Composable private fun Mascot(theme: ThemeChoice, modifier: Modifier) {
+@Composable internal fun Mascot(theme: ThemeChoice, modifier: Modifier) {
     Canvas(modifier.semantics { contentDescription = "Tuto" }) {
         val s = size.minDimension / 240f
         translate((size.width-240*s)/2, (size.height-240*s)/2) { scale(s, s, Offset.Zero) {

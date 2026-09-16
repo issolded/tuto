@@ -6,8 +6,8 @@ android {
         applicationId = "app.tuto.mobile.preview"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-preview"
+        versionCode = 2
+        versionName = "0.2.0-studio-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }

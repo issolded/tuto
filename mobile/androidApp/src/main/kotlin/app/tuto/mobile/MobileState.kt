@@ -11,7 +11,7 @@ import java.util.UUID
 class MobileState(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("tuto-native-preview", 0)
     var theme by mutableStateOf(runCatching { ThemeChoice.valueOf(prefs.getString("theme", "MORPH")!!) }.getOrDefault(ThemeChoice.MORPH)); private set
-    var turkish by mutableStateOf(prefs.getBoolean("tr", true)); private set
+    var turkish by mutableStateOf(prefs.getBoolean("tr", false)); private set
     var name by mutableStateOf(prefs.getString("name", "Alex") ?: "Alex"); private set
     var page by mutableStateOf("home")
     var session by mutableStateOf<Session?>(readSession()); private set

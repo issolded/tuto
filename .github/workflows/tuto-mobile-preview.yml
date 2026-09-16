@@ -30,6 +30,7 @@ jobs:
         with:
           gradle-version: '8.11.1'
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - run: node prepare-assets.mjs
       - run: gradle :shared:jvmTest :androidApp:assembleDebug :androidApp:lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
@@ -61,15 +62,22 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - run: node mobile/prepare-assets.mjs
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_tablet
           disable-animations: true
-          script: cd mobile && gradle :androidApp:connectedDebugAndroidTest --stacktrace
+          script: |
+            cd mobile && gradle :androidApp:connectedDebugAndroidTest --stacktrace
+            adb pull /sdcard/Android/data/app.tuto.mobile.preview/files/screenshots mobile-screenshots
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: tablet-test-report
-          path: mobile/androidApp/build/reports/androidTests/
+          path: |
+            mobile/androidApp/build/reports/androidTests/
+            mobile-screenshots/
+            mobile/mobile-screenshots/
+
