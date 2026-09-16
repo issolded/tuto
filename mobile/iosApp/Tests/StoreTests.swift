@@ -1,7 +1,7 @@
 import XCTest
 @testable import TutoPreview
 @MainActor final class StoreTests: XCTestCase {
-    func testHintAndRewardSurviveRestartWithoutDoubleCredit() throws {
+    func testHintAndRewardSurviveRestartWithoutDoubleCredit() async throws {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
         let s = Store(defaults: defaults)
         s.start("MATH"); s.hint()
@@ -22,7 +22,7 @@ import XCTest
         restarted.morph = false
         XCTAssertFalse(Store(defaults: defaults).morph)
     }
-    func testSecondPracticeFundsExactlyOneRequest() {
+    func testSecondPracticeFundsExactlyOneRequest() async {
         let s = Store(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         for _ in 0..<2 {
             s.start("PATTERNS")

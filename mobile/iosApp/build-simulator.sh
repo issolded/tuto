@@ -13,4 +13,4 @@ mkdir -p iosApp/Frameworks
 cp -R "shared/build/bin/${framework}/debugFramework/TutoCore.framework" iosApp/Frameworks/
 cd iosApp
 xcodegen generate
-xcodebuild -project TutoPreview.xcodeproj -scheme TutoPreview -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build-for-testing
+xcodebuild -project TutoPreview.xcodeproj -scheme TutoPreview -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES build-for-testing

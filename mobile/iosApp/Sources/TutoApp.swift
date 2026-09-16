@@ -44,6 +44,7 @@ struct RootView: View {
                             } }
                         }.padding(24).frame(maxWidth: 1160).frame(maxWidth: .infinity)
                     }
+                    .id(s.practice ? "practice-\(s.state.session?.attempts.count ?? 0)-\(s.state.feedback == nil)" : s.page.rawValue)
                     if !wide { navigation(vertical: false).padding(8).background(.white) }
                 }
             }.background(p.paper).foregroundStyle(Color(red: 0.1, green: 0.08, blue: 0.25)).tint(p.accent)
