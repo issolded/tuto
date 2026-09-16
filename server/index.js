@@ -83,6 +83,21 @@ async function fetchGeminiOnce(body) {
   return res.json()
 }
 
+// Appended to the system prompt of the tools-less re-ask in handleMessage. See the note there.
+const NO_TOOLS_NOTE = {
+  tr: `\n\nBU CEVAP İÇİN ELİNDE HİÇBİR ARAÇ (TOOL) YOK. Bu çağrıda tool tanımlı değil ve bu turda hiçbir ` +
+    `işlem yapılmadı: gem gönderilmedi ya da düşülmedi, hiçbir şey onaylanmadı, eklenmedi, kaydedilmedi. ` +
+    `Tool çağırmaya çalışma; bir tool çağrısını yazıyla da anlatma ("gönderiyorum", "hallediyorum", ` +
+    `"çağırıyorum" gibi); id yazma. Ebeveyn bir işlem istediyse ve önce bir şey sorman gerekiyorsa ` +
+    `(örneğin gem hediyesine açıklama notu eklemek isteyip istemediği — notsuz göndermek de bir seçenek) SADECE o soruyu sor — işlem ebeveyn cevap verince yapılacak. ` +
+    `Sorman gereken bir şey yoksa, isteği bir kez daha net yazmasını rica et.`,
+  en: `\n\nYOU HAVE NO TOOLS FOR THIS REPLY. No tool is declared in this call and nothing was done this ` +
+    `turn: no gems were given or taken, nothing was approved, added or saved. Do not try to call a tool, do ` +
+    `not describe a tool call in words ("sending it now", "calling..."), and never write an id. If the ` +
+    `parent asked for an action and you need to ask something first (e.g. whether they want a note on a gem gift — sending it without one is also fine), ask ONLY ` +
+    `that — the action happens when they answer. If there is nothing to ask, ask them to restate the request.`,
+}
+
 const GEMINI_FALLBACK_REPLY = {
   tr: 'Şu an yapay zeka platformumdaki bir teknik sorun nedeniyle mesajla yanıt veremiyorum. Bunu çözene kadar tüm ayarlara ve onaylara Tuto uygulaması üzerinden erişebilirsiniz.',
   en: "I'm currently unable to reply due to a technical issue with my AI platform. Until this is resolved, you can access all settings and approvals through the Tuto app.",
@@ -743,6 +758,37 @@ async function sendWhatsAppPhoto(to, photoUrl, caption) {
 // remember. Reading parts[0].text has the same fault when the first part is a thought.
 function textFromParts(parts) {
   return (parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim()
+}
+
+// ── What may not reach a parent ───────────────────────────────────────────
+// The model is told not to write ids or talk about its tools, and on 2026-09-16 it sent a parent
+// "Odin'in çocuklarından Ada'ya (id: dd07444d-…) 10 gem göndereceğim. Hallediyorum." — a tool
+// call written out as prose, a child's UUID in it, and a name from nowhere. Reproduced with
+// scripts/chat-probe.mjs on the same conversation, one run in six sent "Let's grant 10 gems to
+// Ada. Calling tool...". A rule about what leaves is a rule, so it is checked here and not asked.
+//
+// Only what is unambiguous is caught: a UUID, one of our own tool names, or a sentence about
+// calling a tool. None of those belongs in a message to a parent under any reading.
+const UUID_RE = /`?\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b`?/gi
+function replyLeak(text) {
+  if (!text) return null
+  if (text.match(UUID_RE)) return 'an internal id'
+  const tool = CONTRIBUTION_TOOLS[0].functionDeclarations.map(f => f.name).find(n => text.includes(n))
+  if (tool) return `the tool name ${tool}`
+  if (/\b(calling|call(ed)?|invoking)\s+(the\s+)?(tool|function)\b|\bfunction ?call\b|\btool ?call\b/i.test(text)) return 'narration of a tool call'
+  return null
+}
+
+// Last resort for a reply that reports something real (a tool has already run) but carries an id:
+// the fact is worth sending, the id is not. "(id: …)" and "id: …" go with it, not just the digits.
+function stripInternalIds(text) {
+  return text
+    .replace(new RegExp(`\\s*\\(\\s*(?:id\\s*[:=]\\s*)?${UUID_RE.source}\\s*\\)`, 'gi'), '')
+    .replace(new RegExp(`\\s*\\bid\\s*[:=]\\s*${UUID_RE.source}`, 'gi'), '')
+    .replace(UUID_RE, '')
+    .replace(/ +([,.;:!?)])/g, '$1')
+    .replace(/ {2,}/g, ' ')
+    .trim()
 }
 
 // ── The exit gate ─────────────────────────────────────────────────────────
@@ -2515,24 +2561,40 @@ async function handleMessage(parentId, replyCb, text) {
       // not this input being unanswerable. One extra plain-call attempt on an
       // empty result is cheap and buys back most of those fluke cases before
       // the parent ever sees a dead-end reply.
+      //
+      // The re-ask has a cost of its own, measured with scripts/chat-probe.mjs on a gem request:
+      // the model still believes it has tools, so it tries to call one — five runs in six came
+      // back MALFORMED_FUNCTION_CALL, and one wrote the call out as prose ("Calling tool...").
+      // So this call is told plainly that it has no tools and that nothing has happened this
+      // turn, and every candidate reply is checked before it can be sent.
+      const plainPrompt = systemPrompt + (language === 'en' ? NO_TOOLS_NOTE.en : NO_TOOLS_NOTE.tr)
       let reply = ''
       for (let attempt = 0; attempt < 2 && !reply; attempt++) {
         try {
           const plainData = await callGeminiWithRetry(() => fetchGeminiOnce({
-            system_instruction: { parts: [{ text: systemPrompt }] },
+            system_instruction: { parts: [{ text: plainPrompt }] },
             contents,
           }))
           const finishReason = plainData.candidates?.[0]?.finishReason
-          reply = textFromParts(plainData.candidates?.[0]?.content?.parts)
-          if (!reply) console.warn(`[MSG] plain-retry attempt ${attempt + 1} came back empty (finishReason=${finishReason}) for parent ${parentId}`)
+          const candidate = textFromParts(plainData.candidates?.[0]?.content?.parts)
+          const leak = replyLeak(candidate)
+          if (leak) console.warn(`[MSG] plain-retry attempt ${attempt + 1} held back: it contained ${leak} (parent ${parentId})`)
+          else reply = candidate
+          if (!candidate) console.warn(`[MSG] plain-retry attempt ${attempt + 1} came back empty (finishReason=${finishReason}) for parent ${parentId}`)
         } catch (err) {
           console.warn(`[MSG] plain-retry attempt ${attempt + 1} threw: ${err.message}`)
         }
       }
       // Both plain attempts came back blank — fall back to the tools-attached
       // call's own text, and only then to a message that at least gives the
-      // parent something to DO instead of a dead end.
-      if (!reply) reply = firstCallText
+      // parent something to DO instead of a dead end. That text is what a model
+      // writes BEFORE a tool call it did not make, so it is the likeliest of the
+      // three to be a call described in words — it gets the same check.
+      if (!reply) {
+        const leak = replyLeak(firstCallText)
+        if (leak) console.warn(`[MSG] first-call text held back: it contained ${leak} (parent ${parentId})`)
+        else reply = firstCallText
+      }
       if (!reply) {
         reply = language === 'en'
           ? "Sorry, I couldn't quite catch that — could you try rephrasing, or use the app to approve directly?"
@@ -2632,7 +2694,27 @@ async function handleMessage(parentId, replyCb, text) {
       ],
       tools: CONTRIBUTION_TOOLS,
     }))
-    const finalText = textFromParts(secondData.candidates?.[0]?.content?.parts) || 'Tamamlandı.'
+    let finalText = textFromParts(secondData.candidates?.[0]?.content?.parts) || 'Tamamlandı.'
+    // A tool has run, so this reply reports something real and is worth sending — just not
+    // with an id or a tool name in it. Asked once more; then the ids are cut out; and if a tool
+    // name is still there, the plain word is all that can safely go.
+    let leak = replyLeak(finalText)
+    if (leak) {
+      console.warn(`[MSG] post-tool reply held back: it contained ${leak} (parent ${parentId})`)
+      const retry = await callGeminiWithRetry(() => fetchGeminiOnce({
+        system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
+        contents: [
+          ...contents,
+          firstData.candidates[0].content,
+          { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
+        ],
+        tools: CONTRIBUTION_TOOLS,
+      })).catch(() => null)
+      const again = textFromParts(retry?.candidates?.[0]?.content?.parts)
+      finalText = again && !replyLeak(again) ? again : stripInternalIds(again || finalText)
+      leak = replyLeak(finalText)
+      if (leak) finalText = language === 'en' ? 'Done.' : 'Tamamlandı.'
+    }
     await logMessage(parentId, 'tuto', finalText)
     await replyCb(finalText)
     console.log(`[MSG] Reply sent to parent ${parentId}`)
