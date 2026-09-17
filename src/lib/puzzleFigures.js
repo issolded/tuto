@@ -63,7 +63,13 @@ export const FILLS = ['none', 'solid', 'hatch-45', 'hatch-90', 'cross']
 export const ROTATIONS = [0, 45, 90, 135, 180, 225, 270, 315]
 export const CORNERS = [null, 'tl', 'tr', 'bl', 'br']
 export const HALVES = [null, 'tl', 'tr', 'bl', 'br']
-export const SIZES = [0.65, 0.82, 1]
+// TWO sizes, not three, and far apart: 0.65 against 1 is a 54% difference in every dimension,
+// where the 0.82 that used to sit between them was 18% — a figure a fifth smaller, among five
+// options that also differ in shading and angle. An adult reading the lab could not tell the
+// "bigger" distractor from the answer, which settles it for a nine-year-old. `size` is one of the
+// six variables the papers work on and is worth posing; it is not worth posing invisibly, and
+// the engine's own rule is that a rule a child cannot see is not a rule.
+export const SIZES = [0.65, 1]
 export const STRETCHES = [1, 0.62, 1.45]
 
 // The inner nodes, chosen to match what the papers actually nest: a pip, a ring, a filled

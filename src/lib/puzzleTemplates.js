@@ -227,7 +227,7 @@ export const BANDS = {
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
     fills: ['none', 'solid', 'hatch-45', 'hatch-90'],
     rotations: [0, 90, 180, 270],
-    sizes: [0.82, 1],
+    sizes: SIZES,
     stretches: [1, 1, 0.62],
     halves: [null, null, ...HALVES.slice(1)],
     inners: [null, null, ...INNER_NODES.slice(1)],
@@ -259,7 +259,7 @@ export const BANDS = {
     shapes: SHAPES,
     fills: FILLS,
     rotations: ROTATIONS,
-    sizes: [0.82, 1],
+    sizes: SIZES,
     stretches: [1, 1, 0.62],
     halves: [null, null, ...HALVES.slice(1)],
     inners: [null, null, ...INNER_NODES.slice(1)],
@@ -276,9 +276,12 @@ export const BANDS = {
   //
   // Codes begin HERE, not at 10-11: Test 2 of the 9-10 book is called Coded Shapes, six of its
   // ten tests work on composite figures, and the 10-11 book carries the same category harder.
-  // The difference between the two bands is how fine a distinction the child has to see, which
-  // is what the pools say: 9-10 offers two sizes and 10-11 offers three, so telling 0.82 from 1
-  // becomes telling 0.65 from 0.82 from 1.
+  // The difference between the two bands is how much is moving at once rather than how fine the
+  // distinctions are: 10-11 is more geometric (8/1/1 against 7/2/1), narrows figures both ways
+  // rather than one, and carries five dots where this band stops at four.
+  //
+  // It used to be size: two sizes here and three at 10-11. Both bands now offer the same two,
+  // because the third value was the 0.82 in the middle and nobody could see it — see SIZES.
   '9-10': {
     types: TYPES,
     glyphTypes: GLYPH_TYPES,
@@ -289,7 +292,7 @@ export const BANDS = {
     shapes: SHAPES,
     fills: FILLS,
     rotations: ROTATIONS,
-    sizes: [0.82, 1],
+    sizes: SIZES,
     stretches: [1, 1, 0.62],
     halves: [null, null, ...HALVES.slice(1)],
     inners: [null, null, ...INNER_NODES.slice(1)],
