@@ -34,6 +34,9 @@ import { fontLoaded, ensureFont } from './fontGate.js'
 import { ICON_CODEPOINTS } from './puzzleArt.generated.js'
 
 export const ICON_FAMILY = 'Material Symbols Outlined'
+// Served by us (public/fonts), subset to this table by `npm run fonts`. Declared from code by
+// ensureIconFont, not by a stylesheet — see note 4 in fontGate.js.
+export const ICON_FONT_URL = '/fonts/puzzle-icons.woff2'
 export const ICON_FONT = "'Material Symbols Outlined'"
 
 // Mutually exclusive categories, same rule as the emoji table: a table where one icon belongs
@@ -98,7 +101,7 @@ export function iconGroupOf(name) {
 export const ALL_ICONS = Object.values(ICON_GROUPS).flatMap(g => g.icons)
 
 // The font itself is served by the app, not by fonts.googleapis.com: it is subset to exactly
-// this table by `npm run fonts` and declared in src/styles/puzzleFonts.css. `npm run
+// this table by `npm run fonts` and declared by ensureIconFont (ICON_FONT_URL). `npm run
 // fonts:check` fails if this table is edited without re-fetching, because a name missing from
 // the subset has no glyph to draw — see the failure note above.
 
@@ -167,7 +170,7 @@ export function iconKey(rawSpec) {
 // would wave these questions through drawn in the device's fallback — the exact failure the
 // pinning exists to prevent.
 export const iconFontReady = () => fontLoaded(ICON_FAMILY)
-export const ensureIconFont = () => ensureFont(ICON_FAMILY)
+export const ensureIconFont = () => ensureFont(ICON_FAMILY, ICON_FONT_URL)
 
 export function renderIcon(rawSpec, opts = {}) {
   const spec = normalizeIconSpec(rawSpec)

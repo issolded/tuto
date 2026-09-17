@@ -1,8 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-// Pins the icon font, served by us. Without it an icon falls back to nothing recognisable and the
-// answer key stops describing what the child is looking at — which is why the generator withholds
-// icon questions until it has loaded. Emoji are drawings in the bundle and need no font.
-import '../styles/puzzleFonts.css'
 import { childLang, t } from '../lib/i18n'
 import {
   BANDS, BAND_KEYS, TYPES, GLYPH_TYPES, ICON_TYPES,
@@ -42,6 +38,15 @@ const FIG = (spec, px) => ({
 })
 
 // a–d at 5-6, a–e above it — the count comes from the band, so the label list has to reach.
+
+// ONE size for every figure on a card, prompt and options alike. The prompt was drawn at 60px
+// (42px for a run of six) and the options at 76px, so the only way to judge `size` was against
+// the other options: in a run of triangles, "a bigger triangle" and "the same triangle" were both
+// bigger than every triangle in the run, and a size distractor could not be told from the answer.
+// Every question that can move `size` — sequence, analogy, grid, mirror — needs the child to
+// compare a figure across that gap. 60px is the largest at which a run of six plus its blank
+// still wraps four-and-three on a phone card, rather than leaving the blank alone on a line.
+const FIG_PX = 60
 const LETTERS = 'abcde'
 
 const C = {
@@ -49,7 +54,7 @@ const C = {
   dim: '#8D83AD', ok: '#3FBF7F', bad: '#E2586A', accent: '#7C6BF5',
 }
 
-function Figure({ spec, px = 76, state }) {
+function Figure({ spec, px = FIG_PX, state }) {
   const border = state === 'ok' ? C.ok : state === 'bad' ? C.bad : '#DCD9EA'
   return (
     <div
@@ -72,7 +77,7 @@ function ruleValue(v) {
   return `${v.fill === 'none' ? '' : v.fill + ' '}${v.shape}${v.inner ? ' + inner' : ''}`
 }
 
-function Blank({ px = 76 }) {
+function Blank({ px = FIG_PX }) {
   return (
     <div style={{
       width: px + 12, height: px + 12, borderRadius: 12, background: '#fff', color: '#9A93B8',
@@ -121,7 +126,7 @@ function Prompt({ q }) {
   if (q.layout === 'grid2x2') {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, max-content)', gap: 6, marginBottom: 12 }}>
-        {q.prompt.map((cell, i) => (cell ? <Figure key={i} spec={cell} px={60} /> : <Blank key={i} px={60} />))}
+        {q.prompt.map((cell, i) => (cell ? <Figure key={i} spec={cell} /> : <Blank key={i} />))}
       </div>
     )
   }
@@ -130,9 +135,9 @@ function Prompt({ q }) {
     // and nothing says which way the mirror faces, so it is drawn here rather than described.
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <Figure spec={q.prompt[0]} px={60} />
+        <Figure spec={q.prompt[0]} />
         <div style={{ width: 0, alignSelf: 'stretch', borderLeft: `3px dashed ${C.dim}` }} />
-        <Blank px={60} />
+        <Blank />
       </div>
     )
   }
@@ -140,22 +145,21 @@ function Prompt({ q }) {
     const [a, b, c] = q.prompt
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Figure spec={a} px={60} />
+        <Figure spec={a} />
         <span style={{ color: C.dim }}>→</span>
-        <Figure spec={b} px={60} />
+        <Figure spec={b} />
         <span style={{ color: C.dim, margin: '0 6px' }}>::</span>
-        <Figure spec={c} px={60} />
+        <Figure spec={c} />
         <span style={{ color: C.dim }}>→</span>
-        <Blank px={60} />
+        <Blank />
       </div>
     )
   }
-  // The bands above 7-8 show six figures in a run rather than four, and at 60px that wrapped and
-  // left the question mark alone on a third line, reading as a separate thing rather than the
-  // end of the sequence. Shrinking the figures fixes that; taking the wrap away as well did not
-  // fix it, it just clipped the sixth figure at the edge of the card, which is worse — a run
-  // with a figure missing is a different question. Wrap stays, the figures get smaller.
-  const px = q.prompt.length >= 6 ? 42 : 60
+  // The bands above 7-8 show six figures in a run rather than four. Taking the wrap away clipped
+  // the sixth figure at the edge of the card, which is worse than wrapping — a run with a figure
+  // missing is a different question. They used to shrink to 42px instead, which broke `size`
+  // (see FIG_PX); at FIG_PX the run wraps four-and-three and the blank stays with its run.
+  const px = FIG_PX
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
       {q.prompt.map((cell, i) => <Figure key={i} spec={cell} px={px} />)}

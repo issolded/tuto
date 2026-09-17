@@ -29,8 +29,15 @@
 //
 // So the gate LATCHES. The question it answers is "has this page successfully fetched the
 // pinned font", and an eviction does not un-fetch it — the bytes are in cache and the next
-// paint re-uses them. What must still fail closed is the case that started all this: no
-// stylesheet, no face, nothing to load, gate shut.
+// paint re-uses them.
+//
+// 4. And the face is declared HERE, not in a stylesheet. It was a CSS @font-face imported by the
+//    lazily loaded lab chunk, and in WebKit the component could mount before that stylesheet was
+//    applied: ensureFont looked for the face, found none, answered false, and was never asked
+//    again — so about one page load in eight (measured, iPhone profile) went without icon
+//    questions for the whole session, with no request for the font ever made. Registering the
+//    FontFace from code makes it exist the moment it is asked for. What still fails closed is a
+//    font that will not load.
 
 const obtained = new Set()
 
@@ -68,10 +75,16 @@ export function fontLoaded(family) {
 // font is never loaded because nothing uses it. The preview page walked straight into it — the
 // icon family vanished from every sheet with no error anywhere. So the load is requested
 // explicitly, once, before the gate is consulted.
-export function ensureFont(family) {
+export function ensureFont(family, url) {
   if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
   if (obtained.has(family)) return Promise.resolve(true)
-  const face = faceFor(family)
+  let face = faceFor(family)
+  if (!face && url && typeof FontFace !== 'undefined') {
+    // font-display block: the fallback for a private-use codepoint is a box or nothing, and the
+    // gate — not a swap — decides whether the question is asked at all.
+    face = new FontFace(family, `url(${url}) format('woff2')`, { display: 'block' })
+    document.fonts.add(face)
+  }
   if (!face) return Promise.resolve(false)
   // face.load() rather than document.fonts.load(): the set-level call is satisfied by whatever
   // can already draw the text, so where a device owns a font of the same name it resolves
