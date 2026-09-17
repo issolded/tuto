@@ -30,7 +30,7 @@ import { installStubFonts } from './lib/stub-fonts.mjs'
 // FontFaceSet faithful enough for src/lib/fontGate.js — see the note there.
 installStubFonts()
 
-const { BANDS, BAND_KEYS, BOOK_COVERAGE, figureKey, generateQuestion, generateSession, validateQuestion, questionSignature } =
+const { BANDS, BAND_KEYS, BOOK_COVERAGE, NEEDS_FIXED, figureKey, generateQuestion, generateSession, validateQuestion, questionSignature } =
   await import('../src/lib/puzzleTemplates.js')
 const { groupOf, GLYPH_GROUPS, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
@@ -401,6 +401,21 @@ for (const band of BAND_KEYS) {
           break
         }
       }
+    }
+  }
+
+  // ── no question moves two attributes that have to be read against each other ─
+  // NEEDS_FIXED names the pairs: `position` is a slot in the figure's own frame and means
+  // nothing while the figure turns; `stretch` is applied before the rotation, so narrowing and
+  // turning at once give a silhouette that reads as neither. Generators bar these pairs at four
+  // separate points (grid's two axes, an analogy's second step, what makes C differ from A, the
+  // spare distractors, a code's two axes) and this is the one place that says so once.
+  for (const q of qs) {
+    const moving = q.rule.attr.split(/[+:]/)
+    const clash = moving.find(a => moving.some(b => (NEEDS_FIXED[a] || []).includes(b)))
+    if (clash) {
+      fail(band, 'held-apart', `${q.type} moves ${q.rule.attr} — ${clash} has to be held still while the other moves`)
+      break
     }
   }
 

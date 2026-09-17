@@ -494,7 +494,20 @@ const clearedFor = (attr) => Object.fromEntries((NEEDS_CLEAR[attr] || []).map(a 
 // pictures, and the specs really do split 4-1 on position. Only the child, looking at it, could
 // tell there was nothing to see. Over 60000 draws, 1242 of the 1244 position questions were like
 // this — not an edge case, the normal case.
-const NEEDS_FIXED = { position: ['rotation', 'flip'] }
+//
+// `stretch` is the second entry, for a reason that looks different and is the same: a narrowing
+// is applied in the FIGURE's frame and the rotation is applied after it, so a narrowed hexagon
+// turned 45° is squeezed along a diagonal. Move both in one question and the row that says
+// "narrower" and the column that says "turned" compound into a silhouette that reads as neither
+// — a grid whose answer was right by both readings and unreadable by eye (10-11 seed 210458).
+// Turning and narrowing are each fine on their own, and either may be the thing held still while
+// the other moves; what they may not do is move together.
+export const NEEDS_FIXED = { position: ['rotation', 'flip'], stretch: ['rotation'], rotation: ['stretch'] }
+
+// Both directions of that table: `a` may not move in a question that moves `b`, whichever way
+// round they were written.
+const movesWith = (attr) => NEEDS_FIXED[attr] || []
+const heldApart = (a, b) => movesWith(a).includes(b) || movesWith(b).includes(a)
 
 // Pick the RULE FIRST, then draw a figure that can carry it — which is the opposite of what
 // every generator here used to do, and the difference is not subtle.
@@ -773,6 +786,7 @@ function genGridComplete(r, band, seed) {
     for (let j = 0; j < tries.length && !found; j++) {
       if (i === j) continue
       const [rowAttr, colAttr] = [tries[i], tries[j]]
+      if (heldApart(rowAttr, colAttr)) continue
       const rowAlt = otherValue(r, band, base, rowAttr)
       const colAlt = otherValue(r, band, base, colAttr)
       if (rowAlt === null || colAlt === null) continue
@@ -798,6 +812,7 @@ function genGridComplete(r, band, seed) {
   ]
   while (options.length < band.options) {
     const spare = shuffle(r, usableAttrs(r, band, answer, [rowAttr, colAttr]))
+      .filter(a => !heldApart(a, rowAttr) && !heldApart(a, colAttr))
       .map(a => [a, otherValue(r, band, answer, a)])
       .find(([, v]) => v !== null)
     if (!spare) return null
@@ -833,13 +848,13 @@ function genAnalogy(r, band, seed) {
   // the first invisible and the analogy silently becomes a one-step question again.
   const steps = [{ attr: ruleAttr, to }]
   if (band.analogySteps > 1) {
-    const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || [])]
+    const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...movesWith(ruleAttr)]
     // Shuffled, not taken in order. `usableAttrs` returns the band's list in the band's order and
     // `shape` heads it, so picking the first usable one put `shape` in essentially every two-step
     // rule — twelve analogies rendered, twelve of them `something+shape`. The same slip is one
     // line down, where the attribute that makes C differ from A was also always the first.
     const second = shuffle(r, usableAttrs(r, band, a, barred)
-      .filter(x => !(NEEDS_CLEAR[x] || []).includes(ruleAttr)))
+      .filter(x => !(NEEDS_CLEAR[x] || []).includes(ruleAttr) && !heldApart(x, ruleAttr)))
       .map(x => [x, otherValue(r, band, a, x)])
       .find(([, v]) => v !== null)
     if (!second) return null
@@ -860,8 +875,11 @@ function genAnalogy(r, band, seed) {
   // analogy whose rule moves `dots` and normalizeSpec takes the dots off C, so the second pair
   // starts from a figure that already differs from A on the very thing being carried across —
   // and the child is asked to apply a change that has nowhere to land.
+  // Held apart from the steps too, and not only cleared: C differing from A on `rotation` while
+  // the step is `stretch` puts the same compounded silhouette in the second pair — the child
+  // applies "narrower" to a figure that is already turned, and the narrowing lands on a diagonal.
   const cAttrs = shuffle(r, usableAttrs(r, band, a, moved))
-    .filter(x => !moved.some(m => (NEEDS_CLEAR[m] || []).includes(x)))
+    .filter(x => !moved.some(m => (NEEDS_CLEAR[m] || []).includes(x) || heldApart(m, x)))
   if (!cAttrs.length) return null
   const cShift = otherValue(r, band, a, cAttrs[0])
   if (cShift === null) return null
@@ -901,6 +919,7 @@ function genAnalogy(r, band, seed) {
   }
   while (options.length < band.options) {
     const spare = shuffle(r, usableAttrs(r, band, answer, moved))
+      .filter(at => !moved.some(m => heldApart(m, at)))
       .map(at => [at, otherValue(r, band, answer, at)])
       .find(([, v]) => v !== null)
     if (!spare) return null
@@ -1020,6 +1039,7 @@ function genCode(r, band, seed) {
   let axes = null
   for (let i = 0; i < attrs.length && !axes; i++) {
     for (let j = i + 1; j < attrs.length && !axes; j++) {
+      if (heldApart(attrs[i], attrs[j])) continue
       const a = valuesFor(attrs[i])
       const b = valuesFor(attrs[j])
       if (a && b) axes = [{ attr: attrs[i], values: a }, { attr: attrs[j], values: b }]
