@@ -210,7 +210,12 @@ export const BANDS = {
   },
   '7-8': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection'],
-    glyphTypes: GLYPH_TYPES,
+    // No glyph-trait below 9-10. What is left of the trait table is visible in the drawing, but
+    // reading a property off a picture and holding it against four others is the hardest thing
+    // the pictorial family asks, and this band is where a child meets pictures at all. The
+    // category question (four instruments and a fruit) is the same shape of question with
+    // nothing to know.
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-trait'),
     iconTypes: ICON_TYPES,
     // Inverted. This band ran at 70% abstract shapes, which is the 5-6 balance applied to the
     // one age where the book does the opposite: twenty-nine of paper 1's thirty questions are
@@ -257,7 +262,7 @@ export const BANDS = {
     // nothing about an emoji to alternate alongside it — so it stays the one-axis run these
     // bands have outgrown. The icon runs carry the pictorial sequence instead: they have a fill
     // axis, so they can do what the shapes do.
-    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence'),
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence' && t !== 'glyph-trait'),   // trait: see 7-8
     iconTypes: ICON_TYPES,
     sources: { geometric: 5, icon: 3, glyph: 2 },
     options: 5,

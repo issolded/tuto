@@ -88,8 +88,21 @@ export const GROUP_KEYS = Object.keys(GLYPH_GROUPS)
 // armchair, a chair, a table and a director's chair. Every option is the same KIND of thing, and
 // what separates one of them is a PROPERTY — what it does, where it goes, what it is for.
 //
-// So a trait is a property, written as the partition it induces on one group. Two constraints
-// make a question built on one sound, and both are checked below rather than trusted:
+// So a trait is a property, written as the partition it induces on one group. Three constraints
+// make a question built on one sound. Two are checked below rather than trusted; the third is a
+// judgement made when a row is written, and it is the one that keeps this a non-verbal test:
+//
+//   THE EVIDENCE IS IN THE DRAWING. A trait a child can only answer from general knowledge is a
+//   verbal-reasoning question wearing pictures — and this module's own rule, everywhere else, is
+//   that a rule a child cannot SEE is not a rule. Five traits were written and have been removed
+//   for failing it: `farm` (knowing a horse is livestock), `engine` (knowing a bicycle has none),
+//   `marks` (knowing a pencil leaves one), `blow` (knowing which instruments are wind), and
+//   `on_water` (knowing where a sailing boat goes). 🎹 was removed from the music group for the
+//   same reason from the other side: a piano HAS strings, struck by hammers, and the drawing
+//   does not show them, so `strings` answered a child who knew that with "wrong".
+//
+//   What is left is what the picture shows: a bug's wings, an instrument's strings, and the
+//   three vehicles that are not on the ground.
 //
 //   A trait belongs to exactly ONE group, and every option comes from that group. If the options
 //   were not all the same kind, the category reading would answer the question and the property
@@ -101,27 +114,17 @@ export const GROUP_KEYS = Object.keys(GLYPH_GROUPS)
 //   answer "the boat, it is the only one on water" — perfectly defensible, and marked wrong.
 //   Totality is what lets a generator see that collision coming; see traitConflict().
 export const GLYPH_TRAITS = {
+  // Not on the ground. The aeroplane's wings, the helicopter's rotor and the rocket's flame are
+  // all in the drawing, and every option it is set against is a road or water vehicle.
   flies:    { group: 'vehicle', tr: 'uçar', en: 'flies',
     yes: ['✈️', '🚁', '🚀'], no: ['🚗', '🚌', '🚲', '🚂', '🚚', '🛵', '⛵'] },
-  on_water: { group: 'vehicle', tr: 'suda gider', en: 'goes on water',
-    yes: ['⛵'], no: ['🚗', '🚌', '🚲', '🚂', '✈️', '🚁', '🚚', '🛵', '🚀'] },
-  engine:   { group: 'vehicle', tr: 'motoru var', en: 'has an engine',
-    yes: ['🚗', '🚌', '🚂', '✈️', '🚁', '🚚', '🛵', '🚀'], no: ['🚲', '⛵'] },
-  // One trait for the mammals, deliberately. `pet` was the obvious second one and it does not
-  // survive translation: Turkish `evcil hayvan` covers the cow and the sheep as readily as the
-  // cat, so a set built on the English sense would have two defensible answers for a child
-  // reading it in Turkish and one in English. Exactly the failure the note at the top of this
-  // file warns about, found by writing the row out in both languages.
-  farm:     { group: 'animal', tr: 'çiftlik hayvanı', en: 'farm animal',
-    yes: ['🐴', '🐷', '🐄', '🐑'], no: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊', '🐹', '🐭'] },
   wings:    { group: 'bug', tr: 'kanatlı', en: 'has wings',
     yes: ['🐝', '🦋', '🐞', '🦟', '🪰'], no: ['🐛', '🐜'] },
-  marks:    { group: 'tool', tr: 'iz bırakır', en: 'leaves a mark',
-    yes: ['✏️', '🖍️', '🖊️', '🖌️'], no: ['📏', '✂️', '📎', '📐'] },
+  // The strings are drawn on all three. That is the whole reason this row survives and the ones
+  // about what an instrument is for do not — and why 🎹, whose strings are under the lid, is not
+  // in the group at all.
   strings:  { group: 'music', tr: 'telli', en: 'has strings',
     yes: ['🎸', '🎻', '🪕'], no: ['🥁', '🎺', '🎷', '🪈'] },
-  blow:     { group: 'music', tr: 'üflenir', en: 'you blow it',
-    yes: ['🎺', '🎷', '🪈'], no: ['🎸', '🥁', '🎻', '🪕'] },
 }
 
 export const TRAIT_KEYS = Object.keys(GLYPH_TRAITS)
