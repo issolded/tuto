@@ -1,5 +1,5 @@
 {
-  "fetched": "2026-09-16",
+  "fetched": "2026-09-17",
   "files": {
     "puzzle-icons.woff2": {
       "family": "Material Symbols Outlined",
@@ -11,7 +11,7 @@
   "emoji_art": {
     "source": "googlefonts/noto-emoji@v2.051/svg",
     "license": "Apache License 2.0",
-    "contents": "🍎🍐🍓🍌🍇🍒🚗🚌🚲🚂✈️🚁🚚🛵⛵🚀🐶🐱🐰🐻🐼🦊🐴🐷🐹🐭🐄🐑🐝🐛🦋🐞🐜🦟🪰☀️🌧️❄️🌪️🌈🌱🌳🌻🌵🍃✏️📏✂️📎🖍️🖊️🖌️📐🎸🥁🎺🎹🎻🪕🎷🪈🍯🐔🥚🥛🧶🐣🌾🍞☂️🧣🧢⛈️🏠🐟🌊🐪🏜️🐦",
-    "bytes": 327137
+    "contents": "🍎🍐🍓🍌🍇🍒🚗🚌🚲🚂✈️🚁🚚🛵⛵🚀🐶🐱🐰🐻🐼🦊🐴🐷🐹🐭🐄🐑🐝🐛🦋🐞🐜🦟🪰☀️🌧️❄️🌪️🌈🌱🌳🌻🌵🍃✏️📏✂️📎🖍️🖊️🖌️📐🎸🥁🎺🎻🪕🎷🪈🍯🐔🥚🥛🧶🐣🌾🍞☂️🧣🧢⛈️🏠🐟🌊🐪🏜️🐦",
+    "bytes": 325129
   }
 }

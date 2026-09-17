@@ -70,7 +70,13 @@ export const GLYPH_GROUPS = {
   weather: { tr: 'hava',   en: 'weather', glyphs: ['☀️', '🌧️', '❄️', '🌪️', '🌈'] },
   plant:   { tr: 'bitki',  en: 'plant',   glyphs: ['🌱', '🌳', '🌻', '🌵', '🍃'] },
   tool:    { tr: 'kırtasiye', en: 'desk thing', glyphs: ['✏️', '📏', '✂️', '📎', '🖍️', '🖊️', '🖌️', '📐'] },
-  music:   { tr: 'müzik',  en: 'music',   glyphs: ['🎸', '🥁', '🎺', '🎹', '🎻', '🪕', '🎷', '🪈'] },
+  // 🎹 was here and is not. `strings` asks which instrument has strings and filed the piano
+  // under no — but a piano is strings struck by hammers, so "the piano also has strings" is
+  // correct and was marked wrong. Turkish groups it as tuşlu and English as a keyboard, which is
+  // how the row came to be written, and neither makes the child's reading wrong. A trait has to
+  // be true, not conventional; the group has seven members left, which is two more than the
+  // widest band needs.
+  music:   { tr: 'müzik',  en: 'music',   glyphs: ['🎸', '🥁', '🎺', '🎻', '🪕', '🎷', '🪈'] },
 }
 
 export const GROUP_KEYS = Object.keys(GLYPH_GROUPS)
@@ -113,9 +119,9 @@ export const GLYPH_TRAITS = {
   marks:    { group: 'tool', tr: 'iz bırakır', en: 'leaves a mark',
     yes: ['✏️', '🖍️', '🖊️', '🖌️'], no: ['📏', '✂️', '📎', '📐'] },
   strings:  { group: 'music', tr: 'telli', en: 'has strings',
-    yes: ['🎸', '🎻', '🪕'], no: ['🥁', '🎺', '🎹', '🎷', '🪈'] },
+    yes: ['🎸', '🎻', '🪕'], no: ['🥁', '🎺', '🎷', '🪈'] },
   blow:     { group: 'music', tr: 'üflenir', en: 'you blow it',
-    yes: ['🎺', '🎷', '🪈'], no: ['🎸', '🥁', '🎹', '🎻', '🪕'] },
+    yes: ['🎺', '🎷', '🪈'], no: ['🎸', '🥁', '🎻', '🪕'] },
 }
 
 export const TRAIT_KEYS = Object.keys(GLYPH_TRAITS)
