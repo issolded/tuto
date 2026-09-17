@@ -598,8 +598,28 @@ function applyNoise(r, band, specs, ruleAttr) {
     return valueKey(normalizeSpec({ ...s, [attr]: v })[ruleAttr]) === valueKey(s[ruleAttr])
   }
 
+  // …and the outline is held still when the rule is a MARK. A question whose answer is "the one
+  // with a dot inside" was dealt two triangles and two circles as noise (5-6 seed 483268): every
+  // check passed it — shape split 2-2, fill split 2-2, only `inner` split 3-1 — and on screen the
+  // rule was the smallest thing there while the noise was the loudest. The papers never do that:
+  // when they ask about a mark, the four figures are the same figure.
+  //
+  // Only `shape` is held back: `half` and the other marks are already barred by NEEDS_CLEAR, and
+  // fill is what a mark sits on rather than something that drowns it. And held back rather than
+  // barred — a band whose figures are all one size with one proportion (5-6) has little else to
+  // be noisy with, and 12% of its draws came back empty when shape was forbidden outright. Last
+  // in the queue means it is used when nothing else will do, which at 5-6 is one question in
+  // fourteen and everywhere else is never.
+  const MARKS = ['inner', 'dots', 'corner', 'position']
+  const LOUD = ['shape', 'fill', 'half']
   const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || [])]
-  for (const attr of usableAttrs(r, band, specs[0], barred)) {
+  const candidates = usableAttrs(r, band, specs[0], barred)
+  // Quiet noise first, and at most ONE loud column when the rule is a mark. Shape and fill go
+  // last so they are used when nothing else will do — a band whose figures are all one size with
+  // one proportion (5-6) has little else to be noisy with, and forbidding them outright emptied
+  // an eighth of its draws.
+  if (MARKS.includes(ruleAttr)) candidates.sort((a, b) => (LOUD.includes(a) ? 1 : 0) - (LOUD.includes(b) ? 1 : 0))
+  for (const attr of candidates) {
     if (used >= want) break
     const alt = otherValue(r, band, specs[0], attr)
     if (alt === null || !keepsRule(attr, alt)) continue
