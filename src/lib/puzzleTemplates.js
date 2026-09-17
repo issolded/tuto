@@ -206,6 +206,7 @@ export const BANDS = {
     analogySteps: 1,
     seqPeriod: 2,             // dolu / boş / dolu / boş — the alternation the 5-6 papers open on
     seqLength: 4,
+    seqSteps: 1,                // one thing moving: find the period and copy
   },
   '7-8': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection'],
@@ -237,6 +238,7 @@ export const BANDS = {
     analogySteps: 1,
     seqPeriod: 3,
     seqLength: 5,
+    seqSteps: 1,                // one thing moving: find the period and copy
   },
   // The turn. Read against Bond 11+ Assessment Papers 8-9, and it is the band where the series
   // changes direction: paper 1 runs five picture sequences (a post office queue, a wash going
@@ -251,7 +253,11 @@ export const BANDS = {
   // ones with the ceilings taken off.
   '8-9': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection'],
-    glyphTypes: GLYPH_TYPES,
+    // No glyph-sequence from here up. A run of emoji can only cycle WHICH picture — there is
+    // nothing about an emoji to alternate alongside it — so it stays the one-axis run these
+    // bands have outgrown. The icon runs carry the pictorial sequence instead: they have a fill
+    // axis, so they can do what the shapes do.
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence'),
     iconTypes: ICON_TYPES,
     sources: { geometric: 5, icon: 3, glyph: 2 },
     options: 5,
@@ -269,6 +275,7 @@ export const BANDS = {
     analogySteps: 1,
     seqPeriod: 4,
     seqLength: 6,
+    seqSteps: 2,                // two: the cycle AND something alternating
   },
   // Split in two, because one band was answering to two books and neither of them properly.
   // bandForAge used to send every child of nine and over here, to a dial calibrated against
@@ -284,7 +291,7 @@ export const BANDS = {
   // because the third value was the 0.82 in the middle and nobody could see it — see SIZES.
   '9-10': {
     types: TYPES,
-    glyphTypes: GLYPH_TYPES,
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence'),   // see 8-9
     iconTypes: ICON_TYPES,
     sources: { geometric: 7, icon: 2, glyph: 1 },
     options: 5,
@@ -302,10 +309,11 @@ export const BANDS = {
     analogySteps: 2,
     seqPeriod: 4,
     seqLength: 6,
+    seqSteps: 2,                // two: the cycle AND something alternating
   },
   '10-11': {
     types: TYPES,
-    glyphTypes: GLYPH_TYPES,
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence'),   // see 8-9
     iconTypes: ICON_TYPES,
     sources: { geometric: 8, icon: 1, glyph: 1 },   // the older the child, the more abstract
     options: 5,
@@ -340,6 +348,7 @@ export const BANDS = {
     // papers give two, and at a period this long that is the difference between reading a cycle
     // and guessing one.
     seqLength: 6,
+    seqSteps: 2,                // two: the cycle AND something alternating
   },
 }
 
@@ -685,7 +694,38 @@ function genSequence(r, band, seed) {
   // A cycle rather than an increment: an increment runs out of pool (dots cannot go past 5)
   // and a run that hits the ceiling stops being the rule it started as.
   const cycle = shuffle(r, values.slice()).slice(0, period)
-  const at = i => makeSpec({ ...base, [ruleAttr]: cycle[i % period] })
+
+  // A SECOND thing happening, where the band asks for one. A run that cycles one attribute is
+  // the easiest question in the engine: the child finds the period and copies. Bond's own runs
+  // from 8-9 up put two things in motion — the shape cycles while the shading alternates — and
+  // then the child has to carry both to the next place. Ours moved one at every age.
+  //
+  // The second axis alternates, which is the only period that composes with the first inside a
+  // prompt this long: the run repeats every lcm(period, 2) figures, and the prompt has to SHOW
+  // a repeat or there is no period to find. At period 4 that is 4 against a prompt of 6; at an
+  // odd period it would be 2×period, which does not fit, and the run stays single-axis.
+  let second = null
+  if (band.seqSteps > 1 && period % 2 === 0) {
+    const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...movesWith(ruleAttr)]
+    for (const attr of usableAttrs(r, band, base, barred)) {
+      if (heldApart(attr, ruleAttr) || (NEEDS_CLEAR[attr] || []).includes(ruleAttr)) continue
+      const alt = otherValue(r, band, base, attr)
+      if (alt === null) continue
+      // Visible on EVERY figure of the cycle, not just the base: an attribute the rule's own
+      // values suppress on one term alternates invisibly there, and the run stops alternating.
+      const live = cycle.every(v => {
+        const s = { ...base, [ruleAttr]: v }
+        return geometryKey({ ...s, [attr]: alt }) !== geometryKey(s)
+          && valueKey(normalizeSpec({ ...s, [attr]: alt })[ruleAttr]) === valueKey(v)
+      })
+      if (live) { second = { attr, values: [base[attr], alt] }; break }
+    }
+  }
+  const at = i => makeSpec({
+    ...base,
+    [ruleAttr]: cycle[i % period],
+    ...(second ? { [second.attr]: second.values[i % 2] } : {}),
+  })
 
   const n = band.seqLength
   const prompt = Array.from({ length: n }, (_, i) => at(i))
@@ -697,7 +737,15 @@ function genSequence(r, band, seed) {
   // the run as "more of the same" lands exactly there.
   const near = at(n - 1)
   if (geometryKey(near) !== geometryKey(answer)) options.push({ spec: near, why: ruleAttr })
-  for (const attr of usableAttrs(r, band, answer, [ruleAttr])) {
+  // With two axes there is a mistake that does not exist with one: carrying the cycle across and
+  // forgetting what alternates. It is the strongest distractor in the set, so it comes first.
+  if (second) {
+    const halfRight = makeSpec({ ...answer, [second.attr]: second.values[(n + 1) % 2] })
+    if (!options.some(o => geometryKey(o.spec) === geometryKey(halfRight))) {
+      options.push({ spec: halfRight, why: second.attr })
+    }
+  }
+  for (const attr of usableAttrs(r, band, answer, [ruleAttr, ...(second ? [second.attr] : [])])) {
     if (options.length >= want) break
     const alt = otherValue(r, band, answer, attr)
     if (alt !== null) options.push({ spec: { ...answer, [attr]: alt }, why: attr })
@@ -715,7 +763,11 @@ function genSequence(r, band, seed) {
     seed, type: 'sequence', layout: 'row', prompt,
     options: order.map(i => options[i]),
     correct_index: order.indexOf(0),
-    rule: { attr: ruleAttr, from: cycle[0], to: cycle[n % period] },
+    rule: {
+      attr: second ? `${ruleAttr}+${second.attr}` : ruleAttr,
+      from: cycle[0],
+      to: cycle[n % period],
+    },
   }
 }
 
@@ -1394,34 +1446,53 @@ function genIconSequence(r, band, seed) {
   // two because outline and solid are all there is; a period is only as long as its pool.
   const period = onFill ? 2 : Math.min(band.seqPeriod, icons.length)
   if (period < 2) return null
+  // A SECOND thing happening, where the band asks for one — the same step the geometric runs
+  // take at 8-9 (see genSequence). The icons cycle and the fill alternates underneath them, so
+  // the child has to carry both. It needs every icon in the cycle to HAVE a solid form, and an
+  // even period, so that the whole run still repeats inside the prompt.
+  //
+  // The cycle is drawn from the icons that HAVE one, rather than from the group in the order it
+  // was shuffled: fourteen of the forty-seven icons draw the same at either end of the fill axis
+  // (FILL_DOES_NOTHING), and asking for four live ones out of a shuffled six came up empty every
+  // time — the two-axis run existed in the code and never once reached a child.
+  const live = icons.filter(fillIsLive)
+  const alternateFill = !onFill && band.seqSteps > 1 && period % 2 === 0 && live.length >= period
+  const run = alternateFill ? live : icons
   const at = (i) => (onFill
     ? makeIconSpec({ icon: icons[0], fill: ICON_FILLS[i % 2], group })
-    : makeIconSpec({ icon: icons[i % period], fill: 0, group }))
+    : makeIconSpec({ icon: run[i % period], fill: alternateFill ? ICON_FILLS[i % 2] : 0, group }))
 
   const prompt = Array.from({ length: n }, (_, i) => at(i))
   const answer = at(n)
   const near = at(n - 1)
 
   const options = [{ spec: answer, why: null }, { spec: near, why: onFill ? 'fill' : 'icon' }]
-  const alt = icons[2] ?? icons[1]
-  options.push({
-    spec: onFill
-      ? makeIconSpec({ icon: alt, fill: answer.fill, group })
-      : makeIconSpec({ icon: answer.icon, fill: 1, group }),
-    why: onFill ? 'icon' : 'fill',
-  })
-  options.push({
-    spec: onFill
-      ? makeIconSpec({ icon: alt, fill: near.fill, group })
-      : makeIconSpec({ icon: near.icon, fill: 1, group }),
-    why: 'both',
-  })
+  // Right icon, wrong fill: the child who followed the cycle and missed what alternates.
+  if (alternateFill) {
+    const halfRight = makeIconSpec({ icon: answer.icon, fill: ICON_FILLS[(n + 1) % 2], group })
+    if (!options.some(o => iconKey(o.spec) === iconKey(halfRight))) options.push({ spec: halfRight, why: 'fill' })
+  }
+  // The rest of the set: the same two mistakes on another icon, then whatever the group has
+  // left. Written against the ANSWER's own fill rather than a hardcoded 1 — with the fill axis
+  // alternating under the cycle, "the answer with fill 1" is sometimes the answer itself, and a
+  // two-axis run was built and thrown away as "two options draw the same picture" every single
+  // time. The whole feature existed and never reached a child.
+  const other = (fill) => ICON_FILLS[(ICON_FILLS.indexOf(fill) + 1) % ICON_FILLS.length]
+  const alt = run[2] ?? run[1]
+  const add = (spec, why) => {
+    if (!options.some(o => iconKey(o.spec) === iconKey(spec))) options.push({ spec, why })
+  }
+  add(onFill
+    ? makeIconSpec({ icon: alt, fill: answer.fill, group })
+    : makeIconSpec({ icon: answer.icon, fill: other(answer.fill), group }), onFill ? 'icon' : 'fill')
+  add(onFill
+    ? makeIconSpec({ icon: alt, fill: near.fill, group })
+    : makeIconSpec({ icon: near.icon, fill: other(near.fill), group }), 'both')
   // Two icons and two fills give exactly four distinct options; a fifth needs a third icon.
-  while (options.length < band.options) {
-    const extra = icons[options.length - 1] ?? icons[(options.length + 1) % icons.length]
-    const cand = makeIconSpec({ icon: extra, fill: ICON_FILLS[options.length % 2], group })
-    if (options.some(o => iconKey(o.spec) === iconKey(cand))) return null
-    options.push({ spec: cand, why: onFill ? 'icon' : 'fill' })
+  for (let k = 0; options.length < band.options; k++) {
+    if (k >= run.length * ICON_FILLS.length) return null
+    add(makeIconSpec({ icon: run[k % run.length], fill: ICON_FILLS[Math.floor(k / run.length) % ICON_FILLS.length], group }),
+      onFill ? 'icon' : 'fill')
   }
   if (new Set(options.map(o => iconKey(o.spec))).size !== options.length) return null
 
@@ -1430,7 +1501,7 @@ function genIconSequence(r, band, seed) {
     seed, type: 'icon-sequence', layout: 'row', prompt,
     options: order.map(i => options[i]),
     correct_index: order.indexOf(0),
-    rule: { attr: onFill ? 'fill' : 'icon', from: null, to: null },
+    rule: { attr: onFill ? 'fill' : alternateFill ? 'icon+fill' : 'icon', from: null, to: null },
   }
 }
 
