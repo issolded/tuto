@@ -891,15 +891,36 @@ function genBelongs(r, band, seed) {
   const prompt = [0, 1, 2].map(() => ({ ...base }))
   if (applyNoise(r, band, prompt, ruleAttr) < 2) return null
 
-  const specs = indices(n).map(() => ({ ...base }))
-  const keepIndex = Math.floor(r() * n)
-  if (applyNoise(r, band, specs, ruleAttr) < noiseNeeded(n)) return null
-  specs.forEach((s, i) => { if (i !== keepIndex) s[ruleAttr] = oddValue })
-
+  // Everything the three on show have IN COMMON is, to a child, a candidate for the rule — not
+  // only the attribute the generator chose. Three small hexagons say "small" and "hexagon" at
+  // once; a 10-11 sheet answered blind had a small pentagon as the answer and a big hexagon among
+  // the distractors, and both readings had an option. So the answer is GIVEN every value the
+  // prompt shares, and then checked: the rule still drawn, the answer not a copy of a figure on
+  // show, all options different. A distractor may still share some of those values, but it
+  // cannot share the rule.
+  const drawnPrompt = prompt.map(normalizeSpec)
+  const shared = ATTRIBUTES.filter(a => a !== ruleAttr
+    && drawnPrompt.every(p => valueKey(p[a]) === valueKey(drawnPrompt[0][a])))
   // The answer must be a NEW member of the set, not one of the three already on display —
   // otherwise the child can match pictures instead of reading the rule.
   const promptKeys = new Set(prompt.map(geometryKey))
-  if (promptKeys.has(geometryKey(specs[keepIndex]))) return null
+
+  let specs = null
+  let keepIndex = 0
+  for (let attempt = 0; attempt < 8 && !specs; attempt++) {
+    const deal = indices(n).map(() => ({ ...base }))
+    keepIndex = Math.floor(r() * n)
+    if (applyNoise(r, band, deal, ruleAttr) < noiseNeeded(n)) continue
+    deal.forEach((s, i) => { if (i !== keepIndex) s[ruleAttr] = oddValue })
+    for (const a of shared) deal[keepIndex][a] = prompt[0][a]
+    const drawnAnswer = normalizeSpec(deal[keepIndex])
+    if (valueKey(drawnAnswer[ruleAttr]) !== valueKey(drawnPrompt[0][ruleAttr])) continue
+    if (shared.some(a => valueKey(drawnAnswer[a]) !== valueKey(drawnPrompt[0][a]))) continue
+    if (promptKeys.has(geometryKey(deal[keepIndex]))) continue
+    if (new Set(deal.map(geometryKey)).size !== n) continue
+    specs = deal
+  }
+  if (!specs) return null
 
   // Shuffled, and that is not cosmetic. The prompt and the options are dealt the same noise
   // patterns over the same indices, so the option at slot k carried the same combination as
