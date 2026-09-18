@@ -48,7 +48,7 @@ import {
   makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure, mirrorSpec, hasLineOfSymmetry, samePicture,
 } from './puzzleFigures.js'
 import {
-  GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_ATTRIBUTES,
+  GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_KINSHIP, GLYPH_ATTRIBUTES,
   GLYPH_TRAITS, TRAIT_KEYS, traitValue, traitConflict,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph,
 } from './puzzleGlyphs.js'
@@ -634,12 +634,20 @@ function applyNoise(r, band, specs, ruleAttr) {
   // mark question it built changed the outline, 100% of them, whatever order the list was taken
   // in. Turning a figure is not something the 5-6 papers ask about; it is something their
   // figures do while the question is about something else.
+  //
+  // And the mirror image of it: when the rule IS the outline's size or proportion, the outline
+  // may not change underneath it. Is a narrow pentagon narrower than a hexagon? Solving a sheet
+  // blind, every question missed was a size or proportion rule dealt shape as noise — three
+  // figures that were "all narrow" across three different outlines, which is a comparison nobody
+  // can make. Marks, fill and splits change the inside and leave the outline to be compared.
   const MARKS = ['inner', 'dots', 'corner', 'position']
-  const TIER = { shape: 3, half: 2, fill: 1 }
+  const OUTLINE = ['size', 'stretch']
+  const TIER = MARKS.includes(ruleAttr) ? { shape: 3, half: 2, fill: 1 }
+    : OUTLINE.includes(ruleAttr) ? { shape: 3, size: 2, stretch: 2, rotation: 1 } : {}
   const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || [])]
   const noisePool = [...band.attributes, ...(band.noise || []).filter(a => !band.attributes.includes(a))]
   const candidates = usableAttrs(r, band, specs[0], barred, noisePool)
-  if (MARKS.includes(ruleAttr)) candidates.sort((a, b) => (TIER[a] || 0) - (TIER[b] || 0))
+  candidates.sort((a, b) => (TIER[a] || 0) - (TIER[b] || 0))
   for (const attr of candidates) {
     if (used >= want) break
     const alt = otherValue(r, band, specs[0], attr)
@@ -829,6 +837,12 @@ function genBelongs(r, band, seed) {
   // isolating every option at once and the set with no defensible single answer.
   const oddValue = otherValue(r, band, base, ruleAttr)
   if (oddValue === null) return null
+
+  // Not a set defined by what its members LACK. Three figures that share "no dots" or "no
+  // satellites" share nothing a child can point at — the prompt shows whatever the noise put
+  // there instead, and in a blind sheet the answer had to be guessed. Odd-one-out can pose an
+  // absence (four with a dot, one without); a set cannot be built on one.
+  if (ruleAttr in EMPTY && valueKey(base[ruleAttr]) === valueKey(EMPTY[ruleAttr])) return null
 
   const n = band.options
   const prompt = [0, 1, 2].map(() => ({ ...base }))
@@ -1410,11 +1424,10 @@ function genGlyphAnalogy(r, band, seed) {
   // defend. Anything reachable from the prompt term in two steps across ALL relations is out.
   // The tables are meant to be edited by hand, and this is the ambiguity hand-editing creates.
   const reach = new Set([c])
+  const links = [...RELATION_KEYS.flatMap(key => GLYPH_RELATIONS[key].pairs), ...GLYPH_KINSHIP]
   for (let step = 0; step < 2; step++) {
-    for (const key of RELATION_KEYS) {
-      for (const [from, to] of GLYPH_RELATIONS[key].pairs) {
-        if (reach.has(from)) reach.add(to)
-      }
+    for (const [from, to] of links) {
+      if (reach.has(from)) reach.add(to)
     }
   }
   const n = band.options

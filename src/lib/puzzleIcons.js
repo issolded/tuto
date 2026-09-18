@@ -57,9 +57,13 @@ export const ICON_GROUPS = {
     tr: 'bitki', en: 'plant',
     icons: ['local_florist', 'forest', 'potted_plant', 'grass', 'park'],
   },
+  // `egg`, `bakery_dining` and (in music) `album` were here and are not. Solved blind at the size
+  // a child sees them, the egg read as a water drop — and water_drop is in `weather`, so an
+  // odd-one-out could put the two side by side as "different"; the croissant read as a hand or a
+  // fan; and the solid record read as a doughnut, a food, in a question about what is NOT food.
   food: {
     tr: 'yiyecek', en: 'food',
-    icons: ['egg', 'cake', 'local_pizza', 'icecream', 'bakery_dining', 'coffee'],
+    icons: ['lunch_dining', 'cake', 'local_pizza', 'icecream', 'nutrition', 'coffee'],
   },
   home: {
     tr: 'ev', en: 'home',
@@ -72,7 +76,7 @@ export const ICON_GROUPS = {
   // could be built, and it could, out of the other five groups.
   music: {
     tr: 'müzik', en: 'music',
-    icons: ['music_note', 'piano', 'headphones', 'radio', 'mic', 'album'],
+    icons: ['music_note', 'piano', 'headphones', 'radio', 'mic', 'speaker'],
   },
   sport: {
     tr: 'spor', en: 'sport',
@@ -131,6 +135,9 @@ const FILL_DOES_NOTHING = new Set([
   'flight', 'directions_bike', 'ac_unit', 'umbrella',
   'grass', 'music_note', 'piano', 'sports_soccer',
   'add', 'check', 'close', 'currency_pound', 'percent', 'remove',
+  // Not at 0% like the rest — 16% of its ink moves — but below every icon this list calls live
+  // (the lowest is 20%), and by eye the solid burger is the outline burger with a darker bun.
+  'lunch_dining',
 ])
 
 // Whether asking for a solid version of this icon will draw anything different. A generator that

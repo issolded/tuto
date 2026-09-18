@@ -175,7 +175,11 @@ const CORNER_POS = { tl: [30, 30], tr: [70, 30], bl: [30, 70], br: [70, 70] }
 // A diagonal split reads as a split only across a compact outline. On an arrow the cut lands
 // across the head and the shaft at once and the result looks like a misprint rather than a
 // half-filled shape.
-const HALF_SHAPES = new Set(['circle', 'triangle', 'square', 'pentagon', 'hexagon'])
+//
+// Nor across a triangle. The split runs corner to corner of the BOX, not of the shape, so on a
+// triangle it leaves a sliver and a wedge whose direction nobody can read — solving a sheet blind,
+// the half-filled triangles were the ones that could not be told apart.
+const HALF_SHAPES = new Set(['circle', 'square', 'pentagon', 'hexagon'])
 const HALF_TRI = {
   tl: [[0, 0], [100, 0], [0, 100]],
   tr: [[0, 0], [100, 0], [100, 100]],
@@ -211,6 +215,11 @@ export function normalizeSpec(spec) {
   const canCorner = s.corner && CORNER_SHAPES.has(s.shape)
   if (!canCorner) s.corner = null
   if (!DOT_AREA[s.shape]) s.dots = 0
+  // An arrow has no inside to nest a figure in, for the reason it takes no dots: its interior is
+  // a shaft a few units tall. A nested circle or triangle was drawn over the outline and out the
+  // other side — six of the questions in a blind sheet of seventy carried one, and each read as a
+  // printing error.
+  if (s.shape === 'arrow') s.inner = null
   if (!HALF_SHAPES.has(s.shape)) s.half = null
   if (!SATELLITE_SHAPES.has(s.shape)) s.position = null
 
@@ -265,8 +274,11 @@ export function shapePoints(shape, r, stretch = 1) {
   if (shape === 'circle' && stretch === 1) return null
   if (shape === 'circle') {
     // An ellipse is sampled rather than special-cased, so one code path compares every outline.
-    return Array.from({ length: 12 }, (_, i) => {
-      const a = (i * 30 * Math.PI) / 180
+    // Sampled finely enough to DRAW as an ellipse. Twelve points, which was enough for the key,
+    // drew a visible dodecagon — and a child counting sides on a "stretched circle" was being
+    // shown a twelve-sided polygon.
+    return Array.from({ length: 48 }, (_, i) => {
+      const a = (i * 7.5 * Math.PI) / 180
       return stretchX([50 + r * Math.cos(a), 50 + r * Math.sin(a)], stretch)
     })
   }
@@ -320,9 +332,26 @@ export function dotRadius(spec) {
 function transform([x, y], spec) {
   const px = spec.flip ? 100 - x : x
   const a = (spec.rotation * Math.PI) / 180
-  const dx = px - 50
-  const dy = y - 50
+  const k = fitScale(spec)
+  const dx = (px - 50) * k
+  const dy = (y - 50) * k
   return [50 + dx * Math.cos(a) - dy * Math.sin(a), 50 + dx * Math.sin(a) + dy * Math.cos(a)]
+}
+
+// A widened figure is scaled down, whole, until it fits the box. Stretched to 1.45 a full-size
+// circle, arrow or pentagon reaches past the edge of the 100-unit box — 55 units from the centre
+// against 50 — and the renderer cut it off: the "wide circle" on a 10-11 sheet was a disc with
+// its sides sliced away. The scale is uniform, so the proportion a question may be about is kept,
+// and it is measured as the furthest outline point from the centre, so turning the figure cannot
+// push it back out. Applied in the key and the renderer alike (see renderFigure).
+const FIT_RADIUS = 47
+function fitScale(spec) {
+  if (!(spec.stretch > 1)) return 1
+  const pts = shapePoints(spec.shape, 38 * spec.size, spec.stretch)
+  const reach = pts
+    ? Math.max(...pts.map(([x, y]) => Math.hypot(x - 50, y - 50)))
+    : 38 * spec.size * spec.stretch
+  return reach > FIT_RADIUS ? FIT_RADIUS / reach : 1
 }
 
 // The figure as it looks in a VERTICAL mirror standing beside it — the dashed line the lab draws.
@@ -490,14 +519,19 @@ function nodeMarkup(spec, radius, ctx) {
     fill = 'currentColor'
   } else if (spec.fill !== 'none') {
     const lines = spec.fill === 'hatch-45'
-      ? '<path d="M-2,6 l8,-8 M0,8 l8,-8 M6,10 l4,-4" stroke="currentColor" stroke-width="1.4" fill="none"/>'
+      ? '<path d="M-1,1 l2,-2 M0,8 l8,-8 M7,9 l2,-2" stroke="currentColor" stroke-width="1.4" fill="none"/>'
       : spec.fill === 'hatch-90'
         ? '<path d="M4,0 v8" stroke="currentColor" stroke-width="1.4" fill="none"/>'
         : '<path d="M4,0 v8 M0,4 h8" stroke="currentColor" stroke-width="1.2" fill="none"/>'
     // viewBox lets the 8×8 artwork above stay as written while the tile itself shrinks with
     // the figure, so a 0.65-size shape gets proportionally finer hatching instead of three
     // fat lines.
-    const sp = (8 * spec.size).toFixed(2)
+    //
+    // And coarse enough to tell apart. An 8-unit tile is under five pixels on a 60px figure, where
+    // the diagonal hatch and the cross-hatch both read as the same grey — a sequence built on
+    // those two fills could not be solved by looking. 14 units puts the lines far enough apart
+    // for the cross to read as a grid and the hatch as lines.
+    const sp = (14 * spec.size).toFixed(2)
     defs = `<defs><pattern id="${id}" width="${sp}" height="${sp}" patternUnits="userSpaceOnUse" viewBox="0 0 8 8">${lines}</pattern></defs>`
     fill = `url(#${id})`
   }
@@ -570,7 +604,9 @@ export function renderFigure(rawSpec, opts = {}) {
   const spec = normalizeSpec(rawSpec)
   const px = opts.px || 84
   const ctx = { bg: opts.bg || '#FFFFFF' }
-  const tf = `rotate(${spec.rotation} 50 50)${spec.flip ? ' translate(100 0) scale(-1 1)' : ''}`
+  const k = fitScale(spec)
+  const fit = k < 1 ? ` translate(50 50) scale(${k.toFixed(4)}) translate(-50 -50)` : ''
+  const tf = `rotate(${spec.rotation} 50 50)${fit}${spec.flip ? ' translate(100 0) scale(-1 1)' : ''}`
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}"`
     + ' aria-hidden="true" focusable="false">'
     + `<g transform="${tf}">${nodeMarkup(spec, 38 * spec.size, ctx)}</g></svg>`

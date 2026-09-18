@@ -187,9 +187,12 @@ export const GLYPH_RELATIONS = {
     tr: 'üretir', en: 'produces',
     pairs: [['🐝', '🍯'], ['🐔', '🥚'], ['🐄', '🥛'], ['🐑', '🧶']],
   },
+  // Things that GROW into something. 🌾→🍞 was here and is not: wheat does not grow into bread,
+  // it is made into it, and a child who carried "grows into" from egg→chick to the wheat looked
+  // for a plant. One relation per kind of change.
   becomes: {
     tr: 'dönüşür', en: 'becomes',
-    pairs: [['🐛', '🦋'], ['🥚', '🐣'], ['🌱', '🌳'], ['🌾', '🍞']],
+    pairs: [['🐛', '🦋'], ['🥚', '🐣'], ['🌱', '🌳']],
   },
   protects: {
     tr: 'korunma', en: 'protects from',
@@ -202,6 +205,13 @@ export const GLYPH_RELATIONS = {
 }
 
 export const RELATION_KEYS = Object.keys(GLYPH_RELATIONS)
+
+// Links a question is never BUILT on but that a child may still make, so a distractor they reach
+// can never be offered. 🐑→🧶 is `produces`, and 🧣 is in the table as what protects you from
+// snow — but a scarf is also made of that wool, and offering it against the sheep gave a second
+// answer a child could defend. genGlyphAnalogy walks these with the relations when it rules out
+// distractors reachable from the prompt.
+export const GLYPH_KINSHIP = [['🧶', '🧣']]
 
 // A pair may not appear under two relations: if 🐝→🍯 is both "produces" and "lives in", a
 // question built on one relation is answerable by the other and has two defensible answers.
