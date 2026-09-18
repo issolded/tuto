@@ -49,7 +49,7 @@ import {
 } from './puzzleFigures.js'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_KINSHIP, GLYPH_ATTRIBUTES,
-  GLYPH_TRAITS, POSED_TRAIT_KEYS, traitValue, traitConflict, traitsOfGroup,
+  GLYPH_TRAITS, POSED_TRAIT_KEYS, traitValue, traitConflict, traitsOfGroup, GLYPH_NEAR,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph,
 } from './puzzleGlyphs.js'
 import {
@@ -241,8 +241,15 @@ export const BANDS = {
     // both are 7-8 categories in the book — paper 1 closes on three reflections. So the abstract
     // fifth is carrying pictorial categories we cannot yet draw, not adding abstraction. When a
     // pictorial reflection exists, this moves again.
-    sources: { geometric: 2, icon: 3, glyph: 5 },
+    //
+    // And moved (2026-09-18) when the picture SEQUENCES left this band. Pictures then had only
+    // "which is different" and "which goes with these" to offer, plus the emoji analogy, and a
+    // session came out seven parts in ten those two questions — six of them in one sitting on the
+    // live app. Pictures stay the majority; the shapes' share grows so reflection, grid, sequence
+    // and analogy have room.
+    sources: { geometric: 4, icon: 2, glyph: 4 },
     options: 5,
+    nearCategories: true,       // see GLYPH_NEAR
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner', 'position'],
     shapes: ['circle', 'triangle', 'square', 'pentagon', 'hexagon', 'arrow'],
     fills: ['none', 'solid', 'hatch-45', 'hatch-90'],
@@ -255,6 +262,7 @@ export const BANDS = {
     corners: [null, 'tl', 'tr', 'bl', 'br'],
     positions: [null, null, ...POSITIONS.slice(1)],
     analogySteps: 1,
+    mirrorNeedsOutline: true,   // see genReflection
     seqPeriod: 3,
     seqLength: 5,
     seqSteps: 1,                // one thing moving: find the period and copy
@@ -280,6 +288,7 @@ export const BANDS = {
     iconTypes: ICON_TYPES,
     sources: { geometric: 5, icon: 3, glyph: 2 },
     options: 5,
+    nearCategories: true,       // see GLYPH_NEAR
     attributes: ['shape', 'fill', 'rotation', 'size', 'stretch', 'half', 'inner', 'dots', 'corner', 'position'],
     shapes: SHAPES,
     fills: FILLS,
@@ -314,6 +323,7 @@ export const BANDS = {
     iconTypes: ICON_TYPES,
     sources: { geometric: 7, icon: 2, glyph: 1 },
     options: 5,
+    nearCategories: true,       // see GLYPH_NEAR
     attributes: ATTRIBUTES,
     shapes: SHAPES,
     fills: FILLS,
@@ -336,6 +346,7 @@ export const BANDS = {
     iconTypes: ICON_TYPES,
     sources: { geometric: 8, icon: 1, glyph: 1 },   // the older the child, the more abstract
     options: 5,
+    nearCategories: true,       // see GLYPH_NEAR
     attributes: ATTRIBUTES,
     shapes: SHAPES,
     fills: FILLS,
@@ -1262,6 +1273,11 @@ function genReflection(r, band, seed) {
   // Symmetric about the vertical axis — a circle, an unmarked square — and there is nothing to
   // see. This is the whole gate, and it is the drawn figure that is asked rather than the spec.
   if (samePicture(answer, base)) return null
+  // And at bands that ask for it, not symmetric under everything BUT its fill. An arrow pointing
+  // straight up is its own mirror image; hatched, its reflection differs only in which way the
+  // lines lean, and a 7-8 sheet answered blind put exactly that in front of a seven-year-old —
+  // the one question on it that was a test of eyesight rather than of mirrors.
+  if (band.mirrorNeedsOutline && samePicture({ ...answer, fill: 'none' }, { ...base, fill: 'none' })) return null
 
   const turned = (spec, by) => makeSpec({ ...spec, rotation: (spec.rotation + by + 360) % 360 })
 
@@ -1331,7 +1347,9 @@ function genReflection(r, band, seed) {
 
 function genGlyphCategory(r, band, seed, type) {
   const groups = shuffle(r, GROUP_KEYS.slice())
-  const [inKey, outKey] = groups
+  const inKey = groups[0]
+  // The other group is a neighbour when the band asks for it and one exists (see GLYPH_NEAR).
+  const outKey = band.nearCategories && GLYPH_NEAR[inKey] ? pick(r, GLYPH_NEAR[inKey]) : groups[1]
   const n = band.options
   const inSet = shuffle(r, GLYPH_GROUPS[inKey].glyphs.slice())
   const outSet = shuffle(r, GLYPH_GROUPS[outKey].glyphs.slice())

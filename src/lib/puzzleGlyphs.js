@@ -81,6 +81,15 @@ export const GLYPH_GROUPS = {
 
 export const GROUP_KEYS = Object.keys(GLYPH_GROUPS)
 
+// Groups that sit NEXT to each other: both living things with legs, both things that grow. Four
+// fruit and a pig is answered before it is looked at — "too easy" was the verdict on a 7-8 sheet —
+// while four fruit and a tree asks the child to see what makes a fruit a fruit. Still one answer:
+// the groups do not overlap (see above). Used from 7-8 up; 5-6 keeps the far pairs.
+export const GLYPH_NEAR = {
+  fruit: ['plant'], plant: ['fruit'],
+  animal: ['bug'], bug: ['animal'],
+}
+
 // The second way a set of pictures can have an odd one out, and the one the 7-8 papers actually
 // lean on. Their odd-one-out questions are rarely "four fruit and a bus": paper 2 opens with a
 // rhino, a goat, a bear, a sheep and a deer (only the bear has no horns), then five load-carrying
