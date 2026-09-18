@@ -17,8 +17,8 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 
 const INK = '#241f3a'
 const INK_SOFT = '#8d83ad'
-const PINK = '#e0668f'
-const PINK_BG = '#FFE0EA'
+const TEAL = '#2BA59A'
+const TEAL_BG = '#D9F3F1'
 const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 const COLORS = { ok: '#3FBF7F', bad: '#E2586A', dim: INK_SOFT }
 
@@ -45,8 +45,8 @@ function BigButton({ children, onClick, disabled }) {
     <button onClick={onClick} disabled={disabled}
       style={{
         border: 'none', borderRadius: 18, padding: '14px 28px', cursor: disabled ? 'default' : 'pointer',
-        background: disabled ? '#E6E1F2' : PINK, color: '#fff', fontFamily: FRED, fontWeight: 600,
-        fontSize: 20, boxShadow: disabled ? 'none' : '0 5px 0 #b94d73', minWidth: 170,
+        background: disabled ? '#E6E1F2' : TEAL, color: '#fff', fontFamily: FRED, fontWeight: 600,
+        fontSize: 20, boxShadow: disabled ? 'none' : '0 5px 0 #1F7A72', minWidth: 170,
       }}>{children}</button>
   )
 }
@@ -128,7 +128,7 @@ export default function PuzzleScreen() {
   const last = index === total - 1
 
   return (
-    <Shell background={PINK_BG}>
+    <Shell background={TEAL_BG}>
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '46px 18px 40px', fontFamily: "'Nunito', sans-serif" }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -139,7 +139,7 @@ export default function PuzzleScreen() {
             }}>←</button>
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 24, color: INK, flex: 1 }}>{t('puzzle_title', lang)}</div>
           {phase === 'question' && (
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: PINK }}>{index + 1}/{total}</div>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: TEAL }}>{index + 1}/{total}</div>
           )}
         </div>
 
@@ -147,7 +147,7 @@ export default function PuzzleScreen() {
           <div style={{ height: 8, borderRadius: 99, background: '#fff', marginBottom: 16, overflow: 'hidden' }}>
             <div style={{
               height: '100%', width: `${((index + (answer ? 1 : 0)) / total) * 100}%`,
-              background: PINK, borderRadius: 99, transition: 'width .3s ease',
+              background: TEAL, borderRadius: 99, transition: 'width .3s ease',
             }} />
           </div>
         )}
@@ -169,8 +169,8 @@ export default function PuzzleScreen() {
               <div style={{ fontSize: 54, lineHeight: 1.1, marginBottom: 10 }}>🧩</div>
               <div style={{ color: INK, fontWeight: 700, fontSize: 17, lineHeight: 1.4, marginBottom: 14 }}>{t('puzzle_intro', lang)}</div>
               <div style={{
-                display: 'inline-block', background: PINK_BG, borderRadius: 12, padding: '6px 14px', marginBottom: 20,
-                fontFamily: FRED, fontWeight: 600, fontSize: 15, color: session.will_pay ? PINK : INK_SOFT,
+                display: 'inline-block', background: TEAL_BG, borderRadius: 12, padding: '6px 14px', marginBottom: 20,
+                fontFamily: FRED, fontWeight: 600, fontSize: 15, color: session.will_pay ? TEAL : INK_SOFT,
               }}>
                 {session.will_pay ? <>{t('puzzle_up_to', lang)} ⭐ {session.gems}</> : t('puzzle_no_gems', lang)}
               </div>
@@ -190,7 +190,7 @@ export default function PuzzleScreen() {
                 of ten, and nothing said where the question ended and the choice began. */}
             <div style={{
               display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8,
-              background: '#FFF3F7', border: '2px dashed #F4C2D3', borderRadius: 18, padding: 12,
+              background: '#F0FAF9', border: '2px dashed #A9DDD7', borderRadius: 18, padding: 12,
             }}>
               {q.options.map((o, i) => {
                 const state = !answer ? null
@@ -231,7 +231,7 @@ export default function PuzzleScreen() {
             <div style={{ textAlign: 'center', padding: '6px 4px' }}>
               <div style={{ fontSize: 54, lineHeight: 1.1, marginBottom: 8 }}>{result.capped ? '🌙' : '🎉'}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 26, color: INK }}>{t('puzzle_well_done', lang)}</div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: PINK, margin: '6px 0' }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: TEAL, margin: '6px 0' }}>
                 {result.correct}/{result.total} <span style={{ fontSize: 20, color: INK_SOFT }}>{t('puzzle_correct_of', lang)}</span>
               </div>
               {result.gems_earned > 0 ? (

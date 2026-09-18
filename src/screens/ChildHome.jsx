@@ -55,7 +55,7 @@ const BASE_TASKS = [
 
 // 'tree' isn't a gem-earning task type (no task_settings entry exists for it
 // — it's always on), it just needs an accent color for its tile icon.
-const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', puzzle: '#e0668f', tree: '#f3a35a' }
+const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', puzzle: '#2BA59A', tree: '#f3a35a' }
 
 function TaskIcon({ type, c }) {
   if (type === 'reading') return (
@@ -506,14 +506,14 @@ export default function ChildHome() {
               display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
               cursor: 'pointer', textAlign: 'left', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
             }}>
-            <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#FFE0EA', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#D9F3F1', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TaskIcon type="puzzle" c={TASK_ACCENT.puzzle} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>{t('task_puzzle', lang)}</h3>
               <span style={{
                 alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 4,
-                background: '#FFE0EA', borderRadius: 10, padding: '3px 10px',
+                background: '#D9F3F1', borderRadius: 10, padding: '3px 10px',
                 fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT,
               }}><span style={{ fontSize: 12 }}>⭐</span>+{ts.puzzle?.gems ?? DEFAULT_TASK_GEMS.puzzle}</span>
             </div>
