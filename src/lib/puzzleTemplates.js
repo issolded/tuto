@@ -1939,16 +1939,27 @@ export function questionSignature(q) {
   return `${q.type}|${q.rule.attr}|${v(q.rule.from)}>${v(q.rule.to)}|${id}`
 }
 
+// At most two of a type in one sitting, while the draws allow it. Deduplication by signature
+// keeps two questions from being the same question, but not four "what comes next" icon runs in
+// ten — which a live 8-9 sitting had. The cap is a first pass, not a rule: a band whose pool is
+// too narrow to honour it still fills the session rather than coming back short.
+const PER_TYPE = 2
+
 export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {}) {
   const out = []
   const seen = new Set()
-  for (let i = 0; out.length < count && i < count * 40; i++) {
-    const q = generateQuestion(bandKey, null, seed + i * 104729, opts)
-    if (!q) continue
-    const sig = questionSignature(q)
-    if (seen.has(sig)) continue
-    seen.add(sig)
-    out.push(q)
+  const perType = {}
+  for (const capped of [true, false]) {
+    for (let i = 0; out.length < count && i < count * 40; i++) {
+      const q = generateQuestion(bandKey, null, seed + i * 104729, opts)
+      if (!q) continue
+      const sig = questionSignature(q)
+      if (seen.has(sig)) continue
+      if (capped && (perType[q.type] || 0) >= PER_TYPE) continue
+      seen.add(sig)
+      perType[q.type] = (perType[q.type] || 0) + 1
+      out.push(q)
+    }
   }
   return out
 }
