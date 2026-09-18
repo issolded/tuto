@@ -96,6 +96,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Emoji artık font değil, Noto'nun SVG çizimleri (`puzzleArt.generated.js`); ikonlar ligature değil
       kod noktasıyla — ikisi de iOS/WebKit'te boş çıkıyordu (2026-09-16). Pictorial bir şey
       değişince `npm run puzzle:webkit`.
+      Kör test turu (2026-09-18, 5-6 → 10-11, her bant cevap anahtarı görmeden çözüldü): "farklı
+      resim" artık "çocuğun ayırt edebileceği resim" demek — `tooAlike` (≥35° dönüş ve ≥7px kayma);
+      simetriye birkaç piksel kalan şekil simetri sorusuna girmez. Bilinçli bırakılanlar: `belongs` /
+      `odd-one-out` dönüşü kural yapmaz (farklı şekiller arasında "aynı yön" okunmuyor), `strings`
+      sorulmaz (5 seçenekte hep davul + 3 üflemeliyle çıkıyor, davul da tek kalıyor).
       Sıra: PR #1 incelemesi → tek bantta çocuk ekranı + cevap kayıtları → aile raporu/Gem. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
