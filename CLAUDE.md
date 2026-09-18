@@ -104,8 +104,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       **Çocuk ekranı yayında (2026-09-18):** "Bulmacalarım" kartı, tüm bantlar (yaştan), 10 soruluk sitting,
       Gem (30 × skor ölçeği, günde 3). Soruyu sunucu üretir, cevabı tarayıcıya hiç göndermez, her
       dokunuşu seed'den yeniden üretip kontrol eder (`puzzle_sessions` / `puzzle_attempts`).
-      Kalan: aile raporu (sohbet bulmaca sonuçlarını henüz okumuyor), ana sayfadaki "Bugün"
-      şeridinde bulmaca yok, iPad'de kart en altta. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
+      Ekran matematikle aynı tasarım ve dilde (Tuto karşılama, flash, sonuç kartı; "Aferin" yok, turkuaz).
+      Sohbet `puzzleSessions` + `puzzleSkills` okuyor (matematik kuralı: son 12, 5'in altında rakam yok);
+      "Bugün" şeridinde de var. 2026-09-18/19 gece kararları: 7-8'de resimli dizi yok (düz tekrar "çok
+      kolay"), 8-9+ tek ikonlu dolgu dizisi yok, 7-8+ kategori sorusu komşu gruptan (meyve/bitki,
+      memeli/böcek), 7-8 kaynak dengesi geometrik 4 / ikon 2 / emoji 4, belongs'ta cevap örneklerin
+      ortak her özelliğini taşır. Kör test (taze seed): 5-6 39/39, 7-8 43/45, 8-9 41/41, 9-10 43/43,
+      10-11 42/43 — kaçırmalar düzeltildi. Kalan: iPad'de kart en altta (kaydırmadan görünmüyor). **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,
