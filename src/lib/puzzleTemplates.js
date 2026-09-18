@@ -1604,7 +1604,11 @@ function genIconSequence(r, band, seed) {
   // on filling a × would be six identical figures. validateQuestion would reject it, so this is
   // not a correctness fix; it stops a tenth of the draws being spent discovering the same thing
   // over and over.
-  const onFill = fillIsLive(icons[0]) && r() < 0.6
+  //
+  // Only at a band that moves one thing at a time. From 8-9 up a run of one icon going outline,
+  // solid, outline, solid is the easiest question on the sheet — a blind 8-9 sheet ended on six
+  // radios of it — while the same band's other runs cycle icons AND fill together.
+  const onFill = band.seqSteps === 1 && fillIsLive(icons[0]) && r() < 0.6
   const n = band.seqLength
   // The icon axis honours the band's period. It used to alternate between two icons at every
   // age, whatever the band declared, so a 10-year-old and a 5-year-old got the same run — while
