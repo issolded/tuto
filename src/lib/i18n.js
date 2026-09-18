@@ -25,6 +25,7 @@ const STRINGS = {
   task_writing:       { en: 'My Stories',    tr: 'Hikâyelerim' },
   task_homework:      { en: 'My Homework',   tr: 'Ödevlerim' },
   task_drawing:       { en: 'My Drawings',   tr: 'Çizimlerim' },
+  task_puzzle:        { en: 'My Puzzles',    tr: 'Bulmacalarım' },
   task_tree:          { en: 'My Tree',       tr: 'Ağacım' },
   chip_books:         { en: 'Books',         tr: 'Kitap' },
   chip_math:          { en: 'Math',          tr: 'Matematik' },
@@ -428,6 +429,28 @@ const STRINGS = {
                         tr: 'Matematik gücünü artırma zamanı! ⚡\nHaydi göster kendini!' },
   math_welcome_older: { en: "Ready for a challenge? 🔥\nLet's see those math skills!",
                         tr: 'Zorlu bir şeye hazır mısın? 🔥\nBakalım matematiğin nasıl!' },
+
+  // ── Puzzles: the child's screen ─────────────────────────────────────────────
+  puzzle_title:       { en: 'My Puzzles 🧩', tr: 'Bulmacalarım 🧩' },
+  puzzle_intro:       { en: '10 shape and pattern puzzles. Look carefully — there is always a clue!',
+                        tr: '10 şekil ve örüntü bulmacası. Dikkatli bak — her zaman bir ipucu var!' },
+  puzzle_preparing:   { en: 'Getting your puzzles ready…', tr: 'Bulmacalarını hazırlıyorum…' },
+  puzzle_start:       { en: 'Start',            tr: 'Başla' },
+  puzzle_up_to:       { en: 'Up to',            tr: 'En fazla' },
+  puzzle_no_gems:     { en: 'Your gems are done for today — you can still play!',
+                        tr: 'Bugünün gemleri tamam — yine de çözebilirsin!' },
+  puzzle_question:    { en: 'Puzzle',           tr: 'Bulmaca' },
+  puzzle_right:       { en: 'Yes, that one! 🎉', tr: 'Evet, o! 🎉' },
+  puzzle_wrong:       { en: 'Not this time — the green one is right.',
+                        tr: 'Bu sefer olmadı — doğrusu yeşil olan.' },
+  puzzle_next:        { en: 'Next',             tr: 'Sıradaki' },
+  puzzle_see_score:   { en: 'See my score',     tr: 'Sonucumu gör' },
+  puzzle_correct_of:  { en: 'right',            tr: 'doğru' },
+  puzzle_well_done:   { en: 'Well done!',       tr: 'Aferin!' },
+  puzzle_home:        { en: 'Back home',        tr: 'Ana sayfa' },
+  puzzle_failed:      { en: 'Something went wrong. Try again in a moment!',
+                        tr: 'Bir şeyler ters gitti. Birazdan tekrar dener misin?' },
+  puzzle_retry:       { en: 'Try again',        tr: 'Tekrar dene' },
 
   // ── Puzzles: one stem per question type ─────────────────────────────────────
   // The six stems are the whole text of the module — the figures carry everything else, which

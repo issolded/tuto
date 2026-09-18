@@ -19,10 +19,10 @@ const HOMEWORK_DEFAULT_GEMS = 25
 // Fallback gem rate per task type when a child's task_settings has no entry
 // yet — mirrors src/lib/taskDefaults.js's TASK_DEFAULTS gems values (kept as
 // a separate copy since frontend and backend are deployed independently).
-const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20 }
+const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20, puzzle: 30 }
 
 // Scored tasks: the configured figure is the most a session can pay, not what it will pay.
-const VARIABLE_TASKS = new Set(['reading', 'math', 'writing'])
+const VARIABLE_TASKS = new Set(['reading', 'math', 'writing', 'puzzle'])
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -1368,7 +1368,7 @@ const CONTRIBUTION_TOOLS = [{
         'questions directly, with NO tool call, and to confirm the new number after a change.\n' +
         'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
         '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ödev"/"homework" ' +
-        '→ homework, "çizim"/"resim"/"drawing" → drawing. If you cannot tell which task type they mean, ASK — ' +
+        '→ homework, "çizim"/"resim"/"drawing" → drawing, "bulmaca"/"şekil bulmacası"/"puzzle"/"NVR" → puzzle. If you cannot tell which task type they mean, ASK — ' +
         'do not guess between two.\n' +
         'The server enforces a 1-500 range. Only call this when the parent explicitly states a task type AND a ' +
         'specific new number — an unclear or partial request ("matematiği artıralım biraz") means asking for the ' +
@@ -1377,7 +1377,7 @@ const CONTRIBUTION_TOOLS = [{
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child whose task reward to change, from the children list in context.' },
-          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing.' },
+          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle.' },
           gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500).' },
         },
         required: ['child_id', 'task_type', 'gems'],
@@ -5233,6 +5233,206 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
     res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, accuracy: acc, submission_id: sub?.id ?? null })
   } catch (err) {
     console.error('[READING]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Puzzle sessions (shape & pattern / NVR) ──────────────────────────────────────────────────
+// Maths is scored in the browser and believed; this is not. The server generates the sheet from
+// a seed it chooses, sends the child's browser the figures to draw and nothing that says which
+// option is right, and checks every answer against the question it regenerates from that seed.
+// The engine is deterministic and pure, so the seed IS the sheet — nothing but the seed has to be
+// stored. The engine itself is a byte-for-byte copy of src/lib (server/puzzle, `npm run
+// puzzle:sync`), because the server is deployed on its own and imports nothing from src/.
+const PUZZLE_DEFAULTS = { gems: 30, dailyCap: 3 }
+const PUZZLE_QUESTIONS = 10
+
+// Age to band. The bands are named for the papers they follow and overlap at the edges (7-8,
+// 8-9); a child is put in the one that STARTS at their age, so a seven-year-old gets 7-8 and a
+// nine-year-old 9-10.
+function puzzleBandForAge(age) {
+  const a = Math.trunc(Number(age))
+  if (!Number.isFinite(a) || a <= 6) return '5-6'
+  if (a >= 10) return '10-11'
+  return { 7: '7-8', 8: '8-9', 9: '9-10' }[a]
+}
+
+// What the browser may know about a figure: enough to draw it, nothing more. A glyph spec carries
+// its `group` and `trait`, and in "which one is different" those ARE the answer — the odd one is
+// the one whose group differs. Geometric specs are drawing attributes all the way down.
+function publicFigure(spec) {
+  if (!spec) return null
+  if (spec.kind === 'glyph') return { kind: 'glyph', glyph: spec.glyph, count: spec.count, size: spec.size, rotation: spec.rotation }
+  if (spec.kind === 'icon') return { kind: 'icon', icon: spec.icon, fill: spec.fill, count: spec.count, size: spec.size, rotation: spec.rotation }
+  return spec
+}
+function publicQuestion(q) {
+  return {
+    type: q.type, layout: q.layout, stem_key: q.stem_key,
+    prompt: (q.prompt || []).map(publicFigure),
+    ...(q.promptLabels ? { promptLabels: q.promptLabels } : {}),
+    // Options in their shown order, without `why` — which is null on exactly the right one.
+    options: q.options.map(o => (o.code !== undefined ? { code: o.code } : { spec: publicFigure(o.spec) })),
+  }
+}
+
+// Regenerating ten questions takes a few milliseconds, but an answer arrives every few seconds
+// for the length of a sitting, so the sheet is kept for the sittings in progress.
+const puzzleSheets = new Map()
+async function puzzleSheet(session) {
+  const hit = puzzleSheets.get(session.id)
+  if (hit) return hit
+  const { generateSession } = await import('./puzzle/puzzleTemplates.js')
+  const sheet = generateSession(session.band, session.question_count, Number(session.seed), { icons: session.icons })
+  puzzleSheets.set(session.id, sheet)
+  if (puzzleSheets.size > 500) puzzleSheets.delete(puzzleSheets.keys().next().value)
+  return sheet
+}
+
+app.post('/api/children/:childId/puzzle-session', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const { data: child } = await supabase
+      .from('children').select('id, age, task_settings').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'puzzle', PUZZLE_DEFAULTS)
+    if (!settings.active) return res.status(403).json({ error: 'puzzles are switched off for this child' })
+
+    const band = puzzleBandForAge(child.age)
+    const icons = req.body?.icons !== false
+    const seed = crypto.randomInt(1, 2 ** 31)
+    const { generateSession } = await import('./puzzle/puzzleTemplates.js')
+    const sheet = generateSession(band, PUZZLE_QUESTIONS, seed, { icons })
+    if (sheet.length < PUZZLE_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
+
+    const { data: session, error } = await supabase.from('puzzle_sessions')
+      .insert({ child_id: childId, band, seed, icons, question_count: sheet.length })
+      .select('id').single()
+    if (error) return res.status(500).json({ error: error.message })
+    puzzleSheets.set(session.id, sheet)
+
+    // Said up front, so the screen can tell the child before the first question rather than after
+    // the last that this sitting will not pay.
+    const tz = await tzForChild(childId)
+    const doneToday = await rewardedToday(childId, tz, 'puzzle')
+    res.json({
+      session_id: session.id, band,
+      questions: sheet.map(publicQuestion),
+      gems: settings.gems, daily_cap: settings.dailyCap,
+      will_pay: doneToday !== null && doneToday < settings.dailyCap,
+    })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
+  const { sessionId } = req.params
+  const index = Number(req.body?.question_index)
+  const chosen = Number(req.body?.chosen_index)
+  try {
+    const { data: session } = await supabase.from('puzzle_sessions')
+      .select('id, child_id, band, seed, icons, question_count, finished_at').eq('id', sessionId).maybeSingle()
+    if (!session) return res.status(404).json({ error: 'session not found' })
+    if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
+    const sheet = await puzzleSheet(session)
+    const q = sheet[index]
+    if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
+    if (!Number.isInteger(chosen) || chosen < 0 || chosen >= q.options.length) return res.status(400).json({ error: 'no such option' })
+
+    const correct = chosen === q.correct_index
+    const { error } = await supabase.from('puzzle_attempts').insert({
+      session_id: session.id, child_id: session.child_id, question_index: index,
+      type: q.type, rule: q.rule?.attr ?? null, band: session.band, chosen_index: chosen, correct,
+    })
+    if (error?.code === '23505') {
+      // Already answered — a double tap, or a retry after a dropped response. The first answer
+      // stands; the second gets told what the first was.
+      const { data: first } = await supabase.from('puzzle_attempts')
+        .select('chosen_index, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
+      return res.json({ correct: !!first?.correct, chosen_index: first?.chosen_index, correct_index: q.correct_index, repeated: true })
+    }
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ correct, chosen_index: chosen, correct_index: q.correct_index })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
+  const { sessionId } = req.params
+  try {
+    const { data: session } = await supabase.from('puzzle_sessions')
+      .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
+    if (!session) return res.status(404).json({ error: 'session not found' })
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id, task_settings').eq('id', session.child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'puzzle', PUZZLE_DEFAULTS)
+    const done = (s) => res.json({
+      correct: s.correct, total: session.question_count, gems_earned: s.gems_earned ?? 0,
+      capped: !!s.capped, daily_cap: settings.dailyCap,
+    })
+    if (session.finished_at) return done(session)
+
+    // The score is counted from what was recorded here, one answer at a time — never taken from
+    // the browser.
+    const { data: attempts, error: attErr } = await supabase.from('puzzle_attempts')
+      .select('correct').eq('session_id', session.id)
+    if (attErr) return res.status(500).json({ error: attErr.message })
+    if ((attempts || []).length < session.question_count) return res.status(400).json({ error: 'not every question is answered' })
+    const correct = attempts.filter(a => a.correct).length
+
+    // Claimed before anything is paid: of two finish calls racing, only the one whose update finds
+    // the row still open goes on to write the ledger.
+    const { data: claimed } = await supabase.from('puzzle_sessions')
+      .update({ finished_at: new Date().toISOString(), correct })
+      .eq('id', session.id).is('finished_at', null).select('id')
+    if (!claimed?.length) {
+      const { data: again } = await supabase.from('puzzle_sessions')
+        .select('correct, gems_earned, capped').eq('id', session.id).maybeSingle()
+      return done(again || { correct })
+    }
+
+    const tz = await tzForChild(child.id)
+    const doneToday = await rewardedToday(child.id, tz, 'puzzle')
+    let gems = 0
+    let capped = false
+    if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
+      capped = true
+    } else {
+      gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+    }
+    if (gems > 0) {
+      const { error: ledErr } = await supabase.from('bt_ledger').insert({ child_id: child.id, amount: gems, reason: 'puzzle' })
+      if (ledErr) {
+        console.error(`[PUZZLE] ledger insert failed for ${child.id}: ${ledErr.message}`)
+        gems = 0
+      }
+    }
+    await supabase.from('puzzle_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
+    puzzleSheets.delete(session.id)
+
+    const { data: prefsRow } = await supabase
+      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    if (gems > 0 && (perTask || doneToday === 0)) {
+      const language = prefsRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const total = session.question_count
+      const msg = language === 'en'
+        ? `${child.name} did their puzzles — ${correct}/${total} correct. +${gems} gems 💎`
+        : `${child.name} bulmacalarını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `şekil ve örüntü bulmacaları, ${correct}/${total} doğru, +${gems} gem`,
+        en: `shape & pattern puzzles, ${correct}/${total} correct, +${gems} gems`,
+      } }).catch(() => {})
+    }
+
+    done({ correct, gems_earned: gems, capped })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
     res.status(500).json({ error: err.message })
   }
 })

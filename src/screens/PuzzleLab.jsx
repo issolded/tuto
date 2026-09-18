@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
+import { Figure, Prompt, CodeChip } from '../components/PuzzleView'
 import {
   BANDS, BAND_KEYS, TYPES, GLYPH_TYPES, ICON_TYPES,
   generateQuestion, generateSession, validateQuestion,
 } from '../lib/puzzleTemplates'
-import { renderFigure, makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
+import { makeSpec, SHAPES, FILLS, HALVES, STRETCHES, INNER_NODES } from '../lib/puzzleFigures'
 import {
-  renderGlyph, ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS,
+  ALL_GLYPHS, makeGlyphSpec, GLYPH_GROUPS, GLYPH_RELATIONS,
 } from '../lib/puzzleGlyphs'
 import {
-  renderIcon, ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, iconFontReady, ensureIconFont,
+  ALL_ICONS, makeIconSpec, ICON_GROUPS, ICON_FILLS, iconFontReady, ensureIconFont,
 } from '../lib/puzzleIcons'
 
 // Isolated pilot for the non-verbal reasoning engine (src/lib/puzzleFigures.js +
@@ -29,42 +30,11 @@ import {
 // the paper the questions are modelled on is white, and judging a figure against anything
 // else at this stage means judging two things at once.
 
-// One entry point for any kind of figure. A glyph is not drawn by us — see the header of
-// puzzleGlyphs.js for why its artwork is shipped rather than left to the device.
-const FIG = (spec, px) => ({
-  __html: spec.kind === 'glyph' ? renderGlyph(spec, { px })
-    : spec.kind === 'icon' ? renderIcon(spec, { px })
-      : renderFigure(spec, { px, bg: '#FFFFFF' }),
-})
-
-// a–d at 5-6, a–e above it — the count comes from the band, so the label list has to reach.
-
-// ONE size for every figure on a card, prompt and options alike. The prompt was drawn at 60px
-// (42px for a run of six) and the options at 76px, so the only way to judge `size` was against
-// the other options: in a run of triangles, "a bigger triangle" and "the same triangle" were both
-// bigger than every triangle in the run, and a size distractor could not be told from the answer.
-// Every question that can move `size` — sequence, analogy, grid, mirror — needs the child to
-// compare a figure across that gap. 60px is the largest at which a run of six plus its blank
-// still wraps four-and-three on a phone card, rather than leaving the blank alone on a line.
-const FIG_PX = 60
 const LETTERS = 'abcde'
 
 const C = {
   bg: '#0F1320', panel: '#181D2E', line: '#2A3149', text: '#EDEBF6',
   dim: '#8D83AD', ok: '#3FBF7F', bad: '#E2586A', accent: '#7C6BF5',
-}
-
-function Figure({ spec, px = FIG_PX, state }) {
-  const border = state === 'ok' ? C.ok : state === 'bad' ? C.bad : '#DCD9EA'
-  return (
-    <div
-      style={{
-        background: '#fff', color: '#12131A', borderRadius: 12, padding: 6,
-        border: `3px solid ${border}`, lineHeight: 0, display: 'inline-block',
-      }}
-      dangerouslySetInnerHTML={FIG(spec, px)}
-    />
-  )
 }
 
 // A rule's value is usually a scalar and sometimes an `inner` node, and template interpolation
@@ -75,100 +45,6 @@ function ruleValue(v) {
   if (v === null) return 'none'
   if (typeof v !== 'object') return String(v)
   return `${v.fill === 'none' ? '' : v.fill + ' '}${v.shape}${v.inner ? ' + inner' : ''}`
-}
-
-function Blank({ px = FIG_PX }) {
-  return (
-    <div style={{
-      width: px + 12, height: px + 12, borderRadius: 12, background: '#fff', color: '#9A93B8',
-      border: '3px dashed #CFC9E4', display: 'grid', placeItems: 'center',
-      fontSize: 30, fontWeight: 700,
-    }}>?</div>
-  )
-}
-
-// The one option that is not a picture. A code question offers five two-letter strings, so it
-// gets a chip the same size as a figure tile — a row of letters at body size next to a row of
-// drawings reads as a different kind of control rather than the same choice.
-function CodeChip({ code, state }) {
-  const border = state === 'ok' ? C.ok : state === 'bad' ? C.bad : '#DCD9EA'
-  return (
-    <div style={{
-      width: 76 + 12, height: 76 + 12, borderRadius: 12, background: '#fff', color: '#12131A',
-      border: `3px solid ${border}`, display: 'grid', placeItems: 'center',
-      font: '700 26px ui-monospace, monospace', letterSpacing: 1,
-    }}>{code}</div>
-  )
-}
-
-function Prompt({ q }) {
-  if (q.layout === 'options-only') return null
-  if (q.layout === 'code') {
-    // Each figure carries its label under it, and the last one carries the question mark. The
-    // labels ARE the question — without them the row is six unrelated drawings.
-    //
-    // All six on one line, so the figure being asked about stays at the end of the run the
-    // labels explain. At 56px they wrapped and the `?` began a second row beside an unrelated
-    // label, which reads as a different question.
-    return (
-      <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-        {q.prompt.map((cell, i) => (
-          <div key={i} style={{ textAlign: 'center' }}>
-            <Figure spec={cell} px={40} />
-            <div style={{
-              font: '700 13px ui-monospace, monospace', color: C.dim, marginTop: 3, letterSpacing: 1,
-            }}>{q.promptLabels[i]}</div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-  if (q.layout === 'grid2x2') {
-    return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, max-content)', gap: 6, marginBottom: 12 }}>
-        {q.prompt.map((cell, i) => (cell ? <Figure key={i} spec={cell} /> : <Blank key={i} />))}
-      </div>
-    )
-  }
-  if (q.layout === 'mirror') {
-    // The dashed line is the question. Without it on screen this is a figure next to a blank
-    // and nothing says which way the mirror faces, so it is drawn here rather than described.
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <Figure spec={q.prompt[0]} />
-        <div style={{ width: 0, alignSelf: 'stretch', borderLeft: `3px dashed ${C.dim}` }} />
-        <Blank />
-      </div>
-    )
-  }
-  if (q.layout === 'analogy') {
-    const [a, b, c] = q.prompt
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Figure spec={a} />
-        <span style={{ color: C.dim }}>→</span>
-        <Figure spec={b} />
-        <span style={{ color: C.dim, margin: '0 6px' }}>::</span>
-        <Figure spec={c} />
-        <span style={{ color: C.dim }}>→</span>
-        <Blank />
-      </div>
-    )
-  }
-  // The bands above 7-8 show six figures in a run rather than four. Taking the wrap away clipped
-  // the sixth figure at the edge of the card, which is worse than wrapping — a run with a figure
-  // missing is a different question. They used to shrink to 42px instead, which broke `size`
-  // (see FIG_PX); at FIG_PX the run wraps four-and-three and the blank stays with its run.
-  const px = FIG_PX
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-      {q.prompt.map((cell, i) => <Figure key={i} spec={cell} px={px} />)}
-      {/* Every "what comes next" run ends in the blank, not just the geometric one — this
-          checked the type and so icon-sequence and glyph-sequence drew a row with no question
-          mark on the end of it. The stem is what the question is, so that is what it asks. */}
-      {q.layout === 'row' && q.stem_key === 'puzzle_stem_next' && <Blank px={px} />}
-    </div>
-  )
 }
 
 function QuestionCard({ q, lang }) {

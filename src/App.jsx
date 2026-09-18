@@ -22,6 +22,9 @@ import MathLab from './screens/MathLab'
 // the whole puzzle engine and its font gate with it — none of which belongs in the bundle every
 // child downloads to open their home screen.
 const PuzzleLab = lazy(() => import('./screens/PuzzleLab'))
+// Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
+// screen needs.
+const PuzzleScreen = lazy(() => import('./screens/PuzzleScreen'))
 import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 import HomeworkScreen from './screens/HomeworkScreen'
@@ -68,6 +71,7 @@ export default function App() {
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
+        <Route path="/child/puzzle" element={<Suspense fallback={null}><PuzzleScreen /></Suspense>} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />
         <Route path="/child/reading" element={<ReadingFlow />} />

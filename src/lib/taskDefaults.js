@@ -13,6 +13,8 @@ export const TASK_DEFAULTS = {
   writing:  { gems: 30, variable: true },
   homework: { gems: 25, variable: false },
   drawing:  { gems: 20, variable: false, daily_cap: 2 },
+  // Shape & pattern puzzles (NVR). Scored and paid on the server, like maths.
+  puzzle:   { gems: 30, variable: true, daily_cap: 3 },
 }
 
 // "Up to 30 gems · 3/day" / "25 gems" — the exact phrasing used anywhere this

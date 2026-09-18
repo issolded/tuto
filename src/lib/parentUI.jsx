@@ -99,6 +99,8 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
     book:    <g {...p}><path d="M12 6c-2-1.4-5-1.4-7 0v11c2-1.4 5-1.4 7 0 2-1.4 5-1.4 7 0V6c-2-1.4-5-1.4-7 0z"/><path d="M12 6v11"/></g>,
     calc:    <g {...p}><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7"/><path d="M9 13h0M12 13h0M15 13h0M9 16.5h0M12 16.5h0M15 16.5h0"/></g>,
     pencil:  <g {...p}><path d="M14 4l6 6M4 20l1.2-4L16 5.2 18.8 8 8 18.8z"/></g>,
+    // The child tile's 2×2 grid with the last cell left open — src/assets/puzzle-tile-icon.svg.
+    puzzle:  <g {...p}><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M15 15.2a1.6 1.6 0 1 1 2.2 1.5c-.5.2-.7.6-.7 1.1M16.5 19.6h0"/></g>,
     house:   <g {...p}><path d="M4 11l8-6.5 8 6.5"/><path d="M6 10v9h12v-9"/></g>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24">{M[name] || null}</svg>
@@ -106,7 +108,7 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
 
 export function TaskIcon({ type, size = 24, color }) {
   const c = color || PC[type] || PC.teal
-  const map = { reading: 'book', math: 'calc', writing: 'pencil', homework: 'camera', drawing: 'pencil' }
+  const map = { reading: 'book', math: 'calc', writing: 'pencil', homework: 'camera', drawing: 'pencil', puzzle: 'puzzle' }
   return <Icon name={map[type] || 'book'} size={size} color={c} sw={2.1} />
 }
 

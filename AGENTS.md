@@ -23,7 +23,8 @@ buraya ekleme.
 
 ## Doğrulama araçları
 
-- Bulmaca (NVR) motoru: `npm run puzzle:check`. Tarayıcı gerektiren kontroller için
+- Bulmaca (NVR) motoru: `npm run puzzle:check`. Motor `src/lib`'de yaşar; sunucu bir kopyasını
+  (`server/puzzle`) kullanır — `src/lib/puzzle*` değişince `npm run puzzle:sync`, yoksa puzzle:check düşer. Tarayıcı gerektiren kontroller için
   `npm run puzzle:pixels`.
 - iOS/iPad (WebKit): `npm run puzzle:webkit` her emoji ve ikonu WebKit ve Chromium'da çizip boş
   çıkanı yakalar (Playwright + webkit gerekir, `PLAYWRIGHT_CORE` ile yol verilebilir). Chromium'da

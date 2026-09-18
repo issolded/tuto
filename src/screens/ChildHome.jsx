@@ -35,13 +35,15 @@ const HOME_CSS = `
   .tuto-today-card.mature .tuto-today-sec{ border-left-color:#E4EAE3; }
   .tuto-task-grid{ grid-template-columns:repeat(3, 1fr); }
   .tuto-wide-card{ grid-column:auto; }
+  /* Seven tiles in three columns leave one alone on the last row; that one takes the row. */
+  .tuto-task-grid > .tuto-wide-card:last-child:nth-child(3n+1){ grid-column:1 / -1; }
 }
 `
 
 // My Tree has no entry here on purpose — it earns no gems (see TASK_ACCENT's
 // comment), so its tile skips the "+N gems" badge entirely rather than
 // falling back to a number that isn't true.
-const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30 }
+const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, puzzle: 30 }
 
 // Names are keys, not text: resolved against the child's language where they are drawn.
 const BASE_TASKS = [
@@ -53,7 +55,7 @@ const BASE_TASKS = [
 
 // 'tree' isn't a gem-earning task type (no task_settings entry exists for it
 // — it's always on), it just needs an accent color for its tile icon.
-const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', tree: '#f3a35a' }
+const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', puzzle: '#e0668f', tree: '#f3a35a' }
 
 function TaskIcon({ type, c }) {
   if (type === 'reading') return (
@@ -64,6 +66,19 @@ function TaskIcon({ type, c }) {
   )
   if (type === 'writing') return (
     <svg width="56" height="56" viewBox="0 0 64 64" fill="none"><path d="M40 12 L52 24 L28 48 L16 48 L16 36 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/><path d="M36 16 L48 28" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M16 48 L24 40" stroke="#20201e" strokeWidth="4" strokeLinecap="round"/><path d="M30 30 L40 40" stroke={c} strokeWidth="3.4" strokeLinecap="round"/></svg>
+  )
+  // src/assets/puzzle-tile-icon.svg: a grid-complete question itself — three cells filled, the
+  // fourth asks.
+  if (type === 'puzzle') return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
+      <rect x="10" y="10" width="44" height="44" rx="11" fill="#fff" stroke="#20201e" strokeWidth="4"/>
+      <path d="M32 12 V52 M12 32 H52" stroke="#20201e" strokeWidth="3"/>
+      <circle cx="21.5" cy="21.5" r="5" fill={c}/>
+      <path d="M42.5 16 L48.5 26.5 H36.5 Z" fill={c}/>
+      <rect x="16.5" y="37.5" width="10" height="10" rx="2" fill={c}/>
+      <path d="M39.5 39.5 C39.5 36.5 45.5 36.5 45.5 39.5 C45.5 42 42.5 42 42.5 44.5" stroke="#20201e" strokeWidth="2.8" strokeLinecap="round"/>
+      <circle cx="42.5" cy="48.3" r="1.6" fill="#20201e"/>
+    </svg>
   )
   if (type === 'tree') return (
     <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
@@ -479,6 +494,29 @@ export default function ChildHome() {
               <DrawingsIcon age={child?.age} />
             </div>
             <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>{t('task_drawing', lang)}</h3>
+          </button>
+          )}
+
+          {/* My Puzzles — a wide card like the two above, so a phone keeps its four square tiles
+              in two full rows. It does pay, so unlike them it carries the reward pill. */}
+          {(ts.puzzle?.active ?? true) && (
+          <button className="tuto-card tuto-wide-card" onClick={() => nav('/child/puzzle')}
+            style={{
+              background: '#fff', border: 'none', borderRadius: 22, padding: 12,
+              display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14,
+              cursor: 'pointer', textAlign: 'left', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
+            }}>
+            <div style={{ width: 82, height: 82, flex: '0 0 auto', background: '#FFE0EA', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TaskIcon type="puzzle" c={TASK_ACCENT.puzzle} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: 0 }}>{t('task_puzzle', lang)}</h3>
+              <span style={{
+                alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: '#FFE0EA', borderRadius: 10, padding: '3px 10px',
+                fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT,
+              }}><span style={{ fontSize: 12 }}>⭐</span>+{ts.puzzle?.gems ?? DEFAULT_TASK_GEMS.puzzle}</span>
+            </div>
           </button>
           )}
         </div>

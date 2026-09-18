@@ -11,6 +11,7 @@ const TASKS = [
   { key: 'writing', label: 'My Stories' },
   { key: 'homework', label: 'My Homework' },
   { key: 'drawing', label: 'My Drawings' },
+  { key: 'puzzle',  label: 'My Puzzles' },
 ]
 
 // My Drawings rewards instantly, with no approval step — so it is the one task

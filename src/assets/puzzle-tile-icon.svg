@@ -3,8 +3,8 @@
      #20201e 4px outline, detail in the tile accent. The picture is a grid-complete question
      itself — three cells filled, the fourth asks — so the icon shows what the screen does.
      Tile colours: bg #FFE0EA, accent #e0668f (no other tile is pink).
-     Not imported anywhere yet: it goes into ChildHome as a TaskIcon branch when the child's
-     puzzle screen exists. Convert attributes to camelCase (stroke-width → strokeWidth) there. -->
+     Drawn inline as the 'puzzle' branch of TaskIcon in src/screens/ChildHome.jsx (camelCased there);
+     this file is the reference copy. -->
 <svg width="58" height="58" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect x="10" y="10" width="44" height="44" rx="11" fill="#fff" stroke="#20201e" stroke-width="4"/>
   <path d="M32 12 V52 M12 32 H52" stroke="#20201e" stroke-width="3"/>
