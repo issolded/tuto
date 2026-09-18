@@ -223,8 +223,14 @@ export const BANDS = {
     // the pictorial family asks, and this band is where a child meets pictures at all. The
     // category question (four instruments and a fruit) is the same shape of question with
     // nothing to know.
-    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-trait'),
-    iconTypes: ICON_TYPES,
+    //
+    // No picture SEQUENCES either (2026-09-18). At this band they are a plain cycle — sunflower,
+    // tree, sprout, sunflower, tree, ? — and the answer is copied off the row above it without
+    // reading anything; tried on a phone, three in one sitting and all three "too easy". 5-6 keeps
+    // them (a two-beat alternation is that age's question), and from 8-9 up the icon run moves two
+    // things at once. Geometric `sequence` stays here: its step is a change to read, not a copy.
+    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-trait' && t !== 'glyph-sequence'),
+    iconTypes: ICON_TYPES.filter(t => t !== 'icon-sequence'),
     // Inverted. This band ran at 70% abstract shapes, which is the 5-6 balance applied to the
     // one age where the book does the opposite: twenty-nine of paper 1's thirty questions are
     // drawings of real things. A seven-year-old working here was being given the wrong material
