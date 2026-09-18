@@ -26,6 +26,9 @@ const FIG_PX = 60
 
 // The lab draws on a dark panel and the child screen on a light one; only these change.
 const PUZZLE_COLORS = { ok: '#3FBF7F', bad: '#E2586A', dim: '#8D83AD' }
+// The child app's rounded face, the one maths and every other child screen use. Codes were set in a
+// monospace, which on the child screen read as a different app.
+const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 
 export function Figure({ spec, px = FIG_PX, state, colors = PUZZLE_COLORS }) {
   const border = state === 'ok' ? colors.ok : state === 'bad' ? colors.bad : '#DCD9EA'
@@ -60,7 +63,7 @@ export function CodeChip({ code, state, px = FIG_PX, colors = PUZZLE_COLORS }) {
     <div style={{
       width: side, height: side, borderRadius: 12, background: '#fff', color: '#12131A',
       border: `3px solid ${border}`, display: 'grid', placeItems: 'center',
-      font: `700 ${Math.round(px * 26 / 60)}px ui-monospace, monospace`, letterSpacing: 1,
+      fontFamily: FRED, fontWeight: 600, fontSize: Math.round(px * 28 / 60), letterSpacing: 1,
     }}>{code}</div>
   )
 }
@@ -89,7 +92,7 @@ export function Prompt({ q, px = FIG_PX, colors = PUZZLE_COLORS }) {
           <div key={i} style={{ textAlign: 'center' }}>
             <Figure spec={cell} px={cellPx} colors={colors} />
             <div style={{
-              font: `700 ${Math.max(12, Math.round(cellPx * 0.3))}px ui-monospace, monospace`, color: C.dim, marginTop: 3, letterSpacing: 1,
+              fontFamily: FRED, fontWeight: 600, fontSize: Math.max(13, Math.round(cellPx * 0.3)), color: C.dim, marginTop: 3, letterSpacing: 1,
             }}>{q.promptLabels[i]}</div>
           </div>
         ))}

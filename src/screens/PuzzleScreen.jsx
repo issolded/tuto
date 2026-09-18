@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { t, childLang } from '../lib/i18n'
-import Shell, { useIsTablet } from '../components/Shell'
+import TutoMascot from '../components/TutoMascot'
+import { useIsTablet } from '../components/Shell'
 import { Figure, Prompt, CodeChip } from '../components/PuzzleView'
 import { ensureIconFont } from '../lib/puzzleIcons'
 
@@ -12,15 +13,34 @@ import { ensureIconFont } from '../lib/puzzleIcons'
 // with nothing that says which option is right, and checks each tap against the question it
 // regenerates from its own seed (server/index.js, "Puzzle sessions"). So the score, the gems and
 // the parent's message are all decided there; this only draws and asks.
+//
+// It is built the way MathScreen is — the same welcome with Tuto, the same coloured header with
+// the progress bar, the same full-screen flash after an answer, the same leave sheet and result
+// card, the same words where the meaning is the same (math_* keys). A child moving between the
+// two should meet one app, not two; the first cut had its own look and its own vocabulary.
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
-const INK = '#241f3a'
-const INK_SOFT = '#8d83ad'
-const TEAL = '#2BA59A'
-const TEAL_BG = '#D9F3F1'
-const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
-const COLORS = { ok: '#3FBF7F', bad: '#E2586A', dim: INK_SOFT }
+const TEAL      = '#2BA59A'
+const INK       = '#241f3a'
+const INK_SOFT  = '#8d83ad'
+const GREEN     = '#4cb685'
+const ORANGE    = '#f79433'
+const FRED      = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
+const FLOW_BG   = 'linear-gradient(172deg,#E8F8F6 0%,#CDEEEA 100%)'
+const COLORS    = { ok: GREEN, bad: '#E2586A', dim: INK_SOFT }
+
+const ANIM = `
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes flashIn { 0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes flashHold { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.pz-press:active { transform: scale(.96) !important; }
+.pz-scroll { overflow-y: auto; min-height: 0; }
+.pz-scroll::-webkit-scrollbar { display: none; }
+`
 
 // The icon font decides whether the sheet may contain icon questions, and the server has to be
 // told before it builds the sheet. A font that has not arrived in a few seconds is treated as
@@ -40,69 +60,90 @@ async function post(path, body) {
   return res.json()
 }
 
-function BigButton({ children, onClick, disabled }) {
-  return (
-    <button onClick={onClick} disabled={disabled}
-      style={{
-        border: 'none', borderRadius: 18, padding: '14px 28px', cursor: disabled ? 'default' : 'pointer',
-        background: disabled ? '#E6E1F2' : TEAL, color: '#fff', fontFamily: FRED, fontWeight: 600,
-        fontSize: 20, boxShadow: disabled ? 'none' : '0 5px 0 #1F7A72', minWidth: 170,
-      }}>{children}</button>
-  )
-}
-
-function Card({ children }) {
-  return (
-    <div style={{
-      background: '#fff', borderRadius: 24, padding: '20px 18px', boxShadow: '0 6px 16px rgba(40,30,70,.09)',
-    }}>{children}</div>
-  )
+// What Tuto says over the result. Maths gets a line from the model; there is nothing here for a
+// model to read, so it is chosen by score.
+function encouragementKey(correct, total) {
+  const acc = total ? correct / total : 0
+  return acc >= 0.8 ? 'puzzle_enc_high' : acc >= 0.5 ? 'puzzle_enc_mid' : 'puzzle_enc_low'
 }
 
 export default function PuzzleScreen() {
   const nav = useNavigate()
   const isTablet = useIsTablet()
   const [child] = useState(() => JSON.parse(localStorage.getItem('child') || 'null'))
-  const lang = childLang(child)
+  const language = childLang(child)
   // One figure size for the whole card (see PuzzleView). 60 is the phone size the lab settled
   // on; a tablet has the room to draw them bigger, and the rule is only that they match.
   const px = isTablet ? 84 : 60
 
-  const [phase, setPhase] = useState('loading')   // loading | intro | question | result | error
+  const [step, setStep] = useState('loading')   // loading | welcome | questions | finishing | result | error
   const [session, setSession] = useState(null)
-  const [index, setIndex] = useState(0)
-  const [answers, setAnswers] = useState([])       // per question: { chosen, correct, correct_index }
+  const [qIdx, setQIdx] = useState(0)
+  const [answers, setAnswers] = useState([])      // per question: { correct, chosen_index, correct_index }
   const [pending, setPending] = useState(false)
-  const [result, setResult] = useState(null)
   const [answerFailed, setAnswerFailed] = useState(false)
+  const [flash, setFlash] = useState(null)        // { correct, correct_index } while the overlay is up
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const [result, setResult] = useState(null)
+  const advanceTimer = useRef(null)
+
+  const wrap = {
+    background: FLOW_BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430,
+    margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: "'Nunito', sans-serif",
+  }
+  const shell = { ...wrap, height: '100dvh', minHeight: 0, overflow: 'hidden' }
 
   function fetchSession() {
     return iconFontWithin(4000).then(icons => post(`/api/children/${child.id}/puzzle-session`, { icons }))
   }
   function begin(s) {
     setSession(s)
-    setIndex(0)
+    setQIdx(0)
     setAnswers([])
     setResult(null)
-    setPhase('intro')
+    setStep('welcome')
   }
   function retry() {
-    setPhase('loading')
-    fetchSession().then(begin, () => setPhase('error'))
+    setStep('loading')
+    fetchSession().then(begin, () => setStep('error'))
   }
 
   useEffect(() => {
     if (!child?.id) { nav('/child', { replace: true }); return }
-    fetchSession().then(begin, () => setPhase('error'))
+    fetchSession().then(begin, () => setStep('error'))
+    return () => clearTimeout(advanceTimer.current)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const total = session?.questions?.length ?? 0
+
+  async function finish() {
+    setStep('finishing')
+    try {
+      setResult(await post(`/api/puzzle-sessions/${session.session_id}/finish`))
+      setStep('result')
+    } catch {
+      setStep('error')
+    }
+  }
+
+  function advance() {
+    clearTimeout(advanceTimer.current)
+    setFlash(null)
+    if (qIdx >= total - 1) finish()
+    else setQIdx(qIdx + 1)
+  }
+
   async function choose(i) {
-    if (pending || answers[index]) return
+    if (pending || answers[qIdx]) return
     setPending(true)
     setAnswerFailed(false)
     try {
-      const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: index, chosen_index: i })
-      setAnswers(prev => { const next = prev.slice(); next[index] = r; return next })
+      const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen_index: i })
+      setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
+      setFlash({ correct: r.correct, correct_index: r.correct_index })
+      // A right answer flashes and moves on, as maths does. A wrong one stays until the child
+      // taps, because it shows them the right figure and that is worth looking at.
+      if (r.correct) advanceTimer.current = setTimeout(advance, 1400)
     } catch {
       setAnswerFailed(true)
     } finally {
@@ -110,144 +151,253 @@ export default function PuzzleScreen() {
     }
   }
 
-  async function finish() {
-    setPending(true)
-    try {
-      setResult(await post(`/api/puzzle-sessions/${session.session_id}/finish`))
-      setPhase('result')
-    } catch {
-      setPhase('error')
-    } finally {
-      setPending(false)
-    }
+  const backBtn = (onClick) => (
+    <button onClick={onClick} style={{
+      width: 42, height: 42, borderRadius: 14, background: 'rgba(255,255,255,0.85)', border: 'none',
+      fontSize: 19, color: INK, fontWeight: 800, cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.1)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>←</button>
+  )
+
+  const primaryBtn = {
+    background: TEAL, color: 'white', border: 'none', borderRadius: 20,
+    padding: '17px 54px', fontFamily: FRED, fontSize: 20, fontWeight: 600,
+    cursor: 'pointer', boxShadow: '0 10px 28px rgba(31,122,114,.38)',
   }
 
-  const q = session?.questions?.[index]
-  const answer = answers[index]
-  const total = session?.questions?.length ?? 0
-  const last = index === total - 1
+  // ── loading / finishing ────────────────────────────────────────────────────
+  if (step === 'loading' || step === 'finishing') return (
+    <div style={wrap}>
+      <style>{ANIM}</style>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, padding: 40 }}>
+        <TutoMascot size={140} expression="thinking" color={TEAL} style={{ animation: 'float 2s ease-in-out infinite' }} />
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 20, color: INK, textAlign: 'center' }}>
+          {t(step === 'loading' ? 'puzzle_preparing' : 'math_checking', language)}
+        </div>
+        <div style={{ display: 'flex', gap: 7 }}>
+          {[0, 1, 2].map(i => (
+            <span key={i} style={{
+              width: 11, height: 11, borderRadius: '50%', background: TEAL, display: 'inline-block',
+              opacity: 0.4 + i * 0.25, animation: 'float 1s ease-in-out infinite', animationDelay: `${i * 0.15}s`,
+            }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
-  return (
-    <Shell background={TEAL_BG}>
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '46px 18px 40px', fontFamily: "'Nunito', sans-serif" }}>
+  // ── error ──────────────────────────────────────────────────────────────────
+  if (step === 'error') return (
+    <div style={wrap}>
+      <style>{ANIM}</style>
+      <div style={{ position: 'absolute', top: 42, left: 18, zIndex: 10 }}>{backBtn(() => nav('/child/home'))}</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: '80px 26px 40px', textAlign: 'center' }}>
+        <TutoMascot size={130} expression="default" color={TEAL} />
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 19, color: INK, lineHeight: 1.5 }}>{t('puzzle_failed', language)}</div>
+        <button className="pz-press" onClick={retry} style={primaryBtn}>{t('puzzle_retry', language)}</button>
+      </div>
+    </div>
+  )
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <button onClick={() => nav('/child/home')} aria-label={t('puzzle_home', lang)}
-            style={{
-              width: 42, height: 42, borderRadius: 14, border: 'none', background: '#fff', cursor: 'pointer',
-              boxShadow: '0 3px 10px rgba(40,30,70,.12)', fontSize: 20, color: INK, flexShrink: 0,
-            }}>←</button>
-          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 24, color: INK, flex: 1 }}>{t('puzzle_title', lang)}</div>
-          {phase === 'question' && (
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: TEAL }}>{index + 1}/{total}</div>
-          )}
+  // ── welcome ────────────────────────────────────────────────────────────────
+  if (step === 'welcome' && session) return (
+    <div style={wrap}>
+      <style>{ANIM}</style>
+      <div style={{ position: 'absolute', top: 42, left: 18, zIndex: 10 }}>{backBtn(() => nav('/child/home'))}</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 26px 40px', gap: 20, textAlign: 'center' }}>
+        <TutoMascot size={150} expression="excited" color={TEAL} style={{ animation: 'float 3s ease-in-out infinite' }} />
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+          {t('puzzle_welcome', language)}
+        </div>
+        <div style={{
+          background: session.will_pay ? TEAL : 'rgba(255,255,255,.8)', color: session.will_pay ? '#fff' : INK_SOFT,
+          borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+        }}>
+          {session.will_pay
+            ? <>⭐ {t('math_up_to_gems', language)} {session.gems} {t('math_gems_word', language)}</>
+            : <>🌙 {t('puzzle_no_gems', language)}</>}
+        </div>
+        <button className="pz-press" onClick={() => setStep('questions')} style={{ ...primaryBtn, marginTop: 4 }}>
+          {t('math_lets_go', language)}
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── result ─────────────────────────────────────────────────────────────────
+  if (step === 'result' && result) {
+    const accuracy = result.total ? Math.round((result.correct / result.total) * 100) : 0
+    return (
+      <div style={shell}>
+        <style>{ANIM}</style>
+        <div style={{ background: TEAL, padding: '18px 24px 26px', borderRadius: '0 0 32px 32px', textAlign: 'center', flexShrink: 0 }}>
+          <TutoMascot size={108} expression="proud" color="#fff" style={{ animation: 'float 3s ease-in-out infinite', display: 'inline-block' }} />
+          <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', marginTop: 6, lineHeight: 1.5, padding: '0 8px' }}>
+            {t(encouragementKey(result.correct, result.total), language)}
+          </div>
         </div>
 
-        {phase === 'question' && (
-          <div style={{ height: 8, borderRadius: 99, background: '#fff', marginBottom: 16, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${((index + (answer ? 1 : 0)) / total) * 100}%`,
-              background: TEAL, borderRadius: 99, transition: 'width .3s ease',
-            }} />
+        <div className="pz-scroll" style={{ flex: 1, padding: '16px 18px 22px', display: 'flex', flexDirection: 'column', gap: 13 }}>
+          <div style={{
+            background: 'white', borderRadius: 22, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease both',
+          }}>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t('math_score', language)}</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: accuracy >= 80 ? GREEN : ORANGE, lineHeight: 1.05 }}>{accuracy}%</div>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>{result.correct} / {result.total} {t('math_correct', language)}</div>
+            </div>
+            <div style={{ width: 1, height: 56, background: '#eee' }} />
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>
+                {result.capped ? t('math_capped', language) : t('math_earned', language)}
+              </div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>
+                {result.capped ? '🌙' : `+${result.gems_earned}`}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>
+                {result.capped ? t('math_come_back', language) : `${t('math_gems_word', language)} ⭐`}
+              </div>
+            </div>
+          </div>
+
+          {/* One mark per puzzle, in order — the "your answers" list maths shows, at the size a
+              row of pictures needs rather than a row of sums. */}
+          <div style={{
+            background: 'white', borderRadius: 18, padding: '14px 16px', animation: 'fadeUp 0.4s ease 0.08s both',
+            boxShadow: '0 3px 12px rgba(31,122,114,.07)',
+          }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, marginBottom: 10 }}>{t('math_your_answers', language)}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {answers.map((a, i) => (
+                <div key={i} style={{
+                  width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center',
+                  background: a?.correct ? '#E4F5EC' : '#FFF1E2', fontSize: 16,
+                }}>{a?.correct ? '✅' : '🔄'}</div>
+              ))}
+            </div>
+          </div>
+
+          <button className="pz-press" onClick={() => nav('/child/home')} style={{
+            background: TEAL, color: 'white', border: 'none', borderRadius: 18, padding: '16px 22px',
+            fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer',
+            boxShadow: '0 8px 20px rgba(31,122,114,.34)', marginTop: 4,
+          }}>{t('math_done', language)}! 🏠</button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── questions ──────────────────────────────────────────────────────────────
+  const q = session?.questions?.[qIdx]
+  if (!q) return <div style={wrap}><style>{ANIM}</style></div>
+  const answer = answers[qIdx]
+  const pct = ((qIdx + (answer ? 1 : 0)) / total) * 100
+  const rightOption = flash && q.options[flash.correct_index]
+
+  return (
+    <>
+      {confirmLeave && (
+        <div onClick={() => setConfirmLeave(false)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(20,16,40,.55)', zIndex: 60,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: '#fff', borderRadius: '26px 26px 0 0', padding: '26px 22px 30px',
+            width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10, animation: 'scaleIn .2s ease both',
+          }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, textAlign: 'center' }}>{t('math_leave_title', language)}</div>
+            <div style={{ fontFamily: FRED, fontWeight: 500, fontSize: 15, color: INK_SOFT, textAlign: 'center', lineHeight: 1.5 }}>{t('math_leave_body', language)}</div>
+            <button className="pz-press" onClick={() => setConfirmLeave(false)} style={{
+              marginTop: 8, background: TEAL, color: '#fff', border: 'none', borderRadius: 16,
+              padding: '15px', fontFamily: FRED, fontSize: 17, fontWeight: 600, cursor: 'pointer',
+            }}>{t('math_leave_stay', language)}</button>
+            <button className="pz-press" onClick={() => nav('/child/home')} style={{
+              background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
+              padding: '11px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
+            }}>{t('math_leave_go', language)}</button>
+          </div>
+        </div>
+      )}
+
+      <div style={shell}>
+        <style>{ANIM}</style>
+
+        {/* The same flash maths gives an answer. A wrong one holds, shows the right figure, and
+            waits for a tap. */}
+        {flash && (
+          <div onClick={() => { if (!flash.correct) advance() }} style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+            background: flash.correct ? 'rgba(76,182,133,.94)' : 'rgba(247,148,51,.94)',
+            animation: flash.correct ? 'flashIn 1.4s ease both' : 'flashHold .22s ease both',
+            padding: '0 26px', cursor: flash.correct ? 'default' : 'pointer',
+          }}>
+            <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
+              {flash.correct ? t('math_yes', language) : t('math_almost', language)}
+            </div>
+            {!flash.correct && rightOption && (
+              <>
+                <div style={{ animation: 'pop .35s ease .1s both' }}>
+                  {rightOption.spec ? <Figure spec={rightOption.spec} px={px + 20} />
+                    : <CodeChip code={rightOption.code} px={px + 20} />}
+                </div>
+                <div style={{ fontFamily: FRED, fontWeight: 600, marginTop: 8, fontSize: 15, color: 'white', opacity: .8 }}>
+                  {language === 'tr' ? 'Devam etmek için dokun' : 'Tap to carry on'}
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {phase === 'loading' && (
-          <Card><div style={{ textAlign: 'center', color: INK_SOFT, fontWeight: 700, padding: 20 }}>{t('puzzle_preparing', lang)}</div></Card>
-        )}
-
-        {phase === 'error' && (
-          <Card>
-            <div style={{ textAlign: 'center', color: INK, fontWeight: 700, padding: '8px 0 18px' }}>{t('puzzle_failed', lang)}</div>
-            <div style={{ textAlign: 'center' }}><BigButton onClick={retry}>{t('puzzle_retry', lang)}</BigButton></div>
-          </Card>
-        )}
-
-        {phase === 'intro' && session && (
-          <Card>
-            <div style={{ textAlign: 'center', padding: '6px 4px' }}>
-              <div style={{ fontSize: 54, lineHeight: 1.1, marginBottom: 10 }}>🧩</div>
-              <div style={{ color: INK, fontWeight: 700, fontSize: 17, lineHeight: 1.4, marginBottom: 14 }}>{t('puzzle_intro', lang)}</div>
-              <div style={{
-                display: 'inline-block', background: TEAL_BG, borderRadius: 12, padding: '6px 14px', marginBottom: 20,
-                fontFamily: FRED, fontWeight: 600, fontSize: 15, color: session.will_pay ? TEAL : INK_SOFT,
-              }}>
-                {session.will_pay ? <>{t('puzzle_up_to', lang)} ⭐ {session.gems}</> : t('puzzle_no_gems', lang)}
-              </div>
-              <div><BigButton onClick={() => setPhase('question')}>{t('puzzle_start', lang)}</BigButton></div>
+        <div style={{ background: TEAL, padding: '16px 20px 18px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div onClick={() => setConfirmLeave(true)} style={{
+              width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.22)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 17, color: '#fff', fontWeight: 800, cursor: 'pointer', flexShrink: 0,
+            }}>←</div>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,.32)', borderRadius: 8, height: 10, overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: 'white', borderRadius: 8, transition: 'width 0.5s ease' }} />
             </div>
-          </Card>
-        )}
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,.95)', flexShrink: 0 }}>
+              {qIdx + 1} / {total}
+            </div>
+          </div>
+        </div>
 
-        {phase === 'question' && q && (
-          <Card>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, marginBottom: 14 }}>{t(q.stem_key, lang)}</div>
-
+        <div className="pz-scroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div key={qIdx} style={{
+            background: 'white', borderRadius: 22, padding: '22px 20px', boxShadow: '0 8px 28px rgba(31,122,114,.14)',
+            animation: 'scaleIn 0.3s ease both', flexShrink: 0,
+          }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.4, marginBottom: 14 }}>
+              {t(q.stem_key, language)}
+            </div>
             <Prompt q={q} px={px} colors={COLORS} />
+          </div>
 
-            {/* The options sit on their own panel. Drawn straight under the prompt in the same
-                tiles, a run of five headphones and the five headphone options read as one block
-                of ten, and nothing said where the question ended and the choice began. */}
-            <div style={{
-              display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8,
-              background: '#F0FAF9', border: '2px dashed #A9DDD7', borderRadius: 18, padding: 12,
-            }}>
-              {q.options.map((o, i) => {
-                const state = !answer ? null
-                  : i === answer.correct_index ? 'ok'
-                    : i === answer.chosen_index ? 'bad' : null
-                return (
-                  <button key={i} onClick={() => choose(i)} disabled={pending || !!answer}
-                    style={{
-                      background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer',
-                      opacity: answer && !state ? 0.45 : 1, transition: 'opacity .2s ease',
-                    }}>
-                    {o.spec ? <Figure spec={o.spec} px={px} state={state} colors={COLORS} />
-                      : <CodeChip code={o.code} state={state} px={px} colors={COLORS} />}
-                  </button>
-                )
-              })}
+          {/* The options are the keypad: under the question card, in their own place, each one
+              a button. */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {q.options.map((o, i) => (
+              <button key={i} className="pz-press" onClick={() => choose(i)} disabled={pending || !!answer}
+                style={{ background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer', borderRadius: 14, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }}>
+                {o.spec ? <Figure spec={o.spec} px={px} colors={COLORS} />
+                  : <CodeChip code={o.code} px={px} colors={COLORS} />}
+              </button>
+            ))}
+          </div>
+
+          {answerFailed && (
+            <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>
+              <span style={{ fontSize: 25 }}>😕</span>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: INK, lineHeight: 1.45 }}>{t('puzzle_failed', language)}</div>
             </div>
-
-            {answerFailed && (
-              <div style={{ marginTop: 14, color: COLORS.bad, fontWeight: 700 }}>{t('puzzle_failed', lang)}</div>
-            )}
-
-            {answer && (
-              <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 19, color: answer.correct ? COLORS.ok : INK }}>
-                  {answer.correct ? t('puzzle_right', lang) : t('puzzle_wrong', lang)}
-                </div>
-                <BigButton disabled={pending} onClick={() => (last ? finish() : setIndex(index + 1))}>
-                  {last ? t('puzzle_see_score', lang) : t('puzzle_next', lang)}
-                </BigButton>
-              </div>
-            )}
-          </Card>
-        )}
-
-        {phase === 'result' && result && (
-          <Card>
-            <div style={{ textAlign: 'center', padding: '6px 4px' }}>
-              <div style={{ fontSize: 54, lineHeight: 1.1, marginBottom: 8 }}>{result.capped ? '🌙' : '🎉'}</div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 26, color: INK }}>{t('puzzle_well_done', lang)}</div>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: TEAL, margin: '6px 0' }}>
-                {result.correct}/{result.total} <span style={{ fontSize: 20, color: INK_SOFT }}>{t('puzzle_correct_of', lang)}</span>
-              </div>
-              {result.gems_earned > 0 ? (
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 22, color: '#f79433', marginBottom: 18 }}>
-                  {t('math_earned', lang)} ⭐ {result.gems_earned}
-                </div>
-              ) : (
-                <div style={{ color: INK_SOFT, fontWeight: 700, marginBottom: 18 }}>
-                  {t('math_capped', lang)} — {t('math_come_back', lang)}
-                </div>
-              )}
-              <BigButton onClick={() => nav('/child/home')}>{t('puzzle_home', lang)}</BigButton>
-            </div>
-          </Card>
-        )}
+          )}
+        </div>
       </div>
-    </Shell>
+    </>
   )
 }
