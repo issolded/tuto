@@ -49,6 +49,19 @@ const sourceOf = (t) => (t.startsWith('glyph') ? 'glyph' : t.startsWith('icon') 
 // `why` labels that name a property computed from the figure rather than a field stored on it.
 const DERIVED_LABELS = new Set(['symmetry', 'flip', 'group', 'trait', 'relation', 'order'])
 
+// How to read a rule attribute off one figure. A SLOT attribute — a half, a corner mark, the
+// filled satellite — is read off the DRAWING, as the direction the mark sits from the centre of
+// the box, because that is what the child compares. The spec said "top-left" on three figures
+// turned three different ways, and the checks agreed with the spec for as long as they read it.
+const SLOT_TAG = { half: 'half', corner: 'c', position: 'P' }
+function readRule(attr) {
+  if (!SLOT_TAG[attr]) return (s) => val(s[attr])
+  return (s) => {
+    const p = drawn(s).points.find(pt => pt.tag === SLOT_TAG[attr])
+    return p ? String(((Math.round(Math.atan2(p.y - 50, p.x - 50) * 180 / Math.PI / 45) * 45) + 360) % 360) : 'none'
+  }
+}
+
 // Whether the marked answer is the one the page implies, read the way a child has to read it.
 // Returns null when it is, or what is wrong.
 function answerProblem(q) {
@@ -57,7 +70,7 @@ function answerProblem(q) {
   let why = null
 
   if (q.type === 'odd-one-out') {
-    const v = (s) => val(s[q.rule.attr])
+    const v = readRule(q.rule.attr)
     if (others.some(s => v(s) === v(ans))) why = 'the answer shares the rule value with a distractor'
     else if (new Set(others.map(v)).size !== 1) why = 'the three non-answers do not agree'
   } else if (q.type === 'analogy') {
@@ -156,9 +169,11 @@ function answerProblem(q) {
     if (others.some(s => grp(s) === grp(ans))) why = `the answer's group ${grp(ans)} is shared`
     else if (new Set(others.map(grp)).size !== 1) why = 'the three non-answers are not one group'
   } else if (q.type === 'belongs') {
-    const want = val(q.prompt[0][q.rule.attr])
-    if (val(ans[q.rule.attr]) !== want) why = 'the answer does not match the prompt'
-    else if (others.some(s => val(s[q.rule.attr]) === want)) why = 'a distractor also belongs'
+    const v = readRule(q.rule.attr)
+    const want = v(q.prompt[0])
+    if (q.prompt.some(s => v(s) !== want)) why = 'the prompt figures do not agree on the rule'
+    else if (v(ans) !== want) why = 'the answer does not match the prompt'
+    else if (others.some(s => v(s) === want)) why = 'a distractor also belongs'
   } else if (q.type === 'glyph-belongs' || q.type === 'icon-belongs') {
     const want = grp(q.prompt[0])
     if (q.prompt.some(c => grp(c) !== want)) why = 'the prompt figures are not one group'

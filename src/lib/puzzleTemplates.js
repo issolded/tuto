@@ -516,7 +516,20 @@ const clearedFor = (attr) => Object.fromEntries((NEEDS_CLEAR[attr] || []).map(a 
 // — a grid whose answer was right by both readings and unreadable by eye (10-11 seed 210458).
 // Turning and narrowing are each fine on their own, and either may be the thing held still while
 // the other moves; what they may not do is move together.
-export const NEEDS_FIXED = { position: ['rotation', 'flip'], stretch: ['rotation'], rotation: ['stretch'] }
+//
+// And `position` was never the only slot. `corner` names a corner of the figure and `half` names
+// a diagonal half of it, both in the figure's own frame, and both were being dealt rotation as
+// noise: the specs agreed "top-left" on the three non-answers while the screen showed three
+// different corners. Measured by reading the mark's direction off the drawing, 81-87% of corner
+// and half odd-one-outs from 7-8 up had no single figure that stood out — the same failure the
+// note above describes for position, which had been fixed for position alone.
+export const NEEDS_FIXED = {
+  position: ['rotation', 'flip'],
+  corner: ['rotation', 'flip'],
+  half: ['rotation', 'flip'],
+  stretch: ['rotation'],
+  rotation: ['stretch', 'position', 'corner', 'half'],
+}
 
 // Both directions of that table: `a` may not move in a question that moves `b`, whichever way
 // round they were written.
