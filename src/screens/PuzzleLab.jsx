@@ -359,7 +359,7 @@ export default function PuzzleLab() {
         <div style={{ fontSize: 11, color: C.dim, marginBottom: 18, lineHeight: 1.7 }}>
           band <strong style={{ color: C.text }}>{band}</strong> ·
           {' '}attributes: {cfg.attributes.join(', ')} ·
-          {' '}noise: {cfg.noise} ·
+          {' '}noise: {(cfg.noise || []).join(', ') || '—'} ·
           {' '}fills: {cfg.fills.length} ·
           {' '}rotations: {cfg.rotations.join('/')} ·
           {' '}halves: {cfg.halves.length} ·

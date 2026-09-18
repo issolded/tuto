@@ -189,10 +189,18 @@ export const BANDS = {
     sources: { geometric: 7, icon: 2, glyph: 1 },
     options: 4,               // the 5-6 papers offer a–d; every band above them offers a–e
     attributes: ['shape', 'fill', 'half', 'inner', 'dots', 'corner'],
+    // Noise only, never a rule — see applyNoise. Without them a question about a dot had nothing
+    // to make its four figures different pictures except changing their outline. Rotation alone
+    // was not enough: it is invisible on the circle and the square, which carry most marks, and
+    // barred outright on a corner question (NEEDS_FIXED), so 77% of mark questions still changed
+    // shape. Size is the other thing the papers' figures do while the question is about something
+    // else — the same figure, bigger or smaller.
+    noise: ['rotation', 'size'],
     shapes: ['circle', 'triangle', 'square', 'hexagon'],
     fills: ['none', 'solid'],
     rotations: [0, 90, 180, 270],
-    sizes: [1],
+    // Mostly full size, so the band still looks like its papers; the small one exists for noise.
+    sizes: [1, 1, SIZES[0]],
     stretches: [1],           // "same sides, different proportions" is a 7-8 idea
     halves: [null, null, null, 'tl', 'br'],
     inners: [null, null, null, ...INNER_NODES.slice(1, 4)],
@@ -479,8 +487,8 @@ function randomSpec(r, band) {
 
 // Attributes whose value can be moved on THIS spec and be seen. Checked per spec, not per
 // band: `dots` is a real attribute until the shape is carrying none and the pool offers none.
-function usableAttrs(r, band, spec, exclude = []) {
-  return band.attributes.filter(a => !exclude.includes(a) && otherValue(r, band, spec, a) !== null)
+function usableAttrs(r, band, spec, exclude = [], from = band.attributes) {
+  return from.filter(a => !exclude.includes(a) && otherValue(r, band, spec, a) !== null)
 }
 
 // normalizeSpec resolves unreadable combinations by precedence — a half-split owns the whole
@@ -617,21 +625,21 @@ function applyNoise(r, band, specs, ruleAttr) {
   // rule was the smallest thing there while the noise was the loudest. The papers never do that:
   // when they ask about a mark, the four figures are the same figure.
   //
-  // Only `shape` is held back: `half` and the other marks are already barred by NEEDS_CLEAR, and
-  // fill is what a mark sits on rather than something that drowns it. And held back rather than
-  // barred — a band whose figures are all one size with one proportion (5-6) has little else to
-  // be noisy with, and 12% of its draws came back empty when shape was forbidden outright. Last
-  // in the queue means it is used when nothing else will do, which at 5-6 is one question in
-  // fourteen and everywhere else is never.
+  // So noise is taken quietest-first when the rule is a mark: turning, size and proportion
+  // before fill, fill before a half-split, and the outline last of all. Held back rather than
+  // barred, because forbidding the loud ones outright emptied an eighth of 5-6's draws.
+  //
+  // And a band may offer attributes as noise that it never poses as a RULE (`band.noise`). 5-6's
+  // rule list has no quiet attribute in it at all — shape, fill, half and three marks — so every
+  // mark question it built changed the outline, 100% of them, whatever order the list was taken
+  // in. Turning a figure is not something the 5-6 papers ask about; it is something their
+  // figures do while the question is about something else.
   const MARKS = ['inner', 'dots', 'corner', 'position']
-  const LOUD = ['shape', 'fill', 'half']
+  const TIER = { shape: 3, half: 2, fill: 1 }
   const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || [])]
-  const candidates = usableAttrs(r, band, specs[0], barred)
-  // Quiet noise first, and at most ONE loud column when the rule is a mark. Shape and fill go
-  // last so they are used when nothing else will do — a band whose figures are all one size with
-  // one proportion (5-6) has little else to be noisy with, and forbidding them outright emptied
-  // an eighth of its draws.
-  if (MARKS.includes(ruleAttr)) candidates.sort((a, b) => (LOUD.includes(a) ? 1 : 0) - (LOUD.includes(b) ? 1 : 0))
+  const noisePool = [...band.attributes, ...(band.noise || []).filter(a => !band.attributes.includes(a))]
+  const candidates = usableAttrs(r, band, specs[0], barred, noisePool)
+  if (MARKS.includes(ruleAttr)) candidates.sort((a, b) => (TIER[a] || 0) - (TIER[b] || 0))
   for (const attr of candidates) {
     if (used >= want) break
     const alt = otherValue(r, band, specs[0], attr)
