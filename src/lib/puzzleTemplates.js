@@ -45,11 +45,11 @@
 // bundler, and anything server-side would need the same.
 import {
   SHAPES, FILLS, ROTATIONS, CORNERS, HALVES, SIZES, STRETCHES, INNER_NODES, POSITIONS, ATTRIBUTES,
-  makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure, mirrorSpec, hasLineOfSymmetry, samePicture,
+  makeSpec, geometryKey, attrVisible, normalizeSpec, renderFigure, mirrorSpec, hasLineOfSymmetry, symmetryGap, samePicture, tooAlike,
 } from './puzzleFigures.js'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_KINSHIP, GLYPH_ATTRIBUTES,
-  GLYPH_TRAITS, POSED_TRAIT_KEYS, traitValue, traitConflict,
+  GLYPH_TRAITS, POSED_TRAIT_KEYS, traitValue, traitConflict, traitsOfGroup,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph,
 } from './puzzleGlyphs.js'
 import {
@@ -740,14 +740,15 @@ function genSequence(r, band, seed) {
   //   them differs from a base at 0°, so each passed attrVisible individually, and the run came
   //   out constant.
   //
-  // Keying on the rendered figure settles both at once.
-  const seen = new Set()
+  // Comparing the drawn figures settles both at once — and compared as a child sees them
+  // (tooAlike), since a triangle at 45° and at 270° are two keys but 15° apart on the page.
+  const seen = []
   const values = []
   for (const v of pool(band, ruleAttr)) {
     if (v !== base[ruleAttr] && !attrVisible(base, ruleAttr, v)) continue
-    const k = geometryKey({ ...base, [ruleAttr]: v })
-    if (seen.has(k)) continue
-    seen.add(k)
+    const fig = { ...base, [ruleAttr]: v }
+    if (seen.some(f => tooAlike(f, fig))) continue
+    seen.push(fig)
     values.push(v)
   }
   const period = Math.min(band.seqPeriod, values.length)
@@ -1075,6 +1076,8 @@ function genAnalogy(r, band, seed) {
 // "toggling flip gives the same picture", which is that one axis, so a hexagon turned 45° could
 // sit among the "no symmetry" options. See hasLineOfSymmetry.
 const isSymmetric = hasLineOfSymmetry
+// In units of the 100-unit box: 10 is 6px on a 60px card.
+const NEAR_SYMMETRY = 10
 
 function genSymmetry(r, band, seed) {
   const want = band.options
@@ -1086,6 +1089,10 @@ function genSymmetry(r, band, seed) {
   const no = []
   for (let i = 0; i < 90 && (yes.length < want || no.length < want); i++) {
     const spec = randomSpec(r, band)
+    // A figure with no line of symmetry that is a few pixels from having one is neither: at card
+    // size a rectangle tilted 45° and split corner to corner is a diamond cut straight across.
+    // It goes in no bucket rather than being marked wrong for a child who saw it as symmetric.
+    if (!isSymmetric(spec) && symmetryGap(spec) < NEAR_SYMMETRY) continue
     const bucket = isSymmetric(spec) ? yes : no
     if (bucket.some(s => geometryKey(s) === geometryKey(spec))) continue
     bucket.push(spec)
@@ -1141,16 +1148,17 @@ function genCode(r, band, seed) {
   if (attrs.length < 2) return null
 
   // Each axis needs three values that are three different pictures, not merely three different
-  // spec fields — the same requirement `sequence` has, for the same reason.
+  // spec fields — the same requirement `sequence` has, for the same reason. Different as a child
+  // sees them: a 9-10 question once asked the child to tell a triangle at 45° from one at 270°.
   const valuesFor = (attr) => {
-    const seen = new Set([geometryKey(base)])
+    const seen = [base]
     const out = [base[attr]]
     for (const v of pool(band, attr)) {
       if (out.length >= 3) break
       if (!attrVisible(base, attr, v)) continue
-      const k = geometryKey({ ...base, [attr]: v })
-      if (seen.has(k)) continue
-      seen.add(k)
+      const fig = { ...base, [attr]: v }
+      if (seen.some(f => tooAlike(f, fig))) continue
+      seen.push(fig)
       out.push(v)
     }
     return out.length === 3 ? out : null
@@ -1350,6 +1358,13 @@ function genGlyphTrait(r, band, seed) {
       // that singles out a DIFFERENT picture gives the child a second defensible answer, and
       // they would be marked wrong for giving it.
       if (traitConflict(glyphs, key, odd)) continue
+      // And the majority has to be ONE kind of thing on every other trait of its group, not only
+      // free of a single outlier. Five instruments — violin, drum, and three you blow — were posed
+      // as "the one with strings", and the drum is just as much the odd one: the four without
+      // strings are three wind and a drum, split 3-1, so the page had two answers. traitConflict
+      // did not see it because `blow` splits the whole set 3-2 and singles nobody out.
+      if (traitsOfGroup(GLYPH_TRAITS[key].group).some(k => k !== key
+        && new Set(majority.map(g => traitValue(k, g))).size > 1)) continue
 
       const trait = GLYPH_TRAITS[key]
       const spec = (glyph) => makeGlyphSpec({
@@ -1627,6 +1642,11 @@ export function validateQuestion(q) {
     // child cannot resolve; with the SAME label it is a freebie. Either way the page is wrong.
     const keys = q.prompt.map(geometryKey)
     if (new Set(keys).size !== keys.length) return 'two figures in the prompt draw the same picture'
+    for (let i = 0; i < q.prompt.length; i++) {
+      for (let j = i + 1; j < q.prompt.length; j++) {
+        if (tooAlike(q.prompt[i], q.prompt[j])) return 'two figures in the prompt are too alike to tell apart'
+      }
+    }
     return null
   }
 
@@ -1654,6 +1674,8 @@ export function validateQuestion(q) {
   for (let i = 0; i < figs.length; i++) {
     for (let j = i + 1; j < figs.length; j++) {
       if (samePicture(figs[i], figs[j])) return 'two options draw the same picture'
+      // And a picture a child can tell apart: see turnGap.
+      if (tooAlike(figs[i], figs[j])) return 'two options are too alike to tell apart'
     }
   }
 

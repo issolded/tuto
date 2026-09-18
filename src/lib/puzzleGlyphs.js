@@ -101,8 +101,9 @@ export const GROUP_KEYS = Object.keys(GLYPH_GROUPS)
 //   same reason from the other side: a piano HAS strings, struck by hammers, and the drawing
 //   does not show them, so `strings` answered a child who knew that with "wrong".
 //
-//   What is left is what the picture shows: a bug's wings, an instrument's strings, and the
-//   three vehicles that are not on the ground.
+//   What is left is what the picture shows: a bug's wings, and the three vehicles that are not
+//   on the ground. An instrument's strings are drawn too, but see `strings` for why that row is
+//   no longer posed.
 //
 //   A trait belongs to exactly ONE group, and every option comes from that group. If the options
 //   were not all the same kind, the category reading would answer the question and the property
@@ -123,7 +124,13 @@ export const GLYPH_TRAITS = {
   // The strings are drawn on all three. That is the whole reason this row survives and the ones
   // about what an instrument is for do not — and why 🎹, whose strings are under the lid, is not
   // in the group at all.
-  strings:  { group: 'music', tr: 'telli', en: 'has strings',
+  //
+  // But it is NOT POSED either, since 2026-09-18. The group has four instruments without strings
+  // — a drum and three you blow — so "the one with strings" at five options always puts all four
+  // beside it, and the drum is as much the odd one out as the violin. Answering a 9-10 sheet blind
+  // turned it up. It comes back if the group gains a fourth wind or string instrument that draws
+  // its evidence; genGlyphTrait now refuses a majority that splits on any other trait.
+  strings:  { group: 'music', tr: 'telli', en: 'has strings', posed: false,
     yes: ['🎸', '🎻', '🪕'], no: ['🥁', '🎺', '🎷', '🪈'] },
   // NEVER POSED, and still here. Removing it with the other knowledge traits also removed what
   // it did for `strings`: with four non-string instruments that are three wind and a drum, the

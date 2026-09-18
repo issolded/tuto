@@ -485,6 +485,64 @@ function drawnParts(rawSpec) {
   }
 }
 
+// How far one picture has to turn to become the other, in degrees, as a child sees it — for two
+// figures that differ ONLY in orientation (rotation, flip). Infinity for anything else: another
+// fill, size, stretch, mark or shape is a different kind of difference and is not measured here.
+//
+// "The keys differ" is not "a child can tell them apart". A triangle turned 45° and one turned
+// 270° are different specs and different keys, but a triangle repeats every 120°, so on the page
+// they are 15° apart — a few pixels at the corners of a 60px card. A 9-10 code question hinged on
+// exactly that pair, and mirror questions offered a hexagon beside its 15°-turned twin. Found by
+// answering generated sheets blind. The angle is read off the drawn points, each against its
+// nearest counterpart, so the shape's own symmetry is accounted for without being told it.
+export function turnGap(a, b) {
+  const na = normalizeSpec(a)
+  const nb = normalizeSpec(b)
+  if (ATTRIBUTES.some(x => x !== 'rotation' && JSON.stringify(na[x]) !== JSON.stringify(nb[x]))) return Infinity
+  const p = drawnParts(a)
+  const q = drawnParts(b)
+  if (p.head !== q.head || p.marks !== q.marks || p.points.length !== q.points.length) return Infinity
+  const turn = (from, to) => Math.max(0, ...from.map(([tag, [x, y]]) => {
+    const rad = Math.hypot(x - 50, y - 50)
+    if (rad < 4) return 0   // at the centre a point has no direction to turn
+    const chord = Math.min(...to.filter(([t]) => t === tag).map(([, [u, v]]) => Math.hypot(u - x, v - y)))
+    return (2 * Math.asin(Math.min(1, chord / (2 * rad))) * 180) / Math.PI
+  }))
+  return Math.max(turn(p.points, q.points), turn(q.points, p.points))
+}
+
+// How far a figure is from having a line of symmetry, in units of the 100-unit box: over every
+// mirror line, the least distance its drawn points are from landing on their reflections. 0 for a
+// symmetric figure. Infinity when no reflection even has the same parts (a hatch that turns into
+// another angle, say), since that difference does not shrink with the scan.
+//
+// hasLineOfSymmetry answers yes or no, and a no can be a near miss the child cannot see: a
+// rectangle tilted 45° and split corner to corner reads as a diamond cut straight across, and a
+// 9-10 sheet offered it as "the one without symmetry" beside a figure that had it.
+export function symmetryGap(spec) {
+  const self = drawnParts(spec)
+  let best = Infinity
+  for (let d = 0; d < 360; d += 2) {
+    const q = drawnParts({ ...spec, flip: !spec.flip, rotation: (spec.rotation + d) % 360 })
+    if (self.head !== q.head || self.marks !== q.marks || self.points.length !== q.points.length) continue
+    const far = (from, to) => Math.max(0, ...from.map(([tag, [x, y]]) => Math.min(
+      ...to.filter(([t]) => t === tag).map(([, [u, v]]) => Math.hypot(u - x, v - y)))))
+    best = Math.min(best, Math.max(far(self.points, q.points), far(q.points, self.points)))
+  }
+  return best
+}
+
+// Below this, two orientations of one figure are one picture to a child. 30° keeps a pentagon
+// point-up apart from point-down (36°) and a square from a diamond (45°), and drops a hexagon
+// turned 45° (15° from where it started) and a pentagon turned 90° (18°).
+export const MIN_TURN = 30
+
+// The test every "are these two different pictures?" question should ask: not only the same
+// picture, but one a child cannot tell from it.
+export function tooAlike(a, b) {
+  return samePicture(a, b) || turnGap(a, b) < MIN_TURN
+}
+
 // Same picture, compared with a tolerance far below any real difference in the vocabulary and
 // far above floating-point error.
 function partsMatch(p, q) {
