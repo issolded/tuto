@@ -26,6 +26,7 @@ export const PC = {
   writing:  '#6cc28a', writingBg: '#E4F4EA',
   homework: '#e0a93b', homeworkBg: '#FBF1D6',
   drawing:  '#d97ab0', drawingBg: '#FBE6F1',
+  puzzle:   '#2BA59A', puzzleBg:  '#D9F3F1',
 }
 
 export const FONT = "'Plus Jakarta Sans', sans-serif"

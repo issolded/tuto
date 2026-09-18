@@ -17,6 +17,7 @@ const TASK_LABELS = {
   story:    { label: 'My Stories',  type: 'writing' },
   homework: { label: 'My Homework', type: null },
   drawing:  { label: 'My Drawings', type: null },
+  puzzle:   { label: 'My Puzzles',  type: 'puzzle' },
   bonus:    { label: 'Bonus Gift',  type: null },
 }
 
