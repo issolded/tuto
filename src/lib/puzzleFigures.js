@@ -496,19 +496,32 @@ function drawnParts(rawSpec) {
 // answering generated sheets blind. The angle is read off the drawn points, each against its
 // nearest counterpart, so the shape's own symmetry is accounted for without being told it.
 export function turnGap(a, b) {
+  return orientationGap(a, b).degrees
+}
+
+// The same comparison, with the distance as well as the angle: the furthest any drawn point
+// moves, in units of the 100-unit box. A turn can be wide and still tiny on the page — a small
+// hexagon's satellites sit a dozen units from its centre, and 30° moves them four pixels.
+function orientationGap(a, b) {
+  const none = { degrees: Infinity, shift: Infinity }
   const na = normalizeSpec(a)
   const nb = normalizeSpec(b)
-  if (ATTRIBUTES.some(x => x !== 'rotation' && JSON.stringify(na[x]) !== JSON.stringify(nb[x]))) return Infinity
+  if (ATTRIBUTES.some(x => x !== 'rotation' && JSON.stringify(na[x]) !== JSON.stringify(nb[x]))) return none
   const p = drawnParts(a)
   const q = drawnParts(b)
-  if (p.head !== q.head || p.marks !== q.marks || p.points.length !== q.points.length) return Infinity
-  const turn = (from, to) => Math.max(0, ...from.map(([tag, [x, y]]) => {
-    const rad = Math.hypot(x - 50, y - 50)
-    if (rad < 4) return 0   // at the centre a point has no direction to turn
-    const chord = Math.min(...to.filter(([t]) => t === tag).map(([, [u, v]]) => Math.hypot(u - x, v - y)))
-    return (2 * Math.asin(Math.min(1, chord / (2 * rad))) * 180) / Math.PI
-  }))
-  return Math.max(turn(p.points, q.points), turn(q.points, p.points))
+  if (p.head !== q.head || p.marks !== q.marks || p.points.length !== q.points.length) return none
+  let degrees = 0
+  let shift = 0
+  for (const [from, to] of [[p.points, q.points], [q.points, p.points]]) {
+    for (const [tag, [x, y]] of from) {
+      const chord = Math.min(...to.filter(([t]) => t === tag).map(([, [u, v]]) => Math.hypot(u - x, v - y)))
+      shift = Math.max(shift, chord)
+      const rad = Math.hypot(x - 50, y - 50)
+      if (rad < 4) continue   // at the centre a point has no direction to turn
+      degrees = Math.max(degrees, (2 * Math.asin(Math.min(1, chord / (2 * rad))) * 180) / Math.PI)
+    }
+  }
+  return { degrees, shift }
 }
 
 // How far a figure is from having a line of symmetry, in units of the 100-unit box: over every
@@ -536,11 +549,17 @@ export function symmetryGap(spec) {
 // point-up apart from point-down (36°) and a square from a diamond (45°), and drops a hexagon
 // turned 45° (15° from where it started) and a pentagon turned 90° (18°).
 export const MIN_TURN = 30
+// And however wide the turn, something on the figure has to move this far: 12 units is 7px on a
+// 60px card. Found on a mirror question whose answer and a distractor were one small hexagon with
+// its filled satellite 30° round — four pixels.
+export const MIN_SHIFT = 12
 
 // The test every "are these two different pictures?" question should ask: not only the same
 // picture, but one a child cannot tell from it.
 export function tooAlike(a, b) {
-  return samePicture(a, b) || turnGap(a, b) < MIN_TURN
+  if (samePicture(a, b)) return true
+  const { degrees, shift } = orientationGap(a, b)
+  return degrees < MIN_TURN || shift < MIN_SHIFT
 }
 
 // Same picture, compared with a tolerance far below any real difference in the vocabulary and

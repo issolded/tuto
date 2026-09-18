@@ -624,7 +624,12 @@ function applyNoise(r, band, specs, ruleAttr) {
   const keepsRule = (attr, v) => {
     const s = specs[0]
     if (!ruleAttr || !(ruleAttr in s)) return true
-    return valueKey(normalizeSpec({ ...s, [attr]: v })[ruleAttr]) === valueKey(s[ruleAttr])
+    const noisy = { ...s, [attr]: v }
+    if (valueKey(normalizeSpec(noisy)[ruleAttr]) !== valueKey(s[ruleAttr])) return false
+    // Kept in the spec is not the same as kept on the page. A rotation question dealt `shape` as
+    // noise turned one option into a circle, which still says rotation 0 and shows no rotation at
+    // all — and it was the answer (9-10, found answering a sheet blind).
+    return pool(band, ruleAttr).some(x => valueKey(x) !== valueKey(s[ruleAttr]) && attrVisible(noisy, ruleAttr, x))
   }
 
   // …and the outline is held still when the rule is a MARK. A question whose answer is "the one
@@ -652,7 +657,13 @@ function applyNoise(r, band, specs, ruleAttr) {
   const OUTLINE = ['size', 'stretch']
   const TIER = MARKS.includes(ruleAttr) ? { shape: 3, half: 2, fill: 1 }
     : OUTLINE.includes(ruleAttr) ? { shape: 3, size: 2, stretch: 2, rotation: 1 } : {}
-  const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || [])]
+  //
+  // And a TURN is read against one outline or not at all. "These three are turned the same way"
+  // across two squares and an arrow, or two pentagons and an arrow, asks whether a pentagon at
+  // 45° faces where an arrow at 225° does — there is no such comparison to make. Barred, not
+  // held back: unlike size, there is no amount of it that stays readable.
+  const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || []),
+    ...(ruleAttr === 'rotation' ? ['shape'] : [])]
   const noisePool = [...band.attributes, ...(band.noise || []).filter(a => !band.attributes.includes(a))]
   const candidates = usableAttrs(r, band, specs[0], barred, noisePool)
   candidates.sort((a, b) => (TIER[a] || 0) - (TIER[b] || 0))
