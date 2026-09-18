@@ -101,7 +101,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       simetriye birkaç piksel kalan şekil simetri sorusuna girmez. Bilinçli bırakılanlar: `belongs` /
       `odd-one-out` dönüşü kural yapmaz (farklı şekiller arasında "aynı yön" okunmuyor), `strings`
       sorulmaz (5 seçenekte hep davul + 3 üflemeliyle çıkıyor, davul da tek kalıyor).
-      Sıra: PR #1 incelemesi → tek bantta çocuk ekranı + cevap kayıtları → aile raporu/Gem. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
+      **Çocuk ekranı yayında (2026-09-18):** "Bulmacalarım" kartı, tüm bantlar (yaştan), 10 soruluk sitting,
+      Gem (30 × skor ölçeği, günde 3). Soruyu sunucu üretir, cevabı tarayıcıya hiç göndermez, her
+      dokunuşu seed'den yeniden üretip kontrol eder (`puzzle_sessions` / `puzzle_attempts`).
+      Kalan: aile raporu (sohbet bulmaca sonuçlarını henüz okumuyor), ana sayfadaki "Bugün"
+      şeridinde bulmaca yok, iPad'de kart en altta. **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,
