@@ -5391,8 +5391,14 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
       .update({ finished_at: new Date().toISOString(), correct })
       .eq('id', session.id).is('finished_at', null).select('id')
     if (!claimed?.length) {
-      const { data: again } = await supabase.from('puzzle_sessions')
-        .select('correct, gems_earned, capped').eq('id', session.id).maybeSingle()
+      // The other call is paying right now; its figure lands a moment after its claim.
+      let again = null
+      for (let i = 0; i < 10; i++) {
+        ;({ data: again } = await supabase.from('puzzle_sessions')
+          .select('correct, gems_earned, capped').eq('id', session.id).maybeSingle())
+        if (again?.gems_earned != null) break
+        await new Promise(r => setTimeout(r, 200))
+      }
       return done(again || { correct })
     }
 
