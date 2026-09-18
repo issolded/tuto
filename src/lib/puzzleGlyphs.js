@@ -125,9 +125,19 @@ export const GLYPH_TRAITS = {
   // in the group at all.
   strings:  { group: 'music', tr: 'telli', en: 'has strings',
     yes: ['🎸', '🎻', '🪕'], no: ['🥁', '🎺', '🎷', '🪈'] },
+  // NEVER POSED, and still here. Removing it with the other knowledge traits also removed what
+  // it did for `strings`: with four non-string instruments that are three wind and a drum, the
+  // drum is "the only one you do not blow" — a second odd one out that traitConflict found only
+  // while this row existed to find it with. A child may well know which instruments are blown;
+  // the question must not be built on it, and must not be answerable by it either.
+  blow:     { group: 'music', tr: 'üflenir', en: 'you blow it', posed: false,
+    yes: ['🎺', '🎷', '🪈'], no: ['🎸', '🥁', '🎻', '🪕'] },
 }
 
 export const TRAIT_KEYS = Object.keys(GLYPH_TRAITS)
+// The traits a question may be BUILT on. The rest exist only so traitConflict can see a second
+// reading coming (see `blow`).
+export const POSED_TRAIT_KEYS = TRAIT_KEYS.filter(k => GLYPH_TRAITS[k].posed !== false)
 
 // Both constraints above, enforced at import. The tables are meant to be edited by hand, and a
 // trait that has quietly stopped covering its group is not visible by reading it.

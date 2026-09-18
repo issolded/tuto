@@ -32,7 +32,7 @@ installStubFonts()
 
 const { BANDS, BAND_KEYS, BOOK_COVERAGE, NEEDS_FIXED, figureKey, generateQuestion, generateSession, validateQuestion, questionSignature } =
   await import('../src/lib/puzzleTemplates.js')
-const { groupOf, GLYPH_GROUPS, GLYPH_RELATIONS, TRAIT_KEYS, traitValue, traitConflict } =
+const { groupOf, GLYPH_GROUPS, GLYPH_RELATIONS, POSED_TRAIT_KEYS: TRAIT_KEYS, traitValue, traitConflict } =
   await import('../src/lib/puzzleGlyphs.js')
 const { iconGroupOf, ICON_GROUPS } = await import('../src/lib/puzzleIcons.js')
 const { ATTRIBUTES, geometryKey, normalizeSpec } = await import('../src/lib/puzzleFigures.js')

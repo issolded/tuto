@@ -49,7 +49,7 @@ import {
 } from './puzzleFigures.js'
 import {
   GLYPH_GROUPS, GROUP_KEYS, GLYPH_RELATIONS, RELATION_KEYS, GLYPH_KINSHIP, GLYPH_ATTRIBUTES,
-  GLYPH_TRAITS, TRAIT_KEYS, traitValue, traitConflict,
+  GLYPH_TRAITS, POSED_TRAIT_KEYS, traitValue, traitConflict,
   makeGlyphSpec, glyphKey, groupOf, renderGlyph,
 } from './puzzleGlyphs.js'
 import {
@@ -531,12 +531,20 @@ const clearedFor = (attr) => Object.fromEntries((NEEDS_CLEAR[attr] || []).map(a 
 // different corners. Measured by reading the mark's direction off the drawing, 81-87% of corner
 // and half odd-one-outs from 7-8 up had no single figure that stood out — the same failure the
 // note above describes for position, which had been fixed for position alone.
+//
+// Two more pairs, both from a blind 10-11 sheet. A hatch is a pattern in the figure's frame
+// too: `hatch-90` on three figures turned three ways drew horizontal lines, vertical lines and
+// lines at 45°, and "the three share a fill" was three different-looking fills. And size and
+// proportion are both how big the outline is: a narrowed figure reads as a smaller one, so a
+// grid whose row changed size and whose column changed proportion could not be told apart.
 export const NEEDS_FIXED = {
   position: ['rotation', 'flip'],
   corner: ['rotation', 'flip'],
   half: ['rotation', 'flip'],
-  stretch: ['rotation'],
-  rotation: ['stretch', 'position', 'corner', 'half'],
+  fill: ['rotation', 'flip'],
+  stretch: ['rotation', 'size'],
+  size: ['stretch'],
+  rotation: ['stretch', 'position', 'corner', 'half', 'fill'],
 }
 
 // Both directions of that table: `a` may not move in a question that moves `b`, whichever way
@@ -1318,7 +1326,7 @@ function genGlyphTrait(r, band, seed) {
   // Whichever side has enough members to fill the question is the majority; the odd one comes
   // from the other. A trait whose sides are both big enough offers the question in both
   // directions and they are listed separately, so neither is the default.
-  const candidates = shuffle(r, TRAIT_KEYS.flatMap((key) => {
+  const candidates = shuffle(r, POSED_TRAIT_KEYS.flatMap((key) => {
     const t = GLYPH_TRAITS[key]
     return [[t.yes, t.no], [t.no, t.yes]]
       .filter(([many, few]) => many.length >= want - 1 && few.length >= 1)
