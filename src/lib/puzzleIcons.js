@@ -51,7 +51,10 @@ export const ICON_GROUPS = {
   },
   weather: {
     tr: 'hava', en: 'weather',
-    icons: ['wb_sunny', 'ac_unit', 'umbrella', 'thunderstorm', 'water_drop', 'cloud'],
+    // `umbrella` was here: it is not weather, it is what you take out in it — a child sorting
+    // "things in the sky" left it out, correctly — and closed, as this font draws it, it was hard
+    // to recognise at all. Sun behind a cloud is weather and reads at a glance.
+    icons: ['wb_sunny', 'ac_unit', 'partly_cloudy_day', 'thunderstorm', 'water_drop', 'cloud'],
   },
   plant: {
     tr: 'bitki', en: 'plant',
@@ -132,7 +135,7 @@ export const ICON_FILLS = [0, 1]
 // browser and cannot live in puzzle:check. RUN IT AFTER EDITING THE TABLE. The fourteen below
 // come back at 0%; the rest range from 20% to 81%.
 const FILL_DOES_NOTHING = new Set([
-  'flight', 'directions_bike', 'ac_unit', 'umbrella',
+  'flight', 'directions_bike', 'ac_unit',
   'grass', 'music_note', 'piano', 'sports_soccer',
   'add', 'check', 'close', 'currency_pound', 'percent', 'remove',
   // Not at 0% like the rest — 16% of its ink moves — but below every icon this list calls live

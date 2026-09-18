@@ -210,6 +210,8 @@ function satellites(spec) {
 // renderer and the key go through. Precedence runs from the most structural device to the
 // least: a half-split owns the whole interior, a nested node needs an empty one to sit in,
 // and marks need a plain ground to be counted against.
+const fitsTriangle = (node) => node.shape === 'triangle' || (node.shape === 'circle' && node.size <= 0.45)
+
 export function normalizeSpec(spec) {
   const s = { ...spec }
   const canCorner = s.corner && CORNER_SHAPES.has(s.shape)
@@ -220,6 +222,11 @@ export function normalizeSpec(spec) {
   // other side — six of the questions in a blind sheet of seventy carried one, and each read as a
   // printing error.
   if (s.shape === 'arrow') s.inner = null
+  // A triangle has room for a nested figure only if it is small or is itself a triangle: its
+  // inscribed circle is half its size, so the ring (0.58), the nested square (0.52) and the
+  // two-level ring (0.66) stood out past its sides — four of 72 questions in a blind 5-6 sheet.
+  // A concentric triangle of any size fits, being the same shape; a circle up to 0.45 fits.
+  if (s.shape === 'triangle' && s.inner && !fitsTriangle(s.inner)) s.inner = null
   if (!HALF_SHAPES.has(s.shape)) s.half = null
   if (!SATELLITE_SHAPES.has(s.shape)) s.position = null
 

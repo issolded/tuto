@@ -200,7 +200,9 @@ export const GLYPH_RELATIONS = {
   },
   lives_in: {
     tr: 'yaşadığı yer', en: 'lives in',
-    pairs: [['🐟', '🌊'], ['🐪', '🏜️'], ['🐄', '🌾'], ['🐦', '🌳']],
+    // 🐄→🌾 was here: a cow does not live in wheat, and a child reading the pair asked whether it
+    // eats it. Three pairs whose "where it lives" is the picture.
+    pairs: [['🐟', '🌊'], ['🐪', '🏜️'], ['🐦', '🌳']],
   },
 }
 

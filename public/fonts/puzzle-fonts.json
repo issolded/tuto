@@ -4,14 +4,14 @@
     "puzzle-icons.woff2": {
       "family": "Material Symbols Outlined",
       "license": "Apache License 2.0",
-      "contents": "ac_unit,add,bed,cake,chair,check,close,cloud,coffee,currency_pound,directions_bike,directions_boat,directions_car,door_front,flight,forest,grass,headphones,home,icecream,key,lightbulb,local_florist,local_pizza,local_shipping,lunch_dining,mic,music_note,nutrition,park,percent,piano,potted_plant,radio,remove,speaker,sports_baseball,sports_basketball,sports_football,sports_soccer,sports_tennis,sports_volleyball,thunderstorm,train,umbrella,water_drop,wb_sunny",
-      "bytes": 10544
+      "contents": "ac_unit,add,bed,cake,chair,check,close,cloud,coffee,currency_pound,directions_bike,directions_boat,directions_car,door_front,flight,forest,grass,headphones,home,icecream,key,lightbulb,local_florist,local_pizza,local_shipping,lunch_dining,mic,music_note,nutrition,park,partly_cloudy_day,percent,piano,potted_plant,radio,remove,speaker,sports_baseball,sports_basketball,sports_football,sports_soccer,sports_tennis,sports_volleyball,thunderstorm,train,water_drop,wb_sunny",
+      "bytes": 10876
     }
   },
   "emoji_art": {
     "source": "googlefonts/noto-emoji@v2.051/svg",
     "license": "Apache License 2.0",
-    "contents": "🍎🍐🍓🍌🍇🍒🚗🚌🚲🚂✈️🚁🚚🛵⛵🚀🐶🐱🐰🐻🐼🦊🐴🐷🐹🐭🐄🐑🐝🐛🦋🐞🐜🦟🪰☀️🌧️❄️🌪️🌈🌱🌳🌻🌵🍃✏️📏✂️📎🖍️🖊️🖌️📐🎸🥁🎺🎻🪕🎷🪈🍯🐔🥚🥛🧶🐣☂️🧣🧢⛈️🏠🐟🌊🐪🏜️🌾🐦",
-    "bytes": 323553
+    "contents": "🍎🍐🍓🍌🍇🍒🚗🚌🚲🚂✈️🚁🚚🛵⛵🚀🐶🐱🐰🐻🐼🦊🐴🐷🐹🐭🐄🐑🐝🐛🦋🐞🐜🦟🪰☀️🌧️❄️🌪️🌈🌱🌳🌻🌵🍃✏️📏✂️📎🖍️🖊️🖌️📐🎸🥁🎺🎻🪕🎷🪈🍯🐔🥚🥛🧶🐣☂️🧣🧢⛈️🏠🐟🌊🐪🏜️🐦",
+    "bytes": 319163
   }
 }
