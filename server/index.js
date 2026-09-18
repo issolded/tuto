@@ -3291,6 +3291,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       { data: mathToday },
       { data: storiesToday },
       { data: paintingsToday },
+      { data: puzzlesToday },
       { data: ledger },
       { data: rewards },
     ] = await Promise.all([
@@ -3299,6 +3300,8 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       supabase.from('math_progress').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
       supabase.from('stories').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
       supabase.from('paintings').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
+      // Finished sittings only: one abandoned after two questions is not a puzzle session done.
+      supabase.from('puzzle_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', todayStart).lte('created_at', todayEnd),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
     ])
@@ -3315,6 +3318,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
         writing: (storiesToday || []).length,
         homework: (subsToday || []).filter(s => s.task_type === 'homework').length,
         drawing: (paintingsToday || []).length,
+        puzzle: (puzzlesToday || []).length,
       },
       gems,
       nearestGoal: nearestGoal ? { id: nearestGoal.id, name: nearestGoal.name, icon: nearestGoal.icon, bt_cost: nearestGoal.bt_cost } : null,
@@ -3325,7 +3329,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
   } catch (err) {
     res.status(500).json({
       today: 0, monthTreeCount: 0,
-      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 },
+      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 },
       gems: 0, nearestGoal: null, hasAnyGoals: false,
       error: err.message,
     })

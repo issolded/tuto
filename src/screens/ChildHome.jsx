@@ -132,7 +132,7 @@ function bandFor(age) {
 
 const EMPTY_TODAY = {
   today: 0, monthTreeCount: 0,
-  activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 },
+  activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 },
   nearestGoal: null, hasAnyGoals: false,
 }
 
@@ -142,6 +142,7 @@ const ACTIVITY_TYPES = [
   { key: 'writing',  chipKey: 'chip_story',    bg: '#D4F5E0', emoji: '✏️' },
   { key: 'homework', chipKey: 'chip_homework', bg: '#FFF1CF', emoji: '📸' },
   { key: 'drawing',  chipKey: 'chip_drawing',  bg: '#EFE3FF', emoji: '🎨' },
+  { key: 'puzzle',   chipKey: 'chip_puzzle',   bg: '#D9F3F1', emoji: '🧩' },
 ]
 
 // Mid/mature's plain-text activity summary — young shows this visually via
@@ -256,7 +257,8 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
         {/* ── Activities ── */}
         <div className="tuto-today-sec">
           {band === 'young' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {/* Three to a row: six chips in one row are 45px each on a phone, narrower than "Matematik". */}
               {ACTIVITY_TYPES.map(a => {
                 const count = today.activities[a.key] || 0
                 const done = count > 0

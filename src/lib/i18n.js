@@ -32,6 +32,7 @@ const STRINGS = {
   chip_story:         { en: 'Story',         tr: 'Hikâye' },
   chip_homework:      { en: 'Homework',      tr: 'Ödev' },
   chip_drawing:       { en: 'Drawing',       tr: 'Çizim' },
+  chip_puzzle:        { en: 'Puzzles',       tr: 'Bulmaca' },
 
   home_trees_month:   { en: 'trees this month', tr: 'ağaç bu ay' },
   home_to_goal:       { en: 'to',        tr: 'kaldı:' },

@@ -168,7 +168,7 @@ export async function getChildGems(childId) {
 // gems and nearest goal in one request (server aggregates it, see
 // server/index.js's /today-summary route for why this isn't 6 client queries).
 export async function getTodaySummary(childId) {
-  const empty = { today: 0, monthTreeCount: 0, activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 }, gems: 0, nearestGoal: null }
+  const empty = { today: 0, monthTreeCount: 0, activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 }, gems: 0, nearestGoal: null }
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/today-summary`)
     const data = await res.json()
