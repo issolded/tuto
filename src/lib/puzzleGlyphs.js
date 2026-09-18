@@ -119,6 +119,12 @@ export const GLYPH_TRAITS = {
   // all in the drawing, and every option it is set against is a road or water vehicle.
   flies:    { group: 'vehicle', tr: 'uçar', en: 'flies',
     yes: ['✈️', '🚁', '🚀'], no: ['🚗', '🚌', '🚲', '🚂', '🚚', '🛵', '⛵'] },
+  // NEVER POSED, like `blow` below, and for the same reason: it is here so a question about
+  // flying cannot be answered by it. It went out with the knowledge traits, and with it went the
+  // guard — a 9-10 sheet dealt ⛵ among four non-fliers, and "the helicopter flies" had a twin in
+  // "the boat is the only one on water". genGlyphTrait now wants the majority to agree on this row.
+  on_water: { group: 'vehicle', tr: 'suda gider', en: 'goes on water', posed: false,
+    yes: ['⛵'], no: ['🚗', '🚌', '🚲', '🚂', '✈️', '🚁', '🚚', '🛵', '🚀'] },
   wings:    { group: 'bug', tr: 'kanatlı', en: 'has wings',
     yes: ['🐝', '🦋', '🐞', '🦟', '🪰'], no: ['🐛', '🐜'] },
   // The strings are drawn on all three. That is the whole reason this row survives and the ones

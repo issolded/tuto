@@ -663,7 +663,13 @@ function applyNoise(r, band, specs, ruleAttr) {
   // 45° faces where an arrow at 225° does — there is no such comparison to make. Barred, not
   // held back: unlike size, there is no amount of it that stays readable.
   const barred = [ruleAttr, ...(NEEDS_CLEAR[ruleAttr] || []), ...(NEEDS_FIXED[ruleAttr] || []),
-    ...(ruleAttr === 'rotation' ? ['shape'] : [])]
+    ...(ruleAttr === 'rotation' ? ['shape'] : []),
+    // The same thing from the other side of the size/stretch rule above: when the question IS
+    // the outline, its proportions may not change either. A pentagon widened to 1.45 has a long
+    // flat top and reads as a hexagon, and a child counting sides to find the one that is not
+    // like the others counts wrong through no fault of their own (8-9, answered blind). Nearly
+    // every shape question from 7-8 up was dealt stretch as noise.
+    ...(ruleAttr === 'shape' ? ['stretch'] : [])]
   const noisePool = [...band.attributes, ...(band.noise || []).filter(a => !band.attributes.includes(a))]
   const candidates = usableAttrs(r, band, specs[0], barred, noisePool)
   candidates.sort((a, b) => (TIER[a] || 0) - (TIER[b] || 0))
@@ -1254,14 +1260,35 @@ function genReflection(r, band, seed) {
   const turned = (spec, by) => makeSpec({ ...spec, rotation: (spec.rotation + by + 360) % 360 })
 
   // The mistakes the question is about, in the order the papers make them. Turning instead of
-  // mirroring is the big one and it gets two entries, since a child who does it may turn either
-  // way; not transforming at all is the next.
-  const options = [
-    { spec: answer, why: null },
-    { spec: makeSpec({ ...base }), why: 'flip' },
-    { spec: turned(base, 180), why: 'flip' },
-    { spec: turned(answer, 90), why: 'rotation' },
+  // mirroring is the big one and may go either way; not transforming at all is the next.
+  //
+  // Taken as CANDIDATES, skipping any a child could not tell from one already on the card, rather
+  // than as a fixed list that throws the question away on a collision. On a hexagon the fixed
+  // list collided constantly — the figure repeats every 60°, so "turned 180°" and "turned 90°"
+  // are often 30° from the answer or from each other — and when tooAlike() learned to see that,
+  // mirror questions fell to less than half and 7-8 could not always build one.
+  const options = [{ spec: answer, why: null }]
+  const add = (spec, why) => {
+    if (options.length >= band.options) return
+    if (options.some(o => tooAlike(o.spec, spec))) return
+    options.push({ spec, why })
+  }
+  const mistakes = [
+    [makeSpec({ ...base }), 'flip'],
+    [turned(base, 180), 'flip'],
+    [turned(answer, 90), 'rotation'],
+    [turned(answer, 270), 'rotation'],
+    [turned(base, 90), 'flip'],
+    [turned(base, 270), 'flip'],
   ]
+  // The original has to be one of them: without it the question does not ask about mirroring.
+  if (tooAlike(answer, mistakes[0][0])) return null
+  // One slot is kept for the last kind of distractor, below.
+  for (const [spec, why] of mistakes) {
+    if (options.length >= band.options - 1) break
+    add(spec, why)
+  }
+
   // The last distractor is a true mirror with something else moved, which is the one that asks
   // whether the child checked the figure as well as its handedness.
   //
@@ -1269,14 +1296,15 @@ function genReflection(r, band, seed) {
   // eliminated without thinking about mirrors at all, so it costs the question one of its five
   // options and teaches nothing — and it is what this picked, being the first attribute in the
   // list. Every other attribute keeps the same object and asks the child to look at it.
-  while (options.length < band.options) {
+  for (let tries = 0; tries < 6 && options.length < band.options; tries++) {
     const movable = shuffle(r, usableAttrs(r, band, answer))
       .map(a => [a, otherValue(r, band, answer, a)])
       .filter(([, v]) => v !== null)
     const spare = movable.find(([a]) => a !== 'shape') ?? movable[0]
     if (!spare) return null
-    options.push({ spec: makeSpec({ ...answer, [spare[0]]: spare[1] }), why: spare[0] })
+    add(makeSpec({ ...answer, [spare[0]]: spare[1] }), spare[0])
   }
+  if (options.length < band.options) return null
   if (new Set(options.map(o => geometryKey(o.spec))).size !== options.length) return null
 
   const order = shuffle(r, indices(options.length))

@@ -545,10 +545,13 @@ export function symmetryGap(spec) {
   return best
 }
 
-// Below this, two orientations of one figure are one picture to a child. 30° keeps a pentagon
+// Below this, two orientations of one figure are one picture to a child. 35° keeps a pentagon
 // point-up apart from point-down (36°) and a square from a diamond (45°), and drops a hexagon
-// turned 45° (15° from where it started) and a pentagon turned 90° (18°).
-export const MIN_TURN = 30
+// turned 45° (15° from where it started) and a pentagon turned 90° (18°). It was 30, which let
+// through a hexagon beside its 30°-turned twin — the most two hexagons can ever differ, since
+// the outline repeats every 60°, and on the page only "slightly tilted". A second blind 9-10
+// sheet missed two mirror questions on exactly that pair.
+export const MIN_TURN = 35
 // And however wide the turn, something on the figure has to move this far: 12 units is 7px on a
 // 60px card. Found on a mirror question whose answer and a distractor were one small hexagon with
 // its filled satellite 30° round — four pixels.
