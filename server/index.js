@@ -169,6 +169,8 @@ async function getParentContext(parentId) {
       { data: lastMathQuestions },
       { data: goals },
       { data: goalRequests },
+      { data: puzzleSessions },
+      puzzleSkills,
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -216,6 +218,12 @@ async function getParentContext(parentId) {
       supabase.from('reward_suggestions')
         .select('id, name, icon, suggested_gems, created_at')
         .eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
+      // Shape & pattern puzzles: the finished sittings, and the per-skill read below.
+      supabase.from('puzzle_sessions')
+        .select('band, correct, question_count, gems_earned, capped, created_at')
+        .eq('child_id', child.id).not('finished_at', 'is', null)
+        .order('created_at', { ascending: false }).limit(10),
+      puzzleStanding(child.id).catch(() => null),
     ])
 
     const sub = submissions || []
@@ -279,6 +287,19 @@ async function getParentContext(parentId) {
             .map(r => ({ topic: r.topic_name, question: r.question, child_answer: r.child_answer,
                          was_correct: r.correct, used_hint: r.help_used }))
         : `no maths questions recorded for ${child.name} yet`,
+      // Puzzles are not maths and must not be reported as maths: they are shape-and-pattern
+      // reasoning (the 11+ "non-verbal reasoning" papers). Same rule as mathTopics for the
+      // per-skill read: the verdict is code's, and a skill under the floor carries no figures.
+      puzzleSessions: (puzzleSessions || []).length
+        ? puzzleSessions.map(p => ({ date: p.created_at, band: p.band, correct: `${p.correct}/${p.question_count}`,
+            gems: p.capped ? 'none — daily limit already reached' : p.gems_earned }))
+        : `${child.name} has not done any shape & pattern puzzles yet`,
+      puzzleSkills: puzzleSkills?.length
+        ? puzzleSkills.map(k => k.standing === 'not enough yet'
+            ? { skill: k.skill, attempts: k.attempts,
+                standing: `only ${k.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
+            : k)
+        : `not enough puzzles answered yet to say anything per skill for ${child.name}`,
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,
@@ -5249,6 +5270,46 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
 // stored. The engine itself is a byte-for-byte copy of src/lib (server/puzzle, `npm run
 // puzzle:sync`), because the server is deployed on its own and imports nothing from src/.
 const PUZZLE_DEFAULTS = { gems: 30, dailyCap: 3 }
+
+// Question types, grouped into the skills a parent would recognise. Three vocabularies (shapes,
+// emoji, icons) ask the same thing, and a parent asking "how is she at sequences" means all three.
+const PUZZLE_SKILLS = {
+  'odd-one-out': 'spotting the odd one out', 'glyph-odd': 'spotting the odd one out', 'icon-odd': 'spotting the odd one out',
+  'glyph-trait': 'spotting the odd one out by a feature',
+  identical: 'finding the identical figure',
+  sequence: 'what comes next (sequences)', 'glyph-sequence': 'what comes next (sequences)', 'icon-sequence': 'what comes next (sequences)',
+  belongs: 'which one belongs with a group', 'glyph-belongs': 'which one belongs with a group', 'icon-belongs': 'which one belongs with a group',
+  'grid-complete': 'completing a pattern grid',
+  analogy: 'analogies (A is to B as C is to ?)', 'glyph-analogy': 'analogies (A is to B as C is to ?)',
+  reflection: 'mirror images', symmetry: 'lines of symmetry', code: 'letter codes',
+}
+
+// Per-skill standing from the raw answers, on the maths rules (MASTERY_*): the last twelve per
+// skill, nothing said under five, and the verdict decided here rather than by the model.
+async function puzzleStanding(childId) {
+  const { data, error } = await supabase.from('puzzle_attempts')
+    .select('type, correct, created_at').eq('child_id', childId)
+    .order('created_at', { ascending: false }).limit(400)
+  if (error) { console.error(`[PUZZLE] standing read failed for ${childId}: ${error.message}`); return null }
+  const bySkill = new Map()
+  for (const row of data || []) {
+    const skill = PUZZLE_SKILLS[row.type] || row.type
+    const rows = bySkill.get(skill) || []
+    if (rows.length < MASTERY_WINDOW) rows.push(row)
+    bySkill.set(skill, rows)
+  }
+  return [...bySkill.entries()].map(([skill, rows]) => {
+    const correct = rows.filter(r => r.correct).length
+    const accuracy = Math.round((correct / rows.length) * 100)
+    return {
+      skill, attempts: rows.length, correct, accuracy,
+      standing: rows.length < MASTERY_MIN_ATTEMPTS ? 'not enough yet'
+        : accuracy < MASTERY_WEAK_BELOW ? 'weak'
+        : accuracy >= MASTERY_CLEARS_AT ? 'strong'
+        : 'getting there',
+    }
+  }).sort((a, b) => a.accuracy - b.accuracy)
+}
 const PUZZLE_QUESTIONS = 10
 
 // Age to band. The bands are named for the papers they follow and overlap at the edges (7-8,
