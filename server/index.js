@@ -5344,6 +5344,15 @@ function publicQuestion(q) {
 // Regenerating ten questions takes a few milliseconds, but an answer arrives every few seconds
 // for the length of a sitting, so the sheet is kept for the sittings in progress.
 const puzzleSheets = new Map()
+// And the session row itself, for the same sittings. Looking it up was one of the two database
+// round trips between a child's tap and the flash — about a fifth of a second each from Railway,
+// on top of the request — and a sitting in progress does not change until its finish call, which
+// drops it from here. A restart just means the first answer after it reads the row again.
+const puzzleOpen = new Map()
+function keepOpen(session) {
+  puzzleOpen.set(session.id, session)
+  if (puzzleOpen.size > 500) puzzleOpen.delete(puzzleOpen.keys().next().value)
+}
 async function puzzleSheet(session) {
   const hit = puzzleSheets.get(session.id)
   if (hit) return hit
@@ -5375,6 +5384,7 @@ app.post('/api/children/:childId/puzzle-session', async (req, res) => {
       .select('id').single()
     if (error) return res.status(500).json({ error: error.message })
     puzzleSheets.set(session.id, sheet)
+    keepOpen({ id: session.id, child_id: childId, band, seed, icons, question_count: sheet.length, finished_at: null })
 
     // Said up front, so the screen can tell the child before the first question rather than after
     // the last that this sitting will not pay.
@@ -5397,10 +5407,14 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
   const index = Number(req.body?.question_index)
   const chosen = Number(req.body?.chosen_index)
   try {
-    const { data: session } = await supabase.from('puzzle_sessions')
-      .select('id, child_id, band, seed, icons, question_count, finished_at').eq('id', sessionId).maybeSingle()
-    if (!session) return res.status(404).json({ error: 'session not found' })
-    if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
+    let session = puzzleOpen.get(sessionId)
+    if (!session) {
+      ;({ data: session } = await supabase.from('puzzle_sessions')
+        .select('id, child_id, band, seed, icons, question_count, finished_at').eq('id', sessionId).maybeSingle())
+      if (!session) return res.status(404).json({ error: 'session not found' })
+      if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
+      keepOpen(session)
+    }
     const sheet = await puzzleSheet(session)
     const q = sheet[index]
     if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
@@ -5428,6 +5442,7 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
 
 app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
   const { sessionId } = req.params
+  puzzleOpen.delete(sessionId)
   try {
     const { data: session } = await supabase.from('puzzle_sessions')
       .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()

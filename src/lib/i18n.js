@@ -401,7 +401,7 @@ const STRINGS = {
 
   // Per-question feedback and the result screen.
   math_yes:           { en: 'Yes! ⭐',      tr: 'Doğru! ⭐' },
-  math_almost:        { en: 'Almost! The answer was', tr: 'Az kaldı! Doğrusu' },
+  math_almost:        { en: 'Almost! The answer was', tr: 'Hmm, bu değil! Doğrusu' },
   math_your_answers:  { en: 'Your answers:', tr: 'Senin cevapların:' },
   math_your_answer:   { en: 'Your answer:',  tr: 'Senin cevabın:' },
   math_answer_was:    { en: 'The answer was', tr: 'Doğrusu' },

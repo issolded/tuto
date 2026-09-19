@@ -1945,9 +1945,23 @@ export function questionSignature(q) {
 // too narrow to honour it still fills the session rather than coming back short.
 const PER_TYPE = 2
 
+// What a picture question is ABOUT, beyond its signature. A live 7-8 sitting asked 🐫→🏜️ :: 🐦→?
+// and then, one question later, 🐦→🌳 :: 🐫→? — two signatures, one question with its pairs
+// swapped. `lives_in` has three pairs, so any two of its analogies share at least one. The same
+// goes for a second "which one flies" or a second fruit-against-animals: the child has just
+// answered it. So each relation, trait and pair of groups is asked once a sitting. Geometric
+// questions have no key — a second size rule on different shapes is a different question.
+function topicKey(q) {
+  const a = q.rule?.attr || ''
+  if (a.startsWith('relation:') || a.startsWith('trait:')) return a
+  if (a === 'group') return `group:${[q.rule.from, q.rule.to].sort().join('+')}`
+  return null
+}
+
 export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {}) {
   const out = []
   const seen = new Set()
+  const topics = new Set()
   const perType = {}
   for (const capped of [true, false]) {
     for (let i = 0; out.length < count && i < count * 40; i++) {
@@ -1955,8 +1969,11 @@ export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {
       if (!q) continue
       const sig = questionSignature(q)
       if (seen.has(sig)) continue
+      const topic = topicKey(q)
       if (capped && (perType[q.type] || 0) >= PER_TYPE) continue
+      if (capped && topic && topics.has(topic)) continue
       seen.add(sig)
+      if (topic) topics.add(topic)
       perType[q.type] = (perType[q.type] || 0) + 1
       out.push(q)
     }

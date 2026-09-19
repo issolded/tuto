@@ -81,6 +81,9 @@ export default function PuzzleScreen() {
   const [qIdx, setQIdx] = useState(0)
   const [answers, setAnswers] = useState([])      // per question: { correct, chosen_index, correct_index }
   const [pending, setPending] = useState(false)
+  // The option just tapped, while its answer is on the way. The check is the server's and takes
+  // about a second from a phone; without this the tap did nothing visible for that second.
+  const [picked, setPicked] = useState(null)
   const [answerFailed, setAnswerFailed] = useState(false)
   const [flash, setFlash] = useState(null)        // { correct, correct_index } while the overlay is up
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -136,6 +139,7 @@ export default function PuzzleScreen() {
   async function choose(i) {
     if (pending || answers[qIdx]) return
     setPending(true)
+    setPicked(i)
     setAnswerFailed(false)
     try {
       const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen_index: i })
@@ -148,6 +152,7 @@ export default function PuzzleScreen() {
       setAnswerFailed(true)
     } finally {
       setPending(false)
+      setPicked(null)
     }
   }
 
@@ -261,20 +266,44 @@ export default function PuzzleScreen() {
             </div>
           </div>
 
-          {/* One mark per puzzle, in order — the "your answers" list maths shows, at the size a
-              row of pictures needs rather than a row of sums. */}
-          <div style={{
-            background: 'white', borderRadius: 18, padding: '14px 16px', animation: 'fadeUp 0.4s ease 0.08s both',
-            boxShadow: '0 3px 12px rgba(31,122,114,.07)',
-          }}>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, marginBottom: 10 }}>{t('math_your_answers', language)}</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {answers.map((a, i) => (
-                <div key={i} style={{
-                  width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center',
-                  background: a?.correct ? '#E4F5EC' : '#FFF1E2', fontSize: 16,
-                }}>{a?.correct ? '✅' : '🔄'}</div>
-              ))}
+          {/* One row per puzzle, as maths lists its sums: what was asked, what the child picked,
+              and the right one where they differ. A row of ticks said how many, not which — and
+              a wrong answer is only worth something next to the figure that was right. */}
+          <div style={{ animation: 'fadeUp 0.4s ease 0.08s both' }}>
+            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, marginBottom: 10 }}>{t('math_your_answers', language)}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {answers.map((a, i) => {
+                const pq = session.questions[i]
+                const mini = (o) => o && (o.spec ? <Figure spec={o.spec} px={34} colors={COLORS} />
+                  : <CodeChip code={o.code} px={26} colors={COLORS} />)
+                return (
+                  <div key={i} style={{
+                    background: 'white', borderRadius: 15, padding: '11px 15px',
+                    display: 'flex', alignItems: 'flex-start', gap: 11,
+                    boxShadow: '0 3px 12px rgba(31,122,114,.07)',
+                    animation: `fadeUp 0.35s ease ${0.1 + i * 0.05}s both`,
+                  }}>
+                    <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{a?.correct ? '✅' : '🔄'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}>
+                        {i + 1}. {t(pq.stem_key, language)}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ fontWeight: 700, fontSize: 12.5, color: a?.correct ? GREEN : INK_SOFT }}>{t('math_your_answer', language)}</span>
+                          {mini(pq.options[a?.chosen_index])}
+                        </div>
+                        {a && !a.correct && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <span style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE }}>{t('math_answer_was', language)}</span>
+                            {mini(pq.options[a.correct_index])}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -383,7 +412,13 @@ export default function PuzzleScreen() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             {q.options.map((o, i) => (
               <button key={i} className="pz-press" onClick={() => choose(i)} disabled={pending || !!answer}
-                style={{ background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer', borderRadius: 14, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }}>
+                style={{
+                  background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer', borderRadius: 14,
+                  transition: 'transform .12s ease, opacity .12s ease, box-shadow .12s ease',
+                  ...(picked === i
+                    ? { transform: 'scale(1.08)', boxShadow: `0 0 0 4px ${TEAL}, 0 8px 20px rgba(31,122,114,.3)` }
+                    : { opacity: picked !== null ? 0.45 : 1, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }),
+                }}>
                 {o.spec ? <Figure spec={o.spec} px={px} colors={COLORS} />
                   : <CodeChip code={o.code} px={px} colors={COLORS} />}
               </button>
