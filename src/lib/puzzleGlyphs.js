@@ -228,7 +228,11 @@ export const GLYPH_RELATIONS = {
   },
   protects: {
     tr: 'korunma', en: 'protects from',
-    pairs: [['🌧️', '☂️'], ['❄️', '🧣'], ['☀️', '🧢'], ['⛈️', '🏠']],
+    // ⛈️→🏠 was here (2026-09-19): "a house protects you from a storm" is true, but so is an
+    // umbrella, and ☂️ was offered beside 🏠 as a distractor — a live 7-8 sitting marked the house
+    // right and would have marked the umbrella wrong, which is the answer a child reaches first.
+    // A storm is rain with lightning; it has no protector of its own that rain's does not share.
+    pairs: [['🌧️', '☂️'], ['❄️', '🧣'], ['☀️', '🧢']],
   },
   lives_in: {
     tr: 'yaşadığı yer', en: 'lives in',
@@ -245,7 +249,12 @@ export const RELATION_KEYS = Object.keys(GLYPH_RELATIONS)
 // snow — but a scarf is also made of that wool, and offering it against the sheep gave a second
 // answer a child could defend. genGlyphAnalogy walks these with the relations when it rules out
 // distractors reachable from the prompt.
-export const GLYPH_KINSHIP = [['🧶', '🧣']]
+//
+// The weather ones for the same reason from the other side. Against ☀️→? a sunshade is an
+// umbrella and a tree is shade; against ❄️→? people do carry umbrellas in snow; against 🌧️→? a
+// tree is where you shelter. Each was a distractor beside the answer, and each is a second answer
+// a child can defend.
+export const GLYPH_KINSHIP = [['🧶', '🧣'], ['☀️', '☂️'], ['☀️', '🌳'], ['❄️', '☂️'], ['🌧️', '🌳']]
 
 // A pair may not appear under two relations: if 🐝→🍯 is both "produces" and "lives in", a
 // question built on one relation is answerable by the other and has two defensible answers.
