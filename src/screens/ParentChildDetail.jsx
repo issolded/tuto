@@ -5,7 +5,7 @@ import { hashPin } from '../lib/hash'
 import { useT, useUiLang } from '../lib/parentI18n'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { downscale } from '../lib/image'
-import { t as childT, localeFor } from '../lib/i18n'
+import { t as childT, localeFor, LANGS, childLang as childLangOf } from '../lib/i18n'
 import {
   PC, FONT, SHADOW_SM, PCSS,
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot,
@@ -1162,6 +1162,30 @@ export default function ParentChildDetail() {
             </div>
           </div>
         </div>
+
+        {/* The language the child is taught in. It lived only at the top of Task settings, one
+            screen down, and a parent looking for it here — on the child's own card — did not
+            find it. Same write as that screen makes; both stay. */}
+        <Card pad={12} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>
+            {s('ts_lang_for', { name: child.name })}
+          </div>
+          {LANGS.map(l => {
+            const on = childLangOf(child) === l.code
+            return (
+              <button key={l.code} className="tc-press tc-tap" title={l.label} aria-label={l.label} aria-pressed={on}
+                onClick={async () => {
+                  if (on) return
+                  setChild(c => ({ ...c, language: l.code }))
+                  await supabase.from('children').update({ language: l.code }).eq('id', child.id)
+                }}
+                style={{
+                  background: on ? PC.tealBg : '#fff', border: `2px solid ${on ? PC.teal : PC.line}`,
+                  borderRadius: 12, padding: '6px 9px', cursor: on ? 'default' : 'pointer', fontSize: 18, lineHeight: 1,
+                }}>{l.flag}</button>
+            )
+          })}
+        </Card>
 
         {/* pending approvals */}
         <div>
