@@ -7,7 +7,8 @@
 //
 // Written for a child reading it, not for the engine: attributes are named the way a child
 // would point at them ("which way it points", "how many dots"), and Turkish is written so no
-// suffix has to agree with a word chosen at run time.
+// suffix has to agree with a word chosen at run time. Spanish carries its article in the table and
+// avoids adjectives that would have to agree with it ("es diferente", never "distinta").
 
 const ATTR = {
   tr: {
@@ -19,6 +20,11 @@ const ATTR = {
     shape: 'shape', fill: 'shading', rotation: 'direction', size: 'size', stretch: 'width',
     half: 'shaded half', dots: 'number of dots', corner: 'corner mark', inner: 'shape inside',
     position: 'filled little circle', flip: 'way it faces',
+  },
+  es: {
+    shape: 'la forma', fill: 'el relleno', rotation: 'la dirección', size: 'el tamaño', stretch: 'la anchura',
+    half: 'la mitad pintada', dots: 'el número de puntos', corner: 'la marca de la esquina', inner: 'la figura de dentro',
+    position: 'el sitio del circulito relleno', flip: 'el lado al que mira',
   },
 }
 
@@ -32,6 +38,7 @@ const NOM = {
   },
 }
 NOM.en = ATTR.en
+NOM.es = ATTR.es
 
 // What a group of pictures IS, as the end of "they are all …" and "this one is …".
 const GROUP = {
@@ -49,6 +56,13 @@ const GROUP = {
     food: ['food or drink', 'food or drink'], home: ['things at home', 'a thing at home'],
     sport: ['sport things', 'a sport thing'], symbol: ['symbols', 'a symbol'],
   },
+  es: {
+    fruit: ['fruta', 'una fruta'], vehicle: ['vehículos', 'un vehículo'], animal: ['mamíferos', 'un mamífero'],
+    bug: ['bichos', 'un bicho'], weather: ['cosas del tiempo', 'algo del tiempo'], plant: ['plantas', 'una planta'],
+    tool: ['cosas del cole', 'una cosa del cole'], music: ['cosas de música', 'algo de música'],
+    food: ['comida o bebida', 'comida o bebida'], home: ['cosas de casa', 'una cosa de casa'],
+    sport: ['cosas de deporte', 'una cosa de deporte'], symbol: ['símbolos', 'un símbolo'],
+  },
 }
 const RELATION = {
   tr: {
@@ -63,6 +77,12 @@ const RELATION = {
     protects: 'The second picture protects us from the first. The answer is what protects us from the third.',
     lives_in: 'The first one lives in the place in the second picture. The answer is where the third one lives.',
   },
+  es: {
+    produces: 'La primera imagen nos da la segunda. La respuesta es lo que nos da la tercera.',
+    becomes: 'La primera imagen se convierte en la segunda. La respuesta es aquello en lo que se convierte la tercera.',
+    protects: 'La segunda imagen nos protege de la primera. La respuesta es lo que nos protege de la tercera.',
+    lives_in: 'El primero vive en el sitio de la segunda imagen. La respuesta es donde vive el tercero.',
+  },
 }
 
 const TRAIT = {
@@ -74,14 +94,21 @@ const TRAIT = {
     flies: ['Only this one can fly; the others cannot.', 'All the others can fly; this one cannot.'],
     wings: ['Only this one has wings.', 'All the others have wings; this one does not.'],
   },
+  es: {
+    flies: ['Solo este puede volar; los demás no.', 'Todos los demás pueden volar; este no.'],
+    wings: ['Solo este tiene alas.', 'Todos los demás tienen alas; este no.'],
+  },
 }
 
 const list = (names, lang) => (names.length < 2 ? names[0]
-  : `${names.slice(0, -1).join(', ')} ${lang === 'tr' ? 've' : 'and'} ${names[names.length - 1]}`)
+  : `${names.slice(0, -1).join(', ')} ${{ tr: 've', es: 'y' }[lang] || 'and'} ${names[names.length - 1]}`)
 
 export function explainQuestion(q, lang = 'en') {
-  const L = lang === 'tr' ? 'tr' : 'en'
+  const L = ['tr', 'es'].includes(lang) ? lang : 'en'
   const tr = L === 'tr'
+  const es = L === 'es'
+  // Picks the sentence for the language: P(english, turkish, spanish).
+  const P = (en, trS, esS) => (tr ? trS : es ? esS : en)
   const attr = String(q.rule?.attr ?? '')
   const parts = attr.replace(/^code:/, '').split('+')
   const names = parts.map(a => ATTR[L][a]).filter(Boolean)
@@ -93,65 +120,85 @@ export function explainQuestion(q, lang = 'en') {
   switch (q.type) {
     case 'odd-one-out':
       if (!A) break
-      return tr ? `Hepsinin ${A} aynı, yalnızca bunun ${A} farklı.` : `They all have the same ${A} — only this one's is different.`
+      return P(`They all have the same ${A} — only this one's is different.`, `Hepsinin ${A} aynı, yalnızca bunun ${A} farklı.`,
+        `En todos ${A} es igual; solo en este es diferente.`)
     case 'belongs':
       if (!A) break
-      return tr ? `Üsttekilerin hepsinin ${A} aynı. Doğru cevap da bu özelliği taşıyan tek seçenek.`
-        : `The ones above all have the same ${A}, and the answer is the only option that does too.`
+      return P(`The ones above all have the same ${A}, and the answer is the only option that does too.`,
+        `Üsttekilerin hepsinin ${A} aynı. Doğru cevap da bu özelliği taşıyan tek seçenek.`,
+        `En los de arriba ${A} es igual, y la respuesta es la única opción donde también lo es.`)
     case 'identical':
-      return tr ? 'Doğru cevap üstteki şeklin tıpatıp aynısı. Diğerlerinin her birinde küçük bir fark var.'
-        : 'The answer is exactly the same as the shape above. Each of the others has one small difference.'
+      return P('The answer is exactly the same as the shape above. Each of the others has one small difference.',
+        'Doğru cevap üstteki şeklin tıpatıp aynısı. Diğerlerinin her birinde küçük bir fark var.',
+        'La respuesta es exactamente igual que la figura de arriba. Cada una de las otras tiene una pequeña diferencia.')
     case 'sequence': {
       const step = q.rule?.step
       if (step !== undefined && q.rule.attr === 'dots') {
-        if (step > 0) return tr ? `Her adımda bir nokta artıyor, sırada ${q.rule.to} noktalı şekil var.` : `One more dot each time, so ${q.rule.to} dots come next.`
-        return tr ? 'Her adımda bir nokta azalıyor, sırada hiç noktası olmayan şekil var.' : 'One dot fewer each time, so no dots come next.'
+        if (step > 0) {
+          return P(`One more dot each time, so ${q.rule.to} dots come next.`, `Her adımda bir nokta artıyor, sırada ${q.rule.to} noktalı şekil var.`,
+            `Cada vez hay un punto más, así que ahora tocan ${q.rule.to} puntos.`)
+        }
+        return P('One dot fewer each time, so no dots come next.', 'Her adımda bir nokta azalıyor, sırada hiç noktası olmayan şekil var.',
+          'Cada vez hay un punto menos, así que ahora toca una figura sin puntos.')
       }
       if (step !== undefined && q.rule.attr === 'rotation') {
         const cw = step > 0
-        return tr ? `Şekil her adımda ${cw ? 'saat yönünde' : 'saatin tersine'} biraz daha dönüyor.`
-          : `The shape turns a little further ${cw ? 'clockwise' : 'anticlockwise'} each time.`
+        return P(`The shape turns a little further ${cw ? 'clockwise' : 'anticlockwise'} each time.`,
+          `Şekil her adımda ${cw ? 'saat yönünde' : 'saatin tersine'} biraz daha dönüyor.`,
+          `La figura gira un poco más cada vez, ${cw ? 'en el sentido de las agujas del reloj' : 'al revés que las agujas del reloj'}.`)
       }
       if (!A) break
       if (nom[1]) {
-        return tr ? `${cap(nom[0])} sırayla değişip tekrar ediyor. Bir yandan da ${nom[1]} bir değişip bir geri dönüyor.`
-          : `The ${A} changes in order and repeats. At the same time the ${names[1]} switches back and forth.`
+        return P(`The ${A} changes in order and repeats. At the same time the ${names[1]} switches back and forth.`,
+          `${cap(nom[0])} sırayla değişip tekrar ediyor. Bir yandan da ${nom[1]} bir değişip bir geri dönüyor.`,
+          `${cap(nom[0])} cambia en orden y se repite. A la vez, ${nom[1]} va y vuelve una y otra vez.`)
       }
-      return tr ? `${cap(nom[0])} sırayla değişiyor ve aynı sırayla tekrar ediyor.` : `The ${A} changes in order, and the order repeats.`
+      return P(`The ${A} changes in order, and the order repeats.`, `${cap(nom[0])} sırayla değişiyor ve aynı sırayla tekrar ediyor.`,
+        `${cap(nom[0])} cambia en orden, y el orden se repite.`)
     }
     case 'grid-complete':
       if (nom.length < 2) break
-      return tr ? `Bir yönde ${nom[0]}, öbür yönde ${nom[1]} değişiyor. Boş kutu ikisine birden uymalı.`
-        : `One way the ${names[0]} changes, the other way the ${names[1]}. The empty box has to fit both.`
+      return P(`One way the ${names[0]} changes, the other way the ${names[1]}. The empty box has to fit both.`,
+        `Bir yönde ${nom[0]}, öbür yönde ${nom[1]} değişiyor. Boş kutu ikisine birden uymalı.`,
+        `En un sentido cambia ${nom[0]}; en el otro, ${nom[1]}. La casilla vacía tiene que encajar con los dos.`)
     case 'analogy':
       if (!A) break
-      return tr ? `İlk şekilden ikincisine ${list(nom, L)} değişiyor. Üçüncü şekle aynı değişikliği yapınca doğru cevap çıkıyor.`
-        : `From the first shape to the second, the ${list(names, L)} changes. Make the same change to the third and you get the answer.`
+      return P(`From the first shape to the second, the ${list(names, L)} changes. Make the same change to the third and you get the answer.`,
+        `İlk şekilden ikincisine ${list(nom, L)} değişiyor. Üçüncü şekle aynı değişikliği yapınca doğru cevap çıkıyor.`,
+        `De la primera figura a la segunda ${nom.length > 1 ? 'cambian' : 'cambia'} ${list(nom, L)}. Haz el mismo cambio en la tercera y tendrás la respuesta.`)
     case 'reflection':
-      return tr ? 'Aynada şekil ters döner: sağdaki her şey sola, soldaki her şey sağa geçer.'
-        : 'In a mirror a shape flips: everything on the right moves to the left, and the left to the right.'
+      return P('In a mirror a shape flips: everything on the right moves to the left, and the left to the right.',
+        'Aynada şekil ters döner: sağdaki her şey sola, soldaki her şey sağa geçer.',
+        'En un espejo la figura se da la vuelta: lo de la derecha pasa a la izquierda, y lo de la izquierda, a la derecha.')
     case 'symmetry':
       return q.rule?.to
-        ? (tr ? 'Ortadan ikiye katlayınca iki yarısı tam üst üste gelen tek şekil bu.' : 'This is the only shape whose two halves match when you fold it down the middle.')
-        : (tr ? 'Diğerlerinin hepsi ortadan katlanınca iki yarısı üst üste geliyor, bunda gelmiyor.' : 'All the others fold into two matching halves; this one does not.')
+        ? P('This is the only shape whose two halves match when you fold it down the middle.',
+          'Ortadan ikiye katlayınca iki yarısı tam üst üste gelen tek şekil bu.',
+          'Es la única figura cuyas dos mitades coinciden al doblarla por la mitad.')
+        : P('All the others fold into two matching halves; this one does not.',
+          'Diğerlerinin hepsi ortadan katlanınca iki yarısı üst üste geliyor, bunda gelmiyor.',
+          'Todas las demás se doblan en dos mitades iguales; esta no.')
     case 'code': {
       const [a, b] = nom
       if (!a || !b) break
-      return tr ? `Harflerden biri ${a} için, öbürü ${b} için. Soru işaretli şekle ikisini de bakarak seç.`
-        : `One letter is for the ${a}, the other for the ${b}. Check both on the shape with the question mark.`
+      return P(`One letter is for the ${a}, the other for the ${b}. Check both on the shape with the question mark.`,
+        `Harflerden biri ${a} için, öbürü ${b} için. Soru işaretli şekle ikisini de bakarak seç.`,
+        `Una letra es para ${a} y la otra para ${b}. Fíjate en las dos en la figura del signo de interrogación.`)
     }
     case 'glyph-odd':
     case 'icon-odd': {
       const inG = GROUP[L][q.rule?.from], outG = GROUP[L][q.rule?.to]
       if (!inG || !outG) break
-      return tr ? `Diğerlerinin hepsi ${inG[0]}, bu ise ${outG[1]}.` : `All the others are ${inG[0]}; this one is ${outG[1]}.`
+      return P(`All the others are ${inG[0]}; this one is ${outG[1]}.`, `Diğerlerinin hepsi ${inG[0]}, bu ise ${outG[1]}.`,
+        `Todos los demás son ${inG[0]}; este es ${outG[1]}.`)
     }
     case 'glyph-belongs':
     case 'icon-belongs': {
       const inG = GROUP[L][q.rule?.from]
       if (!inG) break
-      return tr ? `Üsttekilerin hepsi ${inG[0]}. Seçeneklerden ${inG[0]} olan tek şey doğru cevap.`
-        : `The ones above are all ${inG[0]}, and the answer is the only option that is too.`
+      return P(`The ones above are all ${inG[0]}, and the answer is the only option that is too.`,
+        `Üsttekilerin hepsi ${inG[0]}. Seçeneklerden ${inG[0]} olan tek şey doğru cevap.`,
+        `Los de arriba son todos ${inG[0]}, y la respuesta es la única opción que también lo es.`)
     }
     case 'glyph-trait': {
       const t = TRAIT[L][attr.replace(/^trait:/, '')]
@@ -164,14 +211,15 @@ export function explainQuestion(q, lang = 'en') {
       break
     }
     case 'glyph-sequence':
-      return tr ? 'Resimler hep aynı sırayla tekrar ediyor.' : 'The pictures repeat in the same order.'
+      return P('The pictures repeat in the same order.', 'Resimler hep aynı sırayla tekrar ediyor.', 'Los dibujos se repiten siempre en el mismo orden.')
     case 'icon-sequence':
-      if (attr === 'fill') return tr ? 'Resim bir dolu, bir boş gidiyor.' : 'The picture goes filled, empty, filled, empty.'
+      if (attr === 'fill') return P('The picture goes filled, empty, filled, empty.', 'Resim bir dolu, bir boş gidiyor.', 'El dibujo va lleno, vacío, lleno, vacío.')
       if (attr === 'icon+fill') {
-        return tr ? 'Resimler aynı sırayla tekrar ediyor, bir yandan da bir dolu bir boş gidiyor.'
-          : 'The pictures repeat in order, and they also go filled, empty, filled, empty.'
+        return P('The pictures repeat in order, and they also go filled, empty, filled, empty.',
+          'Resimler aynı sırayla tekrar ediyor, bir yandan da bir dolu bir boş gidiyor.',
+          'Los dibujos se repiten en orden y, además, van lleno, vacío, lleno, vacío.')
       }
-      return tr ? 'Resimler aynı sırayla tekrar ediyor.' : 'The pictures repeat in the same order.'
+      return P('The pictures repeat in the same order.', 'Resimler aynı sırayla tekrar ediyor.', 'Los dibujos se repiten en el mismo orden.')
     default:
   }
   return null

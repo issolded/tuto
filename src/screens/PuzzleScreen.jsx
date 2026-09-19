@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { t, childLang } from '../lib/i18n'
+import { t, say, childLang } from '../lib/i18n'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { Figure, Prompt, CodeChip } from '../components/PuzzleView'
@@ -400,7 +400,7 @@ export default function PuzzleScreen() {
                   </div>
                 )}
                 <div style={{ fontFamily: FRED, fontWeight: 600, marginTop: 8, fontSize: 15, color: 'white', opacity: .8 }}>
-                  {language === 'tr' ? 'Devam etmek için dokun' : 'Tap to carry on'}
+                  {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
                 </div>
               </>
             )}

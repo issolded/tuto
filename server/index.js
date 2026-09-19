@@ -2040,6 +2040,17 @@ async function sendDrawingPhotoTool(paintingId, parentId) {
   return { success: true, child: child.name }
 }
 
+// How many homeworks sent on the same local day as `sub` have already been paid. null when the
+// count cannot be read, which every cap treats as full.
+async function homeworkPaidOnDayOf(sub, tz) {
+  const day = DateTime.fromISO(sub.created_at, { zone: 'utc' }).setZone(tz)
+  const { data, error } = await supabase.from('submissions')
+    .select('id').eq('child_id', sub.child_id).eq('task_type', 'homework').eq('status', 'approved').gt('gems_earned', 0)
+    .gte('created_at', day.startOf('day').toUTC().toISO()).lte('created_at', day.endOf('day').toUTC().toISO())
+  if (error) { console.error(`[CAP] homework check failed: ${error.message}`); return null }
+  return (data || []).length
+}
+
 async function approveSubmissionTool(submissionId, parentId, gems) {
   const { data: sub } = await supabase
     .from('submissions')
@@ -2092,7 +2103,12 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
     dailyCap: TASK_DEFAULT_CAPS[sub.task_type] ?? TASK_DEFAULT_CAPS.homework,
   })
   const tz = await tzForChild(sub.child_id)
-  const already = await rewardedToday(sub.child_id, tz, sub.task_type || 'task')
+  // Homework is counted against the day it was SENT, not the day it is approved: a parent
+  // clearing a week's backlog on Sunday is approving five days of homework, not five pieces of
+  // one day's — counted by approval day, the fourth of them paid nothing.
+  const already = sub.task_type === 'homework'
+    ? await homeworkPaidOnDayOf(sub, tz)
+    : await rewardedToday(sub.child_id, tz, sub.task_type || 'task')
   const capped = !capSettings.active || already === null || already >= capSettings.dailyCap
   if (capped && !namedAmount) awarded = 0
 
@@ -2749,7 +2765,7 @@ async function handleMessage(parentId, replyCb, text) {
       // back MALFORMED_FUNCTION_CALL, and one wrote the call out as prose ("Calling tool...").
       // So this call is told plainly that it has no tools and that nothing has happened this
       // turn, and every candidate reply is checked before it can be sent.
-      const plainPrompt = systemPrompt + (language === 'en' ? NO_TOOLS_NOTE.en : NO_TOOLS_NOTE.tr)
+      const plainPrompt = systemPrompt + (language === 'tr' ? NO_TOOLS_NOTE.tr : NO_TOOLS_NOTE.en)
       let reply = ''
       for (let attempt = 0; attempt < 2 && !reply; attempt++) {
         try {
@@ -2896,7 +2912,7 @@ async function handleMessage(parentId, replyCb, text) {
       const again = textFromParts(retry?.candidates?.[0]?.content?.parts)
       finalText = again && !replyLeak(again) ? again : stripInternalIds(again || finalText)
       leak = replyLeak(finalText)
-      if (leak) finalText = language === 'en' ? 'Done.' : 'Tamamlandı.'
+      if (leak) finalText = say(language, 'Done.', 'Tamamlandı.', 'Hecho.')
     }
     await logMessage(parentId, 'tuto', finalText)
     await replyCb(finalText)
@@ -5656,7 +5672,7 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
     // Why the answer is the answer, for the child who missed it. Only here, after the answer is
     // in: it names the rule, which is the key.
     const { explainQuestion } = await import('./puzzle/puzzleExplain.js')
-    const why = explainQuestion(q, req.body?.lang === 'tr' ? 'tr' : 'en')
+    const why = explainQuestion(q, ['tr', 'es'].includes(req.body?.lang) ? req.body.lang : 'en')
     const { error } = await supabase.from('puzzle_attempts').insert({
       session_id: session.id, child_id: session.child_id, question_index: index,
       type: q.type, rule: q.rule?.attr ?? null, band: session.band, chosen_index: chosen, correct,
@@ -5727,28 +5743,36 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
     } else {
       gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
     }
-    if (gems > 0) {
-      const { error: ledErr } = await supabase.from('bt_ledger').insert({ child_id: child.id, amount: gems, reason: 'puzzle' })
-      if (ledErr) {
-        console.error(`[PUZZLE] ledger insert failed for ${child.id}: ${ledErr.message}`)
-        gems = 0
-      }
-    }
+    // Through recordGems like every other scored task, so a sitting past the limit is a line in
+    // the gem history too, not a gap.
+    const led = await recordGems(child.id, gems, 'puzzle', { capped })
+    if (gems > 0 && !led.ok) gems = 0
     await supabase.from('puzzle_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
     puzzleSheets.delete(session.id)
 
     const { data: prefsRow } = await supabase
       .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
     const perTask = prefsRow?.prefs?.notify_per_task !== false
+    const language = parentLang(prefsRow?.prefs)
+    const total = session.question_count
     if (gems > 0 && (perTask || doneToday === 0)) {
-      const language = prefsRow?.prefs?.language === 'en' ? 'en' : 'tr'
-      const total = session.question_count
-      const msg = language === 'en'
-        ? `${child.name} did their puzzles — ${correct}/${total} correct. +${gems} gems 💎`
-        : `${child.name} bulmacalarını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`
+      const msg = say(language,
+        `${child.name} did their puzzles — ${correct}/${total} correct. +${gems} gems 💎`,
+        `${child.name} bulmacalarını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`,
+        `${child.name} ha hecho sus acertijos — ${correct}/${total} correctos. +${gems} gems 💎`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `şekil ve örüntü bulmacaları, ${correct}/${total} doğru, +${gems} gem`,
         en: `shape & pattern puzzles, ${correct}/${total} correct, +${gems} gems`,
+      } }).catch(() => {})
+    } else if (capped && settings.active && perTask) {
+      // The sitting past the day's limit is told too, and not as an offer — the maths rule.
+      const msg = say(language,
+        `${child.name} did another round of puzzles — ${correct}/${total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} bir tur bulmaca daha çözdü — ${correct}/${total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha hecho otra ronda de acertijos — ${correct}/${total} correctos. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `bulmaca, ${correct}/${total} doğru, günlük sınır dolduğu için gem yok`,
+        en: `puzzles, ${correct}/${total} correct, past the daily limit so no gems`,
       } }).catch(() => {})
     }
 

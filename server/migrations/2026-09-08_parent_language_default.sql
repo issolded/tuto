@@ -1,31 +1,42 @@
 -- The language Tuto writes to a parent in now defaults to English, not Turkish.
 --
 -- Turkish was the default because the first family was Turkish. That stops being a reason the
--- moment anyone else signs up, and the default was invisible: until the picker landed on the
--- dashboard there was no way to change it at all, so a new parent got Turkish notifications
--- and nothing to do about it.
+-- moment anyone else signs up. Signup and onboarding both write the language the parent picked
+-- on the first screen into prefs.language, so this default only decides a row created some other
+-- way (a hand insert, a sign-up that fails before its update lands).
 --
--- Two statements, in this order, and the first one matters. Every row created since the
--- 2026-08-31 migration already carries 'language' explicitly (the column default wrote it in),
--- so the flip below moves nobody. The backfill is for anything older or hand-inserted that
--- lacks the key: those rows read as Turkish today, through the code's fallback, and would
--- silently become English when the fallback changed. Write what they are already getting.
-
+-- Two statements, in this order.
+--
+-- 1. Backfill. Any row without the key reads as Turkish today through the code's fallback, and
+--    would silently become English when the fallback flips. Write what it is already getting.
+--    (Checked 2026-09-19: every parent row already has 'language' = 'tr', so this moves nobody.)
 update parents
 set prefs = coalesce(prefs, '{}'::jsonb) || jsonb_build_object('language', 'tr')
 where prefs is null or not (prefs ? 'language');
 
-alter table parents alter column prefs set default jsonb_build_object(
-  'language', 'en',
-  'tone', null,
-  'bot_name', null,
-  'notify_level', 'all',
-  'notify_per_task', true,
-  'quiet_hours', null,
-  'approval_required', jsonb_build_object('contribution', true, 'submission', true, 'drawing', true),
-  'daily_proactive_limit', 20,
-  'daily_reply_limit', 60
-);
+-- 2. Flip ONLY the language key inside the live column default. The first draft of this file
+--    rewrote the whole default from a copy written on 2026-09-08; anything added to the default
+--    since (or tuned in the dashboard) would have been silently replaced. This reads the default
+--    that is actually there and changes one key of it.
+do $$
+declare
+  cur text;
+begin
+  select pg_get_expr(d.adbin, d.adrelid) into cur
+  from pg_attrdef d
+  join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum
+  where d.adrelid = 'public.parents'::regclass and a.attname = 'prefs';
 
--- Check: nobody left without a language, and no existing parent changed language.
--- select prefs->>'language' as language, count(*) from parents group by 1;
+  if cur is null then
+    raise notice 'parents.prefs has no default; leaving it alone';
+  else
+    execute format(
+      'alter table public.parents alter column prefs set default ((%s) || jsonb_build_object(''language'', ''en''))',
+      cur);
+  end if;
+end $$;
+
+-- Check: the default should now end in ... || jsonb_build_object('language', 'en')
+-- select pg_get_expr(d.adbin, d.adrelid) from pg_attrdef d join pg_attribute a
+--   on a.attrelid = d.adrelid and a.attnum = d.adnum
+--   where d.adrelid = 'public.parents'::regclass and a.attname = 'prefs';
