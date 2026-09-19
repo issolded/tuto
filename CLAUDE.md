@@ -191,7 +191,7 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Doğrulama: 9 ekran × 3 dil tarayıcıda render edildi, 390px'te yatay taşma 0, dil sızıntısı
       0, runtime hatası 0. (Sızıntı testinin ilk hâli Türkçeyi kaçırıyordu: JS'te `\b` yalnız
       ASCII sınırı, `\bÇocuklar\b` hiç eşleşmiyor.)
-- [x] Üçüncü dil: İspanyolca (2026-09-07). Çocuk tarafı: 301 i18n anahtarının hepsinde `es`,
+- [x] Üçüncü dil: İspanyolca (2026-09-07; main'e 2026-09-19'da girdi — 13 commit `claude/parent-dashboard-daily-max-setting-mfv4sa`'da PR'sız kalmıştı, bulmaca ve ödev sınırıyla uzlaştırılarak taşındı). Çocuk tarafı: 301 i18n anahtarının hepsinde `es`,
       matematik şablonlarının 107 cümlesi + kelime bankaları, `numerals.js`'e İspanyolca sayı
       sözcükleri (16-29 tek kelime, `y` bağlacı yalnız onluktan sonra bağlar, binlik ayıracı
       nokta), `timeWords.js`'e saat okunuşu ("las 3 y cuarto", 1 için "la una"), yardım paneli
