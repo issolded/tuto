@@ -56,6 +56,13 @@ const STRINGS = {
 
   home_trees_month:   { en: 'trees this month', tr: 'ağaç bu ay', es: 'árboles este mes' },
   // The 12+ card: the same two counts, in grown-up words.
+  gem_daily_bonus:    { en: 'All-Rounder of the Day 🏅', tr: 'Günün Hezarfeni 🏅', es: 'Todoterreno del día 🏅' },
+  bonus_title:        { en: 'All-Rounder of the Day', tr: 'Günün Hezarfeni', es: 'Todoterreno del día' },
+  bonus_todo:         { en: 'Do them all today: +%n% ⭐', tr: 'Hepsini bugün yap: +%n% ⭐', es: 'Hazlas todas hoy: +%n% ⭐' },
+  bonus_earned:       { en: 'You did it! +%n% ⭐', tr: 'Bonusu kazandın! +%n% ⭐', es: '¡Lo has conseguido! +%n% ⭐' },
+  bonus_why:          { en: 'An all-rounder is someone good at lots of different things.',
+                        tr: 'Hezarfen "bin hüner sahibi" demek: her işten anlayan kişi. Hezarfen Ahmed Çelebi Galata Kulesi\'nden uçmuştu!',
+                        es: 'Un todoterreno es alguien a quien se le dan bien muchas cosas distintas.' },
   // ── 9–11 home ─────────────────────────────────────────────────────────────
   home_this_week:     { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },
   home_n_done:        { en: '%n% done', tr: '%n% etkinlik', es: '%n% hechas' },

@@ -27,6 +27,7 @@ const TASK_LABELS = {
   drawing:  { key: 'task_drawing',  type: null },
   puzzle:   { key: 'task_puzzle',   type: 'puzzle' },
   bonus:    { parentKey: 'cd_bonus', type: null },
+  daily_bonus: { parentKey: 'ts_bonus_title', type: null },
 }
 
 // Resolves one of those rows against whichever dictionary it points at.

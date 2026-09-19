@@ -388,6 +388,14 @@ async function getParentContext(parentId) {
           return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
+      // The once-a-day bonus for doing every activity (Hezarfen / All-Rounder / Todoterreno).
+      dailyBonus: (() => {
+        const b = bonusSettings(child.task_settings, child.age)
+        if (Number(child.age) < BONUS_MIN_AGE) return `not running for ${child.name} — the daily bonus is for children aged ${BONUS_MIN_AGE} and up`
+        return b.active
+          ? `on: +${b.gems} gems once a day when ${child.name} does all of ${b.types.join(', ')} in the same day (homework and the tree do not count toward it)`
+          : `switched off by the parent`
+      })(),
       pendingContributions: pendingError
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
         : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
@@ -1470,7 +1478,9 @@ const CONTRIBUTION_TOOLS = [{
         'to confirm the new number after a change.\n' +
         'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
         '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ödev"/"homework" ' +
-        '→ homework, "çizim"/"resim"/"drawing" → drawing, "bulmaca"/"şekil bulmacası"/"puzzle"/"NVR" → puzzle. If you cannot tell which task type they mean, ASK — ' +
+        '→ homework, "çizim"/"resim"/"drawing" → drawing, "bulmaca"/"şekil bulmacası"/"puzzle"/"NVR" → puzzle, ' +
+        '"günlük bonus"/"hezarfen"/"all-rounder"/"todoterreno"/"hepsini yapınca verilen bonus" → bonus (the once-a-day bonus for doing ' +
+        'every activity; it takes gems and active, never daily_cap). If you cannot tell which task type they mean, ASK — ' +
         'do not guess between two.\n' +
         'The server enforces 1-500 for gems and 0-50 for daily_cap. Only call this when the parent explicitly ' +
         'states a task type AND a specific new number — an unclear or partial request ("matematiği artıralım ' +
@@ -1480,9 +1490,10 @@ const CONTRIBUTION_TOOLS = [{
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child whose task settings to change, from the children list in context.' },
-          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle.' },
+          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle, bonus.' },
           gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Omit entirely if they only asked to change the daily limit.' },
           daily_cap: { type: 'NUMBER', description: 'The exact new number of gem-earning sessions per day the parent said (whole number, 0-50). Omit entirely if they only asked to change the gem amount.' },
+          active: { type: 'BOOLEAN', description: 'Only for task_type bonus: false switches the daily bonus off, true back on. Omit otherwise.' },
         },
         required: ['child_id', 'task_type'],
       },
@@ -2280,6 +2291,27 @@ async function deductGemsTool(childId, amount, parentId, note) {
 // Two dials, either or both: the gem amount, and how many sessions a day earn
 // gems. Merges into the existing task_settings JSONB rather than overwriting it,
 // so the other types' settings — and the dial that wasn't touched — survive.
+// The daily all-rounder bonus: its amount and whether it is on. Separate from the task tool
+// because it has no daily cap (it pays once a day by definition) and it can be switched off here.
+async function updateBonusTool(childId, gems, active, parentId) {
+  const wantsGems = gems !== undefined && gems !== null
+  const wantsActive = typeof active === 'boolean'
+  if (!wantsGems && !wantsActive) return { success: false, error: 'nothing to change: give gems, active, or both' }
+  const n = Math.round(Number(gems))
+  if (wantsGems && (!Number.isFinite(n) || n < 1 || n > 500)) return { success: false, error: 'gems must be between 1 and 500' }
+  const { data: child } = await supabase.from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+  const current = child.task_settings?.bonus || {}
+  const next = { ...(child.task_settings || {}), bonus: {
+    ...current, active: wantsActive ? active : (current.active ?? true), gems: wantsGems ? n : (current.gems ?? BONUS_DEFAULTS.gems),
+  } }
+  const { error } = await supabase.from('children').update({ task_settings: next }).eq('id', childId)
+  if (error) return { success: false, error: error.message }
+  return { success: true, childName: child.name, taskType: 'bonus', gems: next.bonus.gems, active: next.bonus.active,
+    ...(Number(child.age) < BONUS_MIN_AGE ? { note: `saved, but the bonus only runs for children aged ${BONUS_MIN_AGE} and up — say so` } : {}) }
+}
+
 async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap) {
   if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
 
@@ -2847,7 +2879,9 @@ async function handleMessage(parentId, replyCb, text) {
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'update_task_reward') {
-        toolResult = await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap)
+        toolResult = args.task_type === 'bonus'
+          ? await updateBonusTool(args.child_id, args.gems, args.active, parentId)
+          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap)
       } else if (name === 'send_drawing_photo') {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
       } else if (name === 'add_reward') {
@@ -3499,6 +3533,81 @@ app.get('/api/children/:childId/gems', async (req, res) => {
 //
 // The seven-day and streak figures are COUNTS OF THINGS DONE, not time: nothing records how long
 // a child spent, and the home says "activities", never minutes.
+// ── The day's all-rounder bonus ("Günün Hezarfeni") ─────────────────────────────
+// Every one of these done in a day pays a bonus once. Homework and the tree are left out on
+// purpose: neither is something a child can do on any day they choose. A task the parent has
+// switched off drops out of the set, so four of four is as good as five of five. What counts is
+// what the Today card counts — a finished maths session or puzzle round, a finished reading, a
+// completed story, a drawing sent (and not refused by the safety screen) — including a session
+// past the day's gem limit, because it was still done.
+const BONUS_TYPES = ['math', 'reading', 'writing', 'drawing', 'puzzle']
+const BONUS_DEFAULTS = { gems: 50 }
+// From seven (2026-09-19). Five different things in a day is a lot to ask of a six-year-old, and
+// a daily target they cannot reach is a daily failure; the younger home keeps the plain Today card.
+const BONUS_MIN_AGE = 7
+
+function bonusSettings(taskSettings, age) {
+  const s = taskSettings?.bonus || {}
+  return {
+    active: s.active !== false && Number(age) >= BONUS_MIN_AGE,
+    gems: Number.isFinite(s.gems) ? Math.max(1, Math.min(500, Math.trunc(s.gems))) : BONUS_DEFAULTS.gems,
+    types: BONUS_TYPES.filter(k => taskSettings?.[k]?.active !== false),
+  }
+}
+
+// Which of the bonus activities the child has done on the local day `now` falls on.
+async function bonusDoneOn(childId, now) {
+  const from = now.startOf('day').toUTC().toISO()
+  const to = now.endOf('day').toUTC().toISO()
+  const has = (q) => q.gte('created_at', from).lte('created_at', to).limit(1).then(({ data }) => (data || []).length > 0)
+  const [reading, math, writing, drawing, puzzle] = await Promise.all([
+    has(supabase.from('submissions').select('id').eq('child_id', childId).eq('task_type', 'reading')),
+    has(supabase.from('math_progress').select('id').eq('child_id', childId)),
+    has(supabase.from('stories').select('id').eq('child_id', childId).eq('status', 'completed')),
+    has(supabase.from('paintings').select('id').eq('child_id', childId).neq('status', 'blocked')),
+    has(supabase.from('puzzle_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null)),
+  ])
+  return { reading, math, writing, drawing, puzzle }
+}
+
+// Called after each activity finishes. Pays at most once a day. Runs one at a time per child —
+// two activities finishing together would otherwise both see "not paid yet" and both pay.
+const bonusQueue = new Map()
+function queueDailyBonus(childId) {
+  const prev = bonusQueue.get(childId) || Promise.resolve()
+  const next = prev.then(() => payDailyBonus(childId)).catch(err => console.error(`[BONUS] ${childId}: ${err.message}`))
+  bonusQueue.set(childId, next)
+  next.finally(() => { if (bonusQueue.get(childId) === next) bonusQueue.delete(childId) })
+  return next
+}
+
+async function payDailyBonus(childId) {
+  const { data: child } = await supabase.from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
+  if (!child) return
+  const settings = bonusSettings(child.task_settings, child.age)
+  if (!settings.active || !settings.types.length) return
+  const tz = await tzForChild(childId)
+  const now = DateTime.now().setZone(tz)
+  const done = await bonusDoneOn(childId, now)
+  if (!settings.types.every(k => done[k])) return
+  const already = await rewardedToday(childId, tz, 'daily_bonus')
+  if (already === null || already > 0) return
+  const led = await recordGems(childId, settings.gems, 'daily_bonus')
+  if (!led.ok) return
+  console.log(`[BONUS] ${child.name}: +${settings.gems}`)
+
+  const { data: parent } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const language = parentLang(parent?.prefs)
+  sendNotification(child.parent_id, say(language,
+    `🏅 ${child.name} did every activity today — All-Rounder of the Day: +${settings.gems} gems.`,
+    `🏅 ${child.name} bugün bütün etkinlikleri yaptı — Günün Hezarfeni bonusu: +${settings.gems} gem.`,
+    `🏅 ${child.name} ha hecho todas las actividades hoy: bonus de Todoterreno del día, +${settings.gems} gems.`),
+  { kind: 'activity', child: child.name, detail: {
+    tr: `bugün bütün etkinlikleri yaptı, +${settings.gems} gem bonus`,
+    en: `did every activity today, +${settings.gems} gem bonus`,
+  } }).catch(() => {})
+}
+
 const STREAK_LOOKBACK_DAYS = 60
 
 app.get('/api/children/:childId/today-summary', async (req, res) => {
@@ -3520,18 +3629,20 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       { data: rewards },
       { data: child },
       { data: lastMath },
+      bonusPaid,
     ] = await Promise.all([
       getTreeState(childId, tz),
       supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('math_progress').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
-      supabase.from('stories').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
-      supabase.from('paintings').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('stories').select('created_at').eq('child_id', childId).eq('status', 'completed').gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('paintings').select('created_at').eq('child_id', childId).neq('status', 'blocked').gte('created_at', since).lte('created_at', nowIso),
       // Finished sittings only: one abandoned after two questions is not a puzzle session done.
       supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
-      supabase.from('children').select('age').eq('id', childId).maybeSingle(),
+      supabase.from('children').select('age, task_settings').eq('id', childId).maybeSingle(),
       supabase.from('math_progress').select('level').eq('child_id', childId).order('created_at', { ascending: false }).limit(1),
+      rewardedToday(childId, tz, 'daily_bonus'),
     ])
 
     // Every activity as [type, local day].
@@ -3580,6 +3691,10 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       weekByType,
       streak,
       mathLevel: lastMath?.[0]?.level ?? null,
+      bonus: (() => {
+        const b = bonusSettings(child?.task_settings, child?.age)
+        return { active: b.active, gems: b.gems, types: b.types, earned: (bonusPaid || 0) > 0 }
+      })(),
       puzzleBand: child?.age != null ? puzzleBandForAge(child.age) : null,
       gems,
       nearestGoal: nearestGoal ? { id: nearestGoal.id, name: nearestGoal.name, icon: nearestGoal.icon, bt_cost: nearestGoal.bt_cost } : null,
@@ -3775,6 +3890,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
         gemsAwarded = Math.round(settings.gems * rewardScale(q) * effortScale(words, kid?.age))
       }
       await recordGems(childId, gemsAwarded, 'story', { capped })
+      queueDailyBonus(childId)
       if (gemsAwarded > 0) {
         await supabase.from('stories').update({ gems_earned: gemsAwarded }).eq('id', story.id)
       }
@@ -5394,6 +5510,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       recordGems(childId, gems, 'math', { capped, ref: rows.length ? sessionId : null }),
     ])
     if (gems > 0 && !mathLed.ok) gems = 0
+    queueDailyBonus(childId)
 
     // Whether every rewarded session is announced or only the day's first. This was hardcoded
     // to the first — three in an afternoon says no more than one does — but a parent who did a
@@ -5517,6 +5634,7 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
     if (subErr) return res.status(500).json({ error: subErr.message })
 
     const readLed = await recordGems(childId, gems, 'reading', { capped })
+    queueDailyBonus(childId)
     if (gems > 0 && !readLed.ok) gems = 0
 
     // current_page used to be incremented by one here, once per session, which made it a count
@@ -5905,6 +6023,7 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
     const led = await recordGems(child.id, gems, 'puzzle', { capped, ref: session.id })
     if (gems > 0 && !led.ok) gems = 0
     await supabase.from('puzzle_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
+    queueDailyBonus(child.id)
     puzzleSheets.delete(session.id)
 
     const { data: prefsRow } = await supabase
@@ -6077,6 +6196,7 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
       .select('id, drawing_id, age_group, photo_path, status, reward_amount, created_at')
       .single()
     if (insErr) return res.status(500).json({ error: insErr.message })
+    queueDailyBonus(childId)
 
     // The photo still goes out either way. What the parent turned off is being asked, not being
     // shown their child's drawing — and the safety screen above ran before any of this, so an

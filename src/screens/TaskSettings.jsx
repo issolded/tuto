@@ -34,6 +34,7 @@ export default function TaskSettings() {
   const s = useT()
   const lang = useUiLang()
   const [childName, setChildName] = useState('')
+  const [childAge, setChildAge] = useState(null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   // Lives on the child row, not in task_settings: it is not a task and task_settings is
   // rewritten wholesale on every toggle here, which would take the language with it.
@@ -51,10 +52,11 @@ export default function TaskSettings() {
 
   useEffect(() => {
     if (!id) return
-    supabase.from('children').select('name, task_settings, language').eq('id', id).single()
+    supabase.from('children').select('name, age, task_settings, language').eq('id', id).single()
       .then(({ data }) => {
         if (!data) return
         setChildName(data.name)
+        setChildAge(data.age)
         setChildLang(childLangOf(data))
         if (data.task_settings) {
           setSettings({ ...DEFAULT_SETTINGS, ...data.task_settings })
@@ -209,6 +211,43 @@ export default function TaskSettings() {
             </Card>
           )
         })}
+
+        {/* The once-a-day bonus for doing every activity. No daily cap — it pays once a day by
+            definition — and the amount runs higher than a task's, since it follows five of them. */}
+        {(() => {
+          const b = { active: true, gems: 50, ...(settings.bonus || {}) }
+          const setBonus = (patch) => { const next = { ...settings, bonus: { ...b, ...patch } }; setSettings(next); persist(next) }
+          const pct = ((b.gems - 10) / (200 - 10)) * 100
+          return (
+            <Card pad={16} style={{ opacity: b.active ? 1 : 0.55, transition: 'opacity .2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                <div style={{ width: 46, height: 46, borderRadius: 14, background: PC.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 24 }}>🏅</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15.5, color: PC.ink }}>{s('ts_bonus_title')}</div>
+                  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: b.active ? PC.amber : PC.inkFaint, marginTop: 2 }}>
+                    {b.active ? s('ts_bonus_amount', { n: b.gems }) : s('ts_disabled')}
+                  </div>
+                </div>
+                <Toggle on={b.active} onClick={() => setBonus({ active: !b.active })} />
+              </div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.45, marginTop: 10 }}>
+                {s('ts_bonus_sub')}
+                {childAge != null && childAge < 7 && <div style={{ marginTop: 6, color: PC.inkFaint }}>{s('ts_bonus_young', { name: childName })}</div>}
+              </div>
+              {b.active && (
+                <div style={{ marginTop: 14 }}>
+                  <input type="range" min={10} max={200} step={10} value={b.gems}
+                    onChange={e => setBonus({ gems: Number(e.target.value) })}
+                    className="tc-slider" style={{ background: `linear-gradient(to right, ${PC.amber} ${pct}%, ${PC.line} ${pct}%)` }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>10</span>
+                    <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>200</span>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )
+        })()}
       </div>
     </div>
   )

@@ -409,6 +409,62 @@ function Ring({ value, label, color }) {
   )
 }
 
+// The day's all-rounder bonus: one slot per activity it asks for, filled with that activity's icon
+// once it is done today. The server decides the set (what the parent has on) and pays; this only
+// shows it. `tone` is 'mid' for the outlined 9–11 card, 'plain' inside the other ages' Today card.
+const BONUS_ROUTES = { math: '/child/math', reading: '/child/library', writing: '/child/stories', drawing: '/child/drawings', puzzle: '/child/puzzle' }
+const BONUS_NAMES = { math: 'task_math', reading: 'task_reading', writing: 'task_writing', drawing: 'task_drawing', puzzle: 'task_puzzle' }
+
+function BonusCard({ today, lang, nav, tone = 'mid' }) {
+  const [why, setWhy] = useState(false)
+  const b = today.bonus
+  if (!b?.active || !b.types?.length) return null
+  const done = (k) => (today.activities?.[k] || 0) > 0
+  const next = b.types.find(k => !done(k))
+  const count = b.types.filter(done).length
+  const mid = tone === 'mid'
+  const fred = { fontFamily: FRED, fontWeight: 600, color: '#20201e' }
+  return (
+    <div style={mid ? { position: 'relative', background: b.earned ? 'linear-gradient(135deg,#fff3c4,#fde7a3)' : 'linear-gradient(135deg,#e7ddf6,#dcd0f3)',
+      border: '3px solid #20201e', borderRadius: 24, padding: '15px 16px', boxShadow: '0 8px 0 rgba(32,32,30,.10)', overflow: 'hidden' } : {}}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ ...fred, fontSize: 12, letterSpacing: '.6px', textTransform: 'uppercase', color: b.earned ? '#b7720f' : '#7c63c8' }}>🏅 {t('bonus_title', lang)}</span>
+        <button onClick={() => setWhy(w => !w)} aria-label="?" style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #7c63c8', background: 'transparent',
+          color: '#7c63c8', fontWeight: 800, fontSize: 11, lineHeight: 1, cursor: 'pointer', padding: 0 }}>?</button>
+      </div>
+      {why && <div style={{ fontWeight: 700, fontSize: 12.5, color: '#6f6a64', lineHeight: 1.4, marginTop: 6, maxWidth: 280 }}>{t('bonus_why', lang)}</div>}
+      <div style={{ ...fred, fontSize: mid ? 19 : 16, marginTop: 5, lineHeight: 1.15 }}>
+        {(b.earned ? t('bonus_earned', lang) : t('bonus_todo', lang)).replace('%n%', b.gems)}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 11, flexWrap: 'wrap' }}>
+        {b.types.map(k => (
+          <button key={k} onClick={() => nav(BONUS_ROUTES[k], { state: { from: '/child/home' } })} aria-label={t(BONUS_NAMES[k], lang)}
+            style={{ position: 'relative', width: 46, height: 46, borderRadius: 14, cursor: 'pointer', padding: 0,
+              border: `2.5px ${done(k) ? 'solid #20201e' : 'dashed #b9b0cf'}`, background: done(k) ? '#fff' : 'rgba(255,255,255,.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <div style={{ transform: 'scale(.6)', opacity: done(k) ? 1 : 0.35, filter: done(k) ? 'none' : 'grayscale(1)' }}>
+              {k === 'drawing' ? <DrawingsIcon /> : <TaskIcon type={k} c={TASK_ACCENT[k] || '#a98ce6'} />}
+            </div>
+            {done(k) && <span style={{ position: 'absolute', right: -1, bottom: -1, width: 17, height: 17, borderRadius: '50%', background: '#79cf86',
+              border: '2px solid #20201e', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>}
+          </button>
+        ))}
+      </div>
+      {!b.earned && next && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11, position: 'relative', zIndex: 1, maxWidth: mid ? 'calc(100% - 70px)' : '100%' }}>
+          <span style={{ fontWeight: 700, fontSize: 13, color: '#6f6a64' }}>{count}/{b.types.length}</span>
+          <button onClick={() => nav(BONUS_ROUTES[next], { state: { from: '/child/home' } })} style={{ marginLeft: 'auto', background: '#f79433', color: '#fff', ...fred,
+            fontSize: 14, border: '2.5px solid #20201e', borderRadius: 999, padding: '6px 13px', boxShadow: '0 4px 0 rgba(32,32,30,.25)', cursor: 'pointer',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {t('home_quest_next', lang).replace('%task%', t(BONUS_NAMES[next], lang))} →
+          </button>
+        </div>
+      )}
+      {mid && <div style={{ position: 'absolute', right: -4, bottom: -10 }}><TutoMascot size={76} color="#79cf86" /></div>}
+    </div>
+  )
+}
+
 function MidHome({ child, lang, gems, today, ts, nav }) {
   const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
   const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
@@ -478,7 +534,9 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
         </div>
       </div>
 
-      {/* Today's quest: three things today, and the next one to do. */}
+      {/* The all-rounder bonus where the handoff had its daily quest; the plain three-things quest
+          only where the bonus is off (a parent's choice, or a child under seven). */}
+      {today.bonus?.active ? <BonusCard today={today} lang={lang} nav={nav} /> : (
       <div style={{ position: 'relative', background: 'linear-gradient(135deg,#e7ddf6,#dcd0f3)', border: `3px solid ${MID.ink}`, borderRadius: 24,
         padding: '15px 16px', boxShadow: '0 8px 0 rgba(32,32,30,.10)', overflow: 'hidden' }}>
         <div style={{ ...fred, fontSize: 12, letterSpacing: '.6px', textTransform: 'uppercase', color: '#7c63c8' }}>{t('home_quest_tag', lang)}</div>
@@ -500,6 +558,7 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
         </div>
         <div style={{ position: 'absolute', right: -4, bottom: -10 }}><TutoMascot size={82} color="#79cf86" /></div>
       </div>
+      )}
 
       <div style={{ ...fred, fontSize: 18, marginTop: 2 }}>{t('home_activities', lang)}</div>
       <div className="mid-grid">
@@ -633,6 +692,18 @@ export default function ChildHome() {
         </div>
 
         <TodayCard lang={lang} band={band} isTablet={isTablet} today={today} gems={gems ?? 0} nav={nav} />
+
+        {/* The all-rounder bonus under the Today card — outlined like the 9–11 one for a
+            seven- or eight-year-old, quiet and flat from twelve. */}
+        {today.bonus?.active && (
+          band === 'mature' ? (
+            <div style={{ background: '#F7F9F6', border: '1.5px solid #E4EAE3', borderRadius: 20, padding: '14px 16px', margin: '-4px 0 18px' }}>
+              <BonusCard today={today} lang={lang} nav={nav} tone="plain" />
+            </div>
+          ) : (
+            <div style={{ margin: '-4px 0 22px' }}><BonusCard today={today} lang={lang} nav={nav} /></div>
+          )
+        )}
 
         <div className="tuto-task-grid">
           {TASKS.map((task, i) => (

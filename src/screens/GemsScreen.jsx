@@ -17,6 +17,7 @@ const ANIM = `
 // stayed English. 'Welcome bonus' is a reason string some older rows carry verbatim.
 const REASON_KEYS = {
   bonus:           'gem_bonus_gift',
+  daily_bonus:     'gem_daily_bonus',
   adjustment:      'gem_adjustment',
   'Welcome bonus': 'gem_welcome',
   welcome:         'gem_welcome',
@@ -24,7 +25,7 @@ const REASON_KEYS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  homework: '📸', drawing: '🎨', puzzle: '🧩', bonus: '🫴', story: '📖',
+  homework: '📸', drawing: '🎨', puzzle: '🧩', bonus: '🫴', story: '📖', daily_bonus: '🏅',
   adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
