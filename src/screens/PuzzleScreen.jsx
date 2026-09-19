@@ -64,7 +64,8 @@ async function post(path, body) {
 // model to read, so it is chosen by score.
 function encouragementKey(correct, total) {
   const acc = total ? correct / total : 0
-  return acc >= 0.8 ? 'puzzle_enc_high' : acc >= 0.5 ? 'puzzle_enc_mid' : 'puzzle_enc_low'
+  return total && correct === total ? 'puzzle_enc_perfect'
+    : acc >= 0.8 ? 'puzzle_enc_high' : acc >= 0.5 ? 'puzzle_enc_mid' : 'puzzle_enc_low'
 }
 
 export default function PuzzleScreen() {
