@@ -212,8 +212,17 @@ function satellites(spec) {
 // and marks need a plain ground to be counted against.
 const fitsTriangle = (node) => node.shape === 'triangle' || (node.shape === 'circle' && node.size <= 0.45)
 
+// Where narrowing reads as narrowing. A circle becomes an ellipse and a square a rectangle — a
+// new shape a child can name. Anything else narrowed reads as SMALLER: a narrowed pentagon beside
+// a full one was taken for a size change on a live 7-8 grid, and on an arrow the stretch is its
+// length — normal and long were barely two pictures along a diagonal, and short lost its shaft
+// (a live 10-11 code sheet nobody could decode). So elsewhere stretch is not drawn, and since the
+// key goes through here too, no rule, distractor or noise can ever rest on it.
+const STRETCH_SHAPES = new Set(['circle', 'square'])
+
 export function normalizeSpec(spec) {
   const s = { ...spec }
+  if (!STRETCH_SHAPES.has(s.shape)) s.stretch = 1
   const canCorner = s.corner && CORNER_SHAPES.has(s.shape)
   if (!canCorner) s.corner = null
   if (!DOT_AREA[s.shape]) s.dots = 0
