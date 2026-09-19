@@ -55,6 +55,8 @@ const STRINGS = {
                         es: 'Acertijos' },
 
   home_trees_month:   { en: 'trees this month', tr: 'ağaç bu ay', es: 'árboles este mes' },
+  // The 12+ card: the same two counts, in grown-up words.
+  home_contrib_today: { en: 'contributions today', tr: 'katkı bugün', es: 'aportaciones hoy' },
   home_to_goal:       { en: 'to',        tr: 'kaldı:',        es: 'para' },
   home_so_close:      { en: 'So close to', tr: 'Çok az kaldı:', es: 'Ya casi tienes' },
   home_always_on:     { en: '🌱 Always on', tr: '🌱 Her zaman açık', es: '🌱 Siempre disponible' },

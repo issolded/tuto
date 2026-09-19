@@ -252,7 +252,7 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
 
           {mature && (
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 500, fontSize: 14, color: ink }}>
-              {today.today} contributions today · {today.monthTreeCount} this month
+              {today.today} {t('home_contrib_today', lang)} · {today.monthTreeCount} {t('tree_month_label', lang)}
             </div>
           )}
 
