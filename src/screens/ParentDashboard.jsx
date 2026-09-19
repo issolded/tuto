@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { supabase } from '../lib/supabase'
+import { supabase, getTodaySummary } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
 import { LangPicker, BirthDateField } from '../lib/parentUI'
 import { ageFromBirthDate } from '../lib/age'
@@ -142,22 +142,48 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
   )
 }
 
-// ── Child row ────────────────────────────────────────────────────────────────
-function ChildRow({ child, onClick }) {
+// ── Child card ───────────────────────────────────────────────────────────────
+// What a parent opens the dashboard to find out, without opening the child: what they did today,
+// their gems, the day's bonus, and whether anything is waiting on the parent. Today comes from the
+// same summary the child's home reads, so the two never disagree.
+const ACT_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', homework: '📸' }
+
+function ChildCard({ child, pending, onClick }) {
   const s = useT()
+  const [today, setToday] = useState(null)
+  useEffect(() => { getTodaySummary(child.id).then(setToday) }, [child.id])
+  const acts = Object.entries(today?.activities || {}).filter(([, n]) => n > 0)
+  const b = today?.bonus
+  const bDone = b?.active ? b.types.filter(k => (today.activities?.[k] || 0) > 0).length : 0
   return (
-    <Card onClick={onClick} pad={16} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <Avatar child={child} size={52} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16.5, color: PC.ink }}>{child.name}</div>
-        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{s('years_old', { n: child.age })}</div>
-        {child.gems != null && (
-          <div style={{ marginTop: 7 }}>
-            <Pill bg={PC.amberBg} color={PC.amber}>⭐ {child.gems ?? 0}</Pill>
-          </div>
+    <Card onClick={onClick} pad={16} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <Avatar child={child} size={52} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16.5, color: PC.ink }}>{child.name}</div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, marginTop: 1 }}>{s('years_old', { n: child.age })}</div>
+        </div>
+        {today && <Pill bg={PC.amberBg} color={PC.amber}>⭐ {today.gems ?? 0}</Pill>}
+        <Icon name="chevron" size={20} color={PC.inkFaint} />
+      </div>
+      {pending > 0 && (
+        <div style={{ alignSelf: 'flex-start', background: PC.peachBg, color: PC.ink, borderRadius: 10, padding: '6px 11px', fontFamily: FONT, fontWeight: 800, fontSize: 12.5 }}>
+          ⏳ {s('db_pending_n', { n: pending })}
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderTop: `1px solid ${PC.line}`, paddingTop: 11, minHeight: 22 }}>
+        <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkFaint, textTransform: 'uppercase', letterSpacing: '.5px' }}>{s('db_today_label')}</span>
+        <div style={{ flex: 1, display: 'flex', gap: 8, flexWrap: 'wrap', fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.ink }}>
+          {!today ? <span style={{ color: PC.inkFaint }}>…</span>
+            : acts.length ? acts.map(([k, n]) => <span key={k}>{ACT_EMOJI[k] || '•'} {n}</span>)
+              : <span style={{ color: PC.inkSoft, fontWeight: 600 }}>{s('db_today_none')}</span>}
+        </div>
+        {b?.active && (
+          <span title={s('ts_bonus_title')} style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12.5, color: b.earned ? PC.green : PC.inkSoft, whiteSpace: 'nowrap' }}>
+            🏅 {b.earned ? '✓' : `${bDone}/${b.types.length}`}
+          </span>
         )}
       </div>
-      <Icon name="chevron" size={20} color={PC.inkFaint} />
     </Card>
   )
 }
@@ -236,7 +262,17 @@ function TimeInput({ value, onChange }) {
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
-export default function ParentDashboard() {
+// On a tablet the dashboard uses the width: children on the left, "busy for a while" beside them.
+const PD_CSS = `
+.pd-wrap{ max-width:430px; }
+.pd-grid{ display:flex; flex-direction:column; }
+@media (min-width:900px){
+  .pd-wrap{ max-width:980px; }
+  .pd-grid{ display:grid; grid-template-columns:1.5fr 1fr; gap:26px; align-items:start; }
+}
+`
+
+export default function ParentDashboard({ view = 'dashboard' }) {
   const s = useT()
   const nav = useNavigate()
   const location = useLocation()
@@ -255,6 +291,7 @@ export default function ParentDashboard() {
   const waConnected = waJustConnected || !!notifData.whatsappVerifiedAt
   const [waError, setWaError] = useState('')
   const [prefs, setPrefs] = useState(null)
+  const [pendingFor, setPendingFor] = useState({})
   const [nowTs, setNowTs] = useState(Date.now())
 
   useEffect(() => {
@@ -276,6 +313,7 @@ export default function ParentDashboard() {
       if (!user) return
 
       loadParentData(user.id)
+      loadOverview()
 
       const { updatedChild, removedId } = location.state || {}
       if (updatedChild && _childrenCache) {
@@ -312,6 +350,16 @@ export default function ParentDashboard() {
     // second device would show the screens in whatever that device happened to be set to while
     // the messages arrived in the language the account says.
     adoptAccountLang(data?.prefs?.language)
+  }
+
+  const loadOverview = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    try {
+      const r = await fetch(`${SERVER}/api/parent/overview`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const j = await r.json()
+      setPendingFor(Object.fromEntries((j.children || []).map(c => [c.id, c.pending])))
+    } catch { /* the cards just show no badge */ }
   }
 
   const updateChannel = async (ch) => {
@@ -412,95 +460,18 @@ export default function ParentDashboard() {
 
   const displayName = user?.user_metadata?.full_name || user?.email || s('db_parent')
 
-  return (
-    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <div className="tc-scroll" style={{ flex: 1, padding: '8px 22px 32px' }}>
+  const channelConnected = !!notifData.telegramChatId || waConnected
 
-        {/* greeting */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 2px 0' }}>
-          <div>
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.inkSoft }}>{s('db_welcome')}</div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 26, color: PC.ink, letterSpacing: '-.5px', marginTop: 2 }}>{displayName}</div>
-          </div>
-          <button className="tc-press tc-tap" onClick={logout} aria-label={s('db_signout')}
-            style={{ width: 46, height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: SHADOW_SM }}>
-            <Icon name="logout" size={21} color={PC.inkSoft} />
-          </button>
-        </div>
-
-        {/* summary strip */}
-        <Card pad={16} style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14, background: `linear-gradient(120deg, ${PC.teal}, ${PC.tealDeep})`, boxShadow: '0 16px 32px -14px rgba(63,183,172,.6)' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,.85)' }}>{s('db_children')}</div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: '#fff', lineHeight: 1.1, marginTop: 2 }}>{children.length}</div>
-            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: 'rgba(255,255,255,.85)', marginTop: 3 }}>
-              {children.length === 1 ? s('db_child_reg') : s('db_children_reg')}
-            </div>
-          </div>
-          <div style={{ width: 62, height: 62, borderRadius: 20, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="user" size={30} color="#fff" />
-          </div>
-        </Card>
-
-        {/* children section */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '24px 2px 12px' }}>
-          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>{s('db_my_children')}</div>
-          <button className="tc-press tc-tap" onClick={() => setShowModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, background: PC.tealBg, color: PC.tealDeep, border: 'none', borderRadius: 11, padding: '8px 13px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-            <Icon name="plus" size={16} color={PC.tealDeep} sw={2.4} /> {s('db_add')}
-          </button>
-        </div>
-
-        {children.length === 0 ? (
-          <Card pad={32} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, border: `2px dashed ${PC.line}`, boxShadow: 'none' }}>
-            <div style={{ fontSize: 46 }}>🧒</div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>{s('db_no_children')}</div>
-            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, textAlign: 'center' }}>{s('db_no_children_b')}</div>
-          </Card>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {children.map(child => <ChildRow key={child.id} child={child} onClick={() => nav(`/parent/child/${child.id}`)} />)}
-          </div>
-        )}
-
-        {/* device setup */}
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_setup_device')}</div>
-        <Card pad={18}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon name="qr" size={23} color={PC.tealDeep} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>{s('db_child_device')}</div>
-              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{s('db_scan_qr')}</div>
-            </div>
-            <Btn full={false} variant={showQR ? 'soft' : 'outline'} onClick={() => setShowQR(v => !v)} style={{ padding: '10px 16px', fontSize: 14 }}>
-              {showQR ? s('db_hide') : s('db_show_qr')}
-            </Btn>
-          </div>
-          {showQR && familyCode && (
-            <div className="tc-fade" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 16 }}>
-              <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: SHADOW_SM }}>
-                <QRCodeSVG
-                  value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
-                  size={186}
-                  bgColor="#ffffff"
-                  fgColor={PC.ink}
-                  level="M"
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ background: PC.tealBg, borderRadius: 10, padding: '6px 14px' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PC.tealDeep, letterSpacing: 3 }}>{familyCode}</span>
-                </div>
-                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>{s('db_manual_code')}</span>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* notifications */}
-        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_notifications')}</div>
+  // Settings, reached from the gear at the top of the dashboard: how Tuto reaches the parent,
+  // when it writes, what it asks before doing, and the child's device. They were the bottom
+  // three quarters of the dashboard under "How much I write", and a parent looking for
+  // "settings" did not find them.
+  if (view === 'settings') return (
+    <div className="pd-wrap" style={{ background: PC.bg, minHeight: '100dvh', margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <style>{PD_CSS}</style>
+      <TopBar title={s('db_settings')} onBack={() => nav('/parent/dashboard')} />
+      <div className="tc-scroll" style={{ flex: 1, padding: '0 22px 32px' }}>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '6px 2px 12px' }}>{s('db_reach')}</div>
         <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
           {/* Connecting both is useful and the difference is not obvious: updates go to ONE
@@ -585,12 +556,10 @@ export default function ParentDashboard() {
           )}
         </Card>
 
-        {/* how much Tuto writes */}
+
         {prefs && (
           <>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_how_much')}</div>
-            <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
+            <Card pad={18} style={{ marginTop: 12 }}>
               {/* Language first, because it applies to every message below — including the one
                   autopilot sends when it ends. There was no way to set this at all until now:
                   the column defaults to Turkish, and a parent who reads neither Turkish nor
@@ -609,38 +578,9 @@ export default function ParentDashboard() {
                 <LangPicker onPick={code => savePrefs({ language: code })} />
               </div>
 
-              <div style={{ height: 1, background: PC.line }} />
-
-              {/* autopilot — first of the message settings, because while it runs it overrides
-                  everything below it */}
-              <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{s('db_busy')}</div>
-                <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
-                  {s('db_busy_sub')}
-                </div>
-
-                {autopilotOn ? (
-                  <div className="tc-fade" style={{ background: PC.peachBg, borderRadius: 13, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink, lineHeight: 1.45 }}>
-                      {s('db_on_until', { time: new Date(autopilotEnds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
-                      <div style={{ fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 2 }}>
-                        {s('db_will_tell')}
-                      </div>
-                    </div>
-                    <Btn full={false} variant="soft" onClick={endAutopilot} style={{ padding: '8px 13px', fontSize: 13 }}>{s('db_im_back')}</Btn>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: 9 }}>
-                    {AUTOPILOT_PRESETS.map(p => (
-                      <Btn key={p.minutes} full={false} variant="outline" onClick={() => startAutopilot(p.minutes)}
-                        style={{ flex: 1, padding: '9px 6px', fontSize: 13 }}>{s(p.label)}</Btn>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ height: 1, background: PC.line }} />
-
+            </Card>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_when')}</div>
+            <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {/* Dimmed, not disabled, while autopilot runs: a selected row reads as "this is what
                   I'm doing now", and right now it isn't. Still editable, because a parent setting
                   this on their way out means it for when they get back. */}
@@ -695,12 +635,11 @@ export default function ParentDashboard() {
                   </div>
                 )}
               </div>
-
-              <div style={{ height: 1, background: PC.line }} />
-
+            </Card>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_ask_first')}</div>
+            <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {/* per-type approvals */}
               <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5, color: PC.ink }}>{s('db_ask_first')}</div>
                 <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
                   {s('db_ask_first_b')}
                 </div>
@@ -728,6 +667,137 @@ export default function ParentDashboard() {
             </Card>
           </>
         )}
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_setup_device')}</div>
+        <Card pad={18}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="qr" size={23} color={PC.tealDeep} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>{s('db_child_device')}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{s('db_scan_qr')}</div>
+            </div>
+            <Btn full={false} variant={showQR ? 'soft' : 'outline'} onClick={() => setShowQR(v => !v)} style={{ padding: '10px 16px', fontSize: 14 }}>
+              {showQR ? s('db_hide') : s('db_show_qr')}
+            </Btn>
+          </div>
+          {showQR && familyCode && (
+            <div className="tc-fade" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 16 }}>
+              <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: SHADOW_SM }}>
+                <QRCodeSVG
+                  value={`https://tuto-blue.vercel.app/setup?code=${familyCode}`}
+                  size={186}
+                  bgColor="#ffffff"
+                  fgColor={PC.ink}
+                  level="M"
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: PC.tealBg, borderRadius: 10, padding: '6px 14px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, color: PC.tealDeep, letterSpacing: 3 }}>{familyCode}</span>
+                </div>
+                <span style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint }}>{s('db_manual_code')}</span>
+              </div>
+            </div>
+          )}
+        </Card>
+
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="pd-wrap" style={{ background: PC.bg, minHeight: '100dvh', margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <style>{PD_CSS}</style>
+      <div className="tc-scroll" style={{ flex: 1, padding: '8px 22px 32px' }}>
+
+        {/* greeting, with Settings named — the gear is where everything that is not today went */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 2px 0' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.inkSoft }}>{s('db_welcome')}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 26, color: PC.ink, letterSpacing: '-.5px', marginTop: 2 }}>{displayName}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button className="tc-press tc-tap" onClick={() => nav('/parent/settings')}
+              style={{ height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', gap: 7, padding: '0 14px', cursor: 'pointer', boxShadow: SHADOW_SM, fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>
+              <span style={{ fontSize: 17 }}>⚙️</span>{s('db_settings')}
+            </button>
+            <button className="tc-press tc-tap" onClick={logout} aria-label={s('db_signout')}
+              style={{ width: 46, height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: SHADOW_SM }}>
+              <Icon name="logout" size={21} color={PC.inkSoft} />
+            </button>
+          </div>
+        </div>
+
+        {/* Nowhere for Tuto to write yet: said here, once, until it is done. */}
+        {user && !channelConnected && (
+          <Card pad={14} onClick={() => nav('/parent/settings')} style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12, background: PC.peachBg, border: 'none', boxShadow: 'none', cursor: 'pointer' }}>
+            <span style={{ fontSize: 22 }}>💬</span>
+            <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink, lineHeight: 1.4 }}>{s('db_connect_reminder')}</div>
+            <Icon name="chevron" size={18} color={PC.inkFaint} />
+          </Card>
+        )}
+
+        <div className="pd-grid">
+          <div>
+            {/* children — each card says what the parent opens the app to find out */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '22px 2px 12px' }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink }}>{s('db_my_children')}</div>
+              <button className="tc-press tc-tap" onClick={() => setShowModal(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: PC.tealBg, color: PC.tealDeep, border: 'none', borderRadius: 11, padding: '8px 13px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                <Icon name="plus" size={16} color={PC.tealDeep} sw={2.4} /> {s('db_add')}
+              </button>
+            </div>
+            {children.length === 0 ? (
+              <Card pad={32} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, border: `2px dashed ${PC.line}`, boxShadow: 'none' }}>
+                <div style={{ fontSize: 46 }}>🧒</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.ink }}>{s('db_no_children')}</div>
+                <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft, textAlign: 'center' }}>{s('db_no_children_b')}</div>
+              </Card>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {children.map(child => <ChildCard key={child.id} child={child} pending={pendingFor[child.id]} onClick={() => nav(`/parent/child/${child.id}`)} />)}
+              </div>
+            )}
+          </div>
+
+          {/* "I'm busy for a while" is a thing a parent does, not a setting they keep — so it
+              lives on the dashboard, next to the children it is about. */}
+          {prefs && (
+            <div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '22px 2px 12px' }}>{s('db_busy')}</div>
+              <Card pad={18}>
+              {/* autopilot — first of the message settings, because while it runs it overrides
+                  everything below it */}
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2, marginBottom: 13, lineHeight: 1.45 }}>
+                  {s('db_busy_sub')}
+                </div>
+
+                {autopilotOn ? (
+                  <div className="tc-fade" style={{ background: PC.peachBg, borderRadius: 13, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: PC.ink, lineHeight: 1.45 }}>
+                      {s('db_on_until', { time: new Date(autopilotEnds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
+                      <div style={{ fontWeight: 600, fontSize: 12, color: PC.inkSoft, marginTop: 2 }}>
+                        {s('db_will_tell')}
+                      </div>
+                    </div>
+                    <Btn full={false} variant="soft" onClick={endAutopilot} style={{ padding: '8px 13px', fontSize: 13 }}>{s('db_im_back')}</Btn>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 9 }}>
+                    {AUTOPILOT_PRESETS.map(p => (
+                      <Btn key={p.minutes} full={false} variant="outline" onClick={() => startAutopilot(p.minutes)}
+                        style={{ flex: 1, padding: '9px 6px', fontSize: 13 }}>{s(p.label)}</Btn>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
 
       {showModal && user && (

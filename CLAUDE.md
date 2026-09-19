@@ -268,13 +268,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       dönüyor. Üç kırılma senaryosuyla (bare Fredoka, eksik rescue, range'den İ'nin düşmesi)
       doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
       tamamını taşıyor; Georgia ve monospace sistem fontu.
-- [ ] Parent dashboard keşfedilebilirliği: ayar kartı sayfanın en sonunda, Notifications'ın
-      altında, başlığı "How much I write" — hiçbir yerde "Settings" yazmıyor ve telefonda dört
-      ekran aşağıda. Kullanıcı kendi ürününde bulamadı; cache değil (SW hiç olmamış, HTML
-      must-revalidate, canlıda tarayıcı testi bölümü buluyor). Seçenekler: karta "Settings"
-      başlığı verip Notifications'ın üstüne almak, ya da üst özet şeridine atlama satırı.
-      Karar ertelendi (2026-09-01). **Not:** dil seçici bu kartın en başında ama asıl yeri
-      splash ekranı — orada bulunması bu maddeye bağlı değil.
+- [x] Parent dashboard keşfedilebilirliği (2026-09-20): panel "bugün" ekranı oldu — çocuk kartları bugünkü
+      etkinlik, gem, Hezarfen ve "N onay bekliyor" rozetiyle (`/api/parent/overview`), "Bir süre meşgulüm" panelde,
+      kanal bağlı değilse hatırlatma. Bütün ayarlar üstteki ⚙️ **Ayarlar** düğmesinden `/parent/settings`'e taşındı
+      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). Tablette iki sütun.
 - [ ] Drawings, Eylül 2026 partilerinden kalan tek şey: `cizims_sep2026/drawings/robot`
       yayınlanmadı — çizim Optimus Prime, omzunda Autobot arması ve elinde silahla. Marka
       korumalı bir karakter; jenerik bir robot çizdirip aynı boru hattından geçirmek gerek.

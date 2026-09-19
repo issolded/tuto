@@ -59,6 +59,7 @@ export default function App() {
         <Route path="/parent/login" element={<ParentLogin />} />
         <Route path="/parent/signup" element={<ParentSignup />} />
         <Route path="/parent/dashboard"   element={session ? <ParentDashboard />   : <Navigate to="/parent/login" />} />
+        <Route path="/parent/settings"    element={session ? <ParentDashboard view="settings" /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/settings" element={session ? <TaskSettings /> : <Navigate to="/parent/login" />} />

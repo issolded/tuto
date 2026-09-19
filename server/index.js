@@ -6449,6 +6449,34 @@ app.get('/api/children/:childId/paintings', async (req, res) => {
 
 // Parent-side view of a child's paintings. Unlike the child route this proves
 // WHO is asking — parent JWT plus ownership of that child.
+// What is waiting on the parent, per child, for the dashboard's child cards: one call instead of a
+// child page's worth of lists for every child. Counts only — the child page has the items.
+app.get('/api/parent/overview', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: kids } = await supabase.from('children').select('id').eq('parent_id', userId)
+    const ids = (kids || []).map(k => k.id)
+    if (!ids.length) return res.json({ children: [] })
+    const pending = (table, extra = (q) => q) => extra(supabase.from(table).select('child_id').in('child_id', ids).eq('status', 'pending'))
+      .then(({ data }) => data || [])
+    const [subs, paints, contribs, claims, asks] = await Promise.all([
+      pending('submissions'), pending('paintings'), pending('contribution_log'), pending('reward_claims'), pending('reward_suggestions'),
+    ])
+    const count = (rows, id) => rows.filter(r => r.child_id === id).length
+    res.json({ children: ids.map(id => {
+      const n = count(subs, id) + count(paints, id) + count(contribs, id) + count(claims, id) + count(asks, id)
+      return { id, pending: n }
+    }) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/parent/children/:childId/paintings', async (req, res) => {
   try {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
