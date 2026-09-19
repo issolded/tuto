@@ -10,8 +10,10 @@
 export const TASK_DEFAULTS = {
   reading:  { gems: 30, variable: true, daily_cap: 3 },
   math:     { gems: 30, variable: true, daily_cap: 3 },
-  writing:  { gems: 30, variable: true },
-  homework: { gems: 25, variable: false },
+  writing:  { gems: 30, variable: true, daily_cap: 3 },
+  // Homework had no cap: with approval off, or on autopilot, every photo paid. Counted by the day
+  // the homework was sent, so approving a week's backlog at once is not capped as one day.
+  homework: { gems: 25, variable: false, daily_cap: 3 },
   drawing:  { gems: 20, variable: false, daily_cap: 2 },
   // Shape & pattern puzzles (NVR). Scored and paid on the server, like maths.
   puzzle:   { gems: 30, variable: true, daily_cap: 3 },

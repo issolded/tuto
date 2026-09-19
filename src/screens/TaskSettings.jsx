@@ -16,7 +16,17 @@ const TASKS = [
 
 // My Drawings rewards instantly, with no approval step — so it is the one task
 // with a daily cap. The cap is enforced on the SERVER; this is just the dial.
-const CAPPED_TASKS = { drawing: { min: 1, max: 10 } }
+// Every task has a daily cap and every cap is the parent's to change — it was drawing only, and
+// the other four sat at a fixed 3 nobody could see. 1–10 is the range the chat tool takes too.
+// What happens past the cap, said in the task's own words.
+const CAPPED_TASKS = {
+  reading:  { min: 1, max: 10, extra: 'Extra books are still logged, just without gems.' },
+  math:     { min: 1, max: 10, extra: 'Extra sessions still count, just without gems.' },
+  writing:  { min: 1, max: 10, extra: 'Extra stories are still saved, just without gems.' },
+  homework: { min: 1, max: 10, extra: 'Extra homework still reaches you, just without gems.' },
+  drawing:  { min: 1, max: 10, extra: 'Extra drawings are still saved, just without gems.' },
+  puzzle:   { min: 1, max: 10, extra: 'Extra puzzles still count, just without gems.' },
+}
 
 const DEFAULT_SETTINGS = Object.fromEntries(
   Object.entries(TASK_DEFAULTS).map(([key, { gems, daily_cap }]) => [
@@ -182,23 +192,23 @@ export default function TaskSettings() {
                 </div>
               )}
 
-              {/* daily cap — only for tasks that reward without approval */}
+              {/* daily cap */}
               {s.active && CAPPED_TASKS[key] && (
                 <div style={{ marginTop: 14, borderTop: `1px solid ${PC.line}`, paddingTop: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>Rewarded per day</div>
                       <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 2 }}>
-                        Extra drawings are still saved, just without gems.
+                        {CAPPED_TASKS[key].extra}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button onClick={() => setDailyCap(key, Math.max(CAPPED_TASKS[key].min, (s.daily_cap ?? 2) - 1))}
+                      <button onClick={() => setDailyCap(key, Math.max(CAPPED_TASKS[key].min, (s.daily_cap ?? TASK_DEFAULTS[key].daily_cap) - 1))}
                         style={capBtn(PC)}>−</button>
                       <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: accent, minWidth: 18, textAlign: 'center' }}>
-                        {s.daily_cap ?? 2}
+                        {s.daily_cap ?? TASK_DEFAULTS[key].daily_cap}
                       </span>
-                      <button onClick={() => setDailyCap(key, Math.min(CAPPED_TASKS[key].max, (s.daily_cap ?? 2) + 1))}
+                      <button onClick={() => setDailyCap(key, Math.min(CAPPED_TASKS[key].max, (s.daily_cap ?? TASK_DEFAULTS[key].daily_cap) + 1))}
                         style={capBtn(PC)}>+</button>
                     </div>
                   </div>

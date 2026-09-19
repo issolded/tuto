@@ -947,12 +947,25 @@ export default function ParentChildDetail() {
   const pendingContributionGroups = groupByDate(pendingContributions, contributionsTodayDate)
   const pendingClaims = (claims || []).filter(c => c.status === 'pending')
 
+  // Through the server, which checks this parent owns the child, pays the configured amount and
+  // applies homework's daily cap. This wrote the submission and the ledger row from the browser,
+  // with an amount the page chose, so none of that applied to the button parents use most.
+  async function submissionAction(subId, action) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) return null
+    try {
+      const r = await fetch(`${SERVER}/api/submissions/${subId}/${action}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      })
+      return r.ok ? await r.json() : null
+    } catch { return null }
+  }
+
   async function handleApprove(sub) {
-    const earnedGems = sub.gems_earned ?? sub.suggested_gems ?? 30
-    await Promise.all([
-      supabase.from('submissions').update({ status: 'approved', gems_earned: earnedGems }).eq('id', sub.id),
-      supabase.from('bt_ledger').insert({ child_id: id, amount: earnedGems, reason: sub.task_type || 'task' }),
-    ])
+    const r = await submissionAction(sub.id, 'approve')
+    if (!r) return
+    const earnedGems = r.gems ?? 0
     setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved', gems_earned: earnedGems } : s))
     setGems(prev => (prev ?? 0) + earnedGems)
     setJustApproved(true)
@@ -960,7 +973,7 @@ export default function ParentChildDetail() {
   }
 
   async function handleReject(subId) {
-    await supabase.from('submissions').update({ status: 'rejected' }).eq('id', subId)
+    if (!(await submissionAction(subId, 'reject'))) return
     setSubmissions(prev => prev.map(s => s.id === subId ? { ...s, status: 'rejected' } : s))
   }
 
