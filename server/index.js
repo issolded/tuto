@@ -5421,6 +5421,10 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
     if (!Number.isInteger(chosen) || chosen < 0 || chosen >= q.options.length) return res.status(400).json({ error: 'no such option' })
 
     const correct = chosen === q.correct_index
+    // Why the answer is the answer, for the child who missed it. Only here, after the answer is
+    // in: it names the rule, which is the key.
+    const { explainQuestion } = await import('./puzzle/puzzleExplain.js')
+    const why = explainQuestion(q, req.body?.lang === 'tr' ? 'tr' : 'en')
     const { error } = await supabase.from('puzzle_attempts').insert({
       session_id: session.id, child_id: session.child_id, question_index: index,
       type: q.type, rule: q.rule?.attr ?? null, band: session.band, chosen_index: chosen, correct,
@@ -5430,10 +5434,10 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
       // stands; the second gets told what the first was.
       const { data: first } = await supabase.from('puzzle_attempts')
         .select('chosen_index, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
-      return res.json({ correct: !!first?.correct, chosen_index: first?.chosen_index, correct_index: q.correct_index, repeated: true })
+      return res.json({ correct: !!first?.correct, chosen_index: first?.chosen_index, correct_index: q.correct_index, why, repeated: true })
     }
     if (error) return res.status(500).json({ error: error.message })
-    res.json({ correct, chosen_index: chosen, correct_index: q.correct_index })
+    res.json({ correct, chosen_index: chosen, correct_index: q.correct_index, why })
   } catch (err) {
     console.error('[PUZZLE]', err.message)
     res.status(500).json({ error: err.message })

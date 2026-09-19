@@ -154,9 +154,9 @@ export default function PuzzleScreen() {
     setPending(true)
     setAnswerFailed(false)
     try {
-      const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen_index: i })
+      const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen_index: i, lang: language })
       setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
-      setFlash({ correct: r.correct, correct_index: r.correct_index })
+      setFlash({ correct: r.correct, correct_index: r.correct_index, why: r.why })
       // A right answer flashes and moves on, as maths does. A wrong one stays until the child
       // taps, because it shows them the right figure and that is worth looking at.
       if (r.correct) advanceTimer.current = setTimeout(advance, 1400)
@@ -277,41 +277,51 @@ export default function PuzzleScreen() {
             </div>
           </div>
 
-          {/* One row per puzzle, as maths lists its sums: what was asked, what the child picked,
-              and the right one where they differ. A row of ticks said how many, not which — and
-              a wrong answer is only worth something next to the figure that was right. */}
+          {/* One card per puzzle, as maths lists its sums — but a puzzle is its pictures, so the
+              card is the question again: the prompt, every option, the child's pick and the right
+              one marked, and for a miss the sentence that says what the rule was. A row of ticks,
+              and then one picked figure per row, said how many and not what. */}
           <div style={{ animation: 'fadeUp 0.4s ease 0.08s both' }}>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, marginBottom: 10 }}>{t('math_your_answers', language)}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {answers.map((a, i) => {
                 const pq = session.questions[i]
-                const mini = (o) => o && (o.spec ? <Figure spec={o.spec} px={34} colors={COLORS} />
-                  : <CodeChip code={o.code} px={26} colors={COLORS} />)
+                if (!a || !pq) return null
+                const rpx = isTablet ? 56 : 40
                 return (
                   <div key={i} style={{
-                    background: 'white', borderRadius: 15, padding: '11px 15px',
-                    display: 'flex', alignItems: 'flex-start', gap: 11,
+                    background: 'white', borderRadius: 16, padding: '13px 15px',
                     boxShadow: '0 3px 12px rgba(31,122,114,.07)',
                     animation: `fadeUp 0.35s ease ${0.1 + i * 0.05}s both`,
                   }}>
-                    <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{a?.correct ? '✅' : '🔄'}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{a.correct ? '✅' : '🔄'}</span>
+                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.4 }}>
                         {i + 1}. {t(pq.stem_key, language)}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 6 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <span style={{ fontWeight: 700, fontSize: 12.5, color: a?.correct ? GREEN : INK_SOFT }}>{t('math_your_answer', language)}</span>
-                          {mini(pq.options[a?.chosen_index])}
-                        </div>
-                        {a && !a.correct && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                            <span style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE }}>{t('math_answer_was', language)}</span>
-                            {mini(pq.options[a.correct_index])}
-                          </div>
-                        )}
-                      </div>
                     </div>
+                    <Prompt q={pq} px={rpx} colors={COLORS} />
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {pq.options.map((o, j) => {
+                        const mine = j === a.chosen_index
+                        const right = j === a.correct_index
+                        const state = right ? 'ok' : mine ? 'bad' : null
+                        return (
+                          <div key={j} style={{ textAlign: 'center', opacity: state ? 1 : 0.55 }}>
+                            {o.spec ? <Figure spec={o.spec} px={rpx} state={state} colors={COLORS} />
+                              : <CodeChip code={o.code} px={rpx - 8} state={state} colors={COLORS} />}
+                            <div style={{ fontWeight: 800, fontSize: 11, marginTop: 2, minHeight: 14, color: right ? GREEN : ORANGE }}>
+                              {mine ? t('puzzle_you', language) : right ? t('math_answer_was', language) : ''}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {!a.correct && a.why && (
+                      <div style={{ marginTop: 8, background: '#FFF4E8', borderRadius: 12, padding: '9px 12px', fontWeight: 700, fontSize: 13.5, color: INK, lineHeight: 1.45 }}>
+                        💡 {a.why}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -384,6 +394,11 @@ export default function PuzzleScreen() {
                   {rightOption.spec ? <Figure spec={rightOption.spec} px={px + 20} />
                     : <CodeChip code={rightOption.code} px={px + 20} />}
                 </div>
+                {flash.why && (
+                  <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: 'white', textAlign: 'center', lineHeight: 1.45, maxWidth: 420, marginTop: 6 }}>
+                    {flash.why}
+                  </div>
+                )}
                 <div style={{ fontFamily: FRED, fontWeight: 600, marginTop: 8, fontSize: 15, color: 'white', opacity: .8 }}>
                   {language === 'tr' ? 'Devam etmek için dokun' : 'Tap to carry on'}
                 </div>
