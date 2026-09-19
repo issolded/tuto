@@ -109,7 +109,9 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       "Bugün" şeridinde de var. 2026-09-18/19 gece kararları: 7-8'de resimli dizi yok (düz tekrar "çok
       kolay"), 8-9+ tek ikonlu dolgu dizisi yok, 7-8+ kategori sorusu komşu gruptan (meyve/bitki,
       memeli/böcek), 7-8 kaynak dengesi geometrik 4 / ikon 2 / emoji 4, belongs'ta cevap örneklerin
-      ortak her özelliğini taşır. Kör test (taze seed): 5-6 39/39, 7-8 43/45, 8-9 41/41, 9-10 43/43,
+      ortak her özelliğini taşır. 2026-09-19: 7-8 geometrik dizisi döngü değil ilerleyen dizi (nokta 0→5 / 5→0, ok ya da yarım
+      daire 45° adım) — döngüde cevap 3. figürün kopyasıydı, "çok kolay". Oturumda her ilişki/özellik/grup çifti bir kez
+      (deve→çöl sonra kuş→ağaç tekrarı). Telefonda 5 şık zar dizilimi. Kör test (taze seed): 5-6 39/39, 7-8 43/45, 8-9 41/41, 9-10 43/43,
       10-11 42/43 — kaçırmalar düzeltildi. Kalan: iPad'de kart en altta (kaydırmadan görünmüyor). **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı

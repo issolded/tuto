@@ -265,7 +265,14 @@ export const BANDS = {
     mirrorNeedsOutline: true,   // see genReflection
     seqPeriod: 3,
     seqLength: 5,
-    seqSteps: 1,                // one thing moving: find the period and copy
+    seqSteps: 1,
+    // Not a cycle (2026-09-19). A period-3 cycle over five figures puts the answer on the page —
+    // it is the third figure again — and a child copies it without reading the rule; on the live
+    // app it was "too easy" beside the picture runs that had already left for the same reason.
+    // The second axis the older bands add cannot help here: 3 against an alternation repeats only
+    // every 6, one more than this band shows. So the run PROGRESSES instead — a dot more each
+    // time, an arrow a further 45° round — and the next figure is one the child has not seen.
+    seqMode: 'progress',
   },
   // The turn. Read against Bond 11+ Assessment Papers 8-9, and it is the band where the series
   // changes direction: paper 1 runs five picture sequences (a post office queue, a wash going
@@ -756,7 +763,69 @@ function genIdentical(r, band, seed) {
   }
 }
 
+// A run that moves one step at a time, so the next figure is not in it. Two kinds, the two the
+// books run at this age: a count going up or down (dots, 0→5 or 5→0), and a figure turning 45°
+// a step — which needs one whose eight turns are eight pictures: an arrow, or a circle with a
+// half shaded, which reads as a moon going round. (A half-shaded square turned 45° is a diamond
+// every other step, and a run that changes shape as it turns read as two rules.) Every figure of
+// the run and every option is checked against every other as a child sees them (tooAlike): a
+// turn a child cannot see is not a step.
+const PROGRESS_TURNERS = [
+  { shape: 'arrow' }, { shape: 'arrow', fill: 'solid' },
+  { shape: 'circle', half: 'tl' },
+]
+const DOT_SHAPES = ['circle', 'square', 'hexagon', 'pentagon']
+
+function genProgression(r, band, seed) {
+  const n = band.seqLength
+  const want = band.options
+  const turn = r() < 0.5
+  let at, other, rule
+  if (turn) {
+    const base = makeSpec(pick(r, PROGRESS_TURNERS))
+    const step = pick(r, [45, -45])
+    const r0 = pick(r, [0, 90, 180, 270])
+    at = (k, over = {}) => makeSpec({ ...base, rotation: ((r0 + k * step) % 360 + 360) % 360, ...over })
+    // Wrong steps a child makes: stopping (the last one again), going two, turning back.
+    other = [at(n - 1), at(n + 1), at(n - 2), at(n + 2)]
+    const alt = base.half ? { half: 'br' } : { fill: base.fill === 'solid' ? 'none' : 'solid' }
+    other.push(at(n, alt))
+    rule = { attr: 'rotation', from: at(0).rotation, to: at(n).rotation, step }
+  } else {
+    const shape = pick(r, DOT_SHAPES)
+    const up = r() < 0.5
+    const count = (k) => (up ? k : n - k)          // 0…4 → 5, or 5…1 → 0
+    at = (k, over = {}) => makeSpec({ shape, dots: count(k), ...over })
+    const elsewhere = pick(r, DOT_SHAPES.filter(x => x !== shape))
+    other = [at(n - 1), at(n - 2), at(n, { shape: elsewhere }), at(n - 1, { shape: elsewhere })]
+    rule = { attr: 'dots', from: count(0), to: count(n), step: up ? 1 : -1 }
+  }
+  const prompt = Array.from({ length: n }, (_, i) => at(i))
+  const answer = at(n)
+  // Every count has to survive being drawn — normalizeSpec drops marks too small to count.
+  if (!turn && [...prompt, answer].some(f => normalizeSpec(f).dots !== f.dots)) return null
+  const run = [...prompt, answer]
+  for (let i = 0; i < run.length; i++) {
+    for (let j = i + 1; j < run.length; j++) if (tooAlike(run[i], run[j])) return null
+  }
+  const options = [{ spec: answer, why: null }]
+  for (const spec of other) {
+    if (options.length >= want) break
+    if (options.some(o => tooAlike(o.spec, spec))) continue
+    options.push({ spec, why: rule.attr })
+  }
+  if (options.length < want) return null
+  const order = shuffle(r, indices(want))
+  return {
+    seed, type: 'sequence', layout: 'row', prompt,
+    options: order.map(i => options[i]),
+    correct_index: order.indexOf(0),
+    rule,
+  }
+}
+
 function genSequence(r, band, seed) {
+  if (band.seqMode === 'progress') return genProgression(r, band, seed)
   const drawn = ruleAndBase(r, band)
   if (!drawn) return null
   const { base, attr: ruleAttr } = drawn

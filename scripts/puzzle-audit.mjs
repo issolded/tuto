@@ -223,7 +223,18 @@ function answerProblem(q) {
     //
     // Read off the drawn pictures, so it holds for every sequence family and not only glyphs —
     // shape and icon runs had no answer check at all until the mutation check below asked.
-    if (!why) {
+    // A progression (7-8) is not periodic: each figure is the last moved one step. Re-derived the
+    // same way — the step read off the run, the next term computed, the answer checked against it.
+    if (!why && q.rule?.step !== undefined) {
+      const a = q.rule.attr
+      const v = q.prompt.map(s => normalizeSpec(s)[a])
+      const d = (x, y) => (a === 'rotation' ? (((y - x) % 360) + 540) % 360 - 180 : y - x)
+      const steps = v.slice(1).map((x, i) => d(v[i], x))
+      const next = { ...q.prompt[q.prompt.length - 1], [a]: a === 'rotation' ? (v[v.length - 1] + steps[0] + 360) % 360 : v[v.length - 1] + steps[0] }
+      if (steps.some(x => x !== steps[0]) || !steps[0]) why = 'the run does not move by one steady step'
+      else if (geometryKey(ans) !== geometryKey(next)) why = 'the answer is not the next step of the run'
+      else if (others.some(s => geometryKey(s) === geometryKey(next))) why = 'a distractor is also the next step'
+    } else if (!why) {
       const p = keys.map((_, k) => k).slice(1).find(k => keys.every((c, i) => i < k || c === keys[i - k]))
       const next = p && keys[keys.length - p]
       if (!p) why = 'the prompt does not repeat on any period'
