@@ -3667,7 +3667,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
     // Oldest first, today last — the order a bar chart reads in.
     const week = Array.from({ length: 7 }, (_, i) => {
       const d = now.minus({ days: 6 - i })
-      return { date: d.toISODate(), count: countOn(d.toISODate()) }
+      return { date: d.toISODate(), count: countOn(d.toISODate()), byType: byDay.get(d.toISODate()) || blank() }
     })
     const weekByType = blank()
     for (const { date } of week) for (const k of TYPES) weekByType[k] += (byDay.get(date) || {})[k] || 0

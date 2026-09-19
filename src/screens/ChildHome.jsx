@@ -182,58 +182,126 @@ const BONUS_NAMES = { math: 'task_math', reading: 'task_reading', writing: 'task
 
 function BonusCard({ today, lang, nav, tone = 'mid' }) {
   const [why, setWhy] = useState(false)
+  const [open, setOpen] = useState(false)
   const b = today.bonus
   if (!b?.active || !b.types?.length) return null
   const done = (k) => (today.activities?.[k] || 0) > 0
   const next = b.types.find(k => !done(k))
   const count = b.types.filter(done).length
   const mid = tone === 'mid'
-  const fred = { fontFamily: FRED, fontWeight: 600, color: '#20201e' }
+  const grot = "'Space Grotesk', 'Manrope', sans-serif"
+  const fred = { fontFamily: mid ? FRED : grot, fontWeight: 600, color: mid ? '#20201e' : '#1b1f2a' }
+  const tagColor = mid ? (b.earned ? '#b7720f' : '#7c63c8') : '#5860d8'
   return (
     <div style={mid ? { position: 'relative', background: b.earned ? 'linear-gradient(135deg,#fff3c4,#fde7a3)' : 'linear-gradient(135deg,#e7ddf6,#dcd0f3)',
       border: '3px solid #20201e', borderRadius: 24, padding: '15px 16px', boxShadow: '0 8px 0 rgba(32,32,30,.10)', overflow: 'hidden' } : {}}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ ...fred, ...(mid ? {} : { fontFamily: "'Space Grotesk', 'Manrope', sans-serif", color: '#5860d8' }), fontSize: 12, letterSpacing: '.6px', textTransform: 'uppercase',
-          ...(mid ? { color: b.earned ? '#b7720f' : '#7c63c8' } : {}) }}>🏅 {t('bonus_title', lang)}</span>
-        <button onClick={() => setWhy(w => !w)} aria-label="?" style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #7c63c8', background: 'transparent',
-          color: '#7c63c8', fontWeight: 800, fontSize: 11, lineHeight: 1, cursor: 'pointer', padding: 0 }}>?</button>
+        <span style={{ ...fred, fontSize: 12, letterSpacing: '.6px', textTransform: 'uppercase', color: tagColor }}>🏅 {t('bonus_title', lang)}</span>
+        <button onClick={() => setWhy(w => !w)} aria-label="?" style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${tagColor}`, background: 'transparent',
+          color: tagColor, fontWeight: 800, fontSize: 11, lineHeight: 1, cursor: 'pointer', padding: 0 }}>?</button>
       </div>
       {why && <div style={{ fontWeight: 700, fontSize: 12.5, color: '#6f6a64', lineHeight: 1.4, marginTop: 6, maxWidth: 280 }}>{t('bonus_why', lang)}</div>}
-      <div style={{ ...fred, ...(mid ? {} : { fontFamily: "'Space Grotesk', 'Manrope', sans-serif", color: '#1b1f2a' }), fontSize: mid ? 19 : 16, marginTop: 5, lineHeight: 1.15 }}>
+      <div style={{ ...fred, fontSize: mid ? 19 : 16, marginTop: 5, lineHeight: 1.15, maxWidth: mid ? 'calc(100% - 64px)' : undefined }}>
         {(b.earned ? t('bonus_earned', lang) : t('bonus_todo', lang)).replace('%n%', b.gems)}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 11, flexWrap: 'wrap' }}>
-        {b.types.map(k => (
-          <button key={k} onClick={() => nav(BONUS_ROUTES[k], { state: { from: '/child/home' } })} aria-label={t(BONUS_NAMES[k], lang)}
-            style={{ position: 'relative', width: 46, height: 46, borderRadius: mid ? 14 : 12, cursor: 'pointer', padding: 0,
-              border: mid ? `2.5px ${done(k) ? 'solid #20201e' : 'dashed #b9b0cf'}` : `1.5px ${done(k) ? 'solid #5860d8' : 'dashed #cfd3e0'}`,
-              background: done(k) ? '#fff' : 'rgba(255,255,255,.55)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <div style={{ transform: 'scale(.6)', opacity: done(k) ? 1 : 0.35, filter: done(k) ? 'none' : 'grayscale(1)' }}>
-              {k === 'drawing' ? <DrawingsIcon /> : <TaskIcon type={k} c={TASK_ACCENT[k] || '#a98ce6'} />}
-            </div>
-            {done(k) && <span style={{ position: 'absolute', right: -1, bottom: -1, width: 17, height: 17, borderRadius: '50%', background: mid ? '#79cf86' : '#2f9e63',
-              border: mid ? '2px solid #20201e' : '2px solid #fff', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>}
-          </button>
-        ))}
+
+      {/* How far along, as a bar — and what is behind it, one slot per activity, on request. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, maxWidth: mid ? 'calc(100% - 64px)' : undefined }}>
+        <div style={{ flex: 1, height: mid ? 11 : 6, border: mid ? '2.5px solid #20201e' : 'none', borderRadius: 999, background: mid ? '#fff' : '#eceef3', overflow: 'hidden' }}>
+          <i style={{ display: 'block', height: '100%', width: `${(count / b.types.length) * 100}%`, background: mid ? '#79cf86' : '#2f9e63' }} />
+        </div>
+        <span style={{ fontWeight: 800, fontSize: 13, color: '#6f6a64' }}>{count}/{b.types.length}</span>
       </div>
-      {/* The plain card sits under a home that already says what is next. */}
-      {mid && !b.earned && next && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11, position: 'relative', zIndex: 1, maxWidth: mid ? 'calc(100% - 70px)' : '100%' }}>
-          <span style={{ fontWeight: 700, fontSize: 13, color: '#6f6a64' }}>{count}/{b.types.length}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, position: 'relative', zIndex: 1, maxWidth: mid ? 'calc(100% - 64px)' : '100%' }}>
+        <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontWeight: 800, fontSize: 12.5,
+          color: tagColor, fontFamily: "'Nunito', sans-serif" }}>{open ? t('bonus_hide', lang) + ' ▴' : t('bonus_show', lang) + ' ▾'}</button>
+        {mid && !b.earned && next && (
           <button onClick={() => nav(BONUS_ROUTES[next], { state: { from: '/child/home' } })} style={{ marginLeft: 'auto', background: '#f79433', color: '#fff', ...fred,
             fontSize: 14, border: '2.5px solid #20201e', borderRadius: 999, padding: '6px 13px', boxShadow: '0 4px 0 rgba(32,32,30,.25)', cursor: 'pointer',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t('home_quest_next', lang).replace('%task%', t(BONUS_NAMES[next], lang))} →
           </button>
+        )}
+      </div>
+      {open && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 11, flexWrap: 'wrap' }}>
+          {b.types.map(k => (
+            <button key={k} onClick={() => nav(BONUS_ROUTES[k], { state: { from: '/child/home' } })} aria-label={t(BONUS_NAMES[k], lang)}
+              style={{ position: 'relative', width: 46, height: 46, borderRadius: mid ? 14 : 12, cursor: 'pointer', padding: 0,
+                border: mid ? `2.5px ${done(k) ? 'solid #20201e' : 'dashed #b9b0cf'}` : `1.5px ${done(k) ? 'solid #5860d8' : 'dashed #cfd3e0'}`,
+                background: done(k) ? '#fff' : 'rgba(255,255,255,.55)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <div style={{ transform: 'scale(.6)', opacity: done(k) ? 1 : 0.35, filter: done(k) ? 'none' : 'grayscale(1)' }}>
+                {k === 'drawing' ? <DrawingsIcon /> : <TaskIcon type={k} c={TASK_ACCENT[k] || '#a98ce6'} />}
+              </div>
+              {done(k) && <span style={{ position: 'absolute', right: -1, bottom: -1, width: 17, height: 17, borderRadius: '50%', background: mid ? '#79cf86' : '#2f9e63',
+                border: mid ? '2px solid #20201e' : '2px solid #fff', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>}
+            </button>
+          ))}
         </div>
       )}
-      {mid && <div style={{ position: 'absolute', right: -4, bottom: -10 }}><TutoMascot size={76} color="#79cf86" /></div>}
+      {mid && <div style={{ position: 'absolute', right: -4, bottom: -10 }}><TutoMascot size={70} color="#79cf86" /></div>}
     </div>
   )
 }
 
+// The week, one bar a day. A bar is a button: tapping a day says what was done on it. Today is
+// picked to begin with. `teen` draws the flat 12+ version.
+const TYPE_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', homework: '📸' }
+
+function WeekChart({ week, lang, teen = false }) {
+  const [sel, setSel] = useState(week.length - 1)
+  if (!week.length) return null
+  const max = Math.max(3, ...week.map(d => d.count))
+  const fmt = (iso, weekday) => new Intl.DateTimeFormat(localeFor(lang), { weekday }).format(new Date(`${iso}T12:00:00`))
+  const day = week[sel] || week[week.length - 1]
+  const accent = teen ? '#5860d8' : '#a98ce6'
+  const parts = Object.entries(day.byType || {}).filter(([, n]) => n > 0)
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: teen ? 7 : 8, height: teen ? 64 : 56, marginTop: teen ? 12 : 8 }}>
+        {week.map((d, i) => {
+          const on = i === sel
+          const h = d.count ? Math.max(teen ? 12 : 16, (d.count / max) * (teen ? 46 : 40)) : (teen ? 6 : 8)
+          const fill = d.count ? (on ? (teen ? '#3b43b8' : '#f79433') : accent) : (teen ? '#eceef3' : '#f0ecf6')
+          return (
+            <button key={d.date} onClick={() => setSel(i)} aria-label={`${fmt(d.date, 'long')}: ${d.count}`} style={{ flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: teen ? 6 : 4, height: '100%', justifyContent: 'flex-end', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+              {on && d.count > 0 && <span style={{ fontWeight: 800, fontSize: 10.5, color: teen ? '#3b43b8' : '#20201e' }}>{d.count}</span>}
+              <div style={{ width: '100%', maxWidth: teen ? 22 : 26, height: h, borderRadius: teen ? 5 : 7, background: fill,
+                border: teen ? 'none' : '2.5px solid #20201e', outline: on && !d.count ? `2px solid ${accent}` : 'none' }} />
+              <span style={{ fontWeight: 800, fontSize: 10.5, color: on ? (teen ? '#5860d8' : '#20201e') : (teen ? '#a4a8b4' : '#6f6a64') }}>{fmt(d.date, 'narrow')}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px dashed ${teen ? '#e7e9ef' : '#e4def0'}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+        fontWeight: 700, fontSize: 12.5, color: teen ? '#737888' : '#6f6a64' }}>
+        <span style={{ color: teen ? '#1b1f2a' : '#20201e', fontWeight: 800 }}>{fmt(day.date, 'long')}</span>
+        {parts.length
+          ? <>
+              <span>· {t('home_n_done', lang).replace('%n%', day.count)}</span>
+              {parts.map(([k, n]) => <span key={k}>{TYPE_EMOJI[k] || '•'} {n}</span>)}
+            </>
+          : <span>· {t('day_nothing', lang)}</span>}
+      </div>
+    </div>
+  )
+}
+
+// 🔥 and a number meant nothing on its own. The chip says "days", and a tap says what it counts.
+function StreakChip({ n, lang, style, onToggle }) {
+  if (!(n > 0)) return null
+  return (
+    <button onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 5, borderRadius: 999, padding: '7px 12px', cursor: 'pointer',
+      border: 'none', background: '#fff', boxShadow: '0 3px 9px rgba(40,30,70,.08)', fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#ef7a3a', ...style }}>
+      🔥 {t('streak_days', lang).replace('%n%', n)}
+    </button>
+  )
+}
+
 function MidHome({ child, lang, gems, today, ts, nav }) {
+  const [streakWhy, setStreakWhy] = useState(false)
   const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
   const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
   const doneToday = Object.values(today.activities || {}).reduce((a, b) => a + b, 0)
@@ -241,8 +309,6 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
   const nextTile = MID_TILES.find(x => x.type === next)
   const week = today.week?.length ? today.week : []
   const weekTotal = week.reduce((a, d) => a + d.count, 0)
-  const weekMax = Math.max(3, ...week.map(d => d.count))
-  const dayLetter = (iso) => new Intl.DateTimeFormat(localeFor(lang), { weekday: 'narrow' }).format(new Date(`${iso}T12:00:00`))
   const card = { background: '#fff', border: `3px solid ${MID.ink}`, borderRadius: 22, boxShadow: '0 6px 0 rgba(32,32,30,.08)' }
   const fred = { fontFamily: FRED, fontWeight: 600, color: MID.ink }
   const goal = today.nearestGoal
@@ -271,16 +337,18 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
           <div style={{ ...fred, fontSize: 19, lineHeight: 1.1 }}>{child?.name ?? t('friend', lang)}</div>
           <div style={{ fontWeight: 700, fontSize: 13, color: MID.soft }}>{t('hello_name', lang)} 👋</div>
         </div>
-        {today.streak > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', borderRadius: 999, padding: '7px 12px', boxShadow: '0 3px 9px rgba(40,30,70,.08)', ...fred, fontSize: 15, color: '#ef7a3a' }}>
-            🔥 {today.streak}
-          </div>
-        )}
+        <StreakChip n={today.streak} lang={lang} onToggle={() => setStreakWhy(w => !w)} />
         <button className="tuto-gempill" onClick={() => nav('/child/gems')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: 'none', borderRadius: 999,
           padding: '7px 12px', boxShadow: '0 3px 9px rgba(40,30,70,.08)', cursor: 'pointer', ...fred, fontSize: 15, color: MID.orange }}>
           ⭐ {gems === null ? '…' : gems}
         </button>
       </div>
+
+      {streakWhy && today.streak > 0 && (
+        <div style={{ background: '#fff4e8', borderRadius: 14, padding: '9px 12px', fontWeight: 700, fontSize: 13, color: MID.ink, lineHeight: 1.4 }}>
+          🔥 {t('streak_explain', lang).replace('%n%', today.streak)}
+        </div>
+      )}
 
       {/* The week, one bar a day — where the handoff had an XP bar. */}
       <div style={{ background: '#fff', borderRadius: 18, padding: '12px 15px', boxShadow: '0 4px 12px rgba(40,30,70,.07)' }}>
@@ -288,18 +356,7 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
           <span style={{ ...fred, fontWeight: 500, fontSize: 13.5, color: MID.soft }}>{t('home_this_week', lang)}</span>
           <span style={{ ...fred, fontSize: 15 }}>{t('home_n_done', lang).replace('%n%', weekTotal)}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 56, marginTop: 8 }}>
-          {week.map((d, i) => {
-            const isToday = i === week.length - 1
-            return (
-              <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-                <div style={{ width: '100%', maxWidth: 26, height: `${d.count ? Math.max(16, (d.count / weekMax) * 40) : 8}px`, borderRadius: 7,
-                  border: `2.5px solid ${MID.ink}`, background: d.count ? (isToday ? MID.orange : MID.purple) : '#f0ecf6' }} />
-                <span style={{ fontWeight: 800, fontSize: 10.5, color: isToday ? MID.ink : MID.soft }}>{dayLetter(d.date)}</span>
-              </div>
-            )
-          })}
-        </div>
+        <WeekChart week={week} lang={lang} />
       </div>
 
       {/* The all-rounder bonus where the handoff had its daily quest; the plain three-things quest
@@ -397,8 +454,6 @@ function TeenHome({ child, lang, gems, today, ts, nav }) {
   const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
   const week = today.week || []
   const weekTotal = week.reduce((a, d) => a + d.count, 0)
-  const weekMax = Math.max(3, ...week.map(d => d.count))
-  const dayLetter = (iso) => new Intl.DateTimeFormat(localeFor(lang), { weekday: 'narrow' }).format(new Date(`${iso}T12:00:00`))
   const next = nextActivity(today, ts)
   const b = today.bonus
   const bonusLeft = b?.active && !b.earned
@@ -464,18 +519,7 @@ function TeenHome({ child, lang, gems, today, ts, nav }) {
           <span style={{ fontWeight: 700, fontSize: 13.5 }}>{t('home_this_week', lang)}</span>
           <span style={{ fontFamily: GROT, fontWeight: 700, fontSize: 13.5, color: TEEN.soft }}>{t('home_n_done', lang).replace('%n%', weekTotal)}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: 64, marginTop: 12, gap: 7 }}>
-          {week.map((d, i) => {
-            const on = d.count > 0
-            const isToday = i === week.length - 1
-            return (
-              <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
-                <div style={{ width: '100%', maxWidth: 22, borderRadius: 5, height: on ? Math.max(12, (d.count / weekMax) * 46) : 6, background: on ? TEEN.accent : TEEN.track }} />
-                <span style={{ fontSize: 10.5, fontWeight: 700, color: isToday ? TEEN.accent : TEEN.faint }}>{dayLetter(d.date)}</span>
-              </div>
-            )
-          })}
-        </div>
+        <WeekChart week={week} lang={lang} teen />
       </div>
 
       <div style={{ fontFamily: GROT, fontWeight: 600, fontSize: 15, marginTop: 3 }}>{t('home_activities', lang)}</div>
@@ -532,6 +576,7 @@ function Stars({ n }) {
 const YOUNG_WELL = { math: '#D4E4FB', reading: '#E7DDF6', writing: '#D4EED9', puzzle: '#D9F3F1', homework: '#FFF1CF', drawing: '#F8D9E6', tree: '#FCE4CF' }
 
 function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
+  const [streakWhy, setStreakWhy] = useState(false)
   const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
   const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
   const starsFor = (type) => Math.min(5, type === 'tree' ? (today.today || 0) : (today.weekByType?.[type] || 0))
@@ -557,8 +602,13 @@ function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
         <TutoMascot size={138} style={{ position: 'relative', animation: 'float 3.2s ease-in-out infinite' }} />
         <div style={{ display: 'flex', gap: 8, position: 'relative', flexWrap: 'wrap', justifyContent: 'center' }}>
           <TodayPill emoji="🌱" text={`${today.today || 0} ${t('tree_leaves_today', lang)}`} color="#37a06f" bg="rgba(255,255,255,.85)" />
-          {today.streak > 0 && <TodayPill emoji="🔥" text={String(today.streak)} color="#ef7a3a" bg="rgba(255,255,255,.85)" />}
+          <StreakChip n={today.streak} lang={lang} onToggle={() => setStreakWhy(w => !w)} style={{ padding: '5px 11px', fontSize: 13, boxShadow: 'none', background: 'rgba(255,255,255,.85)' }} />
         </div>
+        {streakWhy && today.streak > 0 && (
+          <div style={{ position: 'relative', background: '#fff', borderRadius: 14, padding: '9px 12px', fontWeight: 700, fontSize: 13, color: '#20201e', lineHeight: 1.4, maxWidth: 320, textAlign: 'center' }}>
+            {t('streak_explain', lang).replace('%n%', today.streak)}
+          </div>
+        )}
       </div>
 
       {today.bonus?.active && <BonusCard today={today} lang={lang} nav={nav} />}

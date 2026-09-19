@@ -61,7 +61,7 @@ const STRINGS = {
   bonus_todo:         { en: 'Do them all today: +%n% ⭐', tr: 'Hepsini bugün yap: +%n% ⭐', es: 'Hazlas todas hoy: +%n% ⭐' },
   bonus_earned:       { en: 'You did it! +%n% ⭐', tr: 'Bonusu kazandın! +%n% ⭐', es: '¡Lo has conseguido! +%n% ⭐' },
   bonus_why:          { en: 'An all-rounder is someone good at lots of different things.',
-                        tr: 'Hezarfen "bin hüner sahibi" demek: her işten anlayan kişi. Hezarfen Ahmed Çelebi Galata Kulesi\'nden uçmuştu!',
+                        tr: 'Hezarfen "bin hüner sahibi" demek: her işten anlayan kişi.',
                         es: 'Un todoterreno es alguien a quien se le dan bien muchas cosas distintas.' },
   // ── 12+ and 6–8 homes ─────────────────────────────────────────────────────
   home_welcome_back:  { en: 'Welcome back', tr: 'Tekrar hoş geldin', es: 'Hola de nuevo' },
@@ -74,6 +74,13 @@ const STRINGS = {
   home_this_week_n:   { en: '%n% this week', tr: 'bu hafta %n%', es: '%n% esta semana' },
   home_lets_play:     { en: "Let's play and learn!", tr: 'Hadi oynayalım, öğrenelim!', es: '¡A jugar y aprender!' },
   home_pick_game:     { en: 'Pick a game', tr: 'Bir oyun seç', es: 'Elige un juego' },
+  streak_days:        { en: '%n% days', tr: '%n% gün', es: '%n% días' },
+  streak_explain:     { en: "%n% days in a row with something done. Do one today and it keeps growing!",
+                        tr: '%n% gündür her gün en az bir etkinlik yapıyorsun. Bugün de yaparsan serin büyür!',
+                        es: '%n% días seguidos haciendo algo. ¡Haz una hoy y seguirá creciendo!' },
+  day_nothing:        { en: 'Nothing that day', tr: 'O gün etkinlik yok', es: 'Ese día no hubo nada' },
+  bonus_show:         { en: 'Show what is left', tr: 'Nelerin kaldığını göster', es: 'Ver lo que falta' },
+  bonus_hide:         { en: 'Hide', tr: 'Gizle', es: 'Ocultar' },
   // ── 9–11 home ─────────────────────────────────────────────────────────────
   home_this_week:     { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },
   home_n_done:        { en: '%n% done', tr: '%n% etkinlik', es: '%n% hechas' },
