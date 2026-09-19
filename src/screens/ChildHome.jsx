@@ -111,11 +111,27 @@ function bandFor(age) {
   return 'mature'
 }
 
+const todayCacheKey = (id) => `tuto_today_${id}`
+
+// Yesterday's copy keeps its shape — the week, the bonus and what it asks for — but not what was
+// done today, which it cannot know.
+function cachedToday(childId) {
+  try {
+    const c = JSON.parse(localStorage.getItem(todayCacheKey(childId)) || 'null')
+    if (!c?.today) return EMPTY_TODAY
+    if (c.at === new Date().toDateString()) return { ...c.today, loaded: false }
+    return { ...c.today, activities: EMPTY_TODAY.activities, today: 0, bonus: c.today.bonus && { ...c.today.bonus, earned: false }, loaded: false }
+  } catch { return EMPTY_TODAY }
+}
+
 const EMPTY_TODAY = {
   today: 0, monthTreeCount: 0,
   activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 },
-  nearestGoal: null, hasAnyGoals: false,
+  nearestGoal: null, hasAnyGoals: false, loaded: false,
 }
+
+// Whether to hold a place for the bonus card before the summary says: from the age it starts at.
+const mayHaveBonus = (today, child) => today.bonus?.active || (!today.bonus && today.loaded === false && Number(child?.age) >= 7)
 
 
 
@@ -180,10 +196,15 @@ function Ring({ value, label, color }) {
 const BONUS_ROUTES = { math: '/child/math', reading: '/child/library', writing: '/child/stories', drawing: '/child/drawings', puzzle: '/child/puzzle' }
 const BONUS_NAMES = { math: 'task_math', reading: 'task_reading', writing: 'task_writing', drawing: 'task_drawing', puzzle: 'task_puzzle' }
 
-function BonusCard({ today, lang, nav, tone = 'mid' }) {
+function BonusCard({ today, lang, nav, tone = 'mid', placeholder = false }) {
   const [why, setWhy] = useState(false)
   const [open, setOpen] = useState(false)
   const b = today.bonus
+  // Not known yet (first visit on this device): hold the card's place rather than let it arrive
+  // under a finger. Only where the bonus can apply at all.
+  if (!b && today.loaded === false && placeholder) {
+    return <div style={{ height: tone === 'mid' ? 159 : 102, borderRadius: tone === 'mid' ? 24 : 12, background: tone === 'mid' ? 'rgba(220,208,243,.55)' : '#f0f1f5' }} />
+  }
   if (!b?.active || !b.types?.length) return null
   const done = (k) => (today.activities?.[k] || 0) > 0
   const next = b.types.find(k => !done(k))
@@ -249,9 +270,17 @@ function BonusCard({ today, lang, nav, tone = 'mid' }) {
 // picked to begin with. `teen` draws the flat 12+ version.
 const TYPE_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', homework: '📸' }
 
-function WeekChart({ week, lang, teen = false }) {
-  const [sel, setSel] = useState(week.length - 1)
-  if (!week.length) return null
+function WeekChart({ week: weekIn, lang, teen = false }) {
+  let week = weekIn
+  const [sel, setSel] = useState(6)
+  // Before the first summary: seven empty days, so the card is already its full height.
+  if (!week.length) {
+    const now = new Date()
+    week = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i))
+      return { date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, count: 0, byType: {} }
+    })
+  }
   const max = Math.max(3, ...week.map(d => d.count))
   const fmt = (iso, weekday) => new Intl.DateTimeFormat(localeFor(lang), { weekday }).format(new Date(`${iso}T12:00:00`))
   const day = week[sel] || week[week.length - 1]
@@ -268,7 +297,7 @@ function WeekChart({ week, lang, teen = false }) {
             <button key={d.date} onClick={() => setSel(i)} aria-label={`${fmt(d.date, 'long')}: ${d.count}`} style={{ flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: teen ? 6 : 4, height: '100%', justifyContent: 'flex-end', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
               {on && d.count > 0 && <span style={{ fontWeight: 800, fontSize: 10.5, color: teen ? '#3b43b8' : '#20201e' }}>{d.count}</span>}
-              <div style={{ width: '100%', maxWidth: teen ? 22 : 26, height: h, borderRadius: teen ? 5 : 7, background: fill,
+              <div style={{ width: '100%', maxWidth: teen ? 22 : 26, height: h, borderRadius: teen ? 5 : 7, background: fill, transition: 'height .5s cubic-bezier(.2,.9,.3,1.1), background .2s',
                 border: teen ? 'none' : '2.5px solid #20201e', outline: on && !d.count ? `2px solid ${accent}` : 'none' }} />
               <span style={{ fontWeight: 800, fontSize: 10.5, color: on ? (teen ? '#5860d8' : '#20201e') : (teen ? '#a4a8b4' : '#6f6a64') }}>{fmt(d.date, 'narrow')}</span>
             </button>
@@ -361,7 +390,7 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
 
       {/* The all-rounder bonus where the handoff had its daily quest; the plain three-things quest
           only where the bonus is off (a parent's choice, or a child under seven). */}
-      {today.bonus?.active ? <BonusCard today={today} lang={lang} nav={nav} /> : (
+      {mayHaveBonus(today, child) ? <BonusCard today={today} lang={lang} nav={nav} placeholder /> : (
       <div style={{ position: 'relative', background: 'linear-gradient(135deg,#e7ddf6,#dcd0f3)', border: `3px solid ${MID.ink}`, borderRadius: 24,
         padding: '15px 16px', boxShadow: '0 8px 0 rgba(32,32,30,.10)', overflow: 'hidden' }}>
         <div style={{ ...fred, fontSize: 12, letterSpacing: '.6px', textTransform: 'uppercase', color: '#7c63c8' }}>{t('home_quest_tag', lang)}</div>
@@ -499,18 +528,17 @@ function TeenHome({ child, lang, gems, today, ts, nav }) {
         <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', opacity: 0.8 }}>{t('home_up_next', lang)}</div>
         <div style={{ fontFamily: GROT, fontWeight: 600, fontSize: 19, marginTop: 6, paddingRight: 80 }}>{t(next.nameKey, lang)}</div>
         <div style={{ fontSize: 12.5, opacity: 0.85, fontWeight: 600, marginTop: 3, paddingRight: 80 }}>{subFor(next.type)}</div>
-        {progress != null && (
-          <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.28)', marginTop: 12, overflow: 'hidden', marginRight: 80 }}>
-            <i style={{ display: 'block', height: '100%', width: `${progress * 100}%`, background: '#fff' }} />
-          </div>
-        )}
+        {/* Always there, hidden when there is nothing to show, so the card keeps one height. */}
+        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.28)', marginTop: 12, overflow: 'hidden', marginRight: 80, visibility: progress != null ? 'visible' : 'hidden' }}>
+          <i style={{ display: 'block', height: '100%', width: `${(progress || 0) * 100}%`, background: '#fff', transition: 'width .5s ease' }} />
+        </div>
         <button onClick={() => nav(next.route, { state: { from: '/child/home' } })} style={{ position: 'absolute', right: 14, bottom: 14, background: '#fff', color: TEEN.accent,
           fontFamily: GROT, fontWeight: 600, fontSize: 13.5, border: 'none', borderRadius: 10, padding: '9px 15px', cursor: 'pointer' }}>{t('home_open', lang)}</button>
       </div>
 
-      {b?.active && (
+      {mayHaveBonus(today, child) && (
         <div style={{ ...boxed, borderRadius: 16, padding: '14px 15px' }}>
-          <BonusCard today={today} lang={lang} nav={nav} tone="plain" />
+          <BonusCard today={today} lang={lang} nav={nav} tone="plain" placeholder />
         </div>
       )}
 
@@ -611,7 +639,7 @@ function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
         )}
       </div>
 
-      {today.bonus?.active && <BonusCard today={today} lang={lang} nav={nav} />}
+      {mayHaveBonus(today, child) && <BonusCard today={today} lang={lang} nav={nav} placeholder />}
 
       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: '#20201e' }}>{t('home_pick_game', lang)}</div>
       <div className="tuto-task-grid">
@@ -661,7 +689,10 @@ export default function ChildHome() {
   const greetingKey = hour < 12 ? 'greeting_morning' : hour < 18 ? 'greeting_afternoon' : 'greeting_evening'
   const band = bandFor(child?.age)
   const [gems, setGems] = useState(null)
-  const [today, setToday] = useState(EMPTY_TODAY)
+  // Drawn from the last summary this device saw, then replaced when the fresh one arrives. The
+  // week chart and the bonus card used to appear a beat after everything else and push the
+  // activity tiles down under a child's finger — a tap meant for Homework landed on Puzzles.
+  const [today, setToday] = useState(() => cachedToday(child?.id))
 
   const ts = child?.task_settings || {}
   useEffect(() => {
@@ -669,7 +700,10 @@ export default function ChildHome() {
     if (!child?.id) { nav('/child', { replace: true }); return }
 
     getChildGems(child.id).then(setGems)
-    getTodaySummary(child.id).then(setToday)
+    getTodaySummary(child.id).then(fresh => {
+      setToday({ ...fresh, loaded: true })
+      try { localStorage.setItem(todayCacheKey(child.id), JSON.stringify({ at: new Date().toDateString(), today: fresh })) } catch { /* private mode */ }
+    })
 
     // Settings belong to the parent and can change at any moment, so they are re-read on
     // every visit here rather than frozen at PIN entry — otherwise turning an activity off
