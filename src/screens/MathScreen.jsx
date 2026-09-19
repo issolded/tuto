@@ -2455,12 +2455,17 @@ export default function MathScreen() {
                 : flash.why
                   ? <>
                       <MathText text={flash.why} />
-                      <div style={{ marginTop: 14, fontSize: 19, opacity: .92 }}>{t('math_almost', language)} <MathText text={flash.answer} /></div>
+                      <div style={{ marginTop: 14, fontSize: 17, opacity: .92 }}>{t('math_answer_is', language)}</div>
+                      <div style={{ fontSize: 26 }}><MathText text={flash.answer} /></div>
                       <div style={{ marginTop: 22, fontSize: 15, opacity: .78 }}>
                         {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
                       </div>
                     </>
-                  : `${t('math_almost', language)} ${flash.answer} 💪`}
+                  : <>
+                      {t('math_not_this', language)}
+                      <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{t('math_answer_is', language)}</div>
+                      <div style={{ fontSize: 34 }}>{flash.answer}</div>
+                    </>}
             </div>
           </div>
         )}

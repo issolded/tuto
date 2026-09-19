@@ -577,7 +577,9 @@ const STRINGS = {
 
   // Per-question feedback and the result screen.
   math_yes:           { en: 'Yes! ⭐',      tr: 'Doğru! ⭐', es: '¡Sí! ⭐' },
-  math_almost:        { en: 'Almost! The answer was', tr: 'Hmm, bu değil! Doğrusu', es: '¡Uy, esta no! La respuesta era' },
+  // The same two halves on two lines, with the answer under them: the flash after a miss.
+  math_not_this:      { en: 'Almost!', tr: 'Hmm, bu değil!', es: '¡Uy, esta no!' },
+  math_answer_is:     { en: 'The answer was:', tr: 'Doğrusu:', es: 'La respuesta era:' },
   math_your_answers:  { en: 'Your answers:', tr: 'Senin cevapların:', es: 'Tus respuestas:' },
   math_your_answer:   { en: 'Your answer:',  tr: 'Senin cevabın:', es: 'Tu respuesta:' },
   math_answer_was:    { en: 'The answer was', tr: 'Doğrusu', es: 'La respuesta era' },

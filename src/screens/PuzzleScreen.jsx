@@ -345,8 +345,11 @@ export default function PuzzleScreen() {
           }}>
             <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
-              {flash.correct ? t('math_yes', language) : t('math_almost', language)}
+              {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
             </div>
+            {!flash.correct && rightOption && (
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>{t('math_answer_is', language)}</div>
+            )}
             {!flash.correct && rightOption && (
               <>
                 <div style={{ animation: 'pop .35s ease .1s both' }}>
