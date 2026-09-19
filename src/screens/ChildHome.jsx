@@ -240,7 +240,8 @@ function BonusCard({ today, lang, nav, tone = 'mid', placeholder = false }) {
           <button onClick={() => nav(BONUS_ROUTES[next], { state: { from: '/child/home' } })} style={{ marginLeft: 'auto', background: '#f79433', color: '#fff', ...fred,
             fontSize: 14, border: '2.5px solid #20201e', borderRadius: 999, padding: '6px 13px', boxShadow: '0 4px 0 rgba(32,32,30,.25)', cursor: 'pointer',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {t('home_quest_next', lang).replace('%task%', t(BONUS_NAMES[next], lang))} →
+            {/* The emoji says "this one" without the word "next" that did not fit. */}
+            {TYPE_EMOJI[next]} {t(BONUS_NAMES[next], lang)} →
           </button>
         )}
       </div>

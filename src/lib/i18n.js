@@ -79,7 +79,7 @@ const STRINGS = {
                         tr: '%n% gündür her gün en az bir etkinlik yapıyorsun. Bugün de yaparsan serin büyür!',
                         es: '%n% días seguidos haciendo algo. ¡Haz una hoy y seguirá creciendo!' },
   day_nothing:        { en: 'Nothing that day', tr: 'O gün etkinlik yok', es: 'Ese día no hubo nada' },
-  bonus_show:         { en: 'Show what is left', tr: 'Nelerin kaldığını göster', es: 'Ver lo que falta' },
+  bonus_show:         { en: "What's left", tr: 'Kalanlar', es: 'Lo que falta' },
   bonus_hide:         { en: 'Hide', tr: 'Gizle', es: 'Ocultar' },
   // ── 9–11 home ─────────────────────────────────────────────────────────────
   home_this_week:     { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },

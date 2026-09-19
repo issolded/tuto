@@ -561,6 +561,12 @@ const clearedFor = (attr) => Object.fromEntries((NEEDS_CLEAR[attr] || []).map(a 
 // lines at 45°, and "the three share a fill" was three different-looking fills. And size and
 // proportion are both how big the outline is: a narrowed figure reads as a smaller one, so a
 // grid whose row changed size and whose column changed proportion could not be told apart.
+//
+// And shape and rotation (2026-09-19, a live 10-11 code sheet). "Turned the same way" means
+// nothing between two different shapes: an arrow at 0° points right and a triangle at 0° points
+// up, so the arrow and the triangle that shared a letter for their turn looked nothing alike, and
+// the sheet was solvable only by elimination. It was already barred as noise under a rotation
+// rule; it had not been barred as the other axis of a code, a grid, a two-step run or an analogy.
 export const NEEDS_FIXED = {
   position: ['rotation', 'flip'],
   corner: ['rotation', 'flip'],
@@ -568,7 +574,8 @@ export const NEEDS_FIXED = {
   fill: ['rotation', 'flip'],
   stretch: ['rotation', 'size'],
   size: ['stretch'],
-  rotation: ['stretch', 'position', 'corner', 'half', 'fill'],
+  shape: ['rotation'],
+  rotation: ['stretch', 'position', 'corner', 'half', 'fill', 'shape'],
 }
 
 // Both directions of that table: `a` may not move in a question that moves `b`, whichever way
@@ -1267,6 +1274,16 @@ function genSymmetry(r, band, seed) {
 const CODE_LETTERS = [['A', 'B', 'C'], ['X', 'Y', 'Z']]
 
 function genCode(r, band, seed) {
+  // A few figures before giving up: with shape and rotation held apart (NEEDS_FIXED), some figures
+  // have no second axis left that composes with the first, and the next figure usually does.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const q = genCodeOnce(r, band, seed)
+    if (q) return q
+  }
+  return null
+}
+
+function genCodeOnce(r, band, seed) {
   const base = randomSpec(r, band)
   const attrs = shuffle(r, usableAttrs(r, band, base))
   if (attrs.length < 2) return null
