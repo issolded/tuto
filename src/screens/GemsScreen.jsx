@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { childLang, formatDay, localeFor, t } from '../lib/i18n'
 import { supabase } from '../lib/supabase'
 import TutoMascot from '../components/TutoMascot'
@@ -41,6 +42,7 @@ function formatDate(dateStr, lang) {
 export default function GemsScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const lang = childLang(child)
+  const nav = useNavigate()
   const [ledger, setLedger] = useState(null)
 
   useEffect(() => {
@@ -117,10 +119,14 @@ export default function GemsScreen() {
               const label = labelKey ? t(labelKey, lang) : (key || t('gem_task', lang))
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               const day = row.created_at ? formatDate(row.created_at, lang) : ''
+              // A maths or puzzle sitting opens again, question by question.
+              const opens = (key === 'math' || key === 'puzzle') && row.id
               return (
                 <div
                   key={row.id ?? i}
-                  style={{ background: 'white', borderRadius: 18, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', animation: `fadeUp 0.35s ease ${Math.min(i, 8) * 0.05}s both` }}
+                  onClick={opens ? () => nav(`/child/review/${row.id}`) : undefined}
+                  role={opens ? 'button' : undefined}
+                  style={{ cursor: opens ? 'pointer' : 'default', background: 'white', borderRadius: 18, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', animation: `fadeUp 0.35s ease ${Math.min(i, 8) * 0.05}s both` }}
                 >
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: capped ? '#F3EFE6' : '#FFF8E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, opacity: capped ? 0.75 : 1 }}>
                     {emoji}
@@ -138,6 +144,7 @@ export default function GemsScreen() {
                       {isPositive ? '+' : ''}{row.amount} 💎
                     </div>
                   )}
+                  {opens && <div style={{ color: '#C9BFA9', fontSize: 20, fontWeight: 800, flexShrink: 0 }}>›</div>}
                 </div>
               )
             })}

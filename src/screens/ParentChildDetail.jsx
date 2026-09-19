@@ -984,9 +984,10 @@ export default function ParentChildDetail() {
   // A session that hit the day's limit belongs here too. It earned nothing, and filtering on
   // the amount alone hid it — so a parent whose child did four maths sessions was told about
   // three, which is the one number here they could be misled by.
+  const reviewable = (sub) => (sub.task_type === 'math' || sub.task_type === 'puzzle') && !!sub.ledgerId
   const todayDone = (ledger || [])
     .filter(e => (e.amount > 0 || e.capped) && isToday(e.created_at) && e.reason !== 'Welcome bonus')
-    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))
+    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, ledgerId: e.id, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))
 
   // Reading is the one activity that stores what actually happened — the questions it asked,
   // what the child answered, and the pages they photographed. That record was written from
@@ -1288,9 +1289,11 @@ export default function ParentChildDetail() {
                 return (
                   <Card key={sub.id} pad={12} style={{ display: 'flex', flexDirection: 'column', gap: open ? 12 : 0, opacity: sub.capped ? 0.85 : 1 }}>
                     <div
-                      onClick={detail ? () => setOpenReading(open ? null : sub.id) : undefined}
-                      className={detail ? 'tc-tap' : undefined}
-                      style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: detail ? 'pointer' : 'default' }}>
+                      // Reading opens in place; a maths or puzzle sitting opens its questions.
+                      onClick={detail ? () => setOpenReading(open ? null : sub.id)
+                        : reviewable(sub) ? () => nav(`/parent/child/${id}/review/${sub.ledgerId}`) : undefined}
+                      className={detail || reviewable(sub) ? 'tc-tap' : undefined}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: detail || reviewable(sub) ? 'pointer' : 'default' }}>
                       <div style={{ width: 38, height: 38, borderRadius: 11, background: meta.type ? PC[meta.type + 'Bg'] : PC.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {meta.type ? <TaskIcon type={meta.type} size={20} /> : <span style={{ fontSize: 18 }}>⭐</span>}
                       </div>
@@ -1312,6 +1315,9 @@ export default function ParentChildDetail() {
                         : <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.green }}>+{sub.gems_earned ?? 0} ⭐</div>}
                       {detail && (
                         <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, color: PC.inkFaint }}>{open ? '▲' : '▼'}</span>
+                      )}
+                      {!detail && reviewable(sub) && (
+                        <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.inkFaint }}>›</span>
                       )}
                     </div>
 

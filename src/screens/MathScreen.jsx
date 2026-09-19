@@ -2075,6 +2075,9 @@ export default function MathScreen() {
               // Paper mode has no typed answer — the model read the page — so this is null
               // there rather than invented.
               child_answer: r?.child_answer == null ? null : String(r.child_answer),
+              // Kept so the sitting can be opened again from the gem history with the right
+              // answer beside a wrong one — it was on screen at the end and nowhere after.
+              correct_answer: r?.correct_answer == null ? null : String(r.correct_answer),
               correct: !!r?.correct,
               help_used: helpUsedQs.has(i),
             }

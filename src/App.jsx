@@ -25,6 +25,7 @@ const PuzzleLab = lazy(() => import('./screens/PuzzleLab'))
 // Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
 // screen needs.
 const PuzzleScreen = lazy(() => import('./screens/PuzzleScreen'))
+const ReviewScreen = lazy(() => import('./screens/ReviewScreen'))
 import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 import HomeworkScreen from './screens/HomeworkScreen'
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/settings" element={session ? <TaskSettings /> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/child/:id/review/:ledgerId" element={session ? <Suspense fallback={null}><ReviewScreen parent /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/setup" element={<FamilySetup />} />
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/home" element={<ChildHome />} />
@@ -72,6 +74,7 @@ export default function App() {
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
         <Route path="/child/puzzle" element={<Suspense fallback={null}><PuzzleScreen /></Suspense>} />
+        <Route path="/child/review/:ledgerId" element={<Suspense fallback={null}><ReviewScreen /></Suspense>} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />
         <Route path="/child/reading" element={<ReadingFlow />} />

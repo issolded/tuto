@@ -15,3 +15,10 @@ create index if not exists bt_ledger_ref_idx on bt_ledger (ref_id) where ref_id 
 -- 3. The right answer to each maths question, as shown. The review can say "the answer was 30"
 --    for sittings from here on; older ones show the question and what the child wrote.
 alter table math_attempts add column if not exists correct_answer text;
+
+-- 4. The sheet a puzzle sitting was dealt, answers included — server-side only (RLS on, no
+--    policy). The seed regenerates it only while the engine is unchanged, so a deploy mid-sitting
+--    marked the rest of the answers against different questions, and an old sitting reopened
+--    from the gem history would show questions the child never saw. Older sittings keep
+--    regenerating, and the review refuses one whose regenerated sheet no longer matches.
+alter table puzzle_sessions add column if not exists sheet jsonb;

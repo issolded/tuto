@@ -4,6 +4,7 @@ import { t, say, childLang } from '../lib/i18n'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { Figure, Prompt, CodeChip } from '../components/PuzzleView'
+import { PuzzleReviewList } from '../components/SittingReview'
 import { ensureIconFont } from '../lib/puzzleIcons'
 
 // The child's shape & pattern puzzles (NVR). Ten questions from the child's age band, one at a
@@ -283,49 +284,7 @@ export default function PuzzleScreen() {
               and then one picked figure per row, said how many and not what. */}
           <div style={{ animation: 'fadeUp 0.4s ease 0.08s both' }}>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK, marginBottom: 10 }}>{t('math_your_answers', language)}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {answers.map((a, i) => {
-                const pq = session.questions[i]
-                if (!a || !pq) return null
-                const rpx = isTablet ? 56 : 40
-                return (
-                  <div key={i} style={{
-                    background: 'white', borderRadius: 16, padding: '13px 15px',
-                    boxShadow: '0 3px 12px rgba(31,122,114,.07)',
-                    animation: `fadeUp 0.35s ease ${0.1 + i * 0.05}s both`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-                      <span style={{ fontSize: 18, flexShrink: 0 }}>{a.correct ? '✅' : '🔄'}</span>
-                      <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.4 }}>
-                        {i + 1}. {t(pq.stem_key, language)}
-                      </div>
-                    </div>
-                    <Prompt q={pq} px={rpx} colors={COLORS} />
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {pq.options.map((o, j) => {
-                        const mine = j === a.chosen_index
-                        const right = j === a.correct_index
-                        const state = right ? 'ok' : mine ? 'bad' : null
-                        return (
-                          <div key={j} style={{ textAlign: 'center', opacity: state ? 1 : 0.55 }}>
-                            {o.spec ? <Figure spec={o.spec} px={rpx} state={state} colors={COLORS} />
-                              : <CodeChip code={o.code} px={rpx - 8} state={state} colors={COLORS} />}
-                            <div style={{ fontWeight: 800, fontSize: 11, marginTop: 2, minHeight: 14, color: right ? GREEN : ORANGE }}>
-                              {mine ? t('puzzle_you', language) : right ? t('math_answer_was', language) : ''}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {!a.correct && a.why && (
-                      <div style={{ marginTop: 8, background: '#FFF4E8', borderRadius: 12, padding: '9px 12px', fontWeight: 700, fontSize: 13.5, color: INK, lineHeight: 1.45 }}>
-                        💡 {a.why}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+            <PuzzleReviewList questions={session.questions} answers={answers} lang={language} px={isTablet ? 56 : 40} />
           </div>
 
           <button className="pz-press" onClick={() => nav('/child/home')} style={{

@@ -41,7 +41,9 @@ const TASK_DEFAULT_CAPS = { reading: 3, math: 3, writing: 3, homework: 3, drawin
 // `capped` marks a session that earned nothing BECAUSE of the limit — not any
 // zero. A parent approving homework for 0 gems on purpose is a different thing
 // and must not read as the limit being spent.
-async function recordGems(childId, amount, reason, { capped = false } = {}) {
+// `ref` is the sitting the row pays for (a puzzle session or a maths session_id), so the gem
+// history can open its questions.
+async function recordGems(childId, amount, reason, { capped = false, ref = null } = {}) {
   // A zero that isn't the limit is nobody's history: a parent approving homework for
   // nothing has said their piece to the child directly, and a row saying "+0" would
   // only confuse it. Rows exist for sessions that paid, and for sessions the limit
@@ -49,7 +51,14 @@ async function recordGems(childId, amount, reason, { capped = false } = {}) {
   if (!amount && !capped) return { ok: true, skipped: true }
 
   const row = { child_id: childId, amount, reason }
-  let { error } = await supabase.from('bt_ledger').insert({ ...row, capped })
+  let { error } = await supabase.from('bt_ledger').insert({ ...row, capped, ...(ref ? { ref_id: ref } : {}) })
+
+  // ref_id not migrated yet: the row matters, the link does not — the history falls back to
+  // matching by time.
+  if (error && ref && /ref_id/i.test(error.message || '')) {
+    console.warn('[LEDGER] ref_id column missing — RUN THE MIGRATION (server/migrations/2026-09-19_birth_date_and_review_links.sql)')
+    ;({ error } = await supabase.from('bt_ledger').insert({ ...row, capped }))
+  }
 
   // Column not migrated yet: never let that cost a child their gems. The paid row
   // is rewritten without the flag; a capped row is skipped instead, because
@@ -5313,6 +5322,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
         level,
         question: typeof a.question === 'string' ? a.question.slice(0, 500) : null,
         child_answer: a.child_answer == null ? null : String(a.child_answer).slice(0, 120),
+        correct_answer: a.correct_answer == null ? null : String(a.correct_answer).slice(0, 120),
         correct: !!a.correct,
         help_used: !!a.help_used,
       }))
@@ -5323,6 +5333,10 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     const [, focusCleared, mathLed] = await Promise.all([
       rows.length
         ? supabase.from('math_attempts').insert(rows)
+            // Before the correct_answer column exists the rows go in without it rather than not at all.
+            .then(({ error }) => (error && /correct_answer/i.test(error.message || '')
+              ? supabase.from('math_attempts').insert(rows.map(({ correct_answer: _drop, ...r }) => r))
+              : { error }))
             .then(({ error }) => { if (error) console.error(`[MATH] attempts insert failed for ${childId}: ${error.message}`) })
         : null,
       // A focus the parent asked for lasts until the child masters it, not for a fixed run of
@@ -5330,7 +5344,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       // point of their having asked. math_focus came off the child row this request already
       // read; it used to be fetched again here.
       clearFocusIfMastered(childId, child.math_focus, rows.length),
-      recordGems(childId, gems, 'math', { capped }),
+      recordGems(childId, gems, 'math', { capped, ref: rows.length ? sessionId : null }),
     ])
     if (gems > 0 && !mathLed.ok) gems = 0
 
@@ -5603,9 +5617,18 @@ function keepOpen(session) {
   puzzleOpen.set(session.id, session)
   if (puzzleOpen.size > 500) puzzleOpen.delete(puzzleOpen.keys().next().value)
 }
+// The sheet a sitting was dealt. Stored on the session since 2026-09-19 and read from there: the
+// seed regenerates the same sheet only while the engine is unchanged, and every engine fix
+// changes it — a deploy in the middle of a sitting marked the rest of its answers against
+// different questions, and a sitting opened from the gem history showed questions the child was
+// never asked. Regenerating is the fallback for sittings from before the column.
 async function puzzleSheet(session) {
   const hit = puzzleSheets.get(session.id)
   if (hit) return hit
+  if (Array.isArray(session.sheet) && session.sheet.length) {
+    puzzleSheets.set(session.id, session.sheet)
+    return session.sheet
+  }
   const { generateSession } = await import('./puzzle/puzzleTemplates.js')
   const sheet = generateSession(session.band, session.question_count, Number(session.seed), { icons: session.icons })
   puzzleSheets.set(session.id, sheet)
@@ -5630,8 +5653,12 @@ app.post('/api/children/:childId/puzzle-session', async (req, res) => {
     if (sheet.length < PUZZLE_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
 
     const { data: session, error } = await supabase.from('puzzle_sessions')
-      .insert({ child_id: childId, band, seed, icons, question_count: sheet.length })
+      .insert({ child_id: childId, band, seed, icons, question_count: sheet.length, sheet })
       .select('id').single()
+      // Until the sheet column exists the session is kept without it, as before.
+      .then(r => (r.error && /sheet/i.test(r.error.message || '')
+        ? supabase.from('puzzle_sessions').insert({ child_id: childId, band, seed, icons, question_count: sheet.length }).select('id').single()
+        : r))
     if (error) return res.status(500).json({ error: error.message })
     puzzleSheets.set(session.id, sheet)
     keepOpen({ id: session.id, child_id: childId, band, seed, icons, question_count: sheet.length, finished_at: null })
@@ -5660,7 +5687,7 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
     let session = puzzleOpen.get(sessionId)
     if (!session) {
       ;({ data: session } = await supabase.from('puzzle_sessions')
-        .select('id, child_id, band, seed, icons, question_count, finished_at').eq('id', sessionId).maybeSingle())
+        .select('*').eq('id', sessionId).maybeSingle())
       if (!session) return res.status(404).json({ error: 'session not found' })
       if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
       keepOpen(session)
@@ -5690,6 +5717,87 @@ app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
     res.json({ correct, chosen_index: chosen, correct_index: q.correct_index, why })
   } catch (err) {
     console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// The questions behind one gem history row — what was asked, what the child answered, and the
+// right answer — so a finished sitting can be opened again, by the child from their gem history
+// and by the parent from the child's card. Only for finished sittings: a puzzle's answers are
+// sent here because the child has already answered all of them.
+//
+// A row written since ref_id exists names its sitting. An older one is matched to the sitting
+// that finished in the same request: same child, same activity, closest in time within a few
+// minutes — the ledger write is the last thing that request does.
+app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
+  const { childId, ledgerId } = req.params
+  const lang = ['tr', 'es'].includes(req.query.lang) ? req.query.lang : 'en'
+  try {
+    const { data: row } = await supabase.from('bt_ledger').select('*')
+      .eq('id', ledgerId).eq('child_id', childId).maybeSingle()
+    if (!row) return res.status(404).json({ error: 'not found' })
+    const at = DateTime.fromISO(row.created_at, { zone: 'utc' })
+    const near = (iso) => Math.abs(DateTime.fromISO(iso, { zone: 'utc' }).diff(at).as('milliseconds'))
+    const span = [at.minus({ minutes: 3 }).toISO(), at.plus({ minutes: 1 }).toISO()]
+
+    if (row.reason === 'puzzle') {
+      let session = null
+      const cols = '*'
+      if (row.ref_id) ({ data: session } = await supabase.from('puzzle_sessions').select(cols).eq('id', row.ref_id).maybeSingle())
+      if (!session) {
+        const { data: cands } = await supabase.from('puzzle_sessions').select(cols).eq('child_id', childId)
+          .not('finished_at', 'is', null).gte('finished_at', span[0]).lte('finished_at', span[1])
+        session = (cands || []).sort((x, y) => near(x.finished_at) - near(y.finished_at))[0] || null
+      }
+      if (!session?.finished_at) return res.status(404).json({ error: 'no sitting found for this row' })
+      const [sheet, { data: attempts }, { explainQuestion }] = await Promise.all([
+        puzzleSheet(session),
+        supabase.from('puzzle_attempts').select('question_index, chosen_index, correct, type, rule').eq('session_id', session.id),
+        import('./puzzle/puzzleExplain.js'),
+      ])
+      const byIndex = new Map((attempts || []).map(a => [a.question_index, a]))
+      // A sitting from before sheets were stored is regenerated, and that is only the sitting the
+      // child saw if the engine has not changed since. Each answer recorded its question's type
+      // and rule; if the regenerated sheet disagrees anywhere, it is a different sheet, and the
+      // score is all that can honestly be shown.
+      const same = sheet.every((q, i) => {
+        const a = byIndex.get(i)
+        return !a || (a.type === q.type && (a.rule ?? null) === (q.rule?.attr ?? null))
+      })
+      if (!same) {
+        return res.json({ kind: 'puzzle', at: row.created_at, band: session.band, correct: session.correct,
+          total: session.question_count, questions: null, reason: 'sheet_changed' })
+      }
+      return res.json({
+        kind: 'puzzle', at: row.created_at, band: session.band, correct: session.correct, total: session.question_count,
+        questions: sheet.map(publicQuestion),
+        answers: sheet.map((q, i) => {
+          const a = byIndex.get(i)
+          return a ? { chosen_index: a.chosen_index, correct_index: q.correct_index, correct: a.correct, why: explainQuestion(q, lang) } : null
+        }),
+      })
+    }
+
+    if (row.reason === 'math') {
+      let sessionId = row.ref_id || null
+      if (!sessionId) {
+        const { data: cands } = await supabase.from('math_attempts').select('session_id, created_at').eq('child_id', childId)
+          .gte('created_at', span[0]).lte('created_at', span[1])
+        sessionId = (cands || []).sort((x, y) => near(x.created_at) - near(y.created_at))[0]?.session_id || null
+      }
+      if (!sessionId) return res.status(404).json({ error: 'no sitting found for this row' })
+      const { data: items } = await supabase.from('math_attempts').select('*').eq('session_id', sessionId).eq('child_id', childId)
+      return res.json({
+        kind: 'math', at: row.created_at,
+        items: (items || []).map(r => ({
+          question: r.question, child_answer: r.child_answer, correct: r.correct,
+          correct_answer: r.correct_answer ?? null, help_used: r.help_used, topic_name: r.topic_name,
+        })),
+      })
+    }
+    res.status(404).json({ error: 'nothing to review for this kind of row' })
+  } catch (err) {
+    console.error('[REVIEW]', err.message)
     res.status(500).json({ error: err.message })
   }
 })
@@ -5747,7 +5855,7 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
     }
     // Through recordGems like every other scored task, so a sitting past the limit is a line in
     // the gem history too, not a gap.
-    const led = await recordGems(child.id, gems, 'puzzle', { capped })
+    const led = await recordGems(child.id, gems, 'puzzle', { capped, ref: session.id })
     if (gems > 0 && !led.ok) gems = 0
     await supabase.from('puzzle_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
     puzzleSheets.delete(session.id)

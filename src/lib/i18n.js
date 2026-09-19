@@ -27,6 +27,12 @@ const STRINGS = {
   start_mature:       { en: 'Get started today',     tr: 'Bugüne başla',       es: 'Empieza el día' },
 
   // Activity names — shown on the home tiles and in the gem history.
+  // ── A finished sitting opened again from the gem history ─────────────────────
+  review_loading:     { en: 'Opening…', tr: 'Açılıyor…', es: 'Abriendo…' },
+  review_sheet_gone:  { en: "This puzzle round is from before we kept every question, so it can't be opened. All your new ones can.",
+                        tr: 'Bu bulmaca turu, soruları saklamaya başlamadan önceydi; o yüzden açılamıyor. Yenilerinin hepsi açılabilecek.',
+                        es: 'Esta ronda es de antes de que guardáramos cada pregunta, así que no se puede abrir. Las nuevas sí.' },
+  review_none:        { en: "The questions for this one couldn't be found.", tr: 'Bunun soruları bulunamadı.', es: 'No se han encontrado las preguntas de esta.' },
   home_goals_all_done: { en: "You've reached all your goals", tr: 'Bütün hedeflerine ulaştın', es: 'Has conseguido todas tus metas' },
   home_no_goals:      { en: 'No goals yet — ask your parent to add one', tr: 'Henüz hedef yok — annenden ya da babandan eklemesini iste',
                         es: 'Todavía no hay metas: pide a tu madre o a tu padre que añadan una' },
