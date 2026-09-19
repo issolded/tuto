@@ -307,7 +307,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       ortak her özelliğini taşır. 2026-09-19: 7-8 geometrik dizisi döngü değil ilerleyen dizi (nokta 0→5 / 5→0, ok ya da yarım
       daire 45° adım) — döngüde cevap 3. figürün kopyasıydı, "çok kolay". Oturumda her ilişki/özellik/grup çifti bir kez
       (deve→çöl sonra kuş→ağaç tekrarı). Telefonda 5 şık zar dizilimi. Kör test (taze seed): 5-6 39/39, 7-8 43/45, 8-9 41/41, 9-10 43/43,
-      10-11 42/43 — kaçırmalar düzeltildi. Kalan: iPad'de kart en altta (kaydırmadan görünmüyor). **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
+      10-11 42/43 — kaçırmalar düzeltildi.
+      Gece turu 2026-09-20 (taze seed): 5-6 41/41, 7-8 42/43 + 43/43, 8-9 46/46, 9-10 57/57, 10-11 54/57.
+      Düzeltilenler: 7-8+ resimli `belongs`'ta çeldiriciler tek gruptan geliyordu, cevap şıklar arasında
+      "tek farklı" olarak da bulunuyordu — artık 2 komşu grup + karışık gruplar; simetri sorusunda tarama
+      (hatch) yok (çizgili ok dış hatla simetrik, çizgi açısıyla değil — çocuk şekle bakar); simetri
+      sorusunda gerilmiş çokgen eğik durmaz (45° dönmüş dikdörtgen göze eşkenar dörtgen, köşeden köşeye
+      bölünce "simetrik"; `symmetryGap` bunu ayıramıyor, bütün asimetrikler 10-18 aralığında). Kalan: iPad'de kart en altta (kaydırmadan görünmüyor). **İsim ve ikon kararı verildi (2026-09-16):** çocuk kartı
       "Bulmacalarım 🧩" / "My Puzzles 🧩" (kod zaten `puzzle` diyor; "Zekâ Oyunları" serbest oyun
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,

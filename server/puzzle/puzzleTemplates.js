@@ -1219,7 +1219,21 @@ function genSymmetry(r, band, seed) {
   const yes = []
   const no = []
   for (let i = 0; i < 90 && (yes.length < want || no.length < want); i++) {
-    const spec = randomSpec(r, band)
+    const drawn = randomSpec(r, band)
+    // No hatching (2026-09-20). A hatched arrow is symmetric in outline and not in its stripes,
+    // and "which has a line of symmetry" was then decided by the angle of the lines inside it — a
+    // blind 9-10 sheet offered two hatched arrows as not symmetric, and a child judges the shape.
+    // What breaks the symmetry has to be a thing a child sees: a shaded half, a mark, a dot.
+    const unhatched = String(drawn.fill).startsWith('hatch') ? { ...drawn, fill: 'none' } : drawn
+    // No stretched polygon off the square (2026-09-20). A rectangle turned 45° is a diamond to the
+    // eye, and split corner to corner it is a diamond cut straight across — a blind 10-11 sheet
+    // offered two of them as "no line of symmetry" and both were read as symmetric. symmetryGap
+    // cannot see it: every asymmetric figure at 9-10 and 10-11 sits 10-18 units from symmetric,
+    // these at 14 and 17. Level the polygon and it reads as the rectangle it is. An ellipse keeps
+    // its stretch: a tilted ellipse still shows its own axes.
+    const spec = unhatched.shape !== 'circle' && unhatched.stretch !== 1 && unhatched.rotation % 90 !== 0
+      ? { ...unhatched, rotation: Math.round(unhatched.rotation / 90) * 90 % 360 }
+      : unhatched
     // A figure with no line of symmetry that is a few pixels from having one is neither: at card
     // size a rectangle tilted 45° and split corner to corner is a diamond cut straight across.
     // It goes in no bucket rather than being marked wrong for a child who saw it as symmetric.
@@ -1452,6 +1466,19 @@ function genReflection(r, band, seed) {
 // nothing to move. What glyphs bring instead is the two families the shapes cannot reach:
 // category membership, and relations between things in the world.
 
+// The wrong options of a picture "which goes with these", from 7-8 up. When all four came from ONE
+// other group the answer was the odd one out of the OPTIONS — four symbols and a car — and a child
+// could pick it without looking at the three pictures above (a blind 7-8 sheet, 2026-09-20: every
+// one of them). Two from the near group, then one from each of two further groups: three options
+// now stand alone, so only the pictures above say which one belongs. 5-6 keeps the easier set.
+function mixedDistractors(r, groups, inKey, nearKey, want, members) {
+  const others = shuffle(r, groups.filter(g => g !== inKey && g !== nearKey))
+  const near = shuffle(r, members(nearKey).slice()).slice(0, 2)
+  const rest = others.slice(0, want - near.length).map(g => pick(r, members(g)))
+  const out = [...near, ...rest]
+  return out.length === want && new Set(out).size === want ? out : null
+}
+
 function genGlyphCategory(r, band, seed, type) {
   const groups = shuffle(r, GROUP_KEYS.slice())
   const inKey = groups[0]
@@ -1470,7 +1497,11 @@ function genGlyphCategory(r, band, seed, type) {
     // different wrong groups would leave every option isolated on the rule and the set with
     // no single defensible answer.
     const prompt = inSet.slice(0, 3).map(spec)
-    const options = [spec(inSet[3]), ...outSet.slice(0, n - 1).map(spec)]
+    const wrong = band.nearCategories
+      ? mixedDistractors(r, GROUP_KEYS, inKey, outKey, n - 1, g => GLYPH_GROUPS[g].glyphs)
+      : outSet.slice(0, n - 1)
+    if (!wrong) return null
+    const options = [spec(inSet[3]), ...wrong.map(spec)]
     const order = shuffle(r, indices(n))
     return {
       seed, type, layout: 'row', prompt,
@@ -1656,7 +1687,12 @@ function genIconCategory(r, band, seed, type) {
 
   if (type === 'icon-belongs') {
     const prompt = inSet.slice(0, 3).map(spec)
-    const options = [spec(inSet[3]), ...outSet.slice(0, n - 1).map(spec)]
+    // Icons have no near groups; outKey stands in for the pair (see mixedDistractors).
+    const wrong = n > 4
+      ? mixedDistractors(r, ICON_GROUP_KEYS, inKey, outKey, n - 1, g => ICON_GROUPS[g].icons)
+      : outSet.slice(0, n - 1)
+    if (!wrong) return null
+    const options = [spec(inSet[3]), ...wrong.map(spec)]
     const order = shuffle(r, indices(n))
     return {
       seed, type, layout: 'row', prompt,
@@ -1875,7 +1911,17 @@ export function validateQuestion(q) {
   // Odd-one-out is the only type whose soundness is a property of the option SET rather than
   // of the answer: exactly one attribute may split 3-1, and no other attribute may isolate a
   // single option, or the question has two defensible answers.
-  if (['odd-one-out', 'belongs', 'glyph-odd', 'glyph-trait', 'glyph-belongs', 'icon-odd', 'icon-belongs'].includes(q.type)) {
+  // A picture "which goes with these" is judged by the three above it: exactly one option is of
+  // their group. Its options are NOT meant to split n-1 to 1 any more (see mixedDistractors).
+  const pictureBelongs = (q.type === 'glyph-belongs' || q.type === 'icon-belongs') && q.options.length > 4
+  if (pictureBelongs) {
+    const grpOf = (s) => s.group
+    const want = grpOf(q.prompt[0])
+    if (q.prompt.some(c => grpOf(c) !== want)) return 'the prompt pictures are not one group'
+    const matching = q.options.filter(o => grpOf(o.spec) === want).length
+    if (matching !== 1 || grpOf(q.options[q.correct_index].spec) !== want) return 'not exactly one option belongs with the prompt'
+  }
+  if (!pictureBelongs && ['odd-one-out', 'belongs', 'glyph-odd', 'glyph-trait', 'glyph-belongs', 'icon-odd', 'icon-belongs'].includes(q.type)) {
     // Counted on the NORMALIZED spec — the picture — and not the raw one. The two disagree
     // whenever an attribute is suppressed on some options and not others, and the raw reading
     // then describes a set that was never drawn. A `position` question makes this routine: only
