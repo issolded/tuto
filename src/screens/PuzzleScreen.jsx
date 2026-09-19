@@ -85,8 +85,9 @@ export default function PuzzleScreen() {
   const [qIdx, setQIdx] = useState(0)
   const [answers, setAnswers] = useState([])      // per question: { correct, chosen_index, correct_index }
   const [pending, setPending] = useState(false)
-  // The option just tapped, while its answer is on the way. The check is the server's and takes
-  // about a second from a phone; without this the tap did nothing visible for that second.
+  // The option the child has chosen and not yet sent. A tap used to BE the answer, and a child who
+  // saw the mistake a moment later had no way back; now a tap selects, another tap moves it, and
+  // the send button commits — the same pick-then-✓ that maths has on its keypad.
   const [picked, setPicked] = useState(null)
   const [answerFailed, setAnswerFailed] = useState(false)
   const [flash, setFlash] = useState(null)        // { correct, correct_index } while the overlay is up
@@ -136,14 +137,21 @@ export default function PuzzleScreen() {
   function advance() {
     clearTimeout(advanceTimer.current)
     setFlash(null)
+    setPicked(null)
     if (qIdx >= total - 1) finish()
     else setQIdx(qIdx + 1)
   }
 
-  async function choose(i) {
+  function select(i) {
     if (pending || answers[qIdx]) return
-    setPending(true)
     setPicked(i)
+    setAnswerFailed(false)
+  }
+
+  async function send() {
+    const i = picked
+    if (i === null || pending || answers[qIdx]) return
+    setPending(true)
     setAnswerFailed(false)
     try {
       const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen_index: i })
@@ -156,7 +164,6 @@ export default function PuzzleScreen() {
       setAnswerFailed(true)
     } finally {
       setPending(false)
-      setPicked(null)
     }
   }
 
@@ -420,20 +427,26 @@ export default function PuzzleScreen() {
             display: 'grid', gridTemplateColumns: 'repeat(3, max-content)', gap: '4px 14px', justifyContent: 'center',
           } : { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             {q.options.map((o, i) => (
-              <button key={i} className="pz-press" onClick={() => choose(i)} disabled={pending || !!answer}
+              <button key={i} className="pz-press" onClick={() => select(i)} disabled={pending || !!answer}
                 style={{
                   ...(dice ? { gridRow: DICE_CELLS[i][0], gridColumn: DICE_CELLS[i][1] } : {}),
                   background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer', borderRadius: 14,
                   transition: 'transform .12s ease, opacity .12s ease, box-shadow .12s ease',
                   ...(picked === i
                     ? { transform: 'scale(1.08)', boxShadow: `0 0 0 4px ${TEAL}, 0 8px 20px rgba(31,122,114,.3)` }
-                    : { opacity: picked !== null ? 0.45 : 1, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }),
+                    : { opacity: pending ? 0.45 : 1, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }),
                 }}>
                 {o.spec ? <Figure spec={o.spec} px={px} colors={COLORS} />
                   : <CodeChip code={o.code} px={px} colors={COLORS} />}
               </button>
             ))}
           </div>
+
+          <button className="pz-press" onClick={send} disabled={picked === null || pending || !!answer} style={{
+            ...primaryBtn, alignSelf: 'center', marginTop: 4,
+            opacity: picked === null ? 0.4 : 1, cursor: picked === null ? 'default' : 'pointer',
+            boxShadow: picked === null ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
+          }}>{pending ? '…' : t('puzzle_send', language)}</button>
 
           {answerFailed && (
             <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>

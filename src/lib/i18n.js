@@ -445,6 +445,7 @@ const STRINGS = {
                         tr: 'İyi gidiyorsun! Kaçırdıklarına aşağıdan bir bak 🔍' },
   puzzle_enc_low:     { en: 'Those were tricky ones — keep at it, they get easier 🌱',
                         tr: 'Bugünküler zordu! Doğrularına bak, sonrakinde daha kolay gelecek 🌱' },
+  puzzle_send:        { en: 'Send ✓', tr: 'Gönder ✓' },
   puzzle_failed:      { en: 'Something went wrong. Try again in a moment!',
                         tr: 'Bir şeyler ters gitti. Birazdan tekrar dener misin?' },
   puzzle_retry:       { en: 'Try again',        tr: 'Tekrar dene' },
