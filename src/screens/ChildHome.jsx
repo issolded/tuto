@@ -319,9 +319,10 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
         >
           {!goal ? (
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: inkSoft }}>
+              {/* These were English for every child, whatever their language. */}
               {today.hasAnyGoals
-                ? `You've reached all your goals${mature ? '' : '! 🎉'}`
-                : `No goals yet — ask your parent to add one${mature ? '' : ' 🎯'}`}
+                ? `${t('home_goals_all_done', lang)}${mature ? '' : '! 🎉'}`
+                : `${t('home_no_goals', lang)}${mature ? '' : ' 🎯'}`}
             </div>
           ) : isTablet ? (
             <>

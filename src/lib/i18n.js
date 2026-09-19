@@ -27,6 +27,11 @@ const STRINGS = {
   start_mature:       { en: 'Get started today',     tr: 'Bugüne başla',       es: 'Empieza el día' },
 
   // Activity names — shown on the home tiles and in the gem history.
+  home_goals_all_done: { en: "You've reached all your goals", tr: 'Bütün hedeflerine ulaştın', es: 'Has conseguido todas tus metas' },
+  home_no_goals:      { en: 'No goals yet — ask your parent to add one', tr: 'Henüz hedef yok — annenden ya da babandan eklemesini iste',
+                        es: 'Todavía no hay metas: pide a tu madre o a tu padre que añadan una' },
+  goals_empty_1:      { en: 'No goals yet!', tr: 'Henüz hedef yok!', es: '¡Todavía no hay metas!' },
+  goals_empty_2:      { en: 'Ask your parent to add some', tr: 'Annenden ya da babandan eklemesini iste', es: 'Pide a tu madre o a tu padre que añadan alguna' },
   task_reading:       { en: 'My Books',      tr: 'Kitaplarım', es: 'Mis Libros' },
   task_math:          { en: 'My Math',       tr: 'Matematik', es: 'Mis Mates' },
   task_writing:       { en: 'My Stories',    tr: 'Hikâyelerim', es: 'Mis Cuentos' },
@@ -528,7 +533,7 @@ const STRINGS = {
 
   // Per-question feedback and the result screen.
   math_yes:           { en: 'Yes! ⭐',      tr: 'Doğru! ⭐', es: '¡Sí! ⭐' },
-  math_almost:        { en: 'Almost! The answer was', tr: 'Hmm, bu değil! Doğrusu', es: '¡Casi! La respuesta era' },
+  math_almost:        { en: 'Almost! The answer was', tr: 'Hmm, bu değil! Doğrusu', es: '¡Uy, esta no! La respuesta era' },
   math_your_answers:  { en: 'Your answers:', tr: 'Senin cevapların:', es: 'Tus respuestas:' },
   math_your_answer:   { en: 'Your answer:',  tr: 'Senin cevabın:', es: 'Tu respuesta:' },
   math_answer_was:    { en: 'The answer was', tr: 'Doğrusu', es: 'La respuesta era' },
