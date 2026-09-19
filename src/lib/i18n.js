@@ -56,6 +56,17 @@ const STRINGS = {
 
   home_trees_month:   { en: 'trees this month', tr: 'ağaç bu ay', es: 'árboles este mes' },
   // The 12+ card: the same two counts, in grown-up words.
+  // ── 9–11 home ─────────────────────────────────────────────────────────────
+  home_this_week:     { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },
+  home_n_done:        { en: '%n% done', tr: '%n% etkinlik', es: '%n% hechas' },
+  home_quest_tag:     { en: "Today's quest", tr: 'Bugünün görevi', es: 'Misión de hoy' },
+  home_quest_title:   { en: 'Do 3 things today', tr: 'Bugün 3 etkinlik yap', es: 'Haz 3 cosas hoy' },
+  home_quest_done:    { en: 'Quest done! 🎉', tr: 'Görev tamam! 🎉', es: '¡Misión cumplida! 🎉' },
+  home_quest_next:    { en: 'Next: %task%', tr: 'Sıradaki: %task%', es: 'Siguiente: %task%' },
+  home_go:            { en: 'Go', tr: 'Başla', es: 'Vamos' },
+  home_activities:    { en: 'Activities', tr: 'Etkinlikler', es: 'Actividades' },
+  home_level:         { en: 'Lv %n%', tr: 'Sv %n%', es: 'Nv %n%' },
+  home_goal:          { en: 'Your goal', tr: 'Hedefin', es: 'Tu meta' },
   home_contrib_today: { en: 'contributions today', tr: 'katkı bugün', es: 'aportaciones hoy' },
   home_to_goal:       { en: 'to',        tr: 'kaldı:',        es: 'para' },
   home_so_close:      { en: 'So close to', tr: 'Çok az kaldı:', es: 'Ya casi tienes' },

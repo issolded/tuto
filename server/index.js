@@ -3492,34 +3492,82 @@ app.get('/api/children/:childId/gems', async (req, res) => {
 // each type's own real table/task_type, never approximated from bt_ledger
 // (its `reason` column is inconsistent — e.g. reading writes the book title,
 // not 'reading' — so it can't be used to detect "did X happen today").
+// What the child home shows about the child's own activity: today, the last seven days day by
+// day, the run of days in a row, and where they stand in maths and puzzles. Counted from the
+// activity tables themselves, not the ledger — a session past the day's limit paid nothing and
+// still happened, and homework waiting for a parent is still homework done today.
+//
+// The seven-day and streak figures are COUNTS OF THINGS DONE, not time: nothing records how long
+// a child spent, and the home says "activities", never minutes.
+const STREAK_LOOKBACK_DAYS = 60
+
 app.get('/api/children/:childId/today-summary', async (req, res) => {
   const { childId } = req.params
   try {
     const tz = await tzForChild(childId)
     const now = DateTime.now().setZone(tz)
-    const todayStart = now.startOf('day').toUTC().toISO()
-    const todayEnd = now.endOf('day').toUTC().toISO()
+    const since = now.startOf('day').minus({ days: STREAK_LOOKBACK_DAYS - 1 }).toUTC().toISO()
+    const nowIso = now.endOf('day').toUTC().toISO()
 
     const [
       tree,
-      { data: subsToday },
-      { data: mathToday },
-      { data: storiesToday },
-      { data: paintingsToday },
-      { data: puzzlesToday },
+      { data: subs },
+      { data: maths },
+      { data: stories },
+      { data: paintings },
+      { data: puzzles },
       { data: ledger },
       { data: rewards },
+      { data: child },
+      { data: lastMath },
     ] = await Promise.all([
       getTreeState(childId, tz),
-      supabase.from('submissions').select('task_type').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', todayStart).lte('created_at', todayEnd),
-      supabase.from('math_progress').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
-      supabase.from('stories').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
-      supabase.from('paintings').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('math_progress').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('stories').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('paintings').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
       // Finished sittings only: one abandoned after two questions is not a puzzle session done.
-      supabase.from('puzzle_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
+      supabase.from('children').select('age').eq('id', childId).maybeSingle(),
+      supabase.from('math_progress').select('level').eq('child_id', childId).order('created_at', { ascending: false }).limit(1),
     ])
+
+    // Every activity as [type, local day].
+    const dayOf = (iso) => DateTime.fromISO(iso, { zone: 'utc' }).setZone(tz).toISODate()
+    const done = [
+      ...(subs || []).map(r => [r.task_type, dayOf(r.created_at)]),
+      ...(maths || []).map(r => ['math', dayOf(r.created_at)]),
+      ...(stories || []).map(r => ['writing', dayOf(r.created_at)]),
+      ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
+      ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
+    ]
+    const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle']
+    const blank = () => Object.fromEntries(TYPES.map(k => [k, 0]))
+    const byDay = new Map()
+    for (const [type, day] of done) {
+      if (!byDay.has(day)) byDay.set(day, blank())
+      byDay.get(day)[type]++
+    }
+    const todayIso = now.toISODate()
+    const countOn = (iso) => Object.values(byDay.get(iso) || {}).reduce((a, b) => a + b, 0)
+
+    // Oldest first, today last — the order a bar chart reads in.
+    const week = Array.from({ length: 7 }, (_, i) => {
+      const d = now.minus({ days: 6 - i })
+      return { date: d.toISODate(), count: countOn(d.toISODate()) }
+    })
+    const weekByType = blank()
+    for (const { date } of week) for (const k of TYPES) weekByType[k] += (byDay.get(date) || {})[k] || 0
+
+    // Days in a row with something done, ending today — or yesterday, while today is still
+    // ahead of the child: a streak is not broken at breakfast.
+    let streak = 0
+    for (let d = countOn(todayIso) ? now : now.minus({ days: 1 }); countOn(d.toISODate()) > 0; d = d.minus({ days: 1 })) {
+      streak++
+      if (streak >= STREAK_LOOKBACK_DAYS) break
+    }
 
     const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
     const nearestGoal = (rewards || []).find(r => r.bt_cost > gems) || null
@@ -3527,14 +3575,12 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
     res.json({
       today: tree.today,
       monthTreeCount: tree.monthTreeCount,
-      activities: {
-        reading: (subsToday || []).filter(s => s.task_type === 'reading').length,
-        math: (mathToday || []).length,
-        writing: (storiesToday || []).length,
-        homework: (subsToday || []).filter(s => s.task_type === 'homework').length,
-        drawing: (paintingsToday || []).length,
-        puzzle: (puzzlesToday || []).length,
-      },
+      activities: { ...blank(), ...(byDay.get(todayIso) || {}) },
+      week,
+      weekByType,
+      streak,
+      mathLevel: lastMath?.[0]?.level ?? null,
+      puzzleBand: child?.age != null ? puzzleBandForAge(child.age) : null,
       gems,
       nearestGoal: nearestGoal ? { id: nearestGoal.id, name: nearestGoal.name, icon: nearestGoal.icon, bt_cost: nearestGoal.bt_cost } : null,
       // Distinguishes "no rewards configured at all" from "gems already cover
@@ -3545,6 +3591,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
     res.status(500).json({
       today: 0, monthTreeCount: 0,
       activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 },
+      week: [], weekByType: {}, streak: 0, mathLevel: null, puzzleBand: null,
       gems: 0, nearestGoal: null, hasAnyGoals: false,
       error: err.message,
     })

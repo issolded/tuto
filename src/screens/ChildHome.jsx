@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { t, childLang, say } from '../lib/i18n'
+import { t, childLang, say, localeFor } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import Shell, { useIsTablet } from '../components/Shell'
@@ -364,6 +364,190 @@ function TodayCard({ band, isTablet, today, gems, nav, lang }) {
   )
 }
 
+// ── 9–11: "quest" home (design_handoff_kids_home_ages/Kids Home 9-11.html) ──────
+// The handoff's layout and style — lighter outlines, a hard drop shadow, pastel icon wells — on
+// the data we have. What it drew and we do not hold is left out rather than faked: no XP, no
+// league, no shop. Its XP bar became the week's activity, one bar a day, because that is the one
+// progress figure that is true; its level rings show a real level where there is one (maths) and
+// this week's count everywhere else. A puzzle band ("10-11") is an age range, not a level.
+const MID = {
+  ink: '#20201e', soft: '#6f6a64', bg: '#f6f4fb', purple: '#a98ce6', green: '#79cf86', orange: '#f79433',
+  lilac: '#e7ddf6', mint: '#d4eed9', sky: '#d4e4fb', peach: '#fce4cf', teal: '#d4f0ee', cream: '#FFF1CF',
+}
+const MID_CSS = `
+.mid-sub{ transition: transform .12s ease; }
+.mid-sub:active{ transform: translateY(2px) scale(.98); }
+.mid-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.mid-grid > :last-child:nth-child(odd){ grid-column:1 / -1; }
+@media (min-width:768px){
+  .mid-grid{ grid-template-columns:repeat(3,1fr); }
+  .mid-grid > :last-child:nth-child(odd){ grid-column:auto; }
+  .mid-grid > :last-child:nth-child(3n+1){ grid-column:1 / -1; }
+}
+`
+const MID_TILES = [
+  { type: 'math',     nameKey: 'task_math',     route: '/child/math',     well: MID.sky },
+  { type: 'reading',  nameKey: 'task_reading',  route: '/child/library',  well: MID.lilac },
+  { type: 'puzzle',   nameKey: 'task_puzzle',   route: '/child/puzzle',   well: MID.teal },
+  { type: 'writing',  nameKey: 'task_writing',  route: '/child/stories',  well: MID.mint },
+  { type: 'homework', nameKey: 'task_homework', route: '/child/homework', well: MID.cream },
+  { type: 'drawing',  nameKey: 'task_drawing',  route: '/child/drawings', well: '#EFE3FF' },
+  { type: 'tree',     nameKey: 'task_tree',     route: '/child/task',     well: MID.peach },
+]
+// The order the quest suggests things in: the scored, paying ones first.
+const QUEST_ORDER = ['math', 'reading', 'puzzle', 'writing', 'drawing', 'homework']
+const QUEST_TARGET = 3
+
+function Ring({ value, label, color }) {
+  const pct = Math.max(0, Math.min(1, value)) * 360
+  return (
+    <div style={{ width: 42, height: 42, borderRadius: '50%', flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: `conic-gradient(${color} ${pct}deg, #ece8f3 ${pct}deg)` }}>
+      <span style={{ width: 30, height: 30, borderRadius: '50%', background: '#fff', border: `2px solid ${MID.ink}`, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 10, color: MID.ink }}>{label}</span>
+    </div>
+  )
+}
+
+function MidHome({ child, lang, gems, today, ts, nav }) {
+  const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
+  const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
+  const doneToday = Object.values(today.activities || {}).reduce((a, b) => a + b, 0)
+  const next = QUEST_ORDER.find(k => (ts[k]?.active ?? true) && !(today.activities?.[k] > 0))
+  const nextTile = MID_TILES.find(x => x.type === next)
+  const week = today.week?.length ? today.week : []
+  const weekTotal = week.reduce((a, d) => a + d.count, 0)
+  const weekMax = Math.max(3, ...week.map(d => d.count))
+  const dayLetter = (iso) => new Intl.DateTimeFormat(localeFor(lang), { weekday: 'narrow' }).format(new Date(`${iso}T12:00:00`))
+  const card = { background: '#fff', border: `3px solid ${MID.ink}`, borderRadius: 22, boxShadow: '0 6px 0 rgba(32,32,30,.08)' }
+  const fred = { fontFamily: FRED, fontWeight: 600, color: MID.ink }
+  const goal = today.nearestGoal
+
+  const ringFor = (type) => {
+    if (type === 'math' && today.mathLevel != null) return { value: (today.weekByType?.math || 0) / 5, label: t('home_level', lang).replace('%n%', today.mathLevel) }
+    if (type === 'tree') return { value: (today.today || 0) / 4, label: `${today.today || 0}/4` }
+    const n = today.weekByType?.[type] || 0
+    return { value: n / 5, label: String(n) }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <style>{MID_CSS}</style>
+
+      {/* Who, the run of days, and gems. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 54, height: 54, borderRadius: '50%', background: MID.lilac, border: `3px solid ${MID.ink}`, boxShadow: '0 4px 0 rgba(32,32,30,.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flex: '0 0 auto' }}>
+          {child?.avatar_url?.startsWith('http')
+            ? <img src={child.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : child?.avatar_url ? <span style={{ fontSize: 28 }}>{child.avatar_url}</span>
+              : <TutoMascot size={44} />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...fred, fontSize: 19, lineHeight: 1.1 }}>{child?.name ?? t('friend', lang)}</div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: MID.soft }}>{t('hello_name', lang)} 👋</div>
+        </div>
+        {today.streak > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', borderRadius: 999, padding: '7px 12px', boxShadow: '0 3px 9px rgba(40,30,70,.08)', ...fred, fontSize: 15, color: '#ef7a3a' }}>
+            🔥 {today.streak}
+          </div>
+        )}
+        <button className="tuto-gempill" onClick={() => nav('/child/gems')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: 'none', borderRadius: 999,
+          padding: '7px 12px', boxShadow: '0 3px 9px rgba(40,30,70,.08)', cursor: 'pointer', ...fred, fontSize: 15, color: MID.orange }}>
+          ⭐ {gems === null ? '…' : gems}
+        </button>
+      </div>
+
+      {/* The week, one bar a day — where the handoff had an XP bar. */}
+      <div style={{ background: '#fff', borderRadius: 18, padding: '12px 15px', boxShadow: '0 4px 12px rgba(40,30,70,.07)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ ...fred, fontWeight: 500, fontSize: 13.5, color: MID.soft }}>{t('home_this_week', lang)}</span>
+          <span style={{ ...fred, fontSize: 15 }}>{t('home_n_done', lang).replace('%n%', weekTotal)}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 56, marginTop: 8 }}>
+          {week.map((d, i) => {
+            const isToday = i === week.length - 1
+            return (
+              <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+                <div style={{ width: '100%', maxWidth: 26, height: `${d.count ? Math.max(16, (d.count / weekMax) * 40) : 8}px`, borderRadius: 7,
+                  border: `2.5px solid ${MID.ink}`, background: d.count ? (isToday ? MID.orange : MID.purple) : '#f0ecf6' }} />
+                <span style={{ fontWeight: 800, fontSize: 10.5, color: isToday ? MID.ink : MID.soft }}>{dayLetter(d.date)}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Today's quest: three things today, and the next one to do. */}
+      <div style={{ position: 'relative', background: 'linear-gradient(135deg,#e7ddf6,#dcd0f3)', border: `3px solid ${MID.ink}`, borderRadius: 24,
+        padding: '15px 16px', boxShadow: '0 8px 0 rgba(32,32,30,.10)', overflow: 'hidden' }}>
+        <div style={{ ...fred, fontSize: 12, letterSpacing: '.6px', textTransform: 'uppercase', color: '#7c63c8' }}>{t('home_quest_tag', lang)}</div>
+        <div style={{ ...fred, fontSize: 21, marginTop: 5, maxWidth: 200, lineHeight: 1.12 }}>
+          {doneToday >= QUEST_TARGET ? t('home_quest_done', lang) : t('home_quest_title', lang)}
+        </div>
+        <div style={{ height: 11, border: `2.5px solid ${MID.ink}`, borderRadius: 999, background: '#fff', overflow: 'hidden', marginTop: 10, maxWidth: 170 }}>
+          <i style={{ display: 'block', height: '100%', width: `${Math.min(1, doneToday / QUEST_TARGET) * 100}%`, background: MID.green }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11, position: 'relative', zIndex: 1, maxWidth: 'calc(100% - 70px)' }}>
+          <span style={{ fontWeight: 700, fontSize: 13, color: MID.soft }}>{Math.min(doneToday, QUEST_TARGET)}/{QUEST_TARGET}</span>
+          {doneToday < QUEST_TARGET && nextTile && (
+            <button onClick={() => nav(nextTile.route, { state: { from: '/child/home' } })} style={{ marginLeft: 'auto', background: MID.orange, color: '#fff', ...fred,
+              fontSize: 14.5, border: `2.5px solid ${MID.ink}`, borderRadius: 999, padding: '7px 14px', boxShadow: '0 4px 0 rgba(32,32,30,.25)', cursor: 'pointer',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {t('home_quest_next', lang).replace('%task%', t(nextTile.nameKey, lang))} →
+            </button>
+          )}
+        </div>
+        <div style={{ position: 'absolute', right: -4, bottom: -10 }}><TutoMascot size={82} color="#79cf86" /></div>
+      </div>
+
+      <div style={{ ...fred, fontSize: 18, marginTop: 2 }}>{t('home_activities', lang)}</div>
+      <div className="mid-grid">
+        {tiles.map(x => {
+          const r = ringFor(x.type)
+          const g = x.type === 'tree' ? null : gemFor(x.type)
+          return (
+            <button key={x.type} className="mid-sub" onClick={() => nav(x.route, { state: { from: '/child/home' } })}
+              style={{ ...card, padding: 13, textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: x.well, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <div style={{ transform: 'scale(.62)' }}>
+                    {x.type === 'homework' ? <HomeworkIcon /> : x.type === 'drawing' ? <DrawingsIcon age={child?.age} /> : <TaskIcon type={x.type} c={TASK_ACCENT[x.type]} />}
+                  </div>
+                </div>
+                <Ring value={r.value} label={r.label} color={TASK_ACCENT[x.type] || MID.purple} />
+              </div>
+              <div style={{ ...fred, fontSize: 17, marginTop: 10, lineHeight: 1.15 }}>{t(x.nameKey, lang)}</div>
+              <div style={{ ...fred, fontSize: 13, color: '#b7720f', marginTop: 2 }}>
+                {g != null ? `⭐ +${g}` : x.type === 'tree' ? t('home_always_on', lang) : ''}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* The goal the gems are going towards — the one real "progress to a prize" there is. */}
+      <button onClick={() => nav('/child/goals')} style={{ ...card, padding: '12px 15px', textAlign: 'left', cursor: 'pointer', background: '#f9edc5' }}>
+        {goal ? (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ ...fred, fontSize: 15.5 }}>{t('home_goal', lang)}: {goal.icon} {goal.name}</span>
+              <span style={{ fontWeight: 800, fontSize: 12.5, color: MID.soft, whiteSpace: 'nowrap' }}>{gems ?? 0}/{goal.bt_cost}</span>
+            </div>
+            <div style={{ height: 12, border: `2.5px solid ${MID.ink}`, borderRadius: 999, background: '#fff', overflow: 'hidden', marginTop: 8 }}>
+              <i style={{ display: 'block', height: '100%', width: `${Math.min(1, (gems ?? 0) / goal.bt_cost) * 100}%`, background: MID.purple }} />
+            </div>
+          </>
+        ) : (
+          <span style={{ ...fred, fontWeight: 500, fontSize: 14, color: MID.soft }}>
+            {today.hasAnyGoals ? t('home_goals_all_done', lang) + ' 🎉' : t('home_no_goals', lang) + ' 🎯'}
+          </span>
+        )}
+      </button>
+    </div>
+  )
+}
+
 export default function ChildHome() {
   const nav = useNavigate()
   const isTablet = useIsTablet()
@@ -399,7 +583,7 @@ export default function ChildHome() {
       // overwrites the stored child, so anything missing here is not merely stale — it is
       // erased. Setting a child to Turkish in the parent app took effect until they next
       // opened the home screen, which wiped it back to the default.
-      .select('id, name, age, task_settings, language')
+      .select('id, name, age, task_settings, language, avatar_url')
       .eq('id', child.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -420,11 +604,14 @@ export default function ChildHome() {
   }, [])
 
   return (
-    <Shell active="home" background={LILAC}>
+    <Shell active="home" background={band === 'mid' ? MID.bg : LILAC}>
       <style>{HOME_CSS}</style>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '54px 22px 96px', fontFamily: "'Nunito', sans-serif" }}>
 
+        {band === 'mid' ? (
+          <MidHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} />
+        ) : (<>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 13, color: INK_SOFT, marginBottom: 3 }}>{greetingKey && t(greetingKey, lang)}</div>
@@ -528,6 +715,7 @@ export default function ChildHome() {
           </button>
           )}
         </div>
+        </>)}
       </div>
     </Shell>
   )
