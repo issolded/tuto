@@ -60,6 +60,9 @@ async function post(path, body) {
   return res.json()
 }
 
+// Where each of five options sits on a phone: the corners and the middle of a 3×3, as on a die.
+const DICE_CELLS = [[1, 1], [1, 3], [2, 2], [3, 1], [3, 3]]
+
 // What Tuto says over the result. Maths gets a line from the model; there is nothing here for a
 // model to read, so it is chosen by score.
 function encouragementKey(correct, total) {
@@ -322,6 +325,7 @@ export default function PuzzleScreen() {
   const q = session?.questions?.[qIdx]
   if (!q) return <div style={wrap}><style>{ANIM}</style></div>
   const answer = answers[qIdx]
+  const dice = !isTablet && q.options.length === 5
   const pct = ((qIdx + (answer ? 1 : 0)) / total) * 100
   const rightOption = flash && q.options[flash.correct_index]
 
@@ -409,11 +413,16 @@ export default function PuzzleScreen() {
           </div>
 
           {/* The options are the keypad: under the question card, in their own place, each one
-              a button. */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              a button. Five on a phone do not fit a row, and wrapping them four-and-one left the
+              fifth alone under the rest like an afterthought; they are laid out as the five on a
+              die instead. A tablet has the width for all five in a line. */}
+          <div style={dice ? {
+            display: 'grid', gridTemplateColumns: 'repeat(3, max-content)', gap: '4px 14px', justifyContent: 'center',
+          } : { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             {q.options.map((o, i) => (
               <button key={i} className="pz-press" onClick={() => choose(i)} disabled={pending || !!answer}
                 style={{
+                  ...(dice ? { gridRow: DICE_CELLS[i][0], gridColumn: DICE_CELLS[i][1] } : {}),
                   background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer', borderRadius: 14,
                   transition: 'transform .12s ease, opacity .12s ease, box-shadow .12s ease',
                   ...(picked === i
