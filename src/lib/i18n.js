@@ -63,6 +63,17 @@ const STRINGS = {
   bonus_why:          { en: 'An all-rounder is someone good at lots of different things.',
                         tr: 'Hezarfen "bin hüner sahibi" demek: her işten anlayan kişi. Hezarfen Ahmed Çelebi Galata Kulesi\'nden uçmuştu!',
                         es: 'Un todoterreno es alguien a quien se le dan bien muchas cosas distintas.' },
+  // ── 12+ and 6–8 homes ─────────────────────────────────────────────────────
+  home_welcome_back:  { en: 'Welcome back', tr: 'Tekrar hoş geldin', es: 'Hola de nuevo' },
+  home_day_streak:    { en: 'Day streak', tr: 'Gün serisi', es: 'Días seguidos' },
+  home_week_done:     { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },
+  home_gems_label:    { en: 'Gems', tr: 'Gem', es: 'Gems' },
+  home_up_next:       { en: 'Up next', tr: 'Sıradaki', es: 'Lo siguiente' },
+  home_open:          { en: 'Open', tr: 'Aç', es: 'Abrir' },
+  home_level_long:    { en: 'Level %n%', tr: 'Seviye %n%', es: 'Nivel %n%' },
+  home_this_week_n:   { en: '%n% this week', tr: 'bu hafta %n%', es: '%n% esta semana' },
+  home_lets_play:     { en: "Let's play and learn!", tr: 'Hadi oynayalım, öğrenelim!', es: '¡A jugar y aprender!' },
+  home_pick_game:     { en: 'Pick a game', tr: 'Bir oyun seç', es: 'Elige un juego' },
   // ── 9–11 home ─────────────────────────────────────────────────────────────
   home_this_week:     { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },
   home_n_done:        { en: '%n% done', tr: '%n% etkinlik', es: '%n% hechas' },

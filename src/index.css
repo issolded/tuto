@@ -8,7 +8,7 @@
    mounted: Lexend and Fredoka One were imported by StoriesScreen but also used by
    BookOpenTransition, which LibraryScreen renders too, and there they fell through to the
    generic cursive. */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lexend:wght@400;600&family=Fredoka+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lexend:wght@400;600&family=Fredoka+One&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
 
 /* The five Turkish letters Fredoka does not have: ğ Ğ ş Ş and İ. Without this they fall
    through to whatever comes next in the stack, which is a different typeface mid-word.
