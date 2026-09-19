@@ -172,7 +172,7 @@ function toLocalTimes(value, tz) {
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
-    supabase.from('children').select('id, name, age, task_settings, math_focus').eq('parent_id', parentId),
+    supabase.from('children').select('id, name, age, birth_date, task_settings, math_focus').eq('parent_id', parentId),
   ])
   if (!children?.length) return []
 
@@ -283,6 +283,8 @@ async function getParentContext(parentId) {
     return toLocalTimes({
       name: child.name,
       age: child.age,
+      // The parent gave it for this: "when is her birthday", and a birthday gift_gems note.
+      birthDate: child.birth_date || `${child.name}'s birth date has not been given — the parent can add it on the child's card`,
       totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
       todaySubmissions: today.length ? today : `${child.name} has not completed any tasks today`,
       // Reading stores what it asked and what the child said, and the parent can open it in
@@ -6412,6 +6414,31 @@ app.post('/webhook/whatsapp', async (req, res) => {
   }
 })
 
+// children.age kept in step with children.birth_date. The date is the truth; the age is what
+// forty-odd readers — the maths year, the puzzle band, the story length, the child's skin — have
+// always read, so it is written rather than every reader being taught the date. Counted in the
+// child's own timezone so the birthday lands on their morning, not UTC's. A child without a date
+// keeps the age their parent typed.
+function ageOn(isoDate, today) {
+  const b = DateTime.fromISO(isoDate)
+  if (!b.isValid) return null
+  let age = today.year - b.year
+  if (today.month < b.month || (today.month === b.month && today.day < b.day)) age--
+  return age
+}
+
+async function syncAgesFromBirthDates() {
+  const { data, error } = await supabase.from('children').select('id, age, birth_date').not('birth_date', 'is', null)
+  if (error) { console.error(`[AGE] read failed: ${error.message}`); return }
+  for (const c of data || []) {
+    const age = ageOn(c.birth_date, DateTime.now().setZone(await tzForChild(c.id)))
+    if (age == null || age === c.age) continue
+    const { error: upErr } = await supabase.from('children').update({ age }).eq('id', c.id)
+    if (upErr) console.error(`[AGE] ${c.id}: ${upErr.message}`)
+    else console.log(`[AGE] ${c.id}: ${c.age} → ${age}`)
+  }
+}
+
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
   // Photo retention — homework/chore images are deleted once past the window
@@ -6422,6 +6449,9 @@ app.listen(3000, async () => {
   }
   purgeAll()
   setInterval(purgeAll, 24 * 60 * 60 * 1000)
+  // Hourly, so a birthday is picked up within the hour of midnight wherever the child is.
+  syncAgesFromBirthDates()
+  setInterval(() => { syncAgesFromBirthDates().catch(err => console.error(`[AGE] ${err.message}`)) }, 60 * 60 * 1000)
   startTelegramBot()
   setupMessageListener()
 })

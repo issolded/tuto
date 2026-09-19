@@ -8,8 +8,9 @@ import { downscale } from '../lib/image'
 import { t as childT, localeFor, LANGS, childLang as childLangOf } from '../lib/i18n'
 import {
   PC, FONT, SHADOW_SM, PCSS,
-  TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot,
+  TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot, BirthDateField,
 } from '../lib/parentUI'
+import { ageFromBirthDate } from '../lib/age'
 import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -390,6 +391,7 @@ function EditChildSheet({ child, onClose, onSaved }) {
   const s = useT()
   const [name, setName] = useState(child.name)
   const [age,  setAge]  = useState(child.age)
+  const [birthDate, setBirthDate] = useState(child.birth_date || '')
   const [avatar, setAvatar] = useState(child.avatar_url || null)
   const [preview, setPreview] = useState(child.avatar_url?.startsWith('http') ? child.avatar_url : null)
   const [saving, setSaving]   = useState(false)
@@ -419,7 +421,10 @@ function EditChildSheet({ child, onClose, onSaved }) {
 
   const save = async () => {
     if (!name.trim()) return setError(s('db_err_name'))
-    if (!age || +age < 1 || +age > 18) return setError(s('db_err_age'))
+    // A birth date, once there is one, decides the age; until then the typed age stands.
+    const dated = ageFromBirthDate(birthDate)
+    const nextAge = dated ?? +age
+    if (!nextAge || nextAge < 1 || nextAge > 18) return setError(s('db_err_age'))
     setSaving(true); setError('')
 
     let avatar_url = child.avatar_url
@@ -438,9 +443,10 @@ function EditChildSheet({ child, onClose, onSaved }) {
       avatar_url = avatar
     }
 
-    const { error: dbErr } = await supabase.from('children').update({ name: name.trim(), age: +age, avatar_url }).eq('id', child.id)
+    const patch = { name: name.trim(), age: nextAge, avatar_url, ...(dated != null ? { birth_date: birthDate } : {}) }
+    const { error: dbErr } = await supabase.from('children').update(patch).eq('id', child.id)
     if (dbErr) { setError(dbErr.message); setSaving(false); return }
-    onSaved({ ...child, name: name.trim(), age: +age, avatar_url })
+    onSaved({ ...child, ...patch })
   }
 
   const isPhoto = avatar instanceof Blob || (typeof avatar === 'string' && avatar?.startsWith('http'))
@@ -470,13 +476,18 @@ function EditChildSheet({ child, onClose, onSaved }) {
         <input className="tc-input" type="text" value={name} onChange={e => { setName(e.target.value); setError('') }} />
       </Field>
 
-      <Field label={s('db_age')}>
-        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 16px', gap: 14 }}>
-          <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>−</button>
-          <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 32, color: PC.ink }}>{age}</div>
-          <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>+</button>
-        </div>
-      </Field>
+      <BirthDateField value={birthDate} onChange={v => { setBirthDate(v); setError('') }} s={s} />
+
+      {/* Only while there is no date: a child set up before birth dates keeps the age they had. */}
+      {ageFromBirthDate(birthDate) == null && (
+        <Field label={s('db_age')}>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 16px', gap: 14 }}>
+            <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>−</button>
+            <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 32, color: PC.ink }}>{age}</div>
+            <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 44, height: 44, borderRadius: 13, background: PC.tealBg, border: 'none', color: PC.tealDeep, fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>+</button>
+          </div>
+        </Field>
+      )}
 
       {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
       <Btn onClick={save} disabled={saving}>{saving ? s('saving') : s('cd_save_changes')}</Btn>
@@ -1186,6 +1197,19 @@ export default function ParentChildDetail() {
             )
           })}
         </Card>
+
+        {/* A child set up before birth dates has an age that never moves. Asked here, once, until
+            it is answered — the edit sheet is where the date goes. */}
+        {!child.birth_date && (
+          <Card pad={14} onClick={() => setShowEditModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: PC.amberBg, border: 'none' }}>
+            <span style={{ fontSize: 26 }}>🎂</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.ink }}>{s('cd_birthday_title', { name: child.name })}</div>
+              <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{s('cd_birthday_sub')}</div>
+            </div>
+            <span style={{ color: PC.inkFaint, fontSize: 18 }}>›</span>
+          </Card>
+        )}
 
         {/* pending approvals */}
         <div>

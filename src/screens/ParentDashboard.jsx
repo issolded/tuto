@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { hashPin } from '../lib/hash'
-import { LangPicker } from '../lib/parentUI'
+import { LangPicker, BirthDateField } from '../lib/parentUI'
+import { ageFromBirthDate } from '../lib/age'
 import { useT, adoptAccountLang } from '../lib/parentI18n'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { downscale } from '../lib/image'
@@ -20,7 +21,7 @@ let _childrenCache = null
 function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
   const s = useT()
   const [name, setName] = useState('')
-  const [age, setAge] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -53,7 +54,8 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 
   const save = async () => {
     if (!name.trim()) return setError(s('db_err_name'))
-    if (!age || isNaN(age) || +age < 1 || +age > 18) return setError(s('db_err_age'))
+    const age = ageFromBirthDate(birthDate)
+    if (age == null) return setError(s('db_err_birth'))
     if (!/^\d{4}$/.test(pin)) return setError(s('db_err_pin'))
     setLoading(true); setError('')
 
@@ -87,7 +89,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
     }
     const { data, error: dbError } = await supabase
       .from('children')
-      .insert({ parent_id: parentId, name: name.trim(), age: +age, pin_hash, ...(avatar_url && { avatar_url }) })
+      .insert({ parent_id: parentId, name: name.trim(), birth_date: birthDate, age, pin_hash, ...(avatar_url && { avatar_url }) })
       .select()
       .single()
     if (dbError) { setError(dbError.message); setLoading(false); return }
@@ -123,10 +125,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
           onChange={e => { setName(e.target.value); setError('') }} />
       </Field>
 
-      <Field label={s('db_age')}>
-        <input className="tc-input" type="number" placeholder="8" min="1" max="18" value={age}
-          onChange={e => { setAge(e.target.value); setError('') }} />
-      </Field>
+      <BirthDateField value={birthDate} onChange={v => { setBirthDate(v); setError('') }} s={s} />
 
       <Field label={s('db_pin')}>
         <input className="tc-input" type="password" placeholder="••••" maxLength={4} inputMode="numeric"

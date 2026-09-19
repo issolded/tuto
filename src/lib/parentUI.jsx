@@ -2,6 +2,7 @@
 import TutoMascotComponent from '../components/TutoMascot'
 import { LANGS } from './i18n'
 import { useUiLang, setUiLang, useT } from './parentI18n'
+import { ageFromBirthDate, birthDateBounds } from './age'
 
 export const PC = {
   bg:       '#F4F6F7',
@@ -181,6 +182,28 @@ export function Field({ label, children, hint }) {
       {children}
       {hint && <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 6 }}>{hint}</div>}
     </div>
+  )
+}
+
+// ── Birth date ────────────────────────────────────────────────────────────────
+// The date, and the age it makes today beside it, so a parent sees at once whether the year they
+// scrolled to is the right one. The phone's own date picker: localised, and nothing to maintain.
+// `s` is the caller's parent translator.
+export function BirthDateField({ value, onChange, s }) {
+  const { min, max } = birthDateBounds()
+  const age = ageFromBirthDate(value)
+  return (
+    <Field label={s('db_birth_date')} hint={s('db_birth_hint')}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <input className="tc-input" type="date" min={min} max={max} value={value || ''}
+          onChange={e => onChange(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+        {age != null && (
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.tealDeep, whiteSpace: 'nowrap' }}>
+            {s('years_old', { n: age })}
+          </div>
+        )}
+      </div>
+    </Field>
   )
 }
 

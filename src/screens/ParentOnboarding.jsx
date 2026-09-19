@@ -8,8 +8,9 @@ import { hashPin } from '../lib/hash'
 import { gemHint, CAP_RANGE, TASK_DEFAULTS } from '../lib/taskDefaults'
 import {
   PC, FONT, SHADOW, SHADOW_SM, PCSS,
-  Btn, Card, Field, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot,
+  Btn, Card, Field, Pill, BottomSheet, Icon, TaskIcon, PinPad, Confetti, TutoMascot, BirthDateField,
 } from '../lib/parentUI'
+import { ageFromBirthDate } from '../lib/age'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -133,7 +134,9 @@ export default function ParentOnboarding() {
 
   const [step,            setStep]            = useState(1)
   const [childName,       setChildName]       = useState('')
-  const [age,             setAge]             = useState(7)
+  // The birth date, not an age: an age typed once stayed that age for good, and the maths year
+  // and puzzle band that hang off it with it. The server keeps children.age in step.
+  const [birthDate,       setBirthDate]       = useState('')
   // The language the CHILD is spoken to in — separate from anything the parent reads. The
   // column has existed all along and onboarding wrote 'en' into it unconditionally, so a child
   // who speaks only Turkish got an English app with English questions.
@@ -285,7 +288,7 @@ export default function ParentOnboarding() {
         // switched everything except Maths off still had a child seeing every tile. The
         // shape matches what TaskSettings writes later, so the two agree from the start.
         .insert({
-          parent_id: uid.id, name: childName.trim(), age, pin_hash, language: childLang,
+          parent_id: uid.id, name: childName.trim(), birth_date: birthDate, age: ageFromBirthDate(birthDate), pin_hash, language: childLang,
           task_settings: Object.fromEntries(
             Object.keys(tasks).map(k => [k, { gems: TASK_DEFAULTS[k].gems, active: !!tasks[k], daily_cap: caps[k] }])
           ),
@@ -393,13 +396,7 @@ export default function ParentOnboarding() {
             <Field label={s('db_child_name')}>
               <input className="tc-input" value={childName} onChange={e => setChildName(e.target.value)} placeholder={s('ob_child_name_ph')} />
             </Field>
-            <Field label={s('db_age')}>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1.5px solid ${PC.line}`, borderRadius: 16, padding: '10px 18px', gap: 16 }}>
-                <button className="tc-press" onClick={() => setAge(a => Math.max(1, a - 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>−</button>
-                <div style={{ flex: 1, textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 36, color: PC.ink }}>{age}</div>
-                <button className="tc-press" onClick={() => setAge(a => Math.min(18, a + 1))} style={{ width: 46, height: 46, borderRadius: 14, background: PC.tealBg, border: 'none', fontSize: 24, fontWeight: 800, color: PC.tealDeep, cursor: 'pointer', fontFamily: FONT }}>+</button>
-              </div>
-            </Field>
+            <BirthDateField value={birthDate} onChange={setBirthDate} s={s} />
             <Field label={s('ob_child_lang_q')}>
               <div style={{ display: 'flex', gap: 10 }}>
                 {LANGS.map(l => ({ id: l.code, label: l.label, flag: l.flag })).map(o => {
@@ -421,7 +418,7 @@ export default function ParentOnboarding() {
                 {s('ob_child_lang_b', { name: childName.trim() || s('ts_your_child') })}
               </div>
             </Field>
-            <Btn onClick={next} disabled={!childName.trim()}>{s('ob_next')}</Btn>
+            <Btn onClick={next} disabled={!childName.trim() || ageFromBirthDate(birthDate) == null}>{s('ob_next')}</Btn>
           </div>
         )}
 
