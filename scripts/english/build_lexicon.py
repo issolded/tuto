@@ -249,9 +249,21 @@ def spelling_variant(a, b):
         if long in (short + 's', short + 'es', short + 't'):
             return True
     for x, y in (('our', 'or'), ('re', 'er'), ('ise', 'ize'), ('isa', 'iza'),
-                 ('yse', 'yze'), ('ll', 'l'), ('ae', 'e'), ('oe', 'e')):
+                 ('yse', 'yze'), ('ll', 'l'), ('ae', 'e'), ('oe', 'e'),
+                 ('er', 'or'), ('ence', 'ense'), ('ogue', 'og')):
         if a.replace(x, y) == b.replace(x, y):
             return True
+    # An optional internal `e`: `judgement/judgment`, `acknowledgement/acknowledgment`. These
+    # reached the homophone list, where they are not a question — the two spellings are one
+    # word, so "which of these sounds the same as `judgement`" answers itself.
+    #
+    # Exactly ONE `e` removed, at one position, and not `e`s stripped wholesale: the loose
+    # version took `bare/bear` with it, which is the best homophone pair in the language.
+    short, long = sorted((a, b), key=len)
+    if len(long) == len(short) + 1:
+        for i, ch in enumerate(long):
+            if ch == 'e' and long[:i] + long[i + 1:] == short:
+                return True
     return False
 
 
@@ -342,7 +354,12 @@ def main():
             lexname[name] = lexname.get(name) or syn.lexname()
             order = wn.synsets(name, syn.pos())
             idx = order.index(syn) if syn in order else 99
-            if lem.count() >= 1 or (idx < 2 and syn.pos() == main_pos(name)):
+            # The main part of speech is required in BOTH branches. It used to be required
+            # only in the second, and the SemCor escape hatch let `form = spring` through — a
+            # synset meaning "come into existence", where `spring` is a verb and everyone under
+            # forty means the season. A blind test picked it out as the one synonym question
+            # with no defensible answer.
+            if syn.pos() == main_pos(name) and (lem.count() >= 1 or idx < 2):
                 dominant[name].add(syn.name())
 
     # ---- pass 2: synonym sets ------------------------------------------------------------
@@ -616,9 +633,26 @@ def main():
     def is_vowel(ph):
         return ph[-1].isdigit()
 
+    # /R/ drops after these vowels and not after the others, which is the part the first
+    # version got wrong by dropping it after all of them.
+    #
+    # A blind test found it: the engine offered `shared` as a homophone of `shed`. In General
+    # American `shared` is SH EH R D, and taking the R out leaves exactly `shed`. In British it
+    # does not — EH before R is not EH, it is the centring diphthong of `air`, so `shared` is
+    # /ʃeəd/ and `shed` is /ʃed/. The vowels that really do absorb a following R are the long
+    # back and central ones: `calm`/`arm`, `caught`/`court`, `bird`. The front and high ones
+    # change quality instead, and merging them invents homophones that do not exist.
+    R_ABSORBING = {'AA', 'AO', 'ER', 'AH'}
+
     def non_rhotic(p):
-        return [ph for i, ph in enumerate(p)
-                if not (ph == 'R' and not (i + 1 < len(p) and is_vowel(p[i + 1])))]
+        out = []
+        for i, ph in enumerate(p):
+            if ph == 'R' and not (i + 1 < len(p) and is_vowel(p[i + 1])):
+                prev = out[-1][:-1] if out and is_vowel(out[-1]) else None
+                if prev in R_ABSORBING:
+                    continue
+            out.append(ph)
+        return out
 
     def rime_of(p):
         """From the last STRESSED vowel to the end, stress marks dropped.
