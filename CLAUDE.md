@@ -355,8 +355,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       `medal` için verdiği `ribbon` kitabın birinci çeldiricisi: WordNet cevap üreticisi değil,
       **çeldirici üreticisi**.
       **Güvenlik — üç ayrı eksen, üçü ayrı liste:**
-      (a) *Küfür/hakaret*: `scripts/english/vendor/`'da gömülü üç yayınlanmış liste (LDNOOBW
-      CC-BY, profane-words LGPL, cuss MIT) + elle yazılmış 450 madde = 2.817 kelime. Elle
+      (a) *Küfür/hakaret*: `scripts/english/vendor/`'da gömülü iki yayınlanmış liste (LDNOOBW
+      CC-BY, cuss MIT) + elle yazılmış 475 madde = 1.958 kelime. Üçüncü bir liste
+      (profane-words) kullanıldı ve **çıkarıldı**: tek kopyasol lisans oydu (LGPL-3.0) ve bu
+      listeler uygulama bundle'ına giriyor. Tek başına koruduğu 50 kelimenin yarısı yanlış
+      alarmdı (`leper`, `licking`, `vixen`), gerçek olan 25'i elle `blocklist.txt`'e yazıldı. Elle
       yazılan liste **90 kelimeyi kaçırmıştı** (ırkçı hakaretler ve müstehcen kelimeler dahil,
       hepsi sözlükte duruyordu) — yayınlanmış listeler bu yüzden var. `cuss` derecelendirilmiş
       ve **yalnız skor 1-2 alınıyor**: skor 0'da `african`, `asian`, `american`, `banana`,

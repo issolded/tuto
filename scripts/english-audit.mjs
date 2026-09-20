@@ -58,7 +58,7 @@ function sentenceWords(item) {
 // Deliberately re-read here instead of trusting that the build applied it. The build is the
 // thing under test; an audit that asks the build whether the build worked is not an audit.
 //
-// All four sources, not just the hand-written one. The published lists carry 2491 words the
+// All three sources, not just the hand-written one. The published lists carry words the
 // hand-written list does not, ninety of which were in the lexicon when they were first
 // compared — checking only blocklist.txt here would have left the audit blind to exactly the
 // class of word it exists to catch.
@@ -69,7 +69,6 @@ const BLOCKED = new Set([
     .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')),
   ...readFileSync(join(ROOT, 'scripts/english/vendor/ldnoobw-en.txt'), 'utf8')
     .split('\n').map(l => l.trim()),
-  ...vendor('profane-words.json'),
   // Score 0 is context-dependent, not profane — `banana`, `church`, `blind`, `angry` — and
   // the lexicon keeps those on purpose. Asserting against them here would fail the build for
   // doing the right thing.

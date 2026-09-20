@@ -525,3 +525,37 @@ hiv
 dope
 overdosed
 addicted
+
+# --- absorbed from profane-words, which was then dropped -------------------------------
+# scripts/english/vendor/ held a fourth list, zacanger/profane-words, under LGPL-3.0. It was
+# removed: it is the only copyleft licence among the four and the lists ship inside the app
+# bundle, which is not a question worth carrying for a word list. What it protected against
+# that the other three did not, once its plurals of already-blocked words are set aside, was
+# 50 entries in our frequency band. Half of those were false alarms it would have cost us
+# (`leper`, `licking`, `clamps`, `vixen`, `bombers`, `hummer`, `nimrod`, `penthouse`). The
+# real ones are here, read one by one.
+aryan
+bimbo
+doggie
+dogging
+douche
+ganja
+goddam
+klan
+labia
+lucifer
+lusty
+nazism
+pcp
+perversion
+phallic
+rectal
+reich
+sadist
+snuff
+squirting
+stoner
+transsexual
+uzi
+valium
+wench

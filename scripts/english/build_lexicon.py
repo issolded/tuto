@@ -72,6 +72,10 @@ def load_published_lists():
     them still in the lexicon, where a filler option could have reached it. A list of what
     must never be shown to a child is not something to write from memory.
 
+    A fourth list, zacanger/profane-words, was here and was dropped: LGPL-3.0 is the only
+    copyleft licence among them and these lists ship inside the app bundle. The 25 words it
+    alone protected against are now in blocklist.txt, written out one by one.
+
     `cuss` rates its entries 0 to 2 and only 1 and 2 are taken. Its 0 tier is
     context-dependent rather than profane, and it holds `african`, `asian`, `arab`,
     `american`, `adult` and `angry`; blocking those would be a worse failure than the one
@@ -85,9 +89,6 @@ def load_published_lists():
         w = w.strip().lower()
         if w.isalpha():
             out.add(w)
-    for w in json.loads((VENDOR / 'profane-words.json').read_text()):
-        if w.isalpha():
-            out.add(w.lower())
     for w, score in json.loads((VENDOR / 'cuss.json').read_text()).items():
         if score >= 1 and w.isalpha():
             out.add(w.lower())

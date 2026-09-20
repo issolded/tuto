@@ -6,9 +6,15 @@ of the same commit produce the same lexicon.
 | file | what | source | licence |
 |---|---|---|---|
 | `ldnoobw-en.txt` | 403 obscene terms | [LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (Shutterstock) | CC-BY 4.0 |
-| `profane-words.json` | 2725 profane terms | [zacanger/profane-words](https://github.com/zacanger/profane-words) | LGPL-3.0 |
 | `cuss.json` | 1795 terms **rated** 0–2 for certainty | [words/cuss](https://github.com/words/cuss) (Titus Wormer) | MIT — `cuss.LICENSE.txt` |
 | `dale-chall.json` | 2942 words 80% of US fourth-graders know | [words/dale-chall](https://github.com/words/dale-chall) (Titus Wormer) | MIT — `dale-chall.LICENSE.txt` |
+
+Every licence here is permissive. A fourth list, [zacanger/profane-words](https://github.com/zacanger/profane-words),
+was used and then dropped: LGPL-3.0 is copyleft, and these lists are compiled into
+`src/lib/englishLexicon.generated.js`, which ships in the app bundle. That is not a question
+worth carrying for a word list. Measured before removing it, the words it alone caught in our
+frequency band numbered 50, half of them false alarms it would have cost us (`leper`,
+`licking`, `clamps`, `vixen`, `bombers`). The other 25 are written out in `../blocklist.txt`.
 
 ## Why these, and what they do not do
 
