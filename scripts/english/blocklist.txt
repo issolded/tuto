@@ -492,3 +492,36 @@ fanny
 booby
 bum
 grief
+
+# --- found in the browser, in the first question on the screen ------------------------
+# "received con___med reports of casualties" — a hidden-word question about `confirmed`,
+# built from a WordNet example sentence. Every word in it cleared the readability bar;
+# `casualties` is common enough to pass any frequency gate ever written. It means dead
+# people. The words below are the rest of that class: safe-looking, unsafe in meaning.
+# The grown-up-but-harmless vocabulary that came with it (war, court, economy, president)
+# is in scripts/english/sentence-topics.txt instead, because those words are fine to ask
+# about and only wrong as a scene.
+casualty
+fatality
+fatalities
+mortality
+bereave
+maimed
+mutilated
+slain
+massacred
+perish
+perished
+
+# --- found in the lab, second browser pass ---------------------------------------------
+# `drug` itself was missing while ten of its hyponyms were listed, and it turned up as a
+# filler option next to `vary, send, adjust, examine`. The rest came out of sentences that
+# the concrete-noun rule was rejecting for a different reason ("Please don't advertise the
+# fact that he has AIDS") — caught there by luck, listed here on purpose.
+drug
+drugs
+aids
+hiv
+dope
+overdosed
+addicted

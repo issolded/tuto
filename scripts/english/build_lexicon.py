@@ -34,7 +34,7 @@ Two gates decide what a word is allowed to be:
               `pot`, `joint` and `shot` are innocent lemmas carrying senses a nine-year-old's
               quiz has no business in.
 """
-import json, re, sys, datetime
+import json, re, datetime
 from pathlib import Path
 from collections import defaultdict
 
@@ -45,6 +45,9 @@ from wordfreq import zipf_frequency
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'src' / 'lib' / 'englishLexicon.generated.js'
 BLOCK = Path(__file__).with_name('blocklist.txt')
+TOPICS = Path(__file__).with_name('sentence-topics.txt')
+CAT_SKIP = Path(__file__).with_name('category-skip.txt')
+VENDOR = Path(__file__).parent / 'vendor'
 
 # Floor for anything that may appear on screen at all. Bands sit ABOVE this; it exists so the
 # file is not 150k words of WordNet's long tail.
@@ -52,27 +55,131 @@ MIN_ZIPF = 2.6
 MIN_LEN, MAX_LEN = 3, 12
 
 
-def load_blocklist():
+def load_words(path):
     words = set()
-    for line in BLOCK.read_text().splitlines():
+    for line in path.read_text().splitlines():
         line = line.strip()
         if line and not line.startswith('#'):
             words.add(line.lower())
     return words
 
 
-BLOCKED = load_blocklist()
+def load_published_lists():
+    """The three published profanity lists, merged.
+
+    Written by hand first, and the hand-written list turned out to be missing ninety words
+    these carry — `anus`, `blowjob`, `nigga`, `chink`, `honky`, `paedophile` — every one of
+    them still in the lexicon, where a filler option could have reached it. A list of what
+    must never be shown to a child is not something to write from memory.
+
+    `cuss` rates its entries 0 to 2 and only 1 and 2 are taken. Its 0 tier is
+    context-dependent rather than profane, and it holds `african`, `asian`, `arab`,
+    `american`, `adult` and `angry`; blocking those would be a worse failure than the one
+    this is guarding against.
+
+    Multi-word entries are dropped — the lexicon holds single words, and "alligator bait"
+    cannot appear in it.
+    """
+    out = set()
+    for w in (VENDOR / 'ldnoobw-en.txt').read_text().split('\n'):
+        w = w.strip().lower()
+        if w.isalpha():
+            out.add(w)
+    for w in json.loads((VENDOR / 'profane-words.json').read_text()):
+        if w.isalpha():
+            out.add(w.lower())
+    for w, score in json.loads((VENDOR / 'cuss.json').read_text()).items():
+        if score >= 1 and w.isalpha():
+            out.add(w.lower())
+    return out
+
+
+PUBLISHED = load_published_lists()
+BLOCKED = load_words(BLOCK) | PUBLISHED
+
+# Words 80% of US fourth-graders know (Dale-Chall). An ALLOWLIST, and the only one here.
+# Too small to be the module's vocabulary — 2942 words against the 19,000 this lexicon keeps,
+# and the Bond 8-9 paper reaches well past it — but exactly the right size for judging a
+# SENTENCE, where one unknown word sinks the whole question.
+DALE_CHALL = {w.lower() for w in json.loads((VENDOR / 'dale-chall.json').read_text())}
+# Safe words that set a grown-up scene. They stay in the lexicon — a child can be asked what
+# `market` means — and they are kept out of EXAMPLE SENTENCES, where they stop being vocabulary
+# and start being the news. See sentence-topics.txt for why this is a second list.
+SENTENCE_TOPICS = load_words(TOPICS)
+# Reviewed by eye rather than derived: see category-skip.txt for why each entry is there.
+_CAT_SKIP = load_words(CAT_SKIP)
+SKIP_GROUPS = {w.split(':', 1)[1].strip() for w in _CAT_SKIP if w.startswith('group:')}
+SKIP_MEMBERS = {w for w in _CAT_SKIP if not w.startswith('group:')}
 
 # Whole-word matching with the simple inflections, so `kill` takes `kills`/`killed`/`killing`
-# but never `skill`, and `rape` never takes `grape`. Built once; it is applied to every
-# definition and example sentence in WordNet, which is 200k+ strings.
-_BLOCK_RE = re.compile(
-    r'\b(?:' + '|'.join(sorted((re.escape(w) for w in BLOCKED), key=len, reverse=True))
-    + r')(?:s|es|ed|ing|d|r|rs)?\b', re.I)
+# but never `skill`, and `rape` never takes `grape`.
+#
+# Done by tokenising and looking each word up, rather than with one alternation regex over the
+# whole text. The regex version was fine for a 450-word hand-written list and hung the build
+# when the published lists took it past four thousand: Python compiles that into four thousand
+# alternatives and walks them at every position of every string, and there are 200,000 strings
+# here. Stripping the endings off each token instead costs one pass per word.
+def _forms(token):
+    """The token, plus the base forms it could be an inflection of.
+
+    The endings are stripped conditionally rather than blindly, and the difference is not
+    cosmetic. Stripping a bare `r` turns `poor` into `poo`, which is on the list, and blind
+    stripping cost roughly three quarters of the usable sentences before anyone noticed the
+    lexicon had shrunk. An `-r`/`-rs` ending only means an agent noun when what is left ends
+    in `e` — `abuser` → `abuse` — so that is the only case it is taken off.
+    """
+    yield token
+    if len(token) > 3:
+        for suf in ('s', 'es', 'ed', 'ing', 'd'):
+            if token.endswith(suf) and len(token) - len(suf) >= 3:
+                yield token[:-len(suf)]
+        for suf in ('r', 'rs'):
+            if token.endswith(suf) and token[:-len(suf)].endswith('e'):
+                yield token[:-len(suf)]
+
+
+def _hits(text, vocabulary):
+    for token in re.findall(r"[a-z]+", text.lower()):
+        if any(f in vocabulary for f in _forms(token)):
+            return True
+    return False
 
 
 def unsafe(text):
-    return bool(_BLOCK_RE.search(text))
+    return _hits(text, BLOCKED)
+
+
+# The lexical files that name a THING: something in the world a child could point at, pick up
+# or stroke. Deliberately narrower than the engine's `concrete` list, which also admits
+# adjectives and feelings for its option lines — here the question is whether the SENTENCE has
+# anything in it to picture.
+THING_LEXNAMES = {
+    'noun.animal', 'noun.artifact', 'noun.body', 'noun.food',
+    'noun.object', 'noun.plant', 'noun.substance', 'noun.person',
+}
+
+
+def has_something_to_picture(text, lexname):
+    """At least one word in the sentence names a thing.
+
+    The topic list keeps the news out; this keeps the abstract out, and they are different
+    failures. "offend all laws of humanity", "production was up in the second quarter" and
+    "they assumed their operational positions" contain no forbidden word and nothing a child
+    can see. A sentence with a car, a plate, a chair or a fork in it almost always reads as a
+    sentence about something.
+
+    Measured over the 4139 sentences that reach this point: 35% carry a thing. What that
+    removes is "Will the new rules affect me?" and "she was adequate to the job"; what it
+    keeps is "comfortable chairs arranged around the fireplace" and "an amber light
+    illuminated the room".
+    """
+    return any(lexname.get(w) in THING_LEXNAMES
+               for w in re.findall(r"[a-z']+", text.lower()))
+
+
+def grown_up_scene(text):
+    """A sentence set in the adult world: a courtroom, a market, a ward, a war."""
+    return _hits(text, SENTENCE_TOPICS)
 
 
 # Every spelling WordNet knows with a capital letter. `Russia`, `Jap`, `Wallace`, `Nancy`,
@@ -141,6 +248,26 @@ def spelling_variant(a, b):
         if a.replace(x, y) == b.replace(x, y):
             return True
     return False
+
+
+def is_inflected(name):
+    """True when the word is an inflected form of some other word.
+
+    Two mechanisms, because English has two. `morphy` strips the regular endings, which is
+    what caught `needs` and `wrapped`. It cannot touch the irregular ones — it returns `felt`
+    for `felt` and `saw` for `saw`, since both are also lemmas in their own right (a fabric, a
+    tool). Those live in WordNet's exception lists, which map `felt → feel`, `saw → see`,
+    `fell → fall`, `went → go`.
+
+    It matters for the sense questions, and it matters in the answer rather than the question:
+    "She wrapped her arms around the child — what does `wrapped` mean?" was answered `wind`,
+    and "her fingers felt their way" was answered `feel`. The child is shown a past tense and
+    offered five infinitives.
+    """
+    if any(wn.morphy(name, pos) not in (None, name) for pos in 'nvar'):
+        return True
+    wn.ensure_loaded()
+    return any(name in wn._exception_map.get(pos, {}) for pos in 'nvar')
 
 
 def safe_synset(s):
@@ -266,9 +393,17 @@ def main():
     for syn in wn.all_synsets('n'):
         if not safe_synset(syn):
             continue
+        # No inflected forms. This is the `murphy` problem wearing a plural: `bones` is a
+        # percussion instrument in WordNet and a skeleton to everyone else, `vibes` is a
+        # vibraphone and slang, `organs` is an instrument and a body. Each one carries a
+        # frequency earned by the sense the category is NOT about, and each landed in an
+        # odd-two line where a child could not see the group — `vibes / drum / bones` against
+        # `prosecutor / judge`. The primary-sense gate cannot catch them because the plural is
+        # its own lemma and the instrument really is its first sense.
         names = {l.name().lower() for l in syn.lemmas()
                  if usable_lemma(l.name()) and common(l.name().lower())
-                 and primary(l.name().lower(), syn)}
+                 and primary(l.name().lower(), syn) and not is_inflected(l.name().lower())
+                 and l.name().lower() not in SKIP_MEMBERS}
         if not names:
             continue
         for hyper in syn.hypernyms():
@@ -304,7 +439,7 @@ def main():
 
     categories = []
     for key, members in sorted(cats.items()):
-        if len(members) < 5 or key not in allowed:
+        if len(members) < 5 or key not in allowed or key in SKIP_GROUPS:
             continue
         label = key.split('.')[0].replace('_', ' ')
         if unsafe(label) or unsafe(key):
@@ -318,6 +453,13 @@ def main():
     # three, which is why this type needs no hand-written content at all.
     senses = {}
     for name in sorted(words):
+        # The word has to be a BASE form. WordNet's examples quote a word however the sentence
+        # needs it, and a question built on an inflected quote goes wrong in the answer rather
+        # than in the question: "She wrapped her arms around the child — what does `wrapped`
+        # mean?" was answered `wind`, because the synset's lemmas are base forms and `wound` is
+        # not one of them. The child is asked about a past tense and offered five infinitives.
+        if is_inflected(name):
+            continue
         rows = []
         for syn in wn.synsets(name):
             if not safe_synset(syn):
@@ -328,13 +470,24 @@ def main():
             ex = [e for e in syn.examples()
                   if re.search(r'\b' + re.escape(name) + r'\b', e, re.I)
                   and 4 <= len(e.split()) <= 16
+                  and not grown_up_scene(e)
+                  and has_something_to_picture(e, lexname)
                   and not any(zipf_frequency(tok, 'en') < 3.4
                               for tok in re.findall(r"[a-z']+", e.lower()) if len(tok) > 2)]
             if not ex:
                 continue
+            # A word's own base form is not a meaning of it. `won → win`, `saw → see`,
+            # `shook → shake` all came out of this type, and the engine's spelling-based check
+            # cannot see them: no shared prefix, no shared ending, nothing but English's
+            # irregular verbs. WordNet's morphy knows, so ask it.
+            def same_word(other):
+                bases = {wn.morphy(name, pos) for pos in 'nvar'} | {name}
+                others = {wn.morphy(other, pos) for pos in 'nvar'} | {other}
+                return bool((bases & others) - {None})
+
             sibs = sorted({l.name().lower() for l in syn.lemmas()
                            if usable_lemma(l.name()) and common(l.name().lower())
-                           and l.name().lower() != name})
+                           and l.name().lower() != name and not same_word(l.name().lower())})
             if not sibs:
                 continue
             rows.append([syn.pos(), ex[0], sibs, syn.definition(), syn.name()])
@@ -405,6 +558,8 @@ def main():
                     continue
                 if not (5 <= len(ex.split()) <= 14) or len(ex) > 80:
                     continue
+                if grown_up_scene(ex) or not has_something_to_picture(ex, lexname):
+                    continue
                 # The sentence is read by a nine-year-old, so it is held to the same
                 # vocabulary bar as everything else. WordNet's examples are written for
                 # lexicographers and it shows: "a mechanism of social control", "a
@@ -451,6 +606,10 @@ def main():
             'examples': len(examples),
             'kinship': len(kinship),
             'blocklist': len(BLOCKED),
+            'blocklist_published': len(PUBLISHED),
+            'blocklist_handwritten': len(load_words(BLOCK)),
+            'sentence_topics': len(SENTENCE_TOPICS),
+            'category_skips': len(_CAT_SKIP),
         },
     }
 

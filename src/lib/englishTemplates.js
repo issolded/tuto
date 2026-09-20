@@ -270,6 +270,30 @@ export function sameWordDifferentEnding(a, b) {
   return false
 }
 
+/**
+ * Two words that are not synonyms but keep the same company.
+ *
+ * WordNet links words to SENSES, and two words can both belong to a third word's senses
+ * without ever sharing one of their own. That is not a curiosity, it is the last way a
+ * question gets two right answers: asked what `piece` means in "he needed a piece of granite",
+ * this answered `part` and offered `bit` and `slice` as mistakes. All three are right. WordNet
+ * does not link `bit` to `part` directly, so `related` saw nothing — but all three are
+ * neighbours of `piece`, which is exactly what makes them competing readings of it.
+ *
+ * The measurement is sharp enough to be a rule rather than a threshold: across the pairs on
+ * that question, every bad one shared at least one neighbour and every good one shared none
+ * (`duck/duration`, `barrel/remark`, `garage/sight` — all zero).
+ */
+export function sharesNeighbour(a, b) {
+  const { kin } = index()
+  const ka = kin.get(a)
+  const kb = kin.get(b)
+  if (!ka || !kb) return false
+  const [small, large] = ka.size <= kb.size ? [ka, kb] : [kb, ka]
+  for (const w of small) if (large.has(w)) return true
+  return false
+}
+
 /** Two words a child could defend as meaning the same thing — the relation that makes a
  *  question ambiguous. Deliberately generous: a shared sense in ANY reading counts, and so
  *  does being the same word twice. */
@@ -290,10 +314,29 @@ const COMMON_NOUNS_FALLBACK = [
 /** Pull filler words nobody could argue for: common enough to read, unrelated to everything
  *  already on the line. The book uses these too — `medal … b mess c boss` — and they are what
  *  keeps a five-option line from being a two-horse race. */
-function fillers(r, band, avoid, count) {
+/** The part of speech of a word's main sense: 'noun', 'verb', 'adj', 'adv'. */
+const partOfSpeech = (w) => (WORD_LEX[w] || '').split('.')[0]
+
+function fillers(r, band, avoid, count, like) {
   const { synonyms, antonyms } = index()
-  const pool = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.filler && concrete(w) && w.length >= 4 && w.length <= 9)
+  // Fillers share the ANSWER's part of speech. Every options line in the book is one part of
+  // speech throughout — `bear` is offered `sit run stand find make`, five verbs — and the
+  // reason is not tidiness: a child scanning `needs … teen, seventh, inevitably, capable,
+  // want` does not have to know what any of them mean to find the only noun-ish one. A line
+  // that mixes classes gives the answer away to whoever is not reading.
+  const pos = like ? partOfSpeech(like) : null
+  const common = Object.keys(WORD_Z).filter(
+    w => z(w) >= band.filler && w.length >= 4 && w.length <= 9
+      && (!pos || partOfSpeech(w) === pos))
+  // Concreteness is the preference and the part of speech is the requirement, in that order —
+  // and the order was learned by getting it wrong. Demanding both starved the verbs: WORD_LEX
+  // records one lexical file per word, and of the common words it files as verbs only 34 are
+  // in the concrete list against 983 adjectives and 545 nouns. Every sense question with a
+  // verb answer failed for want of four verbs to sit beside it, and the type collapsed onto
+  // the handful of words with noun answers. Below forty candidates the concrete filter is
+  // dropped and frequency carries the line on its own.
+  const narrow = common.filter(concrete)
+  const pool = narrow.length >= 40 ? narrow : common
   const out = []
   for (let tries = 0; out.length < count && tries < count * 60; tries++) {
     const w = pickOne(r, pool.length ? pool : COMMON_NOUNS_FALLBACK)
@@ -408,7 +451,7 @@ function genSynonym(r, band, seed) {
     .filter(w => w !== stem && z(w) >= band.option && !related(w, stem) && !related(w, answer))
   if (rhymes.length) { const w = pickOne(r, rhymes); distractors.push({ text: w, why: 'rhyme' }); avoid.add(w) }
 
-  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length)) {
+  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
     distractors.push({ text: w, why: 'unrelated' })
   }
   if (distractors.length < band.options - 1) return null
@@ -442,7 +485,7 @@ function genAntonym(r, band, seed) {
     .filter(w => w !== stem && z(w) >= band.option && !related(w, stem) && !related(w, answer))
   if (rhymes.length) { const w = pickOne(r, rhymes); distractors.push({ text: w, why: 'rhyme' }); avoid.add(w) }
 
-  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length)) {
+  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
     distractors.push({ text: w, why: 'unrelated' })
   }
   if (distractors.length < band.options - 1) return null
@@ -473,8 +516,16 @@ function genSense(r, band, seed) {
   const [, sentence, syns, definition, far] = chosen
   const answer = pickOne(r, syns.filter(x => z(x) >= band.answer))
   // "What does `listed` mean?" answered `list` is not a question about meaning, it is the same
-  // word with its ending taken off. WordNet links the two as synonyms and it is right to.
-  if (sameWordDifferentEnding(answer, word) || related(answer, word)) return null
+  // word with its ending taken off.
+  //
+  // `sameWordDifferentEnding` and NOT `related` — the same mistake this file already made once
+  // in genSynonym, made again here and caught by counting where the candidates went: 395 of
+  // 535 words died on this line. A sense question's answer shares a sense with the word by
+  // definition, because that shared sense IS the answer, so `related` rejects every question
+  // the type can ask. The two tests are one line apart and they are opposites: one asks "are
+  // these the same word", the other "do these mean the same thing", and only the first is a
+  // reason to throw the question away.
+  if (sameWordDifferentEnding(answer, word)) return null
 
   const avoid = new Set([word, answer])
   const distractors = []
@@ -490,7 +541,7 @@ function genSense(r, band, seed) {
     {
       for (const cand of shuffle(r, other[2])) {
         if (z(cand) < band.option || avoid.has(cand)) continue
-        if (related(cand, answer)) continue
+        if (related(cand, answer) || sharesNeighbour(cand, answer)) continue
         distractors.push({ text: cand, why: 'other-sense' })
         avoid.add(cand)
         break
@@ -498,7 +549,7 @@ function genSense(r, band, seed) {
     }
     if (distractors.length >= band.options - 2) break
   }
-  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length)) {
+  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
     distractors.push({ text: w, why: 'unrelated' })
   }
   if (distractors.length < band.options - 1) return null
@@ -813,7 +864,10 @@ export function validateItem(item) {
   // A wrong option that means the same as a right one is a second right answer.
   if (item.type === 'synonym' || item.type === 'sense' || item.type === 'word-grid') {
     for (const w of wrong) {
-      for (const a of answers) if (related(w, a)) return `"${w}" is a synonym of the answer "${a}"`
+      for (const a of answers) {
+        if (related(w, a)) return `"${w}" is a synonym of the answer "${a}"`
+        if (sharesNeighbour(w, a)) return `"${w}" keeps the same company as the answer "${a}"`
+      }
     }
   }
   // Same test for the stem itself: an option that means what the QUESTION word means is either

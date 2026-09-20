@@ -54,12 +54,27 @@ function sentenceWords(item) {
   return whole.toLowerCase().match(/[a-z']+/g) || []
 }
 
-// ── the blocklist, read from the file rather than from the lexicon ────────────────────────
+// ── the blocklist, read from source rather than from the lexicon ──────────────────────────
 // Deliberately re-read here instead of trusting that the build applied it. The build is the
 // thing under test; an audit that asks the build whether the build worked is not an audit.
-const BLOCKED = new Set(
-  readFileSync(join(ROOT, 'scripts/english/blocklist.txt'), 'utf8')
-    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')))
+//
+// All four sources, not just the hand-written one. The published lists carry 2491 words the
+// hand-written list does not, ninety of which were in the lexicon when they were first
+// compared — checking only blocklist.txt here would have left the audit blind to exactly the
+// class of word it exists to catch.
+const vendor = (f) => JSON.parse(readFileSync(join(ROOT, 'scripts/english/vendor', f), 'utf8'))
+const cuss = vendor('cuss.json')
+const BLOCKED = new Set([
+  ...readFileSync(join(ROOT, 'scripts/english/blocklist.txt'), 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')),
+  ...readFileSync(join(ROOT, 'scripts/english/vendor/ldnoobw-en.txt'), 'utf8')
+    .split('\n').map(l => l.trim()),
+  ...vendor('profane-words.json'),
+  // Score 0 is context-dependent, not profane — `banana`, `church`, `blind`, `angry` — and
+  // the lexicon keeps those on purpose. Asserting against them here would fail the build for
+  // doing the right thing.
+  ...Object.keys(cuss).filter(w => cuss[w] >= 1),
+].filter(w => /^[a-z]+$/.test(w)))
 
 console.log(`lexicon built ${LEXICON_META.built} · `
   + Object.entries(LEXICON_META.counts).map(([k, v]) => `${v} ${k}`).join(' · '))

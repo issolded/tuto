@@ -354,11 +354,23 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       o anlamın eşanlamları tek kayıtta), **eşanlam zayıf** — kitabın 12 çiftinin 4'ü. Ama
       `medal` için verdiği `ribbon` kitabın birinci çeldiricisi: WordNet cevap üreticisi değil,
       **çeldirici üreticisi**.
-      **Güvenlik:** `scripts/english/blocklist.txt` (432 madde) lemmaya, her tanıma, her örnek
-      cümleye ve kategori adlarına uygulanıyor. WordNet'in kendi işaretleri yetmiyor (`slut`
-      Zipf 3.8, `usage_domains` boş, lexname `noun.person` — `teacher` ile aynı). Çalışma
-      anında da gerekiyor: harf tipleri şıkkı harften kuruyor ve üç harf ~300 soruda bir `ass`
-      yazıyor.
+      **Güvenlik — üç ayrı eksen, üçü ayrı liste:**
+      (a) *Küfür/hakaret*: `scripts/english/vendor/`'da gömülü üç yayınlanmış liste (LDNOOBW
+      CC-BY, profane-words LGPL, cuss MIT) + elle yazılmış 450 madde = 2.817 kelime. Elle
+      yazılan liste **90 kelimeyi kaçırmıştı** (ırkçı hakaretler ve müstehcen kelimeler dahil,
+      hepsi sözlükte duruyordu) — yayınlanmış listeler bu yüzden var. `cuss` derecelendirilmiş
+      ve **yalnız skor 1-2 alınıyor**: skor 0'da `african`, `asian`, `american`, `banana`,
+      `church` var, onları engellemek daha büyük bir hata olurdu.
+      (b) *Yetişkin sahnesi*: `sentence-topics.txt` (314). Masum ama cümle kurunca haber
+      bülteni olan kelimeler — savaş, mahkeme, borsa, klinik. Hiçbir küfür listesinde yok;
+      ilk bozuk soru "received confirmed reports of **casualties**" idi ve `casualty` hiçbir
+      listede geçmiyor, çünkü kaba bir kelime değil.
+      (c) *Okunabilirlik*: Dale-Chall (2.942 kelime, 4. sınıfın %80'inin bildiği) — engelleme
+      değil **izin** listesi, cümle denetiminde kullanılıyor. Buna ek olarak her cümlede en az
+      bir somut isim şartı ("of___d all laws of humanity" bu yüzden eleniyor).
+      WordNet'in kendi işaretleri hiçbirini görmüyor (`slut` Zipf 3.8, `usage_domains` boş,
+      lexname `noun.person` — `teacher` ile aynı). Blocklist çalışma anında da gerekiyor:
+      harf tipleri şıkkı harften kuruyor ve üç harf ~300 soruda bir `ass` yazıyor.
       **Tarayıcıda ve denetimde bulunan gerçek hatalar** (hepsi düzeltildi): lemma büyük/küçük
       harf kontrolü **küçültmeden sonra** yapılıyordu — `Russia`, `Jap`, `Wallace`, `Denmark`
       şıklara girdi (bir ırkçı hakaret dahil); `sense` çeldiricileri aynı kelimenin başka
@@ -370,8 +382,9 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       "patates" argosu) — NLTK'nin isim listesi + SemCor sayacıyla eleniyor.
       `npm run english:check` sekiz tipi 300'er soruyla tarıyor: tek doğru cevap, bant altı
       kelime yok, blocklist ihlali yok, 200 oturumda tekrar yok, cevap konumu a-e %19-21.
-      **Açık işler:** (1) kategori havuzu ince — 25 kullanışlı grup, `odd-two` en dar tip;
-      (2) `sense` verimi %8 (3625 denemede 300) — anlam havuzu dar; (3) kitabın cloze
+      **Açık işler:** (1) kategori havuzu ince — 26 kullanışlı grup, `odd-two` en dar tip;
+      (2) `sense` havuzu 137 kelimeye indi (güvenlik+okunabilirlik kapıları cümleleri budadı) —
+      verim %85 ama çeşitlilik sınırlı; (3) kitabın cloze
       paragrafı, karışık cümle ve kelime türü tipleri yok (cümle bankası ister);
       (4) çocuk ekranı yok — geldiğinde soru sunucuda üretilmeli, cevap tarayıcıya hiç
       gitmemeli (PuzzleScreen deseni). Sözlük 1.8MB, yalnız lab'a lazy yükleniyor.
