@@ -736,3 +736,21 @@ ramadan
 sikh
 testament
 torah
+
+# --- nationality words that slipped in as common nouns ---------------------------------
+# Dropping the capitalised-elsewhere gate recovered 520 ordinary words and let these back in.
+# Each is a genuine lowercase lemma — `siamese` a cat, `japan` a lacquer, `danish` a pastry,
+# `roman` a typeface, `oriental` a rug — and each reads to a child as a word about people.
+# `china` (the porcelain), `turkey` (the bird) and `polish` (the verb) are kept: their everyday
+# sense is the thing, not the nation.
+siamese
+japan
+danish
+roman
+oriental
+eskimo
+negro
+gypsy
+gipsy
+mongol
+mongoloid

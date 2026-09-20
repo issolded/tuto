@@ -52,6 +52,7 @@
 
 import {
   WORD_Z, WORD_LEX, SYNSETS, ANTONYMS, CATEGORIES, SENSES, EXAMPLES, KINSHIP, BLOCKED,
+  SYLLABLES, RIMES, RHYME_GROUPS, HOMOPHONES, SUFFIXED, PREFIXED, PLURALS, PASTS, DEFINITIONS,
   LEXICON_META,
 } from './englishLexicon.generated.js'
 
@@ -77,10 +78,30 @@ const CONCRETE = new Set([
 
 const concrete = (w) => CONCRETE.has(WORD_LEX[w])
 
-export const TYPES = [
+// The verbal-reasoning family — the Bond 8-9 book's taxonomy, which is what this engine was
+// built from.
+export const VR_TYPES = [
   'synonym', 'antonym', 'sense', 'odd-two', 'word-grid',
   'letter-pair', 'shared-letters', 'hidden-word',
 ]
+
+// The word-knowledge family, from the 9-10 and 11-12 books.
+//
+// These are a different SUBJECT, not a harder version of the same one, and that is the single
+// most important thing to know about this file now. The 8-9 book is called "English and Verbal
+// Reasoning" and asks about relationships between words. The 9-10 book is an "Assessment
+// Papers English" and the 11-12 book a "10 Minute Tests English": both are grammar, spelling
+// and word formation — plurals, suffixes, root words, rhyme, homophones, parts of speech.
+//
+// So the claim this engine opened with, that the types do not change with age and only the
+// dial does, is false across these three books. It was true of the non-verbal papers it was
+// copied from. Here a band names its own types, which BANDS could already express.
+export const WORD_TYPES = [
+  'odd-synonym', 'definition', 'rhyme', 'homophone', 'syllables',
+  'plural', 'past-tense', 'suffix', 'prefix-antonym', 'root-word', 'missing-vowel',
+]
+
+export const TYPES = [...VR_TYPES, ...WORD_TYPES]
 
 export const STEM_KEYS = {
   synonym: 'eng_stem_synonym',
@@ -91,6 +112,17 @@ export const STEM_KEYS = {
   'letter-pair': 'eng_stem_letter_pair',
   'shared-letters': 'eng_stem_shared',
   'hidden-word': 'eng_stem_hidden',
+  'odd-synonym': 'eng_stem_odd_synonym',
+  definition: 'eng_stem_definition',
+  rhyme: 'eng_stem_rhyme',
+  homophone: 'eng_stem_homophone',
+  syllables: 'eng_stem_syllables',
+  plural: 'eng_stem_plural',
+  'past-tense': 'eng_stem_past',
+  suffix: 'eng_stem_suffix',
+  'prefix-antonym': 'eng_stem_prefix',
+  'root-word': 'eng_stem_root',
+  'missing-vowel': 'eng_stem_vowel',
 }
 
 // ── bands ────────────────────────────────────────────────────────────────────────────────
@@ -108,7 +140,12 @@ export const STEM_KEYS = {
 export const BANDS = {
   '8-9': {
     book: 'Bond 11+ English and Verbal Reasoning 10 Minute Tests 8-9 (Michellejoy Hughes)',
-    types: TYPES,
+    // This band's book is the only one of the three that is a VERBAL REASONING paper, so it is
+    // the only one that poses word-relationship puzzles. The word-knowledge types are offered
+    // alongside them because its own Missing Letters tests are already half way there, and
+    // because a nine-year-old who can find a hidden word can certainly pluralise `child`.
+    types: [...VR_TYPES, 'odd-synonym', 'definition', 'rhyme', 'homophone', 'plural'],
+    syllables: [2, 3],
     options: 5,              // the book offers a–e throughout
     answer: 36,              // Zipf ×10: the answer must be a word a nine-year-old reads
     option: 28,              // distractors may be rarer, as the book's are
@@ -131,6 +168,58 @@ export const BANDS = {
     // How many letters the letter types hide. The book's 8-9 tests use three and four.
     mask: [2, 3, 4],
   },
+
+  // ── 9-10 ────────────────────────────────────────────────────────────────────────────────
+  // A different book and a different subject. Bond's 9-10 title is an Assessment Paper in
+  // ENGLISH: grammar, spelling and word formation, where the 8-9 title was English AND VERBAL
+  // REASONING. Its non-passage questions are plurals, suffixes, root words, rhyme, homophones,
+  // synonym-odd-one-out, parts of speech and tense — almost none of which the 8-9 book asks.
+  //
+  // So the band drops most of the puzzle types rather than making them harder. `odd-two`,
+  // `word-grid`, `letter-pair`, `shared-letters` and `hidden-word` are not in this paper; what
+  // it keeps of the old family is the plain vocabulary work (`synonym`, `antonym`, `sense`),
+  // which every one of these books asks in some form.
+  '9-10': {
+    book: 'Bond Assessment Papers: English 9-10 Book 1 (Sarah Lindsay)',
+    types: ['synonym', 'antonym', 'sense', 'odd-synonym', 'definition', 'rhyme', 'homophone',
+      'syllables', 'plural', 'past-tense', 'suffix', 'root-word'],
+    options: 5,
+    // A year above 8-9 on every dial. The book's own vocabulary carries it: `onomatopoeic`,
+    // `possessive`, `sacrifices`, `relative clause`.
+    answer: 34,
+    option: 26,
+    stem: 38,
+    stemMax: 55,
+    filler: 40,
+    gridSize: 12,
+    mask: [2, 3, 4],
+    syllables: [2, 3, 4],
+  },
+
+  // ── 11-12 ───────────────────────────────────────────────────────────────────────────────
+  // The 10 Minute Tests for 11+/12+, which sorts its own tests into Spelling, Vocabulary,
+  // Sentences, Comprehension and Mixed. Sentences and Comprehension need a passage bank and
+  // are out; Spelling and Vocabulary are what this band poses.
+  //
+  // It is the first band to ask `prefix-antonym` and `missing-vowel`, both straight out of the
+  // paper: "write an antonym for each of these words by adding a prefix", and a spelling test
+  // that blanks one unstressed vowel — `signific_nt`, `profici_nt`, `poign_nt` — which is
+  // precisely the letter nobody can hear.
+  '11-12': {
+    book: 'Bond 10 Minute Tests: English 11+-12+ (Sarah Lindsay)',
+    types: ['synonym', 'antonym', 'sense', 'odd-synonym', 'definition', 'rhyme', 'homophone',
+      'syllables', 'plural', 'past-tense', 'suffix', 'prefix-antonym', 'root-word',
+      'missing-vowel'],
+    options: 5,
+    answer: 30,
+    option: 24,
+    stem: 34,
+    stemMax: 55,
+    filler: 36,
+    gridSize: 12,
+    mask: [3, 4],
+    syllables: [3, 4, 5],
+  },
 }
 
 export const BAND_KEYS = Object.keys(BANDS)
@@ -139,6 +228,32 @@ export const BAND_KEYS = Object.keys(BANDS)
 // check it and so it cannot quietly go stale after a type ships. Same contract as the puzzle
 // engine's BOOK_COVERAGE.
 export const BOOK_COVERAGE = {
+  '9-10': {
+    book: BANDS['9-10'].book,
+    missing: [
+      'comprehension — every paper opens with a passage or a poem and most of its marks\n'
+      + '        hang off it. Deliberate, as at 8-9: that work belongs to the Reading module',
+      'punctuation — missing commas, apostrophes in plural possessives',
+      'clauses — underline the clause, join two short sentences into one',
+      'parts of speech and tense IN A SENTENCE (noun or verb, past/present/future), which\n'
+      + '        needs a sentence bank rather than a word list',
+      'masculine/feminine pairs, collective nouns, the young of animals — small hand-written\n'
+      + '        tables, not derivable from WordNet',
+      'onomatopoeia, similes, silent letters, abbreviations and contractions',
+      'compound words — "write two compound words that begin with..."',
+    ],
+  },
+  '11-12': {
+    book: BANDS['11-12'].book,
+    missing: [
+      'comprehension — four of the twenty tests, plus the Sentences tests which quote a passage',
+      'sentence work: indirect speech, double negatives, clauses, formal register, adding\n'
+      + '        punctuation to an unpunctuated paragraph. All need written sentences',
+      'prepositions and pronouns identified inside a passage',
+      'alphabetical ordering, mnemonics, similes, definitions written by the child',
+      'archaic-to-modern word pairs ("write the modern version of each of these")',
+    ],
+  },
   '8-9': {
     book: BANDS['8-9'].book,
     missing: [
@@ -156,7 +271,8 @@ export const BOOK_COVERAGE = {
 export function bandForAge(age) {
   const n = Number(age) || 8
   if (n <= 9) return '8-9'
-  return '8-9'
+  if (n <= 10) return '9-10'
+  return '11-12'
 }
 
 // ── seeded randomness ────────────────────────────────────────────────────────────────────
@@ -263,6 +379,9 @@ export function sameWordDifferentEnding(a, b) {
   const short = a.length <= b.length ? a : b
   const long = a.length <= b.length ? b : a
   if (long.startsWith(short) && long.length - short.length <= 3) return true
+  // And the same word wearing a PREFIX, which the startsWith test cannot see: a rhyme
+  // question offered `equal` as the word that rhymes with `unequal`.
+  if (long.endsWith(short) && long.length - short.length <= 4) return true
   // Near-stems, which the prefix test misses because neither word contains the other: `unity /
   // unitary / unitarian` appeared on one line as three separate options. Four shared opening
   // letters on two words of similar length is one word twice.
@@ -886,6 +1005,388 @@ function genHiddenWord(r, band, seed) {
   }
 }
 
+
+// ── the word-knowledge family ─────────────────────────────────────────────────────────────
+//
+// Eleven generators for the 9-10 and 11-12 books. What they have in common, and what makes
+// them different from everything above, is where the distractors come from: in the verbal
+// reasoning types a wrong option is another WORD, and the child has to know what words mean.
+// Here the best wrong option is usually the RULE APPLIED NAIVELY — `beauty` + `ful` is
+// `beautyful`, the plural of `child` is `childs`, the past tense of `run` is `runned`. That is
+// the mistake the question exists to catch, so it has to be on the page.
+
+const REGULAR_PLURAL = (w) => (
+  /(s|x|z|ch|sh)$/.test(w) ? w + 'es'
+    : /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ies'
+      : w + 's')
+
+const REGULAR_PAST = (w) => (
+  w.endsWith('e') ? w + 'd'
+    : /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ied'
+      : w + 'ed')
+
+/** Every rhyme key a word has, across its pronunciations. */
+const rimesOf = (w) => RIMES[w] || []
+const rhymes = (a, b) => rimesOf(a).some(k => rimesOf(b).includes(k))
+
+function genOddSynonym(r, band, seed) {
+  // The 9-10 book: "Underline one word in each group which is not a synonym for the rest."
+  // Four words that mean nearly the same and one that does not — the mirror image of odd-two,
+  // which groups by what a thing IS rather than by what a word MEANS.
+  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => z(w) >= band.answer).length >= 4)
+  if (!usable.length) return null
+  const [, words] = pickOne(r, usable)
+  const inside = shuffle(r, words.filter(w => z(w) >= band.answer)).slice(0, 4)
+  if (inside.length < 4) return null
+
+  // The outsider must be unrelated to ALL four, not merely to the one it was checked against.
+  const avoid = new Set(inside)
+  const outsider = fillers(r, band, avoid, 1, inside[0])[0]
+  if (!outsider) return null
+  if (inside.some(w => related(w, outsider) || sharesNeighbour(w, outsider))) return null
+
+  const rows = shuffle(r, [
+    { text: outsider, why: null },
+    ...inside.map(text => ({ text, why: 'same-meaning' })),
+  ])
+  return {
+    seed, band: null, type: 'odd-synonym', stem_key: STEM_KEYS['odd-synonym'],
+    prompt: {},
+    options: rows,
+    correct: rows.map((o, i) => (o.why === null ? i : -1)).filter(i => i >= 0),
+    pick: 1,
+    rule: { kind: 'odd-synonym', group: inside },
+  }
+}
+
+function genDefinition(r, band, seed) {
+  // "Write one word for each definition." WordNet is a dictionary, so for once the question and
+  // its answer are the same lookup — and the distractors are ordinary words of the same class,
+  // as the book's are.
+  const words = Object.keys(DEFINITIONS).filter(w => z(w) >= band.answer)
+  if (!words.length) return null
+  const word = pickOne(r, words)
+  const avoid = new Set([word])
+  const distractors = fillers(r, band, avoid, band.options - 1, word)
+    .map(text => ({ text, why: 'unrelated' }))
+  if (distractors.length < band.options - 1) return null
+  // A distractor the definition also describes is a second answer. The definition is WordNet's
+  // own words for this sense, so anything sharing that sense is a candidate.
+  if (distractors.some(d => related(d.text, word) || sharesNeighbour(d.text, word))) return null
+
+  return {
+    seed, band: null, type: 'definition', stem_key: STEM_KEYS.definition,
+    prompt: { definition: DEFINITIONS[word] },
+    ...layOut(r, band, [word], distractors),
+    pick: 1,
+    rule: { kind: 'definition', word },
+  }
+}
+
+function genRhyme(r, band, seed) {
+  // "Write a word that rhymes with each of the following." Rhyme is the one thing in this whole
+  // module that WordNet cannot answer at all; it comes from CMUdict, read non-rhotically so
+  // that `calm` rhymes with `arm` as it does in the book.
+  const keys = Object.keys(RHYME_GROUPS).filter(
+    k => RHYME_GROUPS[k].filter(w => z(w) >= band.answer).length >= 2)
+  if (!keys.length) return null
+  const key = pickOne(r, keys)
+  const group = shuffle(r, RHYME_GROUPS[key].filter(w => z(w) >= band.answer))
+  const [stem, answer] = group
+  if (!stem || !answer || sameWordDifferentEnding(stem, answer)) return null
+
+  const avoid = new Set([stem, answer])
+  const distractors = []
+  // The trap English is famous for: spelled alike, said differently. `bough` and `cough`,
+  // `comb` and `bomb`. A child who reads the ending instead of hearing it picks this.
+  const lookalikes = Object.keys(WORD_Z).filter(
+    w => z(w) >= band.filler && w !== stem && w.slice(-3) === stem.slice(-3) && !rhymes(w, stem))
+  if (lookalikes.length) {
+    const w = pickOne(r, lookalikes)
+    distractors.push({ text: w, why: 'looks-alike' })
+    avoid.add(w)
+  }
+  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
+    if (rhymes(w, stem)) continue
+    distractors.push({ text: w, why: 'unrelated' })
+    avoid.add(w)
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'rhyme', stem_key: STEM_KEYS.rhyme,
+    prompt: { word: stem },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'rhyme', of: stem, key },
+  }
+}
+
+function genHomophone(r, band, seed) {
+  // "Write a homophone for each of these words." `their / there`, `bare / bear`.
+  const groups = HOMOPHONES.filter(g => g.filter(w => z(w) >= band.answer).length >= 2)
+  if (!groups.length) return null
+  const group = shuffle(r, pickOne(r, groups).filter(w => z(w) >= band.answer))
+  const [stem, answer] = group
+  if (!stem || !answer) return null
+
+  const avoid = new Set(group)
+  const distractors = []
+  // Rhymes-but-is-not — the near miss. `bare / bear` are homophones; `bore` only rhymes.
+  const near = Object.keys(WORD_Z).filter(
+    w => z(w) >= band.filler && !avoid.has(w) && rhymes(w, stem)
+      && !group.some(g => (HOMOPHONES.find(h => h.includes(g)) || []).includes(w)))
+  if (near.length) {
+    const w = pickOne(r, near)
+    distractors.push({ text: w, why: 'rhyme' })
+    avoid.add(w)
+  }
+  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
+    distractors.push({ text: w, why: 'unrelated' })
+    avoid.add(w)
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'homophone', stem_key: STEM_KEYS.homophone,
+    prompt: { word: stem },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'homophone', of: stem, group },
+  }
+}
+
+function genSyllables(r, band, seed) {
+  // "Complete the table by writing in words that have 3, 4 or 5 syllables." Asked the other way
+  // round, because the book's form is a free write: which of these five has N?
+  const n = pickOne(r, band.syllables)
+  const pool = Object.keys(SYLLABLES).filter(w => z(w) >= band.answer && concrete(w))
+  const right = pool.filter(w => SYLLABLES[w] === n)
+  const wrong = pool.filter(w => SYLLABLES[w] !== n && Math.abs(SYLLABLES[w] - n) <= 2)
+  if (right.length < 1 || wrong.length < band.options - 1) return null
+  const answer = pickOne(r, right)
+  const avoid = new Set([answer])
+  const distractors = []
+  for (const w of shuffle(r, wrong)) {
+    if (distractors.length >= band.options - 1) break
+    if (avoid.has(w) || sameWordDifferentEnding(w, answer)) continue
+    avoid.add(w)
+    distractors.push({ text: w, why: `syllables-${SYLLABLES[w]}` })
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'syllables', stem_key: STEM_KEYS.syllables,
+    prompt: { count: n },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'syllables', count: n },
+  }
+}
+
+function genPlural(r, band, seed) {
+  // "Write each of these words in its plural form." Only the words a rule gets wrong are worth
+  // asking about, so the lexicon holds no `cat -> cats`; and the naive rule is the distractor
+  // that matters, because `childs` is the answer a child actually writes.
+  const pairs = PLURALS.filter(([a, b]) => z(a) >= band.answer && !BANNED.has(b))
+  if (!pairs.length) return null
+  const [single, answer] = pickOne(r, pairs)
+  const naive = REGULAR_PLURAL(single)
+  const avoid = new Set([answer, naive])
+  const distractors = [{ text: naive, why: 'the-rule-applied-blindly' }]
+  const shapes = [single + 's', single + 'es', single + 'en',
+    single.slice(0, -1) + 'ies', single.slice(0, -1) + 'ves', single.slice(0, -2) + 'i']
+  for (const w of shuffle(r, shapes)) {
+    if (distractors.length >= band.options - 1) break
+    // Cutting a word down produces words: `genius` minus two letters is `geni`, `white` minus
+    // one is `whit`, and both are on the blocklist. Everything this file INVENTS has to be
+    // screened, not only what it looks up.
+    if (avoid.has(w) || w === answer || w.length < 3 || BANNED.has(w)) continue
+    avoid.add(w)
+    distractors.push({ text: w, why: 'not-a-word' })
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'plural', stem_key: STEM_KEYS.plural,
+    prompt: { word: single },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'plural', of: single },
+  }
+}
+
+function genPastTense(r, band, seed) {
+  // "Fill each gap by writing the past tense of the verb in bold." Same shape as the plural:
+  // the irregular form against the rule applied blindly.
+  const pairs = PASTS.filter(([a, b]) => z(a) >= band.answer && !BANNED.has(b))
+  if (!pairs.length) return null
+  const [base, answer] = pickOne(r, pairs)
+  const naive = REGULAR_PAST(base)
+  if (naive === answer) return null
+  const avoid = new Set([answer, naive])
+  const distractors = [{ text: naive, why: 'the-rule-applied-blindly' }]
+  const shapes = [base + 'ed', base + 'd', base + 't', base + base.slice(-1) + 'ed',
+    base + 'en', base.slice(0, -1) + 'ed']
+  for (const w of shuffle(r, shapes)) {
+    if (distractors.length >= band.options - 1) break
+    if (avoid.has(w) || w === answer || w.length < 3 || BANNED.has(w)) continue
+    avoid.add(w)
+    distractors.push({ text: w, why: 'not-a-word' })
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'past-tense', stem_key: STEM_KEYS['past-tense'],
+    prompt: { word: base },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'past-tense', of: base },
+  }
+}
+
+function genSuffix(r, band, seed) {
+  // "Add the suffix ful to each of these words. Make any spelling changes necessary." The
+  // spelling change IS the question — `beauty` + `ful` is `beautiful`, not `beautyful` — so the
+  // lexicon only keeps pairs where something changed, and the naive join is option one.
+  const pairs = SUFFIXED.filter(
+    ([a, b]) => z(a) >= band.answer && z(b) >= band.option && !BANNED.has(b))
+  if (!pairs.length) return null
+  const [base, answer, suffix] = pickOne(r, pairs)
+  const naive = base + suffix
+  if (naive === answer) return null
+  const avoid = new Set([answer, naive])
+  const distractors = [{ text: naive, why: 'the-rule-applied-blindly' }]
+  // Every plausible way to join the two, because the ones that collide with real words have
+  // to be thrown away and four candidates left the type starved — it was finding a clean
+  // question once in fifty tries.
+  const shapes = [
+    base.slice(0, -1) + suffix,
+    base + 'e' + suffix,
+    base + base.slice(-1) + suffix,
+    base.slice(0, -1) + 'i' + suffix,
+    base.slice(0, -1) + 'y' + suffix,
+    base.slice(0, -2) + suffix,
+    base + 'a' + suffix,
+    base.slice(0, -1) + 'e' + suffix,
+    base + suffix.slice(1),
+    base + suffix[0] + suffix,
+  ]
+  for (const w of shuffle(r, shapes)) {
+    if (distractors.length >= band.options - 1) break
+    if (avoid.has(w) || w === answer || w.length < 4 || w in WORD_Z || BANNED.has(w)) continue
+    avoid.add(w)
+    distractors.push({ text: w, why: 'not-a-word' })
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'suffix', stem_key: STEM_KEYS.suffix,
+    prompt: { word: base, suffix },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'suffix', of: base, suffix },
+  }
+}
+
+function genPrefixAntonym(r, band, seed) {
+  // "Write an antonym for each of these words by adding a prefix." The options are the prefixes
+  // themselves, which is what makes it a question about English rather than about vocabulary:
+  // the child knows the word means the opposite, and has to know it is `impossible` and not
+  // `unpossible`.
+  const pairs = PREFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option)
+  if (!pairs.length) return null
+  const [stem, whole, prefix] = pickOne(r, pairs)
+  const others = ['un', 'in', 'im', 'dis', 'non', 'mis', 'il', 'ir', 'anti']
+    .filter(p => p !== prefix && !(p + stem in WORD_Z))
+  const distractors = shuffle(r, others).slice(0, band.options - 1)
+    .map(text => ({ text, why: 'wrong-prefix' }))
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'prefix-antonym', stem_key: STEM_KEYS['prefix-antonym'],
+    prompt: { word: stem },
+    ...layOut(r, band, [prefix], distractors),
+    pick: 1,
+    rule: { kind: 'prefix-antonym', of: stem, answer: whole },
+  }
+}
+
+function genRootWord(r, band, seed) {
+  // "Underline the root word for each of these words." `displacement` is `place`, `unhappy` is
+  // `happy`. Built from the affixed pairs the lexicon already holds, so the root is asserted
+  // rather than guessed off the spelling.
+  const candidates = [
+    ...SUFFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option)
+      .map(([base, whole]) => [whole, base]),
+    ...PREFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option)
+      .map(([base, whole]) => [whole, base]),
+  ]
+  if (!candidates.length) return null
+  const [whole, answer] = pickOne(r, candidates)
+  const avoid = new Set([whole, answer])
+  const distractors = []
+  // Pieces of the word itself: the near-misses a child produces by cutting in the wrong place.
+  // Cuts a child could actually make: the word shortened from the END, or the root with one
+  // letter too many or too few. Slicing off the FRONT gives `epentance` and `ntance`, which
+  // nobody would write and which a child eliminates without reading the question.
+  const cuts = [whole.slice(0, answer.length), whole.slice(0, answer.length + 1),
+    whole.slice(0, -1), whole.slice(0, -2), answer + 'e', answer.slice(0, -1)]
+  for (const w of shuffle(r, cuts)) {
+    if (distractors.length >= band.options - 1) break
+    if (!w || avoid.has(w) || w.length < 3 || w === answer || BANNED.has(w)) continue
+    avoid.add(w)
+    distractors.push({ text: w, why: 'cut-in-the-wrong-place' })
+  }
+  for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
+    distractors.push({ text: w, why: 'unrelated' })
+  }
+  if (distractors.length < band.options - 1) return null
+
+  return {
+    seed, band: null, type: 'root-word', stem_key: STEM_KEYS['root-word'],
+    prompt: { word: whole },
+    ...layOut(r, band, [answer], distractors),
+    pick: 1,
+    rule: { kind: 'root-word', of: whole },
+  }
+}
+
+function genMissingVowel(r, band, seed) {
+  // "Fill in the missing letter in each word." The 11-12 book's spelling test: `signific_nt`,
+  // `repugn_nt`, `profici_nt` — always an unstressed vowel, which is exactly the letter nobody
+  // can hear. Five options and five vowels, so the options ARE the alphabet's vowels.
+  const VOWELS = ['a', 'e', 'i', 'o', 'u']
+  const pool = Object.keys(WORD_Z).filter(
+    w => z(w) >= band.answer && w.length >= 6 && w.length <= 12 && !BANNED.has(w))
+  if (!pool.length) return null
+  for (let tries = 0; tries < 60; tries++) {
+    const word = pickOne(r, pool)
+    // Positions holding a vowel, never the first or last letter.
+    const spots = []
+    for (let i = 1; i < word.length - 1; i++) if (VOWELS.includes(word[i])) spots.push(i)
+    if (!spots.length) continue
+    const at = pickOne(r, spots)
+    const truth = word[at]
+    // Exactly one vowel may make a real word, or the question has two answers — `bat`, `bet`,
+    // `bit`, `bot` and `but` are all words and that blank is not a question.
+    const alternatives = VOWELS.filter(v => v !== truth
+      && (word.slice(0, at) + v + word.slice(at + 1)) in WORD_Z)
+    if (alternatives.length) continue
+    const masked = word.slice(0, at) + '_' + word.slice(at + 1)
+    const rows = shuffle(r, VOWELS.map(v => ({ text: v, why: v === truth ? null : 'not-a-word' })))
+    return {
+      seed, band: null, type: 'missing-vowel', stem_key: STEM_KEYS['missing-vowel'],
+      prompt: { masked },
+      options: rows,
+      correct: rows.map((o, i) => (o.why === null ? i : -1)).filter(i => i >= 0),
+      pick: 1,
+      rule: { kind: 'missing-vowel', word },
+    }
+  }
+  return null
+}
+
 const GENERATORS = {
   synonym: genSynonym,
   antonym: genAntonym,
@@ -895,6 +1396,17 @@ const GENERATORS = {
   'letter-pair': genLetterPair,
   'shared-letters': genSharedLetters,
   'hidden-word': genHiddenWord,
+  'odd-synonym': genOddSynonym,
+  definition: genDefinition,
+  rhyme: genRhyme,
+  homophone: genHomophone,
+  syllables: genSyllables,
+  plural: genPlural,
+  'past-tense': genPastTense,
+  suffix: genSuffix,
+  'prefix-antonym': genPrefixAntonym,
+  'root-word': genRootWord,
+  'missing-vowel': genMissingVowel,
 }
 
 // ── validation ───────────────────────────────────────────────────────────────────────────
@@ -977,6 +1489,63 @@ export function validateItem(item) {
     if (!item.prompt.sentence.toLowerCase().includes(item.prompt.word.toLowerCase())) {
       return 'the sentence does not contain the word'
     }
+  }
+
+  // ── the word-knowledge family ───────────────────────────────────────────────────────────
+  // These types fail differently from the ones above. There the danger is two options that
+  // MEAN the same; here it is two options that are both CORRECT ENGLISH — two spellings that
+  // are each a word, two past tenses that are each used. So the checks are mechanical, and
+  // that makes them absolute rather than probabilistic.
+  if (item.type === 'odd-synonym') {
+    const [answer] = answers
+    for (const w of wrong) {
+      if (related(w, answer) || sharesNeighbour(w, answer)) {
+        return `"${w}" and the odd one out "${answer}" share a meaning`
+      }
+    }
+    // And the four that stay must actually share one, or there is no group to be odd against.
+    const { synonyms } = index()
+    for (const w of wrong) {
+      if (!wrong.some(x => x !== w && synonyms.get(w)?.has(x))) return `"${w}" is in no group`
+    }
+  }
+  if (item.type === 'rhyme') {
+    const stem = item.prompt.word
+    for (const w of wrong) if (rhymes(w, stem)) return `"${w}" also rhymes with "${stem}"`
+    if (!rhymes(answers[0], stem)) return `"${answers[0]}" does not rhyme with "${stem}"`
+  }
+  if (item.type === 'homophone') {
+    const group = item.rule.group
+    for (const w of wrong) if (group.includes(w)) return `"${w}" is a homophone too`
+  }
+  if (item.type === 'syllables') {
+    for (const w of wrong) {
+      if (SYLLABLES[w] === item.prompt.count) return `"${w}" also has ${item.prompt.count} syllables`
+    }
+    if (SYLLABLES[answers[0]] !== item.prompt.count) return 'the answer has the wrong syllable count'
+  }
+  // For plural, past tense and suffix the rule is the same and it is the strictest in the
+  // file: exactly ONE option may be a word the lexicon knows. A second real word is a second
+  // right answer, and these are the types where a child is being marked on spelling.
+  if (item.type === 'plural' || item.type === 'past-tense' || item.type === 'suffix') {
+    const real = texts.filter(t => t in WORD_Z)
+    if (real.length > 1) return `${real.length} options are real words (${real.join(', ')})`
+  }
+  if (item.type === 'prefix-antonym') {
+    for (const w of wrong) {
+      if ((w + item.prompt.word) in WORD_Z) return `"${w}${item.prompt.word}" is also a word`
+    }
+  }
+  if (item.type === 'root-word') {
+    for (const w of wrong) {
+      if (w in WORD_Z && !sameWordDifferentEnding(w, answers[0])) {
+        return `"${w}" is a word too, so it could be the root`
+      }
+    }
+  }
+  if (item.type === 'missing-vowel') {
+    const filled = texts.filter(v => item.prompt.masked.replace('_', v) in WORD_Z)
+    if (filled.length !== 1) return `${filled.length} letters make a word`
   }
   return null
 }

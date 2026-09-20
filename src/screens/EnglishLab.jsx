@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
 import {
-  BANDS, BAND_KEYS, TYPES, BOOK_COVERAGE, LEXICON_META,
+  BANDS, BAND_KEYS, BOOK_COVERAGE, LEXICON_META,
   generateItem, generateSession, validateItem,
 } from '../lib/englishTemplates'
 import {
@@ -37,8 +37,15 @@ const C = {
 const LETTERS = 'abcde'
 
 const WHY_LABEL = {
+  'the-rule-applied-blindly': 'the rule applied blindly — the answer a child writes',
+  'cut-in-the-wrong-place': 'the word cut in the wrong place',
+  'wrong-prefix': 'the wrong beginning',
+  'looks-alike': 'spelled alike, said differently',
   opposite: 'means the opposite',
-  'same-meaning': 'means the same (trap on an OPPOSITE question)',
+  // Two types use this and it means opposite things in them. On an ANTONYM question it is the
+  // trap — a word that means the same when the opposite was asked. On odd-synonym it is why
+  // the option is NOT the answer: it belongs to the group.
+  'same-meaning': 'means the same',
   rhyme: 'sounds like the word',
   'other-sense': 'another sense of the same word',
   'same-group': 'is in the group',
@@ -104,7 +111,37 @@ function Stem({ item, lang }) {
       </div>
     )
   }
-  if (item.type === 'odd-two') return null
+  if (item.type === 'odd-two' || item.type === 'odd-synonym') return null
+  if (item.type === 'definition') {
+    return <div style={{ fontSize: 15, fontStyle: 'italic' }}>&ldquo;{p.definition}&rdquo;</div>
+  }
+  if (item.type === 'missing-vowel') {
+    return <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 2 }}>{p.masked}</div>
+  }
+  if (item.type === 'syllables') {
+    return (
+      <div style={{ fontSize: 20, fontWeight: 700 }}>
+        {p.count} <span style={{ fontSize: 13, fontWeight: 400, color: C.dim }}>
+          {t('eng_syllable_beats', lang)}
+        </span>
+      </div>
+    )
+  }
+  if (item.type === 'suffix') {
+    return (
+      <div style={{ fontSize: 20, fontWeight: 700 }}>
+        {p.word} <span style={{ color: C.dim }}>+</span>{' '}
+        <span style={{ color: C.warm }}>{p.suffix}</span>
+      </div>
+    )
+  }
+  if (item.type === 'prefix-antonym') {
+    return (
+      <div style={{ fontSize: 20, fontWeight: 700 }}>
+        <span style={{ color: C.warm }}>___</span>{p.word}
+      </div>
+    )
+  }
   return <div style={{ fontSize: 20, fontWeight: 700 }}>{p.word}</div>
 }
 
@@ -163,9 +200,12 @@ function ItemCard({ item, lang, reveal }) {
         <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>
           answer: <strong style={{ color: C.ok }}>{item.correct.map(i => item.options[i].text).join(' + ')}</strong>
           {item.rule.answer ? ` (${item.rule.answer})` : ''}
-          {item.rule.word ? ` (${item.rule.word})` : ''}
+          {item.rule.word && !item.correct.some(i => item.options[i].text === item.rule.word)
+            ? ` (${item.rule.word})` : ''}
           {item.rule.words ? ` (${item.rule.words.join(', ')})` : ''}
-          {item.rule.group ? ` · group: ${item.rule.group} vs ${item.rule.outsiders}` : ''}
+          {item.rule.group && item.rule.outsiders ? ` · group: ${item.rule.group} vs ${item.rule.outsiders}` : ''}
+          {item.rule.group && !item.rule.outsiders ? ` · group: ${[].concat(item.rule.group).join(', ')}` : ''}
+          {item.rule.suffix ? ` · -${item.rule.suffix}` : ''}
           {item.rule.definition ? ` · “${item.rule.definition}”` : ''}
           <br />
           {/* A word grid has twelve cells and no a–e letters, so name its cells by the word
@@ -193,7 +233,7 @@ function ItemCard({ item, lang, reveal }) {
 function runAudit(bandKey, perType) {
   const rows = []
   let rejected = 0
-  for (const type of TYPES) {
+  for (const type of BANDS[bandKey].types) {
     let made = 0
     let tries = 0
     const answers = new Set()
@@ -212,7 +252,8 @@ function runAudit(bandKey, perType) {
       // are three letters, not words, and `arb`, `ane` and `alb` all happen to be in WordNet
       // at Zipf 2.6. Counting them as unreadable vocabulary put a red number on the one thing
       // about those options that is working.
-      const letters = type === 'letter-pair' || type === 'shared-letters' || type === 'hidden-word'
+      const letters = ['letter-pair', 'shared-letters', 'hidden-word', 'plural', 'past-tense',
+        'suffix', 'root-word', 'prefix-antonym', 'missing-vowel'].includes(type)
       if (!letters) {
         for (const o of item.options) {
           if (WORD_Z[o.text] && WORD_Z[o.text] < BANDS[bandKey].option) rare++
@@ -231,12 +272,18 @@ function runAudit(bandKey, perType) {
 export default function EnglishLab() {
   const lang = childLang()
   const [bandKey, setBandKey] = useState(BAND_KEYS[0])
-  const [type, setType] = useState('all')
+  const [picked, setPicked] = useState('all')
   const [seed, setSeed] = useState(1)
   const [reveal, setReveal] = useState(true)
   const [view, setView] = useState('grid')
 
   const band = BANDS[bandKey]
+
+  // Derived rather than synced. Switching band while a type that band does not pose is
+  // selected would otherwise leave an empty grid, which reads as a broken engine instead of as
+  // a band that does not ask that question — and fixing it with an effect means a second
+  // render for every band change.
+  const type = band.types.includes(picked) ? picked : 'all'
 
   const items = useMemo(() => {
     if (type === 'all') return generateSession(bandKey, 12, seed * 1000003)
@@ -293,9 +340,9 @@ export default function EnglishLab() {
         {view === 'grid' && (
           <>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button style={btn(type === 'all')} onClick={() => setType('all')}>all</button>
-              {TYPES.map(k => (
-                <button key={k} style={btn(k === type)} onClick={() => setType(k)}>{k}</button>
+              <button style={btn(type === 'all')} onClick={() => setPicked('all')}>all</button>
+              {band.types.map(k => (
+                <button key={k} style={btn(k === type)} onClick={() => setPicked(k)}>{k}</button>
               ))}
               <span style={{ width: 12 }} />
               <button style={btn(false)} onClick={() => setSeed(s => s + 1)}>new seed ({seed})</button>

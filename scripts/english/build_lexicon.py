@@ -38,6 +38,7 @@ import json, re, datetime
 from pathlib import Path
 from collections import defaultdict
 
+from nltk.corpus import cmudict
 from nltk.corpus import names as name_corpus
 from nltk.corpus import wordnet as wn
 from wordfreq import zipf_frequency
@@ -183,13 +184,24 @@ def grown_up_scene(text):
     return _hits(text, SENTENCE_TOPICS)
 
 
-# Every spelling WordNet knows with a capital letter. `Russia`, `Jap`, `Wallace`, `Nancy`,
-# `Dresden` — and also the surname behind `murphy`, which is why a slang sense of `potato` was
-# scoring Zipf 4.3: wordfreq counts every Murphy in every text as the same token.
-CAPITALISED = None
+# A gate lived here that removed any word WordNet also spells with a capital letter. It was
+# added in the same pass as the fix below and turned out to be doing that fix's job badly.
+#
+# `Russia`, `Jap`, `Wallace` and `Dresden` reached the lexicon because usable_lemma was being
+# handed an already-lowercased name, so its islower() test was trivially true. Once the RAW
+# lemma is passed instead, a capitalised entry cannot get in at all — and the extra gate was
+# then only removing words that happen to ALSO be a name or an acronym somewhere in WordNet.
+#
+# Measured before removing it: 520 common words, among them `cat` (WordNet carries CAT for the
+# scan), `ball`, `angle`, `army`, `bath`, `bell`, `berry`, `best`, `black`, `begin`, `acre` and
+# `balance`. A children's English module with no word for `cat` in it is not a close call.
+#
+# What it was credited with catching that the case fix does not — `anna`, `basil`, `iris`,
+# common nouns whose frequency belongs to the name — is caught by is_bare_name below. `murphy`,
+# which neither catches, is in blocklist.txt by hand.
 
-# Every given name NLTK knows, 7576 of them. The capitalised-elsewhere gate catches a name only
-# when WordNet also holds it capitalised, and plenty slip past: `anna` is an Indian coin,
+# Every given name NLTK knows, 7576 of them. A name reaches the lexicon whenever it is also a
+# lowercase lemma, and plenty are: `anna` is an Indian coin,
 # `basil` is a herb, `jack` is a lifting tool. Each is a real word and each scores a frequency
 # it did not earn, because wordfreq counts every person called that.
 FIRST_NAMES = {n.lower() for f in name_corpus.fileids() for n in name_corpus.words(f)}
@@ -208,14 +220,6 @@ def is_bare_name(name):
                 if l.name().lower() == name), default=0) == 0
 
 
-def capitalised_elsewhere(name):
-    global CAPITALISED
-    if CAPITALISED is None:
-        CAPITALISED = {l.name().lower() for s in wn.all_synsets() for l in s.lemmas()
-                       if not l.name().islower()}
-    return name in CAPITALISED
-
-
 def usable_lemma(name):
     """A single, lower-case, alphabetic common word.
 
@@ -226,7 +230,7 @@ def usable_lemma(name):
     """
     return (name.islower() and name.isalpha()
             and MIN_LEN <= len(name) <= MAX_LEN and name not in BLOCKED
-            and not capitalised_elsewhere(name) and not is_bare_name(name))
+            and not is_bare_name(name))
 
 
 def spelling_variant(a, b):
@@ -289,7 +293,7 @@ def main():
     def common(w):
         """Takes an already-lowercased word; the case test has run on the raw lemma."""
         return (w.isalpha() and MIN_LEN <= len(w) <= MAX_LEN and w not in BLOCKED
-                and not capitalised_elsewhere(w) and not is_bare_name(w)
+                and not is_bare_name(w)
                 and z(w) >= MIN_ZIPF)
 
     # ---- pass 1: the word list, and which senses each word may speak for ----------------
@@ -597,6 +601,239 @@ def main():
                     kin[a].add(b)
     kinship = {k: sorted(v) for k, v in sorted(kin.items())}
 
+    # ---- pass 8: pronunciation -------------------------------------------------------------
+    # CMUdict, for the three types that are about how a word SOUNDS rather than what it means:
+    # rhyme, homophone and syllable count. All three are in the 9-10 and 11-12 books and none
+    # of them was reachable before — WordNet knows nothing about pronunciation.
+    #
+    # CMUdict is General American and the books are British, which is not a detail. The winter
+    # poem in the 9-10 paper rhymes `calm` with `arm`, and in an American transcription those
+    # do not rhyme: `arm` has an R in it. The fix is the standard one — drop /R/ unless a vowel
+    # follows, which turns General American into a rough RP — and it is worth the trouble:
+    # before it, CMUdict agreed with 3 of the 7 rhymes the poem itself uses, after it, 7.
+    prons = cmudict.dict()
+
+    def is_vowel(ph):
+        return ph[-1].isdigit()
+
+    def non_rhotic(p):
+        return [ph for i, ph in enumerate(p)
+                if not (ph == 'R' and not (i + 1 < len(p) and is_vowel(p[i + 1])))]
+
+    def rime_of(p):
+        """From the last STRESSED vowel to the end, stress marks dropped.
+
+        Stressed is the whole point and the first version missed it, walking back to the last
+        vowel of any kind. CMUdict marks the final `-y` of `ability` as IY0, unstressed, so the
+        rhyme key came out as plain "IY" and `ability`, `absolutely` and `academy` landed in one
+        group of 2057 words that a child would not call rhymes. From the last stressed vowel,
+        `ability` is IH-L-AH-T-IY and keeps its own company.
+        """
+        p = non_rhotic(p)
+        for i in range(len(p) - 1, -1, -1):
+            if is_vowel(p[i]) and p[i][-1] in '12':
+                return '-'.join(x.rstrip('012') for x in p[i:])
+        # A word CMUdict marks with no stress at all (a few function words) falls back to its
+        # last vowel, which is the best available answer rather than no answer.
+        for i in range(len(p) - 1, -1, -1):
+            if is_vowel(p[i]):
+                return '-'.join(x.rstrip('012') for x in p[i:])
+        return '-'.join(p)
+
+    def syllables_of(p):
+        return sum(1 for ph in p if is_vowel(ph))
+
+    # A word's rimes across ALL its pronunciations, not just the first. `and` is listed weak
+    # (AH0 N D) before strong (AE1 N D), and taking only the first said `land` does not rhyme
+    # with `and`; `tears` is both TIHRZ and TEHRZ and only one of them rhymes with `ears`.
+    rimes = {}
+    syllables = {}
+    homophone_key = {}
+    for w in sorted(words):
+        ps = prons.get(w)
+        if not ps:
+            continue
+        rimes[w] = sorted({rime_of(p) for p in ps})
+        syllables[w] = min(syllables_of(p) for p in ps)
+        homophone_key[w] = sorted({'-'.join(x.rstrip('012') for x in non_rhotic(p)) for p in ps})
+
+    by_rime = defaultdict(set)
+    for w, ks in rimes.items():
+        for k in ks:
+            by_rime[k].add(w)
+    rhyme_groups = {k: sorted(v) for k, v in by_rime.items() if len(v) >= 3}
+
+    by_sound = defaultdict(set)
+    for w, ks in homophone_key.items():
+        for k in ks:
+            by_sound[k].add(w)
+    # Homophones only count when they are spelled differently AND are not the same word: the
+    # dictionary lists `bases` twice for one lemma, and `their/there` is a question while
+    # `read/read` is not.
+    homophones = [sorted(v) for v in by_sound.values()
+                  if len(v) >= 2 and not any(spelling_variant(a, b) for a in v for b in v if a < b)]
+
+    # ---- pass 9: word formation --------------------------------------------------------------
+    # Suffixes, prefixes and roots — the 9-10 book's "add the suffix ful", the 11-12 book's
+    # "write an antonym by adding a prefix" and "write the root word of each of these".
+    #
+    # WordNet's derivationally_related_forms is the source and it is a good one: 15,887 pairs,
+    # each asserted by a lexicographer rather than guessed from spelling. The spelling change is
+    # what makes the question — `beauty` + `ful` is `beautiful`, not `beautyful` — so a pair is
+    # only kept when the derived word is NOT simply base + suffix.
+    SUFFIXES = ['ful', 'ous', 'ness', 'ment', 'able', 'ible', 'less', 'tion', 'sion',
+                'ity', 'ance', 'ence', 'ive', 'al', 'ist', 'er', 'or', 'ly', 'ish', 'y']
+    PREFIXES = ['un', 'in', 'im', 'il', 'ir', 'dis', 'non', 'mis', 're', 'pre', 'over',
+                'under', 'sub', 'super', 'anti', 'inter', 'micro', 'trans', 'semi', 'co']
+
+    deriv = set()
+    for syn in wn.all_synsets():
+        if not safe_synset(syn):
+            continue
+        for lem in syn.lemmas():
+            for other in lem.derivationally_related_forms():
+                a, b = lem.name().lower(), other.name().lower()
+                if usable_lemma(lem.name()) and usable_lemma(other.name()) and a != b:
+                    deriv.add((a, b) if a < b else (b, a))
+
+    suffixed = []
+    for a, b in sorted(deriv):
+        for base, derived in ((a, b), (b, a)):
+            if not (common(base) and common(derived)) or len(derived) <= len(base):
+                continue
+            for suf in SUFFIXES:
+                if not derived.endswith(suf):
+                    continue
+                stem = derived[:-len(suf)]
+                # base itself, base minus a silent e, or base with y -> i
+                if stem in (base, base[:-1], base[:-1] + 'i') or (base.endswith('y') and stem == base[:-1] + 'i'):
+                    # Report the suffix the CHILD would be told to add, not the one this loop
+                    # happened to match on. `act` + `ion` is `action`; the loop matched `tion`
+                    # because `act` minus its last letter is `ac`, and the question would have
+                    # read "add the suffix tion to act".
+                    # Whatever letters actually follow the base, whether or not they are on
+                    # the SUFFIXES list: `act` + `ion` is `action`, and looking `ion` up in a
+                    # list that only knows `tion` produced the question "add the suffix tion
+                    # to act".
+                    added = derived[len(base):] if derived.startswith(base) else suf
+                    suffixed.append([base, derived, added or suf])
+                    break
+
+    # Prefixed pairs are taken from the ANTONYM relation, not from spelling. Spelling alone
+    # says `comedian` is `co` + `median` and `reach` is `re` + `ach`; it has no way to know
+    # otherwise. What the 11-12 book actually asks — "write an antonym for each of these words
+    # by adding a prefix" — is a question about `possible/impossible` and `agree/disagree`,
+    # which is the antonym list filtered to pairs where one word contains the other.
+    NEGATIVE = ['un', 'in', 'im', 'il', 'ir', 'dis', 'non', 'mis', 'anti']
+    prefixed = []
+    for a, b, _pos in sorted(antonyms):
+        for stem, whole in ((a, b), (b, a)):
+            if not whole.endswith(stem) or len(whole) <= len(stem):
+                continue
+            pre = whole[:-len(stem)]
+            if pre in NEGATIVE and common(stem) and common(whole):
+                prefixed.append([stem, whole, pre])
+                break
+
+    # ---- pass 10: inflections -----------------------------------------------------------------
+    # Plurals and past tenses that a spelling rule gets wrong — which is the only kind worth
+    # asking about. `cats` teaches nothing; `wolf -> wolves`, `mouse -> mice`, `potato ->
+    # potatoes` and `run -> ran` do.
+    wn.ensure_loaded()
+    plurals = []
+    for plural, singulars in sorted(wn._exception_map['n'].items()):
+        if not (plural.isalpha() and singulars):
+            continue
+        sing = singulars[0].lower()
+        if not (common(sing) and 3 <= len(plural) <= 12 and plural not in BLOCKED):
+            continue
+        # The PLURAL is the answer, so it is held to the same bar as the singular. Without
+        # this the list offered `camera -> camerae`, `beef -> beeves` and `bravo -> bravoes`,
+        # all real and none of them a question for a nine-year-old. `apparatus -> apparatus`
+        # went too: a plural that is the same word teaches the rule by not using it.
+        if plural == sing or plural == sing + 's' or zipf_frequency(plural, 'en') < 3.0:
+            continue
+        # WordNet's noun exceptions carry a few verb forms (`crying` listed against `cry`).
+        # A plural that ends in -ing is not one.
+        if plural.endswith('ing'):
+            continue
+        plurals.append([sing, plural])
+
+    # WordNet's verb exceptions mix past tense with past participle and do not say which is
+    # which: `ring` gets `rang` and `rung`, `eat` gets `ate` and `eaten`. The question asks for
+    # the past tense, so the participle is a wrong answer dressed as the right one — and the
+    # first build shipped `ring -> rung`.
+    #
+    # Where a verb has two forms, two patterns separate them and nothing else is guessed at:
+    # the participle ends in -en (`eaten`, `written`), or the strong-verb vowel splits a for
+    # the past against u for the participle (`sang/sung`, `drank/drunk`, `rang/rung`). A verb
+    # whose two forms fit neither pattern is left out rather than guessed.
+    by_base = defaultdict(list)
+    for form, bases in wn._exception_map['v'].items():
+        if form.isalpha() and bases and not form.endswith('ing'):
+            by_base[bases[0].lower()].append(form)
+
+    def past_tense_of(base, forms):
+        if len(forms) == 1:
+            return forms[0]
+        if len(forms) == 2:
+            en = [f for f in forms if f.endswith('en')]
+            if len(en) == 1:
+                return [f for f in forms if f not in en][0]
+            if 'i' in base:
+                a = [f for f in forms if 'a' in f]
+                u = [f for f in forms if 'u' in f]
+                if len(a) == 1 and len(u) == 1:
+                    return a[0]
+        return None
+
+    pasts = []
+    for base, forms in sorted(by_base.items()):
+        form = past_tense_of(base, sorted(forms))
+        if not form:
+            continue
+        if not (common(base) and form not in BLOCKED and 3 <= len(form) <= 12):
+            continue
+        if form in (base, base + 'ed') or zipf_frequency(form, 'en') < 3.2:
+            continue
+        # Verbs where the regular form is ALSO correct are not questions, they are traps with
+        # two right answers. English has a pile of them, some of them an Atlantic split
+        # (`dived`/`dove`) and some just optional (`learned`/`learnt`, `dreamed`/`dreamt`,
+        # `spelled`/`spelt`). The first build offered `dive -> dove` with `dived` as a mistake.
+        # If the -ed form is common in running text, the irregular one is not the only answer.
+        regular = (base + 'd') if base.endswith('e') else (base + 'ed')
+        if zipf_frequency(regular, 'en') >= 3.4:
+            continue
+        pasts.append([base, form])
+
+    # ---- pass 11: definitions ------------------------------------------------------------------
+    # "Write one word for each definition." WordNet is a dictionary; this is the one type where
+    # that is the whole answer. Kept short and screened like every other string here.
+    definitions = {}
+    for name in sorted(words):
+        if z(name) < 3.6:
+            continue
+        best = None
+        # The word's FIRST sense, not merely a dominant one. A definition question puts the
+        # definition on the page and asks for the word, so a secondary reading reads as a
+        # riddle: "a sustained bass note" is `pedal`, "the intended meaning of a
+        # communication" is `spirit`, and neither is what the child knows the word to be.
+        first = wn.synsets(name)
+        for syn in first[:1]:
+            if not safe_synset(syn):
+                continue
+            d = syn.definition()
+            if not (4 <= len(d.split()) <= 14) or ';' in d or '(' in d:
+                continue
+            if grown_up_scene(d) or re.search(r'\b' + re.escape(name) + r'\b', d, re.I):
+                continue
+            if any(zipf_frequency(t, 'en') < 3.2 for t in re.findall(r"[a-z']+", d.lower()) if len(t) > 2):
+                continue
+            if best is None or len(d) < len(best):
+                best = d
+        if best:
+            definitions[name] = best
+
     meta = {
         'built': datetime.date.today().isoformat(),
         'wordnet': str(wn.get_version() or '3.0'),
@@ -611,6 +848,14 @@ def main():
             'blocklist_handwritten': len(load_words(BLOCK)),
             'sentence_topics': len(SENTENCE_TOPICS),
             'category_skips': len(_CAT_SKIP),
+            'rhyme_groups': len(rhyme_groups),
+            'homophones': len(homophones),
+            'syllables': len(syllables),
+            'suffixed': len(suffixed),
+            'prefixed': len(prefixed),
+            'plurals': len(plurals),
+            'pasts': len(pasts),
+            'definitions': len(definitions),
         },
     }
 
@@ -633,6 +878,15 @@ def main():
         '//             one\'s distractors. See the builder: without it the type asks what a\n'
         '//             word means and offers two right answers.\n'
         '// EXAMPLES    word -> one real sentence using it, for the hide-the-letters types.\n'
+        '// SYLLABLES   word -> syllable count (CMUdict, fewest across pronunciations).\n'
+        '// RIMES       word -> its rhyme keys, one per pronunciation, non-rhotic.\n'
+        '// RHYME_GROUPS rhyme key -> the words that rhyme.\n'
+        '// HOMOPHONES  groups of differently-spelled words that sound the same.\n'
+        '// SUFFIXED    [base, derived, suffix] where the spelling CHANGED (beauty+ful).\n'
+        '// PREFIXED    [stem, prefixed, prefix].\n'
+        '// PLURALS     [singular, plural] where the plural is not just +s.\n'
+        '// PASTS       [base, past] where the past is not just +ed.\n'
+        '// DEFINITIONS word -> a short, readable definition of its main sense.\n'
         '// BLOCKED     blocklist.txt itself. The engine needs it at RUNTIME, not only here: the\n'
         '//             letter types build options out of letters rather than out of the lexicon,\n'
         '//             and three random letters spell `ass` roughly once in every 300 items.\n'
@@ -654,6 +908,15 @@ def main():
         + js('WORD_LEX', lexname)
         + js('KINSHIP', kinship)
         + js('BLOCKED', sorted(BLOCKED))
+        + js('SYLLABLES', syllables)
+        + js('RIMES', rimes)
+        + js('RHYME_GROUPS', rhyme_groups)
+        + js('HOMOPHONES', homophones)
+        + js('SUFFIXED', suffixed)
+        + js('PREFIXED', prefixed)
+        + js('PLURALS', plurals)
+        + js('PASTS', pasts)
+        + js('DEFINITIONS', definitions)
     )
     OUT.write_text(body)
     size = OUT.stat().st_size

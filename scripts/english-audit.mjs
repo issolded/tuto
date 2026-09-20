@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import {
-  BANDS, BAND_KEYS, TYPES, BOOK_COVERAGE,
+  BANDS, BAND_KEYS, BOOK_COVERAGE,
   generateItem, generateSession, validateItem, itemSignature,
 } from '../src/lib/englishTemplates.js'
 import { WORD_Z, LEXICON_META } from '../src/lib/englishLexicon.generated.js'
@@ -86,7 +86,11 @@ for (const bandKey of BAND_KEYS) {
   const positions = {}
   let total = 0
 
-  for (const type of TYPES) {
+  // The band's OWN types, not every type in the module. The 9-10 and 11-12 books do not pose
+  // the letter puzzles and the 8-9 book does not pose prefixes or missing vowels; sweeping all
+  // of them against all three bands measured questions no child would ever be asked, and hid
+  // which band is actually thin.
+  for (const type of band.types) {
     let made = 0
     let tries = 0
     let rare = 0
@@ -124,7 +128,14 @@ for (const bandKey of BAND_KEYS) {
       //
       // The blocklist applies to both, and that difference is what matters: a letter group
       // never has to be READABLE, but it must never be a word a child should not be shown.
-      const letterType = type === 'letter-pair' || type === 'shared-letters' || type === 'hidden-word'
+      // Types whose options are SPELLINGS rather than words. The letter puzzles offer three
+      // letters; the word-formation types offer a right spelling against wrong ones, and the
+      // wrong ones are the whole question — `leaded` for the past tense of `lead`, `childs`
+      // for the plural of `child`. Measuring those against the band's reading level asks
+      // whether a child can read a word that is not supposed to be a word.
+      const letterType = ['letter-pair', 'shared-letters', 'hidden-word',
+        'plural', 'past-tense', 'suffix', 'root-word', 'prefix-antonym',
+        'missing-vowel'].includes(type)
       const words = [
         item.prompt.word,
         ...(item.rule.words || []),
@@ -156,8 +167,14 @@ for (const bandKey of BAND_KEYS) {
     // A type that can only ever say a handful of things is a type a child exhausts in a week.
     // The floor is 40 rather than a token number because a real one was found at 29: odd-two
     // held its five words to the filler bar and came down to nine usable groups.
-    if (made >= PER_TYPE && answers.size < 40) {
-      fail(`${bandKey}/${type}: only ${answers.size} distinct answers across ${made} items`)
+    //
+    // Counted in distinct QUESTIONS, not distinct answers. For most types those are nearly the
+    // same number, and for three of them they are not remotely: the answer to a
+    // prefix-antonym question is one of nine prefixes and the answer to a missing-vowel
+    // question is one of five vowels. Counting answers called those the two thinnest types in
+    // the module when they are among the widest — 184 and 297 distinct questions.
+    if (made >= PER_TYPE && sigs.size < 40) {
+      fail(`${bandKey}/${type}: only ${sigs.size} distinct questions across ${made} items`)
     }
   }
 
@@ -194,7 +211,7 @@ for (const bandKey of BAND_KEYS) {
   if (!cover) fail(`${bandKey}: no BOOK_COVERAGE entry`)
   else {
     for (const note of cover.missing) {
-      const named = TYPES.find(t => note.toLowerCase().startsWith(t))
+      const named = band.types.find(t => note.toLowerCase().startsWith(t))
       if (named) fail(`${bandKey}: BOOK_COVERAGE still lists "${named}" as missing, but it generates`)
     }
     console.log(`  book: ${cover.missing.length} categories still not covered`)

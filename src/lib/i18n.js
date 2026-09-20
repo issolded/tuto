@@ -726,6 +726,38 @@ const STRINGS = {
                         es: 'significa casi lo mismo que' },
   eng_pair_opposite:  { en: 'means the opposite of',            tr: 'ile ters anlamda',
                         es: 'significa lo contrario de' },
+
+  // ── English, the word-knowledge family (the 9-10 and 11-12 books) ────────────
+  // Spelling, sound and word formation rather than relationships between words. The stem names
+  // what is being asked in the CHILD's language; the words themselves stay English, which is
+  // the subject. The two axes finally pull apart here: a Turkish-reading child doing English
+  // work reads "Çoğulu nedir?" above five English spellings.
+  eng_stem_odd_synonym: { en: 'Which word does NOT belong with the others?',
+                        tr: 'Hangi kelime diğerlerinin yanına GELMEZ?',
+                        es: '¿Qué palabra NO va con las demás?' },
+  eng_stem_definition:{ en: 'Which word means this?',           tr: 'Bu tarif hangi kelime?',
+                        es: '¿Qué palabra significa esto?' },
+  eng_stem_rhyme:     { en: 'Which word rhymes with it?',       tr: 'Hangi kelime bununla kafiyeli?',
+                        es: '¿Qué palabra rima con esta?' },
+  eng_stem_homophone: { en: 'Which word sounds the same?',      tr: 'Hangi kelime aynı sesleniyor?',
+                        es: '¿Qué palabra suena igual?' },
+  eng_stem_syllables: { en: 'Which word has this many beats?',  tr: 'Hangi kelime bu kadar heceli?',
+                        es: '¿Qué palabra tiene tantas sílabas?' },
+  eng_stem_plural:    { en: 'What is the plural?',              tr: 'Çoğulu nedir?',
+                        es: '¿Cuál es el plural?' },
+  eng_stem_past:      { en: 'What is the past tense?',          tr: 'Geçmiş zamanı nedir?',
+                        es: '¿Cuál es el pasado?' },
+  eng_stem_suffix:    { en: 'Add the ending. What is the word?', tr: 'Eki ekle. Kelime ne olur?',
+                        es: 'Añade la terminación. ¿Qué palabra sale?' },
+  eng_stem_prefix:    { en: 'Which beginning makes the opposite?', tr: 'Hangi ön ek tersini yapar?',
+                        es: '¿Qué prefijo forma el contrario?' },
+  eng_stem_root:      { en: 'What is the root word?',           tr: 'Kök kelime hangisi?',
+                        es: '¿Cuál es la palabra raíz?' },
+  eng_stem_vowel:     { en: 'Which letter is missing?',         tr: 'Hangi harf eksik?',
+                        es: '¿Qué letra falta?' },
+  // "Beats" rather than "syllables" for the youngest readers — the word a teacher claps out.
+  eng_syllable_beats: { en: 'beats',                            tr: 'hece',
+                        es: 'sílabas' },
 }
 
 // ── Adding a language ────────────────────────────────────────────────────────
