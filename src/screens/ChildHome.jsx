@@ -3,6 +3,7 @@ import { t, childLang, localeFor } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
+import { Icon } from '../lib/parentUI'
 import { supabase, storageClient, getChildGems, getTodaySummary, drawingIconUrl } from '../lib/supabase'
 
 const ACCENT = '#f79433'
@@ -743,6 +744,11 @@ export default function ChildHome() {
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '54px 22px 96px', fontFamily: "'Nunito', sans-serif" }}>
 
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <button onClick={() => nav('/child/settings')} style={{ display: 'flex', alignItems: 'center', gap: 8, border: band === 'young' ? 'none' : '2px solid #20201e', background: '#fff', color: INK, borderRadius: 14, padding: '10px 14px', fontFamily: FRED, fontWeight: 600, cursor: 'pointer' }}>
+            <Icon name="gear" size={20} />{t('sc_settings', lang)}
+          </button>
+        </div>
         {band === 'mid' ? <MidHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} />
           : band === 'mature' ? <TeenHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} />
             : <YoungHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} greetingKey={greetingKey} />}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase, getTodaySummary } from '../lib/supabase'
+import { updateParentPrefs } from '../lib/parentPrefs'
 import { hashPin } from '../lib/hash'
 import { LangPicker, BirthDateField } from '../lib/parentUI'
 import { ageFromBirthDate } from '../lib/age'
@@ -372,7 +373,10 @@ export default function ParentDashboard({ view = 'dashboard' }) {
   const savePrefs = async (patch) => {
     const next = { ...(prefs || {}), ...patch }
     setPrefs(next)
-    if (user) await supabase.from('parents').update({ prefs: next }).eq('id', user.id)
+    if (user) {
+      try { setPrefs(await updateParentPrefs(user.id, current => ({ ...current, ...patch }))) }
+      catch { setPrefs(prefs); window.alert(s('sc_save_error')) }
+    }
   }
 
   const notifyLevel = NOTIFY_LEVELS.some(l => l.id === prefs?.notify_level) ? prefs.notify_level : 'all'
@@ -700,6 +704,15 @@ export default function ParentDashboard({ view = 'dashboard' }) {
               </div>
             </div>
           )}
+        </Card>
+
+        <Card pad={18} style={{ marginTop: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <Icon name="clock" color={PC.tealDeep} />
+            <div><strong>{s('sc_title')}</strong><div style={{ fontSize: 13, color: PC.inkSoft, marginTop: 4 }}>{s('sc_intro')}</div></div>
+          </div>
+          <p style={{ fontSize: 12, color: PC.inkSoft }}>{s('sc_demo')}</p>
+          <Btn variant="soft" onClick={() => nav('/parent/settings/screen-control')}>{s('sc_title')} →</Btn>
         </Card>
 
       </div>

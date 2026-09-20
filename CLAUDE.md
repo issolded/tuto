@@ -81,6 +81,22 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Ekran kontrolü web denemesi (2026-09-20, Codex). Ebeveyn Ayarlar sayfasının EN ALTINDA,
+      çocukta Ayarlar → Ekran Kontrolü. Mevcut Tuto Care / yaşa göre çocuk stili korunur.
+      Kurallar çocuk bazında `parents.prefs.screen_control_web[childId]` içinde; mevcut Supabase
+      ebeveyn oturumu ve RLS ile kaydedilir, migration gerekmez. JSON prefs kaydı güncel değeri
+      okuyup compare-and-swap yapar; dashboard da aynı yardımcıyı kullanır.
+      **Deneme sınırı:** cihaz uygulaması tespit/engelleme yok; 100 örnek Gem, gerçek bt_ledger'a
+      yazma yok. Çocuk talepleri ve ebeveyn onayı yalnız AYNI TARAYICIDAKİ localStorage denemesinde
+      paylaşılır; cihazlar arası senkronizasyon değildir. Kurallar hesapta saklanır, o cihazdaki
+      çocuk denemesi ebeveyn ekranı yüklenince/kaydedilince önbelleğe alınır. Native öncesi bu
+      veriyi gerçek kullanım/koruma diye sunma. Çocuk ekranında ebeveyn kontrolleri bulunmaz.
+      Hafta içi/sonu bütçesi, günlük tavan, Gem oranı/ek süre tavanı, uyku/okul saati, örnek uygulama
+      izinleri; görünür denemede sayaç ve hızlandırılmış dakika. Eğitim uygulaması bütçe tüketmez.
+      Ekran/sekme kapanınca simülasyon saati ilerlemez. Gece yarısı günlük bütçe yenilenir.
+      Doğrulama: `node --test src/lib/__tests__/screenControl.test.js`, Vite build, font:check;
+      i18n:check mevcut 37 bulguda, yeni bulgu yok. Native Android uygulaması ayrı sonraki iş.
+
 - [x] Fotoğraf yüklenen her yere kırpma adımı (2026-09-13). Simply Draw'daki "Edit image"
       ekranından geldi. Sekiz ekrandaki **on iki fotoğraf girişinin hepsi** artık
       `components/PhotoCrop.jsx`'ten geçiyor (`usePhotoCrop` ile üç satırda bağlanıyor).

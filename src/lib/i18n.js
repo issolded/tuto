@@ -13,6 +13,30 @@
 // "ordenador"). Where English has a gendered address the Spanish avoids picking one — the app
 // does not know whether the child is a boy or a girl and must not guess at them by name.
 const STRINGS = {
+  sc_settings: {en: "Settings", tr: "Ayarlar", es: "Ajustes"},
+  sc_title: {en: "Screen Control", tr: "Ekran Kontrolü", es: "Control de pantalla"},
+  sc_demo: {en: "Web demo", tr: "Web denemesi", es: "Demo web"},
+  sc_child_notice: {en: "This is a practice screen. Other apps stay open and your real Gems are safe. Ask your parent to open Screen Control in Settings in this browser to approve a demo request.", tr: "Bu bir deneme ekranı. Diğer uygulamalar açık kalır, gerçek Gem’lerin harcanmaz. Deneme talebini onaylamak için ebeveyninden bu tarayıcıda Ayarlar içindeki Ekran Kontrolü’nü açmasını iste.", es: "Esta es una prueba. Las otras apps siguen abiertas y tus Gems reales están a salvo. Pide a tu familia que abra Control de pantalla en Ajustes en este navegador para aprobar tu petición de prueba."},
+  sc_sample_rules: {en: "Using example rules until your parent saves settings in this browser.", tr: "Ebeveynin bu tarayıcıda ayarları kaydedene kadar örnek kurallar kullanılır.", es: "Se usan reglas de ejemplo hasta que tu familia guarde los ajustes en este navegador."},
+  sc_waiting: {en: "Demo request waiting for your parent. No Gems spent yet.", tr: "Deneme talebi ebeveynini bekliyor. Henüz Gem harcanmadı.", es: "Petición de prueba pendiente de tu familia. Aún no se han gastado Gems."},
+
+  // Child-facing copy for the parent-operated screen control preview.
+  sc_remaining: {en: "Play time left", tr: "Kalan oyun süresi", es: "Tiempo de juego restante"},
+  sc_demo_gems: {en: "Demo Gems", tr: "Deneme Gem’i", es: "Gems de prueba"},
+  sc_apps: {en: "Example apps", tr: "Örnek uygulamalar", es: "Apps de ejemplo"},
+  sc_stop: {en: "Stop demo", tr: "Denemeyi durdur", es: "Detener prueba"},
+  sc_play: {en: "Start demo", tr: "Denemeyi başlat", es: "Iniciar prueba"},
+  sc_request: {en: "Request 5 min · %n% demo Gems", tr: "5 dk iste · %n% deneme Gem’i", es: "Pedir 5 min · %n% Gems de prueba"},
+  sc_redeem: {en: "Get 5 min · %n% demo Gems", tr: "5 dk al · %n% deneme Gem’i", es: "Obtener 5 min · %n% Gems de prueba"},
+  sc_request_hint: {en: "Requests need enough demo Gems and room in both daily limits. Protected hours and paused or blocked apps cannot be opened with Gems.", tr: "Talep için yeterli deneme Gem’i ve her iki günlük sınırda yer gerekir. Korunan saatler, duraklatılan veya engellenen uygulamalar Gem ile açılamaz.", es: "Se necesitan Gems de prueba y margen en ambos límites. Las horas protegidas y apps pausadas o bloqueadas no se abren con Gems."},
+  sc_status_ready: {en: "Ready to play", tr: "Oyun için hazır", es: "Listo para jugar"},
+  sc_status_allowed: {en: "Always available · no play time used", tr: "Her zaman açık · oyun süresi harcanmaz", es: "Siempre disponible · no consume tiempo"},
+  sc_status_blocked: {en: "This app is blocked in the demo", tr: "Bu uygulama denemede engelli", es: "App bloqueada en la prueba"},
+  sc_status_paused: {en: "Play is paused by your parent", tr: "Ebeveynin oyunları duraklattı", es: "Tu familia ha pausado los juegos"},
+  sc_status_bedtime: {en: "Bedtime · play is closed", tr: "Uyku saati · oyunlar kapalı", es: "Hora de dormir · juegos cerrados"},
+  sc_status_school: {en: "School time · play is closed", tr: "Okul saati · oyunlar kapalı", es: "Hora de colegio · juegos cerrados"},
+  sc_status_empty: {en: "Play budget used up", tr: "Oyun bütçesi bitti", es: "Tiempo de juego agotado"},
+
   // ── ChildHome ───────────────────────────────────────────────────────────────
   greeting_morning:   { en: 'Good morning ☀️',      tr: 'Günaydın ☀️',        es: 'Buenos días ☀️' },
   greeting_afternoon: { en: 'Good afternoon 👋',    tr: 'İyi günler 👋',      es: 'Buenas tardes 👋' },
