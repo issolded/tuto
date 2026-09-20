@@ -15,7 +15,9 @@
     "puzzle:sync": "node scripts/sync-puzzle-engine.mjs",
     "puzzle:pixels": "node scripts/puzzle-pixels.mjs",
     "puzzle:webkit": "node scripts/puzzle-webkit.mjs",
-    "font:check": "node scripts/font-check.mjs"
+    "font:check": "node scripts/font-check.mjs",
+    "english:lexicon": "python3 scripts/english/build_lexicon.py",
+    "english:check": "node scripts/english-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

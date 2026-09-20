@@ -334,6 +334,48 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,
       turkuaz kart — pembe denendi, beğenilmedi, 2026-09-18); çocuk ekranı gelmeden ana ekrana kart koyma — boş sayfaya gider.
+- [ ] English (sözel akıl yürütme) motoru: lab canlı, çocuk ekranı yok (2026-09-20).
+      Kaynak Bond 11+ English and Verbal Reasoning 10 Minute Tests **8-9**; diğer yaşlar sonra.
+      **Metin yok** — kitabın 9 comprehension testi bilerek dışarıda; uydurma paragraf okutmak
+      Reading modülünün gerçek kitapla yaptığının kötü kopyası olur. Sekiz tip üretiliyor:
+      synonym, antonym, sense ("bu cümlede 'bear' ne demek", kitabın en kalabalık tipi),
+      odd-two, word-grid, letter-pair (`tired → sl__py`), shared-letters, hidden-word
+      (`pil___` → low).
+      **Mimari bulmacanınkiyle aynı, besleme kaynağı başka:** NVR'da içerik çizilendi (sonsuz,
+      bedava, dilden bağımsız); burada içerik bir SÖZLÜK. Motor ince, ağırlık veride —
+      `src/lib/englishLexicon.generated.js`, WordNet'ten `scripts/english/build_lexicon.py` ile
+      bir kez üretiliyor (`npm run english:lexicon`). **Üretimde model yok**: soru maliyeti
+      sıfır, süresi milisaniye, 40 soru 90ms.
+      **Ölçüm, tahmin değil:** kitabın 598 gerçek şık kelimesinin 5. yüzdeliği Zipf 2.86, o
+      yüzden bant eşiği 2.8 — kitabın kendi kelimelerinin %95'ini tutuyor. Bant bir kadran
+      (`BANDS`), şablon seti değil; 5-6 ve 10-11 aynı üreteçler + farklı eşik.
+      **WordNet'in ne verdiği ölçüldü:** kategori ve zıt anlam mükemmel (`lamb/calf/foal` →
+      young_mammal, `donkey/pig` değil — kitabın kendi sorusu), sense mükemmel (örnek cümle +
+      o anlamın eşanlamları tek kayıtta), **eşanlam zayıf** — kitabın 12 çiftinin 4'ü. Ama
+      `medal` için verdiği `ribbon` kitabın birinci çeldiricisi: WordNet cevap üreticisi değil,
+      **çeldirici üreticisi**.
+      **Güvenlik:** `scripts/english/blocklist.txt` (432 madde) lemmaya, her tanıma, her örnek
+      cümleye ve kategori adlarına uygulanıyor. WordNet'in kendi işaretleri yetmiyor (`slut`
+      Zipf 3.8, `usage_domains` boş, lexname `noun.person` — `teacher` ile aynı). Çalışma
+      anında da gerekiyor: harf tipleri şıkkı harften kuruyor ve üç harf ~300 soruda bir `ass`
+      yazıyor.
+      **Tarayıcıda ve denetimde bulunan gerçek hatalar** (hepsi düzeltildi): lemma büyük/küçük
+      harf kontrolü **küçültmeden sonra** yapılıyordu — `Russia`, `Jap`, `Wallace`, `Denmark`
+      şıklara girdi (bir ırkçı hakaret dahil); `sense` çeldiricileri aynı kelimenin başka
+      anlamlarındandı ve yakın anlamlar ikinci doğru cevap oluyordu (`protection` → cevap
+      `shelter`, çeldirici `security`) — artık yalnız Wu-Palmer uzaklığı 0.4'ün altındaki
+      anlamlar çeldirici olabiliyor; `related()` hem eşanlamı hem aynı-kökü kapsadığı için
+      eşanlam üreteci kendi cevabını reddediyordu (90.000 tohumda sıfır soru) — ikisi ayrıldı;
+      wordfreq özel adların frekansını ödünç veriyor (`murphy` Zipf 4.3, WordNet'te tek anlamı
+      "patates" argosu) — NLTK'nin isim listesi + SemCor sayacıyla eleniyor.
+      `npm run english:check` sekiz tipi 300'er soruyla tarıyor: tek doğru cevap, bant altı
+      kelime yok, blocklist ihlali yok, 200 oturumda tekrar yok, cevap konumu a-e %19-21.
+      **Açık işler:** (1) kategori havuzu ince — 25 kullanışlı grup, `odd-two` en dar tip;
+      (2) `sense` verimi %8 (3625 denemede 300) — anlam havuzu dar; (3) kitabın cloze
+      paragrafı, karışık cümle ve kelime türü tipleri yok (cümle bankası ister);
+      (4) çocuk ekranı yok — geldiğinde soru sunucuda üretilmeli, cevap tarayıcıya hiç
+      gitmemeli (PuzzleScreen deseni). Sözlük 1.8MB, yalnız lab'a lazy yükleniyor.
+
 - [ ] Stories çeşitlilik: 11+ üretimi tek kalıba (AI-duygu-kontrolü / kapalı-dome) çöküyor;
       üretim promptuna premise çeşitliliği + alt-tema rotasyonu, ya da embedding ile
       semantik dedup. (Güvenlik değil, kalite.)

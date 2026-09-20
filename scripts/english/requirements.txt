@@ -1,0 +1,8 @@
+# One-time build environment for scripts/english/build_lexicon.py.
+# Nothing here ships or runs in production — the script's output is a plain JS data file.
+#
+#   python3 -m venv .venv && .venv/bin/pip install -r scripts/english/requirements.txt
+#   .venv/bin/python -c "import nltk; nltk.download('wordnet')"
+#   npm run english:lexicon
+nltk>=3.8
+wordfreq>=3.0

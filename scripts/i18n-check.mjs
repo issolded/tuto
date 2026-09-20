@@ -43,7 +43,15 @@ const NOT_USER_FACING = [
   'screens/ReadingFlow.jsx',
   // Developer sandboxes. No child reaches them — they are unlisted routes whose whole content
   // is attribute names and audit counters, and translating that would hide what it reports.
-  'screens/PuzzleLab.jsx',
+  'screens/PuzzleLab.jsx', 'screens/EnglishLab.jsx',
+  // The English engine and its lexicon. Two separate reasons, and neither is "not translated
+  // yet". The lexicon is the module's subject matter: it is a list of English words, and the
+  // question "why is `garment` not in Turkish" has no answer. The engine's English strings are
+  // its BOOK_COVERAGE notes — prose about what the Bond paper has that this does not, read by
+  // whoever picks the module up next, never by a child. Every string a child sees on an
+  // English question is a stem key in i18n.js (eng_stem_*), and those follow children.language
+  // like everything else.
+  'lib/englishTemplates.js', 'lib/englishLexicon.generated.js',
   // The puzzle vocabulary tables. Their Turkish is not a string waiting to be translated, it is
   // one of the two readings a row already carries — every group, trait and relation is written
   // in both languages on purpose, because a relation that is obvious in English can be a shrug

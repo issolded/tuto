@@ -22,6 +22,11 @@ import MathLab from './screens/MathLab'
 // the whole puzzle engine and its font gate with it — none of which belongs in the bundle every
 // child downloads to open their home screen.
 const PuzzleLab = lazy(() => import('./screens/PuzzleLab'))
+// Lazy for a sharper version of the same reason: the English engine's lexicon is a 2MB data
+// file. No child screen imports it yet, and when one does it will read the questions from the
+// server rather than the bundle — the way PuzzleScreen does, so the answer never reaches the
+// browser at all.
+const EnglishLab = lazy(() => import('./screens/EnglishLab'))
 // Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
 // screen needs.
 const PuzzleScreen = lazy(() => import('./screens/PuzzleScreen'))
@@ -76,6 +81,7 @@ export default function App() {
         <Route path="/child/math" element={<MathScreen />} />
         <Route path="/math-lab" element={<MathLab />} />
         <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
+        <Route path="/english-lab" element={<Suspense fallback={null}><EnglishLab /></Suspense>} />
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />

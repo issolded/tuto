@@ -694,6 +694,38 @@ const STRINGS = {
                         es: '¿Cuál tiene un eje de simetría?' },
   puzzle_stem_symmetry_none: { en: 'Which one has no line of symmetry?', tr: 'Hangisinin simetri ekseni yok?',
                         es: '¿Cuál no tiene eje de simetría?' },
+
+  // ── English (verbal reasoning) ──────────────────────────────────────────────
+  // The WORDS in these questions are English and stay English — that is the subject. The
+  // INSTRUCTION around them follows children.language like every other question in the app,
+  // because a child who cannot read the instruction cannot start. The two are separate axes
+  // here for the first time: a Turkish-reading child doing English work reads a Turkish
+  // "Choose the word closest in meaning" above five English options.
+  eng_stem_synonym:   { en: 'Which word means almost the SAME?', tr: 'Hangi kelime neredeyse AYNI anlama gelir?',
+                        es: '¿Qué palabra significa casi lo MISMO?' },
+  eng_stem_antonym:   { en: 'Which word means the OPPOSITE?',   tr: 'Hangi kelime TERS anlama gelir?',
+                        es: '¿Qué palabra significa lo CONTRARIO?' },
+  eng_stem_sense:     { en: 'What does this word mean in the sentence?', tr: 'Bu kelime cümlede ne anlama geliyor?',
+                        es: '¿Qué significa esta palabra en la frase?' },
+  eng_stem_odd_two:   { en: 'Which TWO do not belong?',         tr: 'Hangi İKİSİ bunlardan değil?',
+                        es: '¿Qué DOS no pertenecen al grupo?' },
+  eng_stem_grid:      { en: 'Find TWO words in the grid',       tr: 'Tablodan İKİ kelime bul',
+                        es: 'Encuentra DOS palabras en la tabla' },
+  eng_stem_letter_pair: { en: 'Which letters finish the word?', tr: 'Kelimeyi hangi harfler tamamlar?',
+                        es: '¿Qué letras completan la palabra?' },
+  eng_stem_shared:    { en: 'Which letters finish BOTH words?', tr: 'Hangi harfler İKİ kelimeyi birden tamamlar?',
+                        es: '¿Qué letras completan LAS DOS palabras?' },
+  eng_stem_hidden:    { en: 'Which three-letter word is hiding?', tr: 'Saklanan üç harfli kelime hangisi?',
+                        es: '¿Qué palabra de tres letras se esconde?' },
+  // The two grid questions differ only in direction, and the direction is the question.
+  eng_grid_similar:   { en: 'that mean almost the SAME as',     tr: 'şununla neredeyse AYNI anlama gelen:',
+                        es: 'que signifiquen casi lo MISMO que' },
+  eng_grid_opposite:  { en: 'that mean the OPPOSITE of',        tr: 'şunun TERSİ anlama gelen:',
+                        es: 'que signifiquen lo CONTRARIO de' },
+  eng_pair_similar:   { en: 'means almost the same as',         tr: 'ile neredeyse aynı anlamda',
+                        es: 'significa casi lo mismo que' },
+  eng_pair_opposite:  { en: 'means the opposite of',            tr: 'ile ters anlamda',
+                        es: 'significa lo contrario de' },
 }
 
 // ── Adding a language ────────────────────────────────────────────────────────
