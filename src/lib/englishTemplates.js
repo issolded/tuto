@@ -317,14 +317,17 @@ const COMMON_NOUNS_FALLBACK = [
 /** The part of speech of a word's main sense: 'noun', 'verb', 'adj', 'adv'. */
 const partOfSpeech = (w) => (WORD_LEX[w] || '').split('.')[0]
 
-function fillers(r, band, avoid, count, like) {
-  const { synonyms, antonyms } = index()
-  // Fillers share the ANSWER's part of speech. Every options line in the book is one part of
-  // speech throughout — `bear` is offered `sit run stand find make`, five verbs — and the
-  // reason is not tidiness: a child scanning `needs … teen, seventh, inevitably, capable,
-  // want` does not have to know what any of them mean to find the only noun-ish one. A line
-  // that mixes classes gives the answer away to whoever is not reading.
-  const pos = like ? partOfSpeech(like) : null
+// Candidate filler words, by band and part of speech.
+//
+// Memoised for the reason sharedLetterIndex is, and this is the same bug in four more places:
+// it filters all 19,000 words of the lexicon and it was doing that once per QUESTION. synonym,
+// antonym, sense and word-grid all ran at about 1.3ms against odd-two's 0.02ms, and this line
+// was the whole difference.
+const FILLER_POOLS = new Map()
+
+function fillerPool(band, pos) {
+  const key = `${band.filler}|${pos || ''}`
+  if (FILLER_POOLS.has(key)) return FILLER_POOLS.get(key)
   const common = Object.keys(WORD_Z).filter(
     w => z(w) >= band.filler && w.length >= 4 && w.length <= 9
       && (!pos || partOfSpeech(w) === pos))
@@ -337,6 +340,18 @@ function fillers(r, band, avoid, count, like) {
   // dropped and frequency carries the line on its own.
   const narrow = common.filter(concrete)
   const pool = narrow.length >= 40 ? narrow : common
+  FILLER_POOLS.set(key, pool)
+  return pool
+}
+
+function fillers(r, band, avoid, count, like) {
+  const { synonyms, antonyms } = index()
+  // Fillers share the ANSWER's part of speech. Every options line in the book is one part of
+  // speech throughout — `bear` is offered `sit run stand find make`, five verbs — and the
+  // reason is not tidiness: a child scanning `needs … teen, seventh, inevitably, capable,
+  // want` does not have to know what any of them mean to find the only noun-ish one. A line
+  // that mixes classes gives the answer away to whoever is not reading.
+  const pool = fillerPool(band, like ? partOfSpeech(like) : null)
   const out = []
   for (let tries = 0; out.length < count && tries < count * 60; tries++) {
     const w = pickOne(r, pool.length ? pool : COMMON_NOUNS_FALLBACK)
@@ -614,6 +629,19 @@ function genOddTwo(r, band, seed) {
   }
 }
 
+// The grid's own pool: shorter words than a filler line allows, because a 4 x 3 block reads
+// better with them. Memoised like the rest.
+const GRID_POOLS = new Map()
+
+function gridPool(band) {
+  const key = String(band.filler)
+  if (!GRID_POOLS.has(key)) {
+    GRID_POOLS.set(key, Object.keys(WORD_Z).filter(
+      w => z(w) >= band.filler && concrete(w) && w.length >= 3 && w.length <= 9))
+  }
+  return GRID_POOLS.get(key)
+}
+
 function genWordGrid(r, band, seed) {
   // The book's grid: twelve words in a 4 × 3 block, and a question that wants TWO of them.
   // Everything that is not an answer has to be safely unrelated to the target AND to the two
@@ -642,8 +670,7 @@ function genWordGrid(r, band, seed) {
     || answers.some(a => related(w, a))
     || synonyms.get(target)?.has(w) || antonyms.get(target)?.has(w)
   const filler = []
-  const pool = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.filler && concrete(w) && w.length >= 3 && w.length <= 9)
+  const pool = gridPool(band)
   for (let tries = 0; filler.length < band.gridSize - 2 && tries < 2000; tries++) {
     const w = pickOne(r, pool)
     if (!w || avoid.has(w) || filler.includes(w) || clash(w)) continue
@@ -786,18 +813,33 @@ function genSharedLetters(r, band, seed) {
   }
 }
 
+// The three-letter words that can hide, and the words they can hide in. Memoised like the
+// rest: this walked the whole lexicon AND the whole example list, per question.
+//
+// The host has to be a concrete word, not merely a readable one. Every word in "the bipolar
+// distribution of certain species" clears the frequency bar and the sentence still means
+// nothing to a nine-year-old; `bipolar` is what put it there. A sentence about a thing tends to
+// be a sentence a child can picture.
+const HIDDEN_POOLS = new Map()
+
+function hiddenWordPools(band) {
+  const key = `${band.option}|${band.answer}`
+  if (!HIDDEN_POOLS.has(key)) {
+    HIDDEN_POOLS.set(key, {
+      three: new Set(Object.keys(WORD_Z).filter(
+        w => w.length === 3 && z(w) >= band.option && !BANNED.has(w))),
+      hosts: Object.keys(EXAMPLES).filter(
+        w => z(w) >= band.answer && concrete(w) && w.length >= 6 && w.length <= 11),
+    })
+  }
+  return HIDDEN_POOLS.get(key)
+}
+
 function genHiddenWord(r, band, seed) {
   // "The tooth fairy had placed a coin under her pil___." — and the three letters that go in
   // are themselves a word (`low`). Two conditions at once, which is what makes it the book's
   // hardest letter type, and the sentence is what tells the child which word is wanted.
-  const three = new Set(Object.keys(WORD_Z).filter(
-    w => w.length === 3 && z(w) >= band.option && !BANNED.has(w)))
-  // The host has to be a concrete word, not merely a readable one. Every word in "the bipolar
-  // distribution of certain species" clears the frequency bar and the sentence still means
-  // nothing to a nine-year-old; `bipolar` is what put it there. A sentence about a thing tends
-  // to be a sentence a child can picture.
-  const hosts = Object.keys(EXAMPLES).filter(
-    w => z(w) >= band.answer && concrete(w) && w.length >= 6 && w.length <= 11)
+  const { three, hosts } = hiddenWordPools(band)
   if (!hosts.length) return null
 
   const found = []
