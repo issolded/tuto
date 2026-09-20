@@ -334,6 +334,42 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,
       turkuaz kart — pembe denendi, beğenilmedi, 2026-09-18); çocuk ekranı gelmeden ana ekrana kart koyma — boş sayfaya gider.
+- [ ] English motoru: üç bant, 19 tip, lab canlı, çocuk ekranı yok (2026-09-20/21).
+      **Üç kitap, iki ayrı ders.** 8-9 "English AND Verbal Reasoning" — kelimeler arası ilişki
+      soruyor. 9-10 "Assessment Papers English" ve 11-12 "10 Minute Tests English" — dilbilgisi,
+      yazım ve kelime türetme. Yani motorun açılış iddiası ("tipler yaşla değişmez, kadran
+      değişir") bu üç kitapta **yanlış**; kopyalandığı NVR kitaplarında doğruydu. Artık her bant
+      kendi tip listesini söylüyor (`BANDS[x].types`), 9-10 ve 11-12 harf bulmacalarını ve kelime
+      ızgarasını hiç posalamıyor çünkü kitaplarında yok.
+      **İki aile:** `VR_TYPES` (8) sözel akıl yürütme; `WORD_TYPES` (11) kelime bilgisi —
+      odd-synonym, definition, rhyme, homophone, syllables, plural, past-tense, suffix,
+      prefix-antonym, root-word, missing-vowel.
+      **Çeldirici mantığı ikinci ailede farklı:** VR'de yanlış şık başka bir KELİME; burada en
+      iyi yanlış şık **kuralın körlemesine uygulanmışı** — `beautyful`, `childs`, `writed`.
+      Çocuğun gerçekten yazdığı cevap bu, o yüzden ekranda olması gerekiyor (`why` alanı söylüyor).
+      **Yeni veri, hepsi çevrimdışı:** CMUdict (kafiye, eş sesli, hece) — WordNet'in hiç
+      bilmediği ilk şey. CMU Amerikan, kitaplar İngiliz: 9-10'un kış şiiri `calm`'ı `arm` ile
+      kafiyeliyor ve Amerikan yazımında bunlar kafiyeli değil. R düşürme şart ama **her sesliden
+      sonra değil** — sadece AA/AO/ER/AH. (İlk hâli `shed`'e `shared`'ı eş sesli dedi; EH+R
+      İngilizcede EH değil, `air`'in diftongu.) Ayrıca WordNet türetme ilişkileri (ek/kök),
+      zıt anlam ∩ olumsuz ön ek (`possible→impossible`), düzensiz çoğul ve geçmiş zaman listeleri.
+      **Kör test iki tur, 156 soru, 153 doğru.** Üç kaçırma da motorun hatasıydı:
+      `shed≈shared` (R kuralı), `form≈spring` (baskınlık kapısındaki kaçak — ana sözcük türü
+      iki koldan yalnız birinde şart koşuluyordu), `unopposed→opposed` (kök bütün ekleri soymalı).
+      **Diğer bulgular:** `ring→rung` (geçmiş zaman değil sıfat-fiil); `dive→dove` yanında
+      `dived` çeldirici olarak (iki biçimi de doğru olan 28 fiil listeye yazıldı — frekans
+      bunları ayıramıyor, `speeded` 2.37 ama doğru); kafiye anahtarı son **vurgulu** sesliden
+      alınmalıydı (381 grup → 1326); `act+tion=action`; `comedian ≠ co+median`;
+      **`cat` sözlükte yoktu** — özel-ad kapısı WordNet'te `CAT` (tomografi) var diye onu ve 520
+      sıradan kelimeyi (`ball`, `angle`, `army`, `bath`, `begin`) atıyordu, kapı kaldırıldı;
+      **her kelimenin iki yazımı vardı** (15/15 çift) — 91 Amerikan biçimi atıldı, çünkü
+      yazım tiplerinde çocuğun öğrendiği yazım yanlış şık olarak çıkıyordu.
+      **Performans:** beş üreteç her soruda kendi indeksini baştan kuruyordu (19.000 kelimeyi
+      süzerek). 24.000 soru 19.192ms → 1.445ms; 10 soruluk oturum 0,72ms.
+      **Havuz:** 68.185 farklı soru (şıklarıyla 1,34 milyon). En dar tipler `odd-two` 182 ve
+      `hidden-word` 167; en geniş `letter-pair` 26.537.
+      Eski 8-9 notu aşağıda duruyor.
+
 - [ ] English (sözel akıl yürütme) motoru: lab canlı, çocuk ekranı yok (2026-09-20).
       Kaynak Bond 11+ English and Verbal Reasoning 10 Minute Tests **8-9**; diğer yaşlar sonra.
       **Metin yok** — kitabın 9 comprehension testi bilerek dışarıda; uydurma paragraf okutmak
