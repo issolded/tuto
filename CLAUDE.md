@@ -369,7 +369,15 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       ilk bozuk soru "received confirmed reports of **casualties**" idi ve `casualty` hiçbir
       listede geçmiyor, çünkü kaba bir kelime değil.
       (c) *Okunabilirlik*: Dale-Chall (2.942 kelime, 4. sınıfın %80'inin bildiği) — engelleme
-      değil **izin** listesi, cümle denetiminde kullanılıyor. Buna ek olarak her cümlede en az
+      değil **izin** listesi, cümle denetiminde kullanılıyor.
+      (d) *Din*: tamamı çıkarıldı (2026-09-20 kullanıcı kararı). Dar çizgi masadaydı — binalar
+      kalsın (cami/kilise/sinagog genel kültür, `place_of_worship` kategorisi), yalnız kavramlar
+      çıksın — alınmadı; geniş çizgi daha net ve savunması kolay. Sebep `mosque` değildi: sözlükte
+      `holy ↔ unholy`, `sacred ↔ profane`, `religious → secular`, `pray = beg = implore`,
+      `saint = ideal` duruyordu ve `religious → secular` gerçekten üretiliyordu. **Simetri pazarlık
+      konusu değil** — `mosque` çıkıp `church` kalsaydı hiç dokunmamaktan kötü olurdu. Maliyet:
+      26 kategoriden biri (ibadethane) ve ~140 kelime. Doğrulama: 4.651 soruda dini kelime 0.
+      Bilerek tutulanlar: `spirit`, `belief`, `cardinal`, `crescent`, `wedding`. Buna ek olarak her cümlede en az
       bir somut isim şartı ("of___d all laws of humanity" bu yüzden eleniyor).
       WordNet'in kendi işaretleri hiçbirini görmüyor (`slut` Zipf 3.8, `usage_domains` boş,
       lexname `noun.person` — `teacher` ile aynı). Blocklist çalışma anında da gerekiyor:

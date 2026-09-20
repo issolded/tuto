@@ -559,3 +559,180 @@ transsexual
 uzi
 valium
 wench
+
+# --- religion, all of it -----------------------------------------------------------------
+# A decision rather than a safety finding. The lab showed 110 of 3200 questions touching a
+# religious word, nearly all of them harmless — `pray` and `bishop` sitting as unrelated
+# distractors. But some were not: `religious → secular` generates today, and the lexicon holds
+# `holy ↔ unholy`, `sacred ↔ profane`, `pray = beg = implore` and `saint = ideal`. A child's
+# quiz has no business asking for the opposite of holy, and no business telling a family that
+# praying is begging.
+#
+# The narrower line was available and was not taken: keep the BUILDINGS, which are general
+# knowledge and appear in the odd-two group `chapel, mosque, shrine, synagogue, temple`, and
+# drop only the concepts. Taking everything is the clearer rule and the easier one to defend,
+# and it costs one category out of twenty-six.
+#
+# Symmetry is the one thing that is not negotiable here. Removing `mosque` while `church`
+# stayed would be worse than doing nothing at all, so every tradition goes or none does.
+#
+# Kept on purpose, because their everyday sense is not religious and a quiz needs them:
+# `spirit` (team spirit), `belief`, `cardinal`, `crescent`, `wedding`, and `minister` (already
+# held out of sentences as government vocabulary).
+#
+# `grace`, `cross` and `mass` were on that list until it was checked: none of them is in the
+# lexicon anyway, and none was removed by this section. They had already gone through the
+# capitalised-elsewhere gate, as Grace the name, the Red Cross and Mass. for Massachusetts.
+
+# places
+abbey
+basilica
+bethel
+cathedral
+chapel
+church
+convent
+kirk
+masjid
+minaret
+monastery
+mosque
+pagoda
+parish
+sanctuary
+shrine
+synagogue
+tabernacle
+temple
+
+# people
+abbot
+apostle
+bishop
+chaplain
+clergy
+clergyman
+congregation
+deacon
+disciple
+friar
+imam
+missionary
+monk
+nun
+pastor
+pilgrim
+pope
+preacher
+priest
+prophet
+rabbi
+saint
+vicar
+worshipper
+
+# practice and objects
+altar
+baptise
+baptism
+baptize
+bless
+blessed
+blessing
+communion
+confession
+crucifix
+hymn
+liturgy
+pilgrimage
+pray
+prayer
+preach
+psalm
+pulpit
+rosary
+sacrament
+sermon
+worship
+
+# concepts
+afterlife
+almighty
+angel
+divine
+divinity
+eternity
+faith
+faithful
+godly
+gospel
+heaven
+heavenly
+holiness
+holy
+messiah
+miracle
+paradise
+parable
+piety
+pious
+prophecy
+purgatory
+redemption
+resurrection
+profane
+religion
+religious
+sacred
+salvation
+scripture
+secular
+soul
+spiritual
+spirituality
+unholy
+worshipful
+
+# names and traditions
+agnostic
+allah
+apostolic
+atheist
+atheism
+biblical
+buddha
+buddhism
+buddhist
+catholic
+catholicism
+christ
+christian
+christianity
+christmas
+diwali
+easter
+eid
+episcopal
+evangelical
+god
+goddess
+hanukkah
+hindu
+hinduism
+islam
+islamic
+jesus
+jewish
+judaism
+koran
+krishna
+lent
+lord
+muslim
+passover
+protestant
+quran
+ramadan
+sikh
+testament
+torah
