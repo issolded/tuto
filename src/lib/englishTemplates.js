@@ -717,16 +717,27 @@ function genLetterPair(r, band, seed) {
   }
 }
 
-function genSharedLetters(r, band, seed) {
-  // "The same three letters complete both of these words." Pure mechanics over the word list —
-  // no meaning involved, which makes it the one type that would survive any vocabulary.
-  // Both host words are printed and both are read, so they are held to the readable bar like
-  // an odd-two line rather than the answer bar: `ideology / theology` share `eol` and share
-  // nothing a nine-year-old has met.
-  const words = Object.keys(WORD_Z).filter(w => z(w) >= band.filler && w.length >= 5 && w.length <= 9)
+// Every three-letter middle that two different words share, with where it sits in each.
+//
+// Memoised per band, and it has to be. The index runs over roughly four thousand words and
+// genSharedLetters was rebuilding it on EVERY call. That was invisible while the audit asked
+// for three hundred questions per type, and became the slowest thing in the module the first
+// time anything asked for sixty thousand — the only generator whose cost did not scale with
+// the number of questions but with the number of questions times the size of the lexicon.
+// The server will be generating sittings back to back.
+//
+// Both host words are printed and both are read, so they are held to the readable bar like an
+// odd-two line rather than the answer bar: `ideology / theology` share `eol` and share nothing
+// a nine-year-old has met.
+const SHARED_INDEX = new Map()
+
+function sharedLetterIndex(band) {
+  const key = String(band.filler)
+  if (SHARED_INDEX.has(key)) return SHARED_INDEX.get(key)
   const maskLen = 3
-  // Index every word by (prefix, suffix) around a hidden middle of maskLen letters, then any
-  // two words sharing a middle are a question.
+  const words = Object.keys(WORD_Z).filter(w => z(w) >= band.filler && w.length >= 5 && w.length <= 9)
+  // Index every word by (prefix, suffix) around a hidden middle of maskLen letters; any two
+  // words sharing a middle are a question.
   const byMiddle = new Map()
   for (const w of words) {
     for (let at = 1; at + maskLen < w.length; at++) {
@@ -737,6 +748,13 @@ function genSharedLetters(r, band, seed) {
   }
   const usable = [...byMiddle.entries()].filter(([, list]) =>
     new Set(list.map(([w]) => w)).size >= 2)
+  SHARED_INDEX.set(key, usable)
+  return usable
+}
+
+function genSharedLetters(r, band, seed) {
+  const maskLen = 3
+  const usable = sharedLetterIndex(band)
   if (!usable.length) return null
 
   const [truth, list] = pickOne(r, usable)
