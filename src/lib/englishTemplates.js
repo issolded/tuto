@@ -1312,16 +1312,34 @@ function genPrefixAntonym(r, band, seed) {
   }
 }
 
+let ROOTS = null
+
 function genRootWord(r, band, seed) {
   // "Underline the root word for each of these words." `displacement` is `place`, `unhappy` is
   // `happy`. Built from the affixed pairs the lexicon already holds, so the root is asserted
   // rather than guessed off the spelling.
-  const candidates = [
-    ...SUFFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option)
-      .map(([base, whole]) => [whole, base]),
-    ...PREFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option)
-      .map(([base, whole]) => [whole, base]),
-  ]
+  // The root has to be a ROOT — a word with nothing left to take off. Stripping one affix is
+  // not enough: `unopposed` minus `un` is `opposed`, which is `oppose` plus `ed`, and a blind
+  // test picked exactly that out as the one question with two defensible answers. The book's
+  // own examples strip all the way down: `displacement` is `place`, `quickly` is `quick`.
+  if (!ROOTS) {
+    // A root is a word with nothing left to take off, and being absent from the derived lists
+    // is not enough to prove that: `opposed` is `oppose` + `d` and no list here records the
+    // plain inflections, so `unopposed -> opposed` survived the first attempt. The test is
+    // direct — strip each ending in turn and see whether a word is left.
+    const INFLECTIONS = ['ed', 'd', 'ing', 'ly', 'ness', 'ment', 'ion', 'tion', 'ous', 'able',
+      'ible', 'ive', 'er', 'est', 'al', 'ity', 'ance', 'ence', 'ist', 'ful', 'less', 's']
+    const decomposable = (w) => INFLECTIONS.some((suf) => {
+      if (!w.endsWith(suf) || w.length - suf.length < 3) return false
+      const stem = w.slice(0, -suf.length)
+      return stem in WORD_Z || (stem + 'e') in WORD_Z || (stem + 'y') in WORD_Z
+    })
+    ROOTS = [
+      ...SUFFIXED.map(([base, whole]) => [whole, base]),
+      ...PREFIXED.map(([base, whole]) => [whole, base]),
+    ].filter(([, base]) => !decomposable(base))
+  }
+  const candidates = ROOTS.filter(([whole, base]) => z(base) >= band.answer && z(whole) >= band.option)
   if (!candidates.length) return null
   const [whole, answer] = pickOne(r, candidates)
   const avoid = new Set([whole, answer])

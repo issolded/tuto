@@ -264,6 +264,14 @@ def spelling_variant(a, b):
         for i, ch in enumerate(long):
             if ch == 'e' and long[:i] + long[i + 1:] == short:
                 return True
+        # The same thing with any vowel, on longer words only: `speciality/specialty`,
+        # `aluminium/aluminum`. Both appeared on one odd-synonym line, where a child is asked
+        # which word does not belong and two of the five are the same word. The length floor
+        # keeps `bare/bear` and `hare/hair` out of it, which are four letters and real pairs.
+        if len(short) >= 8:
+            for i, ch in enumerate(long):
+                if ch in 'aeiou' and long[:i] + long[i + 1:] == short:
+                    return True
     return False
 
 
@@ -285,6 +293,47 @@ def is_inflected(name):
         return True
     wn.ensure_loaded()
     return any(name in wn._exception_map.get(pos, {}) for pos in 'nvar')
+
+
+# The British counterpart of an American spelling, or None.
+#
+# Both books are British and all three bands are calibrated to them, so a module holding both
+# spellings will show a child `color` in one question and `colour` in the next — and in the
+# spelling types it will mark the spelling they were taught as the mistake. WordNet is
+# American, so every pair is in here: all fifteen that were checked by hand.
+#
+# Written as a GENERATOR of candidates rather than a comparison of pairs. Comparing every word
+# with every other word is 19,000 squared and does not finish; asking "what would the British
+# spelling of this word be, and is it in the lexicon" is one pass.
+#
+# Only the unambiguous patterns are here. `practice`/`practise` are both British and mean
+# different things, a noun and a verb; `program` and `programme` are both current; and Oxford
+# itself prefers `-ize`, so `realize` is not an Americanism. Those three stay as they are.
+_ONE_OFF = {
+    'gray': 'grey', 'plow': 'plough', 'aluminum': 'aluminium', 'jewelry': 'jewellery',
+    'mustache': 'moustache', 'pajamas': 'pyjamas', 'tire': 'tyre', 'curb': 'kerb',
+    'draft': 'draught', 'check': 'cheque', 'story': 'storey', 'ax': 'axe',
+}
+
+
+def british_candidates(word):
+    out = []
+    if word in _ONE_OFF:
+        out.append(_ONE_OFF[word])
+    for us, uk in (('or', 'our'), ('er', 're'), ('se', 'ce'), ('og', 'ogue'), ('e', 'ae')):
+        if word.endswith(us) and len(word) > len(us) + 2:
+            out.append(word[:-len(us)] + uk)
+    # The same `or` inside the word, before an ending: `favorite`, `favorable`, `colorful`,
+    # `honorable`, `neighborhood`. The suffix rule only sees it at the end.
+    for i in range(2, len(word) - 2):
+        if word[i:i + 2] == 'or':
+            out.append(word[:i] + 'our' + word[i + 2:])
+    # A single `l` where British doubles it before a vowel ending: traveled/travelled,
+    # canceled/cancelled, jeweler/jeweller, modeling/modelling.
+    for i in range(2, len(word) - 1):
+        if word[i] == 'l' and word[i + 1] in 'aeiou':
+            out.append(word[:i + 1] + 'l' + word[i + 1:])
+    return out
 
 
 def safe_synset(s):
@@ -715,6 +764,22 @@ def main():
     # each asserted by a lexicographer rather than guessed from spelling. The spelling change is
     # what makes the question — `beauty` + `ful` is `beautiful`, not `beautyful` — so a pair is
     # only kept when the derived word is NOT simply base + suffix.
+    # Verbs where the regular past is ALSO correct, so there is no single right answer.
+    #
+    # A frequency threshold cannot find these and two blind rounds proved it: `sneaked` scores
+    # 2.84 and `speeded` 2.37 — rarer than their irregular twins and perfectly standard
+    # English — while `learned` scores 4.85. Any bar that catches the first two throws away
+    # verbs nobody would argue about. The set is finite, so it is written down.
+    #
+    # Most are the British -t / -ed pairs (`learnt/learned`, `dreamt/dreamed`), a few are an
+    # Atlantic split (`dived/dove`, `sneaked/snuck`), and `hang` is on the list for a different
+    # reason: `hung` and `hanged` are both correct and mean different things.
+    BOTH_FORMS = {
+        'burn', 'dive', 'dream', 'dwell', 'fit', 'hang', 'kneel', 'knit', 'lean', 'leap',
+        'learn', 'light', 'plead', 'prove', 'shine', 'shred', 'smell', 'sneak', 'speed',
+        'spell', 'spill', 'spoil', 'strive', 'sweat', 'thrive', 'wake', 'weave', 'wet',
+    }
+
     SUFFIXES = ['ful', 'ous', 'ness', 'ment', 'able', 'ible', 'less', 'tion', 'sion',
                 'ity', 'ance', 'ence', 'ive', 'al', 'ist', 'er', 'or', 'ly', 'ish', 'y']
     PREFIXES = ['un', 'in', 'im', 'il', 'ir', 'dis', 'non', 'mis', 're', 'pre', 'over',
@@ -836,7 +901,7 @@ def main():
         # `spelled`/`spelt`). The first build offered `dive -> dove` with `dived` as a mistake.
         # If the -ed form is common in running text, the irregular one is not the only answer.
         regular = (base + 'd') if base.endswith('e') else (base + 'ed')
-        if zipf_frequency(regular, 'en') >= 3.4:
+        if zipf_frequency(regular, 'en') >= 3.4 or base in BOTH_FORMS:
             continue
         pasts.append([base, form])
 
@@ -868,6 +933,32 @@ def main():
         if best:
             definitions[name] = best
 
+    # ---- pass 12: one spelling per word ------------------------------------------------------
+    # Applied after every other pass so the relations built above still see both forms and
+    # nothing is orphaned; only the final word list loses the American spellings.
+    american = {w for w in words if any(c in words for c in british_candidates(w))}
+    for w in american:
+        words.pop(w, None)
+        lexname.pop(w, None)
+        syllables.pop(w, None)
+        rimes.pop(w, None)
+        definitions.pop(w, None)
+        examples.pop(w, None)
+    drop = lambda rows: [r for r in rows if not any(x in american for x in r if isinstance(x, str))]
+    synsets = [[pos, [n for n in ns if n not in american]] for pos, ns in synsets]
+    synsets = [row for row in synsets if len(row[1]) >= 2]
+    antonyms = {t for t in antonyms if t[0] not in american and t[1] not in american}
+    categories = [[k, lab, [m for m in mem if m not in american], root]
+                  for k, lab, mem, root in categories]
+    categories = [c for c in categories if len(c[2]) >= 5]
+    suffixed, prefixed, plurals, pasts = drop(suffixed), drop(prefixed), drop(plurals), drop(pasts)
+    homophones = [g for g in (sorted(set(g) - american) for g in homophones) if len(g) >= 2]
+    rhyme_groups = {k: [w for w in v if w not in american] for k, v in rhyme_groups.items()}
+    rhyme_groups = {k: v for k, v in rhyme_groups.items() if len(v) >= 3}
+    kinship = {k: [x for x in v if x not in american]
+               for k, v in kinship.items() if k not in american}
+    senses = {k: v for k, v in senses.items() if k not in american}
+
     meta = {
         'built': datetime.date.today().isoformat(),
         'wordnet': str(wn.get_version() or '3.0'),
@@ -890,6 +981,7 @@ def main():
             'plurals': len(plurals),
             'pasts': len(pasts),
             'definitions': len(definitions),
+            'american_dropped': len(american),
         },
     }
 
