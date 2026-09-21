@@ -23,7 +23,7 @@ const BRITISH_CURRICULUM = {
       { id: "y2_subtraction", name: "Subtraction within 100", description: "Subtract ones from a two-digit number, tens from a two-digit number, and two two-digit numbers. Recognise inverse relationship with addition.", operations: ["subtraction"] },
       { id: "y2_multiplication", name: "Multiplication: 2, 5 and 10 tables", description: "Recall and use multiplication facts for the 2, 5 and 10 tables. Calculate multiplication statements using × and = signs. Understand multiplication as repeated addition.", operations: ["multiplication"] },
       { id: "y2_division", name: "Division: 2, 5 and 10", description: "Recall and use division facts related to 2, 5 and 10 tables. Calculate division statements using ÷ and = signs. Solve division problems using arrays.", operations: ["division"] },
-      { id: "y2_fractions", name: "Fractions: ½ ¼ ¾", description: "Recognise, find, name and write fractions 1/3, 1/4, 2/4 and 3/4 of a length, shape, set of objects or quantity. Write simple fractions such as 1/2 of 6 = 3.", operations: ["fractions"] },
+      { id: "y2_fractions", name: "Fractions: ½ ⅓ ¼ ¾", description: "Recognise, find, name and write fractions 1/3, 1/4, 2/4 and 3/4 of a length, shape, set of objects or quantity. Write simple fractions such as 1/2 of 6 = 3.", operations: ["fractions"] },
       { id: "y2_money", name: "Money", description: "Recognise and use symbols for pounds and pence. Combine amounts to make a particular value. Solve simple problems involving addition and subtraction of money including giving change.", operations: ["measurement","addition","subtraction"] },
       { id: "y2_time", name: "Time", description: "Tell and write the time to five minutes including quarter past/to the hour. Draw clock hands. Know the number of minutes in an hour and hours in a day.", operations: ["measurement"] },
       { id: "y2_statistics", name: "Data and Charts", description: "Interpret and construct simple pictograms, tally charts, block diagrams and tables. Ask and answer questions about data.", operations: ["statistics"] }
@@ -361,6 +361,15 @@ FORMAT — the question is shown to the child as ONE run of plain text, so:
   and 5 cats" points at a blank space. Write "There are 8 dogs and 5 cats" instead. Same for
   angles and shapes: state every measurement the child needs, never "the angle marked x in the
   diagram".
+- SAYING IT WITHOUT A PICTURE MUST STILL BE TRUE. Having to describe a figure in words tempts a
+  false shorthand, and a hundred-question audit caught one: "A straight line has 2 angles. If 1
+  angle is 45 degrees, what is the other angle?" A straight line does not have two angles. What
+  is meant is two adjacent angles on it: "Two angles sit next to each other on a straight line.
+  One is 45 degrees. What is the other?" Check the same way for triangles, quadrilaterals and
+  anything at a point — name what the angles BELONG to.
+- THOUSANDS SEPARATORS in any number of five digits or more, in the local style: 4,200,000 and
+  6,270,000 in English, 4.200.000 in Turkish and Spanish. "6270000" is a wall of digits a child
+  has to count through before the question can even start.
 
 NUMBERS THE CHILD CAN HOLD IN THEIR HEAD — most children answer on screen, with nothing to
 write on, so a question that needs a column method gets abandoned rather than failed. A real

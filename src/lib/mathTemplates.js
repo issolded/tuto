@@ -93,6 +93,21 @@ const MAX_FOR_LEVEL = [20, 20, 20, 100, 100, 1000, 1000, 10000, 10000, 20000, 20
 // Which school year's footing a level sits on — 1..6. The dial is two rungs per year, so
 // this is what a template consults when its difficulty is about WHICH numbers are in play
 // (tables, denominators) rather than how big they get.
+// A number as a book would print it for this language: 4,200,000 in English, 4.200.000 in
+// Turkish and Spanish. Below five digits nothing changes, so "45 candies" and "308 + 260" read
+// as they did.
+//
+// A hundred-question audit asked for this — "6270000" is a wall of digits a child has to count
+// through before the question can start. The screen reads numbers back out of the question
+// text for its visual help, so it strips separators first; see `numbersIn` in MathScreen.
+const SEPARATOR = { en: ',', tr: '.', es: '.' }
+
+export function num(n, lang = 'en') {
+  const v = Number(n)
+  if (!Number.isFinite(v) || Math.abs(v) < 10000) return String(n)
+  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, SEPARATOR[lang] ?? ',')
+}
+
 function bandForLevel(level) {
   const l = Math.min(Math.max(Number(level) || 1, 1), 15)
   return Math.min(6, Math.ceil(l / 2) || 1)
@@ -185,6 +200,10 @@ const UNITS = [
 // Two pieces is the useful shape: name the split, then do the first piece and hand over the
 // second. One piece has no intermediate to show without giving the answer away, so it names
 // the place value instead, which is the method a child is actually taught for round numbers.
+// Numbers here go through `num` for the same reason the question text does: a question that
+// reads "30,956 + 18,000" and a hint that reads "Break 18000 up" are the same number written
+// two ways on one screen. Below five digits `num` changes nothing, so every other age is
+// untouched.
 function partitionSteps(a, b, add, lang) {
   const parts = placeParts(b)
   const sign = add ? '+' : '-'
@@ -195,9 +214,9 @@ function partitionSteps(a, b, add, lang) {
     return [
       say(lang, `Only the ones change here.`, `Burada sadece birler basamağı değişiyor.`,
                 `Aquí solo cambian las unidades.`),
-      say(lang, `Count ${add ? 'on' : 'back'} ${b} from ${a}.`,
-                `${a} sayısından ${b} tane ${add ? 'ileri' : 'geri'} say.`,
-                `Cuenta ${b} hacia ${add ? 'adelante' : 'atrás'} desde ${a}.`),
+      say(lang, `Count ${add ? 'on' : 'back'} ${num(b, lang)} from ${num(a, lang)}.`,
+                `${num(a, lang)} sayısından ${num(b, lang)} tane ${add ? 'ileri' : 'geri'} say.`,
+                `Cuenta ${num(b, lang)} hacia ${add ? 'adelante' : 'atrás'} desde ${num(a, lang)}.`),
     ]
   }
 
@@ -206,24 +225,24 @@ function partitionSteps(a, b, add, lang) {
     const k = b / u.at
     const word = say(lang, `${k} ${u.en}`, `${k} ${u.tr}`, `${k} ${k === 1 ? u.es : u.esP}`)
     return [
-      say(lang, `${b} is a round number — ${word}.`, `${b} yuvarlak bir sayı — ${word}.`,
-                `${b} es un número redondo: ${word}.`),
-      say(lang, `So only that place value changes. ${add ? 'Add' : 'Take away'} ${word} ${add ? 'to' : 'from'} ${a}.`,
-                `Yani sadece o basamak değişiyor. ${a} ${add ? 'sayısına' : 'sayısından'} ${word} ${add ? 'ekle' : 'çıkar'}.`,
-                `Así que solo cambia esa cifra. ${add ? `Suma ${word} a ${a}` : `Resta ${word} de ${a}`}.`),
+      say(lang, `${num(b, lang)} is a round number — ${word}.`, `${num(b, lang)} yuvarlak bir sayı — ${word}.`,
+                `${num(b, lang)} es un número redondo: ${word}.`),
+      say(lang, `So only that place value changes. ${add ? 'Add' : 'Take away'} ${word} ${add ? 'to' : 'from'} ${num(a, lang)}.`,
+                `Yani sadece o basamak değişiyor. ${num(a, lang)} ${add ? 'sayısına' : 'sayısından'} ${word} ${add ? 'ekle' : 'çıkar'}.`,
+                `Así que solo cambia esa cifra. ${add ? `Suma ${word} a ${num(a, lang)}` : `Resta ${word} de ${num(a, lang)}`}.`),
     ]
   }
 
   const first = parts[0]
-  const rest = parts.slice(1).join(` ${sign} `)
+  const rest = parts.slice(1).map(x => num(x, lang)).join(` ${sign} `)
   const afterFirst = add ? a + first : a - first
   return [
-    say(lang, `You do not need to write this down. Break ${b} up: ${parts.join(' + ')}.`,
-              `Bunu yazmana gerek yok. ${b} sayısını parçala: ${parts.join(' + ')}.`,
-              `No hace falta que lo escribas. Separa ${b} así: ${parts.join(' + ')}.`),
-    say(lang, `${a} ${sign} ${first} = ${afterFirst}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
-              `${a} ${sign} ${first} = ${afterFirst}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`,
-              `${a} ${sign} ${first} = ${afterFirst}. Ahora ${add ? 'suma' : 'resta'} ${rest}.`),
+    say(lang, `You do not need to write this down. Break ${num(b, lang)} up: ${parts.map(x => num(x, lang)).join(' + ')}.`,
+              `Bunu yazmana gerek yok. ${num(b, lang)} sayısını parçala: ${parts.map(x => num(x, lang)).join(' + ')}.`,
+              `No hace falta que lo escribas. Separa ${num(b, lang)} así: ${parts.map(x => num(x, lang)).join(' + ')}.`),
+    say(lang, `${num(a, lang)} ${sign} ${first} = ${afterFirst}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
+              `${num(a, lang)} ${sign} ${first} = ${afterFirst}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`,
+              `${num(a, lang)} ${sign} ${first} = ${afterFirst}. Ahora ${add ? 'suma' : 'resta'} ${rest}.`),
   ]
 }
 
@@ -245,7 +264,7 @@ function additionTemplate(level, lang, columnar = false) {
   return {
     topic: 'addition',
     level,
-    question_text: `${a} + ${b} = ?`,
+    question_text: `${num(a, lang)} + ${num(b, lang)} = ?`,
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
@@ -313,7 +332,7 @@ function subtractionTemplate(level, lang, columnar = false) {
   return {
     topic: 'subtraction',
     level,
-    question_text: `${a} - ${b} = ?`,
+    question_text: `${num(a, lang)} - ${num(b, lang)} = ?`,
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
@@ -664,7 +683,16 @@ function fractionOfNumber(level, lang) {
   // both got "1/3 of 6". It follows the year now: bigger denominators and bigger wholes.
   const { max } = rangeForLevel(level)
   const band = bandForLevel(level)
-  const denominators = band >= 5 ? [2, 3, 4, 5, 6, 8, 10, 12] : band >= 3 ? [2, 3, 4, 5, 6, 8] : [2, 3, 4]
+  // Year 1 gets halves and quarters and nothing else. Its topic is called "Half and Quarter"
+  // and its curriculum line is "a half as 1 of 2 equal parts... a quarter as 1 of 4 equal
+  // parts" — thirds are not in it. A 100-question audit found "What is 1/3 of 18?" filed
+  // under that topic for a six-year-old. The topic label is not decoration: the parent report
+  // and the progress record both read it, so a question outside it misstates which skill the
+  // child has shown. Thirds enter at Year 2, whose line names 1/3 outright.
+  const denominators = band >= 5 ? [2, 3, 4, 5, 6, 8, 10, 12]
+    : band >= 3 ? [2, 3, 4, 5, 6, 8]
+      : band >= 2 ? [2, 3, 4]
+        : [2, 4]
   const d = pick(denominators)
   const multiplier = randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 6)
   // The whole N has to fit the year: 1/4 of 24 is outside a Year 1 that works within 20.
@@ -724,8 +752,14 @@ function divisionWordTemplate(level, lang) {
   return {
     topic: 'division-word',
     level,
+    // One sentence with a subject in it. The English used to read "Mia has 45 candies. Shared
+    // equally among 5 teammates. How many each?" — a sentence, then a participle phrase with
+    // nobody doing the sharing, then a question with no noun. A hundred-question audit picked
+    // it out, and it is the kind of thing a template repeats at every age until someone does.
+    // The longest roll of the new wording is 77 characters against a seven-year-old's 90.
+    // Turkish and Spanish were already whole sentences and are left alone.
     question_text: say(lang,
-      `${name} has ${a} ${items}. Shared equally among ${b} ${who}. How many each?`,
+      `${name} shares ${a} ${items} equally among ${b} ${who}. How many does each get?`,
       `${name} ${a} ${items} aldı. ${b} ${who} arasında eşit paylaştırdı. Her birine kaç düşer?`,
       `${name} reparte ${a} ${items} entre ${b} ${who}. ¿Cuántas le tocan a cada uno?`),
     format: 'numeric',

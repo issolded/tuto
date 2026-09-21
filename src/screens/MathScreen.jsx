@@ -145,8 +145,23 @@ function refersToMissingVisual(q) {
 // walking the child off the last 10 with +3 toward 13, when the answer is 9. It was not
 // even completable: the −1 arrows expect a negative number and the keypad has no minus.
 // Such patterns fall through to step hints, which describe the real rule.
+// The numbers in a question, with thousands separators taken off first.
+//
+// Every read of a question's numbers goes through here. A plain /\d+/g on "4,200,000 + 1,000"
+// returns 4, 200, 000, 1, 000 — five numbers where there are two, and the first of them is 4.
+// That mattered as soon as questions started writing large numbers the way a book does.
+//
+// A separator is only stripped when exactly three digits follow it and nothing after those, so
+// the decimals survive: "8.4 - 3.2" and "0.75" are left alone, and Turkish "1.500" correctly
+// becomes 1500. Both styles are handled together rather than by language, because a question's
+// language is not always at hand where its numbers are read.
+function numbersIn(text) {
+  const bare = String(text ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1')
+  return (bare.match(/\d+/g) || []).map(Number)
+}
+
 function constantPatternStep(question) {
-  const nums = (question.match(/\d+/g) || []).map(Number)
+  const nums = numbersIn(question)
   if (nums.length < 3) return null // need two diffs before "constant" means anything
   const step = nums[1] - nums[0]
   if (step === 0) return null
@@ -195,7 +210,7 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
     // dial now reaches four digits, and sixty-two circles on screen is not help — past what a
     // child would count, the template's written steps carry it instead.
     if (templateTopic === 'addition' || templateTopic === 'subtraction') {
-      const nums = (question.match(/\d+/g) || []).map(Number)
+      const nums = numbersIn(question)
       return isCountable(nums[0], nums[1]) || (hintSteps?.length ?? 0) > 0
     }
     return !!visual || (hintSteps?.length ?? 0) > 0
@@ -213,7 +228,7 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   // their numbers may need transforming first — and "Sides of a pentagon + Corners of a
   // triangle = ?" has a "+" with no digits at all, which used to open an empty panel.
   return questionType === 'symbolic'
-    && (question.match(/\d+/g) || []).length >= 2
+    && numbersIn(question).length >= 2
     && (question.includes('+') || question.includes('-'))
 }
 
@@ -709,7 +724,7 @@ const HELP_WORDS = {
 export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
   const t = HELP_WORDS[language] ?? HELP_WORDS.en
 
-  const nums    = question.match(/\d+/g)?.map(Number) || []
+  const nums    = numbersIn(question)
   const n0 = nums[0] ?? 0
   const n1 = nums[1] ?? 0
 
