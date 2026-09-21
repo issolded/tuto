@@ -353,7 +353,23 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       sonra değil** — sadece AA/AO/ER/AH. (İlk hâli `shed`'e `shared`'ı eş sesli dedi; EH+R
       İngilizcede EH değil, `air`'in diftongu.) Ayrıca WordNet türetme ilişkileri (ek/kök),
       zıt anlam ∩ olumsuz ön ek (`possible→impossible`), düzensiz çoğul ve geçmiş zaman listeleri.
-      **Kör test iki tur, 156 soru, 153 doğru.** Üç kaçırma da motorun hatasıydı:
+      **Hangi İngilizce ayarı (2026-09-21).** Yazım **ve ses** lehçeye göre değişiyor; ses
+      tarafı cevabı değiştirdiği için asıl mesele o. `calm/arm` sadece İngilizcede kafiyeli,
+      `bath/math` sadece Amerikancada; `flaw/floor` İngilizcede eş sesli, `oar/ore` ve
+      `fairy/ferry` Amerikancada. Ölçüm: 880 kelimenin (%5) kafiyesi farklı, İngilizcede olup
+      Amerikancada olmayan 49 eş sesli grubu, tersi 9. Yanlış varyantta üretilen soru "yanlış"
+      görünmez, **doğru cevabı sayfada olmayan soru** gibi görünür.
+      `generateItem(..., { variety: 'uk'|'us' })`, varsayılan `uk` (kitaplar ve 11+ İngiliz,
+      bütün eşikler onlara karşı ölçüldü). Bir soru tek varyantta üretilir, doğrulayıcı
+      karışmayı reddeder; denetçi 3 bant × 2 varyant = 6 kombinasyonu tarar. Lab'da düğme var.
+      **Ürün kararı bekliyor:** ayar nerede yaşayacak (`children.language`'a BAĞLAMADAN — üçüncü
+      eksen), kim seçecek, varsayılan kalsın mı. Uyarı: varyant yazımı ve sesi değiştirir,
+      **müfredatı değiştirmez** — Amerikan yazımıyla İngiliz müfredatı sunuyoruz.
+      **CMUdict atıldı**, yerine iki IPA sözlüğü (open-dict-data, MIT, kapsama %95). Sebep
+      özellik değil hata: CMU Amerikan ve Amerikanca `hot` ile `calm`'ın seslisini birleştirmiş,
+      İngiliz için R düşürünce `heart` ile `hot` aynı oluyordu — sözlük `heart/hot`, `carp/cop`,
+      `darn/don` çiftlerini eş sesli sunuyordu (hiçbir lehçede değiller).
+      **Kör test beş tur, 312 soru, 305 doğru.** Üç kaçırma da motorun hatasıydı:
       `shed≈shared` (R kuralı), `form≈spring` (baskınlık kapısındaki kaçak — ana sözcük türü
       iki koldan yalnız birinde şart koşuluyordu), `unopposed→opposed` (kök bütün ekleri soymalı).
       **Diğer bulgular:** `ring→rung` (geçmiş zaman değil sıfat-fiil); `dive→dove` yanında
@@ -429,6 +445,22 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       "patates" argosu) — NLTK'nin isim listesi + SemCor sayacıyla eleniyor.
       `npm run english:check` sekiz tipi 300'er soruyla tarıyor: tek doğru cevap, bant altı
       kelime yok, blocklist ihlali yok, 200 oturumda tekrar yok, cevap konumu a-e %19-21.
+      **Çoğullar kural, liste değil (2026-09-21).** İlk hâli WordNet'in düzensizler listesiydi;
+      kitapların sorduğu 27 çoğulun 19'u üretilemiyordu (`baby`, `church`, `valley`, `roof`,
+      `fly`, `lady`, `donkey`) — çünkü onlar düzensiz değil, **kuralın öğretildiği** kelimeler.
+      Kitap kuralı komşusuyla çiftleyerek öğretiyor: `baby→babies` yanında `valley→valleys`
+      (ünsüz+y ile ünlü+y), `thief→thieves` yanında `roof→roofs`, `potato→potatoes` yanında
+      `piano→pianos`. Artık her kayıt kuralını taşıyor, yanlış şıklar **öteki kuralın o kelimeye
+      uygulanmışı**. 66 → 825 çoğul. Latin çoğulları 11-12'ye kilitli (kitap da orada soruyor).
+      **Tanım taraması iki işi birden yapıyordu (2026-09-21).** `valley` sözlükte yoktu: tanımı
+      "a long **depression** in the surface of the land", `depression` engelli. Tarama hem
+      anlamın GÖSTERİLMESİNİ hem kelimenin VAR OLMASINI engelliyordu; ikincisi kasıtlı değildi
+      ve yazılı değildi, yani sildiği kelimelerin yazarı yoktu. 142 sık kelime: `valley`,
+      `clan`, `akin` ("related by blood"), `cattle` ("regardless of sex"), `chew`, `certainly`,
+      `knife`. Ayrıldı: varlığa lemma listesi karar veriyor, tarama yalnız basılan metne.
+      Sonra geri gelen 785 kelime **elle okundu** ve `imprisonment`, `handgun`, `leukemia`,
+      `sexism`, `holocaust`, `screwing` gibi ~300 madde listeye yazıldı; `hospital`, `tennis`,
+      `victory`, `tornado`, `fisherman` bilerek bırakıldı.
       **Açık işler:** (1) kategori havuzu ince — 26 kullanışlı grup, `odd-two` en dar tip;
       (2) `sense` havuzu 137 kelimeye indi (güvenlik+okunabilirlik kapıları cümleleri budadı) —
       verim %85 ama çeşitlilik sınırlı; (3) kitabın cloze
