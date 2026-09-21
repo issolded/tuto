@@ -1145,3 +1145,78 @@ john
 
 # Anatomical, and reached an 8-9 options line as a filler.
 cleavage
+
+# --- found by scanning definitions for a sexual signal ------------------------------------
+# A blind round put `seductive` on an eleven-year-old's syllable line. It is not profane, so
+# none of the published lists holds it, and it is common, so no frequency bar sees it. What
+# finds this class is its DEFINITION: scanning the first two senses of every word in the
+# lexicon for `sexual`, `seduce`, `lust`, `erotic`, `amorous`, `carnal`, `genital` and the
+# rest returns 109 candidates.
+#
+# The scan is a finder, not a decider, and two things had to be read off it by hand.
+#
+# It has a false-positive family: `lust\w*` also matches `lustrous`, so it flagged `pearl`,
+# `zinc`, `titanium`, `mink`, `dull` and `dim`.
+#
+# And most of what it correctly flags is a word that is perfectly ordinary and happens to
+# carry one rude sense: `come`, `straight`, `gay`, `beauty`, `peach`, `fairy`, `hug`,
+# `relation`, `temptation`, `wander`, `vent`. Those stay. Their rude sense cannot be shown,
+# because the strict definition scan already refuses to print it, and the word itself is one
+# a child needs. What follows is the other kind — where the word IS the problem.
+alluring
+amour
+arousal
+chastity
+consummate
+courtesan
+degenerate
+deviant
+deviate
+erotica
+flirt
+flirting
+frigid
+harlot
+hunk
+indecent
+intimacy
+juicy
+liaison
+luscious
+lustful
+madam
+mating
+mistress
+naughty
+pornographic
+procure
+provocative
+racy
+seductive
+seductress
+siren
+slit
+solicit
+steamy
+stud
+sultry
+tease
+titillate
+unfaithful
+voluptuous
+woo
+
+# --- place and brand names that entered as common nouns -----------------------------------
+# `manhattan` is a cocktail in WordNet and a borough to everyone else; it reached an
+# eleven-year-old's syllable line. `cheddar`, `denim`, `tweed`, `cashmere`, `tuxedo`,
+# `bikini`, `marathon`, `turkey`, `china` and `jersey` are not here: they started as place
+# names and stopped being them.
+manhattan
+burgundy
+madras
+cologne
+afghan
+bohemian
+mocha
+bordeaux
+champagne
