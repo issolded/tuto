@@ -237,6 +237,8 @@ export const BANDS = {
     types: ['synonym', 'antonym', 'sense', 'odd-synonym', 'definition', 'rhyme', 'homophone',
       'syllables', 'plural', 'past-tense', 'suffix', 'prefix-antonym', 'root-word',
       'missing-vowel'],
+    // `campus`, `radius`, `criterion` — the book asks these here and nowhere earlier.
+    latinPlurals: true,
     options: 5,
     answer: 30,
     option: 24,
@@ -1255,14 +1257,23 @@ function genPlural(r, band, seed) {
   // "Write each of these words in its plural form." Only the words a rule gets wrong are worth
   // asking about, so the lexicon holds no `cat -> cats`; and the naive rule is the distractor
   // that matters, because `childs` is the answer a child actually writes.
-  const pairs = PLURALS.filter(([a, b]) => z(a) >= band.answer && !BANNED.has(b))
+  // Latin and Greek plurals are held back to the band whose book asks them: the 9-10 paper
+  // asks `thief` and `baby`, and `campus`, `radius` and `criterion` do not appear until 11-12.
+  const pairs = PLURALS.filter(([a, b, rule]) => z(a) >= band.answer && !BANNED.has(b)
+    && (rule !== 'latin' || band.latinPlurals))
   if (!pairs.length) return null
-  const [single, answer] = pickOne(r, pairs)
+  const [single, answer, rule] = pickOne(r, pairs)
   const naive = REGULAR_PLURAL(single)
   const avoid = new Set([answer, naive])
-  const distractors = [{ text: naive, why: 'the-rule-applied-blindly' }]
+  // The wrong answers are the OTHER rules applied to this word, which is the mistake the
+  // question is about: `valleys` written `vallies`, `roofs` written `rooves`, `pianos`
+  // written `pianoes`. When the naive rule happens to be the right answer — the whole point
+  // of the `s-after-*` entries — it is not offered twice.
+  const distractors = naive === answer ? [] : [{ text: naive, why: 'the-rule-applied-blindly' }]
   const shapes = [single + 's', single + 'es', single + 'en',
-    single.slice(0, -1) + 'ies', single.slice(0, -1) + 'ves', single.slice(0, -2) + 'i']
+    single.slice(0, -1) + 'ies', single.slice(0, -1) + 'ves', single.slice(0, -2) + 'i',
+    single.endsWith('f') ? single.slice(0, -1) + 'ves' : single + 'ves',
+    single.endsWith('fe') ? single.slice(0, -2) + 'ves' : single + 'oes']
   for (const w of shuffle(r, shapes)) {
     if (distractors.length >= band.options - 1) break
     // Cutting a word down produces words: `genius` minus two letters is `geni`, `white` minus
@@ -1279,7 +1290,7 @@ function genPlural(r, band, seed) {
     prompt: { word: single },
     ...layOut(r, band, [answer], distractors),
     pick: 1,
-    rule: { kind: 'plural', of: single },
+    rule: { kind: 'plural', of: single, rule },
   }
 }
 

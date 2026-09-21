@@ -131,6 +131,10 @@ vulva
 whorehouse
 
 # --- violence, weapons, war ---
+# `knife` is NOT here, and was. It is cutlery before it is a weapon, it is in every kitchen a
+# child has ever been in, and it is the canonical example of the plural rule the 9-10 book
+# teaches — `knife`, `wife`, `life`, `leaf`, `half` all take -ves. Blocking it cost the best
+# example of a rule for the sake of a sense nobody was going to ask about.
 ammunition
 artillery
 assassin
@@ -160,7 +164,6 @@ gunfire
 gunman
 gunshot
 hostage
-knife
 lynch
 machete
 manslaughter
@@ -754,3 +757,48 @@ gypsy
 gipsy
 mongol
 mongoloid
+
+# --- words the definition scan was removing by accident ---------------------------------
+# The scan over WordNet's definitions used to decide two things at once: whether a sense could
+# be SHOWN, and whether the word existed at all. The second was never intended and was never
+# written down, so the list of words it removed had no author. Splitting the two put 142
+# common words back — `valley`, `clan`, `cattle`, `chew`, `certainly` — and with them these,
+# which were being kept out for the right reason by the wrong mechanism. Now they are on a
+# list, where a decision belongs.
+acne
+apartheid
+apocalypse
+bisexual
+bra
+brassiere
+diabetes
+diabetic
+epidemic
+inflammation
+obesity
+obese
+segregation
+slavery
+tumour
+
+# --- found by a blind round, after the lemma list became the authority -------------------
+# `holocaust` was the stem of a rhyme question. It reached the lexicon when the definition
+# scan stopped deciding which words exist — which was the right change and left this list
+# carrying weight it had not been checked for. A ten-year-old's spelling quiz does not rhyme
+# with the name of a genocide.
+holocaust
+ghetto
+internment
+exile
+deportation
+persecuted
+oppressed
+colonial
+colonialism
+imperial
+imperialism
+dictator
+dictatorship
+tyranny
+tyrant
+propaganda

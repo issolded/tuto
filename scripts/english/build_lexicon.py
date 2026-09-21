@@ -47,6 +47,7 @@ OUT = ROOT / 'src' / 'lib' / 'englishLexicon.generated.js'
 BLOCK = Path(__file__).with_name('blocklist.txt')
 TOPICS = Path(__file__).with_name('sentence-topics.txt')
 CAT_SKIP = Path(__file__).with_name('category-skip.txt')
+MENTIONABLE_FILE = Path(__file__).with_name('mentionable.txt')
 VENDOR = Path(__file__).parent / 'vendor'
 
 # Floor for anything that may appear on screen at all. Bands sit ABOVE this; it exists so the
@@ -107,6 +108,9 @@ DALE_CHALL = {w.lower() for w in json.loads((VENDOR / 'dale-chall.json').read_te
 # `market` means — and they are kept out of EXAMPLE SENTENCES, where they stop being vocabulary
 # and start being the news. See sentence-topics.txt for why this is a second list.
 SENTENCE_TOPICS = load_words(TOPICS)
+# Allowed inside a definition, never as an answer. See mentionable.txt for why the two are
+# different questions.
+MENTIONABLE = load_words(MENTIONABLE_FILE)
 # Reviewed by eye rather than derived: see category-skip.txt for why each entry is there.
 _CAT_SKIP = load_words(CAT_SKIP)
 SKIP_GROUPS = {w.split(':', 1)[1].strip() for w in _CAT_SKIP if w.startswith('group:')}
@@ -308,6 +312,13 @@ def is_inflected(name):
 # Only the unambiguous patterns are here. `practice`/`practise` are both British and mean
 # different things, a noun and a verb; `program` and `programme` are both current; and Oxford
 # itself prefers `-ize`, so `realize` is not an Americanism. Those three stay as they are.
+# Words the patterns would pair up that are not the same word. Seventeen -er/-re pairs come
+# out of the rule and sixteen are real (`centre`, `metre`, `theatre`); `timber` is a plank and
+# `timbre` is the colour of a sound, and the audit caught it by noticing that a Zipf 2.6 word
+# had reached an options line in the youngest band.
+_NOT_A_VARIANT = {'timber', 'pier', 'eager', 'mater', 'cater', 'later', 'water', 'gender',
+                  'tender', 'render', 'wonder', 'order', 'under', 'over', 'power', 'flower'}
+
 _ONE_OFF = {
     'gray': 'grey', 'plow': 'plough', 'aluminum': 'aluminium', 'jewelry': 'jewellery',
     'mustache': 'moustache', 'pajamas': 'pyjamas', 'tire': 'tyre', 'curb': 'kerb',
@@ -320,7 +331,7 @@ def british_candidates(word):
     if word in _ONE_OFF:
         out.append(_ONE_OFF[word])
     for us, uk in (('or', 'our'), ('er', 're'), ('og', 'ogue'), ('e', 'ae')):
-        if word.endswith(us) and len(word) > len(us) + 2:
+        if word.endswith(us) and len(word) > len(us) + 2 and word not in _NOT_A_VARIANT:
             out.append(word[:-len(us)] + uk)
     # -se/-ce is NOT a pattern. It holds for `defense/defence` and breaks for `advise/advice`,
     # `practise/practice`, `devise/device` and `licence/license`, which are pairs of different
@@ -340,11 +351,29 @@ def british_candidates(word):
     return out
 
 
-def safe_synset(s):
-    """A sense is safe when neither its definition nor any example sentence trips the list."""
-    if unsafe(s.definition()):
-        return False
-    return not any(unsafe(e) for e in s.examples())
+def safe_synset(s, strict=True):
+    """Is this sense safe?
+
+    `strict` decides which of the two questions is being asked. Strict is "may a child READ
+    this definition or example", and uses the whole blocklist. Non-strict is "may the word
+    this defines EXIST", and forgives the mentionable words — the ones it is fine to meet
+    inside a lexicographer's phrasing and not fine to be offered as an answer.
+    """
+    text = ' '.join([s.definition()] + list(s.examples()))
+    if strict:
+        return not unsafe(text)
+    # Non-strict asks only whether the word's meaning is itself unspeakable, which is what the
+    # published profanity lists are for. It used to ask the whole blocklist, and that made the
+    # definition scan the accidental authority on which words exist at all — `valley` was
+    # absent because its definition says `depression`, and `bra` and `apartheid` were absent
+    # for reasons nobody had written down. A word's existence is the lemma blocklist's
+    # decision; this is only about meaning nobody can print.
+    # Minus the clinical words. `sex` appears in biological definitions constantly — `cattle`
+    # is "domesticated bovine animals as a group regardless of sex" — and its presence there
+    # says nothing about the word being defined. A word that really is one of these is caught
+    # by its own lemma.
+    return not _hits(text, PUBLISHED - {'sex', 'sexual', 'sexually', 'breast', 'naked',
+                                        'nude', 'virgin', 'strip', 'erotic', 'intercourse'})
 
 
 def main():
@@ -377,6 +406,7 @@ def main():
     dominant = defaultdict(set)
     words = {}
     lexname = {}
+    WORD_LEX_TMP = lexname
     pos_weight = defaultdict(lambda: defaultdict(int))
     for syn in wn.all_synsets():
         for lem in syn.lemmas():
@@ -395,7 +425,7 @@ def main():
         return max(weights, key=lambda p: weights[p])
 
     for syn in wn.all_synsets():
-        if not safe_synset(syn) or syn.instance_hypernyms():
+        if not safe_synset(syn, strict=False) or syn.instance_hypernyms():
             continue
         for lem in syn.lemmas():
             if not usable_lemma(lem.name()):
@@ -785,7 +815,7 @@ def main():
     BOTH_FORMS = {
         'burn', 'dive', 'dream', 'dwell', 'fit', 'hang', 'kneel', 'knit', 'lean', 'leap',
         'learn', 'light', 'plead', 'prove', 'shine', 'shred', 'smell', 'sneak', 'speed',
-        'spell', 'spill', 'spoil', 'strive', 'sweat', 'thrive', 'wake', 'weave', 'wet',
+        'spell', 'spill', 'spoil', 'stave', 'strive', 'sweat', 'thrive', 'wake', 'weave', 'wet',
     }
 
     SUFFIXES = ['ful', 'ous', 'ness', 'ment', 'able', 'ible', 'less', 'tion', 'sion',
@@ -847,25 +877,133 @@ def main():
     # asking about. `cats` teaches nothing; `wolf -> wolves`, `mouse -> mice`, `potato ->
     # potatoes` and `run -> ran` do.
     wn.ensure_loaded()
+
+    # Plurals, and the point is the RULE rather than the word.
+    #
+    # The first version took only WordNet's irregular list, which meant 19 of the 27 plurals
+    # the two books actually ask were unaskable — `baby`, `church`, `valley`, `roof`, `fly`,
+    # `lady`, `donkey`. Those are not irregular; they are where the rules live, and the books
+    # teach them by pairing a rule against its neighbour: `baby -> babies` beside
+    # `valley -> valleys` (consonant + y against vowel + y), `thief -> thieves` beside
+    # `roof -> roofs`. A list of exceptions cannot pose either pair.
+    #
+    # So each entry carries which rule it follows, and the generator builds its wrong answers
+    # by applying the OTHER rules — which is exactly the mistake the question is about.
+    #
+    # Latin and Greek plurals are marked separately and held back to the oldest band, because
+    # that is where the books put them: the 9-10 paper asks `thief` and `church`, and
+    # `campus`, `radius` and `criterion` do not appear until 11-12.
+    LATIN_TAIL = ('um', 'us', 'a', 'ex', 'ix', 'is', 'on')
+    # A plain terminal `s` is left out on purpose: almost every word that ends in one is
+    # already a plural, and the ones that are not end in `ss`, `us` or `is` (`class`, `bus`,
+    # `iris`). Including it pluralised `affairs`, `alms`, `annals` and `arrears`.
+    SIBILANT = ('ss', 'us', 'is', 'x', 'z', 'ch', 'sh')
+
     plurals = []
+    seen_singular = set()
     for plural, singulars in sorted(wn._exception_map['n'].items()):
         if not (plural.isalpha() and singulars):
             continue
         sing = singulars[0].lower()
         if not (common(sing) and 3 <= len(plural) <= 12 and plural not in BLOCKED):
             continue
-        # The PLURAL is the answer, so it is held to the same bar as the singular. Without
-        # this the list offered `camera -> camerae`, `beef -> beeves` and `bravo -> bravoes`,
-        # all real and none of them a question for a nine-year-old. `apparatus -> apparatus`
-        # went too: a plural that is the same word teaches the rule by not using it.
         if plural == sing or plural == sing + 's' or zipf_frequency(plural, 'en') < 3.0:
             continue
-        # WordNet's noun exceptions carry a few verb forms (`crying` listed against `cry`).
-        # A plural that ends in -ing is not one.
         if plural.endswith('ing'):
             continue
-        plurals.append([sing, plural])
+        # A Latin or Greek plural is only a question when English has not adopted an -s form
+        # beside it. `formulas`, `indexes` and `antennas` are ordinary written English, so
+        # `formula -> formulae` has two right answers; `thesises` and `crisises` are not words
+        # at all, so `thesis -> theses` has one.
+        # The irregular plural has to be THE plural, not merely A plural. `duo -> dui` shipped
+        # with `duos` offered as the mistake, and `duos` is what everybody writes; the Latin
+        # tails do not catch it because `duo` has none.
+        #
+        # Comparing the two frequencies rather than putting a floor under the regular one is
+        # what makes this safe. A plain floor would take `child -> children` with it: `childs`
+        # scores 3.17, all of it possessive apostrophes lost in tokenising. `children` beats it
+        # by two and a half, while `dui` loses to `duos` outright.
+        regular = sing + ('es' if sing.endswith(('s', 'x', 'z', 'ch', 'sh')) else 's')
+        if zipf_frequency(plural, 'en') <= zipf_frequency(regular, 'en') + 0.5:
+            continue
+        # Frequency alone cannot finish the job, because the "plural" is sometimes a common
+        # word of its own. `dui` scores 3.35 on the drink-driving acronym and beats `duos`;
+        # `dive` scores 4.12 as the verb and beats `divas`. Two more tests, one for each shape:
+        #
+        #   the plural is its own lemma       `dive` is in WordNet as a verb, `children` is
+        #                                     not in it at all — morphy only maps it to `child`
+        #   the regular is current and the    `duos` is written and `dui` is not dominant;
+        #   irregular is not dominant         `childs` is written too, all of it possessives
+        #                                     lost in tokenising, but `children` is enormous
+        #   the plural's FIRST sense is not     `dive` is in WordNet as the plural of `diva`
+        #   the singular's                      and its first sense is a headlong plunge;
+        #                                       `teeth` is a lemma too and its first sense is
+        #                                       `tooth`, which is why asking merely whether it
+        #                                       is a lemma threw `tooth -> teeth` away
+        #   the regular is current and the      `duos` is written and `dui` is not dominant.
+        #   irregular is not dominant           The bar sits at 2.5 rather than 2.0 because
+        #                                       `knifes` scores 2.17 on the verb and was
+        #                                       costing us `knife -> knives`
+        # Within the plural form's first two senses, not merely its first. `teeth` is a lemma
+        # in its own right — its first sense is `dentition`, the arrangement of them — and
+        # demanding the very first threw `tooth -> teeth` and `fungus -> fungi` away. The
+        # singular ranks first or second in both. In `dive` it ranks fourth, behind a dive bar
+        # and two kinds of plunge, which is the difference the test is for.
+        plural_senses = wn.synsets(plural)
+        singular_senses = set(wn.synsets(sing))
+        if plural_senses and not any(x in singular_senses for x in plural_senses[:2]):
+            continue
+        if zipf_frequency(regular, 'en') >= 2.5 and zipf_frequency(plural, 'en') < 4.0:
+            continue
+        latin = sing.endswith(LATIN_TAIL)
+        plurals.append([sing, plural, 'latin' if latin else 'irregular'])
+        seen_singular.add(sing)
 
+    # The rules, generated rather than looked up — they have no exceptions in either direction.
+    for w in sorted(words):
+        if w in seen_singular or not (3 <= len(w) <= 11) or w in BLOCKED:
+            continue
+        if not (WORD_LEX_TMP.get(w) or '').startswith('noun.'):
+            continue
+        # The word has to be a SINGULAR. Without this the -es rule fires on every word ending
+        # in `s`, which is every plural already in the lexicon: `rails -> railses`,
+        # `roots -> rootses`, `scores -> scoreses`. Two tests, because two kinds slip through.
+        # morphy catches the ordinary plurals; the plural-only nouns it does not — `genetics`,
+        # `semantics`, `premises`, `manners` are all their own singular as far as it knows, and
+        # all of them are `genetic`, `semantic`, `premise`, `manner` plus an s.
+        if is_inflected(w):
+            continue
+        if w.endswith('s') and (w[:-1] in words or w[:-2] in words):
+            continue
+        # Every generated plural has to be a form people actually write. The rules apply
+        # cleanly to mass nouns and produce words nobody says: `electricities`,
+        # `machineries`, `geologies`, `publicities`.
+        def used(form):
+            return zipf_frequency(form, 'en') >= 2.0
+
+        if w.endswith('y') and w[-2] not in 'aeiou' and used(w[:-1] + 'ies'):
+            plurals.append([w, w[:-1] + 'ies', 'ies'])
+        elif w.endswith(('ey', 'ay', 'oy')):
+            # The neighbour that makes the -ies rule a question rather than a reflex: the book
+            # asks `baby` and `valley` in the same list.
+            if used(w + 's'):
+                plurals.append([w, w + 's', 's-after-vowel'])
+        elif w.endswith(SIBILANT) and used(w + 'es'):
+            plurals.append([w, w + 'es', 'es'])
+        elif w.endswith(('f', 'fe')) and zipf_frequency(
+                (w[:-1] if w.endswith('f') else w[:-2]) + 'ves', 'en') < 2.5:
+            # `roof -> roofs`, `chief -> chiefs`, `belief -> beliefs`. Assuming that anything
+            # missing from WordNet's exception list takes a plain -s is not safe — it does not
+            # hold `loaf`, and the first build answered `loaf -> loafs` with `loaves` sitting
+            # there as the mistake. The -ves form has to be checked for, not assumed absent.
+            if used(w + 's'):
+                plurals.append([w, w + 's', 's-after-f'])
+        elif w.endswith('o') and not w.endswith(('oo', 'io')) and used(w + 's'):
+            # `piano -> pianos` against `potato -> potatoes`, the other pair the books use.
+            # -oo and -io never take -oes (`radio`, `zoo`), so they are not a question.
+            plurals.append([w, w + 's', 's-after-o'])
+
+    pasts = []
     # WordNet's verb exceptions mix past tense with past participle and do not say which is
     # which: `ring` gets `rang` and `rung`, `eat` gets `ate` and `eaten`. The question asks for
     # the past tense, so the participle is a wrong answer dressed as the right one — and the
