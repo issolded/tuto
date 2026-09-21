@@ -90,16 +90,7 @@ const FAMILIAR_SET = new Set(FAMILIAR)
 const FAMILIAR_LEX = new Set([...CONCRETE].filter(x => x !== 'adj.all'))
 const familiar = (w) => FAMILIAR_SET.has(w) || FAMILIAR_LEX.has(WORD_LEX[w])
 
-/** Can a child of this band READ this, not merely answer it?
- *
- *  The definition questions were being gated on the answer and not on the question. An
- *  eight-year-old was shown "place of business where professional or clerical duties are
- *  performed" and asked for `office` — an answer they know, inside a sentence they cannot
- *  read. Short words and words the lexicon does not hold are waved through; everything else
- *  has to be familiar. 564 of the 2,821 definitions survive it, which is a band's worth. */
-const readableBy = (band, text) => !band.familiarOnly
-  || (text.toLowerCase().match(/[a-z']+/g) || [])
-    .every(w => w.length <= 3 || !(w in WORD_Z) || familiar(w))
+
 
 // ── which English ─────────────────────────────────────────────────────────────────────────
 //
@@ -812,8 +803,13 @@ function genOddTwo(r, band, seed) {
   // not hold its own lines that high: `lamb calf foal donkey pig` has `foal` at Zipf 2.8. At
   // the answer bar there are 25 groups and 115 words, and they read like the book's: pizza /
   // curry / soup / salad, mouse / rat / squirrel, breakfast / lunch / dinner.
+  // A floor of its own, never below Zipf 3.4. Five words are printed and there is no stem to
+  // anchor them, so the oldest band's answer bar of 3.0 was putting `topper`, `haw`, `dahl`
+  // and `laguna` on the line — real words, and nothing a child can group. At 3.4 all four go
+  // and 39 groups remain against 21 at the next step up.
+  const floor = Math.max(band.answer, 34)
   const inGroup = (c) => c[2].filter(
-    w => z(w) >= band.answer && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
+    w => z(w) >= floor && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
   const usable = CATEGORIES
     .map((c, i) => [i, c])
     .filter(([, c]) => inGroup(c).length >= 3)
@@ -830,7 +826,15 @@ function genOddTwo(r, band, seed) {
   const [, outCat] = pickOne(r, others)
   const outside = shuffle(r, outsiders(outCat)).slice(0, 2)
   if (outside.length < 2 || inside.length < 3) return null
-  if (inside.some(w => outside.includes(w))) return null
+  // No two words on the line may be the same word. `chimpanzee` and `chimp` were appearing
+  // together, and so were `lagoon` and `laguna` — a clipping and a variant spelling, which
+  // the lexicon keeps apart because they are separate lemmas and a child does not.
+  const line = [...inside, ...outside]
+  for (let i = 0; i < line.length; i++) {
+    for (let j = i + 1; j < line.length; j++) {
+      if (sameWordDifferentEnding(line[i], line[j])) return null
+    }
+  }
 
   const rows = shuffle(r, [
     ...inside.map(text => ({ text, why: 'same-group' })),
@@ -1183,6 +1187,13 @@ function genOddSynonym(r, band, seed) {
   const [, words] = pickOne(r, usable)
   const inside = shuffle(r, words.filter(w => askable(band, w))).slice(0, 4)
   if (inside.length < 4) return null
+  // Same rule as odd-two: a synset holds `chimpanzee` and `chimp`, and a line that shows both
+  // is asking a child to tell one word from itself.
+  for (let i = 0; i < inside.length; i++) {
+    for (let j = i + 1; j < inside.length; j++) {
+      if (sameWordDifferentEnding(inside[i], inside[j])) return null
+    }
+  }
 
   // The outsider must be unrelated to ALL four, not merely to the one it was checked against.
   const avoid = new Set(inside)
@@ -1208,8 +1219,14 @@ function genDefinition(r, band, seed) {
   // "Write one word for each definition." WordNet is a dictionary, so for once the question and
   // its answer are the same lookup — and the distractors are ordinary words of the same class,
   // as the book's are.
+  // The definition questions were gated on their answer and not on themselves. An
+  // eight-year-old was shown "place of business where professional or clerical duties are
+  // performed" and asked for `office` — an answer they know, inside a question they cannot
+  // read. The lexicon carries the flag, because deciding it here meant asking whether each
+  // word is in the lexicon, and "not in it, so wave it through" is backwards: `larvae` is not
+  // a lemma and is not easy.
   const words = Object.keys(DEFINITIONS).filter(
-    w => askable(band, w) && readableBy(band, DEFINITIONS[w]))
+    w => askable(band, w) && (!band.familiarOnly || DEFINITIONS[w][1]))
   if (!words.length) return null
   const word = pickOne(r, words)
   const avoid = new Set([word])
@@ -1222,7 +1239,7 @@ function genDefinition(r, band, seed) {
 
   return {
     seed, band: null, type: 'definition', stem_key: STEM_KEYS.definition,
-    prompt: { definition: DEFINITIONS[word] },
+    prompt: { definition: DEFINITIONS[word][0] },
     ...layOut(r, band, [word], distractors),
     pick: 1,
     rule: { kind: 'definition', word },
@@ -1650,6 +1667,21 @@ export function validateItem(item) {
   if (!item) return 'no item'
   const texts = item.options.map(o => o.text)
   if (new Set(texts).size !== texts.length) return 'duplicate option'
+  // Two options that are the same word wearing different clothes — `chimpanzee/chimp`,
+  // `lagoon/laguna`. Only for the types whose options are words; the letter types offer
+  // letter groups, where `abi` and `aib` are not the same anything.
+  // `root-word` is exempt for the opposite reason to the letter types: its answer IS the
+  // stem with its endings taken off, so the check it would fail is the check it passes.
+  if (!['letter-pair', 'shared-letters', 'hidden-word', 'missing-vowel', 'prefix-antonym',
+    'plural', 'past-tense', 'suffix', 'root-word'].includes(item.type)) {
+    for (let i = 0; i < texts.length; i++) {
+      for (let j = i + 1; j < texts.length; j++) {
+        if (sameWordDifferentEnding(texts[i], texts[j])) {
+          return `"${texts[i]}" and "${texts[j]}" are the same word`
+        }
+      }
+    }
+  }
   if (!item.correct.length) return 'no correct option'
   // One variety per question, throughout. The failure this guards against is not picking the
   // wrong spelling — it is `color` in one option and `colour` in the next.

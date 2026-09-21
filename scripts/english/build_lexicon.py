@@ -278,6 +278,20 @@ def spelling_variant(a, b):
     return False
 
 
+def near_the_front(name, syn):
+    """Is this one of the word's first three senses in its own part of speech?
+
+    The test the antonym list needs, and NOT the `dominant` test the synonym sets use. That
+    one also requires the sense to be in the word's main part of speech, and applied here it
+    took `wet/dry` and `early/late` with it — `wet` and `early` are adjectives whose verb and
+    adverb readings carry their own SemCor weight. Measured on the pairs that matter: `wet`,
+    `early`, `high` and `small` are all their part of speech's FIRST sense; `clear`, in the
+    sense that makes it the opposite of `bounce`, is its seventh.
+    """
+    order = wn.synsets(name, syn.pos())
+    return syn in order and order.index(syn) < 3
+
+
 def is_inflected(name):
     """True when the word is an inflected form of some other word.
 
@@ -452,9 +466,16 @@ def main():
     # figure in), `back = stake`. Every one of those is a rare sense of a common word, and a
     # child asked to match them is not being tested on vocabulary but on trivia. Requiring
     # BOTH words to be speaking their own main sense removes the whole class.
+    # Relations read the LENIENT scan, because none of them shows the child a definition.
+    #
+    # The strict one was costing basic pairs and nobody had noticed: `hot/cold` is absent from
+    # this lexicon because WordNet's definition of `cold` ends "...by e.g. ice or
+    # refrigeration; dead", and `dead` is blocked. That is the `valley` mistake again — a scan
+    # over text the child never sees deciding what the child may be asked — fixed there for
+    # whether a word EXISTS and left here for what it may be related to.
     synsets = []
     for syn in wn.all_synsets():
-        if not safe_synset(syn):
+        if not safe_synset(syn, strict=False):
             continue
         names = sorted({l.name().lower() for l in syn.lemmas()
                         if common(l.name().lower()) and syn.name() in dominant[l.name().lower()]})
@@ -467,18 +488,22 @@ def main():
     # about those two words, and the sets around them are not opposites of each other.
     antonyms = set()
     for syn in wn.all_synsets():
-        if not safe_synset(syn):
+        if not safe_synset(syn, strict=False):
             continue
         for lem in syn.lemmas():
             a = lem.name().lower()
-            if not common(a):
+            if not common(a) or not near_the_front(a, syn):
                 continue
             for other in lem.antonyms():
                 b = other.name().lower()
-                if not common(b):
+                if not common(b) or not near_the_front(b, other.synset()):
                     continue
-                if not safe_synset(other.synset()):
+                if not safe_synset(other.synset(), strict=False):
                     continue
+                # Both words near the front of their own part of speech, which the synonym
+                # sets have required since `man = piece` and this list never did. A blind round
+                # asked for the opposite of `clear` and answered `bounce` — a real relation in
+                # WordNet between senses of both words that nobody uses.
                 antonyms.add((a, b, syn.pos()) if a < b else (b, a, syn.pos()))
 
     # ---- pass 4: categories ---------------------------------------------------------------
@@ -496,7 +521,7 @@ def main():
 
     cats = defaultdict(set)
     for syn in wn.all_synsets('n'):
-        if not safe_synset(syn):
+        if not safe_synset(syn, strict=False):
             continue
         # No inflected forms. This is the `murphy` problem wearing a plural: `bones` is a
         # percussion instrument in WordNet and a skeleton to everyone else, `vibes` is a
@@ -512,7 +537,7 @@ def main():
         if not names:
             continue
         for hyper in syn.hypernyms():
-            if not safe_synset(hyper):
+            if not safe_synset(hyper, strict=False):
                 continue
             cats[hyper.name()] |= names
 
@@ -691,7 +716,7 @@ def main():
     # item shipped with two right answers.
     kin = defaultdict(set)
     for syn in wn.all_synsets():
-        if not safe_synset(syn):
+        if not safe_synset(syn, strict=False):
             continue
         names = [l.name().lower() for l in syn.lemmas()
                  if usable_lemma(l.name()) and common(l.name().lower())]
@@ -842,7 +867,7 @@ def main():
 
     deriv = set()
     for syn in wn.all_synsets():
-        if not safe_synset(syn):
+        if not safe_synset(syn, strict=False):
             continue
         for lem in syn.lemmas():
             for other in lem.derivationally_related_forms():
@@ -1098,7 +1123,14 @@ def main():
             if best is None or len(d) < len(best):
                 best = d
         if best:
-            definitions[name] = best
+            # Whether a child in the youngest band can READ it, decided here rather than in the
+            # engine. The engine can only ask whether a word is in the lexicon, and answering
+            # "not in it, so wave it through" is backwards: `larvae` is not a lemma and it is
+            # not easy. Here the frequency of every word is available.
+            young = all(
+                len(t) <= 3 or t in DALE_CHALL or zipf_frequency(t, 'en') >= 4.2
+                for t in re.findall(r"[a-z']+", best.lower()))
+            definitions[name] = [best, 1 if young else 0]
 
     # ---- pass 12: the two spellings, both kept -----------------------------------------------
     # An earlier build DELETED the American spellings, on the grounds that all three books are
@@ -1175,7 +1207,8 @@ def main():
         '// PREFIXED    [stem, prefixed, prefix].\n'
         '// PLURALS     [singular, plural] where the plural is not just +s.\n'
         '// PASTS       [base, past] where the past is not just +ed.\n'
-        '// DEFINITIONS word -> a short, readable definition of its main sense.\n'
+        '// DEFINITIONS word -> [definition, readable by the youngest band]. The flag is set\n'
+        '//             here because only here is every word\'s frequency available.\n'
         '// FAMILIAR    the lexicon\'s words that Dale-Chall lists as known to 80% of nine-\n'
         '//             and ten-year-olds. An age anchor frequency cannot give: `policy`,\n'
         '//             `research` and `analysis` are all commoner than `pillow`.\n'
