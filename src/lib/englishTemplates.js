@@ -907,6 +907,17 @@ function genLetterPair(r, band, seed) {
 // Both host words are printed and both are read, so they are held to the readable bar like an
 // odd-two line rather than the answer bar: `ideology / theology` share `eol` and share nothing
 // a nine-year-old has met.
+// The sound types and the spelling type each scan a whole table per question, and each was
+// doing it on every call — the same bug the filler pools had, in four more places. It stayed
+// invisible while the plural list was 66 entries and showed up when a sitting went from
+// 0.72ms to 7.67ms. Keyed by band and variety, because both change what survives the filter.
+const SOUND_POOLS = new Map()
+
+function soundPool(key, build) {
+  if (!SOUND_POOLS.has(key)) SOUND_POOLS.set(key, build())
+  return SOUND_POOLS.get(key)
+}
+
 const SHARED_INDEX = new Map()
 
 function sharedLetterIndex(band) {
@@ -1169,9 +1180,21 @@ function genRhyme(r, band, seed) {
   const distractors = []
   // The trap English is famous for: spelled alike, said differently. `bough` and `cough`,
   // `comb` and `bomb`. A child who reads the ending instead of hearing it picks this.
-  const lookalikes = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.filler && w !== stem && w.slice(-3) === stem.slice(-3)
-      && !couldPassForRhyme(w, stem, band.variety) && !wrongSpelling(w, band.variety))
+  // Indexed by final trigram rather than scanned: the look-alike is always a word ending in
+  // the same three letters, and finding it by walking twenty thousand words per question is
+  // what made this the slowest generator in the module.
+  const byTail = soundPool(`tail|${band.filler}|${band.variety}`, () => {
+    const out = new Map()
+    for (const w of Object.keys(WORD_Z)) {
+      if (w.length < 3 || z(w) < band.filler || wrongSpelling(w, band.variety)) continue
+      const k = w.slice(-3)
+      if (!out.has(k)) out.set(k, [])
+      out.get(k).push(w)
+    }
+    return out
+  })
+  const lookalikes = (byTail.get(stem.slice(-3)) || []).filter(
+    w => w !== stem && !couldPassForRhyme(w, stem, band.variety))
   if (lookalikes.length) {
     const w = pickOne(r, lookalikes)
     distractors.push({ text: w, why: 'looks-alike' })
@@ -1196,20 +1219,34 @@ function genRhyme(r, band, seed) {
 function genHomophone(r, band, seed) {
   // "Write a homophone for each of these words." `their / there`, `bare / bear`.
   const table = HOMOPHONES[band.variety]
-  const ok = (w) => z(w) >= band.filler && !wrongSpelling(w, band.variety)
-  const groups = table.filter(g => g.filter(ok).length >= 2)
+  // The ANSWER bar, not the filler bar. Both were raised together when rhyme answers turned up
+  // `hap`, `dada` and `nous`, and that reasoning was about rhyme: its pool is the whole
+  // lexicon. The homophone pool is 280 curated groups, and holding it to the filler bar threw
+  // away `air/heir`, `brake/break`, `cellar/seller`, `cereal/serial`, `cite/sight/site`,
+  // `cue/queue`, `dear/deer`, `dual/duel` and `fair/fare` — 92 groups down to 32, and the ones
+  // lost are the ones the 11+ papers actually ask.
+  const ok = (w) => z(w) >= band.answer && !wrongSpelling(w, band.variety)
+  const groups = soundPool(`homo|${band.answer}|${band.variety}`,
+    () => table.map(g => g.filter(ok)).filter(g => g.length >= 2))
   if (!groups.length) return null
-  const group = shuffle(r, pickOne(r, groups).filter(ok))
+  const group = shuffle(r, pickOne(r, groups))
   const [stem, answer] = group
   if (!stem || !answer) return null
 
   const avoid = new Set(group)
   const distractors = []
   // Rhymes-but-is-not — the near miss. `bare / bear` are homophones; `bore` only rhymes.
-  const near = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.filler && !avoid.has(w) && rhymes(w, stem, band.variety)
-      && !wrongSpelling(w, band.variety)
-      && !group.some(g => (table.find(h => h.includes(g)) || []).includes(w)))
+  // Everything that rhymes with the stem, from the rhyme index rather than from a scan of the
+  // lexicon — and `table.find` inside that scan made it a scan of the homophone list too.
+  const homoOf = soundPool(`homoindex|${band.variety}`, () => {
+    const out = new Map()
+    for (const g of table) for (const w of g) out.set(w, g)
+    return out
+  })
+  const near = (RIMES[band.variety]?.[stem] || [])
+    .flatMap(k => RHYME_GROUPS[band.variety][k] || [])
+    .filter(w => z(w) >= band.filler && !avoid.has(w) && !wrongSpelling(w, band.variety)
+      && !group.some(g => (homoOf.get(g) || []).includes(w)))
   if (near.length) {
     const w = pickOne(r, near)
     distractors.push({ text: w, why: 'rhyme' })
@@ -1235,10 +1272,18 @@ function genSyllables(r, band, seed) {
   // round, because the book's form is a free write: which of these five has N?
   const n = pickOne(r, band.syllables)
   const table = SYLLABLES[band.variety]
-  const pool = Object.keys(table).filter(
-    w => z(w) >= band.answer && concrete(w) && !wrongSpelling(w, band.variety))
-  const right = pool.filter(w => table[w] === n)
-  const wrong = pool.filter(w => table[w] !== n && Math.abs(table[w] - n) <= 2)
+  const byCount = soundPool(`syl|${band.answer}|${band.variety}`, () => {
+    const out = new Map()
+    for (const w of Object.keys(table)) {
+      if (z(w) < band.answer || !concrete(w) || wrongSpelling(w, band.variety)) continue
+      const k = table[w]
+      if (!out.has(k)) out.set(k, [])
+      out.get(k).push(w)
+    }
+    return out
+  })
+  const right = byCount.get(n) || []
+  const wrong = [n - 2, n - 1, n + 1, n + 2].flatMap(k => byCount.get(k) || [])
   if (right.length < 1 || wrong.length < band.options - 1) return null
   const answer = pickOne(r, right)
   const avoid = new Set([answer])
@@ -1460,8 +1505,8 @@ function genMissingVowel(r, band, seed) {
   // `repugn_nt`, `profici_nt` — always an unstressed vowel, which is exactly the letter nobody
   // can hear. Five options and five vowels, so the options ARE the alphabet's vowels.
   const VOWELS = ['a', 'e', 'i', 'o', 'u']
-  const pool = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.answer && w.length >= 6 && w.length <= 12 && !BANNED.has(w))
+  const pool = soundPool(`vowel|${band.answer}`, () => Object.keys(WORD_Z).filter(
+    w => z(w) >= band.answer && w.length >= 6 && w.length <= 12 && !BANNED.has(w)))
   if (!pool.length) return null
   for (let tries = 0; tries < 60; tries++) {
     const word = pickOne(r, pool)
