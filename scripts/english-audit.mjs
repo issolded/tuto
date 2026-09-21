@@ -76,8 +76,12 @@ const BLOCKED = new Set([
   ...Object.keys(cuss).filter(w => cuss[w] >= 1),
 ].filter(w => /^[a-z]+$/.test(w)))
 
+// Three of the counts are per-variety objects, so they print as a pair rather than as
+// "[object Object]".
+const count = (v) => (typeof v === 'object'
+  ? Object.entries(v).map(([a, b]) => `${a} ${b}`).join('/') : v)
 console.log(`lexicon built ${LEXICON_META.built} · `
-  + Object.entries(LEXICON_META.counts).map(([k, v]) => `${v} ${k}`).join(' · '))
+  + Object.entries(LEXICON_META.counts).map(([k, v]) => `${count(v)} ${k}`).join(' · '))
 console.log(`blocklist ${BLOCKED.size} entries · ${PER_TYPE} items per type\n`)
 
 // Both varieties, because they are not the same question bank. Three types answer
