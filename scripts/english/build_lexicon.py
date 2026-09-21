@@ -1176,6 +1176,9 @@ def main():
         '// PLURALS     [singular, plural] where the plural is not just +s.\n'
         '// PASTS       [base, past] where the past is not just +ed.\n'
         '// DEFINITIONS word -> a short, readable definition of its main sense.\n'
+        '// FAMILIAR    the lexicon\'s words that Dale-Chall lists as known to 80% of nine-\n'
+        '//             and ten-year-olds. An age anchor frequency cannot give: `policy`,\n'
+        '//             `research` and `analysis` are all commoner than `pillow`.\n'
         '// BLOCKED     blocklist.txt itself. The engine needs it at RUNTIME, not only here: the\n'
         '//             letter types build options out of letters rather than out of the lexicon,\n'
         '//             and three random letters spell `ass` roughly once in every 300 items.\n'
@@ -1207,6 +1210,7 @@ def main():
         + js('PLURALS', plurals)
         + js('PASTS', pasts)
         + js('DEFINITIONS', definitions)
+        + js('FAMILIAR', sorted(w for w in words if w in DALE_CHALL))
     )
     OUT.write_text(body)
     size = OUT.stat().st_size

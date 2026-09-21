@@ -53,8 +53,27 @@
 import {
   WORD_Z, WORD_LEX, SYNSETS, ANTONYMS, CATEGORIES, SENSES, EXAMPLES, KINSHIP, BLOCKED,
   SYLLABLES, RIMES, RHYME_GROUPS, HOMOPHONES, SPELLING, SUFFIXED, PREFIXED, PLURALS, PASTS,
-  DEFINITIONS, LEXICON_META,
+  DEFINITIONS, FAMILIAR, LEXICON_META,
 } from './englishLexicon.generated.js'
+
+// ── how familiar a word has to be ─────────────────────────────────────────────────────────
+//
+// Frequency cannot see age. `policy`, `research`, `analysis`, `development` and `security` are
+// all commoner than `pillow`, and all of them were reaching the 8-9 band as the word a child
+// is asked about. What they have in common is register, not rarity: they are the vocabulary of
+// work and the news.
+//
+// Two lists together decide it. Dale-Chall is the age anchor — 2471 of this lexicon's words
+// are on it, known to 80% of nine- and ten-year-olds — and the concrete lexical files are the
+// other half, because `tortoise`, `bicycle` and `saucepan` are words a child knows that a
+// list of 2942 could never hold all of. A word that is neither is a word about an abstraction
+// somebody else cares about.
+//
+// Measured against the youngest band before this existed: 49% of the words it printed were
+// outside Dale-Chall, and reading the list showed why — `president`, `policy`, `technology`,
+// `contract`, `percent`, `analysis`.
+const FAMILIAR_SET = new Set(FAMILIAR)
+const familiar = (w) => FAMILIAR_SET.has(w) || concrete(w)
 
 // ── which English ─────────────────────────────────────────────────────────────────────────
 //
@@ -173,6 +192,9 @@ export const BANDS = {
     // because a nine-year-old who can find a hidden word can certainly pluralise `child`.
     types: [...VR_TYPES, 'odd-synonym', 'definition', 'rhyme', 'homophone', 'plural'],
     syllables: [2, 3],
+    // The three-letter word a hidden-word question hides. Held high and falling with age,
+    // because it is the ANSWER: the book's own are `low`, `owe`, `tea`, `tin`, `ant`, `ice`.
+    hidden: 40,
     options: 5,              // the book offers a–e throughout
     answer: 36,              // Zipf ×10: the answer must be a word a nine-year-old reads
     option: 28,              // distractors may be rarer, as the book's are
@@ -184,6 +206,10 @@ export const BANDS = {
     // not been asked one — `peripheral`, `patronage`, `organism` were all stems once.
     stem: 40,
     stemMax: 55,
+    // The youngest band asks only about words a child of that age has met — Dale-Chall or
+    // concrete. The older two do not, because their books do not: the 11-12 paper asks about
+    // `vexatious` and `respite`.
+    familiarOnly: true,
     // Filler options — the ones that carry no trap and exist to make five. They are held
     // HIGHER than the answer, not lower, which looks backwards and is not: a distractor that
     // earns its place (an opposite, a rhyme, another sense) may be rare because the child is
@@ -221,6 +247,7 @@ export const BANDS = {
     gridSize: 12,
     mask: [2, 3, 4],
     syllables: [2, 3, 4],
+    hidden: 40,
   },
 
   // ── 11-12 ───────────────────────────────────────────────────────────────────────────────
@@ -248,6 +275,7 @@ export const BANDS = {
     gridSize: 12,
     mask: [3, 4],
     syllables: [3, 4, 5],
+    hidden: 38,
   },
 }
 
@@ -390,6 +418,9 @@ function index() {
 }
 
 const z = (w) => WORD_Z[w] || 0
+
+/** May this word be the thing a question is ABOUT, or its answer, in this band? */
+const askable = (band, w) => z(w) >= band.answer && (!band.familiarOnly || familiar(w))
 
 /**
  * One word wearing two endings: `happy/happily`, `run/running`, `unity/unitary`, `suck/sucking`.
@@ -591,10 +622,10 @@ function plausibleLetters(r, truth, fits, count) {
 
 function genSynonym(r, band, seed) {
   const { antonyms, byRhyme } = index()
-  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => z(w) >= band.answer).length >= 2)
+  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => askable(band, w)).length >= 2)
   if (!usable.length) return null
   const [, words] = pickOne(r, usable)
-  const good = shuffle(r, words.filter(w => z(w) >= band.answer))
+  const good = shuffle(r, words.filter(w => askable(band, w)))
   const [stem, answer] = good
   if (!stem || !answer) return null
   // `suck / sucking` came out of one synset and made a question with no content. The lexicon
@@ -633,7 +664,7 @@ function genSynonym(r, band, seed) {
 
 function genAntonym(r, band, seed) {
   const { synonyms, byRhyme } = index()
-  const pairs = ANTONYMS.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.answer)
+  const pairs = ANTONYMS.filter(([a, b]) => askable(band, a) && askable(band, b))
   if (!pairs.length) return null
   const [a, b] = pickOne(r, pairs)
   const [stem, answer] = r() < 0.5 ? [a, b] : [b, a]
@@ -670,7 +701,8 @@ function genSense(r, band, seed) {
   // with a sentence per sense AND the synonyms of each sense, so the question, its answer and
   // its distractors are one lookup. Nothing is hand-written and nothing is guessed.
   const words = Object.keys(SENSES).filter(
-    w => z(w) >= band.stem && z(w) <= band.stemMax && SENSES[w].length >= 2)
+    w => z(w) >= band.stem && z(w) <= band.stemMax && SENSES[w].length >= 2
+      && (!band.familiarOnly || familiar(w)))
   if (!words.length) return null
   const word = pickOne(r, words)
   const senses = SENSES[word]
@@ -803,7 +835,8 @@ function genWordGrid(r, band, seed) {
   let target = null
   let answers = null
   const source = wantOpposite ? antonyms : synonyms
-  const candidates = [...source.keys()].filter(w => z(w) >= band.stem && z(w) <= band.stemMax)
+  const candidates = [...source.keys()].filter(
+    w => z(w) >= band.stem && z(w) <= band.stemMax && (!band.familiarOnly || familiar(w)))
   for (let tries = 0; tries < 40 && !answers; tries++) {
     const w = pickOne(r, candidates)
     const hits = [...(source.get(w) || [])].filter(x => z(x) >= band.answer)
@@ -850,7 +883,8 @@ function genLetterPair(r, band, seed) {
   const { synonyms, antonyms } = index()
   const wantOpposite = r() < 0.5
   const source = wantOpposite ? antonyms : synonyms
-  const keys = [...source.keys()].filter(w => z(w) >= band.stem && z(w) <= band.stemMax)
+  const keys = [...source.keys()].filter(
+    w => z(w) >= band.stem && z(w) <= band.stemMax && (!band.familiarOnly || familiar(w)))
   if (!keys.length) return null
 
   let stem = null
@@ -988,8 +1022,12 @@ function hiddenWordPools(band) {
   const key = `${band.option}|${band.answer}`
   if (!HIDDEN_POOLS.has(key)) {
     HIDDEN_POOLS.set(key, {
+      // The hidden word is the ANSWER and the book is explicit that it must be a word —
+      // its own are `low`, `owe`, `tea`, `tin`, `ant`, `ice`, all between Zipf 3.5 and 6.5.
+      // At the option bar this was answering `roc`, `ani`, `pap`, `arb` and `dit`, which are
+      // in a dictionary and in no child's head.
       three: new Set(Object.keys(WORD_Z).filter(
-        w => w.length === 3 && z(w) >= band.option && !BANNED.has(w))),
+        w => w.length === 3 && z(w) >= band.hidden && !BANNED.has(w))),
       hosts: Object.keys(EXAMPLES).filter(
         w => z(w) >= band.answer && concrete(w) && w.length >= 6 && w.length <= 11),
     })
@@ -1105,10 +1143,10 @@ function genOddSynonym(r, band, seed) {
   // The 9-10 book: "Underline one word in each group which is not a synonym for the rest."
   // Four words that mean nearly the same and one that does not — the mirror image of odd-two,
   // which groups by what a thing IS rather than by what a word MEANS.
-  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => z(w) >= band.answer).length >= 4)
+  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => askable(band, w)).length >= 4)
   if (!usable.length) return null
   const [, words] = pickOne(r, usable)
-  const inside = shuffle(r, words.filter(w => z(w) >= band.answer)).slice(0, 4)
+  const inside = shuffle(r, words.filter(w => askable(band, w))).slice(0, 4)
   if (inside.length < 4) return null
 
   // The outsider must be unrelated to ALL four, not merely to the one it was checked against.
@@ -1135,7 +1173,7 @@ function genDefinition(r, band, seed) {
   // "Write one word for each definition." WordNet is a dictionary, so for once the question and
   // its answer are the same lookup — and the distractors are ordinary words of the same class,
   // as the book's are.
-  const words = Object.keys(DEFINITIONS).filter(w => z(w) >= band.answer)
+  const words = Object.keys(DEFINITIONS).filter(w => askable(band, w))
   if (!words.length) return null
   const word = pickOne(r, words)
   const avoid = new Set([word])
@@ -1169,6 +1207,7 @@ function genRhyme(r, band, seed) {
   // print one of them as the answer.
   const ok = (w) => z(w) >= band.filler && !wrongSpelling(w, band.variety)
     && (RIMES[band.variety]?.[w] || []).length === 1
+    && (!band.familiarOnly || familiar(w))
   const keys = Object.keys(table).filter(k => table[k].filter(ok).length >= 2)
   if (!keys.length) return null
   const key = pickOne(r, keys)
@@ -1226,6 +1265,7 @@ function genHomophone(r, band, seed) {
   // `cue/queue`, `dear/deer`, `dual/duel` and `fair/fare` — 92 groups down to 32, and the ones
   // lost are the ones the 11+ papers actually ask.
   const ok = (w) => z(w) >= band.answer && !wrongSpelling(w, band.variety)
+    && (!band.familiarOnly || familiar(w))
   const groups = soundPool(`homo|${band.answer}|${band.variety}`,
     () => table.map(g => g.filter(ok)).filter(g => g.length >= 2))
   if (!groups.length) return null
@@ -1311,7 +1351,7 @@ function genPlural(r, band, seed) {
   // that matters, because `childs` is the answer a child actually writes.
   // Latin and Greek plurals are held back to the band whose book asks them: the 9-10 paper
   // asks `thief` and `baby`, and `campus`, `radius` and `criterion` do not appear until 11-12.
-  const pairs = PLURALS.filter(([a, b, rule]) => z(a) >= band.answer && !BANNED.has(b)
+  const pairs = PLURALS.filter(([a, b, rule]) => askable(band, a) && !BANNED.has(b)
     && (rule !== 'latin' || band.latinPlurals))
   if (!pairs.length) return null
   const [single, answer, rule] = pickOne(r, pairs)

@@ -1139,3 +1139,6 @@ shooter
 inmate
 convicted
 offender
+
+# Slang for a lavatory, and a name. Reached the 8-9 band as a stem.
+john
