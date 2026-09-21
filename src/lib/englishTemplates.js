@@ -56,6 +56,15 @@ import {
   DEFINITIONS, FAMILIAR, LEXICON_META,
 } from './englishLexicon.generated.js'
 
+const CONCRETE = new Set([
+  'noun.animal', 'noun.artifact', 'noun.body', 'noun.food', 'noun.object', 'noun.plant',
+  'noun.substance', 'noun.person', 'noun.shape', 'noun.feeling', 'noun.time', 'noun.quantity',
+  'verb.motion', 'verb.contact', 'verb.consumption', 'verb.body', 'verb.perception',
+  'verb.creation', 'verb.competition', 'verb.emotion', 'adj.all',
+])
+
+const concrete = (w) => CONCRETE.has(WORD_LEX[w])
+
 // ── how familiar a word has to be ─────────────────────────────────────────────────────────
 //
 // Frequency cannot see age. `policy`, `research`, `analysis`, `development` and `security` are
@@ -73,7 +82,24 @@ import {
 // outside Dale-Chall, and reading the list showed why — `president`, `policy`, `technology`,
 // `contract`, `percent`, `analysis`.
 const FAMILIAR_SET = new Set(FAMILIAR)
-const familiar = (w) => FAMILIAR_SET.has(w) || concrete(w)
+
+// `concrete` minus `adj.all`, which is 5,700 adjectives and admits `pending`, `inclined`,
+// `tremendous` and `vexatious` along with `happy` and `quick`. A noun can earn its place by
+// being a thing — `tortoise`, `bicycle`, `saucepan` — but an adjective has no such test, so an
+// adjective has to be on Dale-Chall or it is not a word this band asks about.
+const FAMILIAR_LEX = new Set([...CONCRETE].filter(x => x !== 'adj.all'))
+const familiar = (w) => FAMILIAR_SET.has(w) || FAMILIAR_LEX.has(WORD_LEX[w])
+
+/** Can a child of this band READ this, not merely answer it?
+ *
+ *  The definition questions were being gated on the answer and not on the question. An
+ *  eight-year-old was shown "place of business where professional or clerical duties are
+ *  performed" and asked for `office` — an answer they know, inside a sentence they cannot
+ *  read. Short words and words the lexicon does not hold are waved through; everything else
+ *  has to be familiar. 564 of the 2,821 definitions survive it, which is a band's worth. */
+const readableBy = (band, text) => !band.familiarOnly
+  || (text.toLowerCase().match(/[a-z']+/g) || [])
+    .every(w => w.length <= 3 || !(w in WORD_Z) || familiar(w))
 
 // ── which English ─────────────────────────────────────────────────────────────────────────
 //
@@ -115,14 +141,6 @@ const BANNED = new Set(BLOCKED)
 // lines like `medal … demography … dilution … parameter`: five options, four of which a child
 // cannot read, which tests nothing and teaches nothing. What is left in is the concrete half —
 // things, animals, food, plants, bodies, places, feelings — plus the verbs of doing and moving.
-const CONCRETE = new Set([
-  'noun.animal', 'noun.artifact', 'noun.body', 'noun.food', 'noun.object', 'noun.plant',
-  'noun.substance', 'noun.person', 'noun.shape', 'noun.feeling', 'noun.time', 'noun.quantity',
-  'verb.motion', 'verb.contact', 'verb.consumption', 'verb.body', 'verb.perception',
-  'verb.creation', 'verb.competition', 'verb.emotion', 'adj.all',
-])
-
-const concrete = (w) => CONCRETE.has(WORD_LEX[w])
 
 // The verbal-reasoning family — the Bond 8-9 book's taxonomy, which is what this engine was
 // built from.
@@ -422,6 +440,15 @@ const z = (w) => WORD_Z[w] || 0
 /** May this word be the thing a question is ABOUT, or its answer, in this band? */
 const askable = (band, w) => z(w) >= band.answer && (!band.familiarOnly || familiar(w))
 
+/** The bar for a distractor that is doing a JOB — an opposite, a rhyme, another sense.
+ *
+ *  Looser than the filler bar everywhere else, because a word that traps a specific mistake
+ *  earns the right to be rarer: the book offers `hardy` against `early`. In the youngest band
+ *  it is not looser, because the trap only works on a word the child can read, and at the
+ *  option bar this was offering eight-year-olds `beholder` against `border`, `shortstop`
+ *  against `top` and `drainage` against `image`. */
+const trapBar = (band) => (band.familiarOnly ? band.filler : band.option)
+
 /**
  * One word wearing two endings: `happy/happily`, `run/running`, `unity/unitary`, `suck/sucking`.
  *
@@ -508,11 +535,18 @@ const partOfSpeech = (w) => (WORD_LEX[w] || '').split('.')[0]
 const FILLER_POOLS = new Map()
 
 function fillerPool(band, pos) {
-  const key = `${band.filler}|${pos || ''}`
+  const key = `${band.filler}|${pos || ''}|${band.familiarOnly ? 'fam' : ''}`
   if (FILLER_POOLS.has(key)) return FILLER_POOLS.get(key)
   const common = Object.keys(WORD_Z).filter(
     w => z(w) >= band.filler && w.length >= 4 && w.length <= 9
-      && (!pos || partOfSpeech(w) === pos))
+      && (!pos || partOfSpeech(w) === pos)
+      // The youngest band's fillers come from Dale-Chall alone, with no concrete escape. The
+      // escape exists so that the thing a question is ABOUT can be `tortoise` or `saucepan`,
+      // words a child knows that a list of 2,942 cannot hold all of. A filler is not about
+      // anything — it makes up the numbers — so it can afford to be squarely known, and
+      // without that `beholder`, `bacteria` and `drainage` were still on eight-year-olds'
+      // lines by way of being concrete nouns.
+      && (!band.familiarOnly || FAMILIAR_SET.has(w)))
   // Concreteness is the preference and the part of speech is the requirement, in that order —
   // and the order was learned by getting it wrong. Demanding both starved the verbs: WORD_LEX
   // records one lexical file per word, and of the common words it files as verbs only 34 are
@@ -640,12 +674,12 @@ function genSynonym(r, band, seed) {
 
   // The book's favourite trap, and the honest one: the opposite of the word. A child who has
   // the right idea and the wrong direction picks this, and that is worth knowing about.
-  const opp = [...(antonyms.get(stem) || [])].filter(w => z(w) >= band.option && !related(w, answer))
+  const opp = [...(antonyms.get(stem) || [])].filter(w => z(w) >= trapBar(band) && !related(w, answer))
   if (opp.length) { const w = pickOne(r, opp); distractors.push({ text: w, why: 'opposite' }); avoid.add(w) }
 
   // The book's other trap: something that sounds like the stem. `early … e hardy`.
   const rhymes = (byRhyme.get(stem.slice(-3)) || [])
-    .filter(w => w !== stem && z(w) >= band.option && !related(w, stem) && !related(w, answer))
+    .filter(w => w !== stem && z(w) >= trapBar(band) && !related(w, stem) && !related(w, answer))
   if (rhymes.length) { const w = pickOne(r, rhymes); distractors.push({ text: w, why: 'rhyme' }); avoid.add(w) }
 
   for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
@@ -675,11 +709,11 @@ function genAntonym(r, band, seed) {
   // For an OPPOSITE question the trap is a word that means the SAME — the book does this every
   // time it can: `difficult … a tricky b complex`. A child reading the instruction too fast
   // picks it, which is a different mistake from not knowing the word.
-  const same = [...(synonyms.get(stem) || [])].filter(w => z(w) >= band.option && !related(w, answer))
+  const same = [...(synonyms.get(stem) || [])].filter(w => z(w) >= trapBar(band) && !related(w, answer))
   if (same.length) { const w = pickOne(r, same); distractors.push({ text: w, why: 'same-meaning' }); avoid.add(w) }
 
   const rhymes = (byRhyme.get(stem.slice(-3)) || [])
-    .filter(w => w !== stem && z(w) >= band.option && !related(w, stem) && !related(w, answer))
+    .filter(w => w !== stem && z(w) >= trapBar(band) && !related(w, stem) && !related(w, answer))
   if (rhymes.length) { const w = pickOne(r, rhymes); distractors.push({ text: w, why: 'rhyme' }); avoid.add(w) }
 
   for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
@@ -738,7 +772,7 @@ function genSense(r, band, seed) {
     if (!other || other === chosen) continue
     {
       for (const cand of shuffle(r, other[2])) {
-        if (z(cand) < band.option || avoid.has(cand)) continue
+        if (z(cand) < trapBar(band) || avoid.has(cand)) continue
         if (related(cand, answer) || sharesNeighbour(cand, answer)) continue
         distractors.push({ text: cand, why: 'other-sense' })
         avoid.add(cand)
@@ -817,10 +851,11 @@ function genOddTwo(r, band, seed) {
 const GRID_POOLS = new Map()
 
 function gridPool(band) {
-  const key = String(band.filler)
+  const key = `${band.filler}|${band.familiarOnly ? 'fam' : ''}`
   if (!GRID_POOLS.has(key)) {
     GRID_POOLS.set(key, Object.keys(WORD_Z).filter(
-      w => z(w) >= band.filler && concrete(w) && w.length >= 3 && w.length <= 9))
+      w => z(w) >= band.filler && concrete(w) && w.length >= 3 && w.length <= 9
+        && (!band.familiarOnly || FAMILIAR_SET.has(w))))
   }
   return GRID_POOLS.get(key)
 }
@@ -1173,7 +1208,8 @@ function genDefinition(r, band, seed) {
   // "Write one word for each definition." WordNet is a dictionary, so for once the question and
   // its answer are the same lookup — and the distractors are ordinary words of the same class,
   // as the book's are.
-  const words = Object.keys(DEFINITIONS).filter(w => askable(band, w))
+  const words = Object.keys(DEFINITIONS).filter(
+    w => askable(band, w) && readableBy(band, DEFINITIONS[w]))
   if (!words.length) return null
   const word = pickOne(r, words)
   const avoid = new Set([word])
