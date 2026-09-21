@@ -423,19 +423,41 @@ function multReadingVariant(a, b, name, _object, lang) {
 const MULT_VARIANTS = [multGroupsVariant, multArrayVariant, multReadingVariant]
 
 function multiplicationWordTemplate(level, lang) {
-  // The ladder names which tables each rung practises — "×2 ×5 ×10" low down, the harder
-  // ones higher up — but both rungs used to draw factors at random from the same 2..12, so
-  // neither taught what it claimed and the two rungs were indistinguishable. One factor now
-  // comes from the rung's own tables; the other is a plain multiplier. Which side it lands
-  // on varies, so a child does not only ever meet "n groups of 5". Factors stay small
-  // deliberately: word problems get unreadable with large totals.
-  // Tables are taught to twelve, and stopping the multiplier at ten left the "x2 x5 x10"
-  // rung with only 24 distinct problems once operandKey folds a x b and b x a together —
-  // a child doing five sessions had seen all of them.
-  const tables = Number(level) >= 10 ? [3, 4, 6, 7, 8, 9] : [2, 5, 10]
-  const table = pick(tables)
-  const other = randInt(2, 12)
-  const [a, b] = Math.random() < 0.5 ? [table, other] : [other, table]
+  // One factor comes from the tables the child's YEAR is actually learning; the other is a
+  // plain multiplier. Which side it lands on varies, so a child does not only ever meet
+  // "n groups of 5".
+  //
+  // By band, not by a raw level threshold, and that is the whole of the bug this replaced.
+  // `bandForLevel` is `ceil(level/2)` and lands exactly on the school year, which is why
+  // every other template in this file uses it — divisionWordTemplate included, with a comment
+  // about the same failure. This one tested `level >= 10`, and a year owns TWO rungs: Year 5
+  // sits on 9 or 10. So a ten-year-old on the lower rung of their own year dropped to the
+  // Year 2 tables, and `2 × 2` came up in 3.1% of their multiplication questions.
+  //
+  // The sets are each year's own curriculum line, not a guess:
+  //   Year 1-2  "the 2, 5 and 10 tables"
+  //   Year 3    "the 3, 4 and 8 tables"
+  //   Year 4    tables to 12 x 12, so the ones not already drilled
+  //   Year 5-6  past tables entirely — "multiply numbers up to 4 digits by a 1-digit or
+  //             2-digit number", and then long multiplication. Four digits inside a word
+  //             problem is unreadable ("Ada has 3,247 baskets"), so the band takes the
+  //             readable end of it: two digits by one at Year 5, by two at Year 6. That is
+  //             still eight times the old ceiling of 9 x 12.
+  const band = bandForLevel(level)
+  let a, b
+  if (band >= 5) {
+    const big = randInt(13, 99)
+    const small = band >= 6 ? randInt(11, 25) : randInt(3, 9)
+    ;[a, b] = Math.random() < 0.5 ? [big, small] : [small, big]
+  } else {
+    const tables = band >= 4 ? [6, 7, 8, 9, 11, 12] : band >= 3 ? [3, 4, 8] : [2, 5, 10]
+    const table = pick(tables)
+    // Tables are taught to twelve, and stopping the multiplier at ten left the "x2 x5 x10"
+    // rung with only 24 distinct problems once operandKey folds a x b and b x a together —
+    // a child doing five sessions had seen all of them.
+    const other = randInt(2, 12)
+    ;[a, b] = Math.random() < 0.5 ? [table, other] : [other, table]
+  }
   const correct_answer = a * b
   const name = pickL(MULT_NAMES, lang)
   const object = pickL(MULT_OBJECTS, lang)
