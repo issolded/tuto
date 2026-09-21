@@ -733,21 +733,38 @@ def main():
 
     # IPA marks stress with a mark BEFORE the syllable rather than on the vowel, so a syllable
     # is counted by its vowel and the rhyme runs from the last stressed one.
-    VOWELS = set('aeiouæɑɐɒɔəɘɛɜɪiːʊuʌyøœɵɤɯ')
+    # Read off the two dictionaries rather than guessed at — every symbol either of them uses,
+    # sorted into vowels and not. Guessing cost two things: `ɝ`, the r-coloured vowel of
+    # American `bird` and `holder`, was missing although it occurs 29,132 times, so `holder`
+    # counted as one syllable; and `ː`, which is a length mark and not a vowel at all, was in.
+    VOWELS = set('ɪəiɛʊæɑaeoɔuɐɒʌɜɝ')
     STRESS = 'ˈˌ'
 
     def strip_marks(p):
         return ''.join(ch for ch in p if ch not in STRESS)
 
+    # The diphthongs, which are written as two vowel letters and are one syllable. Everything
+    # else adjacent is two.
+    #
+    # Collapsing every run of vowel letters was the first version and it counted `casual`
+    # /ˈkæʒuəl/ as two syllables: `uə` is not a diphthong, it is a hiatus — ca-su-al. A blind
+    # round caught it by finding two two-syllable options on the same line. `radio`, `create`,
+    # `science`, `quiet` and `poem` all break the same way.
+    DIPHTHONGS = {'aɪ', 'aʊ', 'eɪ', 'oʊ', 'ɔɪ', 'ɪə', 'eə', 'ʊə', 'əʊ', 'ɛə', 'ɑɪ', 'ɔə'}
+
     def syllable_count(p):
-        # Long marks and ties are not vowels of their own; a diphthong written as two letters
-        # counts once, so runs of adjacent vowel letters collapse.
-        n, prev_vowel = 0, False
-        for ch in strip_marks(p):
-            v = ch in VOWELS
-            if v and not prev_vowel:
+        bare = strip_marks(p).replace('ː', '')
+        n, i = 0, 0
+        while i < len(bare):
+            if bare[i] not in VOWELS:
+                i += 1
+                continue
+            if i + 1 < len(bare) and bare[i:i + 2] in DIPHTHONGS:
                 n += 1
-            prev_vowel = v
+                i += 2
+            else:
+                n += 1
+                i += 1
         return max(1, n)
 
     def rime_of(p):
@@ -998,7 +1015,11 @@ def main():
             # there as the mistake. The -ves form has to be checked for, not assumed absent.
             if used(w + 's'):
                 plurals.append([w, w + 's', 's-after-f'])
-        elif w.endswith('o') and not w.endswith(('oo', 'io')) and used(w + 's'):
+        elif (w.endswith('o') and not w.endswith(('oo', 'io')) and used(w + 's')
+              and zipf_frequency(w + 'es', 'en') < 2.5):
+            # The same check the -f branch makes, and for the same reason. `cargo -> cargos`
+            # shipped with `cargoes` as the mistake; both are standard and Oxford prefers the
+            # one being marked wrong.
             # `piano -> pianos` against `potato -> potatoes`, the other pair the books use.
             # -oo and -io never take -oes (`radio`, `zoo`), so they are not a question.
             plurals.append([w, w + 's', 's-after-o'])

@@ -1079,7 +1079,9 @@ const couldPassForRhyme = (a, b, variety) => {
   const tail = (w) => {
     const [k] = rimesOf(w, variety)
     if (!k) return null
-    const vowels = [...k].map((ch, i) => ('aeiouæɑɐɒɔəɘɛɜɪiʊuʌyøœ'.includes(ch) ? i : -1))
+    // The same vowel set the lexicon builder uses, read off the two dictionaries: seventeen
+    // symbols including `ɝ`, and not the length mark `ː`.
+    const vowels = [...k].map((ch, i) => ('ɪəiɛʊæɑaeoɔuɐɒʌɜɝ'.includes(ch) ? i : -1))
       .filter(i => i >= 0)
     return vowels.length ? k.slice(vowels[vowels.length - 1]) : k
   }
@@ -1150,7 +1152,12 @@ function genRhyme(r, band, seed) {
   // and both are read, as on an odd-two line — and the answer bar let through `hap`, `dada`
   // and `nous`, which are words a dictionary knows and a child does not.
   const table = RHYME_GROUPS[band.variety]
+  // A stem with two pronunciations is a stem with two rhyme sets, and a child who says the
+  // other one is looking at a page where nothing rhymes. British `garage` is both /ˈɡærɑːʒ/
+  // and /ˈɡærɪdʒ/, so it rhymes with `massage` and with `carriage`, and the question can only
+  // print one of them as the answer.
   const ok = (w) => z(w) >= band.filler && !wrongSpelling(w, band.variety)
+    && (RIMES[band.variety]?.[w] || []).length === 1
   const keys = Object.keys(table).filter(k => table[k].filter(ok).length >= 2)
   if (!keys.length) return null
   const key = pickOne(r, keys)
