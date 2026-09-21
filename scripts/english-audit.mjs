@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import {
-  BANDS, BAND_KEYS, BOOK_COVERAGE,
+  BANDS, BAND_KEYS, BOOK_COVERAGE, VARIETIES,
   generateItem, generateSession, validateItem, itemSignature,
 } from '../src/lib/englishTemplates.js'
 import { WORD_Z, LEXICON_META } from '../src/lib/englishLexicon.generated.js'
@@ -35,7 +35,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PER_TYPE = Number(process.argv[2]) || 300
 
 const failures = []
-const fail = (msg) => failures.push(msg)
+let VARIETY = ''
+const fail = (msg) => failures.push(`[${VARIETY}] ${msg}`)
 
 /**
  * The words of an item's sentence, with any hole in it filled back in first.
@@ -79,9 +80,14 @@ console.log(`lexicon built ${LEXICON_META.built} · `
   + Object.entries(LEXICON_META.counts).map(([k, v]) => `${v} ${k}`).join(' · '))
 console.log(`blocklist ${BLOCKED.size} entries · ${PER_TYPE} items per type\n`)
 
+// Both varieties, because they are not the same question bank. Three types answer
+// differently in each — 880 words rhyme differently and 58 homophone groups exist in only one
+// — and a bank that is sound in British is not thereby sound in American.
+for (const variety of VARIETIES) {
+VARIETY = variety
 for (const bandKey of BAND_KEYS) {
   const band = BANDS[bandKey]
-  console.log(`── band ${bandKey} ${'─'.repeat(52 - bandKey.length)}`)
+  console.log(`── ${variety} · band ${bandKey} ${'─'.repeat(45 - bandKey.length)}`)
 
   const positions = {}
   let total = 0
@@ -99,7 +105,7 @@ for (const bandKey of BAND_KEYS) {
     const sigs = new Set()
 
     for (let s = 1; made < PER_TYPE && tries < PER_TYPE * 300; tries++, s += 7919) {
-      const item = generateItem(bandKey, type, s | 0)
+      const item = generateItem(bandKey, type, s | 0, { variety })
       if (!item) continue
       made++
 
@@ -195,7 +201,7 @@ for (const bandKey of BAND_KEYS) {
   let short = 0
   let repeated = 0
   for (let i = 0; i < 200; i++) {
-    const session = generateSession(bandKey, 10, 1000 + i * 7919)
+    const session = generateSession(bandKey, 10, 1000 + i * 7919, { variety })
     if (session.length < 10) short++
     const sigs = new Set(session.map(itemSignature))
     if (sigs.size !== session.length) repeated++
@@ -217,6 +223,7 @@ for (const bandKey of BAND_KEYS) {
     console.log(`  book: ${cover.missing.length} categories still not covered`)
   }
   console.log()
+}
 }
 
 if (failures.length) {

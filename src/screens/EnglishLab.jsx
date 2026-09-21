@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
 import {
-  BANDS, BAND_KEYS, BOOK_COVERAGE, LEXICON_META,
+  BANDS, BAND_KEYS, BOOK_COVERAGE, LEXICON_META, VARIETIES, DEFAULT_VARIETY,
   generateItem, generateSession, validateItem,
 } from '../lib/englishTemplates'
 import {
@@ -230,7 +230,7 @@ function ItemCard({ item, lang, reveal }) {
 // things that decide whether the module is honest: how often a generator has to give up, and
 // whether anything reaches validateItem that should not.
 
-function runAudit(bandKey, perType) {
+function runAudit(bandKey, perType, variety) {
   const rows = []
   let rejected = 0
   for (const type of BANDS[bandKey].types) {
@@ -240,7 +240,7 @@ function runAudit(bandKey, perType) {
     const stems = new Set()
     let rare = 0
     for (let s = 1; made < perType && tries < perType * 200; tries++, s += 7919) {
-      const item = generateItem(bandKey, type, s)
+      const item = generateItem(bandKey, type, s, { variety })
       if (!item) { rejected++; continue }
       made++
       for (const i of item.correct) answers.add(item.options[i].text)
@@ -272,6 +272,7 @@ function runAudit(bandKey, perType) {
 export default function EnglishLab() {
   const lang = childLang()
   const [bandKey, setBandKey] = useState(BAND_KEYS[0])
+  const [variety, setVariety] = useState(DEFAULT_VARIETY)
   const [picked, setPicked] = useState('all')
   const [seed, setSeed] = useState(1)
   const [reveal, setReveal] = useState(true)
@@ -286,16 +287,17 @@ export default function EnglishLab() {
   const type = band.types.includes(picked) ? picked : 'all'
 
   const items = useMemo(() => {
-    if (type === 'all') return generateSession(bandKey, 12, seed * 1000003)
+    if (type === 'all') return generateSession(bandKey, 12, seed * 1000003, { variety })
     const out = []
     for (let i = 0, s = seed * 1000003; out.length < 12 && i < 2400; i++, s += 7919) {
-      const item = generateItem(bandKey, type, s | 0)
+      const item = generateItem(bandKey, type, s | 0, { variety })
       if (item) out.push(item)
     }
     return out
-  }, [bandKey, type, seed])
+  }, [bandKey, type, seed, variety])
 
-  const audit = useMemo(() => (view === 'audit' ? runAudit(bandKey, 120) : null), [view, bandKey])
+  const audit = useMemo(
+    () => (view === 'audit' ? runAudit(bandKey, 120, variety) : null), [view, bandKey, variety])
 
   const words = useMemo(() => {
     if (view !== 'words') return null
@@ -323,13 +325,25 @@ export default function EnglishLab() {
           <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim, lineHeight: 1.6 }}>
             /english-lab — isolated, no gems, no server, not linked from any menu.<br />
             Lexicon built {LEXICON_META.built} from WordNet {LEXICON_META.wordnet}:{' '}
-            {Object.entries(LEXICON_META.counts).map(([k, v]) => `${v} ${k}`).join(' · ')}.
+            {/* Three of the counts are per-variety objects now, so they print as a pair. */}
+            {Object.entries(LEXICON_META.counts)
+              .map(([k, v]) => `${typeof v === 'object' ? Object.entries(v).map(([a, b]) => `${a} ${b}`).join('/') : v} ${k}`)
+              .join(' · ')}.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {BAND_KEYS.map(k => (
             <button key={k} style={btn(k === bandKey)} onClick={() => setBandKey(k)}>{k}</button>
+          ))}
+          <span style={{ width: 12 }} />
+          {/* Which English. Not a language — the child's language is a separate axis. Three
+              types answer differently here: `calm` rhymes with `arm` in one and not the
+              other, and 87 words are spelled two ways. */}
+          {VARIETIES.map(v => (
+            <button key={v} style={btn(v === variety)} onClick={() => setVariety(v)}>
+              {v === 'uk' ? '🇬🇧 British' : '🇺🇸 American'}
+            </button>
           ))}
           <span style={{ width: 12 }} />
           {['grid', 'audit', 'words', 'coverage'].map(v => (

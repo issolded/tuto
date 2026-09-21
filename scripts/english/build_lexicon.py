@@ -38,7 +38,6 @@ import json, re, datetime
 from pathlib import Path
 from collections import defaultdict
 
-from nltk.corpus import cmudict
 from nltk.corpus import names as name_corpus
 from nltk.corpus import wordnet as wn
 from wordfreq import zipf_frequency
@@ -320,9 +319,14 @@ def british_candidates(word):
     out = []
     if word in _ONE_OFF:
         out.append(_ONE_OFF[word])
-    for us, uk in (('or', 'our'), ('er', 're'), ('se', 'ce'), ('og', 'ogue'), ('e', 'ae')):
+    for us, uk in (('or', 'our'), ('er', 're'), ('og', 'ogue'), ('e', 'ae')):
         if word.endswith(us) and len(word) > len(us) + 2:
             out.append(word[:-len(us)] + uk)
+    # -se/-ce is NOT a pattern. It holds for `defense/defence` and breaks for `advise/advice`,
+    # `practise/practice`, `devise/device` and `licence/license`, which are pairs of different
+    # words — a verb and a noun — and the rule was quietly merging them.
+    if word in ('defense', 'offense', 'pretense'):
+        out.append(word[:-2] + 'ce')
     # The same `or` inside the word, before an ending: `favorite`, `favorable`, `colorful`,
     # `honorable`, `neighborhood`. The suffix rule only sees it at the end.
     for i in range(2, len(word) - 2):
@@ -667,94 +671,98 @@ def main():
                     kin[a].add(b)
     kinship = {k: sorted(v) for k, v in sorted(kin.items())}
 
-    # ---- pass 8: pronunciation -------------------------------------------------------------
-    # CMUdict, for the three types that are about how a word SOUNDS rather than what it means:
-    # rhyme, homophone and syllable count. All three are in the 9-10 and 11-12 books and none
-    # of them was reachable before — WordNet knows nothing about pronunciation.
+    # ---- pass 8: pronunciation, in two varieties ---------------------------------------------
+    # Three types ask how a word SOUNDS — rhyme, homophone and syllables — and their answers
+    # are not the same on both sides of the Atlantic. `calm` rhymes with `arm` in British and
+    # not in American; `flaw` and `floor` are homophones in British, `pore` and `pour` in both,
+    # `oar` and `ore` only in American. Measured over this lexicon: 880 words (5%) have a
+    # different rhyme, and there are 49 homophone groups British has that American does not,
+    # against 9 the other way.
     #
-    # CMUdict is General American and the books are British, which is not a detail. The winter
-    # poem in the 9-10 paper rhymes `calm` with `arm`, and in an American transcription those
-    # do not rhyme: `arm` has an R in it. The fix is the standard one — drop /R/ unless a vowel
-    # follows, which turns General American into a rough RP — and it is worth the trouble:
-    # before it, CMUdict agreed with 3 of the 7 rhymes the poem itself uses, after it, 7.
-    prons = cmudict.dict()
-
-    def is_vowel(ph):
-        return ph[-1].isdigit()
-
-    # /R/ drops after these vowels and not after the others, which is the part the first
-    # version got wrong by dropping it after all of them.
+    # So the pronunciation is stored twice and a question is generated for one variety. Which
+    # one is a setting, not a fact about the module.
     #
-    # A blind test found it: the engine offered `shared` as a homophone of `shed`. In General
-    # American `shared` is SH EH R D, and taking the R out leaves exactly `shed`. In British it
-    # does not — EH before R is not EH, it is the centring diphthong of `air`, so `shared` is
-    # /ʃeəd/ and `shed` is /ʃed/. The vowels that really do absorb a following R are the long
-    # back and central ones: `calm`/`arm`, `caught`/`court`, `bird`. The front and high ones
-    # change quality instead, and merging them invents homophones that do not exist.
-    R_ABSORBING = {'AA', 'AO', 'ER', 'AH'}
-
-    def non_rhotic(p):
-        out = []
-        for i, ph in enumerate(p):
-            if ph == 'R' and not (i + 1 < len(p) and is_vowel(p[i + 1])):
-                prev = out[-1][:-1] if out and is_vowel(out[-1]) else None
-                if prev in R_ABSORBING:
-                    continue
-            out.append(ph)
+    # Read from two IPA dictionaries rather than from CMUdict plus a rule, and that replacement
+    # fixed a real defect rather than adding a feature. CMUdict is American and American merged
+    # the vowels of `hot` and `calm` into one symbol; reading it non-rhotically to reach British
+    # then made `heart` and `hot` identical. The lexicon was offering `heart/hot`, `carp/cop`
+    # and `darn/don` as homophones, which they are in no dialect. The distinction is not in an
+    # American dictionary, so no transformation of one can recover it.
+    def load_ipa(path):
+        out = {}
+        for line in path.read_text(encoding='utf-8').splitlines():
+            if '\t' not in line:
+                continue
+            word, prons = line.split('\t', 1)
+            word = word.lower()
+            if word.isalpha():
+                out[word] = [x.strip().strip('/') for x in prons.split(',') if x.strip()]
         return out
 
+    IPA = {'uk': load_ipa(VENDOR / 'ipa-en_UK.txt'), 'us': load_ipa(VENDOR / 'ipa-en_US.txt')}
+
+    # IPA marks stress with a mark BEFORE the syllable rather than on the vowel, so a syllable
+    # is counted by its vowel and the rhyme runs from the last stressed one.
+    VOWELS = set('aeiouæɑɐɒɔəɘɛɜɪiːʊuʌyøœɵɤɯ')
+    STRESS = 'ˈˌ'
+
+    def strip_marks(p):
+        return ''.join(ch for ch in p if ch not in STRESS)
+
+    def syllable_count(p):
+        # Long marks and ties are not vowels of their own; a diphthong written as two letters
+        # counts once, so runs of adjacent vowel letters collapse.
+        n, prev_vowel = 0, False
+        for ch in strip_marks(p):
+            v = ch in VOWELS
+            if v and not prev_vowel:
+                n += 1
+            prev_vowel = v
+        return max(1, n)
+
     def rime_of(p):
-        """From the last STRESSED vowel to the end, stress marks dropped.
+        """From the last stressed vowel to the end."""
+        marks = [i for i, ch in enumerate(p) if ch in STRESS]
+        for start_at in reversed(marks):
+            tail = strip_marks(p[start_at:])
+            for i, ch in enumerate(tail):
+                if ch in VOWELS:
+                    return tail[i:]
+        bare = strip_marks(p)
+        for i, ch in enumerate(bare):
+            if ch in VOWELS:
+                return bare[i:]
+        return bare
 
-        Stressed is the whole point and the first version missed it, walking back to the last
-        vowel of any kind. CMUdict marks the final `-y` of `ability` as IY0, unstressed, so the
-        rhyme key came out as plain "IY" and `ability`, `absolutely` and `academy` landed in one
-        group of 2057 words that a child would not call rhymes. From the last stressed vowel,
-        `ability` is IH-L-AH-T-IY and keeps its own company.
-        """
-        p = non_rhotic(p)
-        for i in range(len(p) - 1, -1, -1):
-            if is_vowel(p[i]) and p[i][-1] in '12':
-                return '-'.join(x.rstrip('012') for x in p[i:])
-        # A word CMUdict marks with no stress at all (a few function words) falls back to its
-        # last vowel, which is the best available answer rather than no answer.
-        for i in range(len(p) - 1, -1, -1):
-            if is_vowel(p[i]):
-                return '-'.join(x.rstrip('012') for x in p[i:])
-        return '-'.join(p)
+    rimes = {'uk': {}, 'us': {}}
+    syllables = {'uk': {}, 'us': {}}
+    sound_key = {'uk': {}, 'us': {}}
+    for variety, table in IPA.items():
+        for w in sorted(words):
+            ps = table.get(w)
+            if not ps:
+                continue
+            rimes[variety][w] = sorted({rime_of(p) for p in ps})
+            syllables[variety][w] = min(syllable_count(p) for p in ps)
+            sound_key[variety][w] = sorted({strip_marks(p) for p in ps})
 
-    def syllables_of(p):
-        return sum(1 for ph in p if is_vowel(ph))
+    rhyme_groups = {}
+    homophones = {}
+    for variety in IPA:
+        by_rime = defaultdict(set)
+        for w, ks in rimes[variety].items():
+            for k in ks:
+                by_rime[k].add(w)
+        rhyme_groups[variety] = {k: sorted(v) for k, v in by_rime.items() if len(v) >= 3}
 
-    # A word's rimes across ALL its pronunciations, not just the first. `and` is listed weak
-    # (AH0 N D) before strong (AE1 N D), and taking only the first said `land` does not rhyme
-    # with `and`; `tears` is both TIHRZ and TEHRZ and only one of them rhymes with `ears`.
-    rimes = {}
-    syllables = {}
-    homophone_key = {}
-    for w in sorted(words):
-        ps = prons.get(w)
-        if not ps:
-            continue
-        rimes[w] = sorted({rime_of(p) for p in ps})
-        syllables[w] = min(syllables_of(p) for p in ps)
-        homophone_key[w] = sorted({'-'.join(x.rstrip('012') for x in non_rhotic(p)) for p in ps})
-
-    by_rime = defaultdict(set)
-    for w, ks in rimes.items():
-        for k in ks:
-            by_rime[k].add(w)
-    rhyme_groups = {k: sorted(v) for k, v in by_rime.items() if len(v) >= 3}
-
-    by_sound = defaultdict(set)
-    for w, ks in homophone_key.items():
-        for k in ks:
-            by_sound[k].add(w)
-    # Homophones only count when they are spelled differently AND are not the same word: the
-    # dictionary lists `bases` twice for one lemma, and `their/there` is a question while
-    # `read/read` is not.
-    homophones = [sorted(v) for v in by_sound.values()
-                  if len(v) >= 2 and not any(spelling_variant(a, b) for a in v for b in v if a < b)]
+        by_sound = defaultdict(set)
+        for w, ks in sound_key[variety].items():
+            for k in ks:
+                by_sound[k].add(w)
+        # Homophones only count when the spellings differ and are not the same word twice.
+        homophones[variety] = [sorted(v) for v in by_sound.values()
+                               if len(v) >= 2
+                               and not any(spelling_variant(a, b) for a in v for b in v if a < b)]
 
     # ---- pass 9: word formation --------------------------------------------------------------
     # Suffixes, prefixes and roots — the 9-10 book's "add the suffix ful", the 11-12 book's
@@ -933,31 +941,23 @@ def main():
         if best:
             definitions[name] = best
 
-    # ---- pass 12: one spelling per word ------------------------------------------------------
-    # Applied after every other pass so the relations built above still see both forms and
-    # nothing is orphaned; only the final word list loses the American spellings.
-    american = {w for w in words if any(c in words for c in british_candidates(w))}
-    for w in american:
-        words.pop(w, None)
-        lexname.pop(w, None)
-        syllables.pop(w, None)
-        rimes.pop(w, None)
-        definitions.pop(w, None)
-        examples.pop(w, None)
-    drop = lambda rows: [r for r in rows if not any(x in american for x in r if isinstance(x, str))]
-    synsets = [[pos, [n for n in ns if n not in american]] for pos, ns in synsets]
-    synsets = [row for row in synsets if len(row[1]) >= 2]
-    antonyms = {t for t in antonyms if t[0] not in american and t[1] not in american}
-    categories = [[k, lab, [m for m in mem if m not in american], root]
-                  for k, lab, mem, root in categories]
-    categories = [c for c in categories if len(c[2]) >= 5]
-    suffixed, prefixed, plurals, pasts = drop(suffixed), drop(prefixed), drop(plurals), drop(pasts)
-    homophones = [g for g in (sorted(set(g) - american) for g in homophones) if len(g) >= 2]
-    rhyme_groups = {k: [w for w in v if w not in american] for k, v in rhyme_groups.items()}
-    rhyme_groups = {k: v for k, v in rhyme_groups.items() if len(v) >= 3}
-    kinship = {k: [x for x in v if x not in american]
-               for k, v in kinship.items() if k not in american}
-    senses = {k: v for k, v in senses.items() if k not in american}
+    # ---- pass 12: the two spellings, both kept -----------------------------------------------
+    # An earlier build DELETED the American spellings, on the grounds that all three books are
+    # British. That is right about the books and wrong about the children: a child in the
+    # United States writes `color`, and a module that only knows `colour` marks them wrong in
+    # exactly the types where spelling IS the answer.
+    #
+    # So both stay and the choice moves to generation time, beside the pronunciation. What the
+    # lexicon records is which is which, so a question can be built in one variety and never
+    # show the other — the failure to avoid is not picking the wrong spelling, it is putting
+    # `color` in one question and `colour` in the next.
+    spelling = {}
+    for w in sorted(words):
+        for other in british_candidates(w):
+            if other in words:
+                spelling[w] = {'us': w, 'uk': other}
+                spelling[other] = {'us': w, 'uk': other}
+                break
 
     meta = {
         'built': datetime.date.today().isoformat(),
@@ -973,15 +973,15 @@ def main():
             'blocklist_handwritten': len(load_words(BLOCK)),
             'sentence_topics': len(SENTENCE_TOPICS),
             'category_skips': len(_CAT_SKIP),
-            'rhyme_groups': len(rhyme_groups),
-            'homophones': len(homophones),
-            'syllables': len(syllables),
+            'rhyme_groups': {v: len(g) for v, g in rhyme_groups.items()},
+            'homophones': {v: len(g) for v, g in homophones.items()},
+            'syllables': {v: len(g) for v, g in syllables.items()},
             'suffixed': len(suffixed),
             'prefixed': len(prefixed),
             'plurals': len(plurals),
             'pasts': len(pasts),
             'definitions': len(definitions),
-            'american_dropped': len(american),
+            'spelling_pairs': len(spelling) // 2,
         },
     }
 
@@ -1004,10 +1004,14 @@ def main():
         '//             one\'s distractors. See the builder: without it the type asks what a\n'
         '//             word means and offers two right answers.\n'
         '// EXAMPLES    word -> one real sentence using it, for the hide-the-letters types.\n'
-        '// SYLLABLES   word -> syllable count (CMUdict, fewest across pronunciations).\n'
-        '// RIMES       word -> its rhyme keys, one per pronunciation, non-rhotic.\n'
-        '// RHYME_GROUPS rhyme key -> the words that rhyme.\n'
-        '// HOMOPHONES  groups of differently-spelled words that sound the same.\n'
+        '// SYLLABLES   variety -> word -> syllable count.\n'
+        '// RIMES       variety -> word -> its rhyme keys, one per pronunciation.\n'
+        '// RHYME_GROUPS variety -> rhyme key -> the words that rhyme.\n'
+        '// HOMOPHONES  variety -> groups of differently-spelled words that sound the same.\n'
+        '//             All four are stored per variety because their ANSWERS differ: `calm`\n'
+        '//             rhymes with `arm` in British and not in American.\n'
+        '// SPELLING    word -> {uk, us} for the words spelled two ways. Both spellings stay\n'
+        '//             in the lexicon; a question picks one variety and never mixes them.\n'
         '// SUFFIXED    [base, derived, suffix] where the spelling CHANGED (beauty+ful).\n'
         '// PREFIXED    [stem, prefixed, prefix].\n'
         '// PLURALS     [singular, plural] where the plural is not just +s.\n'
@@ -1038,6 +1042,7 @@ def main():
         + js('RIMES', rimes)
         + js('RHYME_GROUPS', rhyme_groups)
         + js('HOMOPHONES', homophones)
+        + js('SPELLING', spelling)
         + js('SUFFIXED', suffixed)
         + js('PREFIXED', prefixed)
         + js('PLURALS', plurals)

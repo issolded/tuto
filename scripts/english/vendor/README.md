@@ -7,6 +7,8 @@ of the same commit produce the same lexicon.
 |---|---|---|---|
 | `ldnoobw-en.txt` | 403 obscene terms | [LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (Shutterstock) | CC-BY 4.0 |
 | `cuss.json` | 1795 terms **rated** 0–2 for certainty | [words/cuss](https://github.com/words/cuss) (Titus Wormer) | MIT — `cuss.LICENSE.txt` |
+| `ipa-en_UK.txt` | 65,119 British pronunciations, in IPA | [open-dict-data/ipa-dict](https://github.com/open-dict-data/ipa-dict) | MIT — `ipa-dict.LICENSE.txt` |
+| `ipa-en_US.txt` | 125,927 American pronunciations, in IPA | same | MIT |
 | `dale-chall.json` | 2942 words 80% of US fourth-graders know | [words/dale-chall](https://github.com/words/dale-chall) (Titus Wormer) | MIT — `dale-chall.LICENSE.txt` |
 
 Every licence here is permissive. A fourth list, [zacanger/profane-words](https://github.com/zacanger/profane-words),
@@ -15,6 +17,23 @@ was used and then dropped: LGPL-3.0 is copyleft, and these lists are compiled in
 worth carrying for a word list. Measured before removing it, the words it alone caught in our
 frequency band numbered 50, half of them false alarms it would have cost us (`leper`,
 `licking`, `clamps`, `vixen`, `bombers`). The other 25 are written out in `../blocklist.txt`.
+
+## Why two pronunciation dictionaries and not CMUdict
+
+CMUdict was here first and could not do the job, for a reason that only shows up when you
+look at the output. It is American, and American English merged two vowels that British keeps
+apart: `hot` and `calm` share the symbol AA. Reading it non-rhotically to get British
+pronunciation — which the 9-10 poem forces, since it rhymes `calm` with `arm` — then makes
+`heart` and `hot` identical. The lexicon was offering `heart/hot`, `carp/cop`, `darn/don` and
+`parted/potted` as homophones, which they are in no dialect of English.
+
+No transformation of an American dictionary can fix that, because the distinction is not in
+it. These two are IPA, they are separate dictionaries rather than one plus a rule, and they
+give the right answer in both varieties: British `heart` is /hɑːt/ against `hot` /hɒt/, and
+`flaw` and `floor` are both /flɔː/; American `flaw` is /flɔ/ against `floor` /flɔɹ/, and
+`pore`, `pour`, `oar` and `ore` are all /ɔɹ/.
+
+They cover 95% of this lexicon. A word in neither is simply not asked about its sound.
 
 ## Why these, and what they do not do
 

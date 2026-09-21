@@ -52,9 +52,36 @@
 
 import {
   WORD_Z, WORD_LEX, SYNSETS, ANTONYMS, CATEGORIES, SENSES, EXAMPLES, KINSHIP, BLOCKED,
-  SYLLABLES, RIMES, RHYME_GROUPS, HOMOPHONES, SUFFIXED, PREFIXED, PLURALS, PASTS, DEFINITIONS,
-  LEXICON_META,
+  SYLLABLES, RIMES, RHYME_GROUPS, HOMOPHONES, SPELLING, SUFFIXED, PREFIXED, PLURALS, PASTS,
+  DEFINITIONS, LEXICON_META,
 } from './englishLexicon.generated.js'
+
+// ── which English ─────────────────────────────────────────────────────────────────────────
+//
+// Not a language — the child's language is already an axis, and this is a third one. Two
+// things move with it and only one of them is obvious.
+//
+// SPELLING is the obvious one: a child in the United States writes `color`, and in the types
+// where spelling is the answer — suffix, plural, past tense, missing vowel — the module would
+// mark the spelling they were taught as the mistake.
+//
+// SOUND is the one that actually changes the answers. `calm` rhymes with `arm` in British and
+// not in American; `bath` rhymes with `math` in American and not in British; `flaw` and
+// `floor` are homophones in British, `oar` and `ore` in American. Measured over this lexicon,
+// 880 words (5%) rhyme differently, and British has 49 homophone groups American does not
+// against 9 the other way. A rhyme question generated in the wrong variety does not look
+// wrong — it looks like a question with no right answer on the page.
+//
+// The default is British because all three books are, the 11+ is a British exam, and every
+// band threshold was measured against them. It is a default, not an assumption.
+export const VARIETIES = ['uk', 'us']
+export const DEFAULT_VARIETY = 'uk'
+
+/** The spelling of a word in the given variety — itself, unless it is one of the 87 pairs. */
+export const spell = (w, variety) => (SPELLING[w] ? SPELLING[w][variety] : w)
+
+/** True when this word is spelled the other way round in this variety, so it must not appear. */
+const wrongSpelling = (w, variety) => !!SPELLING[w] && SPELLING[w][variety] !== w
 
 // The blocklist at runtime, not only at build time. Everything drawn FROM the lexicon is
 // already clean — the builder never put a blocked word in it. The letter types do not draw
@@ -382,6 +409,9 @@ export function sameWordDifferentEnding(a, b) {
   // And the same word wearing a PREFIX, which the startsWith test cannot see: a rhyme
   // question offered `equal` as the word that rhymes with `unequal`.
   if (long.endsWith(short) && long.length - short.length <= 4) return true
+  // And a compound built on it: `science/neuroscience`, `lap/overlap`. Asking which word
+  // rhymes with `science` and answering `neuroscience` is not a question about sound.
+  if (short.length >= 4 && (long.endsWith(short) || long.startsWith(short))) return true
   // Near-stems, which the prefix test misses because neither word contains the other: `unity /
   // unitary / unitarian` appeared on one line as three separate options. Four shared opening
   // letters on two words of similar length is one word twice.
@@ -1026,8 +1056,35 @@ const REGULAR_PAST = (w) => (
       : w + 'ed')
 
 /** Every rhyme key a word has, across its pronunciations. */
-const rimesOf = (w) => RIMES[w] || []
-const rhymes = (a, b) => rimesOf(a).some(k => rimesOf(b).includes(k))
+const rimesOf = (w, variety) => RIMES[variety]?.[w] || []
+const rhymes = (a, b, variety) => rimesOf(a, variety).some(k => rimesOf(b, variety).includes(k))
+
+/** Would a CHILD call these two a rhyme, whatever the dictionary says?
+ *
+ *  The rhyme key runs from the last STRESSED vowel, and the dictionaries mark one stress per
+ *  word. So `overlap` is filed as ˈəʊvəlap, its key is the whole word, and it does not rhyme
+ *  with `flap` — which is how `overlap` came to be offered as a wrong answer to "what rhymes
+ *  with flap". Nobody would mark that wrong.
+ *
+ *  The test is deliberately asymmetric: strict for choosing the ANSWER, which must be a real
+ *  rhyme by the last stressed vowel, and generous for rejecting a DISTRACTOR, where sharing
+ *  the last three letters and the last vowel sound is enough to disqualify it. An option a
+ *  child could defend has no business on the page. */
+const couldPassForRhyme = (a, b, variety) => {
+  if (rhymes(a, b, variety)) return true
+  if (a.length < 3 || b.length < 3) return false
+  if (a.slice(-3) !== b.slice(-3)) return false
+  const tail = (w) => {
+    const [k] = rimesOf(w, variety)
+    if (!k) return null
+    const vowels = [...k].map((ch, i) => ('aeiouæɑɐɒɔəɘɛɜɪiʊuʌyøœ'.includes(ch) ? i : -1))
+      .filter(i => i >= 0)
+    return vowels.length ? k.slice(vowels[vowels.length - 1]) : k
+  }
+  const ta = tail(a)
+  return !!ta && ta === tail(b)
+}
+const syllablesOf = (w, variety) => SYLLABLES[variety]?.[w]
 
 function genOddSynonym(r, band, seed) {
   // The 9-10 book: "Underline one word in each group which is not a synonym for the rest."
@@ -1087,11 +1144,15 @@ function genRhyme(r, band, seed) {
   // "Write a word that rhymes with each of the following." Rhyme is the one thing in this whole
   // module that WordNet cannot answer at all; it comes from CMUdict, read non-rhotically so
   // that `calm` rhymes with `arm` as it does in the book.
-  const keys = Object.keys(RHYME_GROUPS).filter(
-    k => RHYME_GROUPS[k].filter(w => z(w) >= band.answer).length >= 2)
+  // Held to the FILLER bar, not the answer bar. Both words on a rhyme question are printed
+  // and both are read, as on an odd-two line — and the answer bar let through `hap`, `dada`
+  // and `nous`, which are words a dictionary knows and a child does not.
+  const table = RHYME_GROUPS[band.variety]
+  const ok = (w) => z(w) >= band.filler && !wrongSpelling(w, band.variety)
+  const keys = Object.keys(table).filter(k => table[k].filter(ok).length >= 2)
   if (!keys.length) return null
   const key = pickOne(r, keys)
-  const group = shuffle(r, RHYME_GROUPS[key].filter(w => z(w) >= band.answer))
+  const group = shuffle(r, table[key].filter(ok))
   const [stem, answer] = group
   if (!stem || !answer || sameWordDifferentEnding(stem, answer)) return null
 
@@ -1100,14 +1161,15 @@ function genRhyme(r, band, seed) {
   // The trap English is famous for: spelled alike, said differently. `bough` and `cough`,
   // `comb` and `bomb`. A child who reads the ending instead of hearing it picks this.
   const lookalikes = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.filler && w !== stem && w.slice(-3) === stem.slice(-3) && !rhymes(w, stem))
+    w => z(w) >= band.filler && w !== stem && w.slice(-3) === stem.slice(-3)
+      && !couldPassForRhyme(w, stem, band.variety) && !wrongSpelling(w, band.variety))
   if (lookalikes.length) {
     const w = pickOne(r, lookalikes)
     distractors.push({ text: w, why: 'looks-alike' })
     avoid.add(w)
   }
   for (const w of fillers(r, band, avoid, band.options - 1 - distractors.length, answer)) {
-    if (rhymes(w, stem)) continue
+    if (couldPassForRhyme(w, stem, band.variety)) continue
     distractors.push({ text: w, why: 'unrelated' })
     avoid.add(w)
   }
@@ -1118,15 +1180,17 @@ function genRhyme(r, band, seed) {
     prompt: { word: stem },
     ...layOut(r, band, [answer], distractors),
     pick: 1,
-    rule: { kind: 'rhyme', of: stem, key },
+    rule: { kind: 'rhyme', of: stem, key, variety: band.variety },
   }
 }
 
 function genHomophone(r, band, seed) {
   // "Write a homophone for each of these words." `their / there`, `bare / bear`.
-  const groups = HOMOPHONES.filter(g => g.filter(w => z(w) >= band.answer).length >= 2)
+  const table = HOMOPHONES[band.variety]
+  const ok = (w) => z(w) >= band.filler && !wrongSpelling(w, band.variety)
+  const groups = table.filter(g => g.filter(ok).length >= 2)
   if (!groups.length) return null
-  const group = shuffle(r, pickOne(r, groups).filter(w => z(w) >= band.answer))
+  const group = shuffle(r, pickOne(r, groups).filter(ok))
   const [stem, answer] = group
   if (!stem || !answer) return null
 
@@ -1134,8 +1198,9 @@ function genHomophone(r, band, seed) {
   const distractors = []
   // Rhymes-but-is-not — the near miss. `bare / bear` are homophones; `bore` only rhymes.
   const near = Object.keys(WORD_Z).filter(
-    w => z(w) >= band.filler && !avoid.has(w) && rhymes(w, stem)
-      && !group.some(g => (HOMOPHONES.find(h => h.includes(g)) || []).includes(w)))
+    w => z(w) >= band.filler && !avoid.has(w) && rhymes(w, stem, band.variety)
+      && !wrongSpelling(w, band.variety)
+      && !group.some(g => (table.find(h => h.includes(g)) || []).includes(w)))
   if (near.length) {
     const w = pickOne(r, near)
     distractors.push({ text: w, why: 'rhyme' })
@@ -1152,7 +1217,7 @@ function genHomophone(r, band, seed) {
     prompt: { word: stem },
     ...layOut(r, band, [answer], distractors),
     pick: 1,
-    rule: { kind: 'homophone', of: stem, group },
+    rule: { kind: 'homophone', of: stem, group, variety: band.variety },
   }
 }
 
@@ -1160,9 +1225,11 @@ function genSyllables(r, band, seed) {
   // "Complete the table by writing in words that have 3, 4 or 5 syllables." Asked the other way
   // round, because the book's form is a free write: which of these five has N?
   const n = pickOne(r, band.syllables)
-  const pool = Object.keys(SYLLABLES).filter(w => z(w) >= band.answer && concrete(w))
-  const right = pool.filter(w => SYLLABLES[w] === n)
-  const wrong = pool.filter(w => SYLLABLES[w] !== n && Math.abs(SYLLABLES[w] - n) <= 2)
+  const table = SYLLABLES[band.variety]
+  const pool = Object.keys(table).filter(
+    w => z(w) >= band.answer && concrete(w) && !wrongSpelling(w, band.variety))
+  const right = pool.filter(w => table[w] === n)
+  const wrong = pool.filter(w => table[w] !== n && Math.abs(table[w] - n) <= 2)
   if (right.length < 1 || wrong.length < band.options - 1) return null
   const answer = pickOne(r, right)
   const avoid = new Set([answer])
@@ -1171,7 +1238,7 @@ function genSyllables(r, band, seed) {
     if (distractors.length >= band.options - 1) break
     if (avoid.has(w) || sameWordDifferentEnding(w, answer)) continue
     avoid.add(w)
-    distractors.push({ text: w, why: `syllables-${SYLLABLES[w]}` })
+    distractors.push({ text: w, why: `syllables-${table[w]}` })
   }
   if (distractors.length < band.options - 1) return null
 
@@ -1180,7 +1247,7 @@ function genSyllables(r, band, seed) {
     prompt: { count: n },
     ...layOut(r, band, [answer], distractors),
     pick: 1,
-    rule: { kind: 'syllables', count: n },
+    rule: { kind: 'syllables', count: n, variety: band.variety },
   }
 }
 
@@ -1445,6 +1512,12 @@ export function validateItem(item) {
   const texts = item.options.map(o => o.text)
   if (new Set(texts).size !== texts.length) return 'duplicate option'
   if (!item.correct.length) return 'no correct option'
+  // One variety per question, throughout. The failure this guards against is not picking the
+  // wrong spelling — it is `color` in one option and `colour` in the next.
+  if (item.variety) {
+    const mixed = texts.filter(t => wrongSpelling(t, item.variety))
+    if (mixed.length) return `"${mixed[0]}" is the other variety's spelling`
+  }
   if (item.correct.length !== item.pick) return `pick ${item.pick} but ${item.correct.length} correct`
   if (item.options.some(o => !o.text)) return 'empty option'
 
@@ -1529,18 +1602,22 @@ export function validateItem(item) {
   }
   if (item.type === 'rhyme') {
     const stem = item.prompt.word
-    for (const w of wrong) if (rhymes(w, stem)) return `"${w}" also rhymes with "${stem}"`
-    if (!rhymes(answers[0], stem)) return `"${answers[0]}" does not rhyme with "${stem}"`
+    const v = item.rule.variety
+    for (const w of wrong) {
+      if (couldPassForRhyme(w, stem, v)) return `"${w}" could pass for a rhyme with "${stem}"`
+    }
+    if (!rhymes(answers[0], stem, v)) return `"${answers[0]}" does not rhyme with "${stem}" in ${v}`
   }
   if (item.type === 'homophone') {
     const group = item.rule.group
     for (const w of wrong) if (group.includes(w)) return `"${w}" is a homophone too`
   }
   if (item.type === 'syllables') {
+    const v = item.rule.variety
     for (const w of wrong) {
-      if (SYLLABLES[w] === item.prompt.count) return `"${w}" also has ${item.prompt.count} syllables`
+      if (syllablesOf(w, v) === item.prompt.count) return `"${w}" also has ${item.prompt.count} syllables`
     }
-    if (SYLLABLES[answers[0]] !== item.prompt.count) return 'the answer has the wrong syllable count'
+    if (syllablesOf(answers[0], v) !== item.prompt.count) return 'the answer has the wrong syllable count'
   }
   // For plural, past tense and suffix the rule is the same and it is the strictest in the
   // file: exactly ONE option may be a word the lexicon knows. A second real word is a second
@@ -1571,8 +1648,13 @@ export function validateItem(item) {
 // ── public generation ────────────────────────────────────────────────────────────────────
 
 export function generateItem(bandKey, type, seed, opts = {}) {
-  const band = BANDS[bandKey]
-  if (!band) return null
+  const base = BANDS[bandKey]
+  if (!base) return null
+  // The variety rides on the band object rather than being threaded through every generator,
+  // because every generator needs it and only three read it directly. A shallow copy per call
+  // is cheap and keeps BANDS itself a constant.
+  const variety = VARIETIES.includes(opts.variety) ? opts.variety : DEFAULT_VARIETY
+  const band = { ...base, variety }
   const r = rng(seed)
   const kinds = type ? [type] : (opts.types || band.types)
   const kind = type || pickOne(r, kinds)
@@ -1581,6 +1663,12 @@ export function generateItem(bandKey, type, seed, opts = {}) {
   const item = gen(r, band, seed)
   if (!item) return null
   item.band = bandKey
+  item.variety = variety
+  // Everything a question prints goes through the variety's spelling. The sound types already
+  // filter it out at source; this catches the others, where a word arrives from a synset or a
+  // category and carries whichever spelling WordNet happened to file it under.
+  for (const o of item.options) o.text = spell(o.text, variety)
+  if (item.prompt.word) item.prompt.word = spell(item.prompt.word, variety)
   // An item that fails its own check is discarded, never shown and never patched up. Same
   // contract as the puzzle engine: the caller asks again with another seed.
   if (validateItem(item)) return null
