@@ -513,15 +513,202 @@ function multiplicationWordTemplate(level, lang) {
 // 5/8 on a number pad, and asking them to would turn a fractions question into a typing puzzle.
 // They only appear from Year 3, which is where adding same-denominator fractions and comparing
 // unit fractions actually enter the curriculum.
+// Percentage of an amount. Both Bond books ask this more than any other single thing, and the
+// curriculum names it in Year 5, Year 6 and Year 7 — it is the shape that keeps coming back.
+// The percentages are the ones a child can reach by halving and tenths rather than by
+// multiplying a decimal, which is how it is taught before a calculator appears.
+function fractionPercentOf(level, lang) {
+  const band = bandForLevel(level)
+  const pct = pick(band >= 7 ? [5, 10, 15, 20, 25, 30, 40, 60, 75, 80] : [10, 20, 25, 50, 75])
+  // The amount is chosen so the answer is whole: percentages of 100 are the taught anchor.
+  const amount = pick([20, 40, 50, 60, 80, 120, 140, 160, 200, 240, 300, 400, 500]) * (band >= 7 ? pick([1, 1, 2]) : 1)
+  const answer = amount * pct / 100
+  if (!Number.isInteger(answer)) return fractionPercentOf(level, lang)
+
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: say(lang,
+      `What is ${pct}% of ${num(amount, lang)}?`,
+      `${num(amount, lang)} sayısının %${pct} kadarı kaçtır?`,
+      `¿Cuánto es el ${pct}% de ${num(amount, lang)}?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `frac:pct:${pct}:${amount}`,
+    hint_steps: [
+      say(lang, `Per cent means "out of a hundred" — ${pct}% is ${pct} parts of every 100.`,
+                `Yüzde demek "her yüzde" demek — %${pct}, her 100'ün ${pct} parçası.`,
+                `Por ciento significa "de cada cien": el ${pct}% son ${pct} partes de cada 100.`),
+      pct % 10 === 0
+        ? say(lang, `Find 10% first by dividing by 10, then take as many tens as you need.`,
+                    `Önce 10'a bölüp %10'u bul, sonra gerektiği kadar onluk al.`,
+                    `Halla primero el 10% dividiendo entre 10 y luego toma tantas decenas como necesites.`)
+        : say(lang, `Find 10% and 5% first — 10% is a tenth, and 5% is half of that.`,
+                    `Önce %10 ve %5'i bul — %10 onda birdir, %5 de onun yarısı.`,
+                    `Halla primero el 10% y el 5%: el 10% es la décima parte y el 5% la mitad de eso.`),
+    ],
+  }
+}
+
+// Year 7: percentage increase and decrease. Bond's "a £75 jacket with 15% off" and "journey
+// times up 15%" are both this shape, and the mistake it catches is answering with the change
+// instead of with the new amount.
+function fractionPercentChange(level, lang) {
+  const pct = pick([5, 10, 15, 20, 25, 50])
+  const base = pick([40, 60, 80, 120, 160, 200, 240, 300, 400])
+  const change = base * pct / 100
+  if (!Number.isInteger(change)) return fractionPercentChange(level, lang)
+  const up = Math.random() < 0.5
+  const answer = up ? base + change : base - change
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: up
+      ? say(lang,
+          `A journey normally takes ${base} minutes. Today it takes ${pct}% longer. How many minutes is it today?`,
+          `Bir yolculuk normalde ${base} dakika sürüyor. Bugün %${pct} daha uzun sürdü. Bugün kaç dakika sürdü?`,
+          `Un viaje dura normalmente ${base} minutos. Hoy dura un ${pct}% más. ¿Cuántos minutos dura hoy?`)
+      : say(lang,
+          `A coat costs ${base} dollars. In the sale it is ${pct}% off. What does it cost now?`,
+          `Bir mont ${base} lira. İndirimde %${pct} iniyor. Şimdi kaç lira?`,
+          `Un abrigo cuesta ${base} euros. En rebajas tiene un ${pct}% de descuento. ¿Cuánto cuesta ahora?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `frac:pctch:${up ? 'up' : 'dn'}:${pct}:${base}`,
+    hint_steps: [
+      say(lang, `Work out the ${pct}% on its own first.`,
+                `Önce %${pct}'in kendisini hesapla.`,
+                `Calcula primero el ${pct}% por separado.`),
+      up
+        ? say(lang, `That much is ADDED to the original — the question asks for the new time, not the extra.`,
+                    `O kadarı aslın ÜSTÜNE eklenir — soru yeni süreyi istiyor, fazlalığı değil.`,
+                    `Esa cantidad se SUMA al original: la pregunta pide el tiempo nuevo, no lo que aumenta.`)
+        : say(lang, `That much comes OFF the original — the question asks for the new price, not the discount.`,
+                    `O kadarı asıldan DÜŞÜLÜR — soru yeni fiyatı istiyor, indirimi değil.`,
+                    `Esa cantidad se RESTA del original: la pregunta pide el precio nuevo, no el descuento.`),
+    ],
+  }
+}
+
+// Simplifying a fraction with a common factor. A choice question: the answer is a fraction.
+function fractionSimplify(level, lang) {
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x)
+  let n, d
+  do { n = randInt(1, 9); d = randInt(2, 12) } while (n >= d || gcd(n, d) !== 1)
+  const f = randInt(2, 8)
+  const N = n * f, D = d * f
+  const correct = `${n}/${d}`
+
+  const options = shuffle([
+    { value: correct, why: say(lang,
+        `Right — top and bottom both divide by ${f}.`,
+        `Doğru — pay da payda da ${f}'e bölünür.`,
+        `Correcto: arriba y abajo se dividen los dos entre ${f}.`) },
+    { value: `${n * 2}/${d * 2}`, why: say(lang,
+        `Not all the way — ${n * 2} and ${d * 2} still share a factor.`,
+        `Sonuna kadar sadeleşmemiş — ${n * 2} ile ${d * 2} hâlâ ortak bölene sahip.`,
+        `No del todo: ${n * 2} y ${d * 2} todavía comparten un divisor.`) },
+    { value: `${N - f}/${D - f}`, why: say(lang,
+        `${f} was subtracted from each. Simplifying DIVIDES both by the same number, it does not take it away.`,
+        `Her ikisinden ${f} çıkarılmış. Sadeleştirme ikisini de aynı sayıya BÖLER, çıkarmaz.`,
+        `Se ha restado ${f} a cada uno. Simplificar DIVIDE los dos entre el mismo número, no se lo resta.`) },
+    { value: `${d}/${n}`, why: say(lang,
+        `Upside down. ${N} was on top in the question, so its share stays on top.`,
+        `Ters çevrilmiş. Soruda ${N} üstteydi, payı üstte kalır.`,
+        `Del revés. En la pregunta ${N} estaba arriba, así que su parte se queda arriba.`) },
+  ])
+
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: say(lang,
+      `Write ${N}/${D} in its simplest form.`,
+      `${N}/${D} kesrini en sade hâliyle yaz.`,
+      `Escribe ${N}/${D} en su forma más simple.`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `frac:simp:${N}:${D}`,
+    hint_steps: [
+      say(lang, `Find a number that goes into both the top and the bottom.`,
+                `Hem payı hem paydayı bölen bir sayı bul.`,
+                `Busca un número que entre en el de arriba y en el de abajo.`),
+      say(lang, `Divide both by it, and check whether the new pair still share one.`,
+                `İkisini de ona böl, sonra yeni çiftin hâlâ ortak böleni var mı diye bak.`,
+                `Divide los dos entre él y comprueba si la nueva pareja todavía comparte alguno.`),
+    ],
+  }
+}
+
+// Adding fractions with DIFFERENT denominators — the Year 6 line, and a different skill from
+// the same-denominator shape above it. One denominator is a multiple of the other, which is
+// how it is taught first: only one of the two has to be changed.
+function fractionAddDifferent(level, lang) {
+  const d1 = pick([2, 3, 4, 5, 6])
+  const mult = pick([2, 3, 4])
+  const d2 = d1 * mult
+  const n1 = randInt(1, d1 - 1)
+  const n2 = randInt(1, d2 - 1)
+  const sum = n1 * mult + n2
+  if (sum >= d2) return fractionAddDifferent(level, lang)
+  const correct = `${sum}/${d2}`
+
+  const options = shuffle([
+    { value: correct, why: say(lang,
+        `Right — ${n1}/${d1} is the same as ${n1 * mult}/${d2}, and then the tops add.`,
+        `Doğru — ${n1}/${d1} ile ${n1 * mult}/${d2} aynı şey, sonra paylar toplanır.`,
+        `Correcto: ${n1}/${d1} es lo mismo que ${n1 * mult}/${d2}, y entonces se suman los de arriba.`) },
+    { value: `${n1 + n2}/${d1 + d2}`, why: say(lang,
+        `Tops added to tops and bottoms to bottoms. The bottom says how big a piece is — adding them changes the size of the pieces.`,
+        `Paylar payla, paydalar paydayla toplanmış. Payda parçanın büyüklüğünü söyler — onları toplamak parça boyunu değiştirir.`,
+        `Se han sumado los de arriba con los de arriba y los de abajo con los de abajo. El de abajo dice el tamaño del trozo.`) },
+    { value: `${n1 + n2}/${d2}`, why: say(lang,
+        `${n1}/${d1} was used as if it were ${n1}/${d2}. A ${d1}th is bigger than a ${d2}th, so it has to be rewritten first.`,
+        `${n1}/${d1}, sanki ${n1}/${d2} imiş gibi kullanılmış. ${d1}'te bir, ${d2}'de birden büyüktür; önce yeniden yazılmalı.`,
+        `Se ha usado ${n1}/${d1} como si fuera ${n1}/${d2}. Un ${d1}avo es mayor que un ${d2}avo, hay que reescribirlo antes.`) },
+    { value: `${sum}/${d1}`, why: say(lang,
+        `The right top number over the wrong bottom — the pieces were made ${d2}ths, so the answer is in ${d2}ths.`,
+        `Pay doğru ama payda yanlış — parçalar ${d2}'de bire çevrildi, cevap da ${d2}'de bir cinsinden olur.`,
+        `El numerador correcto sobre el denominador equivocado: los trozos se pasaron a ${d2}avos.`) },
+  ])
+
+  return {
+    topic: 'fraction-of-number', level,
+    question_text: say(lang,
+      `What is ${n1}/${d1} + ${n2}/${d2}?`,
+      `${n1}/${d1} + ${n2}/${d2} kaçtır?`,
+      `¿Cuánto es ${n1}/${d1} + ${n2}/${d2}?`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `frac:addiff:${n1}:${d1}:${n2}:${d2}`,
+    hint_steps: [
+      say(lang, `The pieces are different sizes, so they cannot be added yet.`,
+                `Parçalar farklı büyüklükte, bu hâliyle toplanamaz.`,
+                `Los trozos son de tamaños distintos, así que todavía no se pueden sumar.`),
+      say(lang, `${d2} divides by ${d1}, so rewrite ${n1}/${d1} in ${d2}ths and then add the tops.`,
+                `${d2}, ${d1}'e bölünüyor; ${n1}/${d1} kesrini ${d2}'de bir cinsinden yaz, sonra payları topla.`,
+                `${d2} se divide entre ${d1}: reescribe ${n1}/${d1} en ${d2}avos y luego suma los de arriba.`),
+    ],
+  }
+}
+
+// Year 5 names "Decimals and Percentages", Year 6 "Fractions, Decimals, Percentages" and
+// Year 7 the same again — one topic each, and a topic maps to one template, so all of it
+// lives here. From band 5 the percentage shapes are the weight of the topic, which is also
+// how both Bond books are balanced.
 function fractionOfNumberTemplate(level, lang) {
   const band = bandForLevel(level)
   const shapes = band <= 2 ? ['ofNumber']
     : band <= 3 ? ['ofNumber', 'addSame', 'compare']
-    : ['ofNumber', 'addSame', 'compare', 'decimal']
+      : band <= 4 ? ['ofNumber', 'addSame', 'compare', 'decimal']
+        : band <= 6 ? ['percentOf', 'percentOf', 'simplify', 'addDifferent', 'decimal', 'compare', 'ofNumber']
+          : ['percentOf', 'percentChange', 'percentChange', 'simplify', 'addDifferent', 'decimal']
   const shape = pick(shapes)
   if (shape === 'addSame') return fractionAddSame(level, lang)
   if (shape === 'compare') return fractionCompare(level, lang)
   if (shape === 'decimal') return fractionDecimal(level, lang)
+  if (shape === 'percentOf') return fractionPercentOf(level, lang)
+  if (shape === 'percentChange') return fractionPercentChange(level, lang)
+  if (shape === 'simplify') return fractionSimplify(level, lang)
+  if (shape === 'addDifferent') return fractionAddDifferent(level, lang)
   return fractionOfNumber(level, lang)
 }
 
@@ -1018,8 +1205,254 @@ function geometryName(level, lang) {
   }
 }
 
+// ── Angles and area (Year 5 and up) ──────────────────────────────────────────
+// The geometry template above counts sides and corners, which is Year 1 to Year 4. From Year 5
+// the curriculum is angles and area, and until now that went to the model — which is where the
+// hundred-question audit found "A straight line has 2 angles. One is 45°, what is the other?"
+// The model's answer was right and the sentence it wrapped it in was not, and answer
+// verification cannot catch that: it checks the answer, not the premise. A template can only
+// state premises its author wrote, which is the whole argument for having one here.
+//
+// Every angle fact used is named in the question, because nothing is drawn: "angles on a
+// straight line add up to 180°" is the fact, and the question gives one and asks for the rest.
+
+const POLY = {
+  3: { en: 'triangle', tr: 'üçgen', es: 'triángulo' },
+  4: { en: 'quadrilateral', tr: 'dörtgen', es: 'cuadrilátero' },
+  5: { en: 'pentagon', tr: 'beşgen', es: 'pentágono' },
+  6: { en: 'hexagon', tr: 'altıgen', es: 'hexágono' },
+  8: { en: 'octagon', tr: 'sekizgen', es: 'octágono' },
+}
+
+function geometryAngle(level, lang) {
+  const band = bandForLevel(level)
+  const kinds = band >= 7
+    ? ['line', 'point', 'triangle', 'quad', 'opposite', 'regular']
+    : ['line', 'line', 'point', 'triangle', 'triangle', 'quad']
+  const kind = pick(kinds)
+
+  if (kind === 'regular') {
+    // Interior angle of a regular polygon. Only sides whose interior angle is whole.
+    const n = pick([3, 4, 5, 6, 8, 9, 10, 12])
+    const answer = 180 - 360 / n
+    const name = pickL(POLY[n] ?? { en: `${n}-sided shape`, tr: `${n} kenarlı şekil`, es: `figura de ${n} lados` }, lang)
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang,
+        `Every angle in a regular ${name} is the same size. How many degrees is one of them?`,
+        `Düzgün bir ${name}in bütün açıları eşittir. Bir açısı kaç derecedir?`,
+        `Todos los ángulos de un ${name} regular son iguales. ¿Cuántos grados mide uno?`),
+      format: 'numeric',
+      correct_answer: answer,
+      operandKey: `geo:reg:${n}`,
+      hint_steps: [
+        say(lang, `Walking all the way round the outside turns you through 360° altogether.`,
+                  `Şeklin dışından bir tam tur atmak seni toplam 360° döndürür.`,
+                  `Dar toda la vuelta por fuera te gira 360° en total.`),
+        say(lang, `Share that 360° between the ${n} corners, then take that away from a straight line.`,
+                  `O 360°'yi ${n} köşeye eşit paylaştır, sonra doğru açıdan çıkar.`,
+                  `Reparte esos 360° entre las ${n} esquinas y réstaselo a un ángulo llano.`),
+      ],
+    }
+  }
+
+  if (kind === 'opposite') {
+    const a = randInt(25, 155)
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang,
+        `Two straight lines cross. One of the angles is ${a}°. What is the angle opposite it?`,
+        `İki doğru kesişiyor. Açılardan biri ${a}°. Karşısındaki açı kaç derecedir?`,
+        `Dos rectas se cruzan. Uno de los ángulos mide ${a}°. ¿Cuánto mide el opuesto?`),
+      format: 'numeric',
+      correct_answer: a,
+      operandKey: `geo:opp:${a}`,
+      hint_steps: [
+        say(lang, `Where two lines cross, the angles facing each other are equal.`,
+                  `İki doğru kesiştiğinde, karşılıklı duran açılar eşittir.`,
+                  `Cuando dos rectas se cruzan, los ángulos enfrentados son iguales.`),
+        say(lang, `The one next to it is what makes up the straight line — the one opposite is not.`,
+                  `Yanındaki açı doğruyu tamamlayandır — karşısındaki değil.`,
+                  `El de al lado es el que completa la recta; el opuesto no.`),
+      ],
+    }
+  }
+
+  // The three "add up to" facts. `total` is the sum, `parts` how many angles there are.
+  const spec = {
+    line:     { total: 180, parts: 2 },
+    point:    { total: 360, parts: pick([3, 4]) },
+    triangle: { total: 180, parts: 3 },
+    quad:     { total: 360, parts: 4 },
+  }[kind]
+  // Built from the givens outwards so the missing angle is always positive and whole, and so
+  // no angle is 0 — an angle of 0° is not an angle a child should be shown.
+  const given = []
+  let left = spec.total
+  for (let i = 0; i < spec.parts - 1; i++) {
+    const remaining = spec.parts - 1 - i
+    const hi = left - 10 * (remaining + 1)
+    if (hi < 15) return geometryAngle(level, lang)
+    const v = randInt(15, Math.min(hi, 140))
+    given.push(v); left -= v
+  }
+  const answer = left
+  // "115° and 131° and 62°" is not how a list is written. Everything but the last is joined
+  // with a comma and the last with the language's own word for "and".
+  const parts = given.map(v => `${v}°`)
+  const list = parts.length === 1 ? parts[0]
+    : parts.slice(0, -1).join(', ') + say(lang, ' and ', ' ve ', ' y ') + parts[parts.length - 1]
+
+  const text = {
+    line: say(lang,
+      `Two angles sit side by side on a straight line. One is ${given[0]}°. How many degrees is the other?`,
+      `Bir doğru üzerinde yan yana iki açı var. Biri ${given[0]}°. Diğeri kaç derecedir?`,
+      `Dos ángulos están uno al lado del otro sobre una recta. Uno mide ${given[0]}°. ¿Cuánto mide el otro?`),
+    point: say(lang,
+      `${spec.parts} angles meet at a point. ${spec.parts - 1} of them are ${list}. How many degrees is the last one?`,
+      `Bir noktada ${spec.parts} açı birleşiyor. Bunların ${spec.parts - 1} tanesi ${list}. Sonuncusu kaç derecedir?`,
+      `${spec.parts} ángulos se juntan en un punto. ${spec.parts - 1} de ellos miden ${list}. ¿Cuánto mide el último?`),
+    triangle: say(lang,
+      `Two angles of a triangle are ${list}. How many degrees is the third?`,
+      `Bir üçgenin iki açısı ${list}. Üçüncü açı kaç derecedir?`,
+      `Dos ángulos de un triángulo miden ${list}. ¿Cuánto mide el tercero?`),
+    quad: say(lang,
+      `Three angles of a quadrilateral are ${list}. How many degrees is the fourth?`,
+      `Bir dörtgenin üç açısı ${list}. Dördüncü açı kaç derecedir?`,
+      `Tres ángulos de un cuadrilátero miden ${list}. ¿Cuánto mide el cuarto?`),
+  }[kind]
+
+  const fact = {
+    line: say(lang, `Angles on a straight line add up to 180°.`, `Bir doğru üzerindeki açılar toplamı 180°'dir.`,
+                    `Los ángulos sobre una recta suman 180°.`),
+    point: say(lang, `Angles meeting at a point add up to 360°.`, `Bir noktada birleşen açıların toplamı 360°'dir.`,
+                     `Los ángulos que se juntan en un punto suman 360°.`),
+    triangle: say(lang, `The angles inside a triangle add up to 180°.`, `Bir üçgenin iç açıları toplamı 180°'dir.`,
+                        `Los ángulos de un triángulo suman 180°.`),
+    quad: say(lang, `The angles inside a quadrilateral add up to 360°.`, `Bir dörtgenin iç açıları toplamı 360°'dir.`,
+                    `Los ángulos de un cuadrilátero suman 360°.`),
+  }[kind]
+
+  return {
+    topic: 'geometry', level,
+    question_text: text,
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `geo:ang:${kind}:${given.join('-')}`,
+    hint_steps: [
+      fact,
+      say(lang, `Add up the ones you were given, then take that away from ${spec.total}.`,
+                `Verilenleri topla, sonra ${spec.total}'den çıkar.`,
+                `Suma los que te han dado y réstalo de ${spec.total}.`),
+    ],
+  }
+}
+
+// Area and perimeter, including working backwards from a known area — Bond asks that shape in
+// both books and it is the one that separates knowing the formula from using it.
+function geometryArea(level, lang) {
+  const band = bandForLevel(level)
+  const shape = pick(band >= 7 ? ['rect', 'triangle', 'para', 'reverse'] : ['rect', 'rect', 'triangle', 'reverse'])
+  const w = randInt(3, 18)
+  const h = randInt(3, 18)
+
+  if (shape === 'triangle') {
+    // Base and height chosen so half of their product is whole.
+    const b = pick([4, 6, 8, 10, 12, 14, 16, 20])
+    const answer = b * h / 2
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang,
+        `A triangle has a base of ${b} cm and a height of ${h} cm. What is its area in cm²?`,
+        `Bir üçgenin tabanı ${b} cm, yüksekliği ${h} cm. Alanı kaç cm²'dir?`,
+        `Un triángulo tiene una base de ${b} cm y una altura de ${h} cm. ¿Cuál es su área en cm²?`),
+      format: 'numeric', correct_answer: answer, operandKey: `geo:tri:${b}:${h}`,
+      hint_steps: [
+        say(lang, `A triangle is exactly half of the rectangle that would fit around it.`,
+                  `Bir üçgen, etrafına oturacak dikdörtgenin tam yarısıdır.`,
+                  `Un triángulo es exactamente la mitad del rectángulo que lo rodearía.`),
+        say(lang, `Multiply the base by the height, then halve it.`,
+                  `Tabanı yükseklikle çarp, sonra yarıya böl.`,
+                  `Multiplica la base por la altura y divide entre 2.`),
+      ],
+    }
+  }
+
+  if (shape === 'para') {
+    const answer = w * h
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang,
+        `A parallelogram has a base of ${w} cm and a height of ${h} cm. What is its area in cm²?`,
+        `Bir paralelkenarın tabanı ${w} cm, yüksekliği ${h} cm. Alanı kaç cm²'dir?`,
+        `Un paralelogramo tiene una base de ${w} cm y una altura de ${h} cm. ¿Cuál es su área en cm²?`),
+      format: 'numeric', correct_answer: answer, operandKey: `geo:para:${w}:${h}`,
+      hint_steps: [
+        say(lang, `Cut the slanted end off and slide it to the other side — it becomes a rectangle.`,
+                  `Eğik ucu kesip diğer tarafa kaydır — dikdörtgen olur.`,
+                  `Corta el extremo inclinado y deslízalo al otro lado: se convierte en un rectángulo.`),
+        say(lang, `Use the height straight up, not the slanted side.`,
+                  `Eğik kenarı değil, dik yüksekliği kullan.`,
+                  `Usa la altura vertical, no el lado inclinado.`),
+      ],
+    }
+  }
+
+  if (shape === 'reverse') {
+    const area = w * h
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang,
+        `A rectangle has an area of ${area} cm². One side is ${w} cm. How long is the other side?`,
+        `Bir dikdörtgenin alanı ${area} cm². Bir kenarı ${w} cm. Diğer kenarı kaç cm'dir?`,
+        `Un rectángulo tiene un área de ${area} cm². Un lado mide ${w} cm. ¿Cuánto mide el otro?`),
+      format: 'numeric', correct_answer: h, operandKey: `geo:rev:${w}:${h}`,
+      hint_steps: [
+        say(lang, `Area is the two sides multiplied together.`,
+                  `Alan, iki kenarın çarpımıdır.`,
+                  `El área es el producto de los dos lados.`),
+        say(lang, `So going backwards is a division: divide the area by the side you know.`,
+                  `Geriye gitmek bölme demek: alanı bildiğin kenara böl.`,
+                  `Así que ir hacia atrás es una división: divide el área entre el lado que conoces.`),
+      ],
+    }
+  }
+
+  const askArea = Math.random() < 0.6
+  return {
+    topic: 'geometry', level,
+    question_text: askArea
+      ? say(lang, `A rectangle is ${w} cm by ${h} cm. What is its area in cm²?`,
+                  `Bir dikdörtgen ${w} cm × ${h} cm. Alanı kaç cm²'dir?`,
+                  `Un rectángulo mide ${w} cm por ${h} cm. ¿Cuál es su área en cm²?`)
+      : say(lang, `A rectangle is ${w} cm by ${h} cm. What is its perimeter in cm?`,
+                  `Bir dikdörtgen ${w} cm × ${h} cm. Çevresi kaç cm'dir?`,
+                  `Un rectángulo mide ${w} cm por ${h} cm. ¿Cuál es su perímetro en cm?`),
+    format: 'numeric',
+    correct_answer: askArea ? w * h : 2 * (w + h),
+    operandKey: `geo:rect:${askArea ? 'a' : 'p'}:${w}:${h}`,
+    hint_steps: askArea
+      ? [say(lang, `Area is how much surface is covered, counted in squares.`,
+                   `Alan, kaplanan yüzeydir; kareyle sayılır.`,
+                   `El área es la superficie que se cubre, contada en cuadrados.`),
+         say(lang, `${w} rows of ${h} squares — that is a multiplication.`,
+                   `${w} sıra, her sırada ${h} kare — bu bir çarpma.`,
+                   `${w} filas de ${h} cuadrados: eso es una multiplicación.`)]
+      : [say(lang, `Perimeter is the distance all the way round the edge.`,
+                   `Çevre, kenar boyunca dolaşılan toplam uzunluktur.`,
+                   `El perímetro es la distancia que rodea todo el borde.`),
+         say(lang, `A rectangle has two sides of each length, so add them all.`,
+                   `Dikdörtgende her uzunluktan iki kenar vardır, hepsini topla.`,
+                   `Un rectángulo tiene dos lados de cada medida: súmalos todos.`)],
+  }
+}
+
 function geometryTemplate(level, lang) {
-  if (bandForLevel(level) >= 4 && Math.random() < 0.4) return geometryName(level, lang)
+  const band = bandForLevel(level)
+  // From Year 5 the topic is no longer "how many sides" — the curriculum names angles and
+  // area, and counting corners at eleven is not the same question wearing a bigger number.
+  if (band >= 5) return Math.random() < 0.55 ? geometryAngle(level, lang) : geometryArea(level, lang)
+  if (band >= 4 && Math.random() < 0.4) return geometryName(level, lang)
   // Shapes occupy a single rung on the ladder, so difficulty does not ride on the level
   // number — the rung presents its own whole range instead. Both askings, all six shapes,
   // and a mix of one shape and two: a pair tops out at 8 + 8, and since every mark is on
@@ -1399,9 +1832,11 @@ const ROUND_UNITS = { en: ['10', '100', '1,000', '10,000', '100,000'],
 // mistake, not an arithmetic one, and the option says which.
 function placeRound(level, lang) {
   const band = bandForLevel(level)
-  // Year 6 rounds up to a hundred thousand; Year 7 keeps that and adds decimal places, which
-  // is its own shape below.
-  const placeIdx = band >= 6 ? randInt(1, 4) : randInt(0, 3)
+  // Each year rounds to the places its own curriculum line names, and no further. Year 4 says
+  // "round to the nearest 10, 100 or 1,000"; Year 5 adds ten and a hundred thousand; Year 6
+  // says "round any whole number". Rounding a Year 4 child's number to the nearest hundred
+  // thousand is not a harder version of their topic, it is a different one.
+  const placeIdx = band >= 6 ? randInt(1, 4) : band >= 5 ? randInt(0, 3) : randInt(0, 2)
   const place = Math.pow(10, placeIdx + 1)
   // Kept clear of an exact multiple (nothing to round) and of an exact half (the rule for
   // 4,500 is a convention, and a question should not turn on remembering a convention).
@@ -1436,7 +1871,10 @@ function placeRound(level, lang) {
 // separates knowing the digits from knowing the places.
 function placeDigitValue(level, lang) {
   const band = bandForLevel(level)
-  const digits = band >= 6 ? randInt(6, 7) : randInt(5, 6)
+  // Same idea: the number itself is the size the year's topic is named after — "Numbers to
+  // 10,000" is four digits, and asking what a digit is worth in a seven-digit number is not
+  // that topic.
+  const digits = band >= 6 ? randInt(6, 7) : band >= 5 ? randInt(5, 6) : 4
   // Built digit by digit so the chosen digit is unique in the number: "what is the 3 worth"
   // has no answer if there are two 3s.
   const used = new Set()
@@ -1501,8 +1939,11 @@ function placeDigitValue(level, lang) {
 // Intervals across zero. The answer is a COUNT of degrees, which is positive and typable —
 // the version where the answer is the new temperature would need a minus key.
 function placeNegative(level, lang) {
-  const below = randInt(2, 14)
-  const above = randInt(1, 12)
+  // Year 4 is where "count backwards through 0" first appears, so the crossing is small there
+  // and opens up later.
+  const band = bandForLevel(level)
+  const below = band >= 5 ? randInt(2, 14) : randInt(2, 8)
+  const above = band >= 5 ? randInt(1, 12) : randInt(1, 7)
   const answer = below + above
   // Cities only: the sentence says "in ___", and "in the mountain" is not English. The
   // Turkish bank carries its own locative ending because Turkish marks it on the word.
@@ -1545,7 +1986,12 @@ function placeRoundDecimal(level, lang) {
     frac = randInt(1000, 9999)
     value = Number(`${whole}.${frac}`)
     answer = Number(value.toFixed(dp))
-  } while ((String(frac)[dp] === '5' && Number(String(frac).slice(dp + 1)) === 0) || Number.isInteger(answer))
+    // Rejected as well: a result that lands on FEWER decimal places than were asked for.
+    // 49.604 to the nearest hundredth is 49.6, which is right and reads as though the
+    // rounding never happened.
+  } while ((String(frac)[dp] === '5' && Number(String(frac).slice(dp + 1)) === 0)
+    || Number.isInteger(answer)
+    || (String(answer).split('.')[1] || '').length !== dp)
   const unit = pickL({ en: ['litres', 'metres', 'kilograms', 'seconds'],
                        tr: ['litre', 'metre', 'kilogram', 'saniye'],
                        es: ['litros', 'metros', 'kilogramos', 'segundos'] }, lang)
@@ -2109,6 +2555,502 @@ function ratioTemplate(level, lang) {
   return ratioSimplify(level, lang)
 }
 
+// ── Averages (statistics, Year 5 and up) ─────────────────────────────────────
+// The pictogram template is Year 2 and Year 3. From Year 5 the curriculum says "calculate and
+// interpret the mean" and Year 7 adds median, mode and range — a different question, not a
+// bigger picture.
+//
+// The reverse-mean shape ("her mean is 7, how many on Tuesday?") is here because both Bond
+// books ask it and because it is the one that shows whether a child understands what a mean
+// IS rather than which buttons to press.
+
+const AVG_SUBJECTS = {
+  en: [['cups of coffee', 'day'], ['goals', 'match'], ['books read', 'week'], ['minutes late', 'day']],
+  tr: [['fincan kahve', 'gün'], ['gol', 'maç'], ['okunan kitap', 'hafta'], ['dakika gecikme', 'gün']],
+  es: [['tazas de café', 'día'], ['goles', 'partido'], ['libros leídos', 'semana'], ['minutos de retraso', 'día']],
+}
+
+// A list of small whole numbers whose mean is whole, built by choosing the mean first.
+function meanList(n, lo, hi) {
+  for (let tries = 0; tries < 200; tries++) {
+    const xs = Array.from({ length: n }, () => randInt(lo, hi))
+    const total = xs.reduce((a, b) => a + b, 0)
+    if (total % n === 0) return xs
+  }
+  return Array.from({ length: n }, () => lo)
+}
+
+function avgMean(level, lang) {
+  const n = pick([4, 5, 6])
+  const xs = meanList(n, 2, 18)
+  const total = xs.reduce((a, b) => a + b, 0)
+  const [what, per] = pickL(AVG_SUBJECTS, lang)
+
+  return {
+    topic: 'averages', level,
+    question_text: say(lang,
+      `${what} over ${n} ${per}s: ${xs.join(', ')}. What is the mean?`,
+      `${n} ${per} boyunca ${what}: ${xs.join(', ')}. Ortalama kaçtır?`,
+      `${what} durante ${n} ${per}s: ${xs.join(', ')}. ¿Cuál es la media?`),
+    format: 'numeric',
+    correct_answer: total / n,
+    operandKey: `avg:mean:${xs.join('-')}`,
+    hint_steps: [
+      say(lang, `The mean shares the total out evenly, as if every ${per} were the same.`,
+                `Ortalama, toplamı eşit paylaştırır — her ${per} aynıymış gibi.`,
+                `La media reparte el total por igual, como si cada ${per} fuera igual.`),
+      say(lang, `Add all ${n} numbers together, then divide by ${n}.`,
+                `${n} sayıyı topla, sonra ${n}'e böl.`,
+                `Suma los ${n} números y divide entre ${n}.`),
+    ],
+  }
+}
+
+// Working backwards from a known mean to a missing value.
+function avgReverseMean(level, lang) {
+  const n = pick([4, 5])
+  const mean = randInt(4, 14)
+  const total = mean * n
+  // The known values are built so the missing one lands in a sensible range.
+  let xs
+  do {
+    xs = Array.from({ length: n - 1 }, () => randInt(Math.max(1, mean - 5), mean + 5))
+  } while (total - xs.reduce((a, b) => a + b, 0) < 1 || total - xs.reduce((a, b) => a + b, 0) > 25)
+  const missing = total - xs.reduce((a, b) => a + b, 0)
+  const [what, per] = pickL(AVG_SUBJECTS, lang)
+
+  return {
+    topic: 'averages', level,
+    question_text: say(lang,
+      `Over ${n} ${per}s the mean number of ${what} was ${mean}. ${n - 1} of them were ${xs.join(', ')}. What was the last one?`,
+      `${n} ${per} boyunca ${what} ortalaması ${mean} idi. Bunların ${n - 1} tanesi ${xs.join(', ')}. Sonuncusu kaçtı?`,
+      `Durante ${n} ${per}s la media de ${what} fue ${mean}. ${n - 1} de ellos fueron ${xs.join(', ')}. ¿Cuál fue el último?`),
+    format: 'numeric',
+    correct_answer: missing,
+    operandKey: `avg:rev:${mean}:${xs.join('-')}`,
+    hint_steps: [
+      say(lang, `A mean of ${mean} over ${n} ${per}s means the total was shared into ${n} equal lots of ${mean}.`,
+                `${n} ${per} için ortalama ${mean} demek, toplamın ${n} eşit ${mean}'e bölündüğü demek.`,
+                `Una media de ${mean} en ${n} ${per}s significa que el total se repartió en ${n} partes iguales de ${mean}.`),
+      say(lang, `Find the total first, then take away the ones you already know.`,
+                `Önce toplamı bul, sonra bildiklerini çıkar.`,
+                `Halla primero el total y luego quita los que ya conoces.`),
+    ],
+  }
+}
+
+// Median, mode and range. The three get asked about the same list, because telling them apart
+// is the skill — a child who finds the mode when asked for the median has not made an
+// arithmetic mistake.
+function avgOther(level, lang) {
+  const ask = pick(['median', 'mode', 'range'])
+  const n = pick([5, 7])
+  let xs, sorted, mode
+  // The list is built to have exactly one mode and a median that is not also the mode, so
+  // that no question has two defensible answers.
+  for (let tries = 0; tries < 200; tries++) {
+    xs = Array.from({ length: n - 2 }, () => randInt(2, 20))
+    const rep = pick(xs)
+    xs = shuffle([...xs, rep, rep])
+    sorted = [...xs].sort((a, b) => a - b)
+    const counts = {}
+    for (const v of xs) counts[v] = (counts[v] || 0) + 1
+    const top = Math.max(...Object.values(counts))
+    const modes = Object.keys(counts).filter(k => counts[k] === top)
+    if (modes.length !== 1) continue
+    mode = Number(modes[0])
+    if (ask === 'median' && sorted[(n - 1) / 2] === mode) continue
+    break
+  }
+  const median = sorted[(n - 1) / 2]
+  const range = sorted[n - 1] - sorted[0]
+  const answer = { median, mode, range }[ask]
+
+  const q = {
+    median: say(lang, `What is the median of these numbers? ${xs.join(', ')}`,
+                      `Bu sayıların ortancası kaçtır? ${xs.join(', ')}`,
+                      `¿Cuál es la mediana de estos números? ${xs.join(', ')}`),
+    mode: say(lang, `What is the mode of these numbers? ${xs.join(', ')}`,
+                    `Bu sayıların tepe değeri (mod) kaçtır? ${xs.join(', ')}`,
+                    `¿Cuál es la moda de estos números? ${xs.join(', ')}`),
+    range: say(lang, `What is the range of these numbers? ${xs.join(', ')}`,
+                     `Bu sayıların açıklığı kaçtır? ${xs.join(', ')}`,
+                     `¿Cuál es el rango de estos números? ${xs.join(', ')}`),
+  }[ask]
+
+  const hints = {
+    median: [
+      say(lang, `The median is the middle one once they are in order.`,
+                `Ortanca, sayılar sıralandığında ortada kalandır.`,
+                `La mediana es el del medio una vez ordenados.`),
+      say(lang, `Put all ${n} in order first, then count in from both ends together.`,
+                `Önce ${n} sayıyı sırala, sonra iki uçtan birlikte içeri doğru say.`,
+                `Ordena primero los ${n} y luego cuenta desde los dos extremos a la vez.`)],
+    mode: [
+      say(lang, `The mode is the one that turns up most often.`,
+                `Mod, en çok tekrar eden sayıdır.`,
+                `La moda es el que aparece más veces.`),
+      say(lang, `Count how many times each number appears — no ordering needed.`,
+                `Her sayının kaç kez geçtiğini say — sıralamaya gerek yok.`,
+                `Cuenta cuántas veces aparece cada número; no hace falta ordenarlos.`)],
+    range: [
+      say(lang, `The range is how far the numbers spread, not an average.`,
+                `Açıklık, sayıların ne kadar yayıldığıdır; bir ortalama değildir.`,
+                `El rango es cuánto se separan los números, no es una media.`),
+      say(lang, `Find the biggest and the smallest, then take one from the other.`,
+                `En büyüğü ve en küçüğü bul, sonra birini diğerinden çıkar.`,
+                `Busca el mayor y el menor y resta uno del otro.`)],
+  }[ask]
+
+  return {
+    topic: 'averages', level,
+    question_text: q,
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `avg:${ask}:${sorted.join('-')}`,
+    hint_steps: hints,
+  }
+}
+
+// Probability of a single event, written as a fraction. A choice question — the answer is a
+// fraction — and the wrong options are the three real confusions: counting the wrong way
+// round, leaving out the rest, and giving the count instead of the chance.
+function avgProbability(level, lang) {
+  const want = randInt(2, 6)
+  const other = randInt(3, 9)
+  const total = want + other
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x)
+  const g = gcd(want, total)
+  const correct = `${want / g}/${total / g}`
+  const colour = pickL({ en: ['red', 'green', 'blue'], tr: ['kırmızı', 'yeşil', 'mavi'], es: ['rojas', 'verdes', 'azules'] }, lang)
+
+  const options = shuffle([
+    { value: correct, why: say(lang,
+        `Right — ${want} of the ${total} marbles are ${colour}.`,
+        `Doğru — ${total} misketin ${want} tanesi ${colour}.`,
+        `Correcto: ${want} de las ${total} canicas son ${colour}.`) },
+    { value: `${want}/${other}`, why: say(lang,
+        `That compares the ${colour} ones with the others. A probability compares them with ALL of them.`,
+        `Bu, ${colour} olanları diğerleriyle kıyaslıyor. Olasılık ise HEPSİYLE kıyaslar.`,
+        `Eso compara las ${colour} con las demás. Una probabilidad las compara con TODAS.`) },
+    { value: `${total / g}/${want / g}`, why: say(lang,
+        `Upside down. The number you want goes on top, the total underneath.`,
+        `Ters. İstenen sayı üstte, toplam altta olur.`,
+        `Del revés. El número que buscas va arriba y el total debajo.`) },
+    { value: `${other}/${total}`, why: say(lang,
+        `That is the chance of NOT picking a ${colour} one.`,
+        `Bu, ${colour} olmayan birini çekme olasılığı.`,
+        `Esa es la probabilidad de NO sacar una ${colour}.`) },
+  ])
+
+  return {
+    topic: 'averages', level,
+    question_text: say(lang,
+      `A bag has ${want} ${colour} marbles and ${other} others. What is the probability of picking a ${colour} one?`,
+      `Bir torbada ${want} ${colour} misket ve ${other} başka misket var. ${colour} birini çekme olasılığı nedir?`,
+      `Una bolsa tiene ${want} canicas ${colour} y ${other} más. ¿Cuál es la probabilidad de sacar una ${colour}?`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `avg:prob:${want}:${total}`,
+    hint_steps: [
+      say(lang, `A probability is the ones you want over ALL of them.`,
+                `Olasılık, istediklerinin HEPSİNE oranıdır.`,
+                `Una probabilidad es los que quieres sobre TODOS.`),
+      say(lang, `Count the whole bag first, then simplify the fraction if you can.`,
+                `Önce torbanın tamamını say, sonra kesri sadeleştirebiliyorsan sadeleştir.`,
+                `Cuenta primero toda la bolsa y luego simplifica la fracción si puedes.`),
+    ],
+  }
+}
+
+function averagesTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const shapes = band >= 7
+    ? ['mean', 'reverse', 'other', 'other', 'probability']
+    : ['mean', 'mean', 'reverse', 'other']
+  const shape = pick(shapes)
+  if (shape === 'reverse') return avgReverseMean(level, lang)
+  if (shape === 'other') return avgOther(level, lang)
+  if (shape === 'probability') return avgProbability(level, lang)
+  return avgMean(level, lang)
+}
+
+// ── Factors, multiples, primes and powers (Year 7) ───────────────────────────
+// Bond's 11+-12+ book opens its Number tests with these and comes back to them in most of the
+// mixed ones: list the factors of 32, add the primes between 10 and 20, find the lowest common
+// multiple of 7 and 9, the square root of 121. They are the vocabulary of the year.
+//
+// The sets are computed, never listed by hand — a hand-written table of primes is a table that
+// is wrong somewhere, and the whole point of a template is that the answer is derived.
+
+function factorsOf(n) {
+  const out = []
+  for (let i = 1; i <= n; i++) if (n % i === 0) out.push(i)
+  return out
+}
+
+function isPrime(n) {
+  if (n < 2) return false
+  for (let i = 2; i * i <= n; i++) if (n % i === 0) return false
+  return true
+}
+
+function lcm(a, b) {
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x)
+  return (a * b) / gcd(a, b)
+}
+
+function npHowManyFactors(level, lang) {
+  // Numbers with a decent spread of factor counts, so the answer is not always four.
+  const n = pick([24, 28, 30, 32, 36, 40, 42, 45, 48, 50, 54, 56, 60, 64, 72, 80, 96, 100])
+  const fs = factorsOf(n)
+  return {
+    topic: 'number-properties', level,
+    question_text: say(lang,
+      `How many factors does ${n} have altogether?`,
+      `${n} sayısının toplam kaç çarpanı vardır?`,
+      `¿Cuántos divisores tiene ${n} en total?`),
+    format: 'numeric',
+    correct_answer: fs.length,
+    operandKey: `np:fac:${n}`,
+    hint_steps: [
+      say(lang, `A factor divides into ${n} exactly, with nothing left over.`,
+                `Çarpan, ${n} sayısını kalansız bölen sayıdır.`,
+                `Un divisor entra en ${n} exactamente, sin que sobre nada.`),
+      say(lang, `Work in pairs from 1 upwards — each one you find brings its partner with it. Do not forget 1 and ${n}.`,
+                `1'den başlayarak çiftler hâlinde ilerle — bulduğun her çarpan eşini de getirir. 1 ile ${n} sayısını da unutma.`,
+                `Ve de dos en dos desde el 1: cada uno que encuentres trae su pareja. No olvides el 1 y el ${n}.`),
+    ],
+  }
+}
+
+function npPrimeSum(level, lang) {
+  const lo = pick([10, 20, 30, 40, 50])
+  const hi = lo + 10
+  const primes = []
+  for (let i = lo + 1; i < hi; i++) if (isPrime(i)) primes.push(i)
+  if (primes.length < 2) return npPrimeSum(level, lang)
+  return {
+    topic: 'number-properties', level,
+    question_text: say(lang,
+      `Add together all the prime numbers between ${lo} and ${hi}.`,
+      `${lo} ile ${hi} arasındaki bütün asal sayıları topla.`,
+      `Suma todos los números primos que hay entre ${lo} y ${hi}.`),
+    format: 'numeric',
+    correct_answer: primes.reduce((a, b) => a + b, 0),
+    operandKey: `np:primesum:${lo}`,
+    hint_steps: [
+      say(lang, `A prime has exactly two factors: 1 and itself.`,
+                `Asal sayının tam olarak iki çarpanı vardır: 1 ve kendisi.`,
+                `Un número primo tiene exactamente dos divisores: 1 y él mismo.`),
+      say(lang, `Go through them one at a time and cross out anything in the 2, 3, 5 or 7 times table.`,
+                `Tek tek geç ve 2, 3, 5 ya da 7'nin katı olanları ele.`,
+                `Ve uno a uno y tacha todo lo que esté en las tablas del 2, 3, 5 o 7.`),
+    ],
+  }
+}
+
+function npLcm(level, lang) {
+  // Kept coprime-ish and small so the answer is reachable by listing multiples rather than by
+  // prime factorisation, which is the following year.
+  const [a, b] = pick([[4, 6], [6, 8], [4, 10], [6, 9], [8, 12], [7, 9], [5, 6], [3, 8], [6, 10], [9, 12], [8, 10]])
+  return {
+    topic: 'number-properties', level,
+    question_text: say(lang,
+      `What is the lowest number that both ${a} and ${b} divide into exactly?`,
+      `Hem ${a} hem ${b} sayısının tam böldüğü en küçük sayı kaçtır?`,
+      `¿Cuál es el número más pequeño que ${a} y ${b} dividen exactamente?`),
+    format: 'numeric',
+    correct_answer: lcm(a, b),
+    operandKey: `np:lcm:${a}:${b}`,
+    hint_steps: [
+      say(lang, `Count up in ${a}s and in ${b}s and watch for the first number that appears in both lists.`,
+                `${a}'şer ve ${b}'şer sayarak ilerle, iki listede de görünen ilk sayıyı yakala.`,
+                `Cuenta de ${a} en ${a} y de ${b} en ${b} y busca el primer número que salga en las dos listas.`),
+      say(lang, `${a} × ${b} always works, but it is not always the SMALLEST one that does.`,
+                `${a} × ${b} her zaman işe yarar ama her zaman işe yarayanların EN KÜÇÜĞÜ değildir.`,
+                `${a} × ${b} siempre vale, pero no siempre es el MÁS PEQUEÑO que vale.`),
+    ],
+  }
+}
+
+function npSquareRoot(level, lang) {
+  const ask = pick(['root', 'square', 'cube'])
+  if (ask === 'cube') {
+    const n = randInt(2, 8)
+    return {
+      topic: 'number-properties', level,
+      question_text: say(lang, `What is ${n} cubed?`, `${n} sayısının küpü kaçtır?`, `¿Cuánto es ${n} al cubo?`),
+      format: 'numeric', correct_answer: n * n * n, operandKey: `np:cube:${n}`,
+      hint_steps: [
+        say(lang, `Cubed means the number multiplied by itself three times over.`,
+                  `Küpü demek, sayının kendisiyle üç kez çarpılması demek.`,
+                  `Al cubo significa el número multiplicado por sí mismo tres veces.`),
+        say(lang, `Square it first, then multiply by ${n} once more.`,
+                  `Önce karesini al, sonra bir kez daha ${n} ile çarp.`,
+                  `Elévalo al cuadrado primero y luego multiplica otra vez por ${n}.`),
+      ],
+    }
+  }
+  const n = randInt(4, 15)
+  const sq = n * n
+  return ask === 'root'
+    ? {
+      topic: 'number-properties', level,
+      question_text: say(lang, `What is the square root of ${sq}?`, `${sq} sayısının karekökü kaçtır?`,
+                               `¿Cuál es la raíz cuadrada de ${sq}?`),
+      format: 'numeric', correct_answer: n, operandKey: `np:root:${sq}`,
+      hint_steps: [
+        say(lang, `A square root asks: which number times itself makes ${sq}?`,
+                  `Karekök şunu sorar: hangi sayı kendisiyle çarpılınca ${sq} eder?`,
+                  `Una raíz cuadrada pregunta: ¿qué número por sí mismo da ${sq}?`),
+        say(lang, `It is not half of ${sq} — try a few numbers and see which one lands on it.`,
+                  `${sq} sayısının yarısı değildir — birkaç sayı dene, hangisi tutuyor bak.`,
+                  `No es la mitad de ${sq}: prueba con varios números y mira cuál cuadra.`),
+      ],
+    }
+    : {
+      topic: 'number-properties', level,
+      question_text: say(lang, `What is ${n} squared?`, `${n} sayısının karesi kaçtır?`, `¿Cuánto es ${n} al cuadrado?`),
+      format: 'numeric', correct_answer: sq, operandKey: `np:sq:${n}`,
+      hint_steps: [
+        say(lang, `Squared means the number multiplied by itself.`,
+                  `Karesi demek, sayının kendisiyle çarpılması demek.`,
+                  `Al cuadrado significa el número multiplicado por sí mismo.`),
+        say(lang, `It is called squared because ${n} rows of ${n} make a square.`,
+                  `Kare deniyor çünkü ${n} sıra ${n} tane bir kare oluşturur.`,
+                  `Se llama al cuadrado porque ${n} filas de ${n} forman un cuadrado.`),
+      ],
+    }
+}
+
+function numberPropertiesTemplate(level, lang) {
+  const shape = pick(['factors', 'primes', 'lcm', 'power', 'power'])
+  if (shape === 'primes') return npPrimeSum(level, lang)
+  if (shape === 'lcm') return npLcm(level, lang)
+  if (shape === 'power') return npSquareRoot(level, lang)
+  return npHowManyFactors(level, lang)
+}
+
+// ── Sequences and function machines (Year 7) ─────────────────────────────────
+// "If each term is 3 less than the seven times table, what are the first four terms?" is Bond's
+// own wording and it is a position-to-term rule in disguise. The function machine is the same
+// idea drawn as a box, and both books use it in both directions — given the input, and given
+// the output.
+
+function seqContinue(level, lang) {
+  const step = pick([3, 4, 5, 6, 7, 8, 9, 11, 12, 15, 25])
+  const up = Math.random() < 0.7
+  const start = up ? randInt(2, 30) : randInt(60, 140)
+  const terms = [0, 1, 2, 3].map(i => start + (up ? 1 : -1) * step * i)
+  const answer = start + (up ? 1 : -1) * step * 4
+  if (answer < 1) return seqContinue(level, lang)
+  return {
+    topic: 'sequence', level,
+    question_text: say(lang,
+      `What comes next? ${terms.join(', ')}, …`,
+      `Sırada ne gelir? ${terms.join(', ')}, …`,
+      `¿Qué viene después? ${terms.join(', ')}, …`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `seq:cont:${terms.join('-')}`,
+    hint_steps: [
+      say(lang, `Find the gap between one term and the next, and check it is the same gap every time.`,
+                `Bir terimle sonraki arasındaki farkı bul, her seferinde aynı mı diye kontrol et.`,
+                `Halla el salto de un término al siguiente y comprueba que sea siempre el mismo.`),
+      up
+        ? say(lang, `The sequence is going up, so the next one is bigger than ${terms[3]}.`,
+                    `Dizi yükseliyor, yani sıradaki ${terms[3]} sayısından büyük.`,
+                    `La sucesión sube, así que el siguiente es mayor que ${terms[3]}.`)
+        : say(lang, `The sequence is going down, so the next one is smaller than ${terms[3]}.`,
+                    `Dizi azalıyor, yani sıradaki ${terms[3]} sayısından küçük.`,
+                    `La sucesión baja, así que el siguiente es menor que ${terms[3]}.`),
+    ],
+  }
+}
+
+function seqRule(level, lang) {
+  const table = pick([3, 4, 6, 7, 8, 9, 11, 12])
+  const off = randInt(1, 9)
+  const less = Math.random() < 0.5 && table * 1 - off > 0
+  const which = randInt(4, 9)
+  const answer = table * which + (less ? -off : off)
+  return {
+    topic: 'sequence', level,
+    question_text: less
+      ? say(lang,
+          `Each term of a sequence is ${off} less than the ${table} times table. What is the ${which}th term?`,
+          `Bir dizinin her terimi ${table} çarpım tablosundan ${off} eksiktir. ${which}. terim kaçtır?`,
+          `Cada término de una sucesión es ${off} menos que la tabla del ${table}. ¿Cuál es el término ${which}?`)
+      : say(lang,
+          `Each term of a sequence is ${off} more than the ${table} times table. What is the ${which}th term?`,
+          `Bir dizinin her terimi ${table} çarpım tablosundan ${off} fazladır. ${which}. terim kaçtır?`,
+          `Cada término de una sucesión es ${off} más que la tabla del ${table}. ¿Cuál es el término ${which}?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `seq:rule:${table}:${off}:${which}`,
+    hint_steps: [
+      say(lang, `Find the ${which}th number in the ${table} times table first.`,
+                `Önce ${table} çarpım tablosunun ${which}. sayısını bul.`,
+                `Halla primero el número ${which} de la tabla del ${table}.`),
+      less
+        ? say(lang, `Then take ${off} off it — the rule applies to every term, not just the first.`,
+                    `Sonra ondan ${off} çıkar — kural ilk terime değil, her terime uygulanır.`,
+                    `Luego réstale ${off}: la regla vale para todos los términos, no solo el primero.`)
+        : say(lang, `Then add ${off} to it — the rule applies to every term, not just the first.`,
+                    `Sonra ona ${off} ekle — kural ilk terime değil, her terime uygulanır.`,
+                    `Luego súmale ${off}: la regla vale para todos los términos, no solo el primero.`),
+    ],
+  }
+}
+
+function seqMachine(level, lang) {
+  const m = pick([2, 3, 4, 5, 6])
+  const add = randInt(2, 20)
+  const input = randInt(3, 20)
+  const output = input * m + add
+  const backwards = Math.random() < 0.5
+  return {
+    topic: 'sequence', level,
+    question_text: backwards
+      ? say(lang,
+          `A machine multiplies by ${m}, then adds ${add}. It puts out ${output}. What went in?`,
+          `Bir makine ${m} ile çarpıp ${add} ekliyor. Çıkan sayı ${output}. Giren sayı kaçtı?`,
+          `Una máquina multiplica por ${m} y luego suma ${add}. Sale ${output}. ¿Qué entró?`)
+      : say(lang,
+          `A machine multiplies by ${m}, then adds ${add}. ${input} goes in. What comes out?`,
+          `Bir makine ${m} ile çarpıp ${add} ekliyor. İçine ${input} giriyor. Çıkan sayı kaçtır?`,
+          `Una máquina multiplica por ${m} y luego suma ${add}. Entra ${input}. ¿Qué sale?`),
+    format: 'numeric',
+    correct_answer: backwards ? input : output,
+    operandKey: `seq:mach:${backwards ? 'b' : 'f'}:${m}:${add}:${input}`,
+    hint_steps: [
+      backwards
+        ? say(lang, `Going backwards through a machine undoes each step, last one first.`,
+                    `Makinede geriye gitmek, adımları sondan başlayarak geri alır.`,
+                    `Ir hacia atrás por la máquina deshace cada paso, empezando por el último.`)
+        : say(lang, `Follow the steps in order — multiply before you add.`,
+                    `Adımları sırayla uygula — toplamadan önce çarp.`,
+                    `Sigue los pasos en orden: multiplica antes de sumar.`),
+      backwards
+        ? say(lang, `So take ${add} off first, and only then divide by ${m}.`,
+                    `Yani önce ${add} çıkar, ancak ondan sonra ${m}'e böl.`,
+                    `Así que quita ${add} primero y solo después divide entre ${m}.`)
+        : say(lang, `Multiplying after adding would give a different answer, so the order matters.`,
+                    `Toplayıp sonra çarpmak başka bir sonuç verir, sıra önemli.`,
+                    `Sumar antes de multiplicar daría otra respuesta: el orden importa.`),
+    ],
+  }
+}
+
+function sequenceTemplate(level, lang) {
+  const shape = pick(['continue', 'continue', 'rule', 'machine', 'machine'])
+  if (shape === 'rule') return seqRule(level, lang)
+  if (shape === 'machine') return seqMachine(level, lang)
+  return seqContinue(level, lang)
+}
+
 // Year 6 names one topic "Long Multiplication and Division", and a curriculum topic maps to
 // exactly one template — so pointing it at the multiplication template alone would mean a
 // Year 6 child never met division at all, since no other Year 6 topic carries it. This hands
@@ -2133,6 +3075,9 @@ const REGISTRY = {
   algebra: algebraTemplate,
   'long-mult-div': longMultDivTemplate,
   ratio: ratioTemplate,
+  averages: averagesTemplate,
+  'number-properties': numberPropertiesTemplate,
+  sequence: sequenceTemplate,
 }
 
 export { SHAPES }

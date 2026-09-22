@@ -53,10 +53,31 @@ function fail(where, msg, sample) {
 // Words that only ever belong to one language, checked with a Unicode-aware boundary.
 // JavaScript's \b is ASCII-only, so \bÇocuk\b never matches — the first version of this idea
 // in the i18n checker missed every Turkish word it was written to catch.
+// Two leak tests, because one of them is not enough and it is worth saying why.
+//
+// The word lists are the real test. They carry the closed maths vocabulary each language
+// uses — the shape names, the question words — so a Spanish entry filled in with the Turkish
+// word is caught by name. That is not hypothetical: `es: 'sekizgen'` shipped in the polygon
+// table and sat there until the output was read by eye.
+//
+// The letter test is the backstop for words no list will ever hold. It is weaker than it
+// looks and the limit is worth writing down: "sekizgen", "üçgen", "dörtgen" and "kaç" are
+// all invisible to it, because a letter class can only see letters that differ. It catches
+// ğ ş ı İ anywhere outside Turkish, and ç ö outside Turkish — but NOT ü, which Spanish has
+// of its own (pingüino), and not the bare Latin letters that most Turkish words are made of.
+const TR_ONLY = /[ğĞşŞıİ]/u
+const NOT_SPANISH = /[çÇöÖ]/u
+
+// Words that belong to exactly one language. Question words and, above all, the shape names,
+// which are the table that has already been mistranslated once.
+const TR_WORDS = /(kaç|tane|sayı|kadar|şeklin|yuvarla|hangi|toplam|üçgen|dörtgen|beşgen|altıgen|sekizgen|kenar|köşe|açı|derece|oran|kesir)/iu
+const ES_WORDS = /(cuántos|cuántas|figura|redondea|cuál|triángulo|cuadrilátero|pentágono|hexágono|octágono|ángulo|grados|razón)/iu
+const EN_WORDS = /\b(how many|what is|round|which|altogether|nearest|triangle|quadrilateral|pentagon|hexagon|octagon|angle|degrees|ratio)\b/iu
+
 const LEAK = {
-  en: [/\b(kaç|tane|sayı|kadar|şeklin|yuvarla|hangi|toplam)\b/iu, /\b(cuántos|cuántas|figura|redondea|cuál)\b/iu],
-  tr: [/\b(how many|what is|round|which|altogether|nearest)\b/iu, /\b(cuántos|cuántas|redondea|cuál|figura)\b/iu],
-  es: [/\b(how many|what is|round|which|altogether|nearest)\b/iu, /\b(kaç|tane|sayı|yuvarla|hangi|toplam)\b/iu],
+  en: [TR_WORDS, ES_WORDS, TR_ONLY, NOT_SPANISH],
+  tr: [ES_WORDS, EN_WORDS],
+  es: [TR_WORDS, EN_WORDS, TR_ONLY, NOT_SPANISH],
 }
 
 function textOf(p) {

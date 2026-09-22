@@ -74,6 +74,13 @@ const TEMPLATE_FOR_TOPIC = {
   // Year 6 had no entry at all until now, which is the single fact behind the hundred-question
   // audit's "every question for ages 11-13 came from the model": three ages mapped onto a year
   // with nothing to map to.
+  // Years 4 and 5 name a place-value topic too, and it is the same template one band down —
+  // its rounding places and its number sizes follow the year. Year 3's "Numbers to 1000" is
+  // NOT mapped: that year's line is comparing and ordering, and it does not round at all, so
+  // pointing it here would label an ordering topic with a rounding question — the exact
+  // mismatch the hundred-question audit's first finding was about.
+  y4_place_value: 'place-value',
+  y5_place_value: 'place-value',
   y6_place_value: 'place-value',
   // Year 7's rounding-and-negatives topic is the same template one band up — the shapes it
   // adds there (decimal places) belong to exactly this topic.
@@ -81,6 +88,16 @@ const TEMPLATE_FOR_TOPIC = {
   y6_algebra: 'algebra',
   y7_algebra: 'algebra',
   y6_multiplication: 'long-mult-div',
+  y7_number: 'number-properties',
+  y7_sequences: 'sequence',
+  y5_statistics: 'averages',
+  y6_statistics: 'averages',
+  y7_statistics: 'averages',
+  y5_geometry: 'geometry',
+  y6_geometry: 'geometry',
+  y7_geometry: 'geometry',
+  y6_fractions: 'fraction-of-number',
+  y7_fractions: 'fraction-of-number',
   y6_ratio: 'ratio',
   y7_ratio: 'ratio',
 
