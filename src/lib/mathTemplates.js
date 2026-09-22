@@ -35,8 +35,10 @@
 // could drift out of sync with the actual numbers. hint_steps stop at method, never state
 // the final answer — the child does that last step themselves.
 
-import { TR_ACC, TR_ABL } from './timeWords'
-import { say } from './i18n'
+// Extensions are explicit so this module can be imported by `npm run math:check` under
+// bare node as well as by Vite. The audit has to exercise the code that ships, not a copy.
+import { TR_ACC, TR_ABL } from './timeWords.js'
+import { say } from './i18n.js'
 
 function randInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -90,9 +92,11 @@ function shuffle(arr) {
 // testing says otherwise.
 const MAX_FOR_LEVEL = [20, 20, 20, 100, 100, 1000, 1000, 10000, 10000, 20000, 20000, 50000, 50000, 50000, 50000, 50000]
 
-// Which school year's footing a level sits on — 1..6. The dial is two rungs per year, so
+// Which school year's footing a level sits on — 1..7. The dial is two rungs per year, so
 // this is what a template consults when its difficulty is about WHICH numbers are in play
 // (tables, denominators) rather than how big they get.
+// The ceiling was 6 while Year 6 was the last year. It is 7 now that Year 7 exists, which is
+// also what makes levels 13-14 mean anything: capped at 6 they were a second Year 6.
 // A number as a book would print it for this language: 4,200,000 in English, 4.200.000 in
 // Turkish and Spanish. Below five digits nothing changes, so "45 candies" and "308 + 260" read
 // as they did.
@@ -110,7 +114,7 @@ export function num(n, lang = 'en') {
 
 function bandForLevel(level) {
   const l = Math.min(Math.max(Number(level) || 1, 1), 15)
-  return Math.min(6, Math.ceil(l / 2) || 1)
+  return Math.min(7, Math.ceil(l / 2) || 1)
 }
 
 function rangeForLevel(level) {
@@ -1363,6 +1367,214 @@ function timeTemplate(level, lang) {
   }
 }
 
+// ── Place value, rounding and negative numbers ───────────────────────────────
+// Year 6's "Numbers to 10,000,000" and Year 7's "Negative Numbers and Rounding". Both were
+// model-only: Year 6 had no template at all, which is the whole of why the hundred-question
+// audit found every content defect in the oldest three ages.
+//
+// The keypad has no minus key, so a question whose ANSWER is negative has to be offered as
+// options. Negative numbers still appear inside the question freely — that is the half of the
+// curriculum a number pad cannot stop.
+
+// A lookup by place, not a bank to draw from — the separator is the language's own, so this
+// cannot go through `num()` (which would need a number, and these are labels).
+const ROUND_UNITS = { en: ['10', '100', '1,000', '10,000', '100,000'],
+                      tr: ['10', '100', '1.000', '10.000', '100.000'],
+                      es: ['10', '100', '1.000', '10.000', '100.000'] }
+
+// Rounding to a named place. The wrong options are the two neighbouring places and the same
+// number rounded the wrong way — a child who rounds 4,600 down to 4,000 has made a rule
+// mistake, not an arithmetic one, and the option says which.
+function placeRound(level, lang) {
+  const band = bandForLevel(level)
+  // Year 6 rounds up to a hundred thousand; Year 7 keeps that and adds decimal places, which
+  // is its own shape below.
+  const placeIdx = band >= 6 ? randInt(1, 4) : randInt(0, 3)
+  const place = Math.pow(10, placeIdx + 1)
+  // Kept clear of an exact multiple (nothing to round) and of an exact half (the rule for
+  // 4,500 is a convention, and a question should not turn on remembering a convention).
+  let n
+  do { n = randInt(place * 2, place * 60) } while (n % place === 0 || (n % place) * 2 === place)
+  const answer = Math.round(n / place) * place
+  const unit = (ROUND_UNITS[lang] || ROUND_UNITS.en)[placeIdx]
+
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang,
+      `Round ${num(n, lang)} to the nearest ${unit}.`,
+      `${num(n, lang)} sayısını en yakın ${unit} sayısına yuvarla.`,
+      `Redondea ${num(n, lang)} a la ${unit} más cercana.`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `pv:round:${n}:${place}`,
+    hint_steps: [
+      say(lang,
+        `Look at the digit just to the right of the ${unit} place — that one digit decides it.`,
+        `${unit} basamağının hemen sağındaki rakama bak — kararı o tek rakam verir.`,
+        `Mira la cifra justo a la derecha de la posición de ${unit}: esa sola cifra lo decide.`),
+      say(lang,
+        `5 or more goes up, less than 5 stays. Everything to the right becomes 0.`,
+        `5 ve üstü yukarı çıkar, 5'ten küçük olduğu yerde kalır. Sağındaki her şey 0 olur.`,
+        `5 o más sube, menos de 5 se queda. Todo lo que hay a la derecha pasa a ser 0.`),
+    ],
+  }
+}
+
+// "In 103,247 what is the 3 worth?" — straight out of Bond's 10-11 book, and the question that
+// separates knowing the digits from knowing the places.
+function placeDigitValue(level, lang) {
+  const band = bandForLevel(level)
+  const digits = band >= 6 ? randInt(6, 7) : randInt(5, 6)
+  // Built digit by digit so the chosen digit is unique in the number: "what is the 3 worth"
+  // has no answer if there are two 3s.
+  const used = new Set()
+  const ds = []
+  for (let i = 0; i < digits; i++) {
+    let d
+    do { d = i === 0 ? randInt(1, 9) : randInt(0, 9) } while (used.has(d))
+    used.add(d); ds.push(d)
+  }
+  // Never the ones or the tens place. At ones the answer IS the digit, so the "that is the
+  // digit itself" option becomes a second correct answer; at tens the "one place too low"
+  // option collapses onto it as well. Both would put two identical choices on screen.
+  // Never a 0 either, for the same reason taken to its limit: "what is the 0 worth" has all
+  // four options reading 0. It is also not a question — a 0 is a placeholder, not a value.
+  let at
+  do { at = randInt(0, digits - 3) } while (ds[at] === 0)
+  const digit = ds[at]
+  const power = digits - 1 - at
+  const n = Number(ds.join(''))
+  const answer = digit * Math.pow(10, power)
+
+  const options = shuffle([
+    { value: num(answer, lang), why: say(lang,
+        `Right — the ${digit} sits ${power} place${power === 1 ? '' : 's'} up from the ones, so it is worth ${num(answer, lang)}.`,
+        `Doğru — ${digit} rakamı birler basamağından ${power} basamak yukarıda, yani ${num(answer, lang)} değerinde.`,
+        `Correcto: el ${digit} está ${power} posición${power === 1 ? '' : 'es'} por encima de las unidades, así que vale ${num(answer, lang)}.`) },
+    { value: String(digit), why: say(lang,
+        `That is the digit itself. The question asks what it is WORTH, which depends on where it sits.`,
+        `Bu rakamın kendisi. Soru rakamın DEĞERİNİ soruyor, o da bulunduğu basamağa bağlı.`,
+        `Esa es la cifra en sí. La pregunta es cuánto VALE, y eso depende de su posición.`) },
+    { value: num(digit * Math.pow(10, Math.max(0, power - 1)), lang), why: say(lang,
+        `One place too low — count the places to the right of the ${digit} again.`,
+        `Bir basamak eksik — ${digit} rakamının sağındaki basamakları tekrar say.`,
+        `Una posición de menos: vuelve a contar las posiciones a la derecha del ${digit}.`) },
+    { value: num(digit * Math.pow(10, power + 1), lang), why: say(lang,
+        `One place too high — the ${digit} has ${power} digit${power === 1 ? '' : 's'} after it, not ${power + 1}.`,
+        `Bir basamak fazla — ${digit} rakamından sonra ${power} rakam var, ${power + 1} değil.`,
+        `Una posición de más: después del ${digit} hay ${power} cifra${power === 1 ? '' : 's'}, no ${power + 1}.`) },
+  ])
+
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang,
+      `In ${num(n, lang)}, what is the ${digit} worth?`,
+      `${num(n, lang)} sayısında ${digit} rakamının değeri kaçtır?`,
+      `En ${num(n, lang)}, ¿cuánto vale el ${digit}?`),
+    format: 'choice',
+    options,
+    correct_answer: num(answer, lang),
+    operandKey: `pv:digit:${n}:${at}`,
+    hint_steps: [
+      say(lang, `Name the places from the right: ones, tens, hundreds, thousands…`,
+                `Basamakları sağdan adlandır: birler, onlar, yüzler, binler…`,
+                `Nombra las posiciones desde la derecha: unidades, decenas, centenas, millares…`),
+      say(lang, `Find which place the ${digit} is standing in.`,
+                `${digit} rakamının hangi basamakta durduğunu bul.`,
+                `Busca en qué posición está el ${digit}.`),
+    ],
+  }
+}
+
+// Intervals across zero. The answer is a COUNT of degrees, which is positive and typable —
+// the version where the answer is the new temperature would need a minus key.
+function placeNegative(level, lang) {
+  const below = randInt(2, 14)
+  const above = randInt(1, 12)
+  const answer = below + above
+  // Cities only: the sentence says "in ___", and "in the mountain" is not English. The
+  // Turkish bank carries its own locative ending because Turkish marks it on the word.
+  const place = pickL({ en: ['Oslo', 'Helsinki', 'Moscow', 'Calgary', 'Tromso'],
+                        tr: ["Oslo'da", "Helsinki'de", "Moskova'da", "Calgary'de", "Tromso'da"],
+                        es: ['Oslo', 'Helsinki', 'Moscú', 'Calgary', 'Tromso'] }, lang)
+
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang,
+      `At dawn it was −${below}°C in ${place}. By noon it was ${above}°C. How many degrees did it rise?`,
+      `Şafakta ${place} sıcaklık −${below}°C idi. Öğlen ${above}°C oldu. Kaç derece yükseldi?`,
+      `Al amanecer hacía −${below}°C en ${place}. A mediodía hacía ${above}°C. ¿Cuántos grados subió?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `pv:neg:${below}:${above}`,
+    hint_steps: [
+      say(lang, `Count up to 0 first — that is ${below} degrees on its own.`,
+                `Önce 0'a kadar çık — bu tek başına ${below} derece.`,
+                `Primero sube hasta 0: eso ya son ${below} grados.`),
+      say(lang, `Then carry on from 0 up to ${above}, and add the two climbs.`,
+                `Sonra 0'dan ${above} dereceye devam et ve iki çıkışı topla.`,
+                `Luego sigue desde 0 hasta ${above} y suma las dos subidas.`),
+    ],
+  }
+}
+
+// Year 7: round to a given number of decimal places. This is the shape the keypad's decimal
+// point was opened for — as multiple choice it teaches picking, not rounding.
+function placeRoundDecimal(level, lang) {
+  const dp = pick([1, 2])
+  const whole = randInt(2, 89)
+  // Four decimals so there is always a digit to look at past the rounding place, and never an
+  // exact half at that digit.
+  // Rejected: an exact half at the deciding digit (the rule there is a convention, not a
+  // skill), and a value that rounds to a whole number — "round to the nearest tenth" answered
+  // by "48" shows the child nothing about tenths.
+  let frac, value, answer
+  do {
+    frac = randInt(1000, 9999)
+    value = Number(`${whole}.${frac}`)
+    answer = Number(value.toFixed(dp))
+  } while ((String(frac)[dp] === '5' && Number(String(frac).slice(dp + 1)) === 0) || Number.isInteger(answer))
+  const unit = pickL({ en: ['litres', 'metres', 'kilograms', 'seconds'],
+                       tr: ['litre', 'metre', 'kilogram', 'saniye'],
+                       es: ['litros', 'metros', 'kilogramos', 'segundos'] }, lang)
+  const placeName = dp === 1
+    ? say(lang, 'tenth', 'onda bir', 'décima')
+    : say(lang, 'hundredth', 'yüzde bir', 'centésima')
+
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang,
+      `Round ${value} ${unit} to the nearest ${placeName}.`,
+      `${String(value).replace('.', ',')} ${unit} değerini en yakın ${placeName}e yuvarla.`,
+      `Redondea ${String(value).replace('.', ',')} ${unit} a la ${placeName} más cercana.`),
+    // 'decimal' rather than 'numeric': the answer has a point in it, and the keypad only shows
+    // its point when the question says it will be needed.
+    format: 'decimal',
+    correct_answer: answer,
+    operandKey: `pv:dp:${value}:${dp}`,
+    hint_steps: [
+      say(lang, `Keep ${dp} digit${dp === 1 ? '' : 's'} after the point and look at the next one along.`,
+                `Virgülden sonra ${dp} rakam tut ve bir sonrakine bak.`,
+                `Quédate con ${dp} cifra${dp === 1 ? '' : 's'} tras la coma y mira la siguiente.`),
+      say(lang, `5 or more rounds the last kept digit up; less than 5 leaves it alone.`,
+                `5 ve üstü tuttuğun son rakamı bir artırır; 5'ten küçükse rakam olduğu gibi kalır.`,
+                `5 o más sube la última cifra que has guardado; menos de 5 la deja igual.`),
+    ],
+  }
+}
+
+function placeValueTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const shapes = band >= 7
+    ? ['round', 'digit', 'negative', 'roundDecimal', 'roundDecimal']
+    : ['round', 'round', 'digit', 'negative']
+  const shape = pick(shapes)
+  if (shape === 'digit') return placeDigitValue(level, lang)
+  if (shape === 'negative') return placeNegative(level, lang)
+  if (shape === 'roundDecimal') return placeRoundDecimal(level, lang)
+  return placeRound(level, lang)
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -1373,6 +1585,7 @@ const REGISTRY = {
   'division-word': divisionWordTemplate,
   geometry: geometryTemplate,
   pictogram: pictogramTemplate,
+  'place-value': placeValueTemplate,
 }
 
 export { SHAPES }

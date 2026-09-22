@@ -1617,7 +1617,10 @@ export default function MathScreen() {
       // Every template used to be numeric, so the format was assumed here rather than read off
       // the problem. It says so itself now, because a question whose answer is 5/8 cannot be
       // typed on a number pad at all — it has to be offered as options.
-      slot.format = p.format === 'choice' ? 'choice' : 'integer'
+      // 'decimal' is the third: the keypad hides its point unless the question asks for one, so
+      // a template rounding to the nearest tenth had no way to accept 26.8 and had to fall back
+      // to multiple choice. Anything a template does not name stays 'integer'.
+      slot.format = p.format === 'choice' ? 'choice' : p.format === 'decimal' ? 'decimal' : 'integer'
     }
 
     const llmSlots = slots.filter(s => !s.templateTopic)

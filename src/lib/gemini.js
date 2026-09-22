@@ -1,5 +1,5 @@
-import { downscale, toBase64 } from './image'
-import { langName } from './i18n'
+import { downscale, toBase64 } from './image.js'
+import { langName } from './i18n.js'
 
 // ── British National Curriculum ───────────────────────────────────────────────
 
@@ -82,6 +82,31 @@ const BRITISH_CURRICULUM = {
       { id: "y6_geometry", name: "Geometry", description: "Find unknown angles in triangles, quadrilaterals and regular polygons. Recognise angles where they meet at a point, on a straight line or are vertically opposite.", operations: ["geometry"] },
       { id: "y6_statistics", name: "Statistics", description: "Interpret and construct pie charts and line graphs. Calculate and interpret the mean as an average.", operations: ["statistics"] }
     ]
+  },
+  // Key Stage 3. Added because ages 11, 12 and 13 all collapsed onto Year 6: a hundred-question
+  // audit asked the same question of an eleven-year-old and a thirteen-year-old and got the same
+  // one back, which is what happens when three ages share one topic list and one footing.
+  //
+  // Sourced from the KS3 programme of study, checked line by line against Bond's 11+-12+ Maths
+  // 10 Minute Tests so that what a child is asked here is what a book for this age actually
+  // asks. That book is where the square roots, the ratio-to-lowest-terms, the unknown on both
+  // sides of an equation and the speed-distance-time all come from.
+  //
+  // Year 8 is deliberately NOT here. Thirteen still lands on Year 7, which is better than
+  // landing on Year 6 but is still two ages sharing a list — and inventing a Year 8 from memory
+  // is exactly the thing this block exists to stop. It needs its own source.
+  year7: {
+    label: "Year 7", age: [11, 13],
+    topics: [
+      { id: "y7_number", name: "Factors, Multiples and Primes", description: "Find factors, multiples, common factors and common multiples. Find the lowest common multiple and highest common factor. Recognise prime numbers, square numbers and cube numbers, and find square roots of square numbers.", operations: ["place_value","multiplication"] },
+      { id: "y7_negatives", name: "Negative Numbers and Rounding", description: "Order and calculate with positive and negative numbers in all four operations. Round to a given number of decimal places. Estimate the answer to a calculation by rounding each number first.", operations: ["addition","subtraction","place_value"] },
+      { id: "y7_fractions", name: "Fractions, Decimals and Percentages", description: "Convert between fractions, decimals and percentages. Order fractions with different denominators. Find a percentage of an amount, including percentage increase and decrease.", operations: ["fractions","decimals"] },
+      { id: "y7_algebra", name: "Algebra: Expressions and Equations", description: "Simplify expressions by collecting like terms. Substitute numbers, including negative numbers, into expressions and formulae. Solve linear equations with the unknown on one or both sides. Write an expression or equation from a description in words.", operations: ["algebra"] },
+      { id: "y7_sequences", name: "Sequences and Function Machines", description: "Continue and describe linear sequences. Generate a sequence from a term-to-term or position-to-term rule. Find the input or the output of a function machine.", operations: ["algebra"] },
+      { id: "y7_ratio", name: "Ratio, Proportion and Rates", description: "Simplify a ratio to its lowest terms. Divide a quantity in a given ratio. Solve direct proportion problems including unit conversion. Use the relationship between speed, distance and time.", operations: ["ratio","division"] },
+      { id: "y7_geometry", name: "Area, Perimeter and Angles", description: "Find the area of rectangles, triangles, parallelograms and compound shapes. Work backwards from a known area or perimeter. Find missing angles in triangles, on a straight line, at a point and in parallel lines.", operations: ["geometry","measurement"] },
+      { id: "y7_statistics", name: "Averages and Probability", description: "Find and interpret the mean, median, mode and range of a set of data, and work backwards from a known average. Express the probability of a single event as a fraction.", operations: ["statistics"] }
+    ]
   }
 }
 
@@ -92,7 +117,12 @@ export function ageToSchoolYear(age) {
   if (n === 8) return 'year3'
   if (n === 9) return 'year4'
   if (n === 10) return 'year5'
-  return 'year6'
+  // Eleven is the last year of primary and keeps Year 6. Everything above it used to keep Year 6
+  // as well, so a thirteen-year-old was offered a ten-year-old's topic list — the audit found
+  // the same starting question at 11 and at 13 and named it. Twelve and thirteen now share
+  // Year 7, which is one list for two ages rather than one for three; Year 8 waits on a source.
+  if (n === 11) return 'year6'
+  return 'year7'
 }
 
 export { BRITISH_CURRICULUM }
@@ -102,7 +132,10 @@ export { BRITISH_CURRICULUM }
 // Gemini calls go through the backend now — the API key must never ship in
 // the client bundle (it did before, got scraped and flagged as leaked by
 // Google, which broke Gemini access everywhere, frontend and backend alike).
-const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+// Optional chaining because this module is also imported by `npm run math:check`, where
+// there is no Vite and `import.meta.env` is undefined — reading a property off it threw at
+// module load and took the curriculum data down with it.
+const SERVER = import.meta.env?.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 const API_URL = `${SERVER}/api/gemini/generate`
 
 // Camera photos are shrunk first: a full-resolution capture is several MB, base64 inflates

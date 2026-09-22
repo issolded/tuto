@@ -18,7 +18,7 @@
 //
 // A session draws across topics rather than drilling one, which is what makes a quiz look
 // like a quiz instead of a worksheet.
-import { BRITISH_CURRICULUM, ageToSchoolYear } from './gemini'
+import { BRITISH_CURRICULUM, ageToSchoolYear } from './gemini.js'
 
 // Which curriculum topics a code template can actually express, decided one topic at a time.
 //
@@ -70,6 +70,15 @@ const TEMPLATE_FOR_TOPIC = {
   y5_division: 'division-word',
   y5_fractions: 'fraction-of-number',
 
+  // ── Year 6 and Year 7 ──────────────────────────────────────────────────────
+  // Year 6 had no entry at all until now, which is the single fact behind the hundred-question
+  // audit's "every question for ages 11-13 came from the model": three ages mapped onto a year
+  // with nothing to map to.
+  y6_place_value: 'place-value',
+  // Year 7's rounding-and-negatives topic is the same template one band up — the shapes it
+  // adds there (decimal places) belong to exactly this topic.
+  y7_negatives: 'place-value',
+
   // Deliberately absent, and it is worth saying why rather than leaving a silent gap:
   // money (no template), place value past 100 (the counting template draws objects),
   // measurement, area and perimeter, decimals and percentages, angles beyond
@@ -94,7 +103,7 @@ export function templateTopicFor(topic) {
 // parent screens and the levelling rules are all built on it — but it now means "how hard",
 // not "about what", so a child starts at their year's footing rather than at whichever rung
 // happened to name an operation they could do.
-const BASE_LEVEL_FOR_YEAR = { year1: 2, year2: 4, year3: 6, year4: 8, year5: 10, year6: 12 }
+const BASE_LEVEL_FOR_YEAR = { year1: 2, year2: 4, year3: 6, year4: 8, year5: 10, year6: 12, year7: 14 }
 
 export function startingLevelForAge(age) {
   return BASE_LEVEL_FOR_YEAR[ageToSchoolYear(age)] ?? 6
