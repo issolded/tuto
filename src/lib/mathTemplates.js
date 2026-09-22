@@ -2808,9 +2808,12 @@ function lcm(a, b) {
 }
 
 function npHowManyFactors(level, lang) {
-  // Numbers with a decent spread of factor counts, so the answer is not always four.
-  const n = pick([24, 28, 30, 32, 36, 40, 42, 45, 48, 50, 54, 56, 60, 64, 72, 80, 96, 100])
-  const fs = factorsOf(n)
+  // Composite numbers only, and never a prime or a square of one: "how many factors does 37
+  // have" is a different question wearing this one's clothes. Rolled rather than listed —
+  // a hand-written list of eighteen numbers was the whole pool, and a child doing this three
+  // times a week would have met all of them inside a month.
+  let n, fs
+  do { n = randInt(18, 120); fs = factorsOf(n) } while (fs.length < 4)
   return {
     topic: 'number-properties', level,
     question_text: say(lang,
@@ -2832,7 +2835,7 @@ function npHowManyFactors(level, lang) {
 }
 
 function npPrimeSum(level, lang) {
-  const lo = pick([10, 20, 30, 40, 50])
+  const lo = pick([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]) + (Math.random() < 0.4 ? 5 : 0)
   const hi = lo + 10
   const primes = []
   for (let i = lo + 1; i < hi; i++) if (isPrime(i)) primes.push(i)
@@ -2858,9 +2861,11 @@ function npPrimeSum(level, lang) {
 }
 
 function npLcm(level, lang) {
-  // Kept coprime-ish and small so the answer is reachable by listing multiples rather than by
-  // prime factorisation, which is the following year.
-  const [a, b] = pick([[4, 6], [6, 8], [4, 10], [6, 9], [8, 12], [7, 9], [5, 6], [3, 8], [6, 10], [9, 12], [8, 10]])
+  // Small enough that the answer is reachable by listing multiples rather than by prime
+  // factorisation, which is the following year — so the lowest common multiple is capped
+  // rather than the operands. Rolled, not listed, for the same reason as the factors above.
+  let a, b
+  do { a = randInt(3, 12); b = randInt(3, 15) } while (a === b || lcm(a, b) > 90)
   return {
     topic: 'number-properties', level,
     question_text: say(lang,
@@ -2884,7 +2889,7 @@ function npLcm(level, lang) {
 function npSquareRoot(level, lang) {
   const ask = pick(['root', 'square', 'cube'])
   if (ask === 'cube') {
-    const n = randInt(2, 8)
+    const n = randInt(2, 10)
     return {
       topic: 'number-properties', level,
       question_text: say(lang, `What is ${n} cubed?`, `${n} sayısının küpü kaçtır?`, `¿Cuánto es ${n} al cubo?`),
@@ -2899,7 +2904,7 @@ function npSquareRoot(level, lang) {
       ],
     }
   }
-  const n = randInt(4, 15)
+  const n = randInt(4, 20)
   const sq = n * n
   return ask === 'root'
     ? {
