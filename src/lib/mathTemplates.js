@@ -1261,9 +1261,9 @@ function geometryAngle(level, lang) {
     return {
       topic: 'geometry', level,
       question_text: say(lang,
-        `Two straight lines cross. One of the angles is ${a}°. What is the angle opposite it?`,
-        `İki doğru kesişiyor. Açılardan biri ${a}°. Karşısındaki açı kaç derecedir?`,
-        `Dos rectas se cruzan. Uno de los ángulos mide ${a}°. ¿Cuánto mide el opuesto?`),
+        `Two straight lines cross each other. One of the four angles made is ${a}°. What is the angle directly opposite it?`,
+        `İki doğru birbirini kesiyor. Oluşan dört açıdan biri ${a}°. Tam karşısındaki açı kaç derecedir?`,
+        `Dos rectas se cruzan. Uno de los cuatro ángulos que se forman mide ${a}°. ¿Cuánto mide el que está justo enfrente?`),
       format: 'numeric',
       correct_answer: a,
       operandKey: `geo:opp:${a}`,
@@ -1304,14 +1304,20 @@ function geometryAngle(level, lang) {
     : parts.slice(0, -1).join(', ') + say(lang, ' and ', ' ve ', ' y ') + parts[parts.length - 1]
 
   const text = {
+    // "Angles meet at a point" does NOT make them add to 360: they have to be adjacent and
+    // go all the way round, with no gap and no overlap. Nothing is drawn here, so every
+    // condition the answer depends on has to be in the sentence — otherwise the child is
+    // asked to guess the diagram. A re-audit found this wording the day it was written, and
+    // it is the same defect as the model's "a straight line has 2 angles", one step milder:
+    // a premise that happens to be true of the picture the author had in mind.
     line: say(lang,
-      `Two angles sit side by side on a straight line. One is ${given[0]}°. How many degrees is the other?`,
-      `Bir doğru üzerinde yan yana iki açı var. Biri ${given[0]}°. Diğeri kaç derecedir?`,
-      `Dos ángulos están uno al lado del otro sobre una recta. Uno mide ${given[0]}°. ¿Cuánto mide el otro?`),
+      `Two angles sit next to each other and together they make a straight line. One is ${given[0]}°. How many degrees is the other?`,
+      `İki açı yan yana duruyor ve birlikte bir doğru oluşturuyor. Biri ${given[0]}°. Diğeri kaç derecedir?`,
+      `Dos ángulos están uno junto al otro y juntos forman una recta. Uno mide ${given[0]}°. ¿Cuánto mide el otro?`),
     point: say(lang,
-      `${spec.parts} angles meet at a point. ${spec.parts - 1} of them are ${list}. How many degrees is the last one?`,
-      `Bir noktada ${spec.parts} açı birleşiyor. Bunların ${spec.parts - 1} tanesi ${list}. Sonuncusu kaç derecedir?`,
-      `${spec.parts} ángulos se juntan en un punto. ${spec.parts - 1} de ellos miden ${list}. ¿Cuánto mide el último?`),
+      `${spec.parts} angles sit next to each other and together they make a full turn. ${spec.parts - 1} of them are ${list}. How many degrees is the last one?`,
+      `${spec.parts} açı yan yana duruyor ve birlikte tam bir tur oluşturuyor. Bunların ${spec.parts - 1} tanesi ${list}. Sonuncusu kaç derecedir?`,
+      `${spec.parts} ángulos están uno junto a otro y juntos dan una vuelta completa. ${spec.parts - 1} de ellos miden ${list}. ¿Cuánto mide el último?`),
     triangle: say(lang,
       `Two angles of a triangle are ${list}. How many degrees is the third?`,
       `Bir üçgenin iki açısı ${list}. Üçüncü açı kaç derecedir?`,

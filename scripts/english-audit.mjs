@@ -29,7 +29,7 @@ import {
   BANDS, BAND_KEYS, BOOK_COVERAGE, VARIETIES,
   generateItem, generateSession, validateItem, itemSignature,
 } from '../src/lib/englishTemplates.js'
-import { WORD_Z, LEXICON_META } from '../src/lib/englishLexicon.generated.js'
+import { WORD_Z, LEXICON_META, SYLLABLES } from '../src/lib/englishLexicon.generated.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PER_TYPE = Number(process.argv[2]) || 300
@@ -228,6 +228,29 @@ for (const bandKey of BAND_KEYS) {
   }
   console.log()
 }
+}
+
+// ── the one check in this file that is not self-referential ──────────────────
+// Everything above reads the same generated tables the generator reads, so it can prove a
+// question is consistent with the lexicon and can never prove the LEXICON is right. An
+// outside re-audit made exactly that point, having found `nefarious` filed as three syllables
+// — a wrong entry that passed every check here, because every check here believed it.
+//
+// The build now keeps a syllable count only where two independently compiled pronunciation
+// dictionaries agree on it. That is the only independent evidence available offline, so this
+// asserts the guarantee still holds rather than trusting that nobody removed it.
+{
+  const uk = Object.keys(SYLLABLES.uk), us = Object.keys(SYLLABLES.us)
+  if (uk.length !== us.length) {
+    failures.push(`[lexicon] syllable tables differ in size: uk ${uk.length}, us ${us.length}`)
+  }
+  const disagree = uk.filter(w => SYLLABLES.us[w] !== SYLLABLES.uk[w])
+  if (disagree.length) {
+    failures.push(`[lexicon] ${disagree.length} words are kept with counts the two dictionaries `
+      + `disagree on, e.g. ${disagree.slice(0, 5).map(w => `${w} (uk ${SYLLABLES.uk[w]}, us ${SYLLABLES.us[w]})`).join(', ')}`)
+  } else {
+    console.log(`phonics: ${count(uk.length)} words, both dictionaries agree on every count`)
+  }
 }
 
 if (failures.length) {

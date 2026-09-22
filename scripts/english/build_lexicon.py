@@ -775,16 +775,36 @@ def main():
     # /ˈkæʒuəl/ as two syllables: `uə` is not a diphthong, it is a hiatus — ca-su-al. A blind
     # round caught it by finding two two-syllable options on the same line. `radio`, `create`,
     # `science`, `quiet` and `poem` all break the same way.
-    DIPHTHONGS = {'aɪ', 'aʊ', 'eɪ', 'oʊ', 'ɔɪ', 'ɪə', 'eə', 'ʊə', 'əʊ', 'ɛə', 'ɑɪ', 'ɔə'}
+    #
+    # `ɪə` was in this set and `iə` was not, which is backwards for the UK dictionary, and the
+    # set could not be shared at all. An outside re-audit reported `nefarious` as three
+    # syllables and this is what was under it. The two dictionaries use different SYSTEMS, and
+    # the raw entries say so plainly:
+    #
+    #   here    UK /hˈiə/      US /ˈhiɹ/
+    #   beard   UK /bˈiəd/     US /ˈbɪɹd/
+    #   square  UK /skwˈeə/    US /ˈskwɛɹ/
+    #   obvious UK /ˈɒbvɪəs/   US /ˈɑbviəs/
+    #
+    # British English has centring diphthongs and writes them `iə`, `eə`, `ʊə`. General
+    # American has none — they are a vowel plus `ɹ` — so in that dictionary those same letter
+    # pairs are ALWAYS two syllables, and `-ious` is written `iəs` where the UK writes `ɪəs`.
+    # One shared set had to be wrong for one of them whichever way round it was written.
+    DIPHTHONGS = {
+        'uk': {'aɪ', 'aʊ', 'eɪ', 'ɔɪ', 'əʊ', 'iə', 'eə', 'ʊə', 'ɛə', 'ɑɪ', 'ɔə'},
+        # No centring diphthongs, on purpose. Adding them back makes `nefarious` three.
+        'us': {'aɪ', 'aʊ', 'eɪ', 'oʊ', 'ɔɪ', 'ɑɪ'},
+    }
 
-    def syllable_count(p):
+    def syllable_count(p, variety):
         bare = strip_marks(p).replace('ː', '')
+        diph = DIPHTHONGS[variety]
         n, i = 0, 0
         while i < len(bare):
             if bare[i] not in VOWELS:
                 i += 1
                 continue
-            if i + 1 < len(bare) and bare[i:i + 2] in DIPHTHONGS:
+            if i + 1 < len(bare) and bare[i:i + 2] in diph:
                 n += 1
                 i += 2
             else:
@@ -815,8 +835,29 @@ def main():
             if not ps:
                 continue
             rimes[variety][w] = sorted({rime_of(p) for p in ps})
-            syllables[variety][w] = min(syllable_count(p) for p in ps)
+            syllables[variety][w] = min(syllable_count(p, variety) for p in ps)
             sound_key[variety][w] = sorted({strip_marks(p) for p in ps})
+
+    # The two dictionaries now check each other, and a word only keeps a syllable count when
+    # they agree on it.
+    #
+    # This is here because of a specific criticism, and it is a fair one: the audit script
+    # reads the same generated table the generator does, so it can confirm that a question is
+    # consistent with the table and can never tell that the TABLE is wrong. `nefarious` counted
+    # as three passed every check there is. Nothing inside one dictionary can catch that.
+    # Two independently compiled dictionaries can, and where they part company the honest
+    # answer is not to ask the question at all.
+    #
+    # It removes the genuinely uncertain, not the merely hard: `idea` and `area` (UK 2, US 3),
+    # `casual` (3 / 2) and `aspiring` (4 / 3) all go, and each is a word people really do say
+    # both ways. `here`, `beard`, `career`, `nefarious`, `obvious` and `mysterious` all stay,
+    # because both books agree on them.
+    sure = {w for w in syllables['uk'] if syllables['us'].get(w) == syllables['uk'][w]}
+    dropped = {v: len(t) - len(sure & set(t)) for v, t in syllables.items()}
+    for variety in syllables:
+        syllables[variety] = {w: n for w, n in syllables[variety].items() if w in sure}
+    print(f"syllables: kept {len(sure)} words both dictionaries agree on; "
+          f"dropped uk {dropped['uk']}, us {dropped['us']}")
 
     rhyme_groups = {}
     homophones = {}

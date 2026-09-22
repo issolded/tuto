@@ -1164,6 +1164,13 @@ const couldPassForRhyme = (a, b, variety) => {
   if (rhymes(a, b, variety)) return true
   if (a.length < 3 || b.length < 3) return false
   if (a.slice(-3) !== b.slice(-3)) return false
+  // A word this dictionary has no pronunciation for cannot be judged, and NOT KNOWING is not
+  // the same as SOUNDING DIFFERENT. It was: `underground` has no UK entry, so it fell through
+  // as "does not pass for a rhyme" and was offered against `bound` as a spelled-alike trap —
+  // when it rhymes perfectly. Unknown now disqualifies a word from being that trap, which is
+  // the generous direction this test is supposed to lean in for distractors.
+  const unknown = (w) => !rimesOf(w, variety)?.[0]
+  if (unknown(a) || unknown(b)) return true
   const tail = (w) => {
     const [k] = rimesOf(w, variety)
     if (!k) return null
