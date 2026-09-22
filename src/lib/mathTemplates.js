@@ -49,8 +49,13 @@ function pick(arr) {
 }
 
 // Word banks are keyed by language; anything still a bare array is language-neutral.
+// A bank whose per-language value is a single STRING rather than a list is returned whole.
+// Without that line this picked a random CHARACTER out of it, and "1 kilogram is about 2.2
+// pounds" went out as "1 r is about 2.2 d" — a wrong question that reads as a corrupted one,
+// and that no check looking for undefined or NaN can see.
 function pickL(bank, lang) {
-  return pick(Array.isArray(bank) ? bank : (bank[lang] || bank.en))
+  const v = Array.isArray(bank) ? bank : (bank[lang] ?? bank.en)
+  return typeof v === 'string' ? v : pick(v)
 }
 
 // Everything a child reads goes through say(lang, en, tr, es), so adding a language is adding
@@ -745,8 +750,15 @@ function divisionWordTemplate(level, lang) {
   // Division used to occupy a single rung, so it took no notice of the level at all — which
   // is why a Year 5 session could be handed "28 shared among 4". It follows the year now.
   const band = bandForLevel(level)
-  const b = pick(band >= 5 ? [3, 4, 6, 7, 8, 9, 12] : band >= 3 ? [2, 3, 4, 5, 6, 8] : [2, 3, 4, 5])
-  const multiplier = randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 9)
+  // Year 6 and up divide by a TWO-DIGIT number — the curriculum line is "divide numbers up to
+  // 4 digits by a 2-digit number using long division", and the band-5 range was still handing
+  // a twelve-year-old "42 shared among 7". The divisors avoid 10 and 11, which are a
+  // place-value trick and a pattern rather than a division.
+  const b = band >= 6 ? pick([12, 13, 14, 15, 16, 18, 21, 24, 25])
+    : band >= 5 ? pick([3, 4, 6, 7, 8, 9, 12])
+      : band >= 3 ? pick([2, 3, 4, 5, 6, 8]) : pick([2, 3, 4, 5])
+  const multiplier = band >= 6 ? randInt(12, 60)
+    : randInt(band >= 5 ? 6 : band >= 3 ? 3 : 2, band >= 5 ? 25 : band >= 3 ? 12 : 9)
   const a = b * multiplier
   const correct_answer = a / b
   const name = pickL(DIV_NAMES, lang)
@@ -1575,6 +1587,538 @@ function placeValueTemplate(level, lang) {
   return placeRound(level, lang)
 }
 
+// ── Algebra ──────────────────────────────────────────────────────────────────
+// Year 6's "Algebra" and Year 7's "Expressions and Equations". Both were model-only.
+//
+// The shapes come from Bond's two books rather than from the curriculum line alone, because
+// the line says "express missing number problems algebraically" and the books show what that
+// looks like to a child: a think-of-a-number puzzle, a formula to substitute into, a
+// perimeter written in terms of x. Year 7 adds the unknown on BOTH sides, which Year 6's
+// national curriculum does not have and Bond's 10-11 book does — the 11+ is ahead of the
+// curriculum, and that difference is the whole reason the harder shape sits a year up.
+//
+// Every equation here is built from its solution outwards, never rolled and then solved:
+// pick x, pick the coefficients, compute the constant. That way the answer is always a whole
+// number by construction and no generated question can turn out to have no answer.
+
+const ALG_NAMES = { en: ['Alice', 'Omar', 'Priya', 'Jonah', 'Maya', 'Ben'],
+                    tr: ['Elif', 'Kerem', 'Defne', 'Baran', 'Nil', 'Tuna'],
+                    es: ['Lucía', 'Mateo', 'Sofía', 'Diego', 'Vera', 'Hugo'] }
+
+// "I think of a number, multiply by 4, then add 12. The answer is 76." Inverse operations,
+// and the one shape in this template a ten-year-old meets before they meet a letter.
+function algThinkOfNumber(level, lang) {
+  const x = randInt(3, 24)
+  const mult = pick([2, 3, 4, 5, 6])
+  const add = randInt(5, 30)
+  const plus = Math.random() < 0.7
+  const total = plus ? x * mult + add : x * mult - add
+  const name = pickL(ALG_NAMES, lang)
+
+  return {
+    topic: 'algebra', level,
+    question_text: plus
+      ? say(lang,
+          `${name} thinks of a number, multiplies it by ${mult} and adds ${add}. The answer is ${total}. What was the number?`,
+          `${name} bir sayı tutuyor, ${mult} ile çarpıp ${add} ekliyor. Sonuç ${total}. Tuttuğu sayı kaç?`,
+          `${name} piensa un número, lo multiplica por ${mult} y le suma ${add}. Sale ${total}. ¿Qué número era?`)
+      : say(lang,
+          `${name} thinks of a number, multiplies it by ${mult} and takes away ${add}. The answer is ${total}. What was the number?`,
+          `${name} bir sayı tutuyor, ${mult} ile çarpıp ${add} çıkarıyor. Sonuç ${total}. Tuttuğu sayı kaç?`,
+          `${name} piensa un número, lo multiplica por ${mult} y le resta ${add}. Sale ${total}. ¿Qué número era?`),
+    format: 'numeric',
+    correct_answer: x,
+    operandKey: `alg:think:${mult}:${add}:${x}`,
+    hint_steps: [
+      say(lang, `Work backwards from ${total}, undoing each step in reverse order.`,
+                `${total} sayısından geriye doğru git, adımları ters sırayla geri al.`,
+                `Ve hacia atrás desde ${total}, deshaciendo cada paso en orden inverso.`),
+      plus
+        ? say(lang, `The last thing done was adding ${add}, so undo that first — then undo the × ${mult}.`,
+                    `En son ${add} eklendi, önce onu geri al — sonra ${mult} ile çarpmayı geri al.`,
+                    `Lo último fue sumar ${add}, así que deshaz eso primero y luego el × ${mult}.`)
+        : say(lang, `The last thing done was taking away ${add}, so undo that first — then undo the × ${mult}.`,
+                    `En son ${add} çıkarıldı, önce onu geri al — sonra ${mult} ile çarpmayı geri al.`,
+                    `Lo último fue restar ${add}, así que deshaz eso primero y luego el × ${mult}.`),
+    ],
+  }
+}
+
+// Substitution: 4a + 2b − c, find the value. Year 7 gets a negative among the letters, which
+// is where substitution stops being arithmetic with extra steps.
+function algSubstitute(level, lang) {
+  const band = bandForLevel(level)
+  const negatives = band >= 7 && Math.random() < 0.5
+  const a = randInt(2, 9)
+  const b = negatives ? -randInt(2, 7) : randInt(2, 9)
+  const ca = randInt(2, 6)
+  const cb = randInt(2, 5)
+  const extra = randInt(1, 12)
+  const answer = ca * a + cb * b + extra
+  // Built to land positive: there is no minus key, so a negative total would be untypable.
+  if (answer <= 0) return algSubstitute(level, lang)
+  const bWritten = b < 0 ? `−${Math.abs(b)}` : String(b)
+
+  return {
+    topic: 'algebra', level,
+    question_text: say(lang,
+      `If a = ${a} and b = ${bWritten}, what is ${ca}a + ${cb}b + ${extra}?`,
+      `a = ${a} ve b = ${bWritten} ise, ${ca}a + ${cb}b + ${extra} kaçtır?`,
+      `Si a = ${a} y b = ${bWritten}, ¿cuánto vale ${ca}a + ${cb}b + ${extra}?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `alg:sub:${ca}:${a}:${cb}:${b}:${extra}`,
+    hint_steps: [
+      say(lang, `${ca}a means ${ca} × a. Put the numbers in place of the letters first.`,
+                `${ca}a demek ${ca} × a demek. Önce harflerin yerine sayıları koy.`,
+                `${ca}a significa ${ca} × a. Primero pon los números en lugar de las letras.`),
+      negatives
+        ? say(lang, `Adding a negative number makes the total smaller — ${cb} × ${bWritten} takes away.`,
+                    `Negatif bir sayı eklemek toplamı küçültür — ${cb} × ${bWritten} eksiltir.`,
+                    `Sumar un número negativo hace el total más pequeño: ${cb} × ${bWritten} resta.`)
+        : say(lang, `Do both multiplications before you add anything.`,
+                    `Bir şey toplamadan önce iki çarpmayı da yap.`,
+                    `Haz las dos multiplicaciones antes de sumar nada.`),
+    ],
+  }
+}
+
+// Solving. Year 6 gets the unknown on one side; Year 7 gets it on both, which is where a
+// child has to move terms rather than just undo them.
+function algSolve(level, lang) {
+  const band = bandForLevel(level)
+  const bothSides = band >= 7
+  const x = randInt(2, 15)
+
+  if (!bothSides) {
+    const m = pick([2, 3, 4, 5, 6, 7])
+    const c = randInt(3, 25)
+    const total = m * x + c
+    return {
+      topic: 'algebra', level,
+      question_text: say(lang, `If ${m}x + ${c} = ${total}, what is x?`,
+                               `${m}x + ${c} = ${total} ise x kaçtır?`,
+                               `Si ${m}x + ${c} = ${total}, ¿cuánto vale x?`),
+      format: 'numeric',
+      correct_answer: x,
+      operandKey: `alg:solve1:${m}:${c}:${x}`,
+      hint_steps: [
+        say(lang, `Whatever you do to one side, do to the other — that keeps it balanced.`,
+                  `Bir tarafa ne yaparsan diğerine de yap — denge böyle korunur.`,
+                  `Lo que hagas a un lado, hazlo al otro: así sigue equilibrada.`),
+        say(lang, `Take ${c} off both sides first, then divide both sides by ${m}.`,
+                  `Önce iki taraftan da ${c} çıkar, sonra iki tarafı da ${m}'e böl.`,
+                  `Primero quita ${c} a los dos lados y luego divide los dos lados entre ${m}.`),
+      ],
+    }
+  }
+
+  // Both sides: ax + b = cx + d, built so a > c and both constants land positive.
+  const c2 = randInt(2, 6)
+  const a2 = c2 + randInt(1, 5)
+  const d = randInt(5, 40)
+  const b = (c2 - a2) * x + d
+  if (b <= 0) return algSolve(level, lang)
+  return {
+    topic: 'algebra', level,
+    question_text: say(lang, `If ${a2}x + ${b} = ${c2}x + ${d}, what is x?`,
+                             `${a2}x + ${b} = ${c2}x + ${d} ise x kaçtır?`,
+                             `Si ${a2}x + ${b} = ${c2}x + ${d}, ¿cuánto vale x?`),
+    format: 'numeric',
+    correct_answer: x,
+    operandKey: `alg:solve2:${a2}:${b}:${c2}:${d}`,
+    hint_steps: [
+      say(lang, `Get all the x terms on one side and all the plain numbers on the other.`,
+                `Bütün x'li terimleri bir tarafa, düz sayıları diğer tarafa topla.`,
+                `Junta todos los términos con x en un lado y los números sueltos en el otro.`),
+      say(lang, `Take ${c2}x off both sides — that leaves ${a2 - c2}x on the left.`,
+                `İki taraftan da ${c2}x çıkar — solda ${a2 - c2}x kalır.`,
+                `Quita ${c2}x a los dos lados: a la izquierda queda ${a2 - c2}x.`),
+    ],
+  }
+}
+
+// Collecting like terms. A choice question because the answer is an expression, not a number.
+// The wrong options are the three mistakes a child actually makes: adding the unlike terms
+// together, dropping a sign, and multiplying instead of adding the coefficients.
+// A coefficient of 1 is not written: 1y is not how anyone writes y, and a child who has just
+// been taught the notation should not meet it written wrongly in the question they are
+// being taught it with.
+function term(n, letter) {
+  return n === 1 ? letter : `${n}${letter}`
+}
+
+function algSimplify(level, lang) {
+  // 2 and 2 are excluded together: 2 + 2 and 2 × 2 are both 4, so the "you multiplied the x
+  // terms" option would come out identical to the right answer and two of the four choices
+  // would be correct. The checker found this, not a reading of the code.
+  let a1, a2
+  do { a1 = randInt(2, 9); a2 = randInt(2, 9) } while (a1 * a2 === a1 + a2)
+  const b1 = randInt(2, 9), b2 = randInt(1, b1 - 1 || 1)
+  const xs = a1 + a2
+  const ys = b1 + b2
+  const correct = `${term(xs, 'x')} + ${term(ys, 'y')}`
+
+  const options = shuffle([
+    { value: correct, why: say(lang,
+        `Right — only the x terms go together and only the y terms go together.`,
+        `Doğru — sadece x'liler kendi arasında, y'liler kendi arasında toplanır.`,
+        `Correcto: solo los términos con x se juntan entre sí, y los de y entre sí.`) },
+    { value: `${term(xs + ys, 'xy')}`, why: say(lang,
+        `x and y are different things, so they cannot be added into one term — ${xs} apples and ${ys} pears are not ${xs + ys} applepears.`,
+        `x ile y farklı şeyler, tek terimde toplanamaz — ${xs} elma ve ${ys} armut, ${xs + ys} elmarmut etmez.`,
+        `x e y son cosas distintas, no se suman en un solo término: ${xs} manzanas y ${ys} peras no son ${xs + ys} manzaperas.`) },
+    { value: `${term(a1 * a2, 'x')} + ${term(ys, 'y')}`, why: say(lang,
+        `The x terms were multiplied. ${a1}x + ${a2}x is ${a1} lots of x plus ${a2} more lots of x.`,
+        `x'liler çarpılmış. ${a1}x + ${a2}x demek ${a1} tane x'in üstüne ${a2} tane x daha demek.`,
+        `Los términos con x se han multiplicado. ${a1}x + ${a2}x son ${a1} equis más otras ${a2} equis.`) },
+    { value: `${term(xs, 'x')} + ${term(b1 - b2, 'y')}`, why: say(lang,
+        `The y terms were subtracted. Both of them are being added in the question.`,
+        `y'liler çıkarılmış. Soruda ikisi de toplanıyor.`,
+        `Los términos con y se han restado. En la pregunta los dos se suman.`) },
+  ])
+
+  return {
+    topic: 'algebra', level,
+    question_text: say(lang,
+      `Simplify: ${term(a1, 'x')} + ${term(b1, 'y')} + ${term(a2, 'x')} + ${term(b2, 'y')}`,
+      `Sadeleştir: ${term(a1, 'x')} + ${term(b1, 'y')} + ${term(a2, 'x')} + ${term(b2, 'y')}`,
+      `Simplifica: ${term(a1, 'x')} + ${term(b1, 'y')} + ${term(a2, 'x')} + ${term(b2, 'y')}`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `alg:simp:${a1}:${a2}:${b1}:${b2}`,
+    hint_steps: [
+      say(lang, `Like terms are ones with exactly the same letter.`,
+                `Benzer terimler, harfi birebir aynı olanlardır.`,
+                `Los términos semejantes son los que llevan exactamente la misma letra.`),
+      say(lang, `Gather the x terms, then gather the y terms, and leave them side by side.`,
+                `Önce x'lileri topla, sonra y'lileri topla, ikisini yan yana bırak.`,
+                `Junta primero los términos con x, luego los de y, y déjalos uno al lado del otro.`),
+    ],
+  }
+}
+
+// Writing an expression rather than evaluating one: a rectangle whose length is given in
+// terms of its width. Bond asks this in both books and the curriculum line calls it
+// "express missing number problems algebraically".
+function algExpression(level, lang) {
+  const times = pick([2, 3])
+  const plus = randInt(1, 9)
+  const useTimes = Math.random() < 0.5
+  // perimeter = 2(w + l)
+  const correct = useTimes ? term(2 + 2 * times, 'x') : `4x + ${2 * plus}`
+  const options = shuffle([
+    { value: correct, why: useTimes
+        ? say(lang, `Right — the two lengths are ${times}x each and the two widths are x each, and all four are added.`,
+                    `Doğru — iki uzun kenar ${times}x, iki kısa kenar x, dördü de toplanır.`,
+                    `Correcto: los dos lados largos miden ${times}x y los dos cortos x, y se suman los cuatro.`)
+        : say(lang, `Right — two widths of x and two lengths of x + ${plus} make 4x + ${2 * plus}.`,
+                    `Doğru — iki tane x ve iki tane x + ${plus}, toplamda 4x + ${2 * plus} eder.`,
+                    `Correcto: dos anchos de x y dos largos de x + ${plus} dan 4x + ${2 * plus}.`) },
+    { value: useTimes ? term(times + 1, 'x') : `2x + ${plus}`, why: say(lang,
+        `That is one width and one length added — a perimeter goes all the way round, so all four sides count.`,
+        `Bu bir kısa ve bir uzun kenarın toplamı — çevre etrafını tamamen dolaşır, dört kenar da sayılır.`,
+        `Eso es un ancho más un largo. El perímetro da toda la vuelta, así que cuentan los cuatro lados.`) },
+    { value: useTimes ? term(2 * times, 'x') : `4x + ${plus}`, why: say(lang,
+        `Two of the sides were left out or counted once instead of twice.`,
+        `Kenarların ikisi atlanmış ya da iki kez yerine bir kez sayılmış.`,
+        `Se han dejado fuera dos lados, o se han contado una vez en vez de dos.`) },
+    { value: useTimes ? term(times, 'x²') : `x² + ${plus}`, why: say(lang,
+        `Multiplying the sides gives the AREA. Perimeter is the distance around the edge, so the sides are added.`,
+        `Kenarları çarpmak ALANI verir. Çevre, kenar boyunca dolaşılan uzunluktur, kenarlar toplanır.`,
+        `Multiplicar los lados da el ÁREA. El perímetro es la distancia del borde, así que los lados se suman.`) },
+  ])
+
+  return {
+    topic: 'algebra', level,
+    question_text: useTimes
+      ? say(lang,
+          `A rectangle is x cm wide. It is ${times} times as long as it is wide. What is its perimeter?`,
+          `Bir dikdörtgenin genişliği x cm. Uzunluğu genişliğinin ${times} katı. Çevresi kaçtır?`,
+          `Un rectángulo mide x cm de ancho. Es ${times} veces más largo que ancho. ¿Cuál es su perímetro?`)
+      : say(lang,
+          `A rectangle is x cm wide and ${plus} cm longer than it is wide. What is its perimeter?`,
+          `Bir dikdörtgenin genişliği x cm, uzunluğu genişliğinden ${plus} cm fazla. Çevresi kaçtır?`,
+          `Un rectángulo mide x cm de ancho y ${plus} cm más de largo que de ancho. ¿Cuál es su perímetro?`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `alg:expr:${useTimes ? 't' + times : 'p' + plus}`,
+    hint_steps: [
+      say(lang, `Write down what each of the four sides is, in terms of x.`,
+                `Dört kenarın her birini x cinsinden yaz.`,
+                `Escribe cuánto mide cada uno de los cuatro lados, en función de x.`),
+      say(lang, `Perimeter is all four added together. Collect the like terms at the end.`,
+                `Çevre, dört kenarın toplamıdır. Sonunda benzer terimleri topla.`,
+                `El perímetro es la suma de los cuatro. Al final junta los términos semejantes.`),
+    ],
+  }
+}
+
+function algebraTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const shapes = band >= 7
+    ? ['solve', 'solve', 'substitute', 'substitute', 'simplify', 'think', 'expression']
+    : ['think', 'think', 'solve', 'substitute', 'simplify', 'expression']
+  const shape = pick(shapes)
+  if (shape === 'solve') return algSolve(level, lang)
+  if (shape === 'substitute') return algSubstitute(level, lang)
+  if (shape === 'simplify') return algSimplify(level, lang)
+  if (shape === 'expression') return algExpression(level, lang)
+  return algThinkOfNumber(level, lang)
+}
+
+// ── Ratio and proportion ─────────────────────────────────────────────────────
+// Year 6's "Ratio and Proportion" and Year 7's "Ratio, Proportion and Rates". Bond asks all
+// four of these shapes in both books; the rate shape (speed, distance, time) is Year 7 only,
+// which is also where the curriculum line puts it.
+
+// Simplifying a ratio to its lowest terms. Built from the simplified pair outwards so the
+// common factor is known rather than searched for — and so the pair is never already in its
+// lowest terms, which would make the question answer itself.
+function ratioSimplify(level, lang) {
+  // Coprime by construction: the whole skill is dividing by the common factor, and a pair
+  // that still shares one after "simplifying" would mark a correct answer wrong.
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x)
+  let p, q
+  do { p = randInt(2, 12); q = randInt(2, 12) } while (p === q || gcd(p, q) !== 1)
+  const f = randInt(2, 9)
+  const a = p * f, b = q * f
+  const correct = `${p}:${q}`
+
+  const options = shuffle([
+    { value: correct, why: say(lang,
+        `Right — both sides divide by ${f}.`,
+        `Doğru — iki taraf da ${f}'e bölünür.`,
+        `Correcto: los dos lados se dividen entre ${f}.`) },
+    { value: `${q}:${p}`, why: say(lang,
+        `The right numbers, the wrong way round. ${a} comes first in the question, so its share comes first in the answer.`,
+        `Sayılar doğru ama ters. Soruda önce ${a} geçiyor, cevapta da onun payı önce gelir.`,
+        `Los números correctos, pero al revés. En la pregunta va primero ${a}, así que su parte va primero.`) },
+    { value: `${a - b === 0 ? a : Math.abs(a - b)}:${f}`, why: say(lang,
+        `That is the difference between the two, not the ratio. A ratio keeps both amounts.`,
+        `Bu ikisinin farkı, oran değil. Oran iki miktarı da korur.`,
+        `Eso es la diferencia entre los dos, no la razón. Una razón conserva las dos cantidades.`) },
+    { value: `${p * 2}:${q * 2}`, why: say(lang,
+        `Not all the way down — ${p * 2} and ${q * 2} can still both be halved.`,
+        `Sonuna kadar sadeleşmemiş — ${p * 2} ile ${q * 2} hâlâ ikiye bölünebilir.`,
+        `No está del todo reducida: ${p * 2} y ${q * 2} todavía se pueden dividir entre 2.`) },
+  ])
+
+  return {
+    topic: 'ratio', level,
+    question_text: say(lang,
+      `Write the ratio ${a}:${b} in its simplest form.`,
+      `${a}:${b} oranını en sade hâliyle yaz.`,
+      `Escribe la razón ${a}:${b} en su forma más simple.`),
+    format: 'choice',
+    options,
+    correct_answer: correct,
+    operandKey: `ratio:simp:${a}:${b}`,
+    hint_steps: [
+      say(lang, `Look for a number that divides into both sides exactly.`,
+                `İki tarafı da tam bölen bir sayı ara.`,
+                `Busca un número que divida exactamente a los dos lados.`),
+      say(lang, `Keep dividing until nothing goes into both any more.`,
+                `İkisini birden bölen başka sayı kalmayana kadar bölmeye devam et.`,
+                `Sigue dividiendo hasta que ya no haya ningún número que entre en los dos.`),
+    ],
+  }
+}
+
+// Sharing an amount in a given ratio. The answer is one share, so it is typable.
+function ratioShare(level, lang) {
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x)
+  let p, q
+  do { p = randInt(1, 7); q = randInt(1, 7) } while (p === q || gcd(p, q) !== 1)
+  const part = randInt(4, 30)
+  const total = (p + q) * part
+  const bigger = p > q
+  const answer = (bigger ? p : q) * part
+  const [n1, n2] = pickL({ en: [['Ada', 'Sam'], ['Omar', 'Lily'], ['Ben', 'Nora']],
+                           tr: [['Ada', 'Kerem'], ['Ömer', 'Elif'], ['Deniz', 'Nil']],
+                           es: [['Ada', 'Hugo'], ['Omar', 'Lía'], ['Bea', 'Nora']] }, lang)
+  const thing = pickL({ en: ['stickers', 'marbles', 'cards'], tr: ['çıkartma', 'misket', 'kart'],
+                        es: ['pegatinas', 'canicas', 'cartas'] }, lang)
+  const who = bigger ? n1 : n2
+
+  return {
+    topic: 'ratio', level,
+    question_text: say(lang,
+      `${total} ${thing} are shared between ${n1} and ${n2} in the ratio ${p}:${q}. How many does ${who} get?`,
+      `${total} ${thing} ${n1} ile ${n2} arasında ${p}:${q} oranında paylaşılıyor. ${who} kaç tane alır?`,
+      `Se reparten ${total} ${thing} entre ${n1} y ${n2} en la razón ${p}:${q}. ¿Cuántas le tocan a ${who}?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `ratio:share:${total}:${p}:${q}`,
+    hint_steps: [
+      say(lang, `${p}:${q} means ${p + q} equal parts altogether.`,
+                `${p}:${q} demek toplam ${p + q} eşit pay demek.`,
+                `${p}:${q} significa ${p + q} partes iguales en total.`),
+      say(lang, `Divide ${total} by ${p + q} to find one part, then take as many parts as ${who} is owed.`,
+                `Bir payı bulmak için ${total} sayısını ${p + q}'e böl, sonra ${who}'a düşen kadar pay al.`,
+                `Divide ${total} entre ${p + q} para hallar una parte y toma tantas partes como le corresponden a ${who}.`),
+    ],
+  }
+}
+
+// Direct proportion — the "if 4 cost £6, what do 10 cost" shape, and its unit-conversion
+// cousin. Both books lean on it.
+function ratioProportion(level, lang) {
+  const band = bandForLevel(level)
+  const unitConv = band >= 7 && Math.random() < 0.45
+
+  if (unitConv) {
+    // The rates are the ones Bond actually uses, so the number a child carries away is true.
+    // Singular and plural are separate fields rather than an -s stripped off the plural:
+    // "inches" minus its s is "inche". Turkish needs neither, which is why its two fields are
+    // the same word — the language marks number on the verb, not the noun after a count.
+    // `g` is the Spanish gender of the unit being converted TO, and it is not decoration:
+    // it agrees both the question word and the article, so without it the sentence reads
+    // "¿cuántos libras?" and "unas kilómetros". The geometry template carries the same field
+    // for the same reason.
+    const conv = pick([
+      { per: 2.2, step: 5,
+        from: { en: ['kilogram', 'kilograms'], tr: ['kilogram', 'kilogram'], es: ['kilogramo', 'kilogramos'] },
+        to:   { en: ['pound', 'pounds'],       tr: ['libre', 'libre'],       es: ['libra', 'libras'] }, g: 'f' },
+      { per: 2.5, step: 2,
+        from: { en: ['inch', 'inches'],        tr: ['inç', 'inç'],           es: ['pulgada', 'pulgadas'] },
+        to:   { en: ['centimetre', 'centimetres'], tr: ['santimetre', 'santimetre'], es: ['centímetro', 'centímetros'] }, g: 'm' },
+      // 5 miles to 8 kilometres, so the multiple has to clear the 5 or the answer is not whole:
+      // 2 miles came out as 3.2 and was rounded to 3, which is a wrong answer, not an estimate.
+      { per: 8, step: 5,
+        from: { en: ['mile', 'miles'],         tr: ['mil', 'mil'],           es: ['milla', 'millas'] },
+        to:   { en: ['kilometre', 'kilometres'], tr: ['kilometre', 'kilometre'], es: ['kilómetro', 'kilómetros'] }, g: 'm' },
+    ])
+    const n = conv.step * randInt(2, 12)
+    const answer = conv.per === 8 ? (n / 5) * 8 : Math.round(n * conv.per)
+    const [fromOne, fromMany] = conv.from[lang] ?? conv.from.en
+    const [, toMany] = conv.to[lang] ?? conv.to.en
+    const esMany = conv.g === 'f' ? 'cuántas' : 'cuántos'
+    const esSome = conv.g === 'f' ? 'unas' : 'unos'
+    // Each language states the rate in its own natural shape. Turkish reads badly as a
+    // translated "if X then Y" — "2,2 libre eder ise" — so it takes the rate as its own
+    // sentence and asks the question after it.
+    const rate = conv.per === 8
+      ? say(lang, `5 miles is about 8 kilometres`, `5 mil yaklaşık 8 kilometredir.`, `5 millas son ${esSome} 8 kilómetros`)
+      : say(lang, `1 ${fromOne} is about ${conv.per} ${toMany}`,
+                  `1 ${fromOne} yaklaşık ${String(conv.per).replace('.', ',')} ${toMany}dir.`,
+                  `1 ${fromOne} son ${esSome} ${String(conv.per).replace('.', ',')} ${toMany}`)
+    return {
+      topic: 'ratio', level,
+      question_text: say(lang,
+        `If ${rate}, about how many ${toMany} is ${n} ${fromMany}?`,
+        `${rate} ${n} ${fromMany} yaklaşık kaç ${toMany} eder?`,
+        `Si ${rate}, ¿${esMany} ${toMany} son aproximadamente ${n} ${fromMany}?`),
+      format: 'numeric',
+      correct_answer: answer,
+      operandKey: `ratio:conv:${conv.per}:${n}`,
+      hint_steps: [
+        say(lang, `Find what one unit is worth first, then multiply.`,
+                  `Önce bir birimin karşılığını bul, sonra çarp.`,
+                  `Halla primero cuánto vale una unidad y después multiplica.`),
+        say(lang, `Both amounts grow together, so ${n} times as much of one is ${n} times as much of the other.`,
+                  `İki miktar birlikte büyür, birinden ${n} kat almak diğerinden de ${n} kat almak demektir.`,
+                  `Las dos cantidades crecen juntas: ${n} veces de una es ${n} veces de la otra.`),
+      ],
+    }
+  }
+
+  const unit = randInt(2, 15)
+  const have = randInt(2, 8)
+  const want = have + randInt(1, 9)
+  const cost = unit * have
+  const answer = unit * want
+  const thing = pickL({ en: ['pencils', 'tickets', 'apples', 'notebooks'], tr: ['kalem', 'bilet', 'elma', 'defter'],
+                        es: ['lápices', 'entradas', 'manzanas', 'cuadernos'] }, lang)
+
+  return {
+    topic: 'ratio', level,
+    question_text: say(lang,
+      `${have} ${thing} cost ${cost} cents. At the same rate, what do ${want} cost?`,
+      `${have} ${thing} ${cost} kuruş tutuyor. Aynı fiyattan ${want} tanesi kaç kuruş tutar?`,
+      `${have} ${thing} cuestan ${cost} céntimos. Al mismo precio, ¿cuánto cuestan ${want}?`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `ratio:prop:${have}:${want}:${unit}`,
+    hint_steps: [
+      say(lang, `Work out what one costs before you work out what ${want} cost.`,
+                `${want} tanesini hesaplamadan önce bir tanesinin kaç ettiğini bul.`,
+                `Averigua cuánto cuesta uno antes de calcular cuánto cuestan ${want}.`),
+      say(lang, `Divide by ${have} to get one, then multiply by ${want}.`,
+                `Bir tanesi için ${have}'e böl, sonra ${want} ile çarp.`,
+                `Divide entre ${have} para tener uno y luego multiplica por ${want}.`),
+    ],
+  }
+}
+
+// Year 7 only: speed, distance, time. Numbers are chosen so the answer is whole in whichever
+// of the three is being asked for.
+function ratioRate(level, lang) {
+  const speed = pick([30, 40, 50, 60, 80, 90])
+  const hours = pick([2, 3, 4, 5])
+  const distance = speed * hours
+  const ask = pick(['distance', 'time', 'speed'])
+  const q = {
+    distance: say(lang,
+      `A train travels at ${speed} km/h for ${hours} hours. How far does it go?`,
+      `Bir tren ${speed} km/sa hızla ${hours} saat gidiyor. Kaç kilometre yol alır?`,
+      `Un tren va a ${speed} km/h durante ${hours} horas. ¿Qué distancia recorre?`),
+    time: say(lang,
+      `A train travels ${distance} km at ${speed} km/h. How many hours does it take?`,
+      `Bir tren ${speed} km/sa hızla ${distance} km gidiyor. Kaç saat sürer?`,
+      `Un tren recorre ${distance} km a ${speed} km/h. ¿Cuántas horas tarda?`),
+    speed: say(lang,
+      `A train covers ${distance} km in ${hours} hours. What is its speed in km/h?`,
+      `Bir tren ${hours} saatte ${distance} km gidiyor. Hızı saatte kaç km?`,
+      `Un tren recorre ${distance} km en ${hours} horas. ¿Cuál es su velocidad en km/h?`),
+  }[ask]
+  const answer = { distance, time: hours, speed }[ask]
+
+  return {
+    topic: 'ratio', level,
+    question_text: q,
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `ratio:rate:${ask}:${speed}:${hours}`,
+    hint_steps: [
+      say(lang, `Speed, distance and time make one triangle: distance sits on top.`,
+                `Hız, yol ve zaman tek bir üçgen kurar: yol en üstte durur.`,
+                `Velocidad, distancia y tiempo forman un triángulo: la distancia va arriba.`),
+      ask === 'distance'
+        ? say(lang, `Covering ${speed} km each hour, for ${hours} hours, is a multiplication.`,
+                    `Her saat ${speed} km gitmek, ${hours} saat boyunca, bir çarpma işlemidir.`,
+                    `Recorrer ${speed} km cada hora durante ${hours} horas es una multiplicación.`)
+        : say(lang, `Cover up the one you are looking for and the triangle shows you the sum.`,
+                    `Aradığını parmağınla kapat, üçgen sana işlemi gösterir.`,
+                    `Tapa con el dedo lo que buscas y el triángulo te enseña la operación.`),
+    ],
+  }
+}
+
+function ratioTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const shapes = band >= 7
+    ? ['simplify', 'share', 'proportion', 'rate', 'rate']
+    : ['simplify', 'simplify', 'share', 'share', 'proportion']
+  const shape = pick(shapes)
+  if (shape === 'share') return ratioShare(level, lang)
+  if (shape === 'proportion') return ratioProportion(level, lang)
+  if (shape === 'rate') return ratioRate(level, lang)
+  return ratioSimplify(level, lang)
+}
+
+// Year 6 names one topic "Long Multiplication and Division", and a curriculum topic maps to
+// exactly one template — so pointing it at the multiplication template alone would mean a
+// Year 6 child never met division at all, since no other Year 6 topic carries it. This hands
+// the slot to either, which is what the topic itself says.
+function longMultDivTemplate(level, lang, columnar) {
+  return Math.random() < 0.5
+    ? multiplicationWordTemplate(level, lang, columnar)
+    : divisionWordTemplate(level, lang, columnar)
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -1586,6 +2130,9 @@ const REGISTRY = {
   geometry: geometryTemplate,
   pictogram: pictogramTemplate,
   'place-value': placeValueTemplate,
+  algebra: algebraTemplate,
+  'long-mult-div': longMultDivTemplate,
+  ratio: ratioTemplate,
 }
 
 export { SHAPES }

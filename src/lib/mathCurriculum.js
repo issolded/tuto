@@ -78,6 +78,11 @@ const TEMPLATE_FOR_TOPIC = {
   // Year 7's rounding-and-negatives topic is the same template one band up — the shapes it
   // adds there (decimal places) belong to exactly this topic.
   y7_negatives: 'place-value',
+  y6_algebra: 'algebra',
+  y7_algebra: 'algebra',
+  y6_multiplication: 'long-mult-div',
+  y6_ratio: 'ratio',
+  y7_ratio: 'ratio',
 
   // Deliberately absent, and it is worth saying why rather than leaving a silent gap:
   // money (no template), place value past 100 (the counting template draws objects),
