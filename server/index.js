@@ -5302,14 +5302,17 @@ async function topicStanding(childId) {
 app.get('/api/children/:childId/math-plan', async (req, res) => {
   const { childId } = req.params
   try {
-    const [{ data: child }, { data: prevRows }] = await Promise.all([
+    // All three go out together. topicStanding only ever needed the id from the URL, so
+    // waiting for the other two first bought nothing and cost a whole round trip — and this
+    // call is the only thing standing between tapping Maths and seeing a question, now that
+    // the questions themselves take 0.04 ms to build.
+    const [{ data: child }, { data: prevRows }, standing] = await Promise.all([
       supabase.from('children').select('id, age, math_focus').eq('id', childId).maybeSingle(),
       supabase.from('math_progress').select('level').eq('child_id', childId)
         .order('created_at', { ascending: false }).limit(1),
+      topicStanding(childId),
     ])
     if (!child) return res.status(404).json({ error: 'child not found' })
-
-    const standing = await topicStanding(childId)
     res.json({
       level: prevRows?.[0]?.level ?? null,   // null = the client falls back to the age footing
       focus: child.math_focus ?? null,

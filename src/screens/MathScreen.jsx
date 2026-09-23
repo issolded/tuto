@@ -1815,8 +1815,15 @@ export default function MathScreen() {
   // Begin preparing as soon as the level is known. `result` is what makes the loading screen
   // skippable: if it is already there when the mode is chosen, the questions go up on the same
   // tick and the child never sees a spinner at all.
-  const startPrefetch = (lvl, w) => {
-    if (prefetch.current) return
+  // `replace` rebuilds over a prefetch that is already there. Building is free — 0.04 ms for a
+  // whole session now that no question comes from the model — so the session is built
+  // immediately at the age's own footing and rebuilt if the plan turns out to say something
+  // different. Before this the build waited for /math-plan, which meant the one thing between
+  // tapping Maths and seeing a question was a network round trip, for data that changes the
+  // questions barely at all: a year owns two rungs, so the level can only be off by one, and
+  // the topics come from the year rather than the level.
+  const startPrefetch = (lvl, w, replace = false) => {
+    if (prefetch.current && !replace) return
     const entry = { result: null, promise: null }
     entry.promise = buildSession(lvl, w)
       .then(built => { entry.result = built; return built })
@@ -1832,12 +1839,12 @@ export default function MathScreen() {
     // A restored session already has its questions; building another would waste a model call
     // and hand the child a session they did not ask for.
     const resuming = !!saved
-    if (!child?.id) {
-      const lvl = startingLevelForAge(age)
-      setLevel(lvl)
-      if (!resuming) startPrefetch(lvl, { focusTopicId: null, weakTopicIds: [] })
-      return
-    }
+    const guess = startingLevelForAge(age)
+    setLevel(guess)
+    // Built before the fetch, not after it. The child is looking at the welcome screen either
+    // way; this way the questions are already waiting when they pick a mode.
+    if (!resuming) startPrefetch(guess, { focusTopicId: null, weakTopicIds: [] })
+    if (!child?.id) return
     ;(async () => {
       try {
         const res = await fetch(`${SERVER}/api/children/${child.id}/math-plan`)
@@ -1852,17 +1859,24 @@ export default function MathScreen() {
           focusTopicId: plan?.focus?.topic_id ?? null,
           weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
         }
+        // Only adopted while the built session is still sitting unclaimed. Once the child has
+        // started, `startLoading` has taken the entry and `prefetch.current` is null — and the
+        // questions on screen were built at one particular rung, which is the rung the server
+        // has to be told about when the session saves. Moving `level` underneath them would
+        // report a session that was never played.
+        if (!prefetch.current) return
         setLevel(lvl)
         setWeighting(w)
-        // Started here, not on the mode screen: the two model calls need longer than the
-        // child takes to choose, and the welcome screen is the only slack there is.
-        if (!resuming) startPrefetch(lvl, w)
+        // Replaced only if the plan says something the guess did not: another rung, a focus
+        // topic, or a weakness to lean towards. Usually it does not, and the session already
+        // waiting is the one that gets played.
+        const sameAsGuess = lvl === guess && !w.focusTopicId && w.weakTopicIds.length === 0
+        if (!resuming && !sameAsGuess) startPrefetch(lvl, w, true)
       } catch (e) {
         // A session with no weighting is still a good session; one that will not start is not.
+        // The optimistic build is already in hand and was made with exactly these values,
+        // so a failed plan now costs nothing at all.
         console.error('math-plan:', e)
-        const lvl = startingLevelForAge(age)
-        setLevel(lvl)
-        if (!resuming) startPrefetch(lvl, { focusTopicId: null, weakTopicIds: [] })
       }
     })()
     return () => clearTimeout(flashTimer.current)
