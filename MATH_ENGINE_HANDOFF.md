@@ -1,12 +1,13 @@
 # Matematik motoru — denetim devri
 
-**Ne değişti:** matematik soruları artık büyük ölçüde modelden değil, deterministik
-şablonlardan geliyor. 11, 12 ve 13 yaşta model **hiç çalışmıyor**.
+**Ne değişti:** matematik soruları artık modelden değil, deterministik şablonlardan geliyor.
+**Ekran modunda, 5'ten 13'e kadar her yaşta, model hiç çalışmıyor** — ne soru üretiminde ne
+cevap doğrulamada. Müfredat kapsamı 57/57.
 
 Bu dosya o motoru denetlemek için yazıldı. Ne olduğunu, nasıl çalıştırılacağını, nereye
 bakılmasını istediğimi ve **kimsenin kontrol etmediği yerleri** söyler.
 
-Yazıldığı an: 22 Eylül 2026, `main` üzerinde `683a325`.
+Yazıldığı an: 23 Eylül 2026, `main` üzerinde `fe883b9` sonrası.
 Önceki iki doküman hâlâ geçerli: [`MATH_AUDIT_RESPONSE.md`](MATH_AUDIT_RESPONSE.md)
 (21 Eylül denetimine cevap) ve [`ENGLISH_AUDIT.md`](ENGLISH_AUDIT.md) (İngilizce modülü).
 
@@ -33,47 +34,39 @@ M-F05 (`a 800 ml` → `an 800 ml`, LLM cümlesi), P-F01/P-F02 (bulmaca erişileb
 
 ## 2. Modelden ne kadar kurtulduk — ölçüm
 
-10 soruluk bir oturumda kaç sorunun şablondan geldiği, yaş başına 1.000 oturum simüle
+10 soruluk bir oturumda kaç sorunun şablondan geldiği, yaş başına 2.000 oturum simüle
 edilerek:
 
-| yaş | yıl | şablon | LLM | şablon % |
-|---|---|---|---|---|
-| 5 | Year 1 | 8.3 | 1.7 | 83% |
-| 6 | Year 1 | 8.4 | 1.6 | 84% |
-| 7 | Year 2 | 8.9 | 1.1 | 89% |
-| 8 | Year 3 | 8.0 | 2.0 | 80% |
-| 9 | Year 4 | 7.8 | 2.2 | 78% |
-| 10 | Year 5 | 8.8 | 1.2 | 88% |
-| **11** | Year 6 | **10.0** | **0.0** | **100%** |
-| **12** | Year 7 | **10.0** | **0.0** | **100%** |
-| **13** | Year 7 | **10.0** | **0.0** | **100%** |
+| yaş | yıl | şablon | LLM |
+|---|---|---|---|
+| 5-6 | Year 1 | 10.0 | **0** |
+| 7 | Year 2 | 10.0 | **0** |
+| 8 | Year 3 | 10.0 | **0** |
+| 9 | Year 4 | 10.0 | **0** |
+| 10 | Year 5 | 10.0 | **0** |
+| 11 | Year 6 | 10.0 | **0** |
+| 12-13 | Year 7 | 10.0 | **0** |
 
-**Önemli nüans:** oturum kurulumu model çağrısını **bekliyor**. 10 soruda tek bir LLM sorusu
-olsa bile tam bir gidiş-dönüş bekleniyor. Yani 5-10 yaşta kazanç "sorularin %80'i şablon"
-değil — bekleme ve hata ihtimali aynen duruyor. O yaşlarda asıl sıçrama son yedi konu
-kapandığında olur.
+Cevap doğrulaması da düştü: `findBadAnswers` yalnız modelden gelen slotlar için çalışıyordu,
+onlar kalmadı. `generateCurriculumQuestions` çağrı yeri kodda duruyor ama **ölü** — bir konu
+eşlemesi kaldırılırsa devreye giren emniyet ağı.
 
 **Modelin kalmaya devam ettiği yerler:**
-- **Kağıt modu.** Her yaşta. Gemini el yazısını okuyor (`evaluateMath`). Şablonla ilgisi yok
-  ve yerine konacak bir şey de yok — orada model soru üretmiyor, **görüyor**.
-- **Şablonu olmayan 7 konu** (aşağıda §4).
-- Ebeveyn mesajlaşma katmanı — ayrı sistem, bu devrin dışında.
-
----
+- **Kağıt modu.** Her yaşta. Gemini el yazısını okuyor (`evaluateMath`). Orada model soru
+  üretmiyor, **görüyor**; yerine konacak bir şey yok.
+- Uygulamanın matematik dışı yerleri: okuma (`identifyCover`), hikâye (`readStory`,
+  `checkTitleSpelling`), sunucudaki ödev ve hikâye üretimi, ebeveyn sohbet katmanı. Bu devrin
+  dışında.
 
 ## 3. Müfredat kapsamı
 
 `npm run math:check` her çalıştığında bu tabloyu basıyor:
 
 ```
-  year1   5/6   eksik: Measurement
-  year2   8/9   eksik: Money
-  year3   8/10  eksik: Numbers to 1000, Measurement
-  year4   7/9   eksik: Area and Perimeter, Data and Time Graphs
-  year5   7/8   eksik: Decimals and Percentages
-✓ year6   7/7
-✓ year7   8/8
-  ── toplam 50/57 (%88)
+✓ year1   6/6      ✓ year5   8/8
+✓ year2   9/9      ✓ year6   7/7
+✓ year3  10/10     ✓ year7   8/8
+✓ year4   9/9      ── toplam 57/57 (%100)
 ```
 
 Müfredat verisi `src/lib/gemini.js` içinde `BRITISH_CURRICULUM`. Year 1-6 ulusal
@@ -84,24 +77,22 @@ var olduğu şey.
 
 ---
 
-## 4. Şablonu olmayan 7 konu — ikisi bilerek
+## 4. Eşlemeler
 
-Beşi gerçekten eksik: Measurement (Year 1 ve 3), Money (Year 2), Area and Perimeter
-(Year 4), Data and Time Graphs (Year 4).
-
-**İkisi bilerek bağlanmadı**, ve sebebi denetimin kendi 1. bulgusu:
-
-- **Year 3 "Numbers to 1000"** — o yılın satırı karşılaştırma ve sıralama diyor, yuvarlama
-  hiç demiyor. `place-value` şablonuna bağlasam bir sıralama konusuna yuvarlama sorusu
-  etiketlerdim.
-- **Year 5 "Decimals and Percentages"** — aynı yılda kendi "Fractions" konusunun yanında
-  duruyor. İkisi de tek şablona bakarsa etiket yarı yarıya tutmaz.
-
-Bir müfredat konusu tam olarak bir şablona eşleniyor (`TEMPLATE_FOR_TOPIC`,
+Bir müfredat konusu tam olarak **bir** şablona eşleniyor (`TEMPLATE_FOR_TOPIC`,
 `src/lib/mathCurriculum.js`) ve şablon hangi konuyu doldurduğunu **bilmiyor**. Bu yapısal
-sınır kalkana kadar o ikisi modelde kalıyor.
+sınır hâlâ duruyor ve bir kez ısırdı:
 
----
+`y5_statistics` bir süre `averages` şablonuna bağlıydı. Year 5'in satırı *"çizgi grafikteki
+bilgiyle karşılaştırma, toplam ve fark problemleri; bir tablodaki bilgiyi tamamla"* diyor —
+ortalama orada geçmiyor, Year 6'da geçiyor. Yani 10 yaşındaki bir çocuk, etiketi "çizgi grafik
+ve tablo" diyen bir konunun altında ortalama sorusu alıyordu. Bu, 21 Eylül denetiminin 1.
+bulgusunun aynısı.
+
+`npm run math:check` artık **eşlemenin kendisini** denetliyor: şablonun konusundan en az bir
+kelime, müfredat konusunun adında ya da tarifinde geçmek zorunda. Muafiyetler gerekçesiyle
+birlikte listeli (bugün tek muafiyet `y1_fractions` — adı "Half and Quarter", yarım ve çeyrek
+kesirdir ama "fraction" kelimesi geçmez).
 
 ## 5. Nasıl çalıştırılır
 
@@ -138,7 +129,7 @@ doğrulanmadı — kaynakta görülen düzeltme ile canlıda görülen davranı�
 
 ## 6. Şablonlar
 
-16 şablon, `src/lib/mathTemplates.js`. Altısı son 24 saatte yazıldı, ikisi genişletildi.
+20 şablon, `src/lib/mathTemplates.js`. Onu son 48 saatte yazıldı, ikisi genişletildi.
 
 | şablon | hangi yıllara | ne üretiyor |
 |---|---|---|
@@ -157,8 +148,27 @@ doğrulanmadı — kaynakta görülen düzeltme ile canlıda görülen davranı�
 | `number-properties` | Y7 | **çarpan, asal, EKOK, kare, küp, karekök** |
 | `sequence` | Y7 | **dizi devamı, konum-terim kuralı, fonksiyon makinesi** |
 | `time` | Y2-3 | saat okuma |
+| `money` | Y2 | **bozuk para toplama, para üstü, kaç tane X eder** |
+| `measurement` | Y1, Y3 | **uzunluk/kütle/hacim karşılaştırma, birim dönüşümü, çevre**; Y1'de saat ve para da |
+| `area-grid` | Y4 | **ızgarada L şeklinin alanı ve çevresi — kareler sayılarak** |
+| `chart` | Y4-5 | **sütun grafik (Y4) ve çizgi grafik (Y5) okuma** |
+| `decimals-percentages` | Y5 | **ondalık ↔ kesir ↔ yüzde, ondalık toplama/çıkarma, yuvarlama** |
 
 **Kalın** olanlar denetlenmemiş yeni yüzey.
+
+### Görseller
+
+Üç konunun müfredat satırı **resmin kendisini adlandırıyor** — *"kareleri sayarak"*,
+*"sütun grafik"*, *"çizgi grafik"*. Resim olmadan soru "şu sayıları çıkar"a dönüşüyor:
+cevabı aynı, sorusu başka, ve etiket çocuğun görmediği bir şeyi tarif ediyor.
+
+- `src/components/MathGeometry.jsx` — açı ve alan şemaları. **Ölçekli değil** ve bunu
+  yazıyor; ekrandan ölçmeye davet etmiyor.
+- `src/components/MathChart.jsx` — ızgara, sütun ve çizgi grafik. Bunlar **ölçekli** ve bunu
+  belirtmiyorlar, çünkü çubuğu eksene karşı okumak zaten becerinin kendisi.
+
+İkisinin de ortak kuralı: **sorulan değer çizimde yazmaz.** Üstüne sayıları yazılmış bir
+sütun grafik, arkasında resim olan bir çıkarma sorusudur.
 
 ### Sözleşme
 
@@ -228,30 +238,34 @@ Türkçe harflerle tarıyor, ama **çeviri kalitesini** ölçemez. Özellikle:
 - Türkçe ek uyumu, özellikle sayılardan sonra
 - İspanyolca **es-ES** olarak seçildi (euro, `es-ES` tarih). LatAm değil.
 
-### 7.5 Havuz büyüklüğü — bilinen zayıf nokta
+### 7.5 Havuz büyüklüğü — bilinen zayıf noktalar
 
-20.000 çekilişte kaç farklı soru metni çıktığı:
+20.000 çekilişte kaç **farklı soru metni** çıktığı:
 
-| şablon | Year 6 | Year 7 |
-|---|---|---|
-| `averages` | 19.844 | 16.059 |
-| `long-mult-div` | 19.252 | — |
-| `place-value` | 15.324 | 16.716 |
-| `algebra` | 12.068 | 12.902 |
-| `ratio` | 8.088 | 5.444 |
-| `geometry` | 7.424 | 6.512 |
-| `sequence` | — | 4.913 |
-| **`fraction-of-number`** | **800** | **881** |
-| **`number-properties`** | — | **243** |
+| şablon | | şablon | |
+|---|---|---|---|
+| `averages` L12 | 19.742 | `ratio` L12 | 8.025 |
+| `long-mult-div` L12 | 19.245 | `geometry` L12 | 7.367 |
+| `place-value` L12 | 15.138 | `measurement` L6 | 6.314 |
+| `algebra` L12 | 12.189 | `sequence` L14 | 4.900 |
+| `decimals-percentages` L10 | 11.540 | `measurement` L2 | 3.579 |
+| `place-value` L6 | 8.643 | `money` L4 | 3.270 |
+| **`chart` L8 / L10** | **207 / 216** | **`fraction-of-number` L12** | **800** |
+| **`number-properties` L14** | **243** | **`area-grid` L8** | **12** |
 
-Son ikisi ince. `number-properties` 65'ti, havuzları elle listelendiği için; rakamlar
-rastgeleleştirildi ve 243'e çıktı — hâlâ en dar şablon. `fraction-of-number`'ın yüzde
-şekilleri "çocuğun zihinden bulabileceği" yüzdelerle sınırlı (5, 10, 15, 20, 25, …), bu
-bilinçli ama havuzu daraltıyor.
+Son dördü ince, ve son ikisi **bilerek** öyle: `area-grid` ve `chart` için çeşitlilik
+metinde değil **resimde**. Bir alan sorusunun cümlesi her seferinde aynıdır, değişen şekildir.
+Yine de cümle sayısı 2 → 12 ve 69 → 207'ye çıkarıldı, çünkü oturumun kendi tekrar koruması
+(`avoidText`) **cümleye** bakıyor ve Year 4'te 9 konu 10 slota düşüyor — yani bir konu mutlaka
+iki kez geliyor.
 
-**Sorulması gereken:** haftada üç oturum yapan bir çocuk ne kadar sürede tekrar görür?
-Oturum içi tekrar engelli (`avoidText`), günler arası **değil** — önceki rapor 7 yaşta
-`1/3 of 18`'in iki gün üst üste çıktığını gösterdi ve bu hâlâ böyle.
+`number-properties` 65'ti (havuzlar elle listelenmişti), rakamlar rastgeleleştirildi.
+`fraction-of-number`'ın yüzde şekilleri "çocuğun zihinden bulabileceği" yüzdelerle sınırlı —
+bilinçli ama daraltıyor.
+
+**Sorulması gereken:** haftada üç oturum yapan bir çocuk ne kadar sürede tekrar görür? Oturum
+içi tekrar engelli, **günler arası değil** — 21 Eylül raporu 7 yaşta `1/3 of 18`'in iki gün
+üst üste çıktığını göstermişti ve bu hâlâ böyle.
 
 ---
 
@@ -270,9 +284,15 @@ geçiş `clampLevelToAge` ile kilitli. Year 6'nın gerçekten Year 5'ten zor olu
 rolü yok, konular sadece dönüyor. 6 yaşta tek elma saymakla 16'nın dörtte birini bulmak
 aynı sette.
 
-**8.4 Şablon hangi konuyu doldurduğunu bilmiyor.** §4'teki iki eşlemenin yapılamamasının
-sebebi bu. Aynı sınır, bir yılın iki konusu aynı şablona baktığında etiket uyumsuzluğu
-riski yaratır — bugün öyle bir eşleme yok, ama yapılabilir ve fark edilmez.
+**8.4 Şablon hangi konuyu doldurduğunu bilmiyor.** §4'e bakın: bu sınır bir kez ısırdı ve
+şimdi bir kontrolle korunuyor, ama kontrol kelime eşleşmesine dayanıyor — kaba bir test.
+Bir yılın iki konusu aynı şablona baktığında ikisi de kontrolden geçer ve etiket yarı yarıya
+tutmaz. Bugün öyle bir eşleme yok.
+
+**8.8 Görsellerin doğruluğu yalnız benim gözümle denetlendi.** `MathGeometry` ve `MathChart`
+çizimlerinin metinle uyuştuğunu tarayıcıda şekil şekil karşılaştırdım ve iki grafiği çocuk
+gibi okuyup cevabı doğru verdim — ama bu bir program değil. Bir çizimin yanlış ölçeklenmesi
+ya da yanlış çubuğu vurgulaması `math:check`'in göremeyeceği bir hatadır.
 
 **8.5 Kağıt modu denetlenmedi.** Bilinen bir P0 orada: fotoğraf hatası yanlış cevap olarak
 kaydediliyor (20 Eylül raporu G06).
@@ -298,16 +318,18 @@ sızıntısını, oturum içi tekrarı ve her yılın bir oturumu doldurabildiğ
 - **Matematiğin doğruluğunu bağımsız olarak doğrulamaz.** Cevabı şablonun kendisi
   hesaplıyor; denetim aynı koddan okuyor. Şablonun formülü yanlışsa denetim bunu göremez.
   (İngilizce tarafında aynı eleştiri yapıldı ve orada iki bağımsız telaffuz sözlüğüyle
-  çözüldü. Matematikte karşılığı **yok** — `number-properties` için elle bağımsız bir
-  hesapla 8.000 cevabı karşılaştırdım, 0 hata; diğer şablonlar için böyle bir kontrol
-  yapılmadı. **Burası denetimin en çok değer katacağı yer olabilir.**)
-- Önermenin doğruluğunu denetlemez (§7.1).
+  çözüldü. Matematikte karşılığı **yok** — `number-properties` için 8.000 cevabı ve
+  `area-grid` için 5.000 alan/çevre değerini elle yazılmış ikinci bir algoritmayla
+  karşılaştırdım, ikisinde de 0 hata; **diğer şablonlar için böyle bir kontrol yapılmadı.**
+  Burası denetimin en çok değer katacağı yer olabilir.)
+- **Önermenin doğruluğunu denetlemez** (§7.1) ve **çizimin metinle uyumunu denetlemez** (§8.8).
 - Pedagojiyi, yaş uygunluğunu, çeviri kalitesini denetlemez.
 - İpucu sızıntısı kontrolü **cevabı 20'nin altında olan soruları hiç görmez** — eşik
   ölçülerek seçildi (0'da 120 bulgu, 5'te 34, 10'da 17, 20'de 0, ve 20'nin altındakilerin
   okuduğum her biri tesadüftü), ama bu Year 1'in çoğu demek.
 
----
+**Eklenenler (23 Eylül):** eşleme kontrolü (§4), ve `decimal` formatının tam sayı cevapla
+kullanılmaması — tuş takımının noktasını çocuğun kullanamayacağı bir soruda açıyordu.
 
 ## 10. Boşa harcanmasın
 
@@ -330,5 +352,9 @@ sızıntısını, oturum içi tekrarı ve her yılın bir oturumu doldurabildiğ
 | `ed8c07b` | `algebra`, `ratio`, iki basamaklı bölen, Year 6'nın çarpma+bölme eşlemesi |
 | `2967d3a` | `averages`, `number-properties`, `sequence`, geometri açıları ve alan, kesir/yüzde genişlemesi, lab'da şık desteği |
 | `683a325` | 22 Eylül denetiminin üç bulgusu (açı önermesi + iki İngilizce ses bilgisi hatası) |
+| `60001a3` | bu doküman, ve `number-properties` havuzunun genişletilmesi |
+| `2075a5d` | `y5_statistics` yanlış eşlemesi, `averages` cümle/değer düzeltmeleri, eşleme kontrolü; Codex'in geometri çizimleri ve ondalık şablonu |
+| `fe903fd` | `money` ve `measurement` — Year 1 ve Year 2 kapandı |
+| `fe883b9` | `area-grid`, `chart`, Year 3 yer değeri — **57/57, ekran modunda model bitti** |
 
 Öncesi: `843940c`, `01405e6` (21 Eylül denetiminin dört bulgusu ve `2 × 2`).

@@ -2267,6 +2267,15 @@ function algSolve(level, lang) {
 // A coefficient of 1 is not written: 1y is not how anyone writes y, and a child who has just
 // been taught the notation should not meet it written wrongly in the question they are
 // being taught it with.
+// A phrase drawn from a bank starts a sentence in some languages and not others. Turkish puts
+// the shape first in both of these wordings; English and Spanish never do.
+// The locale is passed, not left to the host. Turkish capitalises i as İ and ı as I, and the
+// default mapping gets the first of those wrong — the same distinction that put a font check
+// in this repo. No bank starts with an i today; one will.
+function up(w, lang = 'en') {
+  return String(w).charAt(0).toLocaleUpperCase(lang === 'tr' ? 'tr-TR' : lang) + String(w).slice(1)
+}
+
 // "2, 8, 4 and 11", not "2 and 8 and 4 and 11". Everything but the last joined with a comma,
 // the last with the language's own word.
 function listWithAnd(parts, lang) {
@@ -3486,15 +3495,32 @@ function rectilinearShape() {
 function areaGridTemplate(level, lang) {
   const shape = rectilinearShape()
   const askArea = Math.random() < 0.55
+  // Several phrasings, because the whole variety of this template lives in the PICTURE and a
+  // single wording meant two distinct question texts in twenty thousand draws. A Year 4 session
+  // has nine topics for ten slots, so one topic comes round twice — and the session's own
+  // repeat guard works on the sentence, which would have had nothing to choose between.
+  const who = pickL({ en: ['this shape', 'the shape on the grid', 'the blue shape'],
+                      tr: ['bu şeklin', 'ızgaradaki şeklin', 'mavi şeklin'],
+                      es: ['esta figura', 'la figura de la cuadrícula', 'la figura azul'] }, lang)
   return {
     topic: 'area-grid', level,
     question_text: askArea
-      ? say(lang, `Each square is 1 cm by 1 cm. What is the area of this shape in cm²?`,
-                  `Her kare 1 cm × 1 cm. Bu şeklin alanı kaç cm²'dir?`,
-                  `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el área de esta figura en cm²?`)
-      : say(lang, `Each square is 1 cm by 1 cm. What is the perimeter of this shape in cm?`,
-                  `Her kare 1 cm × 1 cm. Bu şeklin çevresi kaç cm'dir?`,
-                  `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el perímetro de esta figura en cm?`),
+      ? pick([
+        say(lang, `Each square is 1 cm by 1 cm. What is the area of ${who} in cm²?`,
+                  `Her kare 1 cm × 1 cm. ${up(who, 'tr')} alanı kaç cm²'dir?`,
+                  `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el área de ${who} en cm²?`),
+        say(lang, `How many 1 cm squares does ${who} cover?`,
+                  `${up(who, 'tr')} kapladığı 1 cm'lik kare sayısı kaçtır?`,
+                  `¿Cuántos cuadrados de 1 cm cubre ${who}?`),
+      ])
+      : pick([
+        say(lang, `Each square is 1 cm by 1 cm. What is the perimeter of ${who} in cm?`,
+                  `Her kare 1 cm × 1 cm. ${up(who, 'tr')} çevresi kaç cm'dir?`,
+                  `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el perímetro de ${who} en cm?`),
+        say(lang, `How far is it all the way round the edge of ${who}, in cm?`,
+                  `${up(who, 'tr')} kenarı boyunca bir tam tur kaç cm eder?`,
+                  `¿Cuánto mide todo el contorno de ${who}, en cm?`),
+      ]),
     format: 'numeric',
     correct_answer: askArea ? shape.area : shape.perimeter,
     operandKey: `grid:${askArea ? 'a' : 'p'}:${shape.cells.map(c => c.join('')).join('-')}`,
@@ -3601,10 +3627,19 @@ function chartTemplate(level, lang) {
 
   return {
     topic: 'chart', level,
-    question_text: say(lang,
-      `The chart shows the ${set.what}. ${spec.q}`,
-      `Grafik ${set.what} sayısını gösteriyor. ${spec.q}`,
-      `El gráfico muestra los ${set.what}. ${spec.q}`),
+    // Same reason as the grid above: the lead-in was one fixed sentence, so two chart questions
+    // in a session read as the same question twice even with different data behind them.
+    question_text: pick([
+      say(lang, `The chart shows the ${set.what}. ${spec.q}`,
+                `Grafik ${set.what} sayısını gösteriyor. ${spec.q}`,
+                `El gráfico muestra los ${set.what}. ${spec.q}`),
+      say(lang, `Look at the chart of ${set.what}. ${spec.q}`,
+                `${set.what} grafiğine bak. ${spec.q}`,
+                `Mira el gráfico de ${set.what}. ${spec.q}`),
+      say(lang, `This is a record of the ${set.what}. ${spec.q}`,
+                `Bu, ${set.what} kaydıdır. ${spec.q}`,
+                `Este es el registro de ${set.what}. ${spec.q}`),
+    ]),
     format: 'numeric',
     correct_answer: spec.a,
     operandKey: `chart:${line ? 'l' : 'b'}:${ask}:${values.join('-')}`,
@@ -3629,7 +3664,10 @@ function decimalsPercentagesTemplate(level, lang) {
   const kind = pick(['percent-decimal', 'decimal-percent', 'fraction-decimal', 'decimal-fraction', 'add', 'subtract', 'compare', 'round'])
   const places = pick([1, 2, 3])
   const scale = 10 ** places
-  const a = randInt(1, scale * 4 - 1)
+  // Never an exact whole number: "1 = ?/100" is not a question about writing a decimal as a
+  // fraction, and its hint has to say 100, which is the answer.
+  let a
+  do { a = randInt(1, scale * 4 - 1) } while (a % scale === 0)
   const b = randInt(1, scale * 2 - 1)
   const dec = n => String(n / scale)
   let question, answer, hints, key
