@@ -27,7 +27,11 @@ test('decimal questions: independently calculated answers, all kinds and languag
           expected = (whole + ((a % factor) * 2 >= factor ? 1 : 0)) / 10 ** b
         } else expected = Number((kind === 'add' ? a / scale + b / scale : a / scale - b / scale).toFixed(3))
         assert.equal(p.correct_answer, expected, p.operandKey)
-        assert.equal(p.format, 'decimal')
+        // The format describes the ANSWER, not the topic: "write 0.69 as a percentage" is
+        // answered with 69, and declaring that 'decimal' puts a point on the keypad the child
+        // cannot use and could mistype into. Asserted as the rule rather than as a constant,
+        // which is stronger than the original either way.
+        assert.equal(p.format, Number.isInteger(p.correct_answer) ? 'numeric' : 'decimal', p.operandKey)
         assert.ok(Number.isFinite(p.correct_answer) && p.correct_answer >= 0)
         assert.ok(p.question_text.length <= 150)
         assert.equal(p.hint_steps.length, 2)

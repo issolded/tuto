@@ -18,7 +18,8 @@
     "font:check": "node scripts/font-check.mjs",
     "english:lexicon": "python3 scripts/english/build_lexicon.py",
     "english:check": "node scripts/english-audit.mjs",
-    "math:check": "node scripts/math-audit.mjs"
+    "math:check": "node --test scripts/tests/*.test.mjs && node scripts/math-audit.mjs",
+    "test": "node --test scripts/tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",
