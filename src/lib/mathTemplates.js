@@ -3466,6 +3466,17 @@ function measurementTemplate(level, lang, columnar) {
 // An L built from a rectangle with a corner bitten out. Returned as the filled unit squares,
 // plus the area and perimeter computed from the cells rather than from a formula, so the
 // answer cannot drift from the picture.
+export function measureGridCells(cells = []) {
+  const has = new Set(cells.map(c => c.join(',')))
+  let perimeter = 0
+  for (const [x, y] of cells) {
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      if (!has.has(`${x + dx},${y + dy}`)) perimeter++
+    }
+  }
+  return { area: cells.length, perimeter }
+}
+
 function rectilinearShape() {
   const w = randInt(3, 7), h = randInt(3, 6)
   // The bite is always smaller than the rectangle in both directions, so the result is a
@@ -3480,16 +3491,9 @@ function rectilinearShape() {
       if (!(inBiteX && inBiteY)) cells.push([x, y])
     }
   }
-  const has = new Set(cells.map(c => c.join(',')))
   // Perimeter is counted as the number of cell edges with nothing on the other side, which is
   // true of any rectilinear figure and needs no special case for the notch.
-  let perimeter = 0
-  for (const [x, y] of cells) {
-    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
-      if (!has.has(`${x + dx},${y + dy}`)) perimeter++
-    }
-  }
-  return { w, h, cells, area: cells.length, perimeter }
+  return { w, h, cells, ...measureGridCells(cells) }
 }
 
 function areaGridTemplate(level, lang) {
@@ -3517,9 +3521,9 @@ function areaGridTemplate(level, lang) {
         say(lang, `Each square is 1 cm by 1 cm. What is the perimeter of ${who} in cm?`,
                   `Her kare 1 cm × 1 cm. ${up(who, 'tr')} çevresi kaç cm'dir?`,
                   `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el perímetro de ${who} en cm?`),
-        say(lang, `How far is it all the way round the edge of ${who}, in cm?`,
-                  `${up(who, 'tr')} kenarı boyunca bir tam tur kaç cm eder?`,
-                  `¿Cuánto mide todo el contorno de ${who}, en cm?`),
+        say(lang, `Count the 1 cm sides around the outside of ${who}. What is its perimeter?`,
+                  `${up(who, 'tr')} dışındaki 1 cm'lik kenarları say. Çevresi kaç cm'dir?`,
+                  `Cuenta los lados de 1 cm alrededor de ${who}. ¿Cuál es su perímetro?`),
       ]),
     format: 'numeric',
     correct_answer: askArea ? shape.area : shape.perimeter,

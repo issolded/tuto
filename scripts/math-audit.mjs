@@ -35,7 +35,7 @@
 //
 // Non-zero exit on any failure, so it can gate a commit.
 
-import { generateProblem, TOPICS, num } from '../src/lib/mathTemplates.js'
+import { generateProblem, TOPICS, num, measureGridCells } from '../src/lib/mathTemplates.js'
 import { templateTopicFor, startingLevelForAge, clampLevelToAge } from '../src/lib/mathCurriculum.js'
 import { BRITISH_CURRICULUM, ageToSchoolYear, maxQuestionChars } from '../src/lib/gemini.js'
 
@@ -174,6 +174,16 @@ for (const age of AGES) {
         }
         // 3. hint must not hand over the answer
         if (hintLeaksAnswer(p)) fail(where, 'ipucu cevabı söylüyor', `${p.question_text} → ${p.correct_answer}`)
+        // A grid question is answered from the same filled cells the child sees. This catches
+        // the worst possible diagram bug: counting the visible boundary correctly and being
+        // marked wrong because the key describes a different shape.
+        if (p.topic === 'area-grid') {
+          const measured = measureGridCells(p.visual?.cells)
+          const expected = p.operandKey.startsWith('grid:a:') ? measured.area : measured.perimeter
+          if (Number(p.correct_answer) !== expected) {
+            fail(where, 'ızgara görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${expected}`)
+          }
+        }
         // 4. reading limit
         if (String(p.question_text).length > cap) {
           fail(where, `okuma sınırı aşıldı (${p.question_text.length} > ${cap})`, p.question_text)

@@ -81,6 +81,25 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] 8 yaş ve altı yanlış şık yardımı (2026-09-23, Codex; yerelde).
+      Sayı yazılan sorular yanlışta öğretici yardım ve yeniden deneme açarken çoktan seçmeli
+      sorular ilk yanlışta doğru cevabı gösterip ilerliyordu. Şıklı sorular da artık aynı yaş
+      kuralına uyuyor: seçilen şıkkın neden yanlış olduğu ilk ipucu, ardından sorunun kademeli
+      ipuçları geliyor; çocuk yeniden deneyebiliyor veya yardımdan sonra soruyu yanlış olarak
+      geçebiliyor. Yardım kullanımı Gem indirimine dahil. 9 yaş ve üstündeki tek deneme akışı
+      değişmedi. Doğrulama: math:check 57/57, Vite build; tarayıcıda `1/6` yanlış seçildi,
+      şık özelindeki açıklama gösterildi, yeniden denemede `1/3` doğru kabul edildi.
+
+- [x] Izgara çevresi sorusu ve yaş değişimi güvenliği (2026-09-23, Codex; yerelde).
+      Dolambaçlı “How far is it all the way round…” metni, çocuğa eylemi de söyleyen
+      “Count the 1 cm sides around the outside… What is its perimeter?” oldu (TR/ES de
+      aynı açıklıkta). Ekran modu cevap anahtarını artık render edilen aynı dolu karelerden
+      yeniden hesaplıyor; görsel/anahtar ayrışamaz. `math:check` de her area-grid sorusunda
+      alanı/çevreyi görsel hücrelerden bağımsız yeniden ölçüyor. Aynı çocuğun yaşı değişirse
+      eski okul yılına ait sessionStorage oturumu artık geri yüklenmiyor; snapshot yaş taşır.
+      Doğrulama: 9 yaş × 3 dil × 400 soru/konu tam motor denetimi (57/57), Vite build ve
+      tarayıcıda iki çevre metni ile ızgara çizimi.
+
 - [x] 10 yaş ondalık/yüzde sorularını motora taşıma (2026-09-23, Codex; yerelde).
       `y5_decimals` → `decimals-percentages`: yüzde↔ondalık, kesir↔ondalık (eksik pay),
       üç basamağa kadar ondalık toplama/çıkarma, karşılaştırma ve yuvarlama; EN/TR/ES.

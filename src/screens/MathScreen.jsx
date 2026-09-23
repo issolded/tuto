@@ -7,7 +7,7 @@ import ClockFace, { DraggableClock } from '../components/ClockFace'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
-import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
+import { generateProblem, SHAPES, isCountable, measureGridCells } from '../lib/mathTemplates'
 import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
 import { t, say } from '../lib/i18n'
@@ -23,10 +23,14 @@ const SESSION_KEY = 'tuto_math_session_v1'
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000
 const ANSWERING_STEPS = ['paper_questions', 'screen_questions']
 
-function readSavedSession(childId) {
+function readSavedSession(childId, age) {
   try {
     const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null')
     if (!s || s.childId !== (childId ?? null)) return null
+    // The parent can change a child's age while this tab is open. A session built for the old
+    // school year must not follow the same child into the new one merely because the id still
+    // matches. Old snapshots have no age and are deliberately discarded once.
+    if (Number(s.age) !== Number(age)) return null
     if (!s.savedAt || Date.now() - s.savedAt > SESSION_TTL_MS) return null
     if (!ANSWERING_STEPS.includes(s.step)) return null
     if (!Array.isArray(s.questions) || !s.questions.length) return null
@@ -1518,7 +1522,7 @@ export default function MathScreen() {
   const language = child?.language || 'en'
 
   // Read once, before any state is created: a reload lands here with the session it lost.
-  const saved = useMemo(() => readSavedSession(child?.id), [])
+  const saved = useMemo(() => readSavedSession(child?.id, age), [])
 
   const [step,          setStep]         = useState(saved?.step ?? 'welcome')
   const [mode,          setMode]         = useState(saved?.mode ?? null)        // 'paper' | 'screen'
@@ -1540,7 +1544,8 @@ export default function MathScreen() {
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
-  const [wrongGuess,    setWrongGuess]   = useState(null)  // the number the child actually typed, so help can answer THAT rather than the correct answer
+  const [wrongGuess,    setWrongGuess]   = useState(null)  // the answer the child tried; numeric sharing help can stage it and Skip can record it
+  const [choiceMistake, setChoiceMistake] = useState(null) // why the selected option was wrong; becomes the first teaching step
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
   const [buildFailed,   setBuildFailed] = useState(false)  // a session that could not be built, so the mode screen can say why
   const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
@@ -1551,7 +1556,7 @@ export default function MathScreen() {
 
   // Keyed on the question rather than cleared at each of the several places that advance one,
   // so a new route to the next question cannot forget to reset and carry a stale guess in.
-  useEffect(() => { setWrongGuess(null); setGuessRound(0) }, [qIdx])
+  useEffect(() => { setWrongGuess(null); setChoiceMistake(null); setGuessRound(0) }, [qIdx])
 
   // Closing help leaves the column scrolled where the child left it, but the column has grown
   // by then — "Skip this one" is now under the card — so the question's picture ends up above
@@ -1615,7 +1620,12 @@ export default function MathScreen() {
       usedTexts.add(p.question_text)
       slot.problem = p
       slot.question = p.question_text
-      slot.answer = p.correct_answer
+      // For a grid question, the picture is the source of truth. Derive its answer from the
+      // exact cells sent to the renderer so an answer key can never drift from what the child
+      // counted on screen.
+      slot.answer = p.topic === 'area-grid'
+        ? measureGridCells(p.visual?.cells)[p.operandKey.startsWith('grid:a:') ? 'area' : 'perimeter']
+        : p.correct_answer
       // Every template used to be numeric, so the format was assumed here rather than read off
       // the problem. It says so itself now, because a question whose answer is 5/8 cannot be
       // typed on a number pad at all — it has to be offered as options.
@@ -1866,7 +1876,7 @@ export default function MathScreen() {
     if (!ANSWERING_STEPS.includes(step)) return
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        savedAt: Date.now(), childId: child?.id ?? null,
+        savedAt: Date.now(), childId: child?.id ?? null, age,
         step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
         answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
         skippable: [...skippable], helpUsedQs: [...helpUsedQs],
@@ -1922,15 +1932,32 @@ export default function MathScreen() {
   }
 
   // ── Screen mode: submit one multiple-choice answer ───────────────────────
-  // One tap, one attempt, no second try. A choice question already shows the answer somewhere
-  // on the screen, so letting the child guess again would just be four taps to a certain gem.
-  // What replaces the retry is the option's own `why`: the child sees the specific mistake they
-  // made — added the denominators, subtracted instead — rather than a generic "almost".
+  // Older children get one attempt, with the selected option's specific explanation. At eight
+  // and under a wrong option opens the same scaffolded help as a typed answer: the explanation
+  // becomes the first hint and the child gets another try. Help still reduces the reward, and
+  // Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
   const submitChoiceAnswer = (value) => {
     if (flash) return
     const isCorrect = sameAnswer(value, correctAns[qIdx])
     const newAnswers = [...userAnswers, value]
-    const why = templateProblems[qIdx]?.options?.find(o => o.value === value)?.why ?? null
+    const tProblem = templateProblems[qIdx]
+    const why = tProblem?.options?.find(o => o.value === value)?.why ?? null
+    const baseHints = tProblem?.hint_steps ?? llmHints[qIdx]
+    const canHelp = hasRealHelp(
+      questions[qIdx] || '', qTypes[qIdx], tProblem?.topic,
+      why ? [why, ...(baseHints ?? [])] : baseHints,
+      tProblem?.visual,
+    )
+
+    if (!isCorrect && Number(age) <= 8 && canHelp) {
+      setHelpVisible(true)
+      setHelpUsed(true)
+      setChoiceMistake(why)
+      setWrongGuess(value)
+      setGuessRound(r => r + 1)
+      setSkippable(prev => { const next = new Set(prev); next.add(qIdx); return next })
+      return
+    }
 
     setFlash({ correct: isCorrect, answer: correctAns[qIdx], why: isCorrect ? null : why })
     setInput('')
@@ -2517,9 +2544,11 @@ export default function MathScreen() {
               question={q}
               questionType={qTypes[qIdx]}
               templateTopic={templateProblems[qIdx]?.topic}
-              hintSteps={templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]}
+              hintSteps={choiceMistake
+                ? [choiceMistake, ...(templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx] ?? [])]
+                : (templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx])}
               visual={templateProblems[qIdx]?.visual}
-              onDone={() => { setHelpVisible(false); setInput('') }}
+              onDone={() => { setHelpVisible(false); setChoiceMistake(null); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}
               guess={wrongGuess}
