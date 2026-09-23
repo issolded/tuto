@@ -3114,6 +3114,273 @@ function sequenceTemplate(level, lang) {
   return seqContinue(level, lang)
 }
 
+// ── Money ────────────────────────────────────────────────────────────────────
+// Year 2's own topic. The curriculum line says pounds and pence because it is the British
+// curriculum; the app's money is the reader's — dollars and cents in English, lira and kuruş
+// in Turkish, euros and céntimos in Spanish. That is a decision already made and written down
+// (see the decimal hint in fractionDecimal, and the model's own prompt), not a new one.
+//
+// Amounts stay in the minor unit while they are small, because a seven-year-old counting coins
+// is counting whole numbers — "45 cents" is a number, "$0.45" is a notation lesson wearing a
+// money question's clothes.
+
+// Looked up by language, NOT drawn from with pickL: these are [plural, singular] pairs, and
+// pickL picks one element out of a list. Destructuring what it returns gave the first
+// CHARACTER — "Kerem 50 k veriyor". Same trap as the unit banks in the ratio template, from
+// the other side.
+const MINOR = { en: ['cents', 'cent'], tr: ['kuruş', 'kuruş'], es: ['céntimos', 'céntimo'] }
+// The coins a child actually handles, in the minor unit.
+const COINS = [1, 5, 10, 25, 50]
+
+function moneyCombine(level, lang) {
+  const [many] = MINOR[lang] ?? MINOR.en
+  // Two or three different coins, each with a small count — a purse, not an arithmetic problem
+  // in disguise.
+  const kinds = shuffle(COINS).slice(0, randInt(2, 3))
+  const parts = kinds.map(v => ({ v, n: randInt(1, 4) }))
+  const total = parts.reduce((s, p) => s + p.v * p.n, 0)
+  const list = listWithAnd(parts.map(p => say(lang,
+    `${p.n} ${p.v}${many === 'cents' ? 'c' : ''} ${p.n === 1 ? 'coin' : 'coins'}`,
+    `${p.n} tane ${p.v} kuruşluk`,
+    `${p.n} ${p.n === 1 ? 'moneda' : 'monedas'} de ${p.v}`)), lang)
+
+  return {
+    topic: 'money', level,
+    question_text: say(lang,
+      `Ada has ${list} in her purse. How many ${many} is that altogether?`,
+      `Ada'nın cüzdanında ${list} var. Toplam kaç ${many} eder?`,
+      `Ada tiene ${list} en el monedero. ¿Cuántos ${many} son en total?`),
+    format: 'numeric',
+    correct_answer: total,
+    operandKey: `money:comb:${parts.map(p => `${p.n}x${p.v}`).sort().join('-')}`,
+    hint_steps: [
+      say(lang, `Work out each kind of coin on its own first.`,
+                `Önce her bozuk paranın kendi toplamını bul.`,
+                `Calcula primero cada clase de moneda por separado.`),
+      say(lang, `${parts[0].n} coins of ${parts[0].v} is ${parts[0].n} lots of ${parts[0].v}. Then add the other piles on.`,
+                `${parts[0].n} tane ${parts[0].v} kuruşluk demek ${parts[0].v}'nin ${parts[0].n} katı demek. Sonra diğer öbekleri ekle.`,
+                `${parts[0].n} monedas de ${parts[0].v} son ${parts[0].n} veces ${parts[0].v}. Luego suma los otros montones.`),
+    ],
+  }
+}
+
+function moneyChange(level, lang) {
+  const band = bandForLevel(level)
+  const [many] = MINOR[lang] ?? MINOR.en
+  // Paid with a round note or coin, so the change is a subtraction a child can do in their head.
+  const paid = band >= 3 ? pick([100, 200, 500]) : pick([20, 50, 100])
+  // Never exactly half: the change then equals the price, which makes the hint name the
+  // answer and turns "how much change" into "halve it".
+  let cost
+  do { cost = randInt(Math.round(paid * 0.25), paid - 5) } while (cost * 2 === paid)
+  const thing = pickL({ en: ['a pencil', 'a sticker book', 'an apple', 'a rubber'],
+                        tr: ['bir kalem', 'bir çıkartma kitabı', 'bir elma', 'bir silgi'],
+                        es: ['un lápiz', 'un libro de pegatinas', 'una manzana', 'una goma'] }, lang)
+
+  return {
+    topic: 'money', level,
+    question_text: say(lang,
+      `${thing.charAt(0).toUpperCase() + thing.slice(1)} costs ${cost} ${many}. Leo pays with ${paid} ${many}. How much change does he get?`,
+      `${thing.charAt(0).toUpperCase() + thing.slice(1)} ${cost} ${many}. Kerem ${paid} ${many} veriyor. Kaç ${many} para üstü alır?`,
+      `${thing.charAt(0).toUpperCase() + thing.slice(1)} cuesta ${cost} ${many}. Mateo paga con ${paid} ${many}. ¿Cuánto le devuelven?`),
+    format: 'numeric',
+    correct_answer: paid - cost,
+    operandKey: `money:chg:${paid}:${cost}`,
+    hint_steps: [
+      say(lang, `Change is what is left of what you handed over.`,
+                `Para üstü, verdiğin paradan geriye kalandır.`,
+                `El cambio es lo que sobra de lo que has dado.`),
+      say(lang, `Count up from ${cost} to ${paid}, or take ${cost} away from ${paid} — both give the same answer.`,
+                `${cost}'ten ${paid}'e kadar sayarak çık, ya da ${paid}'ten ${cost} çıkar — ikisi de aynı sonucu verir.`,
+                `Cuenta desde ${cost} hasta ${paid}, o resta ${cost} de ${paid}: dan lo mismo.`),
+    ],
+  }
+}
+
+function moneyMakeValue(level, lang) {
+  const [many] = MINOR[lang] ?? MINOR.en
+  const coin = pick([2, 5, 10, 20, 25])
+  const n = randInt(3, 9)
+  const total = coin * n
+
+  return {
+    topic: 'money', level,
+    question_text: say(lang,
+      `How many ${coin}${many === 'cents' ? 'c' : ''} coins make ${total} ${many}?`,
+      `${total} ${many} etmek için kaç tane ${coin} ${many}luk gerekir?`,
+      `¿Cuántas monedas de ${coin} hacen ${total} ${many}?`),
+    format: 'numeric',
+    correct_answer: n,
+    operandKey: `money:make:${coin}:${total}`,
+    hint_steps: [
+      say(lang, `Count up in ${coin}s and keep track of how many you have said.`,
+                `${coin}'şer sayarak ilerle ve kaç kez saydığını takip et.`,
+                `Cuenta de ${coin} en ${coin} y lleva la cuenta de cuántas veces.`),
+      say(lang, `Or ask: how many ${coin}s fit inside ${total}?`,
+                `Ya da şunu sor: ${total} içine kaç tane ${coin} sığar?`,
+                `O pregúntate: ¿cuántos ${coin} caben en ${total}?`),
+    ],
+  }
+}
+
+function moneyTemplate(level, lang) {
+  const shape = pick(['change', 'change', 'combine', 'combine', 'make'])
+  if (shape === 'combine') return moneyCombine(level, lang)
+  if (shape === 'make') return moneyMakeValue(level, lang)
+  return moneyChange(level, lang)
+}
+
+// ── Measurement ──────────────────────────────────────────────────────────────
+// Year 1's "Measurement" and Year 3's. Both bundle several strands, and Year 1's bundles one
+// more: it is the only place that year names telling the time, so a share of its rolls go to
+// the time template rather than quietly deleting that strand — the same arrangement Year 6's
+// "Long Multiplication and Division" needed.
+//
+// Nothing is drawn here. A comparison is asked as a difference ("how much longer") rather than
+// as "which is longer", because the second needs a picture to be a measuring question at all
+// and without one it is just reading two numbers.
+
+// Written out rather than abbreviated inside a sentence. "How many l are there in 6 l" puts a
+// lower-case L next to digits, where it reads as a 1 — and these are the units a Year 3 child
+// is learning the NAMES of.
+const UNITS_BY_KIND = {
+  length: { per: 100, big: { en: 'metres', tr: 'metre', es: 'metros' }, small: { en: 'centimetres', tr: 'santimetre', es: 'centímetros' } },
+  length_mm: { per: 10, big: { en: 'centimetres', tr: 'santimetre', es: 'centímetros' }, small: { en: 'millimetres', tr: 'milimetre', es: 'milímetros' } },
+  mass: { per: 1000, big: { en: 'kilograms', tr: 'kilogram', es: 'kilogramos' }, small: { en: 'grams', tr: 'gram', es: 'gramos' } },
+  capacity: { per: 1000, big: { en: 'litres', tr: 'litre', es: 'litros' }, small: { en: 'millilitres', tr: 'mililitre', es: 'mililitros' } },
+}
+
+function measureConvert(level, lang) {
+  const kind = pick(Object.keys(UNITS_BY_KIND))
+  const u0 = UNITS_BY_KIND[kind]
+  const u = { per: u0.per, big: pickL(u0.big, lang), small: pickL(u0.small, lang) }
+  const toSmall = Math.random() < 0.6
+  // Whole numbers both ways: going down multiplies, going up needs an exact multiple.
+  const big = u.per >= 1000 ? randInt(2, 9) : randInt(2, 40)
+  const small = big * u.per
+
+  return {
+    topic: 'measurement', level,
+    question_text: toSmall
+      ? say(lang, `How many ${u.small} are there in ${big} ${u.big}?`,
+                  `${big} ${u.big} kaç ${u.small} eder?`,
+                  `¿Cuántos ${u.small} hay en ${big} ${u.big}?`)
+      : say(lang, `How many ${u.big} are there in ${num(small, lang)} ${u.small}?`,
+                  `${num(small, lang)} ${u.small} kaç ${u.big} eder?`,
+                  `¿Cuántos ${u.big} hay en ${num(small, lang)} ${u.small}?`),
+    format: 'numeric',
+    correct_answer: toSmall ? small : big,
+    operandKey: `meas:conv:${kind}:${big}:${toSmall ? 'd' : 'u'}`,
+    hint_steps: [
+      say(lang, `1 ${u.big} is ${num(u.per, lang)} ${u.small}.`,
+                `1 ${u.big} = ${num(u.per, lang)} ${u.small}.`,
+                `1 ${u.big} son ${num(u.per, lang)} ${u.small}.`),
+      toSmall
+        ? say(lang, `Going to the smaller unit makes the number bigger, so multiply.`,
+                    `Küçük birime geçerken sayı büyür, yani çarparsın.`,
+                    `Al pasar a la unidad pequeña el número crece, así que multiplica.`)
+        : say(lang, `Going to the bigger unit makes the number smaller, so divide.`,
+                    `Büyük birime geçerken sayı küçülür, yani bölersin.`,
+                    `Al pasar a la unidad grande el número se hace menor, así que divide.`),
+    ],
+  }
+}
+
+function measureDifference(level, lang) {
+  const band = bandForLevel(level)
+  const set = band <= 2
+    ? pick([
+      { unit: 'cm', lo: 5, hi: 30, a: { en: 'pencil', tr: 'kalem', es: 'lápiz', g: 'm' }, b: { en: 'ruler', tr: 'cetvel', es: 'regla', g: 'f' } },
+      { unit: 'cm', lo: 20, hi: 90, a: { en: 'cat', tr: 'kedi', es: 'gato', g: 'm' }, b: { en: 'dog', tr: 'köpek', es: 'perro', g: 'm' } },
+    ])
+    : pick([
+      { unit: 'g', lo: 150, hi: 900, a: { en: 'apple', tr: 'elma', es: 'manzana', g: 'f' }, b: { en: 'melon', tr: 'kavun', es: 'melón', g: 'm' } },
+      { unit: 'ml', lo: 100, hi: 900, a: { en: 'cup', tr: 'bardak', es: 'vaso', g: 'm' }, b: { en: 'bottle', tr: 'şişe', es: 'botella', g: 'f' } },
+      { unit: 'cm', lo: 30, hi: 200, a: { en: 'chair', tr: 'sandalye', es: 'silla', g: 'f' }, b: { en: 'door', tr: 'kapı', es: 'puerta', g: 'f' } },
+    ])
+  const small = randInt(set.lo, Math.floor((set.lo + set.hi) / 2))
+  const large = randInt(small + 2, set.hi)
+  const A = pickL(set.a, lang), B = pickL(set.b, lang)
+  // "A apple" and "Un manzana" were both being printed. English takes its article from the
+  // sound, Spanish from the noun's gender, which the bank now carries.
+  const enA = /^[aeiou]/i.test(pickL(set.a, 'en')) ? 'An' : 'A'
+  const enB = /^[aeiou]/i.test(pickL(set.b, 'en')) ? 'an' : 'a'
+  const esA = set.a.g === 'f' ? 'Una' : 'Un'
+  const esB = set.b.g === 'f' ? 'una' : 'un'
+  const esTheB = set.b.g === 'f' ? 'la' : 'el'
+  // The Spanish adjective agrees with the thing being compared, so it takes B's gender too —
+  // "más alto es la puerta" was going out. English and Turkish do not inflect here.
+  const esF = set.b.g === 'f'
+  const heavier = set.unit === 'g'
+    ? say(lang, 'heavier', 'daha ağır', `más ${esF ? 'pesada' : 'pesado'}`)
+    : set.unit === 'ml'
+      ? say(lang, 'more', 'daha fazla', 'más')
+      : say(lang, 'taller', 'daha uzun', `más ${esF ? 'alta' : 'alto'}`)
+
+  return {
+    topic: 'measurement', level,
+    question_text: set.unit === 'ml'
+      ? say(lang, `${enA} ${A} holds ${small} ml and ${enB} ${B} holds ${large} ml. How much more does the ${B} hold?`,
+                  `Bir ${A} ${small} ml, bir ${B} ${large} ml alıyor. ${B} kaç ml daha fazla alır?`,
+                  `${esA} ${A} contiene ${small} ml y ${esB} ${B} contiene ${large} ml. ¿Cuántos ml más contiene ${esTheB} ${B}?`)
+      : say(lang, `${enA} ${A} is ${small} ${set.unit} and ${enB} ${B} is ${large} ${set.unit}. How much ${heavier} is the ${B}?`,
+                  `Bir ${A} ${small} ${set.unit}, bir ${B} ${large} ${set.unit}. ${B} kaç ${set.unit} ${heavier}?`,
+                  `${esA} ${A} mide ${small} ${set.unit} y ${esB} ${B} mide ${large} ${set.unit}. ¿Cuánto ${heavier} es ${esTheB} ${B}?`),
+    format: 'numeric',
+    correct_answer: large - small,
+    operandKey: `meas:diff:${set.unit}:${small}:${large}`,
+    hint_steps: [
+      say(lang, `"How much more" asks for the gap between the two, not for either one.`,
+                `"Kaç fazla" sorusu ikisinin arasındaki farkı ister, sayılardan birini değil.`,
+                `"Cuánto más" pide la diferencia entre los dos, no uno de ellos.`),
+      say(lang, `Take the smaller away from the larger.`,
+                `Küçüğü büyükten çıkar.`,
+                `Resta el menor del mayor.`),
+    ],
+  }
+}
+
+function measurePerimeter(level, lang) {
+  const w = randInt(3, 24), h = randInt(3, 24)
+  return {
+    topic: 'measurement', level,
+    question_text: say(lang,
+      `A rectangle is ${w} cm long and ${h} cm wide. What is its perimeter in cm?`,
+      `Bir dikdörtgenin uzunluğu ${w} cm, genişliği ${h} cm. Çevresi kaç cm'dir?`,
+      `Un rectángulo mide ${w} cm de largo y ${h} cm de ancho. ¿Cuál es su perímetro en cm?`),
+    format: 'numeric',
+    correct_answer: 2 * (w + h),
+    operandKey: `meas:per:${w}:${h}`,
+    hint_steps: [
+      say(lang, `Perimeter is the whole way round the outside.`,
+                `Çevre, dışından bir tam turdur.`,
+                `El perímetro es toda la vuelta por fuera.`),
+      say(lang, `A rectangle has two sides of each length, so there are four sides to add.`,
+                `Dikdörtgende her uzunluktan iki kenar vardır, yani toplanacak dört kenar var.`,
+                `Un rectángulo tiene dos lados de cada medida: hay cuatro lados que sumar.`),
+    ],
+    visual: { kind: 'geometry', shape: 'rect', base: w, height: h, ask: 'perimeter' },
+  }
+}
+
+function measurementTemplate(level, lang, columnar) {
+  const band = bandForLevel(level)
+  if (band <= 2) {
+    // Year 1 names telling the time inside this topic and nowhere else, and it names coins.
+    // A share of the rolls goes to each rather than dropping the strand.
+    const r = Math.random()
+    if (r < 0.3) return timeTemplate(level, lang, columnar)
+    if (r < 0.45) return moneyCombine(level, lang)
+    return measureDifference(level, lang)
+  }
+  // Year 3: units, perimeter, and money change — all three are in its line.
+  const shape = pick(['convert', 'convert', 'difference', 'perimeter', 'change'])
+  if (shape === 'difference') return measureDifference(level, lang)
+  if (shape === 'perimeter') return measurePerimeter(level, lang)
+  if (shape === 'change') return moneyChange(level, lang)
+  return measureConvert(level, lang)
+}
+
 // Year 6 names one topic "Long Multiplication and Division", and a curriculum topic maps to
 // exactly one template — so pointing it at the multiplication template alone would mean a
 // Year 6 child never met division at all, since no other Year 6 topic carries it. This hands
@@ -3234,6 +3501,8 @@ const REGISTRY = {
   'number-properties': numberPropertiesTemplate,
   sequence: sequenceTemplate,
   'decimals-percentages': decimalsPercentagesTemplate,
+  money: moneyTemplate,
+  measurement: measurementTemplate,
 }
 
 export { SHAPES }

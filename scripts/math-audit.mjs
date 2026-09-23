@@ -233,6 +233,8 @@ const TEMPLATE_WORDS = {
   time: ['time', 'clock'],
   pictogram: ['chart', 'pictogram', 'bar', 'graph', 'table', 'data'],
   'decimals-percentages': ['decimal', 'percent'],
+  money: ['money', 'pound', 'pence', 'coin', 'change', 'value'],
+  measurement: ['length', 'mass', 'capacity', 'volume', 'measure', 'perimeter', 'money', 'time'],
 }
 // Topic ids whose wording cannot contain the word, with the reason spelled out.
 const MATCH_EXEMPT = {

@@ -89,6 +89,9 @@ const TEMPLATE_FOR_TOPIC = {
   y6_algebra: 'algebra',
   y7_algebra: 'algebra',
   y6_multiplication: 'long-mult-div',
+  y1_measurement: 'measurement',
+  y2_money: 'money',
+  y3_measurement: 'measurement',
   y7_number: 'number-properties',
   y7_sequences: 'sequence',
   // y5_statistics is NOT mapped, and it was, which is the mistake worth leaving written here.
