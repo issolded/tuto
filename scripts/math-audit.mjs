@@ -234,6 +234,8 @@ const TEMPLATE_WORDS = {
   pictogram: ['chart', 'pictogram', 'bar', 'graph', 'table', 'data'],
   'decimals-percentages': ['decimal', 'percent'],
   money: ['money', 'pound', 'pence', 'coin', 'change', 'value'],
+  'area-grid': ['area', 'perimeter', 'square', 'rectilinear'],
+  chart: ['chart', 'graph', 'data', 'table', 'comparison'],
   measurement: ['length', 'mass', 'capacity', 'volume', 'measure', 'perimeter', 'money', 'time'],
 }
 // Topic ids whose wording cannot contain the word, with the reason spelled out.

@@ -1886,7 +1886,7 @@ function placeDigitValue(level, lang) {
   // Same idea: the number itself is the size the year's topic is named after — "Numbers to
   // 10,000" is four digits, and asking what a digit is worth in a seven-digit number is not
   // that topic.
-  const digits = band >= 6 ? randInt(6, 7) : band >= 5 ? randInt(5, 6) : 4
+  const digits = band >= 6 ? randInt(6, 7) : band >= 5 ? randInt(5, 6) : band >= 4 ? 4 : 3
   // Built digit by digit so the chosen digit is unique in the number: "what is the 3 worth"
   // has no answer if there are two 3s.
   const used = new Set()
@@ -2033,12 +2033,77 @@ function placeRoundDecimal(level, lang) {
   }
 }
 
+// Year 3's own line: "count from 0 in multiples of 4, 8, 50 and 100; recognise place value of
+// each digit in a 3-digit number; compare and order numbers up to 1,000." No rounding — that
+// starts in Year 4 — so the rounding shape is kept out of this band entirely.
+function placeCountInMultiples(level, lang) {
+  const step = pick([4, 8, 50, 100])
+  const start = step * randInt(1, 4)
+  const terms = [0, 1, 2, 3].map(i => start + step * i)
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang,
+      `Count on in ${step}s. What comes next? ${terms.map(t => num(t, lang)).join(', ')}, …`,
+      `${step}'şer sayarak ilerle. Sırada ne gelir? ${terms.map(t => num(t, lang)).join(', ')}, …`,
+      `Cuenta de ${step} en ${step}. ¿Qué viene después? ${terms.map(t => num(t, lang)).join(', ')}, …`),
+    format: 'numeric',
+    correct_answer: start + step * 4,
+    operandKey: `pv:mult:${step}:${start}`,
+    hint_steps: [
+      say(lang, `Every step goes up by the same amount.`,
+                `Her adımda aynı kadar artıyor.`,
+                `Cada paso sube lo mismo.`),
+      say(lang, `Check the gap between two of them, then add that to ${num(terms[3], lang)}.`,
+                `İkisinin arasındaki farka bak, sonra onu ${num(terms[3], lang)} sayısına ekle.`,
+                `Mira el salto entre dos de ellos y súmalo a ${num(terms[3], lang)}.`),
+    ],
+  }
+}
+
+function placeCompare(level, lang) {
+  // Four numbers close enough that they cannot be told apart at a glance — the skill is
+  // comparing digit by digit from the left, not spotting the obviously biggest.
+  const hundreds = randInt(2, 9)
+  const set = new Set()
+  while (set.size < 4) set.add(hundreds * 100 + randInt(0, 99))
+  const xs = [...set]
+  const askBiggest = Math.random() < 0.5
+  const answer = askBiggest ? Math.max(...xs) : Math.min(...xs)
+  return {
+    topic: 'place-value', level,
+    question_text: askBiggest
+      ? say(lang, `Which of these is the largest? ${xs.map(x => num(x, lang)).join(', ')}`,
+                  `Bunlardan hangisi en büyük? ${xs.map(x => num(x, lang)).join(', ')}`,
+                  `¿Cuál de estos es el mayor? ${xs.map(x => num(x, lang)).join(', ')}`)
+      : say(lang, `Which of these is the smallest? ${xs.map(x => num(x, lang)).join(', ')}`,
+                  `Bunlardan hangisi en küçük? ${xs.map(x => num(x, lang)).join(', ')}`,
+                  `¿Cuál de estos es el menor? ${xs.map(x => num(x, lang)).join(', ')}`),
+    format: 'numeric',
+    correct_answer: answer,
+    operandKey: `pv:cmp:${xs.slice().sort((a, b) => a - b).join('-')}`,
+    hint_steps: [
+      say(lang, `Compare the hundreds first, then the tens, then the ones.`,
+                `Önce yüzleri, sonra onları, sonra birleri karşılaştır.`,
+                `Compara primero las centenas, luego las decenas y después las unidades.`),
+      say(lang, `The first place where they differ is the one that decides it.`,
+                `Farklılaştıkları ilk basamak kararı verir.`,
+                `La primera posición en la que se diferencian es la que decide.`),
+    ],
+  }
+}
+
 function placeValueTemplate(level, lang) {
   const band = bandForLevel(level)
-  const shapes = band >= 7
-    ? ['round', 'digit', 'negative', 'roundDecimal', 'roundDecimal']
-    : ['round', 'round', 'digit', 'negative']
+  // Year 3 does not round and does not use negative numbers — both arrive in Year 4 — so its
+  // band gets its own three shapes rather than a softened version of the others.
+  const shapes = band <= 3
+    ? ['multiples', 'multiples', 'compare', 'compare', 'digit']
+    : band >= 7
+      ? ['round', 'digit', 'negative', 'roundDecimal', 'roundDecimal']
+      : ['round', 'round', 'digit', 'negative']
   const shape = pick(shapes)
+  if (shape === 'multiples') return placeCountInMultiples(level, lang)
+  if (shape === 'compare') return placeCompare(level, lang)
   if (shape === 'digit') return placeDigitValue(level, lang)
   if (shape === 'negative') return placeNegative(level, lang)
   if (shape === 'roundDecimal') return placeRoundDecimal(level, lang)
@@ -3381,6 +3446,173 @@ function measurementTemplate(level, lang, columnar) {
   return measureConvert(level, lang)
 }
 
+// ── Area and perimeter by counting squares (Year 4) ──────────────────────────
+// The line is "find the area of rectilinear shapes by counting squares; calculate the
+// perimeter of rectilinear figures; convert between different units of measurement".
+//
+// Rectilinear, not rectangular: an L-shape is the whole point of the topic, and it is also
+// what stops the question being answered by multiplying the two numbers in the sentence —
+// there are no two numbers in the sentence. The shape is on the grid and nowhere else.
+
+// An L built from a rectangle with a corner bitten out. Returned as the filled unit squares,
+// plus the area and perimeter computed from the cells rather than from a formula, so the
+// answer cannot drift from the picture.
+function rectilinearShape() {
+  const w = randInt(3, 7), h = randInt(3, 6)
+  // The bite is always smaller than the rectangle in both directions, so the result is a
+  // proper L and never a rectangle or a disconnected pair.
+  const bw = randInt(1, w - 2), bh = randInt(1, h - 2)
+  const corner = pick([[0, 0], [1, 0], [0, 1], [1, 1]])
+  const cells = []
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const inBiteX = corner[0] === 0 ? x < bw : x >= w - bw
+      const inBiteY = corner[1] === 0 ? y < bh : y >= h - bh
+      if (!(inBiteX && inBiteY)) cells.push([x, y])
+    }
+  }
+  const has = new Set(cells.map(c => c.join(',')))
+  // Perimeter is counted as the number of cell edges with nothing on the other side, which is
+  // true of any rectilinear figure and needs no special case for the notch.
+  let perimeter = 0
+  for (const [x, y] of cells) {
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      if (!has.has(`${x + dx},${y + dy}`)) perimeter++
+    }
+  }
+  return { w, h, cells, area: cells.length, perimeter }
+}
+
+function areaGridTemplate(level, lang) {
+  const shape = rectilinearShape()
+  const askArea = Math.random() < 0.55
+  return {
+    topic: 'area-grid', level,
+    question_text: askArea
+      ? say(lang, `Each square is 1 cm by 1 cm. What is the area of this shape in cm²?`,
+                  `Her kare 1 cm × 1 cm. Bu şeklin alanı kaç cm²'dir?`,
+                  `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el área de esta figura en cm²?`)
+      : say(lang, `Each square is 1 cm by 1 cm. What is the perimeter of this shape in cm?`,
+                  `Her kare 1 cm × 1 cm. Bu şeklin çevresi kaç cm'dir?`,
+                  `Cada cuadrado mide 1 cm por 1 cm. ¿Cuál es el perímetro de esta figura en cm?`),
+    format: 'numeric',
+    correct_answer: askArea ? shape.area : shape.perimeter,
+    operandKey: `grid:${askArea ? 'a' : 'p'}:${shape.cells.map(c => c.join('')).join('-')}`,
+    hint_steps: askArea
+      ? [say(lang, `Area is how many squares the shape covers.`,
+                   `Alan, şeklin kapladığı kare sayısıdır.`,
+                   `El área es cuántos cuadrados cubre la figura.`),
+         say(lang, `Count them row by row so none is counted twice.`,
+                   `Satır satır say ki hiçbiri iki kez sayılmasın.`,
+                   `Cuéntalos fila a fila para no contar ninguno dos veces.`)]
+      : [say(lang, `Perimeter is the distance all the way round the edge.`,
+                   `Çevre, kenar boyunca dolaşılan toplam uzunluktur.`,
+                   `El perímetro es la distancia que rodea todo el borde.`),
+         say(lang, `Start at one corner and count the sides of the squares along the outside — the notch counts too.`,
+                   `Bir köşeden başla ve dış kenardaki kare kenarlarını say — girinti de sayılır.`,
+                   `Empieza en una esquina y cuenta los lados de los cuadrados por fuera; la muesca también cuenta.`)],
+    visual: { kind: 'chart', shape: 'grid', cols: shape.w, rows: shape.h, cells: shape.cells },
+  }
+}
+
+// ── Bar charts and time graphs (Year 4), line graphs and tables (Year 5) ─────
+// The question never prints the value it asks for. A chart with its numbers written on it is
+// a subtraction question with a picture behind it, and the topic is reading the chart.
+
+const CHART_SETS = {
+  en: [
+    { what: 'books borrowed', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'books' },
+    { what: 'goals scored', labels: ['Sep', 'Oct', 'Nov', 'Dec'], unit: 'goals' },
+    { what: 'visitors', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'people' },
+  ],
+  tr: [
+    { what: 'ödünç alınan kitap', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kitap' },
+    { what: 'atılan gol', labels: ['Eyl', 'Eki', 'Kas', 'Ara'], unit: 'gol' },
+    { what: 'ziyaretçi', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kişi' },
+  ],
+  es: [
+    { what: 'libros prestados', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'libros' },
+    { what: 'goles marcados', labels: ['Sep', 'Oct', 'Nov', 'Dic'], unit: 'goles' },
+    { what: 'visitantes', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'personas' },
+  ],
+}
+
+// Values land on the gridlines, because a bar between two lines cannot be read exactly and the
+// question would then have no defensible answer.
+function chartData(step, n) {
+  const vals = []
+  while (vals.length < n) {
+    const v = step * randInt(1, 9)
+    // No two the same: "which day had the most" needs one answer, and a repeated value in a
+    // difference question makes the pair ambiguous.
+    if (!vals.includes(v)) vals.push(v)
+  }
+  return vals
+}
+
+function chartTemplate(level, lang) {
+  const band = bandForLevel(level)
+  const line = band >= 5
+  const set = pickL(CHART_SETS, lang)
+  const step = pick(line ? [5, 10, 20] : [2, 5, 10])
+  const values = chartData(step, set.labels.length)
+  const ask = pick(line ? ['read', 'difference', 'total', 'most'] : ['read', 'read', 'difference', 'most'])
+
+  const iMax = values.indexOf(Math.max(...values))
+  const i1 = randInt(0, values.length - 1)
+  let i2 = randInt(0, values.length - 1)
+  while (i2 === i1) i2 = randInt(0, values.length - 1)
+  const [hi, lo] = values[i1] > values[i2] ? [i1, i2] : [i2, i1]
+
+  const spec = {
+    read: {
+      q: say(lang, `How many ${set.unit} on ${set.labels[i1]}?`,
+                   `${set.labels[i1]} günü kaç ${set.unit}?`,
+                   `¿Cuántos ${set.unit} el ${set.labels[i1]}?`),
+      a: values[i1], highlight: [set.labels[i1]],
+      h: [say(lang, `Find ${set.labels[i1]} along the bottom.`, `Alt tarafta ${set.labels[i1]} etiketini bul.`, `Busca ${set.labels[i1]} en la parte de abajo.`),
+          say(lang, `Follow it up, then read straight across to the numbers on the left.`, `Yukarı doğru takip et, sonra soldaki sayılara doğru düz git.`, `Súbelo y luego lee en línea recta hacia los números de la izquierda.`)],
+    },
+    difference: {
+      q: say(lang, `How many more ${set.unit} on ${set.labels[hi]} than on ${set.labels[lo]}?`,
+                   `${set.labels[hi]} günü ${set.labels[lo]} gününden kaç ${set.unit} fazla?`,
+                   `¿Cuántos ${set.unit} más el ${set.labels[hi]} que el ${set.labels[lo]}?`),
+      a: values[hi] - values[lo], highlight: [set.labels[hi], set.labels[lo]],
+      h: [say(lang, `Read both of them off the chart first.`, `Önce ikisini de grafikten oku.`, `Lee primero los dos en el gráfico.`),
+          say(lang, `"How many more" is the gap between them, so take the smaller from the larger.`, `"Kaç fazla" aradaki farktır, küçüğü büyükten çıkar.`, `"Cuántos más" es la diferencia: resta el menor del mayor.`)],
+    },
+    total: {
+      q: say(lang, `How many ${set.unit} altogether across all ${values.length}?`,
+                   `Hepsinde toplam kaç ${set.unit}?`,
+                   `¿Cuántos ${set.unit} hay en total entre los ${values.length}?`),
+      a: values.reduce((x, y) => x + y, 0), highlight: [],
+      h: [say(lang, `Read each one off the chart and write it down before adding.`, `Her birini grafikten okuyup yaz, sonra topla.`, `Lee cada uno del gráfico y anótalo antes de sumar.`),
+          say(lang, `Add them in pairs that make a round number if you can.`, `Yuvarlak sayı yapan çiftleri önce topla.`, `Suma primero las parejas que den un número redondo.`)],
+    },
+    most: {
+      q: say(lang, `How many ${set.unit} were there on the busiest one?`,
+                   `En yoğun olanında kaç ${set.unit} vardı?`,
+                   `¿Cuántos ${set.unit} hubo en el de más?`),
+      a: values[iMax], highlight: [set.labels[iMax]],
+      h: [say(lang, `Find the tallest one first.`, `Önce en yükseğini bul.`, `Busca primero el más alto.`),
+          say(lang, `Then read its height off the numbers on the left.`, `Sonra yüksekliğini soldaki sayılardan oku.`, `Luego lee su altura en los números de la izquierda.`)],
+    },
+  }[ask]
+
+  return {
+    topic: 'chart', level,
+    question_text: say(lang,
+      `The chart shows the ${set.what}. ${spec.q}`,
+      `Grafik ${set.what} sayısını gösteriyor. ${spec.q}`,
+      `El gráfico muestra los ${set.what}. ${spec.q}`),
+    format: 'numeric',
+    correct_answer: spec.a,
+    operandKey: `chart:${line ? 'l' : 'b'}:${ask}:${values.join('-')}`,
+    hint_steps: spec.h,
+    visual: { kind: 'chart', shape: line ? 'line' : 'bar', labels: set.labels, values, step, unit: set.unit, highlight: spec.highlight },
+  }
+}
+
 // Year 6 names one topic "Long Multiplication and Division", and a curriculum topic maps to
 // exactly one template — so pointing it at the multiplication template alone would mean a
 // Year 6 child never met division at all, since no other Year 6 topic carries it. This hands
@@ -3503,6 +3735,8 @@ const REGISTRY = {
   'decimals-percentages': decimalsPercentagesTemplate,
   money: moneyTemplate,
   measurement: measurementTemplate,
+  'area-grid': areaGridTemplate,
+  chart: chartTemplate,
 }
 
 export { SHAPES }

@@ -80,6 +80,10 @@ const TEMPLATE_FOR_TOPIC = {
   // NOT mapped: that year's line is comparing and ordering, and it does not round at all, so
   // pointing it here would label an ordering topic with a rounding question — the exact
   // mismatch the hundred-question audit's first finding was about.
+  y3_place_value: 'place-value',
+  y4_measurement: 'area-grid',
+  y4_statistics: 'chart',
+  y5_statistics: 'chart',
   y4_place_value: 'place-value',
   y5_place_value: 'place-value',
   y6_place_value: 'place-value',
