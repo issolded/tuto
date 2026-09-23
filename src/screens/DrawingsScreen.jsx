@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
+import { drawingStepUrl, drawingThumbUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
 import { drawingAlign } from '../lib/drawingAlign'
 import Shell, { useIsTabletLandscape } from '../components/Shell'
 import { usePhotoCrop } from '../components/usePhotoCrop'
@@ -119,7 +119,7 @@ function DrawingThumb({ id, ageGroup, stepCount, category, radius = 14 }) {
       background: CATEGORY_TINT[category] || PANEL_BG,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <img src={drawingStepUrl(id, ageGroup, stepCount)} alt="" loading="lazy"
+      <img src={drawingThumbUrl(id, ageGroup, stepCount)} alt="" loading="lazy" decoding="async"
         style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
     </div>
   )
@@ -329,6 +329,16 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
 // ── Ready ────────────────────────────────────────────────────────────────────
 function Ready({ sk, target, ageGroup, onStart, onBack }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
+
+  // The child spends a moment reading this screen before tapping Start. Use that time to warm
+  // the first two guide panels, so the first drawing step does not begin with an empty frame.
+  useEffect(() => {
+    if (!target) return
+    ;[1, 2].forEach(n => {
+      if (n <= target.step_count) new Image().src = drawingStepUrl(target.id, ageGroup, n)
+    })
+  }, [target, ageGroup])
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
@@ -452,8 +462,9 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   }, [step, baseStep])
 
   // Warm the neighbouring panels. Without this every tap on Next waits on a
-  // fresh download and the child watches an empty frame; the panels are only
-  // ~20-45 KB, so fetching one ahead is cheap and keeps the flow instant.
+  // fresh download and the child watches an empty frame. drawingStepUrl caps the
+  // transfer at a 1024 px WebP derivative, so fetching one ahead is bounded and
+  // keeps the flow instant even when the source panel is a multi-megabyte PNG.
   useEffect(() => {
     ;[step + 2, step].forEach(n => {
       if (n >= 1 && n <= total) new Image().src = drawingStepUrl(target.id, ageGroup, n)

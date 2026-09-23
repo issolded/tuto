@@ -81,6 +81,18 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] My Drawings görsel yükleme performansı (2026-09-23, Codex; yerelde).
+      6-8 kataloğu 40 kart için toplam 18,4 MB tam boy son-adım görseline bakıyordu;
+      `loading="lazy"` yalnız ekran dışındakileri erteliyor, görünür ilk sıra yine yüzlerce KB
+      ile birkaç MB arasındaki dosyaları indiriyordu. Üstelik 257 yerel `.webp` dosyasının
+      68'i gerçekte PNG baytı; en büyüğü 2,9 MB ve canlı Storage başlıkları `no-cache`.
+      Katalog artık Supabase'in 320×320 gerçek WebP türevini, çizim adımları 1024×1024
+      türevini kullanıyor. Ölçülen ağır örnek: katalogda 2,9 MB → 35 KB, adımda
+      2,9 MB → 237 KB. Hazırlık ekranı ilk iki adımı da önceden ısıtıyor; ağır `Master`
+      setinde Hazırım → adım 1 ve adım 1 → 2 geçişleri tarayıcıda boş çerçevesiz açıldı.
+      Vite build geçti. Kaynak dosyaları gerçek WebP'ye dönüştürüp Storage'a tekrar yüklemek
+      hâlâ iyi bir temizlik işi, fakat ekranın performansı artık onu beklemiyor.
+
 - [x] 8 yaş ve altı yanlış şık yardımı (2026-09-23, Codex; yerelde).
       Sayı yazılan sorular yanlışta öğretici yardım ve yeniden deneme açarken çoktan seçmeli
       sorular ilk yanlışta doğru cevabı gösterip ilerliyordu. Şıklı sorular da artık aynı yaş
