@@ -163,6 +163,11 @@ for (const age of AGES) {
           // The keypad only shows its decimal point for format 'decimal'; a non-integer answer
           // anywhere else is a question the child cannot type.
           fail(where, `tam sayı olmayan cevap ama format '${p.format}'`, `${p.question_text} → ${p.correct_answer}`)
+        } else if (p.format === 'decimal' && Number.isInteger(Number(p.correct_answer))) {
+          // The mirror of the rule above, and the one that was missing: 'decimal' opens the
+          // keypad's point, so declaring it for a whole-number answer offers a key the child
+          // cannot use and can mistype into.
+          fail(where, `tam sayı cevap ama format 'decimal'`, `${p.question_text} → ${p.correct_answer}`)
         } else if (Number(p.correct_answer) < 0) {
           // There is no minus key.
           fail(where, 'negatif cevap, tuş takımında eksi yok', p.question_text)
@@ -196,6 +201,52 @@ for (const age of AGES) {
       const p = generateProblem(tt, level, keys, 'tr', { maxChars: cap, avoidText: texts })
       if (texts.has(p.question_text)) fail(`${year}/oturum`, 'aynı cümle iki kez', p.question_text)
       keys.add(p.operandKey); texts.add(p.question_text)
+    }
+  }
+}
+
+// ── 8. does the template match the topic it was given? ───────────────────────
+// A curriculum topic maps to exactly one template and the template has no idea which topic it
+// is filling, so a wrong mapping is invisible at every other level: the question is correct,
+// the answer is correct, and the LABEL the parent reads is about something else. The audit's
+// first finding was that mismatch, and it happened again a day later — y5_statistics was
+// pointed at the averages template although Year 5's line is line graphs and tables and the
+// mean does not arrive until Year 6.
+//
+// The test is coarse on purpose: at least one word the template is about has to appear in the
+// topic's own name or description. Exemptions are listed with a reason, never silently.
+const TEMPLATE_WORDS = {
+  'place-value': ['round', 'place value', 'negative', 'order', 'compare'],
+  'fraction-of-number': ['fraction', 'decimal', 'percent'],
+  geometry: ['angle', 'area', 'perimeter', 'shape', '2d', '3d', 'side'],
+  averages: ['mean', 'median', 'mode', 'range', 'average', 'probability'],
+  ratio: ['ratio', 'proportion', 'scale', 'speed'],
+  algebra: ['algebra', 'formula', 'equation', 'unknown'],
+  sequence: ['sequence', 'function', 'term'],
+  'number-properties': ['factor', 'multiple', 'prime', 'square', 'cube', 'root'],
+  'long-mult-div': ['multipl', 'divi'],
+  'multiplication-word': ['multipl'],
+  'division-word': ['divi'],
+  addition: ['add'],
+  subtraction: ['subtract'],
+  counting: ['count', 'place value', 'number'],
+  time: ['time', 'clock'],
+  pictogram: ['chart', 'pictogram', 'bar', 'graph', 'table', 'data'],
+  'decimals-percentages': ['decimal', 'percent'],
+}
+// Topic ids whose wording cannot contain the word, with the reason spelled out.
+const MATCH_EXEMPT = {
+  y1_fractions: 'named "Half and Quarter"; halves and quarters are fractions, the word is not used',
+}
+for (const year of Object.keys(BRITISH_CURRICULUM)) {
+  for (const t of BRITISH_CURRICULUM[year].topics) {
+    const tt = templateTopicFor(t)
+    if (!tt || MATCH_EXEMPT[t.id]) continue
+    const words = TEMPLATE_WORDS[tt]
+    if (!words) { fail(`${year}/eşleme`, `'${tt}' şablonu için anahtar kelime tanımlı değil`); continue }
+    const text = `${t.name} ${t.description}`.toLowerCase()
+    if (!words.some(w => text.includes(w))) {
+      fail(`${year}/eşleme`, `konu '${t.name}' → '${tt}' şablonu; konunun tarifinde şablonun hiçbir konusu geçmiyor`, t.description)
     }
   }
 }

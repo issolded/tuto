@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import MathGeometry from '../components/MathGeometry'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock } from '../components/ClockFace'
 import { usePhotoCrop } from '../components/usePhotoCrop'
@@ -2536,6 +2537,7 @@ export default function MathScreen() {
                 minHeight: isWord ? 120 : 84, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: 14, flexShrink: 0,
               }}>
+                <MathGeometry visual={qVisual} language={language} hint={hintOpenFor === qIdx} description={q} />
                 {questionShapes && (
                   <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
                     {questionShapes.map((s, i) => <ShapeSVG key={i} kind={s} size={96} />)}
@@ -2555,7 +2557,7 @@ export default function MathScreen() {
                 {questionPicto && (
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
                 )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto ? 20 : 32), color: INK, lineHeight: 1.55 }}>
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto || qVisual?.kind === 'geometry' ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   <MathText text={q} />
                 </div>
               </div>

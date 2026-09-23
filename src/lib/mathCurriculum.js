@@ -69,6 +69,7 @@ const TEMPLATE_FOR_TOPIC = {
   y5_multiplication: 'multiplication-word',
   y5_division: 'division-word',
   y5_fractions: 'fraction-of-number',
+  y5_decimals: 'decimals-percentages',
 
   // ── Year 6 and Year 7 ──────────────────────────────────────────────────────
   // Year 6 had no entry at all until now, which is the single fact behind the hundred-question
@@ -90,7 +91,13 @@ const TEMPLATE_FOR_TOPIC = {
   y6_multiplication: 'long-mult-div',
   y7_number: 'number-properties',
   y7_sequences: 'sequence',
-  y5_statistics: 'averages',
+  // y5_statistics is NOT mapped, and it was, which is the mistake worth leaving written here.
+  // Year 5's line reads "solve comparison, sum and difference problems using information in a
+  // line graph; complete and interpret information in a table" — no mean anywhere. The mean
+  // arrives in Year 6. Pointing Year 5 at the averages template put a mean question under a
+  // topic labelled line graphs and tables, which is precisely the mismatch the hundred-question
+  // audit's first finding was about, committed in the change that claimed to be avoiding it.
+  // It needs a line-graph and table template, and that needs drawing code.
   y6_statistics: 'averages',
   y7_statistics: 'averages',
   y5_geometry: 'geometry',

@@ -81,6 +81,33 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] 10 yaş ondalık/yüzde sorularını motora taşıma (2026-09-23, Codex; yerelde).
+      `y5_decimals` → `decimals-percentages`: yüzde↔ondalık, kesir↔ondalık (eksik pay),
+      üç basamağa kadar ondalık toplama/çıkarma, karşılaştırma ve yuvarlama; EN/TR/ES.
+      Hesaplar tam sayı birimlerinde yapılır. Cevap formatı `decimal`, ekranın nokta
+      tuşunu açar. Year 5 artık 8/8 şablon: yeni 10 yaş seanslarının soru üretiminde
+      LLM çağrısı yok. Kağıt fotoğrafını okuyan değerlendirme LLM'i değişmedi.
+      Doğrulama: `node --test scripts/tests/decimal-templates.test.mjs` (seed 230923,
+      7.200 soru ve 200 seans planı), math:check, Vite build; lab'da 3.4+1.1=4.5 kabul edildi.
+
+- [x] Matematik geometri çizimleri (2026-09-23, Codex; yerelde, push yok).
+      `MathGeometry` SVG bileşeni ekran modu ve math-lab'da motorun `visual` verisini çizer;
+      soru metninden şekil tahmini yapmaz. Doğru/tam tur/üçgen/dörtgen açıları, dikdörtgen
+      alan-çevre-bilinmeyen kenar, üçgen alanı; üst bantta ters açı/düzgün çokgen/paralelkenar.
+      Bilinmeyen etiket `?`; bilinmeyen kenarın uzunluğu görsel verisine konmaz. Çizimler
+      şematik, üç dilde ölçekli olmadıkları belirtilir. Çevre ipucunda karşı kenarlar
+      etiketlenir ve sınır vurgulanır; alan yardımında iç yüzey vurgulanır.
+      Kapsam: yeni üretilen soruların ekran modu; eski kayıtlar ve kağıt modu değişmedi.
+      Doğrulama: 6.000 soruda görsel verisi/cevap tutarlılığı, math:check, Vite build,
+      font:check; tarayıcıda üçgen alanı, dörtgen açıları, bilinmeyen kenar, çevre yardımı
+      ve doğru açısı görsel kontrolü.
+
+- [x] Matematik sayı yazımı (2026-09-23, Codex): `num()` binlik ayırıcıyı 1.000’den
+      itibaren kullanır; `11,711 + 5000` artık `11,711 + 5,000`. EN virgül, TR/ES nokta;
+      ara işlem ipuçları da aynı biçimde. Toplama/çıkarma yardımındaki "yalnız o basamak
+      değişir" genellemesi kaldırıldı: elde/ödünç almada üst basamaklar da değişebilir.
+      Doğrulama: math:check ve Vite build.
+
 - [x] Ekran kontrolü web denemesi (2026-09-20, Codex). Ebeveyn Ayarlar sayfasının EN ALTINDA,
       çocukta Ayarlar → Ekran Kontrolü. Mevcut Tuto Care / yaşa göre çocuk stili korunur.
       Kurallar çocuk bazında `parents.prefs.screen_control_web[childId]` içinde; mevcut Supabase

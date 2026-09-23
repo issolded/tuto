@@ -1,3 +1,4 @@
+import MathGeometry from '../components/MathGeometry'
 import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
 import { generateProblem, TOPICS } from '../lib/mathTemplates'
@@ -85,6 +86,9 @@ export default function MathLab() {
             <Pictogram unit={problem.visual.unit} each={problem.visual.each} rows={problem.visual.rows} />
           </div>
         )}
+        <div style={{ background: 'white', borderRadius: 12, marginBottom: 12 }}>
+          <MathGeometry visual={problem.visual} language={lang} hint={hintShown > 0} description={problem.question_text} />
+        </div>
         <div style={{ fontSize: 18, marginBottom: 16 }}>{problem.question_text}</div>
 
         {/* A choice question has no typable answer — 7:4 and 5/8 are not numbers — so until now

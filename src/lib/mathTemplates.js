@@ -103,7 +103,7 @@ const MAX_FOR_LEVEL = [20, 20, 20, 100, 100, 1000, 1000, 10000, 10000, 20000, 20
 // The ceiling was 6 while Year 6 was the last year. It is 7 now that Year 7 exists, which is
 // also what makes levels 13-14 mean anything: capped at 6 they were a second Year 6.
 // A number as a book would print it for this language: 4,200,000 in English, 4.200.000 in
-// Turkish and Spanish. Below five digits nothing changes, so "45 candies" and "308 + 260" read
+// Turkish and Spanish. Below four digits nothing changes, so "45 candies" and "308 + 260" read
 // as they did.
 //
 // A hundred-question audit asked for this — "6270000" is a wall of digits a child has to count
@@ -113,7 +113,7 @@ const SEPARATOR = { en: ',', tr: '.', es: '.' }
 
 export function num(n, lang = 'en') {
   const v = Number(n)
-  if (!Number.isFinite(v) || Math.abs(v) < 10000) return String(n)
+  if (!Number.isFinite(v) || Math.abs(v) < 1000) return String(n)
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, SEPARATOR[lang] ?? ',')
 }
 
@@ -211,8 +211,7 @@ const UNITS = [
 // the place value instead, which is the method a child is actually taught for round numbers.
 // Numbers here go through `num` for the same reason the question text does: a question that
 // reads "30,956 + 18,000" and a hint that reads "Break 18000 up" are the same number written
-// two ways on one screen. Below five digits `num` changes nothing, so every other age is
-// untouched.
+// two ways on one screen. Group four-digit numbers too, including intermediate steps.
 function partitionSteps(a, b, add, lang) {
   const parts = placeParts(b)
   const sign = add ? '+' : '-'
@@ -221,8 +220,8 @@ function partitionSteps(a, b, add, lang) {
   // also only reachable with a large `a`, since a small pair goes to the counting steps.
   if (b < 10) {
     return [
-      say(lang, `Only the ones change here.`, `Burada sadece birler basamağı değişiyor.`,
-                `Aquí solo cambian las unidades.`),
+      say(lang, `Start with the ones; you may need to cross a ten.`, `Birler basamağından başla; bir onluğu geçmen gerekebilir.`,
+                `Empieza por las unidades; puede que cruces una decena.`),
       say(lang, `Count ${add ? 'on' : 'back'} ${num(b, lang)} from ${num(a, lang)}.`,
                 `${num(a, lang)} sayısından ${num(b, lang)} tane ${add ? 'ileri' : 'geri'} say.`,
                 `Cuenta ${num(b, lang)} hacia ${add ? 'adelante' : 'atrás'} desde ${num(a, lang)}.`),
@@ -236,9 +235,9 @@ function partitionSteps(a, b, add, lang) {
     return [
       say(lang, `${num(b, lang)} is a round number — ${word}.`, `${num(b, lang)} yuvarlak bir sayı — ${word}.`,
                 `${num(b, lang)} es un número redondo: ${word}.`),
-      say(lang, `So only that place value changes. ${add ? 'Add' : 'Take away'} ${word} ${add ? 'to' : 'from'} ${num(a, lang)}.`,
-                `Yani sadece o basamak değişiyor. ${num(a, lang)} ${add ? 'sayısına' : 'sayısından'} ${word} ${add ? 'ekle' : 'çıkar'}.`,
-                `Así que solo cambia esa cifra. ${add ? `Suma ${word} a ${num(a, lang)}` : `Resta ${word} de ${num(a, lang)}`}.`),
+      say(lang, `${add ? 'Add' : 'Take away'} ${word} ${add ? 'to' : 'from'} ${num(a, lang)}. The smaller place values stay the same.`,
+                `${num(a, lang)} ${add ? 'sayısına' : 'sayısından'} ${word} ${add ? 'ekle' : 'çıkar'}. Daha küçük basamaklar aynı kalır.`,
+                `${add ? `Suma ${word} a ${num(a, lang)}` : `Resta ${word} de ${num(a, lang)}`}. Las posiciones menores no cambian.`),
     ]
   }
 
@@ -249,9 +248,9 @@ function partitionSteps(a, b, add, lang) {
     say(lang, `You do not need to write this down. Break ${num(b, lang)} up: ${parts.map(x => num(x, lang)).join(' + ')}.`,
               `Bunu yazmana gerek yok. ${num(b, lang)} sayısını parçala: ${parts.map(x => num(x, lang)).join(' + ')}.`,
               `No hace falta que lo escribas. Separa ${num(b, lang)} así: ${parts.map(x => num(x, lang)).join(' + ')}.`),
-    say(lang, `${num(a, lang)} ${sign} ${first} = ${afterFirst}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
-              `${num(a, lang)} ${sign} ${first} = ${afterFirst}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`,
-              `${num(a, lang)} ${sign} ${first} = ${afterFirst}. Ahora ${add ? 'suma' : 'resta'} ${rest}.`),
+    say(lang, `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
+              `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`,
+              `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Ahora ${add ? 'suma' : 'resta'} ${rest}.`),
   ]
 }
 
@@ -1245,6 +1244,7 @@ function geometryAngle(level, lang) {
       format: 'numeric',
       correct_answer: answer,
       operandKey: `geo:reg:${n}`,
+      visual: { kind: 'geometry', shape: 'regular', sides: n },
       hint_steps: [
         say(lang, `Walking all the way round the outside turns you through 360° altogether.`,
                   `Şeklin dışından bir tam tur atmak seni toplam 360° döndürür.`,
@@ -1267,6 +1267,7 @@ function geometryAngle(level, lang) {
       format: 'numeric',
       correct_answer: a,
       operandKey: `geo:opp:${a}`,
+      visual: { kind: 'geometry', shape: 'opposite', angles: [a] },
       hint_steps: [
         say(lang, `Where two lines cross, the angles facing each other are equal.`,
                   `İki doğru kesiştiğinde, karşılıklı duran açılar eşittir.`,
@@ -1345,6 +1346,7 @@ function geometryAngle(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `geo:ang:${kind}:${given.join('-')}`,
+    visual: { kind: 'geometry', shape: kind, angles: given },
     hint_steps: [
       fact,
       say(lang, `Add up the ones you were given, then take that away from ${spec.total}.`,
@@ -1373,6 +1375,7 @@ function geometryArea(level, lang) {
         `Bir üçgenin tabanı ${b} cm, yüksekliği ${h} cm. Alanı kaç cm²'dir?`,
         `Un triángulo tiene una base de ${b} cm y una altura de ${h} cm. ¿Cuál es su área en cm²?`),
       format: 'numeric', correct_answer: answer, operandKey: `geo:tri:${b}:${h}`,
+      visual: { kind: 'geometry', shape: 'triangle', base: b, height: h, ask: 'area' },
       hint_steps: [
         say(lang, `A triangle is exactly half of the rectangle that would fit around it.`,
                   `Bir üçgen, etrafına oturacak dikdörtgenin tam yarısıdır.`,
@@ -1393,6 +1396,7 @@ function geometryArea(level, lang) {
         `Bir paralelkenarın tabanı ${w} cm, yüksekliği ${h} cm. Alanı kaç cm²'dir?`,
         `Un paralelogramo tiene una base de ${w} cm y una altura de ${h} cm. ¿Cuál es su área en cm²?`),
       format: 'numeric', correct_answer: answer, operandKey: `geo:para:${w}:${h}`,
+      visual: { kind: 'geometry', shape: 'para', base: w, height: h, ask: 'area' },
       hint_steps: [
         say(lang, `Cut the slanted end off and slide it to the other side — it becomes a rectangle.`,
                   `Eğik ucu kesip diğer tarafa kaydır — dikdörtgen olur.`,
@@ -1413,6 +1417,7 @@ function geometryArea(level, lang) {
         `Bir dikdörtgenin alanı ${area} cm². Bir kenarı ${w} cm. Diğer kenarı kaç cm'dir?`,
         `Un rectángulo tiene un área de ${area} cm². Un lado mide ${w} cm. ¿Cuánto mide el otro?`),
       format: 'numeric', correct_answer: h, operandKey: `geo:rev:${w}:${h}`,
+      visual: { kind: 'geometry', shape: 'rect', base: w, area, ask: 'side' },
       hint_steps: [
         say(lang, `Area is the two sides multiplied together.`,
                   `Alan, iki kenarın çarpımıdır.`,
@@ -1437,6 +1442,7 @@ function geometryArea(level, lang) {
     format: 'numeric',
     correct_answer: askArea ? w * h : 2 * (w + h),
     operandKey: `geo:rect:${askArea ? 'a' : 'p'}:${w}:${h}`,
+    visual: { kind: 'geometry', shape: 'rect', base: w, height: h, ask: askArea ? 'area' : 'perimeter' },
     hint_steps: askArea
       ? [say(lang, `Area is how much surface is covered, counted in squares.`,
                    `Alan, kaplanan yüzeydir; kareyle sayılır.`,
@@ -2196,6 +2202,13 @@ function algSolve(level, lang) {
 // A coefficient of 1 is not written: 1y is not how anyone writes y, and a child who has just
 // been taught the notation should not meet it written wrongly in the question they are
 // being taught it with.
+// "2, 8, 4 and 11", not "2 and 8 and 4 and 11". Everything but the last joined with a comma,
+// the last with the language's own word.
+function listWithAnd(parts, lang) {
+  if (parts.length <= 1) return parts.join('')
+  return parts.slice(0, -1).join(', ') + say(lang, ' and ', ' ve ', ' y ') + parts[parts.length - 1]
+}
+
 function term(n, letter) {
   return n === 1 ? letter : `${n}${letter}`
 }
@@ -2570,10 +2583,43 @@ function ratioTemplate(level, lang) {
 // books ask it and because it is the one that shows whether a child understands what a mean
 // IS rather than which buttons to press.
 
+// Each subject carries the range that is plausible FOR IT. One shared range produced "cups of
+// coffee over 4 days: 18, 10, 5, 3" — about half of all generated questions had a value no
+// child would believe, and a number a child does not believe is a number they stop reading.
+// Coffee is gone rather than re-ranged: it came from Bond's 10-11 book, where the question is
+// about someone's mum, and outside that framing it reads as the child drinking it.
+// The period is carried in BOTH forms rather than built by adding an s. "4 matchs" and
+// "5 sesións" are what adding one gives you, and this is the second time an -s has been
+// wrong here — the ratio template's unit banks were fixed for "inche" the same day. Turkish
+// takes the same word twice on purpose: it does not mark plural after a number.
+// Each subject carries the range that is plausible FOR IT, its plural, and the verb that
+// makes it a sentence.
+//
+// The range is here because one shared range produced "cups of coffee over 4 days: 18, 10, 5,
+// 3" — about half of all generated questions had a value no child would believe, and a number
+// a child does not believe is a number they stop reading. Coffee is gone rather than re-ranged:
+// it came from Bond's 10-11 book, where the question is about someone's mum, and outside that
+// framing it reads as the child drinking it.
+//
+// The plural is carried rather than made by adding an s, because "4 matchs" and "5 sesións"
+// are what adding one gives you. Turkish takes the same word twice on purpose: it does not
+// mark plural after a number.
+//
+// The verb is here because without it the question was not a sentence. "Points over 6 games:
+// 2, 8, 4, 11, 15, 2. What is the mean?" is a spreadsheet header with a question after it —
+// the same defect as the division word problem that read "Mia has 45 candies. Shared equally
+// among 5 teammates. How many each?", written again in a new template a day after that one
+// was fixed.
 const AVG_SUBJECTS = {
-  en: [['cups of coffee', 'day'], ['goals', 'match'], ['books read', 'week'], ['minutes late', 'day']],
-  tr: [['fincan kahve', 'gün'], ['gol', 'maç'], ['okunan kitap', 'hafta'], ['dakika gecikme', 'gün']],
-  es: [['tazas de café', 'día'], ['goles', 'partido'], ['libros leídos', 'semana'], ['minutos de retraso', 'día']],
+  en: [['goals', 'match', 'matches', 'scored', 0, 6], ['books', 'week', 'weeks', 'read', 1, 7],
+       ['points', 'game', 'games', 'scored', 2, 20], ['lengths', 'session', 'sessions', 'swam', 2, 16],
+       ['birds', 'day', 'days', 'spotted', 1, 18]],
+  tr: [['gol', 'maç', 'maç', 'attı', 0, 6], ['kitap', 'hafta', 'hafta', 'okudu', 1, 7],
+       ['puan', 'oyun', 'oyun', 'topladı', 2, 20], ['tur', 'antrenman', 'antrenman', 'yüzdü', 2, 16],
+       ['kuş', 'gün', 'gün', 'gördü', 1, 18]],
+  es: [['goles', 'partido', 'partidos', 'marcó', 0, 6], ['libros', 'semana', 'semanas', 'leyó', 1, 7],
+       ['puntos', 'juego', 'juegos', 'consiguió', 2, 20], ['largos', 'sesión', 'sesiones', 'nadó', 2, 16],
+       ['pájaros', 'día', 'días', 'vio', 1, 18]],
 }
 
 // A list of small whole numbers whose mean is whole, built by choosing the mean first.
@@ -2588,16 +2634,18 @@ function meanList(n, lo, hi) {
 
 function avgMean(level, lang) {
   const n = pick([4, 5, 6])
-  const xs = meanList(n, 2, 18)
+  const [what, per, pers, verb, lo, hi] = pickL(AVG_SUBJECTS, lang)
+  const xs = meanList(n, lo, hi)
   const total = xs.reduce((a, b) => a + b, 0)
-  const [what, per] = pickL(AVG_SUBJECTS, lang)
+  const name = pickL(MULT_NAMES, lang)
+  const list = listWithAnd(xs.map(String), lang)
 
   return {
     topic: 'averages', level,
     question_text: say(lang,
-      `${what} over ${n} ${per}s: ${xs.join(', ')}. What is the mean?`,
-      `${n} ${per} boyunca ${what}: ${xs.join(', ')}. Ortalama kaçtır?`,
-      `${what} durante ${n} ${per}s: ${xs.join(', ')}. ¿Cuál es la media?`),
+      `Over ${n} ${pers} ${name} ${verb} ${list} ${what}. What is the mean?`,
+      `${name} ${n} ${per} boyunca ${list} ${what} ${verb}. Ortalama kaçtır?`,
+      `En ${n} ${pers} ${name} ${verb} ${list} ${what}. ¿Cuál es la media?`),
     format: 'numeric',
     correct_answer: total / n,
     operandKey: `avg:mean:${xs.join('-')}`,
@@ -2615,29 +2663,33 @@ function avgMean(level, lang) {
 // Working backwards from a known mean to a missing value.
 function avgReverseMean(level, lang) {
   const n = pick([4, 5])
-  const mean = randInt(4, 14)
+  const [what, per, pers, verb, lo, hi] = pickL(AVG_SUBJECTS, lang)
+  // The mean has to sit inside the subject's own range, or the values built around it leave it.
+  const mean = randInt(Math.max(lo + 1, 2), Math.max(lo + 2, hi - 1))
   const total = mean * n
-  // The known values are built so the missing one lands in a sensible range.
-  let xs
+  // Every known value, and the missing one, stay inside that range too — a missing value of 25
+  // goals is the same defect as a list of them.
+  let xs, missing
   do {
-    xs = Array.from({ length: n - 1 }, () => randInt(Math.max(1, mean - 5), mean + 5))
-  } while (total - xs.reduce((a, b) => a + b, 0) < 1 || total - xs.reduce((a, b) => a + b, 0) > 25)
-  const missing = total - xs.reduce((a, b) => a + b, 0)
-  const [what, per] = pickL(AVG_SUBJECTS, lang)
+    xs = Array.from({ length: n - 1 }, () => randInt(lo, hi))
+    missing = total - xs.reduce((a, b) => a + b, 0)
+  } while (missing < Math.max(lo, 1) || missing > hi)
+  const name = pickL(MULT_NAMES, lang)
+  const list = listWithAnd(xs.map(String), lang)
 
   return {
     topic: 'averages', level,
     question_text: say(lang,
-      `Over ${n} ${per}s the mean number of ${what} was ${mean}. ${n - 1} of them were ${xs.join(', ')}. What was the last one?`,
-      `${n} ${per} boyunca ${what} ortalaması ${mean} idi. Bunların ${n - 1} tanesi ${xs.join(', ')}. Sonuncusu kaçtı?`,
-      `Durante ${n} ${per}s la media de ${what} fue ${mean}. ${n - 1} de ellos fueron ${xs.join(', ')}. ¿Cuál fue el último?`),
+      `Over ${n} ${pers} ${name} ${verb} a mean of ${mean} ${what}. In the first ${n - 1} ${pers} ${name} ${verb} ${list}. How many in the last one?`,
+      `${name} ${n} ${per} boyunca ortalama ${mean} ${what} ${verb}. İlk ${n - 1} ${per} içinde ${list} ${verb}. Sonuncusunda kaç tane?`,
+      `En ${n} ${pers} ${name} ${verb} una media de ${mean} ${what}. En los primeros ${n - 1} ${pers} ${verb} ${list}. ¿Cuántos en el último?`),
     format: 'numeric',
     correct_answer: missing,
     operandKey: `avg:rev:${mean}:${xs.join('-')}`,
     hint_steps: [
-      say(lang, `A mean of ${mean} over ${n} ${per}s means the total was shared into ${n} equal lots of ${mean}.`,
+      say(lang, `A mean of ${mean} over ${n} ${pers} means the total was shared into ${n} equal lots of ${mean}.`,
                 `${n} ${per} için ortalama ${mean} demek, toplamın ${n} eşit ${mean}'e bölündüğü demek.`,
-                `Una media de ${mean} en ${n} ${per}s significa que el total se repartió en ${n} partes iguales de ${mean}.`),
+                `Una media de ${mean} en ${n} ${pers} significa que el total se repartió en ${n} partes iguales de ${mean}.`),
       say(lang, `Find the total first, then take away the ones you already know.`,
                 `Önce toplamı bul, sonra bildiklerini çıkar.`,
                 `Halla primero el total y luego quita los que ya conoces.`),
@@ -3072,6 +3124,98 @@ function longMultDivTemplate(level, lang, columnar) {
     : divisionWordTemplate(level, lang, columnar)
 }
 
+// Year 5's separate decimal topic. Integer units keep the arithmetic exact;
+// rounding happens on those units, not on binary floating-point decimals.
+function decimalsPercentagesTemplate(level, lang) {
+  const kind = pick(['percent-decimal', 'decimal-percent', 'fraction-decimal', 'decimal-fraction', 'add', 'subtract', 'compare', 'round'])
+  const places = pick([1, 2, 3])
+  const scale = 10 ** places
+  const a = randInt(1, scale * 4 - 1)
+  const b = randInt(1, scale * 2 - 1)
+  const dec = n => String(n / scale)
+  let question, answer, hints, key
+  const placeHint = say(lang,
+    'After the decimal point come tenths, hundredths, then thousandths.',
+    'Ondalık ayıracından sonra onda birler, yüzde birler, sonra binde birler gelir.',
+    'Tras el separador decimal vienen décimas, centésimas y milésimas.')
+  if (kind === 'percent-decimal' || kind === 'decimal-percent') {
+    const pct = randInt(1, 99)
+    const toDecimal = kind === 'percent-decimal'
+    question = toDecimal
+      ? say(lang, `Write ${pct}% as a decimal.`, `%${pct} değerini ondalık sayı olarak yaz.`, `Escribe el ${pct}% como número decimal.`)
+      : say(lang, `Write ${pct / 100} as a percentage. Enter the number before %.`, `${pct / 100} sayısını yüzde olarak yaz. Yüzde işareti olmadan sayıyı gir.`, `Escribe ${pct / 100} como porcentaje. Introduce el número sin %.`)
+    answer = toDecimal ? pct / 100 : pct
+    hints = [say(lang, 'Percent means parts out of one hundred.', 'Yüzde, yüz eş parçadan kaçının alındığını söyler.', 'Por ciento indica cuántas partes se toman de cien.'),
+      toDecimal
+        ? say(lang, 'Divide the percentage number by 100. Use the hundredths place, with a zero placeholder if needed.', 'Yüzde sayısını 100’e böl. Yüzde birler basamağını kullan; gerekirse boş basamağa sıfır koy.', 'Divide el porcentaje entre 100. Usa las centésimas y un cero si hace falta para guardar la posición.')
+        : say(lang, 'One whole is 100%. Multiply the decimal by 100 to count the hundredths.', 'Bir bütün %100’dür. Yüzde birleri saymak için ondalık sayıyı 100 ile çarp.', 'Un entero es el 100%. Multiplica el decimal por 100 para contar las centésimas.')]
+    key = `${kind}:${pct}`
+  } else if (kind === 'fraction-decimal' || kind === 'decimal-fraction') {
+    const toDecimal = kind === 'fraction-decimal'
+    question = toDecimal
+      ? say(lang, `Write ${a}/${scale} as a decimal.`, `${a}/${scale} kesrini ondalık sayı olarak yaz.`, `Escribe ${a}/${scale} como número decimal.`)
+      : say(lang, `Complete: ${dec(a)} = ?/${scale}. What is the top number?`, `Tamamla: ${dec(a)} = ?/${scale}. Üstteki sayı kaçtır?`, `Completa: ${dec(a)} = ?/${scale}. ¿Cuál es el número de arriba?`)
+    answer = toDecimal ? a / scale : a
+    hints = [placeHint, toDecimal
+      ? say(lang, `Divide the top number by ${scale}; use ${places} decimal places before dropping any trailing zeros.`, `Üstteki sayıyı ${scale} sayısına böl; sondaki sıfırları silmeden önce ${places} ondalık basamak kullan.`, `Divide el número de arriba entre ${scale}; usa ${places} cifras decimales antes de quitar ceros finales.`)
+      : say(lang, `Count how many pieces of size 1/${scale} make this number. Multiply by ${scale}.`, `Bu sayıda kaç tane 1/${scale} olduğunu bul. ${scale} ile çarp.`, `Cuenta cuántas partes de tamaño 1/${scale} forman el número. Multiplica por ${scale}.`)]
+    key = `${kind}:${a}:${scale}`
+  } else if (kind === 'round') {
+    // Include a discarded digit, including exact halfway cases; round half upwards.
+    // The value must actually NEED rounding: 7.700 asked "to 1 decimal place" answers itself
+    // with 7.7, and a question the child does nothing to is not a question. Same rule as
+    // placeRoundDecimal above, which was fixed for the same reason.
+    const digits = pick([0, 1, 2])
+    const divisor = 10 ** (3 - digits)
+    let units, value
+    do {
+      units = randInt(11, 9999)
+      value = units / 1000
+    } while (units % divisor === 0)
+    answer = Math.floor((units + divisor / 2) / divisor) / (10 ** digits)
+    // "1 decimal places" — English and Spanish both agree the noun with the count, Turkish
+    // does not. Fourth time an -s has been wrong in these banks today, so it is written out
+    // rather than appended.
+    // And "0 decimal places" is not how anyone asks for a whole number, least of all of a
+    // ten-year-old. Zero gets its own wording.
+    const one = digits === 1
+    question = digits === 0
+      ? say(lang,
+          `Round ${value} to the nearest whole number.`,
+          `${value} sayısını en yakın tam sayıya yuvarla.`,
+          `Redondea ${value} al número entero más cercano.`)
+      : say(lang,
+          `Round ${value} to ${digits} decimal ${one ? 'place' : 'places'}.`,
+          `${value} sayısını ${digits} ondalık basamağa yuvarla.`,
+          `Redondea ${value} a ${digits} ${one ? 'cifra decimal' : 'cifras decimales'}.`)
+    hints = [placeHint, say(lang, 'Look at the first digit you will remove. If it is 5 or more, increase the last kept digit; otherwise keep it.', 'Sileceğin ilk rakama bak. 5 veya büyükse tutacağın son basamağı artır; küçükse aynı bırak.', 'Mira la primera cifra que vas a quitar. Si es 5 o más, aumenta la última que conservas; si no, déjala igual.')]
+    key = `${kind}:${units}:${digits}`
+  } else if (kind === 'compare') {
+    // Different printed lengths catch the misconception that more digits means bigger.
+    const short = randInt(1, 29) * 100
+    let long = randInt(1, 2999)
+    if (long === short) long += 1
+    question = say(lang, `Which is greater: ${short / 1000} or ${long / 1000}?`, `Hangisi daha büyük: ${short / 1000} mi, ${long / 1000} mi?`, `¿Cuál es mayor: ${short / 1000} o ${long / 1000}?`)
+    answer = Math.max(short, long) / 1000
+    hints = [say(lang, 'Compare the whole-number parts first, then tenths, hundredths and thousandths.', 'Önce tam kısımları, sonra onda birleri, yüzde birleri ve binde birleri karşılaştır.', 'Compara primero los enteros, luego décimas, centésimas y milésimas.'),
+      say(lang, 'Add zeros at the end of the decimal part; its value stays the same. Compare matching places.', 'Ondalık kısmın sonuna sıfır eklemek değeri değiştirmez. Aynı basamakları karşılaştır.', 'Puedes añadir ceros al final de la parte decimal sin cambiar su valor. Compara las mismas posiciones.')]
+    key = `${kind}:${short}:${long}`
+  } else {
+    const x = Math.max(a, b), y = Math.min(a, b)
+    const add = kind === 'add'
+    question = `${dec(x)} ${add ? '+' : '−'} ${dec(y)} = ?`
+    answer = (add ? x + y : x - y) / scale
+    hints = [say(lang, 'Line up the decimal points. Add zeros at the end if the decimal lengths differ.', 'Ondalık ayıraçlarını alt alta hizala. Ondalık basamak sayıları farklıysa sona sıfır ekle.', 'Alinea los separadores decimales. Añade ceros al final si hay distinta cantidad de cifras decimales.'),
+      say(lang, 'Work from right to left, keeping each place aligned. Regroup when needed; keep the decimal point in line.', 'Sağdan sola, aynı basamaklarla işlem yap. Gerekirse elde veya ödünç alma kullan; ondalık ayıracını hizasında tut.', 'Opera de derecha a izquierda, con las posiciones alineadas. Reagrupa cuando haga falta y conserva el separador alineado.')]
+    key = `${kind}:${x}:${y}:${scale}`
+  }
+  // The format describes the ANSWER, not the topic: "write 0.69 as a percentage" is answered
+  // with 69 and "= ?/1000" with 2042, and declaring those 'decimal' puts a point on the keypad
+  // that the child has no use for and could mistype into.
+  const format = Number.isInteger(answer) ? 'numeric' : 'decimal'
+  return { topic: 'decimals-percentages', level, question_text: question, format, correct_answer: answer, operandKey: `dec:${key}`, hint_steps: hints }
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -3089,6 +3233,7 @@ const REGISTRY = {
   averages: averagesTemplate,
   'number-properties': numberPropertiesTemplate,
   sequence: sequenceTemplate,
+  'decimals-percentages': decimalsPercentagesTemplate,
 }
 
 export { SHAPES }
