@@ -1155,11 +1155,30 @@ function genAnalogy(r, band, seed) {
   if (steps.some(st => geometryKey({ ...b, [st.attr]: a[st.attr] }) === geometryKey(b)
     || geometryKey({ ...answer, [st.attr]: c[st.attr] }) === geometryKey(answer))) return null
 
-  const options = [
-    { spec: answer, why: null },
+  // A, B and C were all offered verbatim. Each names a real mistake — the transform not
+  // applied, applied to the wrong figure, applied to neither — but all three are already on
+  // the page above, and a child who notices that the answer is never something already shown
+  // does not have to reason at all. Measured before this: every analogy question at every
+  // band offered exactly three copies, so at 5-6 (four options) the answer was the ONLY
+  // figure not already visible and pure elimination scored 100%; from 7-8 up it scored 50%
+  // against 20% for guessing.
+  //
+  // One is kept from 7-8 up, because the mistake it names is worth catching and one copy out
+  // of five is not a strategy. Which one rotates, so it is not always the same shortcut, and
+  // the rest of the set is filled by the spare loop below with figures nobody has seen.
+  //
+  // The youngest band keeps none. It has four options rather than five, so one copy is a
+  // third of what is left rather than a fifth, and a five-year-old is the likeliest to notice
+  // "the answer is never one that is already up there" and least in need of a distractor that
+  // names a misconception to them.
+  const misreads = shuffle(r, [
     { spec: { ...c }, why: ruleAttr },          // transform not applied
     { spec: { ...b }, why: cAttrs[0] },         // transform applied to the wrong figure
     { spec: { ...a }, why: 'both' },
+  ])
+  const options = [
+    { spec: answer, why: null },
+    ...(band.options > 4 ? [misreads[0]] : []),
   ]
   // With two steps there is a mistake that does not exist with one: carrying half the transform
   // across. It is the strongest distractor in the set, so it is offered before the spares below.
@@ -1169,15 +1188,53 @@ function genAnalogy(r, band, seed) {
       options.push({ spec: half, why: steps[1].attr })
     }
   }
+  // Fresh figures first, and a misread the child can already see only when there is no fresh
+  // one left. Preferring fresh USED to mean discarding the question when the spare pool ran
+  // dry, which cost about one analogy in a thousand — a question the child never sees is a
+  // worse outcome than a second familiar option in the set, and the audit reads that loss as
+  // a failure rather than a trade.
+  // The spares are drawn once, across ALL the usable attributes, rather than re-rolled per
+  // slot. Re-rolling shuffled the same list each time and `find` took the first usable entry,
+  // so the second slot kept proposing the figure the first had already taken — which did not
+  // show while only one spare was needed and became the common case the moment three were.
+  const singles = shuffle(r, usableAttrs(r, band, answer, moved))
+    .filter(at => !moved.some(m => heldApart(m, at)))
+    .map(at => [at, otherValue(r, band, answer, at)])
+    .filter(([, v]) => v !== null)
+  // Pairs, after the singles are used up. One attribute at a time ran dry often enough to
+  // matter: at 5-6 fifteen per cent of questions came out with the answer as the ONLY figure
+  // not already on the page, which is the whole defect this block exists to fix, surviving in
+  // the tail. Two attributes at once is still a plain wrong answer — it varies the answer on
+  // things the rule does not touch — and there are many more of them.
+  // …and screened against the three figures already on the page. A spare is the answer varied
+  // on something the rule does not touch, and one of those variations is B exactly: B is the
+  // answer with C's distinguishing attribute put back to A's value. So the loop that was there
+  // to add unseen figures was quietly handing back a seen one, which is why removing the three
+  // deliberate copies still left about one and a half per question.
+  const onPage = q => [a, b, c].some(x => samePicture(x, q.spec))
+  const spares = [
+    ...singles.map(([at, v]) => ({ spec: { ...answer, [at]: v }, why: at })),
+    ...singles.flatMap(([a1, v1], i) => singles.slice(i + 1)
+      .filter(([a2]) => !heldApart(a1, a2))
+      .map(([a2, v2]) => ({ spec: { ...answer, [a1]: v1, [a2]: v2 }, why: a1 }))),
+    // Last resort before falling back to something already on the page: move the rule's OWN
+    // attribute to a third value. "Applied the transform, but not to where it lands" is a real
+    // misreading and it is guaranteed fresh — it is neither A's value nor the answer's.
+    ...moved.flatMap(m => {
+      const v = otherValue(r, band, answer, m)
+      return v === null || valueKey(v) === valueKey(a[m]) ? [] : [{ spec: { ...answer, [m]: v }, why: m }]
+    }),
+  ].filter(x => !onPage(x))
+  let spareMisread = band.options > 4 ? 1 : 0
   while (options.length < band.options) {
-    const spare = shuffle(r, usableAttrs(r, band, answer, moved))
-      .filter(at => !moved.some(m => heldApart(m, at)))
-      .map(at => [at, otherValue(r, band, answer, at)])
-      .find(([, v]) => v !== null)
-    if (!spare) return null
-    const cand = { ...answer, [spare[0]]: spare[1] }
-    if (options.some(o => geometryKey(o.spec) === geometryKey(cand))) return null
-    options.push({ spec: cand, why: spare[0] })
+    const taken = new Set(options.map(o => geometryKey(o.spec)))
+    const next = spares.find(o => !taken.has(geometryKey(o.spec)))
+    if (next) { options.push(next); continue }
+    // Only once the fresh figures really are exhausted: a question the child never sees is a
+    // worse outcome than a second familiar option in the set.
+    const fallback = misreads[spareMisread++]
+    if (!fallback || taken.has(geometryKey(fallback.spec))) return null
+    options.push(fallback)
   }
   if (new Set(options.map(o => geometryKey(o.spec))).size !== options.length) return null
 
