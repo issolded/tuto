@@ -172,6 +172,17 @@ for (const age of AGES) {
           // There is no minus key.
           fail(where, 'negatif cevap, tuş takımında eksi yok', p.question_text)
         }
+        // The sharing picture is the automatic help for ages eight and under, and it is
+        // dropped above a size limit. A question those children can be asked that loses its
+        // picture leaves them with written steps at the moment they just got it wrong — which
+        // is what "50 pencils among 5 friends" did, for a fifth of Year 3's division.
+        // A division word problem is recognised by the shape of its answer, not by its
+        // operandKey — that key is a bare "5,40" pair with no prefix, which is why the first
+        // version of this check never fired.
+        if (age <= 8 && (tt === 'division-word' || tt === 'long-mult-div')
+            && /\bshares\b|\bpaylaş|\breparte\b/.test(p.question_text) && !p.visual) {
+          fail(where, 'paylaştırma görseli düştü (sınırın üstünde)', p.question_text)
+        }
         // 3. hint must not hand over the answer
         if (hintLeaksAnswer(p)) fail(where, 'ipucu cevabı söylüyor', `${p.question_text} → ${p.correct_answer}`)
         // A grid question is answered from the same filled cells the child sees. This catches

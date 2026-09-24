@@ -144,7 +144,17 @@ export function isCountable(a, b) {
 // The equal-sharing picture draws one object per unit and splits them into groups. That reads
 // at 20 shared among 4; at 300 shared among 12 it is a screenful of dots nobody can count, so
 // past this the help falls back to the written steps the template already carries.
-const SHAREABLE_LIMIT = 48
+//
+// It was 48, which is below what the children who SEE this picture are actually asked. The
+// picture lives inside HelpPanel and HelpPanel opens for ages eight and under, so the largest
+// number that can ever reach it is Year 3's ceiling: a 2-digit number divided by a 1-digit
+// one, up to 96. At 48 roughly a fifth of Year 3's division questions lost their picture —
+// "50 pencils among 5 friends" had none, which is how this was reported. 88 among 8 was
+// rendered and read cleanly, so the ceiling is the curriculum's, not the drawing's.
+//
+// The coupling is checked rather than remembered: math:check fails if any question a child of
+// eight or under can be asked carries a share that this limit would drop.
+const SHAREABLE_LIMIT = 100
 function shareVisual(total, groups, highlight) {
   if (total > SHAREABLE_LIMIT) return null
   return highlight ? { kind: 'share', total, groups, highlight } : { kind: 'share', total, groups }
