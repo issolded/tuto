@@ -74,8 +74,10 @@ export default function MathChart({ visual: v, language = 'en', description }) {
   // a heading row, one row per choice, and a "?" where the missing number goes. The "?" is
   // the question itself, so it is marked from the start rather than only under a hint.
   if (v.shape === 'table') {
-    const labelW = 120
-    const colW = 78
+    // A two-column survey keeps its roomy columns; a four-train timetable narrows them so the
+    // whole table stays inside the frame.
+    const labelW = v.cols.length > 2 ? 104 : 120
+    const colW = Math.min(78, Math.floor((W - 12 - labelW) / v.cols.length))
     const rowH = 36
     const tw = labelW + colW * v.cols.length
     const th = rowH * (v.rows.length + 1)
@@ -83,7 +85,7 @@ export default function MathChart({ visual: v, language = 'en', description }) {
     const oy = (H - th) / 2
     // `fill` goes in the style, not as an attribute: a style fill wins over the attribute, and
     // the first version drew the "?" in ink because of it.
-    const cellText = c => ({ font: '700 16px Nunito, sans-serif', fill: c == null ? ORANGE : INK })
+    const cellText = c => ({ font: `700 ${colW < 60 ? 13 : 16}px Nunito, sans-serif`, fill: c == null ? ORANGE : INK })
     return (
       <Figure description={description} language={language} scale={false}>
         <g>
@@ -94,12 +96,12 @@ export default function MathChart({ visual: v, language = 'en', description }) {
           )))}
           {v.cols.map((c, ci) => (
             <text key={c} x={ox + labelW + ci * colW + colW / 2} y={oy + rowH / 2} textAnchor="middle"
-              dominantBaseline="middle" style={{ font: '700 14px Nunito, sans-serif' }} fill={TEAL}>{c}</text>
+              dominantBaseline="middle" style={{ font: `700 ${colW < 60 ? 12 : 14}px Nunito, sans-serif`, fill: TEAL }}>{c}</text>
           ))}
           {v.rows.map((r, ri) => (
             <g key={r.label}>
-              <text x={ox + 10} y={oy + rowH * (ri + 1.5)} dominantBaseline="middle"
-                style={{ font: '700 14px Nunito, sans-serif' }} fill={INK}>{r.label}</text>
+              <text x={ox + 8} y={oy + rowH * (ri + 1.5)} dominantBaseline="middle"
+                style={{ font: `700 ${v.cols.length > 2 ? 12 : 14}px Nunito, sans-serif`, fill: INK }}>{r.label}</text>
               {r.cells.map((c, ci) => (
                 <text key={ci} x={ox + labelW + ci * colW + colW / 2} y={oy + rowH * (ri + 1.5)} textAnchor="middle"
                   dominantBaseline="middle" style={cellText(c)}>{c == null ? '?' : c}</text>

@@ -81,6 +81,36 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] 7-9 yaş Bond biçimine geçti, görsellerle (2026-09-24 gece, Claude). Kaynak *Bond Assessment
+      Papers Maths 7-8* (22 kâğıt) ve *Bond 10 Minute Tests Maths 8-9* (28 test), ikisi de baştan
+      sona okundu; not dökümü oturumun scratchpad'inde (`NOTES-bond-young.md`), kitaplar repoda yok.
+      **Ölçüm önce:** Year 2-4'te toplama, çıkarma ve bölme konu başına TEK biçimdi (`68 + 25 = ?`),
+      çarpma üç (aynı cümle, isim değişiyor); oturum başına ~2,2 çıplak işlem, 7 yaşta 0 şıklı soru.
+      Kitapların sorduğu biçimlerin çoğu hiç yoktu: eksik sayı/işaret, iki adımlı hikâye, kalanı
+      yuvarlama (7-8 kitabı Paper 15), ölçek okuma, taralı kesir, koordinat (Year 4 müfredatında
+      yazılı ama sorusu yoktu), simetri, dik açı, 3B cisim, çetele, fiyat listesi, süre/tarife.
+      **Yeni:** `components/MathFigure.jsx` — cetvel (kalem sıfırdan), ölçü kabı, termometre, tartı,
+      sayı doğrusu (yalnız uçlar etiketli), taralı şekil (şerit/ızgara/daire), koordinat ızgarası,
+      3B cisimler (gizli ayrıtlar kesikli), çetele, çokgenler (ipucunda simetri eksenleri/dik açı
+      işaretleri, 3 denemeden sonra), fiyat etiketleri, dijital saat. Şablonlarda bir "young"
+      bölümü: her konu düz biçimini bir pay olarak tutuyor, gerisi kitabın biçimleri — işaret
+      sorusunun cevabı konunun kendi işareti (çıkarma slotunda cevap ÷ çıkmıyor). Kâğıt modu
+      eskiden hiç görsel basmıyordu (saat, grafik, ızgara soruları kâğıtta resimsizdi) — artık
+      `QuestionPicture` basıyor; yardım paneli de soruyu değiştirdiği için görseli kendisi çiziyor.
+      **Yan düzeltmeler:** grafik soruları ay etiketini gün gibi okuyordu ("Eki günü Ara gününden"),
+      İspanyolca "¿Cuántos personas", Türkçe cümle başı küçük harf; "4'şer" dağıtma eki (`trDist`);
+      8 yaşa "Bir elma 418 kuruş" çıkaran para üstü şekli ölçüden alındı (dükkân listesi geçti).
+      **Sonra:** çıplak işlem 2,2 → 0,67/oturum; şıklı soru 7 yaşta 0 → 1,4; biçim sayısı konu
+      başına 1-3 → 7-30 (bölme 7 yaşta 2). `math:check` üç yeni kontrol: resimden söz eden soru
+      görselsiz olamaz (cismin adı sorusu bir gün resimsiz çıkmıştı), ölçek okuması = cevap, taralı
+      parça sayısı = cevap. Doğrulama: math:check 3 dil × 2000 soru/konu bulgu yok, Vite build,
+      font:check, i18n:check değişmedi (38); 17 görsel × 3 dil 390px'te tarayıcıda, yardım paneli
+      görselle; 7/8/9 yaş × 4 oturum EN + 2 oturum TR elle okundu.
+      **Kapsam dışı kalanlar:** Venn/Carroll diyagramı, yarım sembollü piktogram, çizim/işaretleme
+      gerektiren sorular ("saate akrebi çiz", "C noktasını işaretle", "şeklin 6/9'unu boya"),
+      Roma rakamı 100'ün üstü. Gerçek MathScreen oturumu (Supabase'li) tarayıcıda görülmedi — lab'da
+      ve derlemede doğrulandı.
+
 - [x] 10-11 yaş dört işlem Bond biçimine geçti (2026-09-24, Claude). Kaynak *Bond Maths 10 Minute
       Tests 10-11* (yaklaşık 200 soru okundu; taramada 18, 22, 23. testler eksik). Kitapta çıplak
       "a + b = ?" **hiç yok**; toplama/çıkarma hep bağlam içinde ve çoğu iki adımlı, büyük sayı

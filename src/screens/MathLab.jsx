@@ -1,5 +1,6 @@
 import MathGeometry from '../components/MathGeometry'
 import MathChart from '../components/MathChart'
+import MathFigure from '../components/MathFigure'
 import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
 import { generateProblem, TOPICS, dnum } from '../lib/mathTemplates'
@@ -90,6 +91,7 @@ export default function MathLab() {
         <div style={{ background: 'white', borderRadius: 12, marginBottom: 12 }}>
           <MathGeometry visual={problem.visual} language={lang} hint={hintShown > 0} description={problem.question_text} />
           <MathChart visual={problem.visual} language={lang} description={problem.question_text} />
+          <MathFigure visual={problem.visual} language={lang} hint={hintShown > 0} description={problem.question_text} />
         </div>
         <div style={{ fontSize: 18, marginBottom: 16 }}>{problem.question_text}</div>
 

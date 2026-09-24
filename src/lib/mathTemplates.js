@@ -65,6 +65,10 @@ function pickL(bank, lang) {
 // It was a local `tr` taking two phrasings, which is why the rename: with three languages a
 // name that means "the Turkish one" reads as a bug at every one of its call sites.
 
+// Capitalise a sentence that starts with a word from a bank ("atılan gol grafiğine bak" was
+// printed lower-case). Turkish rules, so "ı" stays dotless and "i" becomes "İ".
+const cap = s => s.charAt(0).toLocaleUpperCase('tr') + s.slice(1)
+
 function pairKey(a, b) {
   return [a, b].sort((x, y) => x - y).join(',')
 }
@@ -285,7 +289,10 @@ function partitionSteps(a, b, add, lang) {
 // `columnar` is paper mode asking for the numbers back at full width. On screen the second
 // operand is partitionable; on paper it is whatever the band allows, because a formal written
 // method is exactly what the curriculum wants there and paper is what it needs.
-function additionTemplate(level, lang, columnar = false) {
+function additionTemplate(level, lang, columnar = false, plain = false) {
+  // Years 2-4 mix in the book's shapes (see youngAddSub); `plain` is that mix asking for this one.
+  const yb = bandForLevel(level)
+  if (!plain && yb >= 2 && yb <= 4) return youngAddSub(level, lang, true, columnar)
   const { min, max } = rangeForLevel(level)
   // Both operands used to be drawn from the whole range, so the SUM could reach twice the
   // band's ceiling — "Addition within 20" handing over 17 + 16. The ceiling belongs to the
@@ -349,7 +356,9 @@ function countingOnSteps(a, b, lang) {
 
 // ─── Subtraction ────────────────────────────────────────────────────────────
 
-function subtractionTemplate(level, lang, columnar = false) {
+function subtractionTemplate(level, lang, columnar = false, plain = false) {
+  const yb = bandForLevel(level)
+  if (!plain && yb >= 2 && yb <= 4) return youngAddSub(level, lang, false, columnar)
   const { min, max } = rangeForLevel(level)
   // a is the larger operand, kept non-negative. Both bounds matter: drawing a uniformly
   // from the whole range put it near the floor half the time, and b then had nowhere to sit
@@ -495,6 +504,9 @@ function multiplicationWordTemplate(level, lang) {
   const band = bandForLevel(level)
   // From Year 5 the numbers belong to the story; see contextMultiplication.
   if (band >= 5) return contextMultiplication(level, lang)
+  // Years 2-4: the book's stories and missing factors take most slots; null keeps this one.
+  const young = band >= 2 ? youngMultiplication(level, lang) : null
+  if (young) return young
   const tables = band >= 4 ? [6, 7, 8, 9, 11, 12] : band >= 3 ? [3, 4, 8] : [2, 5, 10]
   const table = pick(tables)
   // Tables are taught to twelve, and stopping the multiplier at ten left the "x2 x5 x10"
@@ -712,12 +724,15 @@ function fractionAddDifferent(level, lang) {
 // how both Bond books are balanced.
 function fractionOfNumberTemplate(level, lang) {
   const band = bandForLevel(level)
-  const shapes = band <= 2 ? ['ofNumber']
-    : band <= 3 ? ['ofNumber', 'addSame', 'compare']
-      : band <= 4 ? ['ofNumber', 'addSame', 'compare', 'decimal']
+  // 'shaded' — a drawn shape with some parts coloured — is the fraction question both of
+  // Bond's younger books ask most, and every year from 1 to 4 names fractions "of a shape".
+  const shapes = band <= 2 ? ['ofNumber', 'shaded', 'shaded']
+    : band <= 3 ? ['ofNumber', 'addSame', 'compare', 'shaded', 'shaded']
+      : band <= 4 ? ['ofNumber', 'addSame', 'compare', 'decimal', 'shaded']
         : band <= 6 ? ['percentOf', 'percentOf', 'simplify', 'addDifferent', 'decimal', 'compare', 'ofNumber']
           : ['percentOf', 'percentChange', 'percentChange', 'simplify', 'addDifferent', 'decimal']
   const shape = pick(shapes)
+  if (shape === 'shaded') return fractionShaded(level, lang)
   if (shape === 'addSame') return fractionAddSame(level, lang)
   if (shape === 'compare') return fractionCompare(level, lang)
   if (shape === 'decimal') return fractionDecimal(level, lang)
@@ -958,6 +973,8 @@ function divisionWordTemplate(level, lang) {
   // From Year 5: context-sized numbers and remainders; see contextDivision. Year 6's two-digit
   // divisors ("divide up to 4 digits by a 2-digit number using long division") live there too.
   if (band >= 5) return contextDivision(level, lang)
+  const young = band >= 2 ? youngDivision(level, lang) : null
+  if (young) return young
   const b = band >= 3 ? pick([2, 3, 4, 5, 6, 8]) : pick([2, 3, 4, 5])
   const multiplier = randInt(band >= 3 ? 3 : 2, band >= 3 ? 12 : 9)
   const a = b * multiplier
@@ -1463,6 +1480,7 @@ function shuffled(arr) {
 
 function pictogramTemplate(level, lang) {
   const band = bandForLevel(level)
+  if (band >= 2 && Math.random() < 0.35) return dataTally(level, lang)
   const set = pick(PICTO_SETS)
   const words = set[lang] ?? set.en
   const { noun, verb } = words
@@ -1913,6 +1931,10 @@ function geometryTemplate(level, lang) {
   // From Year 5 the topic is no longer "how many sides" — the curriculum names angles and
   // area, and counting corners at eleven is not the same question wearing a bigger number.
   if (band >= 5) return Math.random() < 0.55 ? geometryAngle(level, lang) : geometryArea(level, lang)
+  // Years 3 and 4: solids, right angles, turns, symmetry and coordinates (geometryYoung); null
+  // keeps the sides-and-corners and naming questions below for a share of the slots.
+  const young = band >= 3 ? geometryYoung(level, lang) : null
+  if (young) return young
   if (band >= 4 && Math.random() < 0.4) return geometryName(level, lang)
   // Shapes occupy a single rung on the ladder, so difficulty does not ride on the level
   // number — the rung presents its own whole range instead. Both askings, all six shapes,
@@ -1986,7 +2008,7 @@ function countingTemplate(level, lang) {
   // Year 2 child in the same session as a four-digit sum. Past the first year it is a number
   // -line topic, not a counting-objects one: one more, ten more, and the steps of 2s, 5s and
   // 10s the curriculum actually names.
-  if (bandForLevel(level) >= 2) return numberLineTemplate(level, lang)
+  if (bandForLevel(level) >= 2) return youngPlaceValue(level, lang) ?? numberLineTemplate(level, lang)
 
   if (Math.random() < 0.65) {
     const n = randInt(1, 10)
@@ -2108,6 +2130,9 @@ function minuteChoicesForBand(band) {
 
 function timeTemplate(level, lang) {
   const band = bandForLevel(level)
+  // Years 2 and 3 add the book's time questions: what time it will be, how long between two
+  // times, a timetable, a watch that is fast. The clock-reading shapes below keep the rest.
+  if (band >= 2 && Math.random() < 0.45) return timeYoung(level, lang)
   const h = randInt(1, 12)
   const next = h === 12 ? 1 : h + 1
   const shapes = band <= 1 ? ['hour', 'halfPast', 'later']
@@ -2544,6 +2569,8 @@ function placeCompare(level, lang) {
 
 function placeValueTemplate(level, lang) {
   const band = bandForLevel(level)
+  const young = band >= 3 && band <= 4 ? youngPlaceValue(level, lang) : null
+  if (young) return young
   // Year 3 does not round and does not use negative numbers — both arrive in Year 4 — so its
   // band gets its own three shapes rather than a softened version of the others.
   const shapes = band <= 3
@@ -3748,6 +3775,7 @@ function moneyMakeValue(level, lang) {
 }
 
 function moneyTemplate(level, lang) {
+  if (bandForLevel(level) >= 2 && Math.random() < 0.4) return moneyShop(level, lang)
   const shape = pick(['change', 'change', 'combine', 'combine', 'make'])
   if (shape === 'combine') return moneyCombine(level, lang)
   if (shape === 'make') return moneyMakeValue(level, lang)
@@ -3895,13 +3923,18 @@ function measurementTemplate(level, lang, columnar) {
     const r = Math.random()
     if (r < 0.3) return timeTemplate(level, lang, columnar)
     if (r < 0.45) return moneyCombine(level, lang)
+    if (r < 0.65) return measureReading(level, lang)
     return measureDifference(level, lang)
   }
   // Year 3: units, perimeter, and money change — all three are in its line.
-  const shape = pick(['convert', 'convert', 'difference', 'perimeter', 'change'])
+  // Reading a scale is the measuring question both books ask most, and it could not be asked
+  // until there was something to draw it with.
+  // Change is asked through the shop now: the old shape priced an apple at 418 cents.
+  const shape = pick(['convert', 'convert', 'difference', 'perimeter', 'read', 'read', 'read', 'shop', 'shop'])
+  if (shape === 'read') return measureReading(level, lang)
+  if (shape === 'shop') return moneyShop(level, lang)
   if (shape === 'difference') return measureDifference(level, lang)
   if (shape === 'perimeter') return measurePerimeter(level, lang)
-  if (shape === 'change') return moneyChange(level, lang)
   return measureConvert(level, lang)
 }
 
@@ -3999,21 +4032,28 @@ function areaGridTemplate(level, lang) {
 // The question never prints the value it asks for. A chart with its numbers written on it is
 // a subtraction question with a picture behind it, and the topic is reading the chart.
 
+// The axis carries the short label; the question says the day or month in full, with the
+// preposition the language puts in front of it. The questions used to reuse the axis label and
+// the day's grammar for everything: "Eki günü Ara gününden kaç gol fazla?" ("on October-day")
+// and "¿Cuántos goles el Oct?".
+const EN_DAYS = ['on Monday', 'on Tuesday', 'on Wednesday', 'on Thursday', 'on Friday']
+const TR_DAYS = ['pazartesi', 'salı', 'çarşamba', 'perşembe', 'cuma']
+const ES_DAYS = ['el lunes', 'el martes', 'el miércoles', 'el jueves', 'el viernes']
 const CHART_SETS = {
   en: [
-    { what: 'books borrowed', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'books' },
-    { what: 'goals scored', labels: ['Sep', 'Oct', 'Nov', 'Dec'], unit: 'goals' },
-    { what: 'visitors', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'people' },
+    { what: 'books borrowed', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'books', at: EN_DAYS },
+    { what: 'goals scored', labels: ['Sep', 'Oct', 'Nov', 'Dec'], unit: 'goals', at: ['in September', 'in October', 'in November', 'in December'] },
+    { what: 'visitors', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'people', at: EN_DAYS },
   ],
   tr: [
-    { what: 'ödünç alınan kitap', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kitap' },
-    { what: 'atılan gol', labels: ['Eyl', 'Eki', 'Kas', 'Ara'], unit: 'gol' },
-    { what: 'ziyaretçi', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kişi' },
+    { what: 'ödünç alınan kitap', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kitap', at: TR_DAYS.map(d => `${d} günü`), from: TR_DAYS.map(d => `${d} gününden`) },
+    { what: 'atılan gol', labels: ['Eyl', 'Eki', 'Kas', 'Ara'], unit: 'gol', at: ['eylülde', 'ekimde', 'kasımda', 'aralıkta'], from: ['eylülden', 'ekimden', 'kasımdan', 'aralıktan'] },
+    { what: 'ziyaretçi', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kişi', at: TR_DAYS.map(d => `${d} günü`), from: TR_DAYS.map(d => `${d} gününden`) },
   ],
   es: [
-    { what: 'libros prestados', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'libros' },
-    { what: 'goles marcados', labels: ['Sep', 'Oct', 'Nov', 'Dic'], unit: 'goles' },
-    { what: 'visitantes', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'personas' },
+    { what: 'libros prestados', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'libros', at: ES_DAYS },
+    { what: 'goles marcados', labels: ['Sep', 'Oct', 'Nov', 'Dic'], unit: 'goles', at: ['en septiembre', 'en octubre', 'en noviembre', 'en diciembre'] },
+    { what: 'visitantes', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'personas', at: ES_DAYS, many: 'Cuántas' },
   ],
 }
 
@@ -4105,17 +4145,17 @@ function chartTemplate(level, lang) {
 
   const spec = {
     read: {
-      q: say(lang, `How many ${set.unit} on ${set.labels[i1]}?`,
-                   `${set.labels[i1]} günü kaç ${set.unit}?`,
-                   `¿Cuántos ${set.unit} el ${set.labels[i1]}?`),
+      q: say(lang, `How many ${set.unit} ${set.at[i1]}?`,
+                   `${cap(set.at[i1])} kaç ${set.unit}?`,
+                   `¿${set.many ?? 'Cuántos'} ${set.unit} ${set.at[i1]}?`),
       a: values[i1], highlight: [set.labels[i1]],
       h: [say(lang, `Find ${set.labels[i1]} along the bottom.`, `Alt tarafta ${set.labels[i1]} etiketini bul.`, `Busca ${set.labels[i1]} en la parte de abajo.`),
           say(lang, `Follow it up, then read straight across to the numbers on the left.`, `Yukarı doğru takip et, sonra soldaki sayılara doğru düz git.`, `Súbelo y luego lee en línea recta hacia los números de la izquierda.`)],
     },
     difference: {
-      q: say(lang, `How many more ${set.unit} on ${set.labels[hi]} than on ${set.labels[lo]}?`,
-                   `${set.labels[hi]} günü ${set.labels[lo]} gününden kaç ${set.unit} fazla?`,
-                   `¿Cuántos ${set.unit} más el ${set.labels[hi]} que el ${set.labels[lo]}?`),
+      q: say(lang, `How many more ${set.unit} ${set.at[hi]} than ${set.at[lo]}?`,
+                   `${cap(set.at[hi])}, ${set.from?.[lo]} kaç ${set.unit} fazla?`,
+                   `¿${set.many ?? 'Cuántos'} ${set.unit} más ${set.at[hi]} que ${set.at[lo]}?`),
       a: values[hi] - values[lo], highlight: [set.labels[hi], set.labels[lo]],
       h: [say(lang, `Read both of them off the chart first.`, `Önce ikisini de grafikten oku.`, `Lee primero los dos en el gráfico.`),
           say(lang, `"How many more" is the gap between them, so take the smaller from the larger.`, `"Kaç fazla" aradaki farktır, küçüğü büyükten çıkar.`, `"Cuántos más" es la diferencia: resta el menor del mayor.`)],
@@ -4123,7 +4163,7 @@ function chartTemplate(level, lang) {
     total: {
       q: say(lang, `How many ${set.unit} altogether across all ${values.length}?`,
                    `Hepsinde toplam kaç ${set.unit}?`,
-                   `¿Cuántos ${set.unit} hay en total entre los ${values.length}?`),
+                   `¿${set.many ?? 'Cuántos'} ${set.unit} hay en total entre los ${values.length}?`),
       a: values.reduce((x, y) => x + y, 0), highlight: [],
       h: [say(lang, `Read each one off the chart and write it down before adding.`, `Her birini grafikten okuyup yaz, sonra topla.`, `Lee cada uno del gráfico y anótalo antes de sumar.`),
           say(lang, `Add them in pairs that make a round number if you can.`, `Yuvarlak sayı yapan çiftleri önce topla.`, `Suma primero las parejas que den un número redondo.`)],
@@ -4131,7 +4171,7 @@ function chartTemplate(level, lang) {
     most: {
       q: say(lang, `How many ${set.unit} were there on the busiest one?`,
                    `En yoğun olanında kaç ${set.unit} vardı?`,
-                   `¿Cuántos ${set.unit} hubo en el de más?`),
+                   `¿${set.many ?? 'Cuántos'} ${set.unit} hubo en el de más?`),
       a: values[iMax], highlight: [set.labels[iMax]],
       h: [say(lang, `Find the tallest one first.`, `Önce en yükseğini bul.`, `Busca primero el más alto.`),
           say(lang, `Then read its height off the numbers on the left.`, `Sonra yüksekliğini soldaki sayılardan oku.`, `Luego lee su altura en los números de la izquierda.`)],
@@ -4147,7 +4187,7 @@ function chartTemplate(level, lang) {
                 `Grafik ${set.what} sayısını gösteriyor. ${spec.q}`,
                 `El gráfico muestra los ${set.what}. ${spec.q}`),
       say(lang, `Look at the chart of ${set.what}. ${spec.q}`,
-                `${set.what} grafiğine bak. ${spec.q}`,
+                `${cap(set.what)} grafiğine bak. ${spec.q}`,
                 `Mira el gráfico de ${set.what}. ${spec.q}`),
       say(lang, `This is a record of the ${set.what}. ${spec.q}`,
                 `Bu, ${set.what} kaydıdır. ${spec.q}`,
@@ -4266,6 +4306,1407 @@ function decimalsPercentagesTemplate(level, lang) {
   return { topic: 'decimals-percentages', level, question_text: question, format, correct_answer: answer, operandKey: `dec:${key}`, hint_steps: hints }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Years 2 to 4 (ages 7-9): the questions Bond's 7-8 and 8-9 books ask
+// ═══════════════════════════════════════════════════════════════════════════════
+// Measured before this section was written: those three years had one shape of addition
+// ("68 + 25 = ?"), one of subtraction, one of division and three of multiplication, all of them
+// the same sentence with the nouns swapped. Bond's Assessment Papers 7-8 and 10 Minute Tests 8-9
+// ask the same arithmetic in a dozen ways — a missing number ("? + 650 = 1000"), the missing
+// sign ("22 ? 19 = 41"), a story that takes two steps, a remainder that has to be rounded the
+// right way ("30 children, 4 to a car"), a scale to read, a shape with some of it shaded, a grid,
+// a tally chart. A child can be fluent at "68 + 25" and lost at every one of those, which is why
+// the books ask them.
+//
+// Each topic keeps a share of its plain shape — the fluency still has to be practised — and
+// takes the rest from the book's shapes, scaled to the child's year.
+
+// A choice option. Every wrong one carries the mistake it stands for, the same contract the
+// fraction templates keep: a wrong answer is told WHY it is wrong, not just that it is.
+const opt = (value, why) => ({ value: String(value), why })
+
+// Options in a stable, meaningful order where the values have one (numbers, times), shuffled
+// otherwise, with duplicates of the right answer's VALUE removed rather than trusted away.
+function choiceOf(right, wrongs, { sort = null } = {}) {
+  const seen = new Set([right.value])
+  const out = [right]
+  for (const w of wrongs) {
+    if (!w || seen.has(w.value)) continue
+    seen.add(w.value)
+    out.push(w)
+    if (out.length === 4) break
+  }
+  return sort ? out.sort(sort) : shuffle(out)
+}
+
+// ── number words ──────────────────────────────────────────────────────────────
+// "Write two hundred and two in figures" is in both books, and so is the reverse. English is
+// the British form the books print ("nine thousand, seven hundred and three"); Turkish drops
+// "bir" before yüz and bin; Spanish has its own words to 29 and its irregular hundreds.
+const EN_ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+const EN_TENS_W = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+const TR_ONES = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz']
+const TR_TENS_W = ['', 'on', 'yirmi', 'otuz', 'kırk', 'elli', 'altmış', 'yetmiş', 'seksen', 'doksan']
+const ES_TO_29 = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez',
+  'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve',
+  'veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis',
+  'veintisiete', 'veintiocho', 'veintinueve']
+const ES_TENS_W = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa']
+const ES_HUNDREDS = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos',
+  'setecientos', 'ochocientos', 'novecientos']
+
+export function numberWords(n, lang = 'en') {
+  if (lang === 'tr') {
+    if (n === 0) return 'sıfır'
+    const parts = []
+    const th = Math.floor(n / 1000), h = Math.floor((n % 1000) / 100), t = Math.floor((n % 100) / 10), o = n % 10
+    if (th) parts.push(th === 1 ? 'bin' : `${TR_ONES[th]} bin`)
+    if (h) parts.push(h === 1 ? 'yüz' : `${TR_ONES[h]} yüz`)
+    if (t) parts.push(TR_TENS_W[t])
+    if (o) parts.push(TR_ONES[o])
+    return parts.join(' ')
+  }
+  if (lang === 'es') {
+    const under100 = m => m < 30 ? ES_TO_29[m] : `${ES_TENS_W[Math.floor(m / 10)]}${m % 10 ? ` y ${ES_TO_29[m % 10]}` : ''}`
+    const under1000 = m => {
+      if (m === 100) return 'cien'
+      const h = Math.floor(m / 100), r = m % 100
+      return [h ? ES_HUNDREDS[h] : '', r ? under100(r) : ''].filter(Boolean).join(' ')
+    }
+    if (n === 0) return 'cero'
+    const th = Math.floor(n / 1000), r = n % 1000
+    return [th ? (th === 1 ? 'mil' : `${under1000(th)} mil`) : '', r ? under1000(r) : ''].filter(Boolean).join(' ')
+  }
+  const under100 = m => m < 20 ? EN_ONES[m] : `${EN_TENS_W[Math.floor(m / 10)]}${m % 10 ? `-${EN_ONES[m % 10]}` : ''}`
+  const under1000 = m => {
+    const h = Math.floor(m / 100), r = m % 100
+    if (!h) return under100(r)
+    return `${EN_ONES[h]} hundred${r ? ` and ${under100(r)}` : ''}`
+  }
+  if (n === 0) return 'zero'
+  const th = Math.floor(n / 1000), r = n % 1000
+  if (!th) return under1000(r)
+  if (!r) return `${under1000(th)} thousand`
+  return `${under1000(th)} thousand${r < 100 ? ' and ' : ', '}${under1000(r)}`
+}
+
+// Roman numerals to 100 — Year 4's own line ("read Roman numerals to 100").
+export function roman(n) {
+  const table = [[100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
+  let out = ''
+  for (const [v, s] of table) while (n >= v) { out += s; n -= v }
+  return out
+}
+
+// ── money and time as the reader writes them ──────────────────────────────────
+// The app's money is the reader's (see the money section): dollars in English, lira in Turkish,
+// euros in Spanish. Tags print the major unit with two decimals, the way a shop does.
+function cash(cents, lang) {
+  const s = (cents / 100).toFixed(2)
+  return say(lang, `$${s}`, `${s.replace('.', ',')} TL`, `${s.replace('.', ',')} €`)
+}
+const MAJOR = { en: 'dollars', tr: 'lira', es: 'euros' }
+
+// h:mm on a 12-hour face, hh:mm on a 24-hour clock. Minutes are counted from midnight.
+const hm = (mins, pad = false) => {
+  const m = ((mins % 1440) + 1440) % 1440
+  const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0')
+  return pad ? `${String(h).padStart(2, '0')}:${mm}` : `${((h + 11) % 12) + 1}:${mm}`
+}
+
+// Turkish's distributive suffix, written after digits the way a book does: 2'şer, 3'er, 4'er,
+// 6'şar, 9'ar, 10'ar, 50'şer, 100'er. It follows the last word of the number as it is SAID —
+// a vowel-final word takes -şer/-şar, and the vowel harmonises with the last vowel — so it
+// cannot be one suffix for every number, which is what "Count on in 4s" was doing ("4'şer").
+export function trDist(n) {
+  const words = numberWords(n, 'tr').split(' ')
+  const last = words[words.length - 1]
+  const vowels = last.match(/[aeıioöuü]/g) || ['e']
+  const back = 'aıou'.includes(vowels[vowels.length - 1])
+  const endsVowel = /[aeıioöuü]$/.test(last)
+  return `${n}'${endsVowel ? 'ş' : ''}${back ? 'ar' : 'er'}`
+}
+
+// ── addition and subtraction, ages 7-9 ────────────────────────────────────────
+// The numbers each year works in, and a round number to aim at. "? + 650 = 1000" is the
+// Year 3 question; "? + 38 = 100" the Year 2 one.
+function youngRange(band) {
+  if (band <= 2) return { lo: 11, hi: 99, whole: [50, 60, 80, 100], parts: 2 }
+  if (band === 3) return { lo: 101, hi: 999, whole: [200, 500, 1000], parts: 2 }
+  return { lo: 1001, hi: 9999, whole: [2000, 5000, 10000], parts: 2 }
+}
+
+// A number whose non-zero digits are few enough to hold in the head, drawn inside [lo, hi].
+function partitionable(lo, hi, parts = 2) {
+  let n
+  do { n = randInt(lo, hi) } while (placeParts(n).length > parts)
+  return n
+}
+
+function missingNumber(level, lang, add) {
+  const band = bandForLevel(level)
+  const R = youngRange(band)
+  const toWhole = Math.random() < 0.5
+  let a, b, total
+  if (add) {
+    total = toWhole ? pick(R.whole) : randInt(Math.max(R.lo * 2, 30), R.hi)
+    b = partitionable(Math.round(total * 0.2), Math.round(total * 0.8), R.parts)
+    a = total - b
+    const blankFirst = Math.random() < 0.5
+    const q = blankFirst ? `? + ${num(b, lang)} = ${num(total, lang)}` : `${num(a, lang)} + ? = ${num(total, lang)}`
+    const known = blankFirst ? b : a
+    return {
+      topic: 'addition', level, question_text: q, format: 'numeric', correct_answer: total - known,
+      operandKey: `miss:add:${known}:${total}`,
+      hint_steps: [
+        say(lang, `The missing number and ${num(known, lang)} make ${num(total, lang)} together.`,
+                  `Eksik sayı ile ${num(known, lang)} birlikte ${num(total, lang)} eder.`,
+                  `El número que falta y ${num(known, lang)} suman ${num(total, lang)}.`),
+        say(lang, `So take ${num(known, lang)} away from ${num(total, lang)}, or count up from ${num(known, lang)} to ${num(total, lang)}.`,
+                  `Yani ${num(total, lang)} sayısından ${num(known, lang)} çıkar ya da ${num(known, lang)} sayısından ${num(total, lang)} sayısına kadar say.`,
+                  `Así que resta ${num(known, lang)} de ${num(total, lang)}, o cuenta desde ${num(known, lang)} hasta ${num(total, lang)}.`),
+      ],
+    }
+  }
+  // Subtraction: "74 − ? = 51" and "? − 25 = 22" — the second is the one children find hard,
+  // because the answer is BIGGER than both numbers on the page.
+  const start = toWhole ? pick(R.whole) : randInt(Math.max(R.lo * 2, 30), R.hi)
+  const takeAway = partitionable(Math.round(start * 0.15), Math.round(start * 0.7), R.parts)
+  const left = start - takeAway
+  const blankStart = Math.random() < 0.4
+  if (blankStart) {
+    return {
+      topic: 'subtraction', level,
+      question_text: `? − ${num(takeAway, lang)} = ${num(left, lang)}`, format: 'numeric', correct_answer: start,
+      operandKey: `miss:subA:${takeAway}:${left}`,
+      hint_steps: [
+        say(lang, `Something had ${num(takeAway, lang)} taken away and ${num(left, lang)} was left.`,
+                  `Bir sayıdan ${num(takeAway, lang)} çıkarılmış, geriye ${num(left, lang)} kalmış.`,
+                  `A un número se le quitaron ${num(takeAway, lang)} y quedaron ${num(left, lang)}.`),
+        say(lang, `Put the ${num(takeAway, lang)} back: add it to ${num(left, lang)}.`,
+                  `Çıkarılan ${num(takeAway, lang)} sayısını geri koy: ${num(left, lang)} ile topla.`,
+                  `Devuelve los ${num(takeAway, lang)}: súmalos a ${num(left, lang)}.`),
+      ],
+    }
+  }
+  return {
+    topic: 'subtraction', level,
+    question_text: `${num(start, lang)} − ? = ${num(left, lang)}`, format: 'numeric', correct_answer: takeAway,
+    operandKey: `miss:subB:${start}:${left}`,
+    hint_steps: [
+      say(lang, `How much do you take from ${num(start, lang)} to get down to ${num(left, lang)}?`,
+                `${num(start, lang)} sayısından ne kadar çıkarırsan ${num(left, lang)} kalır?`,
+                `¿Cuánto hay que quitar a ${num(start, lang)} para llegar a ${num(left, lang)}?`),
+      say(lang, `That is the gap between them: count up from ${num(left, lang)} to ${num(start, lang)}.`,
+                `Bu, aradaki farktır: ${num(left, lang)} sayısından ${num(start, lang)} sayısına kadar say.`,
+                `Es la diferencia entre los dos: cuenta desde ${num(left, lang)} hasta ${num(start, lang)}.`),
+    ],
+  }
+}
+
+// "22 ? 19 = 41": which sign makes it true. Year 2 chooses between + and −; from Year 3 the
+// tables are in play, so × and ÷ are offered too — and a question is only asked when exactly
+// one sign works.
+function missingSign(level, lang, lean) {
+  const band = bandForLevel(level)
+  // Year 2 names × with its 2, 5 and 10 tables, so it is the third sign there; ÷ joins at Year 3.
+  const ops = band <= 2 ? ['+', '−', '×'] : ['+', '−', '×', '÷']
+  const calc = (a, o, b) => (o === '+' ? a + b : o === '−' ? a - b : o === '×' ? a * b : (b && a % b === 0 ? a / b : NaN))
+  let a, b, o, r
+  do {
+    // The answer is the topic's own sign — an addition slot asks about +, a subtraction slot
+    // about − — and the other signs are the distractors. Otherwise a parent reading "Subtraction"
+    // sees a question whose answer is ÷.
+    o = lean === 'add' ? '+' : lean === 'sub' ? '−' : pick(ops)
+    if (o === '×' || o === '÷') {
+      const x = band <= 2 ? pick([2, 5, 10]) : randInt(2, band >= 4 ? 12 : 10), y = randInt(2, band >= 4 ? 12 : 10)
+      ;[a, b] = o === '×' ? [x, y] : [x * y, y]
+    } else {
+      // Never both small enough to count: the help panel draws a countable addition as the
+      // sum it is, and this question's sign is the unknown.
+      a = randInt(21, band <= 2 ? 60 : 99); b = randInt(band <= 2 ? 3 : 11, band <= 2 ? 30 : 60)
+      if (o === '−' && b >= a) a += b
+    }
+    r = calc(a, o, b)
+  } while (!Number.isInteger(r) || r <= 0 || ops.filter(p => calc(a, p, b) === r).length !== 1)
+  const why = {
+    '+': say(lang, `${a} + ${b} is ${a + b}, not ${r}.`, `${a} + ${b} = ${a + b} eder, ${r} değil.`, `${a} + ${b} son ${a + b}, no ${r}.`),
+    '−': say(lang, `${a} − ${b} is ${a - b}, not ${r}.`, `${a} − ${b} = ${a - b} eder, ${r} değil.`, `${a} − ${b} son ${a - b}, no ${r}.`),
+    '×': say(lang, `${a} × ${b} is ${a * b}, not ${r}.`, `${a} × ${b} = ${a * b} eder, ${r} değil.`, `${a} × ${b} son ${a * b}, no ${r}.`),
+    '÷': say(lang, `${a} ÷ ${b} does not give ${r}.`, `${a} ÷ ${b}, ${r} etmez.`, `${a} ÷ ${b} no da ${r}.`),
+  }
+  const right = opt(o, say(lang, `Right — ${a} ${o} ${b} = ${r}.`, `Doğru — ${a} ${o} ${b} = ${r}.`, `Correcto: ${a} ${o} ${b} = ${r}.`))
+  return {
+    topic: lean === 'sub' ? 'subtraction' : 'addition', level,
+    question_text: say(lang, `Which sign makes this true? ${a} ? ${b} = ${r}`, `Hangi işaret bunu doğru yapar? ${a} ? ${b} = ${r}`,
+                             `¿Qué signo lo hace correcto? ${a} ? ${b} = ${r}`),
+    format: 'choice',
+    options: ops.map(p => (p === o ? right : opt(p, why[p]))),
+    correct_answer: o,
+    operandKey: `sign:${a}:${b}:${r}`,
+    hint_steps: [
+      say(lang, `Is ${r} bigger or smaller than ${a}?`, `${r}, ${a} sayısından büyük mü küçük mü?`, `¿${r} es mayor o menor que ${a}?`),
+      say(lang, `Bigger means you added or multiplied; smaller means you took away or divided. Try each one.`,
+                `Büyükse topladın ya da çarptın; küçükse çıkardın ya da böldün. Her birini dene.`,
+                `Si es mayor, sumaste o multiplicaste; si es menor, restaste o dividiste. Prueba cada uno.`),
+    ],
+  }
+}
+
+// Stories. Both books' word problems are these: a total and a part, a start and what changed,
+// two amounts to compare. Each year has its own stories, because the context has to own the
+// size of its numbers — strawberries picked in a morning are a Year 2 number, a flight's
+// kilometres a Year 4 one, and swapping them is how "a lorry drives 4,213 km on Monday" happens.
+function youngStory(level, lang, add) {
+  const band = Math.min(Math.max(bandForLevel(level), 2), 4)
+  const name = pickL(MULT_NAMES, lang)
+  const N = n => num(n, lang)
+  const P = (lo, hi) => partitionable(lo, hi, 2)
+  const ADD = {
+    2: [
+      () => { const a = randInt(12, 45), b = P(5, 40); return { a, b, key: 'berries',
+        q: say(lang, `${name} picked ${a} strawberries in the morning and ${b} in the afternoon. How many is that altogether?`,
+                     `${name} sabah ${a}, öğleden sonra ${b} çilek topladı. Toplam kaç çilek eder?`,
+                     `${name} cogió ${a} fresas por la mañana y ${b} por la tarde. ¿Cuántas son en total?`) } },
+      () => { const a = randInt(20, 55), b = P(10, 40); return { a, b, key: 'pages',
+        q: say(lang, `A book has two parts. The first has ${a} pages and the second has ${b} pages. How many pages is that?`,
+                     `Bir kitap iki bölümden oluşuyor. Birinci bölüm ${a}, ikinci bölüm ${b} sayfa. Kitap toplam kaç sayfa?`,
+                     `Un libro tiene dos partes. La primera tiene ${a} páginas y la segunda ${b}. ¿Cuántas páginas son?`) } },
+      () => { const a = randInt(20, 60), b = P(5, 35); return { a, b, key: 'stickers',
+        q: say(lang, `${name} has ${a} stickers and is given ${b} more. How many stickers does ${name} have now?`,
+                     `${name} ${a} çıkartması var, ${b} tane daha hediye ediliyor. Şimdi kaç çıkartması var?`,
+                     `${name} tiene ${a} pegatinas y le regalan ${b} más. ¿Cuántas tiene ahora?`) } },
+    ],
+    3: [
+      () => { const a = randInt(150, 480), b = P(100, 450); return { a, b, key: 'fair',
+        q: say(lang, `${a} people came to the school fair on Saturday and ${b} on Sunday. How many people came altogether?`,
+                     `Okul şenliğine cumartesi ${a}, pazar ${b} kişi geldi. Toplam kaç kişi geldi?`,
+                     `A la feria del colegio vinieron ${a} personas el sábado y ${b} el domingo. ¿Cuántas vinieron en total?`) } },
+      () => { const a = randInt(120, 480), b = P(40, 400); return { a, b, key: 'drive',
+        q: say(lang, `A family drives ${a} km on the first day of their holiday and ${b} km on the second. How far is that?`,
+                     `Bir aile tatilin ilk günü ${a} km, ikinci günü ${b} km yol gitti. Toplam kaç km eder?`,
+                     `Una familia recorre ${a} km el primer día de vacaciones y ${b} km el segundo. ¿Cuántos km son?`) } },
+      () => { const a = randInt(74, 480), b = P(20, 300); return { a, b, key: 'collect',
+        q: say(lang, `By the age of 8 ${name} had collected ${a} shells. The next year ${name} found ${b} more. How many shells is that now?`,
+                     `${name} 8 yaşına kadar ${a} deniz kabuğu topladı. Ertesi yıl ${b} tane daha buldu. Şimdi kaç deniz kabuğu var?`,
+                     `A los 8 años ${name} había reunido ${a} conchas. Al año siguiente encontró ${b} más. ¿Cuántas tiene ahora?`) } },
+    ],
+    4: [
+      () => { const a = randInt(1200, 4800), b = P(1000, 4000); return { a, b, key: 'museum',
+        q: say(lang, `A museum had ${N(a)} visitors in June and ${N(b)} in July. How many visitors is that altogether?`,
+                     `Bir müzeyi haziranda ${N(a)}, temmuzda ${N(b)} kişi ziyaret etti. Toplam kaç ziyaretçi eder?`,
+                     `Un museo tuvo ${N(a)} visitantes en junio y ${N(b)} en julio. ¿Cuántos visitantes son en total?`) } },
+      () => { const a = randInt(1500, 6000), b = P(200, 3000); return { a, b, key: 'score',
+        q: say(lang, `${name} scored ${N(a)} points in a game, then ${N(b)} more in the bonus round. What is the score now?`,
+                     `${name} bir oyunda ${N(a)} puan aldı, bonus turunda ${N(b)} puan daha kazandı. Şimdi puanı kaç?`,
+                     `${name} consiguió ${N(a)} puntos en un juego y luego ${N(b)} más en la ronda extra. ¿Cuántos puntos tiene ahora?`) } },
+      () => { const a = randInt(1500, 5500), b = P(300, 2500); return { a, b, key: 'village',
+        q: say(lang, `A town has ${N(a)} people. ${N(b)} more move into new houses. How many people live there now?`,
+                     `Bir kasabada ${N(a)} kişi yaşıyor. Yeni evlere ${N(b)} kişi daha taşınıyor. Şimdi kasabada kaç kişi yaşıyor?`,
+                     `En un pueblo viven ${N(a)} personas. Llegan ${N(b)} más a casas nuevas. ¿Cuántas personas viven ahora?`) } },
+    ],
+  }
+  const SUB = {
+    2: [
+      () => { const a = randInt(40, 99), b = P(12, a - 8); return { a, b, key: 'read',
+        q: say(lang, `A book has ${a} pages. ${name} has read ${b} of them. How many pages are left to read?`,
+                     `Bir kitap ${a} sayfa. ${name} ${b} sayfasını okudu. Okunacak kaç sayfa kaldı?`,
+                     `Un libro tiene ${a} páginas. ${name} ha leído ${b}. ¿Cuántas le quedan por leer?`) } },
+      () => { const a = 100, b = P(12, 88); return { a, b, key: 'beads',
+        q: say(lang, `There are 100 beads in a jar. ${name} uses ${b} of them for a bracelet. How many beads are left?`,
+                     `Bir kavanozda 100 boncuk var. ${name} bilezik yapmak için ${b} tanesini kullandı. Kaç boncuk kaldı?`,
+                     `En un bote hay 100 cuentas. ${name} usa ${b} para una pulsera. ¿Cuántas quedan?`) } },
+      () => { const a = randInt(40, 64), b = randInt(Math.round(a * 0.4), Math.round(a * 0.6)); return { a, b, key: 'classes',
+        q: say(lang, `There are ${a} children in Class 1 and Class 2 altogether. ${b} are in Class 1. How many are in Class 2?`,
+                     `1. ve 2. sınıfta toplam ${a} çocuk var. ${b} tanesi 1. sınıfta. 2. sınıfta kaç çocuk var?`,
+                     `Entre la clase 1 y la clase 2 hay ${a} niños. En la clase 1 hay ${b}. ¿Cuántos hay en la clase 2?`) } },
+    ],
+    3: [
+      () => { const a = randInt(150, 900), b = P(60, a - 40); return { a, b, key: 'journey',
+        q: say(lang, `A family drives ${a} km to their holiday. They stop for lunch after ${b} km. How many km are left?`,
+                     `Bir aile tatile gitmek için ${a} km yol gidecek. ${b} km sonra öğle yemeği için duruyorlar. Kaç km yol kaldı?`,
+                     `Una familia viaja ${a} km hasta su destino. Paran a comer tras ${b} km. ¿Cuántos km les quedan?`) } },
+      () => { const a = 1000, b = P(120, 880); return { a, b, key: 'juice',
+        q: say(lang, `A bottle holds ${N(1000)} ml of juice. ${b} ml is spilt. How much juice is left in the bottle?`,
+                     `Bir şişede ${N(1000)} ml meyve suyu var. ${b} ml döküldü. Şişede kaç ml kaldı?`,
+                     `Una botella tiene ${N(1000)} ml de zumo. Se derraman ${b} ml. ¿Cuánto zumo queda?`) } },
+      () => { const a = randInt(200, 999), b = P(Math.round(a * 0.25), Math.round(a * 0.75)); return { a, b, key: 'between',
+        q: say(lang, `At the age of 8 ${name} had ${b} shells. At 9 ${name} had ${a}. How many were found in between?`,
+                     `${name} 8 yaşındayken ${b} deniz kabuğu vardı, 9 yaşında ${a} oldu. Arada kaç tane buldu?`,
+                     `A los 8 años ${name} tenía ${b} conchas y a los 9, ${a}. ¿Cuántas encontró entre medias?`) } },
+    ],
+    4: [
+      () => { const a = randInt(2400, 9800), b = P(Math.round(a * 0.2), Math.round(a * 0.8)); return { a, b, key: 'flight',
+        q: say(lang, `A flight is ${N(a)} km long. The plane has flown ${N(b)} km so far. How many km are left?`,
+                     `Bir uçuş ${N(a)} km. Uçak şimdiye kadar ${N(b)} km uçtu. Kaç km kaldı?`,
+                     `Un vuelo es de ${N(a)} km. El avión lleva ${N(b)} km. ¿Cuántos km quedan?`) } },
+      () => { const a = pick([5000, 6000, 8000, 9000]), b = P(Math.round(a * 0.3), Math.round(a * 0.9)); return { a, b, key: 'stadium',
+        q: say(lang, `A stadium has ${N(a)} seats. ${N(b)} tickets have been sold. How many seats are still free?`,
+                     `Bir stadyumda ${N(a)} koltuk var. ${N(b)} bilet satıldı. Kaç koltuk hâlâ boş?`,
+                     `Un estadio tiene ${N(a)} asientos. Se han vendido ${N(b)} entradas. ¿Cuántos asientos quedan libres?`) } },
+      () => { const a = randInt(3000, 9000), b = P(Math.round(a * 0.3), Math.round(a * 0.8)); return { a, b, key: 'more',
+        q: say(lang, `Last year a zoo had ${N(b)} visitors in May. This year it had ${N(a)}. How many more visitors came this year?`,
+                     `Geçen yıl mayısta bir hayvanat bahçesine ${N(b)} kişi gelmişti. Bu yıl ${N(a)} kişi geldi. Bu yıl kaç kişi daha fazla geldi?`,
+                     `El año pasado un zoo tuvo ${N(b)} visitantes en mayo. Este año tuvo ${N(a)}. ¿Cuántos visitantes más vinieron este año?`) } },
+    ],
+  }
+  const s = pick((add ? ADD : SUB)[band])()
+  const ans = add ? s.a + s.b : s.a - s.b
+  return {
+    topic: add ? 'addition' : 'subtraction', level,
+    question_text: s.q, format: 'numeric', correct_answer: ans,
+    operandKey: `story:${s.key}:${s.a}:${s.b}`,
+    hint_steps: add
+      ? [say(lang, `Both amounts go together, so this is an adding question.`, `İki miktar bir araya geliyor, yani bu bir toplama sorusu.`, `Las dos cantidades se juntan: es una suma.`),
+         say(lang, `Add ${N(s.a)} and ${N(s.b)} — split the smaller one into its parts if it helps.`,
+                   `${N(s.a)} ile ${N(s.b)} sayısını topla — işine yararsa küçük olanı parçalarına ayır.`,
+                   `Suma ${N(s.a)} y ${N(s.b)}; si te ayuda, separa el menor en partes.`)]
+      : [say(lang, `You know the whole and one part, so take the part away.`, `Bütünü ve bir parçasını biliyorsun, parçayı bütünden çıkar.`, `Conoces el total y una parte: resta la parte.`),
+         say(lang, `Work out ${N(s.a)} − ${N(s.b)}, or count up from ${N(s.b)} to ${N(s.a)}.`,
+                   `${N(s.a)} − ${N(s.b)} işlemini yap ya da ${N(s.b)} sayısından ${N(s.a)} sayısına kadar say.`,
+                   `Calcula ${N(s.a)} − ${N(s.b)}, o cuenta desde ${N(s.b)} hasta ${N(s.a)}.`)],
+  }
+}
+
+// The mix for Years 2-4. Plain sums keep a share — the fluency still needs practising, and a
+// seven-year-old's session gets the counting picture from them — but no longer the whole topic.
+function youngAddSub(level, lang, add, columnar) {
+  const r = Math.random()
+  // Paper keeps the plain written sum: it is the one place the column method can be done.
+  if (columnar || r < 0.3) return add ? additionTemplate(level, lang, columnar, true) : subtractionTemplate(level, lang, columnar, true)
+  if (r < 0.55) return missingNumber(level, lang, add)
+  if (r < 0.7) return missingSign(level, lang, add ? 'add' : 'sub')
+  return youngStory(level, lang, add)
+}
+
+// ── multiplication and division, ages 7-9 ─────────────────────────────────────
+// A context knows what size its numbers come in: a spider has 8 legs, a week 7 days, a box of
+// eggs 6. The multiplier is the year's — its tables at Year 2 and 3, a two- or three-digit
+// number at Year 4 ("multiply 2-digit and 3-digit numbers by a 1-digit number").
+function tableFor(band) {
+  return band <= 2 ? [2, 5, 10] : band === 3 ? [3, 4, 8] : [6, 7, 8, 9, 11, 12]
+}
+
+const YOUNG_MULT = [
+  { id: 'legs', per: [8], unit: { en: 'legs', tr: 'bacak', es: 'patas' },
+    q: (lang, n, per) => say(lang, `A spider has ${per} legs. How many legs do ${n} spiders have?`,
+                                   `Bir örümceğin ${per} bacağı var. ${n} örümceğin toplam kaç bacağı vardır?`,
+                                   `Una araña tiene ${per} patas. ¿Cuántas patas tienen ${n} arañas?`) },
+  { id: 'eggs', per: [2, 3, 4, 5, 6], unit: { en: 'eggs', tr: 'yumurta', es: 'huevos' },
+    q: (lang, n, per) => say(lang, `The hens lay ${per} eggs a day. How many eggs do they lay in ${n} days?`,
+                                   `Tavuklar günde ${per} yumurta yumurtluyor. ${n} günde kaç yumurta yumurtlarlar?`,
+                                   `Las gallinas ponen ${per} huevos al día. ¿Cuántos huevos ponen en ${n} días?`) },
+  { id: 'weeks', per: [7], unit: { en: 'days', tr: 'gün', es: 'días' },
+    q: (lang, n, per) => say(lang, `There are ${per} days in a week. How many days are there in ${n} weeks?`,
+                                   `Bir haftada ${per} gün var. ${n} haftada kaç gün vardır?`,
+                                   `Una semana tiene ${per} días. ¿Cuántos días hay en ${n} semanas?`) },
+  { id: 'packs', per: [2, 3, 4, 5, 6, 8, 10, 12], unit: { en: 'pens', tr: 'kalem', es: 'bolis' },
+    q: (lang, n, per) => say(lang, `Pens come in packs of ${per}. How many pens are in ${n} packs?`,
+                                   `Kalemler ${per} tanelik paketlerde satılıyor. ${n} pakette kaç kalem vardır?`,
+                                   `Los bolis vienen en paquetes de ${per}. ¿Cuántos bolis hay en ${n} paquetes?`) },
+  { id: 'walks', per: [14, 21], unit: { en: 'walks', tr: 'yürüyüş', es: 'paseos' }, band: 4,
+    q: (lang, n, per) => say(lang, `A dog goes on ${per} walks a week. How many walks is that in ${n} weeks?`,
+                                   `Bir köpek haftada ${per} kez yürüyüşe çıkıyor. ${n} haftada kaç yürüyüş eder?`,
+                                   `Un perro sale de paseo ${per} veces a la semana. ¿Cuántos paseos son en ${n} semanas?`) },
+  { id: 'class', per: [24, 26, 28, 30, 32], unit: { en: 'children', tr: 'çocuk', es: 'niños' }, band: 4,
+    q: (lang, n, per) => say(lang, `A school has ${n} classes with ${per} children in each. How many children is that?`,
+                                   `Bir okulda ${n} sınıf var, her sınıfta ${per} çocuk okuyor. Toplam kaç çocuk eder?`,
+                                   `Un colegio tiene ${n} clases con ${per} niños en cada una. ¿Cuántos niños son?`) },
+  { id: 'pages', per: [125, 150, 175, 216, 248], unit: { en: 'pages', tr: 'sayfa', es: 'páginas' }, band: 4,
+    q: (lang, n, per) => say(lang, `Each book in a series has ${per} pages. How many pages are there in ${n} books?`,
+                                   `Bir dizideki her kitap ${per} sayfa. ${n} kitapta toplam kaç sayfa vardır?`,
+                                   `Cada libro de una colección tiene ${per} páginas. ¿Cuántas páginas hay en ${n} libros?`) },
+]
+
+function youngMultStory(level, lang) {
+  const band = bandForLevel(level)
+  const tables = tableFor(band)
+  // Year 2 and 3 multiply inside the year's tables (8 legs is Year 3's 8 times table); the
+  // Year 4 contexts are the two- and three-digit ones, and every context is open to Year 4.
+  const pool = YOUNG_MULT.flatMap(c => {
+    const pers = band >= 4 ? c.per : c.band ? [] : c.per.filter(p => tables.includes(p))
+    return pers.length ? [{ c, pers }] : []
+  })
+  const { c, pers } = pick(pool)
+  const per = pick(pers)
+  const n = band <= 2 ? randInt(2, 10)
+    : band === 3 ? (Math.random() < 0.5 ? randInt(2, 10) : randInt(11, 25))
+      : per >= 100 ? randInt(2, 6) : per > 12 ? randInt(3, 9) : randInt(3, 12)
+  return {
+    topic: 'multiplication-word', level,
+    question_text: c.q(lang, n, per), format: 'numeric', correct_answer: n * per,
+    operandKey: `ymult:${c.id}:${n}:${per}`,
+    hint_steps: [
+      say(lang, `That is ${n} groups of ${per}: ${n} × ${per}.`, `Bu, ${per} tanelik ${n} grup demek: ${n} × ${per}.`,
+                `Son ${n} grupos de ${per}: ${n} × ${per}.`),
+      n > 12 || per > 12
+        ? multSplitHint(n, per, lang)
+        : say(lang, `Count up in ${per}s, ${n} times.`, `${trDist(per)} ${trDist(per)} ${n} kez say.`, `Cuenta de ${per} en ${per}, ${n} veces.`),
+    ],
+  }
+}
+
+// "56 = ? × 8", "? × 7 = 63" — the table read backwards, which is where division begins.
+function missingFactor(level, lang) {
+  const band = bandForLevel(level)
+  const t = pick(tableFor(band))
+  const k = randInt(2, 12)
+  const p = t * k
+  const shape = randInt(0, 2)
+  const q = shape === 0 ? `? × ${t} = ${p}` : shape === 1 ? `${t} × ? = ${p}` : `${p} = ? × ${t}`
+  return {
+    topic: 'multiplication-word', level, question_text: q, format: 'numeric', correct_answer: k,
+    operandKey: `mfac:${t}:${k}`,
+    hint_steps: [
+      say(lang, `Which number in the ${t} times table makes ${p}?`, `${t} çarpım tablosunda hangi sayı ${p} eder?`,
+                `¿Qué número de la tabla del ${t} da ${p}?`),
+      say(lang, `Count up in ${t}s until you reach ${p}, and count how many steps it took.`,
+                `${p} sayısına ulaşana kadar ${trDist(t)} ${trDist(t)} say ve kaç adım attığını say.`,
+                `Cuenta de ${t} en ${t} hasta llegar a ${p} y cuenta cuántos saltos has dado.`),
+    ],
+  }
+}
+
+// "Which of these is a factor pair for 63?" — Year 4, 10 Minute Tests 8-9, test 5.
+function factorPair(level, lang) {
+  const a = randInt(3, 9), b = randInt(3, 9)
+  const p = a * b
+  const right = opt(`${a} × ${b}`, say(lang, `Right — ${a} × ${b} = ${p}.`, `Doğru — ${a} × ${b} = ${p}.`, `Correcto: ${a} × ${b} = ${p}.`))
+  const wrongs = [[a + 1, b], [a, b - 1], [a + 2, b - 1], [a - 1, b + 1], [a + b, 1 + 1]]
+    .filter(([x, y]) => x > 1 && y > 1 && x * y !== p)
+    .map(([x, y]) => opt(`${x} × ${y}`, say(lang, `${x} × ${y} = ${x * y}, not ${p}.`, `${x} × ${y} = ${x * y} eder, ${p} değil.`, `${x} × ${y} = ${x * y}, no ${p}.`)))
+  return {
+    topic: 'multiplication-word', level,
+    question_text: say(lang, `Which of these multiplies to make ${p}?`, `Bunlardan hangisinin sonucu ${p} eder?`, `¿Cuál de estas multiplicaciones da ${p}?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
+    operandKey: `fpair:${p}:${Math.min(a, b)}`,
+    hint_steps: [
+      say(lang, `Work out each one in turn.`, `Her birini sırayla hesapla.`, `Calcula cada una por turnos.`),
+      say(lang, `Only one of them lands exactly on ${p}.`, `Yalnız biri tam olarak ${p} eder.`, `Solo una da exactamente ${p}.`),
+    ],
+  }
+}
+
+function youngMultiplication(level, lang) {
+  const band = bandForLevel(level)
+  const r = Math.random()
+  // Year 2 keeps the drawn groups and arrays for half its questions: at seven the picture is
+  // the method.
+  if (band <= 2) return r < 0.5 ? null : r < 0.8 ? youngMultStory(level, lang) : missingFactor(level, lang)
+  if (r < 0.2) return null
+  if (r < 0.65) return youngMultStory(level, lang)
+  if (band >= 4 && r < 0.8) return factorPair(level, lang)
+  return missingFactor(level, lang)
+}
+
+// Division for ages 7-9: sharing (the existing picture), grouping ("how many 6s in 24?"),
+// and from Year 3 the remainder — both books' own examples: "30 children, 4 in a car, how
+// many cars?" rounds up; "37 eggs, boxes of 6, how many full boxes?" rounds down.
+const YOUNG_DIV_UP = [
+  { need: ['a car', 'bir araba', 'un coche'],
+    q: (lang, n, d) => say(lang, `${n} children are going on a trip. Each car can take ${d} children. How many cars are needed?`,
+                                 `${n} çocuk geziye gidiyor. Her arabaya ${d} çocuk sığıyor. Kaç araba gerekir?`,
+                                 `${n} niños van de excursión. En cada coche caben ${d} niños. ¿Cuántos coches hacen falta?`) },
+  { need: ['a box', 'bir kutu', 'una caja'],
+    q: (lang, n, d) => say(lang, `I have ${n} eggs. An egg box holds ${d}. How many boxes do I need to hold all the eggs?`,
+                                 `${n} yumurtam var. Bir kutuya ${d} yumurta sığıyor. Bütün yumurtalar için kaç kutu gerekir?`,
+                                 `Tengo ${n} huevos. En una caja caben ${d}. ¿Cuántas cajas necesito para todos?`) },
+  { need: ['a table', 'bir masa', 'una mesa'],
+    q: (lang, n, d) => say(lang, `${n} guests are coming to dinner. Each table seats ${d}. How many tables are needed?`,
+                                 `Akşam yemeğine ${n} misafir geliyor. Her masada ${d} kişi oturabiliyor. Kaç masa gerekir?`,
+                                 `Vienen ${n} invitados a cenar. En cada mesa caben ${d}. ¿Cuántas mesas hacen falta?`) },
+]
+const YOUNG_DIV_DOWN = [
+  { q: (lang, n, d) => say(lang, `I have ${n} eggs. An egg box holds ${d}. How many boxes can I fill completely?`,
+                                 `${n} yumurtam var. Bir kutuya ${d} yumurta sığıyor. Kaç kutuyu tamamen doldurabilirim?`,
+                                 `Tengo ${n} huevos. En una caja caben ${d}. ¿Cuántas cajas puedo llenar del todo?`) },
+  { money: true,
+    q: (lang, n, d) => say(lang, `I have ${n} dollars. Cinema tickets cost ${d} dollars each. How many tickets can I buy?`,
+                                 `${n} liram var. Sinema biletinin tanesi ${d} lira. En fazla kaç bilet alabilirim?`,
+                                 `Tengo ${n} euros. Cada entrada de cine cuesta ${d} euros. ¿Cuántas entradas puedo comprar?`) },
+  { q: (lang, n, d) => say(lang, `A packet of ${n} biscuits is shared out, ${d} to each child. How many children get ${d} biscuits?`,
+                                 `${n} bisküvilik bir paket, her çocuğa ${d} tane olacak şekilde dağıtılıyor. Kaç çocuk ${d} bisküvi alır?`,
+                                 `Hay un paquete de ${n} galletas y cada niño recibe ${d}. ¿Cuántos niños reciben ${d} galletas?`) },
+]
+
+function youngDivision(level, lang) {
+  const band = bandForLevel(level)
+  const tables = tableFor(band)
+  const r = Math.random()
+  if (band <= 2) {
+    if (r < 0.55) return null
+    // grouping: "How many 5s are there in 30?"
+    const d = pick(tables), k = randInt(3, 10)
+    return {
+      topic: 'division-word', level,
+      question_text: say(lang, `How many ${d}s are there in ${d * k}?`, `${d * k} sayısında kaç tane ${d} vardır?`, `¿Cuántas veces cabe el ${d} en ${d * k}?`),
+      format: 'numeric', correct_answer: k, operandKey: `ygroup:${d}:${k}`,
+      hint_steps: [
+        say(lang, `Count up in ${d}s until you reach ${d * k}.`, `${d * k} sayısına ulaşana kadar ${trDist(d)} ${trDist(d)} say.`, `Cuenta de ${d} en ${d} hasta llegar a ${d * k}.`),
+        say(lang, `The number of jumps is the answer.`, `Kaç kez saydığın cevaptır.`, `El número de saltos es la respuesta.`),
+      ],
+    }
+  }
+  // Year 4 divides two- and three-digit numbers ("98 children in 7 groups"); the picture of
+  // dealing out dots is past its size, so Year 4's exact share is written, not drawn.
+  if (band >= 4 && r < 0.3) {
+    const d = pick([3, 4, 6, 7, 8, 9]), q = randInt(12, 45), n = d * q
+    const c = pick([
+      { en: `On sports day ${n} children are split into ${d} equal teams. How many children are in each team?`,
+        tr: `Spor gününde ${n} çocuk ${d} eşit takıma ayrılıyor. Her takımda kaç çocuk olur?`,
+        es: `En el día del deporte, ${n} niños se reparten en ${d} equipos iguales. ¿Cuántos niños hay en cada equipo?` },
+      { en: `${n} kg of apples are packed equally into ${d} crates. How many kg go in each crate?`,
+        tr: `${n} kg elma ${d} kasaya eşit olarak konuyor. Her kasaya kaç kg düşer?`,
+        es: `Se reparten ${n} kg de manzanas a partes iguales en ${d} cajas. ¿Cuántos kg van en cada caja?` },
+    ])
+    return {
+      topic: 'division-word', level, question_text: say(lang, c.en, c.tr, c.es), format: 'numeric', correct_answer: q,
+      operandKey: `ybig:${n}:${d}`,
+      hint_steps: [
+        say(lang, `Split ${n} into a part that divides easily by ${d} and the rest: ${d * 10} is 10 lots of ${d}.`,
+                  `${n} sayısını ${d} ile kolay bölünen bir parça ve kalanı diye ayır: ${d * 10}, ${d} sayısının 10 katıdır.`,
+                  `Separa ${n} en una parte fácil de dividir entre ${d} y el resto: ${d * 10} son 10 veces ${d}.`),
+        say(lang, `Divide each part by ${d} and add the two answers.`, `Her parçayı ${d} ile böl ve iki sonucu topla.`, `Divide cada parte entre ${d} y suma los dos resultados.`),
+      ],
+    }
+  }
+  if (r < 0.3) return null
+  const d = band === 3 ? pick([3, 4, 5, 6, 8]) : pick([4, 6, 7, 8, 9])
+  if (r < 0.5) {
+    // "Find the remainder: 69 ÷ 8 = 8 r ?" — answer the remainder
+    const q = randInt(3, band === 3 ? 10 : 12), rem = randInt(1, d - 1), n = q * d + rem
+    return {
+      topic: 'division-word', level,
+      question_text: say(lang, `What is the remainder? ${n} ÷ ${d} = ${q} r ?`, `Kalan kaçtır? ${n} ÷ ${d} = ${q} kalan ?`,
+                               `¿Cuál es el resto? ${n} ÷ ${d} = ${q} y resto ?`),
+      format: 'numeric', correct_answer: rem, operandKey: `yrem:${n}:${d}`,
+      hint_steps: [
+        say(lang, `${q} lots of ${d} is ${q} × ${d}.`, `${q} tane ${d}, ${q} × ${d} eder.`, `${q} veces ${d} es ${q} × ${d}.`),
+        say(lang, `What is left of ${n} after that?`, `Bundan sonra ${n} sayısından geriye ne kalır?`, `¿Qué queda de ${n} después de eso?`),
+      ],
+    }
+  }
+  const up = r < 0.75
+  const q = randInt(3, band === 3 ? 9 : 12), rem = randInt(1, d - 1), n = q * d + rem
+  const c = up ? pick(YOUNG_DIV_UP) : pick(YOUNG_DIV_DOWN)
+  return {
+    topic: 'division-word', level,
+    question_text: c.q(lang, n, d), format: 'numeric', correct_answer: up ? q + 1 : q,
+    operandKey: `yround:${up ? 'u' : 'd'}:${n}:${d}`,
+    hint_steps: [
+      say(lang, `${n} ÷ ${d} = ${q} remainder ${rem}.`, `${n} ÷ ${d} = ${q}, kalan ${rem}.`, `${n} ÷ ${d} = ${q} y sobran ${rem}.`),
+      up
+        ? say(lang, `The ${rem} left over still need ${c.need[0]}.`, `Artan ${rem} için de ${c.need[1]} gerekir.`, `Los ${rem} que sobran también necesitan ${c.need[2]}.`)
+        : say(lang, `The ${rem} left over are not enough for another one.`, `Artan ${rem}, bir tane daha için yetmez.`, `Los ${rem} que sobran no llegan para otro.`),
+    ],
+  }
+}
+
+// ── fractions of a shape ──────────────────────────────────────────────────────
+// "What fraction of this shape is shaded?" — the most common fraction question in both books,
+// and the one a sentence cannot ask. Year 1 halves and quarters; Year 2 thirds and three
+// quarters; Year 3 up to tenths; Year 4 asks for the EQUAL fraction ("which is the same as the
+// shaded part?"), the step from counting parts to equivalence.
+function gcd(a, b) { return b ? gcd(b, a % b) : a }
+
+function fractionShaded(level, lang) {
+  const band = bandForLevel(level)
+  const menu = band <= 1 ? [[1, 2], [1, 4]]
+    : band === 2 ? [[1, 2], [1, 3], [1, 4], [2, 4], [3, 4], [2, 3]]
+      : band === 3 ? [[1, 5], [2, 5], [3, 5], [3, 8], [5, 8], [7, 10], [3, 10], [4, 6], [5, 6], [2, 3], [3, 4]]
+        : [[2, 4], [4, 8], [6, 8], [2, 6], [4, 6], [2, 8], [6, 10], [4, 10], [8, 10], [3, 6], [9, 12]]
+  const [n, d] = pick(menu)
+  // Circles cut into more than eight read as a fan; they are kept to the small denominators.
+  const shape = d <= 8 && Math.random() < 0.4 ? 'circle' : d % 2 === 0 && d >= 6 && Math.random() < 0.6 ? 'grid' : 'bar'
+  const cols = shape === 'grid' ? (d === 6 ? 3 : d === 12 ? 4 : d / 2) : d
+  // Shaded parts are not always the first ones in a row: "the first n" makes it a count of a
+  // run, not of the parts.
+  const shaded = shuffle(Array.from({ length: d }, (_, i) => i)).slice(0, n).sort((a, b) => a - b)
+  const askWhite = band >= 2 && band <= 3 && Math.random() < 0.3
+  const k = askWhite ? d - n : n
+  const g = gcd(k, d)
+  const equalMode = band >= 4
+  const answer = equalMode ? `${k / g}/${d / g}` : `${k}/${d}`
+  const why = {
+    swap: v => say(lang, `${v} compares the two colours — the bottom number counts ALL the parts.`,
+                         `${v} iki rengi birbiriyle karşılaştırır — alttaki sayı BÜTÜN parçaları sayar.`,
+                         `${v} compara los dos colores; el número de abajo cuenta TODAS las partes.`),
+    other: v => say(lang, `${v} is the other colour.`, `${v} öbür rengin kesri.`, `${v} es el otro color.`),
+    near: v => say(lang, `Count the parts again — ${v} is not what the picture shows.`, `Parçaları yeniden say — resim ${v} göstermiyor.`,
+                         `Vuelve a contar las partes: el dibujo no muestra ${v}.`),
+    notEqual: v => say(lang, `${v} is not the same amount — check by making both bottoms the same.`,
+                             `${v} aynı miktar değil — iki kesrin paydasını eşitleyerek kontrol et.`,
+                             `${v} no es la misma cantidad: compruébalo igualando los denominadores.`),
+  }
+  const right = opt(answer, say(lang, `Right — ${k} of the ${d} equal parts.`, `Doğru — ${d} eş parçanın ${k} tanesi.`, `Correcto: ${k} de las ${d} partes iguales.`))
+  const wrongs = equalMode
+    ? [[k / g + 1, d / g], [k / g, d / g + 1], [d - k, d], [k / g, d], [1, d / g]].filter(([x, y]) => x > 0 && x < y && x * d !== k * y)
+      .map(([x, y]) => opt(`${x}/${y}`, why.notEqual(`${x}/${y}`)))
+    : [[k, d - k, why.swap], [d - k, d, why.other], [k, d + 1, why.near], [k + 1, d, why.near], [k - 1, d, why.near],
+       [k, d * 2, why.near], [k, d - 1, why.near]]
+      // A wrong option must be a proper fraction and must not be EQUAL to the answer: 2/4
+      // offered against 1/2 would be a second right answer.
+      .filter(([x, y]) => x >= 1 && y >= 2 && x < y && x * d !== k * y)
+      .map(([x, y, w]) => opt(`${x}/${y}`, w(`${x}/${y}`)))
+  const q = equalMode
+    ? say(lang, 'Which fraction is equal to the shaded part?', 'Hangi kesir taralı kısma eşittir?', '¿Qué fracción es igual a la parte coloreada?')
+    : askWhite
+      ? say(lang, 'What fraction of this shape is NOT shaded?', 'Bu şeklin ne kadarı boyalı DEĞİL?', '¿Qué fracción de la figura NO está coloreada?')
+      : say(lang, 'What fraction of this shape is shaded?', 'Bu şeklin ne kadarı boyalı?', '¿Qué fracción de la figura está coloreada?')
+  return {
+    topic: 'fraction-of-number', level, question_text: q, format: 'choice',
+    options: choiceOf(right, wrongs), correct_answer: answer,
+    operandKey: `fshade:${n}/${d}:${askWhite ? 'w' : 's'}:${shape}`,
+    hint_steps: [
+      say(lang, `Count all the equal parts — that is the bottom number.`, `Bütün eş parçaları say — bu alttaki sayıdır.`,
+                `Cuenta todas las partes iguales: ese es el número de abajo.`),
+      equalMode
+        ? say(lang, `Now see if the shaded parts can be grouped evenly into bigger pieces.`, `Şimdi boyalı parçaları eşit büyük gruplara toplayabilir misin, bak.`,
+                    `Ahora mira si las partes coloreadas se pueden agrupar en trozos más grandes iguales.`)
+        : say(lang, `Then count the ${askWhite ? 'white' : 'shaded'} parts — that is the top number.`,
+                    `Sonra ${askWhite ? 'boyasız' : 'boyalı'} parçaları say — bu üstteki sayıdır.`,
+                    `Luego cuenta las partes ${askWhite ? 'blancas' : 'coloreadas'}: ese es el número de arriba.`),
+    ],
+    visual: { kind: 'fraction', shape, parts: d, cols, shaded },
+  }
+}
+
+// ── reading a scale ───────────────────────────────────────────────────────────
+// The ruler, the jug, the kitchen scales and the thermometer are on almost every page of both
+// books, and a scale's difficulty is its MARKINGS, not its numbers: a jug marked every 100 ml
+// read at 600 is Year 2; the same jug marked every 50 read at 350 is Year 3. Each spec below
+// lands its reading on a mark so there is exactly one answer.
+function scaleReading(level, lang, types) {
+  const band = bandForLevel(level)
+  const type = pick(types)
+  let v, q, unit, hint
+  if (type === 'ruler') {
+    const half = band >= 3 && Math.random() < 0.5
+    const max = band <= 1 ? 10 : 12
+    const value = half ? randInt(3, max - 1) + 0.5 : randInt(3, max)
+    v = { kind: 'scale', type, max, value, minor: band >= 2 ? 0.5 : 1 }
+    q = say(lang, 'How long is the pencil, in cm?', 'Kalem kaç cm uzunluğunda?', '¿Cuántos cm mide el lápiz?')
+    hint = say(lang, `The pencil starts at 0. Find the number under its point.`, `Kalem 0'dan başlıyor. Ucunun altındaki sayıyı bul.`,
+                     `El lápiz empieza en el 0. Busca el número que hay bajo su punta.`)
+    unit = half ? say(lang, `The small marks are half centimetres.`, `Küçük çizgiler yarım santimetredir.`, `Las marcas pequeñas son medios centímetros.`) : null
+  } else if (type === 'jug') {
+    const spec = band <= 2 ? pick([{ max: 1000, major: 200, minor: 100 }, { max: 500, major: 100, minor: 100 }])
+      : pick([{ max: 1000, major: 200, minor: 50 }, { max: 1000, major: 250, minor: 50 }, { max: 500, major: 100, minor: 25 }])
+    const steps = spec.max / spec.minor
+    const value = randInt(2, steps - 1) * spec.minor
+    v = { kind: 'scale', type, ...spec, value, unit: 'ml' }
+    q = say(lang, 'How much water is in the jug, in ml?', 'Sürahide kaç ml su var?', '¿Cuántos ml de agua hay en la jarra?')
+    hint = say(lang, `Find the numbered line just below the water, then count the small marks up to the top of the water.`,
+                     `Suyun hemen altındaki numaralı çizgiyi bul, sonra suyun üstüne kadar küçük çizgileri say.`,
+                     `Busca la línea numerada justo debajo del agua y cuenta las marcas pequeñas hasta arriba.`)
+    unit = say(lang, `Each small mark here is ${spec.minor} ml.`, `Buradaki her küçük çizgi ${spec.minor} ml.`, `Aquí cada marca pequeña es ${spec.minor} ml.`)
+  } else if (type === 'thermo') {
+    const spec = band <= 2 ? { min: 0, max: 40, major: 10, minor: 5 } : pick([{ min: 0, max: 40, major: 10, minor: 2 }, { min: 0, max: 50, major: 10, minor: 5 }])
+    const value = randInt(2, (spec.max - spec.min) / spec.minor - 1) * spec.minor + spec.min
+    v = { kind: 'scale', type, ...spec, value }
+    q = say(lang, 'What temperature does the thermometer show, in °C?', 'Termometre kaç °C gösteriyor?', '¿Qué temperatura marca el termómetro, en °C?')
+    hint = say(lang, `Find the top of the red line and read across to the numbers.`, `Kırmızı çizginin en üstünü bul ve yandaki sayılara bak.`,
+                     `Busca el final de la línea roja y mira los números de al lado.`)
+    unit = say(lang, `Between two numbers, each mark is ${spec.minor} degrees.`, `İki sayı arasında her çizgi ${spec.minor} derece.`, `Entre dos números, cada marca son ${spec.minor} grados.`)
+  } else if (type === 'dial') {
+    const spec = pick([{ max: 1000, major: 200, minor: 50, unit: 'g' }, { max: 5, major: 1, minor: 0.5, unit: 'kg' }, { max: 100, major: 20, minor: 5, unit: 'kg' }])
+    const steps = spec.max / spec.minor
+    // Never on the first mark: the hint names what one mark is worth.
+    const value = Math.round(randInt(2, steps - 1) * spec.minor * 1000) / 1000
+    v = { kind: 'scale', type, ...spec, value }
+    q = say(lang, `How much does it weigh, in ${spec.unit}?`, `Kaç ${spec.unit} geliyor?`, `¿Cuánto pesa, en ${spec.unit}?`)
+    hint = say(lang, `Start at 0 at the top and follow the numbers round to the pointer.`, `Tepedeki 0'dan başla, sayıları ibreye kadar takip et.`,
+                     `Empieza en el 0 de arriba y sigue los números hasta la aguja.`)
+    unit = say(lang, `Each small mark is ${dnum(spec.minor, lang)} ${spec.unit}.`, `Her küçük çizgi ${dnum(spec.minor, lang)} ${spec.unit}.`, `Cada marca pequeña es ${dnum(spec.minor, lang)} ${spec.unit}.`)
+  } else {
+    // A number line labelled at its ends only: count the steps. Year 2 in tens to 100, Year 3
+    // in hundreds to 1,000 or tens inside a hundred, Year 4 in tens between two hundreds
+    // ("2300 … 2400") and tenths between two whole numbers.
+    const spec = band <= 2 ? { min: 0, max: 100, minor: 10 }
+      : band === 3 ? pick([{ min: 0, max: 1000, minor: 100 }, { min: 200, max: 300, minor: 10 }, { min: 0, max: 50, minor: 5 }])
+        : pick([(() => { const h = randInt(12, 89) * 100; return { min: h, max: h + 100, minor: 10 } })(), (() => { const w = randInt(1, 8); return { min: w, max: w + 1, minor: 0.1 } })(), { min: 0, max: 1000, minor: 50 }])
+    const steps = Math.round((spec.max - spec.min) / spec.minor)
+    const value = Math.round((spec.min + randInt(1, steps - 1) * spec.minor) * 10) / 10
+    v = { kind: 'scale', type: 'line', ...spec, value }
+    q = say(lang, 'What number is the arrow pointing to?', 'Ok hangi sayıyı gösteriyor?', '¿A qué número apunta la flecha?')
+    hint = say(lang, `Work out how much each small step is worth: the gap between the two ends, shared by the number of steps.`,
+                     `Önce her küçük adımın kaç ettiğini bul: iki uç arasındaki farkı adım sayısına böl.`,
+                     `Averigua cuánto vale cada paso pequeño: la distancia entre los dos extremos entre el número de pasos.`)
+    unit = say(lang, `Then count the steps from ${label0(spec.min, lang)} to the arrow.`, `Sonra ${label0(spec.min, lang)} sayısından oka kadar adımları say.`,
+                     `Luego cuenta los pasos desde ${label0(spec.min, lang)} hasta la flecha.`)
+  }
+  const answer = v.value
+  return {
+    topic: type === 'line' ? 'place-value' : 'measurement', level,
+    question_text: q,
+    format: Number.isInteger(answer) ? 'numeric' : 'decimal',
+    correct_answer: answer,
+    operandKey: `scale:${type}:${v.max}:${v.minor}:${answer}`,
+    hint_steps: [hint, ...(unit ? [unit] : [])],
+    visual: v,
+  }
+}
+const label0 = (n, lang) => (Number.isInteger(n) ? num(n, lang) : dnum(n, lang))
+
+// ── time, ages 7-9 ────────────────────────────────────────────────────────────
+// Every time question the books ask that is not "read the clock": what time it will be, how
+// long something took, a timetable, a watch that is fast. The answer is a time, which the
+// keypad cannot type, so those are offered as choices — and the wrong choices are the real
+// mistakes: going the wrong way, adding to the hour, forgetting that 60 minutes make an hour.
+function timeYoung(level, lang) {
+  const band = bandForLevel(level)
+  const pad = band >= 3
+  const name = pickL(MULT_NAMES, lang)
+  const shape = pick(band <= 2 ? ['after', 'between', 'quarter'] : ['after', 'between', 'before', 'watch', 'timetable'])
+  const start = (randInt(7, 17) * 60) + randInt(0, 11) * 5 + (band >= 3 ? randInt(0, 4) : 0)
+
+  if (shape === 'quarter') {
+    const [q, a] = pick([
+      [say(lang, 'How many minutes are there in a quarter of an hour?', 'Çeyrek saat kaç dakikadır?', '¿Cuántos minutos hay en un cuarto de hora?'), 15],
+      [say(lang, 'How many minutes are there in half an hour?', 'Yarım saat kaç dakikadır?', '¿Cuántos minutos hay en media hora?'), 30],
+      [say(lang, 'How many minutes are there in three quarters of an hour?', 'Üç çeyrek saat kaç dakikadır?', '¿Cuántos minutos hay en tres cuartos de hora?'), 45],
+      [say(lang, 'How many hours are there in a day?', 'Bir günde kaç saat vardır?', '¿Cuántas horas tiene un día?'), 24],
+      [say(lang, 'How many days are there in a week?', 'Bir haftada kaç gün vardır?', '¿Cuántos días tiene una semana?'), 7],
+    ])
+    return { topic: 'time', level, question_text: q, format: 'numeric', correct_answer: a, operandKey: `tq:${a}`,
+      hint_steps: [say(lang, 'A whole hour is 60 minutes.', 'Bir tam saat 60 dakikadır.', 'Una hora entera son 60 minutos.'),
+                   say(lang, 'Half of it, or a quarter of it, is the same share of 60.', 'Yarısı ya da çeyreği, 60\'ın o kadarıdır.', 'La mitad o un cuarto son esa parte de 60.')] }
+  }
+
+  if (shape === 'after' || shape === 'before') {
+    const add = band <= 2 ? randInt(2, 8) * 5 : randInt(12, 55)
+    const after = shape === 'after'
+    const answer = after ? start + add : start - add
+    const crosses = Math.floor(start / 60) !== Math.floor(answer / 60)
+    const why = {
+      wrongWay: say(lang, 'That goes the wrong way in time.', 'Bu, zamanda ters yöne gidiyor.', 'Eso va hacia atrás en el tiempo.'),
+      carry: crosses
+        ? say(lang, 'The minutes went past the hour, so the hour changes too.', 'Dakikalar saati geçti, o yüzden saat de değişir.', 'Los minutos pasan de la hora, así que la hora también cambia.')
+        : say(lang, 'The minutes stay inside the hour here — the hour does not change.', 'Burada dakikalar saati geçmiyor — saat değişmez.', 'Aquí los minutos no pasan de la hora: la hora no cambia.'),
+      off: say(lang, 'Close, but count the minutes again.', 'Yakın, ama dakikaları yeniden say.', 'Cerca, pero vuelve a contar los minutos.'),
+    }
+    const right = opt(hm(answer, pad), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    const wrongs = [
+      opt(hm(after ? start - add : start + add, pad), why.wrongWay),
+      opt(hm(crosses ? answer + (after ? -60 : 60) : answer + (after ? 60 : -60), pad), why.carry),
+      opt(hm(answer + (after ? 5 : -5) * (band <= 2 ? 1 : 2), pad), why.off),
+      opt(hm(answer - (after ? 5 : -5) * (band <= 2 ? 1 : 2), pad), why.off),
+    ]
+    const task = pick([
+      { en: 'walk to school', tr: 'okula yürümeye', es: 'ir andando al colegio' },
+      { en: 'bake a cake', tr: 'kek pişirmeye', es: 'hornear un bizcocho' },
+      { en: 'do some homework', tr: 'ödev yapmaya', es: 'hacer los deberes' },
+    ])
+    return {
+      topic: 'time', level,
+      question_text: after
+        ? say(lang, `${name} starts to ${task.en} at the time shown. It takes ${add} minutes. What time does ${name} finish?`,
+                    `${name} gösterilen saatte ${task.tr} başlıyor. Bu ${add} dakika sürüyor. ${name} saat kaçta bitirir?`,
+                    `${name} empieza a ${task.es} a la hora que se ve. Tarda ${add} minutos. ¿A qué hora termina?`)
+        : say(lang, `A lesson finished at the time shown. It lasted ${add} minutes. What time did it start?`,
+                    `Bir ders gösterilen saatte bitti. Ders ${add} dakika sürdü. Ders saat kaçta başladı?`,
+                    `Una clase terminó a la hora que se ve. Duró ${add} minutos. ¿A qué hora empezó?`),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
+      operandKey: `t${shape}:${start}:${add}`,
+      hint_steps: [
+        say(lang, `Count ${after ? 'on' : 'back'} to the o'clock first.`, `Önce ${after ? 'ileri' : 'geri'} doğru tam saate kadar say.`,
+                  `Cuenta primero ${after ? 'hacia delante' : 'hacia atrás'} hasta la hora en punto.`),
+        say(lang, `Then ${after ? 'add' : 'take away'} whatever is left of the ${add} minutes.`, `Sonra ${add} dakikadan kalanı ${after ? 'ekle' : 'çıkar'}.`,
+                  `Luego ${after ? 'suma' : 'resta'} lo que quede de los ${add} minutos.`),
+      ],
+      visual: { kind: 'digital', times: [hm(start, pad)] },
+    }
+  }
+
+  if (shape === 'between') {
+    const len = band <= 2 ? randInt(2, 11) * 5 : randInt(15, 95)
+    // Never from an o'clock: from 9:00 the end time's minutes ARE the answer, and the hint that
+    // names the end time would be naming it.
+    const from = start % 60 === 0 ? start + 5 : start
+    const end = from + len
+    const start_ = from
+    return {
+      topic: 'time', level,
+      question_text: say(lang, `How many minutes are there between these two times?`, `Bu iki saat arasında kaç dakika var?`, `¿Cuántos minutos hay entre estas dos horas?`),
+      format: 'numeric', correct_answer: len, operandKey: `tbetween:${start_}:${len}`,
+      hint_steps: [
+        say(lang, `Count on from ${hm(start_, pad)} to the next o'clock.`, `${hm(start_, pad)} saatinden bir sonraki tam saate kadar say.`, `Cuenta desde las ${hm(start_, pad)} hasta la siguiente hora en punto.`),
+        say(lang, `Then count on to ${hm(end, pad)} and add the two parts.`, `Sonra ${hm(end, pad)} saatine kadar say ve iki parçayı topla.`, `Luego sigue hasta las ${hm(end, pad)} y suma las dos partes.`),
+      ],
+      visual: { kind: 'digital', times: [hm(start_, pad), hm(end, pad)] },
+    }
+  }
+
+  if (shape === 'watch') {
+    const off = pick([5, 10, 15])
+    const fast = Math.random() < 0.5
+    const shown = start
+    const real = fast ? shown - off : shown + off
+    const right = opt(hm(real, pad), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    const wrongs = [opt(hm(fast ? shown + off : shown - off, pad), say(lang, `A ${fast ? 'fast' : 'slow'} watch is ${fast ? 'ahead of' : 'behind'} the real time, so go the other way.`,
+      `${fast ? 'İleri' : 'Geri'} kalan saat gerçek saatin ${fast ? 'önündedir' : 'gerisindedir'}, öbür yöne git.`,
+      `Un reloj que ${fast ? 'adelanta' : 'atrasa'} va ${fast ? 'por delante' : 'por detrás'} de la hora real: ve al revés.`)),
+      opt(hm(shown, pad), say(lang, `That is what the watch says, not the real time.`, `Bu, saatin gösterdiği; gerçek saat değil.`, `Eso es lo que marca el reloj, no la hora real.`)),
+      opt(hm(real + (fast ? -5 : 5), pad), say(lang, 'Close, but count the minutes again.', 'Yakın, ama dakikaları yeniden say.', 'Cerca, pero vuelve a contar los minutos.'))]
+    return {
+      topic: 'time', level,
+      question_text: say(lang, `${name}'s watch is ${off} minutes ${fast ? 'fast' : 'slow'}. It shows the time here. What is the real time?`,
+                               `${name} adlı çocuğun saati ${off} dakika ${fast ? 'ileri' : 'geri'}. Saat burada gösterilen zamanı gösteriyor. Gerçek saat kaç?`,
+                               `El reloj de ${name} ${fast ? 'adelanta' : 'atrasa'} ${off} minutos. Marca la hora de aquí. ¿Qué hora es de verdad?`),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `twatch:${shown}:${off}:${fast}`,
+      hint_steps: [
+        say(lang, `A fast watch shows a time that has not happened yet; a slow one is behind.`, `İleri olan saat henüz gelmemiş bir zamanı gösterir; geri olan saat geride kalır.`, `Un reloj que adelanta marca una hora que aún no ha llegado; uno que atrasa va por detrás.`),
+        say(lang, `So ${fast ? 'take' : 'add'} ${off} minutes ${fast ? 'off' : 'on'}.`, `O zaman ${off} dakika ${fast ? 'çıkar' : 'ekle'}.`, `Así que ${fast ? 'quita' : 'suma'} ${off} minutos.`),
+      ],
+      visual: { kind: 'digital', times: [hm(shown, pad)] },
+    }
+  }
+
+  // timetable: four trains, how long does one take
+  // Trains leave in order and arrive in order — a later train overtaking an earlier one is a
+  // timetable no one has seen, and it makes a child doubt the reading they just did.
+  let trains
+  do {
+    trains = Array.from({ length: 4 }, (_, i) => ({ leave: (8 + i) * 60 + randInt(0, 11) * 5, take: randInt(4, 13) * 5 }))
+  } while (trains.some((tr, i) => i > 0 && tr.leave + tr.take <= trains[i - 1].leave + trains[i - 1].take))
+  const k = randInt(0, 3)
+  const place = pickL({ en: [['Rigby', 'Stairs'], ['Oakley', 'Hilton']], tr: [['Kavaklı', 'Ilıca'], ['Çamlık', 'Pınarbaşı']], es: [['Robledo', 'Sierra'], ['Olmos', 'Fuentes']] }, lang)
+  const letters = ['A', 'B', 'C', 'D']
+  return {
+    topic: 'time', level,
+    question_text: say(lang, `How many minutes does train ${letters[k]} take?`, `${letters[k]} treni yolculuğu kaç dakikada yapıyor?`, `¿Cuántos minutos tarda el tren ${letters[k]}?`),
+    format: 'numeric', correct_answer: trains[k].take, operandKey: `ttable:${trains.map(t => `${t.leave}-${t.take}`).join(':')}:${k}`,
+    hint_steps: [
+      say(lang, `Find train ${letters[k]}'s column: when it leaves and when it arrives.`, `${letters[k]} treninin sütununu bul: ne zaman kalkıyor, ne zaman varıyor?`, `Busca la columna del tren ${letters[k]}: cuándo sale y cuándo llega.`),
+      say(lang, `Count on from leaving to arriving — to the next o'clock first, then the rest.`, `Kalkıştan varışa kadar say — önce tam saate, sonra kalanı.`, `Cuenta desde la salida hasta la llegada: primero hasta la hora en punto y luego el resto.`),
+    ],
+    visual: { kind: 'chart', shape: 'table', cols: letters.map(l => say(lang, `Train ${l}`, `${l} treni`, `Tren ${l}`)),
+      rows: [{ label: say(lang, `Leaves ${place[0]}`, `${place[0]} kalkış`, `Sale de ${place[0]}`), cells: trains.map(t => hm(t.leave, true)) },
+             { label: say(lang, `Arrives ${place[1]}`, `${place[1]} varış`, `Llega a ${place[1]}`), cells: trains.map(t => hm(t.leave + t.take, true)) }] },
+  }
+}
+
+// ── geometry, ages 8-9 ────────────────────────────────────────────────────────
+const SOLIDS = {
+  cube: { faces: 6, edges: 12, vertices: 8, name: { en: 'cube', tr: 'küp', es: 'cubo' } },
+  cuboid: { faces: 6, edges: 12, vertices: 8, name: { en: 'cuboid', tr: 'dikdörtgenler prizması', es: 'ortoedro' } },
+  prism: { faces: 5, edges: 9, vertices: 6, name: { en: 'triangular prism', tr: 'üçgen prizma', es: 'prisma triangular' } },
+  pyramid: { faces: 5, edges: 8, vertices: 5, name: { en: 'square-based pyramid', tr: 'kare tabanlı piramit', es: 'pirámide cuadrangular' } },
+  cylinder: { name: { en: 'cylinder', tr: 'silindir', es: 'cilindro' } },
+  cone: { name: { en: 'cone', tr: 'koni', es: 'cono' } },
+  sphere: { name: { en: 'sphere', tr: 'küre', es: 'esfera' } },
+}
+
+function geoSolid(level, lang) {
+  const name = pick(Object.keys(SOLIDS))
+  const s = SOLIDS[name]
+  const counts = s.faces != null && Math.random() < 0.7
+  if (counts) {
+    const ask = pick(['faces', 'edges', 'vertices'])
+    const word = { faces: say(lang, 'faces', 'yüzü', 'caras'), edges: say(lang, 'edges', 'ayrıtı', 'aristas'), vertices: say(lang, 'vertices (corners)', 'köşesi', 'vértices') }[ask]
+    const esMany = ask === 'edges' || ask === 'faces' ? 'Cuántas' : 'Cuántos'
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang, `How many ${word} does this ${s.name.en} have?`, `Bu ${s.name.tr} şeklinin kaç ${word} var?`, `¿${esMany} ${word} tiene este ${s.name.es}?`)
+        .replace('este pirámide', 'esta pirámide'),
+      format: 'numeric', correct_answer: s[ask], operandKey: `solid:${name}:${ask}`,
+      hint_steps: [
+        { faces: say(lang, 'A face is a flat side. Count the front ones, then the ones you cannot see.', 'Yüz, düz bir kenardır. Önce öndekileri, sonra görünmeyenleri say.', 'Una cara es un lado plano. Cuenta las de delante y luego las que no se ven.'),
+          edges: say(lang, 'An edge is where two faces meet. The dashed lines are edges at the back.', 'Ayrıt, iki yüzün birleştiği çizgidir. Kesikli çizgiler arkadaki ayrıtlardır.', 'Una arista es donde se juntan dos caras. Las líneas discontinuas son aristas de detrás.'),
+          vertices: say(lang, 'A vertex is a corner where edges meet. Include the hidden ones at the back.', 'Köşe, ayrıtların birleştiği noktadır. Arkadaki gizlileri de say.', 'Un vértice es una esquina donde se juntan aristas. Cuenta también las de detrás.') }[ask],
+        say(lang, 'Count the top, then the bottom, then any in between.', 'Önce üsttekileri, sonra alttakileri, sonra aradakileri say.', 'Cuenta las de arriba, luego las de abajo y luego las del medio.'),
+      ],
+      visual: { kind: 'solid', name },
+    }
+  }
+  const right = opt(s.name[lang] ?? s.name.en, say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = shuffle(Object.keys(SOLIDS).filter(k => k !== name)).map(k => opt(SOLIDS[k].name[lang] ?? SOLIDS[k].name.en,
+    say(lang, `A ${SOLIDS[k].name.en} looks different — count its faces and look for curved ones.`,
+              `${SOLIDS[k].name.tr} farklı görünür — yüzlerini say, eğri yüz var mı bak.`,
+              `Esa figura es distinta: cuenta sus caras y busca las curvas.`)))
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, 'What is this 3D shape called?', 'Bu cismin adı nedir?', '¿Cómo se llama este cuerpo geométrico?'),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `solid:${name}:name`,
+    hint_steps: [
+      say(lang, 'Are its faces flat, or is some of it curved?', 'Yüzleri düz mü, yoksa eğri bir yüzü var mı?', '¿Sus caras son planas o tiene alguna curva?'),
+      say(lang, 'Look at the shape of its faces: squares, rectangles, triangles or circles?', 'Yüzlerinin şekline bak: kare mi, dikdörtgen mi, üçgen mi, daire mi?', 'Mira la forma de sus caras: ¿cuadrados, rectángulos, triángulos o círculos?'),
+    ],    visual: { kind: 'solid', name },
+  }
+}
+
+const POLY_FACTS = {
+  square: { lines: 4, right: 4 }, rectangle: { lines: 2, right: 4 }, equilateral: { lines: 3, right: 0 },
+  isosceles: { lines: 1, right: 0 }, rightTriangle: { lines: 0, right: 1 }, scalene: { lines: 0, right: 0 },
+  pentagon: { lines: 5, right: 0 }, hexagon: { lines: 6, right: 0 }, octagon: { lines: 8, right: 0 },
+  parallelogram: { lines: 0, right: 0 }, rhombus: { lines: 2, right: 0 }, kite: { lines: 1, right: 0 },
+  trapezium: { lines: 1, right: 0 }, rightTrapezium: { lines: 0, right: 2 }, lShape: { lines: 0, right: 5 },
+}
+export { POLY_FACTS }
+
+// Lines of symmetry (Year 4's line) and right angles (Year 3's). Both drawn; the hint draws the
+// mirror lines or marks the right angles on the same shape.
+function geoPolygon(level, lang, ask) {
+  const pool = ask === 'right'
+    ? ['square', 'rectangle', 'rightTriangle', 'rightTrapezium', 'lShape', 'equilateral', 'parallelogram', 'rightTriangle', 'lShape', 'rightTrapezium']
+    : ['square', 'rectangle', 'equilateral', 'isosceles', 'pentagon', 'hexagon', 'rhombus', 'kite', 'trapezium', 'parallelogram', 'scalene', 'octagon']
+  const name = pick(pool)
+  const answer = POLY_FACTS[name][ask]
+  return {
+    topic: 'geometry', level,
+    question_text: ask === 'right'
+      ? say(lang, 'How many right angles are there inside this shape?', 'Bu şeklin içinde kaç dik açı var?', '¿Cuántos ángulos rectos hay dentro de esta figura?')
+      : say(lang, 'How many lines of symmetry does this shape have?', 'Bu şeklin kaç simetri ekseni var?', '¿Cuántos ejes de simetría tiene esta figura?'),
+    format: 'numeric', correct_answer: answer, operandKey: `poly:${name}:${ask}`,
+    hint_steps: ask === 'right'
+      ? [say(lang, 'A right angle is a square corner, like the corner of a book.', 'Dik açı, bir kitabın köşesi gibi kare bir köşedir.', 'Un ángulo recto es una esquina cuadrada, como la de un libro.'),
+         say(lang, 'Check every corner inside the shape, one at a time. A corner can be too wide or too narrow to count.', 'Şeklin içindeki her köşeye tek tek bak. Bazı köşeler fazla geniş ya da dar olabilir.', 'Revisa cada esquina de dentro, una por una. Algunas son demasiado abiertas o cerradas.')]
+      : [say(lang, 'A line of symmetry folds the shape into two halves that match exactly.', 'Simetri ekseni, şekli tam üst üste gelen iki yarıya katlar.', 'Un eje de simetría dobla la figura en dos mitades que coinciden exactamente.'),
+         say(lang, 'Try up and down, across, and corner to corner. Some shapes have none.', 'Dikey, yatay ve köşeden köşeye dene. Bazı şekillerin hiç yoktur.', 'Prueba de arriba abajo, de lado a lado y de esquina a esquina. Algunas figuras no tienen ninguno.')],
+    visual: { kind: 'polygon', name, ask },
+  }
+}
+
+// Compass turns: "Gavin faces North and turns a quarter turn clockwise."
+function geoTurn(level, lang) {
+  const dirs = ['N', 'E', 'S', 'W']
+  const names = { N: say(lang, 'North', 'Kuzey', 'Norte'), E: say(lang, 'East', 'Doğu', 'Este'), S: say(lang, 'South', 'Güney', 'Sur'), W: say(lang, 'West', 'Batı', 'Oeste') }
+  const from = randInt(0, 3)
+  const turns = pick([1, 2, 3])
+  const cw = Math.random() < 0.5
+  const to = (from + (cw ? turns : 4 - turns)) % 4
+  const turnWord = { 1: say(lang, 'a quarter turn', 'çeyrek tur', 'un cuarto de vuelta'), 2: say(lang, 'a half turn', 'yarım tur', 'media vuelta'), 3: say(lang, 'three quarters of a turn', 'üç çeyrek tur', 'tres cuartos de vuelta') }[turns]
+  const dirWord = cw ? say(lang, 'clockwise', 'saat yönünde', 'en el sentido de las agujas del reloj') : say(lang, 'anticlockwise', 'saatin tersi yönünde', 'en sentido contrario a las agujas del reloj')
+  const name = pickL(MULT_NAMES, lang)
+  const right = opt(names[dirs[to]], say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongDir = (from + (cw ? 4 - turns : turns)) % 4
+  const wrongs = [opt(names[dirs[wrongDir]], say(lang, 'That is turning the other way round.', 'Bu, ters yöne dönmek.', 'Eso es girar al revés.')),
+                  ...dirs.filter((_, i) => i !== to && i !== wrongDir).map(d => opt(names[d], say(lang, 'Count the quarter turns again.', 'Çeyrek turları yeniden say.', 'Vuelve a contar los cuartos de vuelta.')))]
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `${name} is facing ${names[dirs[from]]} and makes ${turnWord} ${dirWord}. Which way is ${name} facing now?`,
+                             `${name} ${names[dirs[from]]} yönüne bakıyor ve ${dirWord} ${turnWord} dönüyor. ${name} şimdi hangi yöne bakıyor?`,
+                             `${name} mira al ${names[dirs[from]]} y da ${turnWord} ${dirWord}. ¿Hacia dónde mira ahora?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `turn:${from}:${turns}:${cw}`,
+    hint_steps: [
+      say(lang, `Going clockwise the order is North, East, South, West.`, `Saat yönünde sıra: Kuzey, Doğu, Güney, Batı.`, `En el sentido de las agujas del reloj el orden es Norte, Este, Sur, Oeste.`),
+      say(lang, `Each quarter turn moves one step along that order${cw ? '' : ', backwards'}.`, `Her çeyrek tur bu sırada bir adım ${cw ? 'ileri' : 'geri'} gider.`, `Cada cuarto de vuelta avanza un paso en ese orden${cw ? '' : ', hacia atrás'}.`),
+    ],
+  }
+}
+
+// Coordinates (Year 4): "What are the coordinates of B?" — the classic wrong answer is the pair
+// the wrong way round, so it is always on offer when it differs.
+function geoCoords(level, lang) {
+  const size = 6
+  const pts = []
+  const used = new Set()
+  for (const label of ['A', 'B', 'C', 'D']) {
+    let x, y
+    do { x = randInt(1, size - 1); y = randInt(1, size - 1) } while (used.has(`${x},${y}`) || x === y)
+    used.add(`${x},${y}`)
+    pts.push({ label, x, y })
+  }
+  const target = pick(pts)
+  const readMode = Math.random() < 0.6
+  const pair = (x, y) => `(${x}, ${y})`
+  if (readMode) {
+    const right = opt(pair(target.x, target.y), say(lang, 'Right — across first, then up.', 'Doğru — önce sağa, sonra yukarı.', 'Correcto: primero a lo largo y luego hacia arriba.'))
+    const wrongs = [opt(pair(target.y, target.x), say(lang, 'Those are the right numbers the wrong way round: across comes first.', 'Sayılar doğru ama sırası ters: önce yatay gelir.', 'Son los números correctos al revés: primero va el de abajo.')),
+      opt(pair(target.x + 1, target.y), say(lang, 'Count the lines along the bottom again, starting from 0.', 'Alttaki çizgileri 0\'dan başlayarak yeniden say.', 'Vuelve a contar las líneas de abajo desde 0.')),
+      opt(pair(target.x, target.y - 1), say(lang, 'Count the lines up the side again, starting from 0.', 'Yandaki çizgileri 0\'dan başlayarak yeniden say.', 'Vuelve a contar las líneas del lado desde 0.'))]
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang, `What are the coordinates of point ${target.label}?`, `${target.label} noktasının koordinatları nedir?`, `¿Cuáles son las coordenadas del punto ${target.label}?`),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `coord:r:${pts.map(p => `${p.x}${p.y}`).join('')}:${target.label}`,
+      hint_steps: [
+        say(lang, `Go along the bottom first until you are under ${target.label}.`, `Önce altta, ${target.label} noktasının altına gelene kadar ilerle.`, `Ve primero por abajo hasta quedar debajo de ${target.label}.`),
+        say(lang, `Then go up to it. Write (along, up).`, `Sonra yukarı çık. (yatay, dikey) diye yaz.`, `Luego sube hasta él. Escribe (horizontal, vertical).`),
+      ],
+      visual: { kind: 'coords', size, points: pts.map(p => ({ ...p, ask: p.label === target.label })) },
+    }
+  }
+  const right = opt(target.label, say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const swapped = pts.find(p => p.x === target.y && p.y === target.x)
+  const wrongs = pts.filter(p => p.label !== target.label).map(p => opt(p.label, p === swapped
+    ? say(lang, 'That point has the numbers the wrong way round.', 'O noktada sayılar ters sırada.', 'Ese punto tiene los números al revés.')
+    : say(lang, `${p.label} is at (${p.x}, ${p.y}).`, `${p.label} noktası (${p.x}, ${p.y}) konumunda.`, `${p.label} está en (${p.x}, ${p.y}).`)))
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `Which point is at ${pair(target.x, target.y)}?`, `Hangi nokta ${pair(target.x, target.y)} konumunda?`, `¿Qué punto está en ${pair(target.x, target.y)}?`),
+    format: 'choice', options: choiceOf(right, wrongs, { sort: (a, b) => a.value.localeCompare(b.value) }), correct_answer: right.value,
+    operandKey: `coord:w:${pts.map(p => `${p.x}${p.y}`).join('')}:${target.label}`,
+    hint_steps: [
+      say(lang, `The first number is how far along, the second how far up.`, `İlk sayı ne kadar sağa, ikincisi ne kadar yukarı gidileceğidir.`, `El primer número es cuánto avanzar y el segundo cuánto subir.`),
+      say(lang, `Go ${target.x} along, then ${target.y} up.`, `${target.x} sağa, sonra ${target.y} yukarı git.`, `Avanza ${target.x} y luego sube ${target.y}.`),
+    ],
+    visual: { kind: 'coords', size, points: pts },
+  }
+}
+
+// Angles against a right angle (Year 3: "identify whether angles are greater than or less than
+// a right angle"), and the whole-turn facts both books ask.
+function geoAngleFacts(level, lang) {
+  if (Math.random() < 0.5) {
+    // Each fact carries its own hints, written so that none of them states the fact asked.
+    const facts = [
+      { a: 4, q: say(lang, 'How many right angles make a whole turn?', 'Tam tur kaç dik açıdır?', '¿Cuántos ángulos rectos forman una vuelta completa?'),
+        h: [say(lang, 'A right angle is a quarter turn, like the hand of a clock going from 12 to 3.', 'Dik açı çeyrek turdur, akrebin 12\'den 3\'e gitmesi gibi.', 'Un ángulo recto es un cuarto de vuelta, como la aguja del reloj del 12 al 3.'),
+            say(lang, 'Keep turning in quarter turns until you are back where you started, and count them.', 'Başladığın yere dönene kadar çeyrek tur dön ve say.', 'Sigue girando de cuarto en cuarto hasta volver al principio y cuéntalos.')] },
+      { a: 2, q: say(lang, 'How many right angles make a half turn?', 'Yarım tur kaç dik açıdır?', '¿Cuántos ángulos rectos forman media vuelta?'),
+        h: [say(lang, 'A right angle is a quarter turn, like the hand of a clock going from 12 to 3.', 'Dik açı çeyrek turdur, akrebin 12\'den 3\'e gitmesi gibi.', 'Un ángulo recto es un cuarto de vuelta, como la aguja del reloj del 12 al 3.'),
+            say(lang, 'A half turn takes the hand from 12 to 6. How many quarter turns is that?', 'Yarım tur, akrebi 12\'den 6\'ya götürür. Bu kaç çeyrek tur?', 'Media vuelta lleva la aguja del 12 al 6. ¿Cuántos cuartos son?')] },
+      { a: 90, q: say(lang, 'How many degrees are there in a right angle?', 'Dik açı kaç derecedir?', '¿Cuántos grados tiene un ángulo recto?'),
+        h: [say(lang, 'A whole turn is 360 degrees.', 'Tam tur 360 derecedir.', 'Una vuelta completa son 360 grados.'),
+            say(lang, 'A right angle is a quarter of a whole turn: 360 ÷ 4.', 'Dik açı tam turun çeyreğidir: 360 ÷ 4.', 'Un ángulo recto es un cuarto de vuelta: 360 ÷ 4.')] },
+      { a: 360, q: say(lang, 'How many degrees are there in a whole turn?', 'Tam tur kaç derecedir?', '¿Cuántos grados tiene una vuelta completa?'),
+        h: [say(lang, 'A right angle is 90 degrees.', 'Dik açı 90 derecedir.', 'Un ángulo recto mide 90 grados.'),
+            say(lang, 'A whole turn is four right angles: 4 × 90.', 'Tam tur dört dik açıdır: 4 × 90.', 'Una vuelta completa son cuatro ángulos rectos: 4 × 90.')] },
+      { a: 45, q: say(lang, 'How many degrees are there in half a right angle?', 'Dik açının yarısı kaç derecedir?', '¿Cuántos grados tiene la mitad de un ángulo recto?'),
+        h: [say(lang, 'A right angle is 90 degrees.', 'Dik açı 90 derecedir.', 'Un ángulo recto mide 90 grados.'),
+            say(lang, 'Half of it is 90 ÷ 2.', 'Yarısı 90 ÷ 2 eder.', 'La mitad es 90 ÷ 2.')] },
+    ]
+    const f = pick(facts)
+    return { topic: 'geometry', level, question_text: f.q, format: 'numeric', correct_answer: f.a, operandKey: `angfact:${f.a}`, hint_steps: f.h }
+  }
+  const bigger = Math.random() < 0.5
+  const target = bigger ? randInt(95, 170) : randInt(15, 85)
+  const others = shuffle([randInt(15, 85), randInt(20, 80), 90, randInt(95, 170), randInt(100, 160)])
+    .filter(x => (bigger ? x <= 90 : x >= 90) && x !== target).slice(0, 3)
+  const right = opt(`${target}°`, say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = others.map(x => opt(`${x}°`, x === 90
+    ? say(lang, '90° IS a right angle — not bigger or smaller.', '90° tam dik açıdır — ne büyük ne küçük.', '90° ES un ángulo recto: ni mayor ni menor.')
+    : say(lang, `${x}° is ${x > 90 ? 'more' : 'less'} than a right angle.`, `${x}°, dik açıdan ${x > 90 ? 'büyük' : 'küçük'}.`, `${x}° es ${x > 90 ? 'mayor' : 'menor'} que un ángulo recto.`)))
+  return {
+    topic: 'geometry', level,
+    question_text: bigger
+      ? say(lang, 'Which angle is bigger than a right angle?', 'Hangi açı dik açıdan büyüktür?', '¿Qué ángulo es mayor que un ángulo recto?')
+      : say(lang, 'Which angle is smaller than a right angle?', 'Hangi açı dik açıdan küçüktür?', '¿Qué ángulo es menor que un ángulo recto?'),
+    format: 'choice', options: choiceOf(right, wrongs, { sort: (a, b) => parseInt(a.value) - parseInt(b.value) }), correct_answer: right.value,
+    operandKey: `angcmp:${bigger}:${target}`,
+    hint_steps: [say(lang, 'A right angle is 90°.', 'Dik açı 90°\'dir.', 'Un ángulo recto mide 90°.'),
+                 say(lang, `Look for the one ${bigger ? 'more' : 'less'} than 90.`, `90'dan ${bigger ? 'büyük' : 'küçük'} olanı bul.`, `Busca el que sea ${bigger ? 'mayor' : 'menor'} que 90.`)],
+  }
+}
+
+function geometryYoung(level, lang) {
+  const band = bandForLevel(level)
+  const r = Math.random()
+  if (band === 3) {
+    if (r < 0.2) return null                                   // sides and corners, as before
+    if (r < 0.45) return geoSolid(level, lang)
+    if (r < 0.65) return geoPolygon(level, lang, 'right')
+    if (r < 0.82) return geoAngleFacts(level, lang)
+    return geoTurn(level, lang)
+  }
+  // Year 4: "classify shapes; identify lines of symmetry; describe positions on a 2D grid as
+  // coordinates". Coordinates had no question at all before this.
+  if (r < 0.15) return null
+  if (r < 0.45) return geoCoords(level, lang)
+  if (r < 0.7) return geoPolygon(level, lang, 'lines')
+  if (r < 0.85) return geoSolid(level, lang)
+  return geoTurn(level, lang)
+}
+
+// ── place value and number, ages 7-9 ──────────────────────────────────────────
+// Numbers in words and back, the biggest number from some digits, the missing term of a
+// sequence, what a number is made of, Roman numerals — every one of them in both books.
+function pvWords(level, lang) {
+  const band = bandForLevel(level)
+  const n = band <= 2 ? randInt(21, 99) : band === 3 ? randInt(101, 999) : randInt(1001, 9999)
+  // Zeros inside the number are where the mistakes live: "two hundred and two" is written 22.
+  const tricky = band >= 3 && Math.random() < 0.5
+    ? (band === 3 ? randInt(1, 9) * 100 + randInt(1, 9) : randInt(1, 9) * 1000 + (Math.random() < 0.5 ? randInt(1, 9) * 100 + randInt(1, 9) : randInt(10, 99)))
+    : n
+  return {
+    topic: band <= 2 ? 'counting' : 'place-value', level,
+    question_text: say(lang, `Write "${numberWords(tricky, 'en')}" in figures.`, `"${numberWords(tricky, 'tr')}" sayısını rakamla yaz.`, `Escribe "${numberWords(tricky, 'es')}" con cifras.`),
+    format: 'numeric', correct_answer: tricky, operandKey: `pvw:${tricky}`,
+    hint_steps: [
+      say(lang, `Write each part in its place: thousands, hundreds, tens, ones.`, `Her parçayı kendi basamağına yaz: binler, yüzler, onlar, birler.`, `Escribe cada parte en su lugar: millares, centenas, decenas, unidades.`),
+      say(lang, `If a place has nothing in it, it still needs a 0.`, `Bir basamakta hiçbir şey yoksa oraya 0 yazılır.`, `Si una posición está vacía, lleva un 0.`),
+    ],
+  }
+}
+
+function pvDigits(level, lang) {
+  const band = bandForLevel(level)
+  const k = band <= 3 ? 3 : 4
+  let digits
+  do { digits = Array.from({ length: k }, () => randInt(0, 9)) } while (new Set(digits).size < k - (band >= 4 ? 1 : 0) || digits.filter(d => d > 0).length < 2)
+  const biggest = Math.random() < 0.5
+  const sorted = [...digits].sort((a, b) => (biggest ? b - a : a - b))
+  // The smallest number cannot start with 0: swap in the smallest non-zero digit.
+  if (!biggest && sorted[0] === 0) {
+    const i = sorted.findIndex(d => d > 0)
+    ;[sorted[0], sorted[i]] = [sorted[i], sorted[0]]
+  }
+  const answer = Number(sorted.join(''))
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang, `What is the ${biggest ? 'biggest' : 'smallest'} number you can make with these digits: ${digits.join(', ')}?`,
+                             `Bu rakamlarla yazabileceğin en ${biggest ? 'büyük' : 'küçük'} sayı kaçtır: ${digits.join(', ')}?`,
+                             `¿Cuál es el número más ${biggest ? 'grande' : 'pequeño'} que puedes formar con estas cifras: ${digits.join(', ')}?`),
+    format: 'numeric', correct_answer: answer, operandKey: `pvd:${biggest}:${digits.join('')}`,
+    hint_steps: [
+      say(lang, `The first digit is worth the most, so put the ${biggest ? 'biggest' : 'smallest'} digit there.`,
+                `İlk rakam en değerli olandır, oraya en ${biggest ? 'büyük' : 'küçük'} rakamı koy.`,
+                `La primera cifra es la que más vale: pon ahí la ${biggest ? 'mayor' : 'menor'}.`),
+      biggest
+        ? say(lang, `Then the next biggest, and so on.`, `Sonra bir sonraki en büyüğü, böyle devam et.`, `Luego la siguiente mayor, y así.`)
+        : say(lang, `A number cannot start with 0 — use 0 in the next place instead.`, `Sayı 0 ile başlayamaz — 0'ı bir sonraki basamağa koy.`, `Un número no puede empezar por 0: ponlo en la siguiente posición.`),
+    ],
+  }
+}
+
+function pvSequence(level, lang) {
+  const band = bandForLevel(level)
+  const steps = band <= 2 ? [2, 3, 5, 10] : band === 3 ? [4, 8, 50, 100, 6, 9] : [6, 7, 9, 25, 1000, 11, 12, 15]
+  const step = pick(steps)
+  const down = Math.random() < 0.45
+  const len = 5
+  const maxStart = band <= 2 ? 99 : band === 3 ? 999 : 9999
+  let start = randInt(step * (down ? len : 1), Math.max(step * (down ? len : 1) + 1, maxStart - (down ? 0 : step * len)))
+  if (step >= 25) start = Math.round(start / step) * step || step * len
+  const terms = Array.from({ length: len }, (_, i) => (down ? start - step * i : start + step * i))
+  if (terms.some(t => t <= 0)) return pvSequence(level, lang)
+  const gap = randInt(1, len - 2)
+  const shown = terms.map((t, i) => (i === gap ? '?' : num(t, lang)))
+  return {
+    topic: band <= 2 ? 'counting' : 'place-value', level,
+    question_text: say(lang, `What is the missing number? ${shown.join(', ')}`, `Eksik sayı kaçtır? ${shown.join(', ')}`, `¿Qué número falta? ${shown.join(', ')}`),
+    format: 'numeric', correct_answer: terms[gap], operandKey: `pvs:${step}:${terms[0]}:${down}:${gap}`,
+    hint_steps: [
+      say(lang, `Find two numbers next to each other and work out the gap.`, `Yan yana iki sayı bul ve aradaki farkı hesapla.`, `Busca dos números seguidos y calcula la diferencia.`),
+      say(lang, `The sequence goes ${down ? 'down' : 'up'} by the same amount every time.`, `Dizi her seferinde aynı miktarda ${down ? 'azalıyor' : 'artıyor'}.`, `La serie ${down ? 'baja' : 'sube'} siempre lo mismo.`),
+    ],
+  }
+}
+
+function pvPartition(level, lang) {
+  const band = bandForLevel(level)
+  if (band <= 2) {
+    const t = randInt(2, 9), o = randInt(1, 9)
+    const swapped = Math.random() < 0.3
+    return {
+      topic: 'counting', level,
+      question_text: swapped
+        ? say(lang, `What number is ${o} ones and ${t} tens?`, `${o} birlik ve ${t} onluk hangi sayıyı yapar?`, `¿Qué número forman ${o} unidades y ${t} decenas?`)
+        : say(lang, `What number is ${t} tens and ${o} ones?`, `${t} onluk ve ${o} birlik hangi sayıyı yapar?`, `¿Qué número forman ${t} decenas y ${o} unidades?`),
+      format: 'numeric', correct_answer: t * 10 + o, operandKey: `pvp:${t}:${o}:${swapped}`,
+      hint_steps: [say(lang, `${t} tens is ${t * 10}.`, `${t} onluk ${t * 10} eder.`, `${t} decenas son ${t * 10}.`),
+                   say(lang, `Then add the ones.`, `Sonra birlikleri ekle.`, `Luego suma las unidades.`)],
+    }
+  }
+  const n = band === 3 ? randInt(101, 999) : randInt(1001, 9999)
+  const parts = placeParts(n)
+  if (parts.length < 3) return pvPartition(level, lang)
+  const hide = randInt(1, parts.length - 1)
+  const shown = parts.map((p, i) => (i === hide ? '?' : num(p, lang))).join(' + ')
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang, `What is the missing number? ${num(n, lang)} = ${shown}`, `Eksik sayı kaçtır? ${num(n, lang)} = ${shown}`, `¿Qué número falta? ${num(n, lang)} = ${shown}`),
+    format: 'numeric', correct_answer: parts[hide], operandKey: `pvp:${n}:${hide}`,
+    hint_steps: [say(lang, `Each part is one digit of ${num(n, lang)} in its place.`, `Her parça, ${num(n, lang)} sayısının bir basamağıdır.`, `Cada parte es una cifra de ${num(n, lang)} en su posición.`),
+                 say(lang, `Find the digit that is missing and what its place makes it worth.`, `Eksik rakamı ve bulunduğu basamağın ona kattığı değeri bul.`, `Busca la cifra que falta y cuánto vale en su posición.`)],
+  }
+}
+
+function pvRoman(level, lang) {
+  // A single letter (V, X, L, C) is not asked: the hint's key names every one of them.
+  let n
+  do { n = randInt(4, 99) } while ([5, 10, 50].includes(n))
+  const r = roman(n)
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang, `What number is ${r} in Roman numerals?`, `Roma rakamıyla ${r} hangi sayıdır?`, `¿Qué número es ${r} en números romanos?`),
+    format: 'numeric', correct_answer: n, operandKey: `roman:${n}`,
+    hint_steps: [
+      say(lang, 'I = 1, V = 5, X = 10, L = 50, C = 100.', 'I = 1, V = 5, X = 10, L = 50, C = 100.', 'I = 1, V = 5, X = 10, L = 50, C = 100.'),
+      (() => {
+        // The worked examples are chosen so that neither is the numeral being asked about.
+        const ex = [['IV', 4], ['IX', 9], ['XL', 40], ['XC', 90]].filter(([, v]) => v !== n).slice(0, 2).map(([s, v]) => `${s} = ${v}`).join(', ')
+        return say(lang, `Add them up — but a smaller one BEFORE a bigger one is taken away (${ex}).`,
+                         `Hepsini topla — ama büyük olanın ÖNÜNDEKİ küçük çıkarılır (${ex}).`,
+                         `Súmalos, pero uno pequeño DELANTE de uno grande se resta (${ex}).`)
+      })(),
+    ],
+  }
+}
+
+function pvMoreLess(level, lang) {
+  const band = bandForLevel(level)
+  const amount = band <= 2 ? pick([1, 10]) : band === 3 ? pick([10, 100]) : pick([100, 1000])
+  const up = Math.random() < 0.5
+  const max = band <= 2 ? 99 : band === 3 ? 999 : 9999
+  const n = randInt(amount + 1, max - amount)
+  return {
+    topic: band <= 2 ? 'counting' : 'place-value', level,
+    question_text: say(lang, `What is ${num(amount, lang)} ${up ? 'more' : 'less'} than ${num(n, lang)}?`,
+                             `${num(n, lang)} sayısının ${num(amount, lang)} ${up ? 'fazlası' : 'eksiği'} kaçtır?`,
+                             `¿Cuánto es ${num(amount, lang)} ${up ? 'más' : 'menos'} que ${num(n, lang)}?`),
+    format: 'numeric', correct_answer: up ? n + amount : n - amount, operandKey: `pvml:${amount}:${n}:${up}`,
+    hint_steps: [
+      say(lang, `Only one digit is being ${up ? 'added to' : 'taken from'}: the ${amount === 1000 ? 'thousands' : amount === 100 ? 'hundreds' : amount === 10 ? 'tens' : 'ones'}.`,
+                `Yalnız bir basamak ${up ? 'artıyor' : 'azalıyor'}: ${amount === 1000 ? 'binler' : amount === 100 ? 'yüzler' : amount === 10 ? 'onlar' : 'birler'} basamağı.`,
+                `Solo cambia una posición: la de las ${amount === 1000 ? 'unidades de millar' : amount === 100 ? 'centenas' : amount === 10 ? 'decenas' : 'unidades'}.`),
+      say(lang, `If that digit passes 9 or goes below 0, the next place changes too.`, `O rakam 9'u geçerse ya da 0'ın altına inerse bir sonraki basamak da değişir.`, `Si esa cifra pasa de 9 o baja de 0, cambia también la siguiente.`),
+    ],
+  }
+}
+
+function youngPlaceValue(level, lang) {
+  const band = bandForLevel(level)
+  const r = Math.random()
+  if (band <= 2) {
+    if (r < 0.35) return null
+    if (r < 0.55) return pvSequence(level, lang)
+    if (r < 0.72) return pvWords(level, lang)
+    if (r < 0.87) return pvPartition(level, lang)
+    return lineReading(level, lang)
+  }
+  if (band === 3) {
+    if (r < 0.3) return null
+    if (r < 0.45) return pvSequence(level, lang)
+    if (r < 0.58) return pvWords(level, lang)
+    if (r < 0.7) return pvDigits(level, lang)
+    if (r < 0.82) return pvMoreLess(level, lang)
+    if (r < 0.9) return pvPartition(level, lang)
+    return lineReading(level, lang)
+  }
+  if (r < 0.3) return null
+  if (r < 0.42) return pvRoman(level, lang)
+  if (r < 0.54) return pvSequence(level, lang)
+  if (r < 0.64) return pvWords(level, lang)
+  if (r < 0.74) return pvDigits(level, lang)
+  if (r < 0.82) return pvMoreLess(level, lang)
+  if (r < 0.9) return pvPartition(level, lang)
+  return lineReading(level, lang)
+}
+
+function lineReading(level, lang) {
+  return scaleReading(level, lang, ['line'])
+}
+
+// Year 1 reads a ruler in whole centimetres; Year 3 reads all four instruments.
+function measureReading(level, lang) {
+  return scaleReading(level, lang, bandForLevel(level) <= 2 ? ['ruler'] : ['ruler', 'jug', 'thermo', 'dial'])
+}
+
+// ── data, ages 7-9 ────────────────────────────────────────────────────────────
+// A tally chart: Year 2's curriculum names it, and both books start their data pages with one.
+const TALLY_SETS = [
+  { en: { what: 'favourite fruit', rows: ['Apple', 'Banana', 'Grapes', 'Pear'] }, tr: { what: 'en sevdiği meyveyi', rows: ['Elma', 'Muz', 'Üzüm', 'Armut'] }, es: { what: 'fruta favorita', rows: ['Manzana', 'Plátano', 'Uvas', 'Pera'] } },
+  { en: { what: 'favourite pet', rows: ['Dog', 'Cat', 'Hamster', 'Fish'] }, tr: { what: 'en sevdiği evcil hayvanı', rows: ['Köpek', 'Kedi', 'Hamster', 'Balık'] }, es: { what: 'mascota favorita', rows: ['Perro', 'Gato', 'Hámster', 'Pez'] } },
+  { en: { what: 'way to school', rows: ['Walk', 'Car', 'Bus', 'Bike'] }, tr: { what: 'okula geliş şeklini', rows: ['Yürüyerek', 'Arabayla', 'Otobüsle', 'Bisikletle'] }, es: { what: 'forma de ir al cole', rows: ['Andando', 'Coche', 'Autobús', 'Bici'] } },
+]
+
+function dataTally(level, lang) {
+  const band = bandForLevel(level)
+  const set = pick(TALLY_SETS)
+  const w = set[lang] ?? set.en
+  const counts = shuffle(Array.from({ length: band <= 2 ? 12 : 17 }, (_, i) => i + 2)).slice(0, 4)
+  const rows = w.rows.map((label, i) => ({ label, count: counts[i] }))
+  const ask = pick(band <= 2 ? ['read', 'read', 'more', 'total'] : ['read', 'more', 'total', 'total'])
+  const i = randInt(0, 3)
+  let j = randInt(0, 3); while (j === i) j = randInt(0, 3)
+  const [hi, lo] = counts[i] > counts[j] ? [i, j] : [j, i]
+  const intro = say(lang, `The tally chart shows each child's ${w.what}.`, `Çetele tablosu, çocukların ${w.what} gösteriyor.`, `La tabla de conteo muestra la ${w.what} de cada niño.`)
+  const q = ask === 'read'
+    ? say(lang, `${intro} How many children chose ${w.rows[i]}?`, `${intro} Kaç çocuk "${w.rows[i]}" dedi?`, `${intro} ¿Cuántos niños eligieron «${w.rows[i]}»?`)
+    : ask === 'more'
+      ? say(lang, `${intro} How many more chose ${w.rows[hi]} than ${w.rows[lo]}?`, `${intro} "${w.rows[hi]}" diyenler, "${w.rows[lo]}" diyenlerden kaç kişi fazla?`, `${intro} ¿Cuántos más eligieron «${w.rows[hi]}» que «${w.rows[lo]}»?`)
+      : say(lang, `${intro} How many children are there altogether?`, `${intro} Toplam kaç çocuk var?`, `${intro} ¿Cuántos niños hay en total?`)
+  const answer = ask === 'read' ? counts[i] : ask === 'more' ? counts[hi] - counts[lo] : counts.reduce((a, b) => a + b, 0)
+  return {
+    topic: 'pictogram', level, question_text: q, format: 'numeric', correct_answer: answer,
+    operandKey: `tally:${ask}:${counts.join('-')}:${i}:${j}`,
+    hint_steps: [
+      say(lang, 'Each gate of four lines with one across is 5. Count the gates in fives, then the single lines.', 'Üstü çizili dört çizgi 5 demektir. Önce beşleri, sonra tek çizgileri say.', 'Cada grupo de cuatro rayas cruzadas es 5. Cuenta de 5 en 5 y luego las rayas sueltas.'),
+      ask === 'total' ? say(lang, 'Add up every row.', 'Bütün satırları topla.', 'Suma todas las filas.')
+        : ask === 'more' ? say(lang, 'Count both rows, then find the difference.', 'İki satırı da say, sonra farkı bul.', 'Cuenta las dos filas y calcula la diferencia.')
+          : say(lang, 'Find the right row first.', 'Önce doğru satırı bul.', 'Busca primero la fila correcta.'),
+    ],
+    visual: { kind: 'tally', rows },
+  }
+}
+
+// ── money, ages 7-9 ───────────────────────────────────────────────────────────
+// A shop's price list: what two things cost together, which two cost an exact amount, how much
+// change. Year 2 works in cents; Years 3 and 4 in dollars and cents, the way the books use £.
+const SHOP = [
+  { icon: '✏️', en: 'pencil', tr: 'kalem', es: 'lápiz' }, { icon: '📒', en: 'notepad', tr: 'defter', es: 'libreta' },
+  { icon: '🧽', en: 'rubber', tr: 'silgi', es: 'goma' }, { icon: '📏', en: 'ruler', tr: 'cetvel', es: 'regla' },
+  { icon: '🖍️', en: 'crayons', tr: 'boya', es: 'ceras' }, { icon: '✂️', en: 'scissors', tr: 'makas', es: 'tijeras' },
+  { icon: '🖊️', en: 'pen', tr: 'tükenmez', es: 'boli' },
+]
+
+function moneyShop(level, lang) {
+  const band = bandForLevel(level)
+  const items = shuffle(SHOP).slice(0, 4).map(it => ({ ...it,
+    cents: band <= 2 ? randInt(2, 9) * 5 : randInt(4, 39) * 5 }))
+  // no two prices the same, or "which two cost …" can have two answers
+  if (new Set(items.map(i => i.cents)).size < items.length) return moneyShop(level, lang)
+  const price = c => (band <= 2 ? say(lang, `${c}c`, `${c} kr`, `${c} cént.`) : cash(c, lang))
+  const visual = { kind: 'prices', items: items.map(it => ({ icon: it.icon, name: it[lang] ?? it.en, price: price(it.cents) })) }
+  const unitQ = band <= 2 ? say(lang, 'cents', 'kuruş', 'céntimos') : MAJOR[lang] ?? MAJOR.en
+  const ask = pick(['pair', 'pair', 'change', 'which'])
+  const [a, b] = items
+  const nm = it => it[lang] ?? it.en
+  const value = c => (band <= 2 ? c : c / 100)
+  const fmt = band <= 2 ? 'numeric' : 'decimal'
+  if (ask === 'pair') {
+    const total = a.cents + b.cents
+    return {
+      topic: 'money', level,
+      question_text: say(lang, `How much do the ${nm(a)} and the ${nm(b)} cost together, in ${unitQ}?`,
+                               `${cap(nm(a))} ve ${nm(b)} birlikte kaç ${unitQ} tutar?`,
+                               `¿Cuánto cuestan juntos ${nm(a)} y ${nm(b)}, en ${unitQ}?`),
+      format: Number.isInteger(value(total)) ? 'numeric' : fmt, correct_answer: value(total), operandKey: `shop:pair:${a.cents}:${b.cents}`,
+      hint_steps: [say(lang, `Find both prices on the tags.`, `İki fiyatı da etiketlerden bul.`, `Busca los dos precios en las etiquetas.`),
+                   say(lang, `Add them — the cents first, then the ${band <= 2 ? 'tens' : 'dollars'}.`, `Topla — önce kuruşları, sonra ${band <= 2 ? 'onlukları' : 'liraları'}.`, `Súmalos: primero los céntimos y luego ${band <= 2 ? 'las decenas' : 'los euros'}.`)],
+      visual,
+    }
+  }
+  if (ask === 'change') {
+    const paid = band <= 2 ? 100 : pick([500, 1000])
+    const spend = a.cents + (band >= 3 ? b.cents : 0)
+    return {
+      topic: 'money', level,
+      question_text: band <= 2
+        ? say(lang, `${pickL(MULT_NAMES, lang)} buys the ${nm(a)} and pays with 100 cents. How much change is there, in cents?`,
+                    `${pickL(MULT_NAMES, lang)} ${nm(a)} alıyor ve 100 kuruş veriyor. Kaç kuruş para üstü alır?`,
+                    `${pickL(MULT_NAMES, lang)} compra ${nm(a)} y paga con 100 céntimos. ¿Cuánto le devuelven, en céntimos?`)
+        : say(lang, `${pickL(MULT_NAMES, lang)} buys the ${nm(a)} and the ${nm(b)} and pays with ${cash(paid, lang)}. How much change is there, in ${unitQ}?`,
+                    `${pickL(MULT_NAMES, lang)} ${nm(a)} ve ${nm(b)} alıyor, ${cash(paid, lang)} veriyor. Kaç ${unitQ} para üstü alır?`,
+                    `${pickL(MULT_NAMES, lang)} compra ${nm(a)} y ${nm(b)} y paga con ${cash(paid, lang)}. ¿Cuánto le devuelven, en ${unitQ}?`),
+      format: Number.isInteger(value(paid - spend)) ? 'numeric' : fmt, correct_answer: value(paid - spend), operandKey: `shop:chg:${paid}:${spend}`,
+      hint_steps: [say(lang, `First find what it all costs.`, `Önce hepsinin kaç tuttuğunu bul.`, `Primero calcula cuánto cuesta todo.`),
+                   say(lang, `Then count up from that to what was paid.`, `Sonra oradan verilen paraya kadar say.`, `Luego cuenta desde ahí hasta lo que se pagó.`)],
+      visual,
+    }
+  }
+  // which two cost exactly …
+  const pairs = []
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) pairs.push([items[i], items[j]])
+  const target = pick(pairs)
+  const sum = target[0].cents + target[1].cents
+  if (pairs.filter(([x, y]) => x.cents + y.cents === sum).length !== 1) return moneyShop(level, lang)
+  const label = ([x, y]) => say(lang, `${nm(x)} and ${nm(y)}`, `${nm(x)} ve ${nm(y)}`, `${nm(x)} y ${nm(y)}`)
+  const right = opt(label(target), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = shuffle(pairs.filter(p => p !== target)).map(p => opt(label(p),
+    say(lang, `Those two come to ${price(p[0].cents + p[1].cents)}.`, `Bu ikisi ${price(p[0].cents + p[1].cents)} tutar.`, `Esos dos suman ${price(p[0].cents + p[1].cents)}.`)))
+  return {
+    topic: 'money', level,
+    question_text: say(lang, `Which two things cost exactly ${price(sum)} together?`, `Hangi iki şey birlikte tam ${price(sum)} tutar?`, `¿Qué dos cosas cuestan juntas exactamente ${price(sum)}?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `shop:which:${items.map(i => i.cents).join('-')}:${sum}`,
+    hint_steps: [say(lang, `Try adding the prices two at a time.`, `Fiyatları ikişer ikişer toplamayı dene.`, `Prueba a sumar los precios de dos en dos.`),
+                 say(lang, `Only one pair lands exactly on ${price(sum)}.`, `Yalnız bir çift tam ${price(sum)} eder.`, `Solo una pareja da exactamente ${price(sum)}.`)],
+    visual,
+  }
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -4292,6 +5733,10 @@ const REGISTRY = {
 }
 
 export { SHAPES }
+
+// The visual kinds drawn by components/MathFigure. Kept here, beside the templates that emit
+// them, so the screen can ask "is this a picture question?" without importing a component.
+export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital'])
 
 export const TOPICS = Object.keys(REGISTRY)
 

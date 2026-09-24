@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MathGeometry from '../components/MathGeometry'
 import MathChart from '../components/MathChart'
+import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock } from '../components/ClockFace'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
-import { generateProblem, SHAPES, isCountable, measureGridCells, dnum } from '../lib/mathTemplates'
+import { generateProblem, SHAPES, isCountable, measureGridCells, dnum, FIGURE_KINDS } from '../lib/mathTemplates'
 import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
 import { t, say } from '../lib/i18n'
@@ -730,6 +731,35 @@ const HELP_WORDS = {
   },
 }
 
+// The picture a question cannot be answered without, for the paper list. Paper mode printed the
+// sentence alone, so a chart, a clock or a grid question reached the child with nothing to
+// read — "How many books on Tue?" beside no chart. The help-only pictures (sharing, groups,
+// arrays) are not drawn: they are the method, not the question.
+function QuestionPicture({ visual, language, description }) {
+  if (!visual) return null
+  if (visual.kind === 'clock' && visual.ask !== 'span') {
+    return <div style={{ alignSelf: 'center' }}><ClockFace hour={visual.hour} minute={visual.minute} size={140} zoomable language={language} /></div>
+  }
+  if (visual.kind === 'pictogram') return <Pictogram unit={visual.unit} each={visual.each} rows={visual.rows} />
+  if (visual.kind === 'shapes') {
+    return <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+      {visual.shapes.map((s, i) => <ShapeSVG key={i} kind={s} size={76} />)}
+    </div>
+  }
+  if (visual.kind === 'count') {
+    return <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+      {Array.from({ length: visual.n }).map((_, i) => <span key={i} style={{ fontSize: 28, lineHeight: 1 }}>{visual.item}</span>)}
+    </div>
+  }
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <MathGeometry visual={visual} language={language} description={description} />
+      <MathChart visual={visual} language={language} description={description} />
+      <MathFigure visual={visual} language={language} description={description} />
+    </div>
+  )
+}
+
 // Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
 // screen on demand — in a real session a given one turns up once in ten questions and only
 // after a wrong answer.
@@ -830,6 +860,20 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   }
 
   // ── Sayalım content ──────────────────────────────────────────────────────
+  // A question that IS a picture — a chart, a scale, a shape, a grid — keeps its picture in the
+  // help, on whichever tab shows the steps. The panel replaces the question card, and "find the
+  // top of the red line" said beside no thermometer is not help. The figure's own hint marks
+  // (mirror lines, coordinate guides) wait for the same three tries the shapes' Show tab does:
+  // they are most of the answer.
+  const stepsWithPicture = hasStepHints && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: '100%' }}>
+      <MathGeometry visual={visual} language={language} hint description={question} />
+      <MathChart visual={visual} language={language} description={question} />
+      <MathFigure visual={visual} language={language} hint={guessRound >= GUESS_ROUNDS} description={question} />
+      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
+    </div>
+  )
+
   let sayalim
 
   if (clock) {
@@ -1244,9 +1288,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       </div>
     )
   } else if (hasStepHints) {
-    sayalim = (
-      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
-    )
+    sayalim = stepsWithPicture
   } else {
     // Unreachable in practice — HelpPanel only mounts when hasRealHelp() (MathScreen)
     // is true, which is exactly isPlus || isMinus || pattern || hasStepHints. Kept as a
@@ -1419,9 +1461,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       </div>
     )
   } else if (hasStepHints) {
-    goster = (
-      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
-    )
+    goster = stepsWithPicture
   } else {
     // Unreachable in practice — see the matching note on the `sayalim` fallback above.
     goster = null
@@ -2421,6 +2461,7 @@ export default function MathScreen() {
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5 }}>
                   <MathText text={q} />
                 </div>
+                <QuestionPicture visual={templateProblems[i]?.visual} language={language} description={q} />
                 {/* Paper mode had no hints at all: the child on screen could ask for a nudge and
                     the child with a pencil could not, for the same question. Same first step,
                     same cost — it counts as help either way. */}
@@ -2598,6 +2639,7 @@ export default function MathScreen() {
               }}>
                 <MathGeometry visual={qVisual} language={language} hint={hintOpenFor === qIdx} description={q} />
                 <MathChart visual={qVisual} language={language} description={q} />
+                <MathFigure visual={qVisual} language={language} description={q} />
                 {questionShapes && (
                   <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
                     {questionShapes.map((s, i) => <ShapeSVG key={i} kind={s} size={96} />)}
@@ -2617,7 +2659,7 @@ export default function MathScreen() {
                 {questionPicto && (
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
                 )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto || qVisual?.kind === 'geometry' || qVisual?.kind === 'chart' ? 20 : 32), color: INK, lineHeight: 1.55 }}>
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto || qVisual?.kind === 'geometry' || qVisual?.kind === 'chart' || FIGURE_KINDS.has(qVisual?.kind) ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   <MathText text={q} />
                 </div>
               </div>

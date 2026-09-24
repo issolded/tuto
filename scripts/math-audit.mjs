@@ -197,7 +197,7 @@ for (const age of AGES) {
         }
         // A two-way table is answered from the cells the child sees: what is printed plus the
         // answer has to make the total the question states, or the "?" has no right answer.
-        if (p.visual?.shape === 'table') {
+        if (p.visual?.shape === 'table' && p.operandKey.startsWith('chart:t:')) {
           const total = Number(p.operandKey.split(':')[2])
           const shown = p.visual.rows.flatMap(r => r.cells).filter(c => c != null).reduce((x, y) => x + y, 0)
           const holes = p.visual.rows.flatMap(r => r.cells).filter(c => c == null).length
@@ -220,6 +220,21 @@ for (const age of AGES) {
           const bad = tok.includes(grouping) && !new RegExp(`^\\d{1,3}(\\${grouping}\\d{3})+(\\${decimalMark}\\d+)?$`).test(tok)
           if (bad) { fail(where, 'ondalık işareti dile uymuyor', `${tok} — ${p.question_text}`); break }
         }
+        // The scale and the shaded shape are answered from what is drawn, so the key is recomputed
+        // from the drawing: the scale's reading, the shaded (or white) parts over all the parts.
+        if (p.visual?.kind === 'scale' && Number(p.correct_answer) !== p.visual.value) {
+          fail(where, 'ölçek görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${p.visual.value}`)
+        }
+        if (p.visual?.kind === 'fraction') {
+          const white = /NOT|DEĞİL|NO está/.test(p.question_text)
+          const k = white ? p.visual.parts - p.visual.shaded.length : p.visual.shaded.length
+          const [n, d] = String(p.correct_answer).split('/').map(Number)
+          if (n * p.visual.parts !== k * d) fail(where, 'kesir görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${k}/${p.visual.parts}`)
+        }
+        // A question that talks about a picture must carry one. "What is this 3D shape called?"
+        // shipped for a day with no solid drawn under it, and every other check passed it.
+        if (/\b(this|these) (shape|3D shape|clock|chart|scale|jug|thermometer|pencil|tally chart|grid)\b|shaded|the time shown|arrow is pointing|each child's/i.test(p.question_text)
+            && !p.visual) fail(where, 'soru bir resimden söz ediyor ama görsel yok', p.question_text)
         // 4. reading limit
         if (String(p.question_text).length > cap) {
           fail(where, `okuma sınırı aşıldı (${p.question_text.length} > ${cap})`, p.question_text)
