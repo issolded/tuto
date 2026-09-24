@@ -5,7 +5,7 @@ import { say } from '../lib/i18n'
 //   Year 4 "Area and Perimeter"   — "find the area of rectilinear shapes by counting squares"
 //   Year 4 "Data and Time Graphs" — "interpret and present data using bar charts and time graphs"
 //   Year 5 "Statistics"           — "using information in a line graph; complete and interpret
-//                                    information in a table"
+//                                    information in a table" (the two-way table below)
 //
 // Every one of those lines names the picture. Without one the question becomes "here are some
 // numbers, subtract them", which is a different question with the same answer — and the topic
@@ -64,6 +64,58 @@ export default function MathChart({ visual: v, language = 'en', description }) {
           <text x={W / 2} y={oy + rows * size + 16} textAnchor="middle" {...axisLabel}>
             {say(language, 'each square is 1 cm by 1 cm', 'her kare 1 cm × 1 cm', 'cada cuadrado mide 1 cm por 1 cm')}
           </text>
+        </g>
+      </Figure>
+    )
+  }
+
+  // ── a two-way table with one cell asked for ────────────────────────────────
+  // Year 5's "complete and interpret information in a table", drawn the way Bond prints it:
+  // a heading row, one row per choice, and a "?" where the missing number goes. The "?" is
+  // the question itself, so it is marked from the start rather than only under a hint.
+  if (v.shape === 'table') {
+    const labelW = 120
+    const colW = 78
+    const rowH = 36
+    const tw = labelW + colW * v.cols.length
+    const th = rowH * (v.rows.length + 1)
+    const ox = (W - tw) / 2
+    const oy = (H - th) / 2
+    // `fill` goes in the style, not as an attribute: a style fill wins over the attribute, and
+    // the first version drew the "?" in ink because of it.
+    const cellText = c => ({ font: '700 16px Nunito, sans-serif', fill: c == null ? ORANGE : INK })
+    return (
+      <Figure description={description} language={language} scale={false}>
+        <g>
+          <rect x={ox} y={oy} width={tw} height={rowH} fill="#e7f4f5" />
+          {v.rows.map((r, ri) => r.cells.map((c, ci) => c == null && (
+            <rect key={`q${ri}${ci}`} x={ox + labelW + ci * colW} y={oy + rowH * (ri + 1)} width={colW} height={rowH}
+              fill="rgba(184,91,16,.12)" />
+          )))}
+          {v.cols.map((c, ci) => (
+            <text key={c} x={ox + labelW + ci * colW + colW / 2} y={oy + rowH / 2} textAnchor="middle"
+              dominantBaseline="middle" style={{ font: '700 14px Nunito, sans-serif' }} fill={TEAL}>{c}</text>
+          ))}
+          {v.rows.map((r, ri) => (
+            <g key={r.label}>
+              <text x={ox + 10} y={oy + rowH * (ri + 1.5)} dominantBaseline="middle"
+                style={{ font: '700 14px Nunito, sans-serif' }} fill={INK}>{r.label}</text>
+              {r.cells.map((c, ci) => (
+                <text key={ci} x={ox + labelW + ci * colW + colW / 2} y={oy + rowH * (ri + 1.5)} textAnchor="middle"
+                  dominantBaseline="middle" style={cellText(c)}>{c == null ? '?' : c}</text>
+              ))}
+            </g>
+          ))}
+          {/* Grid on top of the fills so every line reads the same weight. */}
+          <rect x={ox} y={oy} width={tw} height={th} fill="none" stroke={INK} strokeWidth="2" rx="4" />
+          {Array.from({ length: v.rows.length }, (_, i) => (
+            <line key={`h${i}`} x1={ox} y1={oy + rowH * (i + 1)} x2={ox + tw} y2={oy + rowH * (i + 1)}
+              stroke={i === 0 ? INK : GRID} strokeWidth={i === 0 ? 2 : 1.5} />
+          ))}
+          {v.cols.map((_, ci) => (
+            <line key={`v${ci}`} x1={ox + labelW + ci * colW} y1={oy} x2={ox + labelW + ci * colW} y2={oy + th}
+              stroke={ci === 0 ? INK : GRID} strokeWidth={ci === 0 ? 2 : 1.5} />
+          ))}
         </g>
       </Figure>
     )

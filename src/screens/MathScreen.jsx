@@ -7,7 +7,7 @@ import ClockFace, { DraggableClock } from '../components/ClockFace'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
-import { generateProblem, SHAPES, isCountable, measureGridCells } from '../lib/mathTemplates'
+import { generateProblem, SHAPES, isCountable, measureGridCells, dnum } from '../lib/mathTemplates'
 import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
 import { t, say } from '../lib/i18n'
@@ -296,7 +296,9 @@ function getScoreMsg(pct, age, language) {
 // to be a positive whole number, so there was no key and a four-character limit; curriculum
 // topics like Decimals and Percentages need both. Showing the key on every question instead
 // would put a decimal point in front of a five-year-old counting apples.
-function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false }) {
+// The point key is labelled the way the question prints its decimals — a comma in Turkish and
+// Spanish — but what it types is always a point, so the answer is still read as a number.
+function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false, language = 'en' }) {
   const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], allowDecimal ? ['⌫','0','.','✓'] : ['⌫','0','✓']]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
@@ -334,7 +336,7 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
                   boxShadow: `0 5px 14px ${glow}`,
                   transition: 'transform 0.1s, opacity 0.15s',
                 }}
-              >{key}</button>
+              >{key === '.' ? dnum('0.0', language)[1] : key}</button>
             )
           })}
         </div>
@@ -2530,7 +2532,7 @@ export default function MathScreen() {
                   ? <>
                       <MathText text={flash.why} />
                       <div style={{ marginTop: 14, fontSize: 17, opacity: .92 }}>{t('math_answer_is', language)}</div>
-                      <div style={{ fontSize: 26 }}><MathText text={flash.answer} /></div>
+                      <div style={{ fontSize: 26 }}><MathText text={dnum(flash.answer, language)} /></div>
                       <div style={{ marginTop: 22, fontSize: 15, opacity: .78 }}>
                         {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
                       </div>
@@ -2538,7 +2540,7 @@ export default function MathScreen() {
                   : <>
                       {t('math_not_this', language)}
                       <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{t('math_answer_is', language)}</div>
-                      <div style={{ fontSize: 34 }}>{flash.answer}</div>
+                      <div style={{ fontSize: 34 }}>{dnum(flash.answer, language)}</div>
                     </>}
             </div>
           </div>
@@ -2631,7 +2633,10 @@ export default function MathScreen() {
               {(() => {
                 const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
                 if (!Array.isArray(all) || !all.length) return null
-                const names = s => new RegExp(`(?<!\\d)${String(correctAns[qIdx]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`).test(String(s))
+                // Both spellings of a decimal answer: hints print "0,25" in Turkish and Spanish.
+                const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
+                  .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
                 const steps = [all[0], ...all.slice(1).filter(s => !names(s))]
                 const open = hintOpenFor === qIdx
                 return (
@@ -2697,7 +2702,7 @@ export default function MathScreen() {
                         boxShadow: '0 6px 18px rgba(60,120,200,.12)', cursor: flash ? 'default' : 'pointer',
                         fontFamily: FRED, fontWeight: 600, fontSize: 27, color: MATH, lineHeight: 1.2,
                       }}
-                    ><MathText text={opt.value} /></button>
+                    ><MathText text={dnum(opt.value, language)} /></button>
                   ))}
                 </div>
               ) : (
@@ -2709,7 +2714,7 @@ export default function MathScreen() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
-                      {input || '?'}
+                      {input ? dnum(input, language) : '?'}
                     </span>
                   </div>
 
@@ -2720,6 +2725,7 @@ export default function MathScreen() {
                     onSubmit={submitScreenAnswer}
                     disabled={!!flash}
                     allowDecimal={answerFormats[qIdx] === 'decimal'}
+                    language={language}
                   />
                 </>
               )}
@@ -2847,12 +2853,12 @@ export default function MathScreen() {
                             seven-year-old typed 960, saw "your answer: —", and the older child
                             who cannot skip at all was the only one shown their own mistake. */}
                         {t('math_your_answer', language)} {r.child_answer == null
-                          ? (r.attempted == null ? '—' : <MathText text={r.attempted} />)
-                          : <MathText text={r.child_answer} />}
+                          ? (r.attempted == null ? '—' : <MathText text={dnum(r.attempted, language)} />)
+                          : <MathText text={dnum(r.child_answer, language)} />}
                       </div>
                       {!r.correct && (
                         <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 2 }}>
-                          {t('math_answer_was', language)} <MathText text={r.correct_answer} /> 💡
+                          {t('math_answer_was', language)} <MathText text={dnum(r.correct_answer, language)} /> 💡
                         </div>
                       )}
                     </div>

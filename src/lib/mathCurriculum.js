@@ -65,7 +65,9 @@ const TEMPLATE_FOR_TOPIC = {
   y4_fractions: 'fraction-of-number',
   y4_geometry: 'geometry',
 
-  y5_addition: 'addition',
+  // Year 5 is where addition leaves the bare "a + b = ?" and goes inside a story, the way
+  // Bond's 10-11 book asks it; the bare template stays for the years that are learning the sum.
+  y5_addition: 'add-sub-word',
   y5_multiplication: 'multiplication-word',
   y5_division: 'division-word',
   y5_fractions: 'fraction-of-number',

@@ -195,6 +195,31 @@ for (const age of AGES) {
             fail(where, 'ızgara görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${expected}`)
           }
         }
+        // A two-way table is answered from the cells the child sees: what is printed plus the
+        // answer has to make the total the question states, or the "?" has no right answer.
+        if (p.visual?.shape === 'table') {
+          const total = Number(p.operandKey.split(':')[2])
+          const shown = p.visual.rows.flatMap(r => r.cells).filter(c => c != null).reduce((x, y) => x + y, 0)
+          const holes = p.visual.rows.flatMap(r => r.cells).filter(c => c == null).length
+          if (holes !== 1 || shown + Number(p.correct_answer) !== total) {
+            fail(where, 'tablo görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}`)
+          }
+        }
+        // Decimal mark. Turkish and Spanish write thousands with a point (1.500), so a decimal
+        // printed with a point in those languages reads as a different number — "8.312" was
+        // eight point three one two in one Year 5 question and "8.412" eight thousand in the
+        // next. A pointed number there has to be a well-formed thousands group; in English a
+        // comma has to be. (A three-decimal "8.312" is indistinguishable from thousands by
+        // spelling alone, which is why the source uses `dnum` rather than trusting this.)
+        // Option VALUES are left out: they are compared as numbers and the screen localises them
+        // when it draws them, so only the words around them are checked here.
+        const read = `${p.question_text} ${(p.hint_steps || []).join(' ')} ${(p.options || []).map(o => o.why).join(' ')}`
+        for (const tok of read.match(/\d[\d.,]*\d/g) || []) {
+          const grouping = lang === 'en' ? ',' : '.'
+          const decimalMark = lang === 'en' ? '.' : ','
+          const bad = tok.includes(grouping) && !new RegExp(`^\\d{1,3}(\\${grouping}\\d{3})+(\\${decimalMark}\\d+)?$`).test(tok)
+          if (bad) { fail(where, 'ondalık işareti dile uymuyor', `${tok} — ${p.question_text}`); break }
+        }
         // 4. reading limit
         if (String(p.question_text).length > cap) {
           fail(where, `okuma sınırı aşıldı (${p.question_text.length} > ${cap})`, p.question_text)
@@ -249,6 +274,7 @@ const TEMPLATE_WORDS = {
   'multiplication-word': ['multipl'],
   'division-word': ['divi'],
   addition: ['add'],
+  'add-sub-word': ['add', 'subtract'],
   subtraction: ['subtract'],
   counting: ['count', 'place value', 'number'],
   time: ['time', 'clock'],

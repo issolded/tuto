@@ -2,7 +2,7 @@ import MathGeometry from '../components/MathGeometry'
 import MathChart from '../components/MathChart'
 import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
-import { generateProblem, TOPICS } from '../lib/mathTemplates'
+import { generateProblem, TOPICS, dnum } from '../lib/mathTemplates'
 import { HelpPanel, Pictogram } from './MathScreen'
 
 // Isolated pilot for the math template engine (src/lib/mathTemplates.js). Not linked from
@@ -114,7 +114,7 @@ export default function MathLab() {
                     color: 'white',
                   }}
                 >
-                  <div>{o.value}{result && isRight ? '  ✓' : ''}</div>
+                  <div>{dnum(o.value, lang)}{result && isRight ? '  ✓' : ''}</div>
                   {result && chosen && (
                     <div style={{ fontSize: 12, color: '#b9b2d0', marginTop: 6 }}>{o.why}</div>
                   )}

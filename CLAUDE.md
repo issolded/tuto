@@ -81,6 +81,28 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] 10-11 yaş dört işlem Bond biçimine geçti (2026-09-24, Claude). Kaynak *Bond Maths 10 Minute
+      Tests 10-11* (yaklaşık 200 soru okundu; taramada 18, 22, 23. testler eksik). Kitapta çıplak
+      "a + b = ?" **hiç yok**; toplama/çıkarma hep bağlam içinde ve çoğu iki adımlı, büyük sayı
+      doğal olarak büyük olan şeyde ("52 kişilik otobüs × 12", "2800 taraftar, 53 koltuk"), bölmenin
+      yarısı kalanı yorumlatıyor. Bizde ise 10 yaş oturumunda ~1,3 çıplak `8.412 + 5.400` vardı,
+      çıkarma hiç yoktu; "93 sepet × 8 düğme" gibi sorular çıkıyordu, bölmede kalan yoktu.
+      **Değişenler:** `y5_addition` → yeni `add-sub-word` (anket kalanı, otobüs iniş-biniş, kalan
+      MB, yemek yetmedi, yıllar arası, para kalanı; eklenen/çıkarılan sayı ekranda en fazla iki
+      sıfırdan farklı basamak, kağıtta serbest). `multiplication-word`/`division-word` band ≥5'te
+      bağlam kendi sayı aralığını taşıyor (Y5 iki basamak × bir, Y6 iki × iki); bölmede dört mod:
+      tam, yukarı yuvarla (kaç otobüs gerekir), aşağı yuvarla (kaç tam parça), kalan. Year 5
+      istatistiğe iki yönlü tablo (`MathChart` `shape: 'table'`, bir hücre "?"), chart sorularının
+      ~%35'i. **Ondalık virgülü:** TR/ES'de `num()` binlikte nokta kullanırken ondalık da noktayla
+      basılıyordu (aynı oturumda `8.412` sekiz bin, `8.312` sekiz virgül); `dnum()` okunan metni
+      virgülle basıyor, şık değerleri ve cevaplar noktalı kalıyor, ekran çizerken yerelleştiriyor,
+      klavye tuşu TR/ES'de "," gösteriyor ama "." yazıyor. `math:check` iki yeni kontrol: dile uymayan
+      ondalık işareti ve tablo görseli ile cevap anahtarının tutarlılığı.
+      Ölçüm (2000 oturum): 10 yaş çıplak 4 basamaklı toplama 1,3 → 0; kalanlı bölme ~1,0/oturum;
+      tablo ~0,4/oturum. Doğrulama: math:check (1000 soru/konu, bulgu yok), Vite build, font:check,
+      i18n:check değişmedi; tablo TR/EN/ES'de 390px ve 1024px tarayıcıda, TR ondalık şıklar.
+      **Açık:** gerçek MathScreen oturumunda (Supabase'li) klavye tuşu görülmedi, yalnız lab.
+
 - [x] My Drawings görsel yükleme performansı (2026-09-23, Codex; yerelde).
       6-8 kataloğu 40 kart için toplam 18,4 MB tam boy son-adım görseline bakıyordu;
       `loading="lazy"` yalnız ekran dışındakileri erteliyor, görünür ilk sıra yine yüzlerce KB
