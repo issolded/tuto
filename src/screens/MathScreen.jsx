@@ -512,7 +512,11 @@ export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
 // whole lesson for "what is 3pm on a 24-hour clock" and for the two duration shapes — and it is
 // the answer, verbatim, for every shape that asks the child to READ the face, because the help
 // tells them to turn the hands until they match the question first.
-const READOUT_SAFE = new Set(['h24', 'span', 'later'])
+// 'span' is not one of them, although it was. It asks how many MINUTES are in n hours and the
+// readout prints a TIME — a child who turns the hands to four o'clock and reads the words
+// underneath writes 4, and the answer is 240. `later` belongs here because its answer really is
+// a time; the two were grouped as "the duration shapes" and only one of them is.
+const READOUT_SAFE = new Set(['h24', 'later'])
 
 function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, capacity }) {
   // `counts` is the child's own guess dealt out, which is the one case where the groups can
@@ -837,7 +841,16 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     // Every other shape asks the child to READ a face, so the draggable one starts at 12:00
     // and the question's face sits beside it as the thing to copy.
     const seedFromQuestion = clock.ask === 'span' || clock.ask === 'later'
-    const guide = (CLOCK_GUIDE[language] ?? CLOCK_GUIDE.en)[clock.ask]
+    let guide = (CLOCK_GUIDE[language] ?? CLOCK_GUIDE.en)[clock.ask]
+    // The span guide demonstrated ONE turn and stopped, which grounds "an hour is 60 minutes"
+    // and then leaves the child to do the rest of the question with no help at all. It counts
+    // the turns now, which is the question.
+    if (clock.ask === 'span' && clock.hours > 1) {
+      guide = say(language,
+        `Turn the long hand all the way round once: the short hand moves on one hour, which is 60 minutes. Do that ${clock.hours} times, counting 60, 120, and on.`,
+        `Yelkovanı bir tam tur çevir: akrep bir saat ilerler, o da 60 dakikadır. Bunu ${clock.hours} kez yap ve 60, 120 diye sayarak git.`,
+        `Dale una vuelta entera a la aguja larga: la corta avanza una hora, que son 60 minutos. Hazlo ${clock.hours} veces, contando 60, 120 y así.`)
+    }
 
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>

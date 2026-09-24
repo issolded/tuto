@@ -1766,7 +1766,8 @@ function timeTemplate(level, lang) {
       format: 'numeric',
       correct_answer: n * 60,
       operandKey: `time:span:${n}`,
-      visual: { kind: 'clock', hour: 12, minute: 0, ask: 'span' },
+      // `hours` so the help can count the turns rather than demonstrating one and stopping.
+      visual: { kind: 'clock', hour: 12, minute: 0, ask: 'span', hours: n },
       hint_steps: [
         say(lang, 'One hour is 60 minutes.', 'Bir saat 60 dakikadır.', 'Una hora son 60 minutos.'),
         say(lang, `So ${n} hours is ${n} lots of 60.`, `Yani ${n} saat, ${n} kere 60 eder.`,
