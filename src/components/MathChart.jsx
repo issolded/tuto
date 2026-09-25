@@ -34,6 +34,43 @@ const axisLabel = { font: '600 11px Nunito, sans-serif', fill: '#617383' }
 export default function MathChart({ visual: v, language = 'en', description }) {
   if (v?.kind !== 'chart') return null
 
+  // ── a pie chart ─────────────────────────────────────────────────────────────
+  // Year 6's line is "interpret pie charts", and Bond's are read the way a child reads a clock:
+  // half, a quarter, an eighth. So slices come from fractions with small denominators, the
+  // quarter lines get a faint guide cross, and no slice carries its number — the label names
+  // the group, the size is what the child reads.
+  if (v.shape === 'pie') {
+    const cx = 110, cy = 104, r = 88
+    const COLOURS = ['#7ecbd0', '#f3c98b', '#b9d98a', '#e6a6b4', '#b7b3e6', '#9fd0f0']
+    // Each slice starts where the ones before it end: 12 o'clock plus their running total.
+    const starts = v.slices.map((_, i) => v.slices.slice(0, i).reduce((sum, s) => sum + s.n / s.d, 0))
+    const slices = v.slices.map((s, i) => {
+      const a0 = -Math.PI / 2 + starts[i] * 2 * Math.PI
+      const a1 = a0 + (s.n / s.d) * 2 * Math.PI
+      const p0 = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)], p1 = [cx + r * Math.cos(a1), cy + r * Math.sin(a1)]
+      const big = a1 - a0 > Math.PI ? 1 : 0
+      const mid = (a0 + a1) / 2
+      return { i, s, d: `M ${cx} ${cy} L ${p0} A ${r} ${r} 0 ${big} 1 ${p1} Z`, mid }
+    })
+    return (
+      <Figure description={description} language={language} scale={false}>
+        <g>
+          {slices.map(({ i, d }) => <path key={i} d={d} fill={COLOURS[i % COLOURS.length]} stroke="white" strokeWidth="2" />)}
+          <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke="rgba(36,70,90,.18)" strokeDasharray="3 4" />
+          <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} stroke="rgba(36,70,90,.18)" strokeDasharray="3 4" />
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="2" />
+          {/* A key beside the pie rather than labels on it: an eighth is too narrow to write in. */}
+          {slices.map(({ i, s }) => (
+            <g key={`k${i}`}>
+              <rect x={216} y={28 + i * 30} width={16} height={16} rx={3} fill={COLOURS[i % COLOURS.length]} stroke={INK} strokeWidth="1" />
+              <text x={240} y={36 + i * 30} dominantBaseline="middle" style={{ font: '700 13px Nunito, sans-serif', fill: INK }}>{s.label}</text>
+            </g>
+          ))}
+        </g>
+      </Figure>
+    )
+  }
+
   // ── a grid of unit squares with a rectilinear shape drawn on it ────────────
   if (v.shape === 'grid') {
     const { cols, rows, cells } = v          // cells: [[x, y], …] filled unit squares

@@ -1480,7 +1480,9 @@ function shuffled(arr) {
 
 function pictogramTemplate(level, lang) {
   const band = bandForLevel(level)
-  if (band >= 2 && Math.random() < 0.35) return dataTally(level, lang)
+  const rr = Math.random()
+  if (band >= 2 && rr < 0.3) return dataTally(level, lang)
+  if (band >= 2 && rr < 0.5) return dataSorting(level, lang)
   const set = pick(PICTO_SETS)
   const words = set[lang] ?? set.en
   const { noun, verb } = words
@@ -1932,7 +1934,8 @@ function geometryTemplate(level, lang) {
   const band = bandForLevel(level)
   // From Year 5 the topic is no longer "how many sides" — the curriculum names angles and
   // area, and counting corners at eleven is not the same question wearing a bigger number.
-  if (band >= 5) return Math.random() < 0.55 ? geometryAngle(level, lang) : geometryArea(level, lang)
+  // Bond's 10-11 book asks for nets thirteen times; they take a share of the older years too.
+  if (band >= 5) { const r = Math.random(); return r < 0.15 ? geoNet(level, lang) : r < 0.6 ? geometryAngle(level, lang) : geometryArea(level, lang) }
   // Years 3 and 4: solids, right angles, turns, symmetry and coordinates (geometryYoung); null
   // keeps the sides-and-corners and naming questions below for a share of the slots.
   const young = band >= 3 ? geometryYoung(level, lang) : null
@@ -3383,6 +3386,8 @@ function avgProbability(level, lang) {
 
 function averagesTemplate(level, lang) {
   const band = bandForLevel(level)
+  // Year 6's line opens with pie charts, and the book reads them; a third of the slots.
+  if (Math.random() < 0.35) return statsPie(level, lang)
   const shapes = band >= 7
     ? ['mean', 'reverse', 'other', 'other', 'probability']
     : ['mean', 'mean', 'reverse', 'other']
@@ -4149,6 +4154,8 @@ function chartTemplate(level, lang) {
   const band = bandForLevel(level)
   // From Year 5 a third of the chart questions are the two-way table the curriculum line names.
   if (band >= 5 && Math.random() < 0.35) return chartTable(level, lang)
+  // Year 4 sorts numbers too (Venn and Carroll diagrams, Bond 8-9 tests 4, 7, 15).
+  if (band === 4 && Math.random() < 0.25) return { ...dataSorting(level, lang), topic: 'chart' }
   const line = band >= 5
   const set = pickL(CHART_SETS, lang)
   const step = pick(line ? [5, 10, 20] : [2, 5, 10])
@@ -5413,6 +5420,7 @@ function geometryYoung(level, lang) {
   const r = Math.random()
   if (band === 3) {
     if (r < 0.2) return null                                   // sides and corners, as before
+    if (r < 0.32) return geoNet(level, lang)
     if (r < 0.45) return geoSolid(level, lang)
     if (r < 0.65) return geoPolygon(level, lang, 'right')
     if (r < 0.82) return geoAngleFacts(level, lang)
@@ -5423,7 +5431,8 @@ function geometryYoung(level, lang) {
   if (r < 0.15) return null
   if (r < 0.45) return geoCoords(level, lang)
   if (r < 0.7) return geoPolygon(level, lang, 'lines')
-  if (r < 0.85) return geoSolid(level, lang)
+  if (r < 0.78) return geoNet(level, lang)
+  if (r < 0.88) return geoSolid(level, lang)
   return geoTurn(level, lang)
 }
 
@@ -5725,6 +5734,170 @@ function moneyShop(level, lang) {
   }
 }
 
+// ── pie charts (Year 6: "interpret pie charts") ───────────────────────────────
+// The statistics topic of an 11-year-old asked only for averages, although the curriculum line
+// begins with pie charts and Bond's 10-11 book has them. Slices are halves, quarters, eighths,
+// thirds, sixths and fifths — read against the circle the way the book's are, never measured.
+const PIE_SPLITS = [
+  [[1, 2], [1, 4], [1, 4]], [[1, 2], [1, 4], [1, 8], [1, 8]], [[3, 8], [1, 4], [1, 4], [1, 8]],
+  [[1, 4], [1, 4], [1, 4], [1, 4]], [[1, 3], [1, 3], [1, 6], [1, 6]], [[1, 2], [1, 3], [1, 6]],
+  [[2, 5], [1, 5], [1, 5], [1, 5]], [[3, 8], [3, 8], [1, 8], [1, 8]], [[1, 2], [1, 6], [1, 6], [1, 6]],
+]
+
+function statsPie(level, lang) {
+  const set = pick(TALLY_SETS)
+  const w = set[lang] ?? set.en
+  const split = shuffle(pick(PIE_SPLITS))
+  const lcm = split.reduce((m, [, d]) => (m * d) / gcd(m, d), 1)
+  const total = lcm * pick([2, 3, 4, 5, 6, 8, 10].filter(k => lcm * k >= 20 && lcm * k <= 120))
+  const labels = shuffle(w.rows).slice(0, split.length)
+  const slices = split.map(([n, d], i) => ({ label: labels[i], n, d, count: (total * n) / d }))
+  const i = randInt(0, slices.length - 1)
+  const s = slices[i]
+  const intro = say(lang, `The pie chart shows the ${w.what} of ${total} children.`,
+                          `Daire grafiği ${total} çocuğun ${w.what} gösteriyor.`,
+                          `El gráfico circular muestra la ${w.what} de ${total} niños.`)
+  const visual = { kind: 'chart', shape: 'pie', slices: slices.map(({ label, n, d }) => ({ label, n, d })) }
+  const ask = pick(['count', 'count', 'fraction', 'more'])
+  const g = gcd(s.n, s.d)
+  const frac = `${s.n / g}/${s.d / g}`
+  const readHint = say(lang, 'The whole circle is all the children. A half is a straight line through the middle; a quarter is a right angle.',
+                             'Bütün daire, çocukların hepsidir. Yarım, ortadan geçen düz çizgidir; çeyrek bir dik açıdır.',
+                             'El círculo entero son todos los niños. La mitad es una línea recta por el centro; un cuarto es un ángulo recto.')
+  if (ask === 'fraction') {
+    const right = opt(frac, say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    const wrongs = [...slices.filter(o => o.n * s.d !== s.n * o.d).map(o => { const k = gcd(o.n, o.d); return opt(`${o.n / k}/${o.d / k}`, say(lang, `That is the ${o.label} slice.`, `Bu, "${o.label}" diliminin kesri.`, `Esa es la porción de «${o.label}».`)) }),
+      opt(`1/${slices.length}`, say(lang, 'The slices are not all the same size, so it is not one part in ' + slices.length + '.', `Dilimler eşit büyüklükte değil, yani ${slices.length} eşit parçadan biri değil.`, `Las porciones no son iguales, así que no es una de ${slices.length} partes.`)),
+      // Common fractions of a circle as the remaining distractors, never one equal to the answer.
+      ...shuffle([[1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 8], [3, 8], [2, 5], [3, 4]])
+        .filter(([x, y]) => x * (s.d / g) !== (s.n / g) * y)
+        .map(([x, y]) => opt(`${x}/${y}`, say(lang, 'Compare the slice with a half or a quarter of the circle.', 'Dilimi dairenin yarısı ya da çeyreğiyle karşılaştır.', 'Compara la porción con media o un cuarto del círculo.')))]
+    return {
+      topic: 'averages', level,
+      question_text: say(lang, `${intro} What fraction of the children chose ${s.label}?`, `${intro} Çocukların ne kadarı "${s.label}" dedi?`, `${intro} ¿Qué fracción de los niños eligió «${s.label}»?`),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: frac, operandKey: `pie:f:${split.join('|')}:${i}`,
+      hint_steps: [readHint, say(lang, 'How many slices that size would fill the whole circle?', 'O büyüklükte kaç dilim bütün daireyi doldurur?', '¿Cuántas porciones de ese tamaño llenarían el círculo?')],
+      visual,
+    }
+  }
+  if (ask === 'more') {
+    const others = slices.filter(o => o.count !== s.count)
+    if (!others.length) return statsPie(level, lang)
+    const o = pick(others)
+    const [hi, lo] = s.count > o.count ? [s, o] : [o, s]
+    return {
+      topic: 'averages', level,
+      question_text: say(lang, `${intro} How many more chose ${hi.label} than ${lo.label}?`, `${intro} "${hi.label}" diyenler, "${lo.label}" diyenlerden kaç kişi fazla?`, `${intro} ¿Cuántos más eligieron «${hi.label}» que «${lo.label}»?`),
+      format: 'numeric', correct_answer: hi.count - lo.count, operandKey: `pie:m:${total}:${split.join('|')}:${hi.label}:${lo.label}`,
+      hint_steps: [readHint, say(lang, `Work out each slice as a fraction of ${total}, then find the difference.`, `Her dilimi ${total} sayısının bir kesri olarak hesapla, sonra farkı bul.`, `Calcula cada porción como fracción de ${total} y luego la diferencia.`)],
+      visual,
+    }
+  }
+  return {
+    topic: 'averages', level,
+    question_text: say(lang, `${intro} How many children chose ${s.label}?`, `${intro} Kaç çocuk "${s.label}" dedi?`, `${intro} ¿Cuántos niños eligieron «${s.label}»?`),
+    format: 'numeric', correct_answer: s.count, operandKey: `pie:c:${total}:${split.join('|')}:${i}`,
+    hint_steps: [readHint, say(lang, `Find what fraction of the circle the slice is, then take that fraction of ${total}.`, `Dilimin dairenin ne kadarı olduğunu bul, sonra ${total} sayısının o kadarını al.`, `Averigua qué fracción del círculo es la porción y calcula esa fracción de ${total}.`)],
+    visual,
+  }
+}
+
+// ── nets ──────────────────────────────────────────────────────────────────────
+const NETS = ['cube', 'cuboid', 'prism', 'pyramid', 'cylinder', 'cone']
+function geoNet(level, lang) {
+  const name = pick(NETS)
+  const nm = k => SOLIDS[k].name[lang] ?? SOLIDS[k].name.en
+  const right = opt(nm(name), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const why = {
+    cube: say(lang, 'A cube folds from six squares all the same size.', 'Küp, eş büyüklükte altı kareden katlanır.', 'Un cubo se dobla con seis cuadrados iguales.'),
+    cuboid: say(lang, 'A cuboid folds from six rectangles, in three matching pairs.', 'Dikdörtgenler prizması, üç eş çift hâlinde altı dikdörtgenden katlanır.', 'Un ortoedro se dobla con seis rectángulos, en tres parejas iguales.'),
+    prism: say(lang, 'A triangular prism needs two triangles and three rectangles.', 'Üçgen prizma iki üçgen ve üç dikdörtgen ister.', 'Un prisma triangular necesita dos triángulos y tres rectángulos.'),
+    pyramid: say(lang, 'A square-based pyramid is one square with four triangles.', 'Kare tabanlı piramit, bir kare ve dört üçgendir.', 'Una pirámide cuadrangular es un cuadrado con cuatro triángulos.'),
+    cylinder: say(lang, 'A cylinder rolls up from a rectangle, with a circle at each end.', 'Silindir bir dikdörtgenin kıvrılmasıyla olur, iki ucunda birer daire vardır.', 'Un cilindro se enrolla desde un rectángulo, con un círculo en cada extremo.'),
+    cone: say(lang, 'A cone is a curved piece like a fan, with one circle.', 'Koni, yelpaze gibi kıvrık bir parça ve bir daireden oluşur.', 'Un cono es una pieza curva como un abanico, con un círculo.'),
+    sphere: say(lang, 'A sphere has no flat faces, so it has no net.', 'Kürenin düz yüzü yoktur, açınımı da yoktur.', 'Una esfera no tiene caras planas, así que no tiene desarrollo.'),
+  }
+  // The near misses first: cube against cuboid, prism against pyramid, cylinder against cone.
+  const near = { cube: 'cuboid', cuboid: 'cube', prism: 'pyramid', pyramid: 'prism', cylinder: 'cone', cone: 'cylinder' }[name]
+  const wrongs = [near, ...shuffle(Object.keys(SOLIDS).filter(k => k !== name && k !== near))].map(k => opt(nm(k), why[k]))
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, 'This is a net. Which 3D shape does it fold up into?', 'Bu bir açınım. Katlanınca hangi cisim olur?', 'Esto es un desarrollo plano. ¿Qué cuerpo se forma al doblarlo?'),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `net:${name}`,
+    hint_steps: [
+      say(lang, 'Count the faces and look at their shapes.', 'Yüzleri say ve şekillerine bak.', 'Cuenta las caras y mira qué forma tienen.'),
+      say(lang, 'Imagine folding the outside pieces up to meet each other.', 'Dıştaki parçaları yukarı katlayıp birbirine değdirdiğini düşün.', 'Imagina que doblas las piezas de fuera hasta que se juntan.'),
+    ],
+    visual: { kind: 'net', name },
+  }
+}
+
+// ── Venn and Carroll diagrams ─────────────────────────────────────────────────
+// Sorting numbers by two properties — Bond 7-8 Papers 2, 7, 9, 22 and 8-9 tests 4, 7, 15.
+// Asked as "which number goes in the shaded part?", with every wrong option telling the child
+// which of the two tests it fails.
+const TR_GEN = { 2: "2'nin", 3: "3'ün", 4: "4'ün", 5: "5'in", 6: "6'nın", 7: "7'nin", 8: "8'in", 9: "9'un", 10: "10'un" }
+function sortProps(band) {
+  const multiples = band <= 2 ? [2, 5, 10] : band === 3 ? [3, 4, 5, 8] : [3, 4, 6, 7, 9]
+  const big = band <= 2 ? 30 : band === 3 ? 50 : 100
+  const props = [
+    { id: 'even', test: n => n % 2 === 0, en: 'Even numbers', tr: 'Çift sayılar', es: 'Números pares', not: { en: 'is odd', tr: 'tek', es: 'es impar' }, is: { en: 'is even', tr: 'çift', es: 'es par' } },
+    { id: 'odd', test: n => n % 2 === 1, en: 'Odd numbers', tr: 'Tek sayılar', es: 'Números impares', not: { en: 'is even', tr: 'çift', es: 'es par' }, is: { en: 'is odd', tr: 'tek', es: 'es impar' } },
+    ...multiples.map(k => ({ id: `m${k}`, test: n => n % k === 0, en: `Multiples of ${k}`, tr: `${TR_GEN[k]} katları`, es: `Múltiplos de ${k}`,
+      not: { en: `is not a multiple of ${k}`, tr: `${TR_GEN[k]} katı değil`, es: `no es múltiplo de ${k}` }, is: { en: `is a multiple of ${k}`, tr: `${TR_GEN[k]} katı`, es: `es múltiplo de ${k}` } })),
+    { id: `gt${big}`, test: n => n > big, en: `More than ${big}`, tr: `${big}'den büyük`.replace("50'den", "50'den").replace("100'den", "100'den").replace("30'den", "30'dan"), es: `Mayores que ${big}`,
+      not: { en: `is not more than ${big}`, tr: `${big}'den büyük değil`.replace("30'den", "30'dan"), es: `no es mayor que ${big}` }, is: { en: `is more than ${big}`, tr: `${big}'den büyük`.replace("30'den", "30'dan"), es: `es mayor que ${big}` } },
+  ]
+  return { props, max: band <= 2 ? 60 : band === 3 ? 100 : 150 }
+}
+
+function dataSorting(level, lang) {
+  const band = bandForLevel(level)
+  const { props, max } = sortProps(band)
+  let A, B
+  do { [A, B] = shuffle(props).slice(0, 2) } while ((A.id === 'even' && B.id === 'odd') || (A.id === 'odd' && B.id === 'even')
+    || (A.id === 'even' && B.id.startsWith('m') && Number(B.id.slice(1)) % 2 === 0) || (B.id === 'even' && A.id.startsWith('m') && Number(A.id.slice(1)) % 2 === 0)
+    || (A.id.startsWith('m') && B.id.startsWith('m') && (Number(A.id.slice(1)) % Number(B.id.slice(1)) === 0 || Number(B.id.slice(1)) % Number(A.id.slice(1)) === 0)))
+  const region = n => `${A.test(n) ? 1 : 0}${B.test(n) ? 1 : 0}`
+  const buckets = { '11': [], '10': [], '01': [], '00': [] }
+  // The threshold of "more than 50" is never an answer: the hint would have to name it.
+  for (let n = 2; n <= max; n++) if (!props.some(p => p.id === `gt${n}`)) buckets[region(n)].push(n)
+  if (Object.values(buckets).some(b => !b.length)) return dataSorting(level, lang)
+  const target = pick(['11', '11', '10', '01', '00'])
+  const answer = pick(buckets[target])
+  const others = ['11', '10', '01', '00'].filter(k => k !== target).map(k => pick(buckets[k]))
+  const L = p => p[lang] ?? p.en
+  const describe = n => {
+    const a = A.test(n) ? L(A.is) : L(A.not), b = B.test(n) ? L(B.is) : L(B.not)
+    return say(lang, `${n} ${a} and ${b}.`, `${n}: ${a}, ${b}.`, `${n} ${a} y ${b}.`)
+  }
+  const right = opt(answer, describe(answer))
+  const wrongs = others.map(n => opt(n, describe(n)))
+  const carroll = Math.random() < 0.4
+  const need = {
+    '11': say(lang, `It has to be in both: ${L(A.is)} AND ${L(B.is)}.`, `İkisine birden uymalı: hem ${L(A.is)} hem ${L(B.is)}.`, `Tiene que cumplir las dos: ${L(A.is)} Y ${L(B.is)}.`),
+    '10': say(lang, `It ${L(A.is)} but ${L(B.not)}.`, `${cap(L(A.is))} ama ${L(B.not)}.`, `${cap(L(A.is))} pero ${L(B.not)}.`),
+    '01': say(lang, `It ${L(B.is)} but ${L(A.not)}.`, `${cap(L(B.is))} ama ${L(A.not)}.`, `${cap(L(B.is))} pero ${L(A.not)}.`),
+    '00': say(lang, `It fits neither label: it ${L(A.not)} and ${L(B.not)}.`, `İki etikete de uymaz: ${L(A.not)} ve ${L(B.not)}.`, `No cumple ninguna: ${L(A.not)} y ${L(B.not)}.`),
+  }[target]
+  const visual = carroll
+    ? { kind: 'carroll', cols: [L(B), say(lang, 'Others', 'Diğerleri', 'Los demás')], rows: [L(A), say(lang, 'Others', 'Diğerleri', 'Los demás')], cell: [target[0] === '1' ? 0 : 1, target[1] === '1' ? 0 : 1] }
+    : { kind: 'venn', labels: [L(A), L(B)], shade: { '11': 'both', '10': 'left', '01': 'right', '00': 'outside' }[target] }
+  return {
+    topic: 'pictogram', level,
+    question_text: carroll
+      ? say(lang, 'Which number belongs in the shaded box?', 'Hangi sayı boyalı kutuya girer?', '¿Qué número va en la casilla coloreada?')
+      : say(lang, 'Which number belongs in the shaded part?', 'Hangi sayı boyalı bölgeye girer?', '¿Qué número va en la parte coloreada?'),
+    format: 'choice', options: choiceOf(right, wrongs, { sort: (x, y) => Number(x.value) - Number(y.value) }), correct_answer: right.value,
+    operandKey: `sort:${carroll ? 'c' : 'v'}:${A.id}:${B.id}:${target}:${answer}`,
+    hint_steps: [
+      say(lang, 'Read both labels, then test each number against them one at a time.', 'İki etiketi oku, sonra her sayıyı tek tek ikisine göre dene.', 'Lee las dos etiquetas y comprueba cada número con ellas, uno por uno.'),
+      need,
+    ],
+    visual,
+  }
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -5754,7 +5927,7 @@ export { SHAPES }
 
 // The visual kinds drawn by components/MathFigure. Kept here, beside the templates that emit
 // them, so the screen can ask "is this a picture question?" without importing a component.
-export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital'])
+export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll'])
 
 export const TOPICS = Object.keys(REGISTRY)
 

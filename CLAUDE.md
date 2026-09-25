@@ -81,6 +81,21 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Pasta grafiği, açınım, Venn/Carroll ve sonuç ekranında görseller (2026-09-25, Claude).
+      Kitaplarla görsel karşılaştırmasında açık kalan üçü: **pasta grafiği** (Year 6 müfredat satırı
+      "pie charts" ile açılıyor ama 11 yaş istatistiği yalnız ortalama soruyordu; artık `averages`
+      slotlarının ~%35'i, dilimler 1/2-1/8, 1/3, 1/6, 1/5 — kaç kişi / hangi kesir / kaç fazla),
+      **açınım** (10-11 kitabında 13 kez; küp, dikdörtgenler prizması, üçgen prizma, kare piramit,
+      silindir, koni; çeldiriciler önce yakın komşu: küp↔prizma, piramit↔prizma, silindir↔koni;
+      8-9 yaş geometrisi + 10+ geometrinin %15'i), **Venn/Carroll** (7-9 yaş veri: "boyalı bölgeye
+      hangi sayı girer?", her yanlış şık hangi etikete uymadığını söyler; sınır sayı "50'den büyük"
+      için 50 cevap olmaz, ipucu onu yazıyor). Sonuç ekranı ("Cevapların") artık her sorunun
+      görselini gösteriyor — grafik sorusu sonda grafiksiz okunamıyordu. Doğrulama: math:check 3 dil
+      × 2000 soru/konu bulgu yok, 12 yeni görsel TR/EN tarayıcıda, gerçek MathScreen'de 9 yaş
+      oturumu uçtan uca çözülüp sonuç ekranı görselleriyle görüldü.
+      **Hâlâ yok:** yansıma/öteleme, harita ölçeği, çarkla olasılık, 4 bölgeli koordinat, dönüşüm
+      grafiği; çizim/işaretleme gerektiren sorular.
+
 - [x] 7-9 yaş Bond biçimine geçti, görsellerle (2026-09-24 gece, Claude). Kaynak *Bond Assessment
       Papers Maths 7-8* (22 kâğıt) ve *Bond 10 Minute Tests Maths 8-9* (28 test), ikisi de baştan
       sona okundu; not dökümü oturumun scratchpad'inde (`NOTES-bond-young.md`), kitaplar repoda yok.

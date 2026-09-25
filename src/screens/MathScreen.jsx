@@ -2886,6 +2886,13 @@ export default function MathScreen() {
                     <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{r.correct ? '✅' : '🔄'}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}><MathText text={r.question} /></div>
+                      {/* The question as it was asked: "How many books on Tuesday?" means nothing
+                          at the end without its chart, and a wrong answer is looked at here. */}
+                      {templateProblems[i]?.visual && !['share', 'groups', 'array'].includes(templateProblems[i].visual.kind) && (
+                        <div style={{ margin: '6px 0 2px' }}>
+                          <QuestionPicture visual={templateProblems[i].visual} language={language} description={r.question} />
+                        </div>
+                      )}
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
                         {/* A skipped question records no answer on purpose — giving up is not
                             answering, and the score has to say so. But the child DID type

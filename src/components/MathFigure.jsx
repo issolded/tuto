@@ -35,9 +35,12 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
       : v.kind === 'coords' ? coords(v, lang, hint)
         : v.kind === 'solid' ? solid(v)
           : v.kind === 'tally' ? tally(v)
-            : polygon(v, hint)
+            : v.kind === 'net' ? net(v)
+              : v.kind === 'venn' ? venn(v)
+                : v.kind === 'carroll' ? carroll(v)
+                  : polygon(v, hint)
   if (!body) return null
-  const schematic = v.kind === 'solid' || v.kind === 'polygon'
+  const schematic = v.kind === 'solid' || v.kind === 'polygon' || v.kind === 'net'
   return (
     <figure style={{ margin: 0, width: '100%', maxWidth: 340, flexShrink: 0 }}>
       <svg viewBox={`0 0 ${W} ${body.h}`} role="img"
@@ -471,4 +474,113 @@ function Digital({ times, labels = [] }) {
       ))}
     </div>
   )
+}
+
+// ── nets ──────────────────────────────────────────────────────────────────────
+// "Which 3D shape does this net make?" — thirteen times in Bond's 10-11 book and in the 8-9 one.
+// Each net is the textbook one: the cross for a cube, the cross of rectangles for a cuboid, three
+// rectangles and two triangles for a triangular prism, a square with four triangles for a
+// pyramid, a rectangle and two circles for a cylinder, a sector and a circle for a cone.
+function net(v) {
+  const R = (x, y, w, h, k) => <rect key={k} x={x} y={y} width={w} height={h} fill={PAPER} stroke={INK} strokeWidth="2" />
+  const P = (pts, k) => <polygon key={k} points={pts.map(p => p.join(',')).join(' ')} fill={PAPER} stroke={INK} strokeWidth="2" strokeLinejoin="round" />
+  let g
+  if (v.name === 'cube' || v.name === 'cuboid') {
+    const [w, h, d] = v.name === 'cube' ? [44, 44, 44] : [60, 38, 26]
+    const x0 = 160 - w / 2 - d, y0 = 8
+    g = <g>
+      {R(x0 + d, y0, w, d, 'a')}{R(x0 + d, y0 + d, w, h, 'b')}{R(x0 + d, y0 + d + h, w, d, 'c')}{R(x0 + d, y0 + 2 * d + h, w, h, 'd')}
+      {R(x0, y0 + d, d, h, 'l')}{R(x0 + d + w, y0 + d, d, h, 'r')}
+    </g>
+    return { h: y0 * 2 + 2 * d + 2 * h, g }
+  }
+  if (v.name === 'prism') {
+    const w = 46, h = 70, x0 = 160 - 1.5 * w, y0 = 40
+    g = <g>
+      {R(x0, y0, w, h, 'a')}{R(x0 + w, y0, w, h, 'b')}{R(x0 + 2 * w, y0, w, h, 'c')}
+      {P([[x0 + w, y0], [x0 + 2 * w, y0], [x0 + 1.5 * w, y0 - 38]], 't')}
+      {P([[x0 + w, y0 + h], [x0 + 2 * w, y0 + h], [x0 + 1.5 * w, y0 + h + 38]], 'u')}
+    </g>
+    return { h: y0 + h + 48, g }
+  }
+  if (v.name === 'pyramid') {
+    const s = 60, cx = 160, cy = 100, e = 52
+    const A = [cx - s / 2, cy - s / 2], B = [cx + s / 2, cy - s / 2], C = [cx + s / 2, cy + s / 2], D = [cx - s / 2, cy + s / 2]
+    g = <g>
+      {P([A, B, [cx, cy - s / 2 - e]], 'n')}{P([B, C, [cx + s / 2 + e, cy]], 'e')}
+      {P([C, D, [cx, cy + s / 2 + e]], 's')}{P([D, A, [cx - s / 2 - e, cy]], 'w')}
+      {R(A[0], A[1], s, s, 'b')}
+    </g>
+    return { h: 200, g }
+  }
+  if (v.name === 'cylinder') {
+    const w = 120, h = 60, r = 26, x0 = 100, y0 = 2 * r + 8
+    g = <g>
+      {R(x0, y0, w, h, 'b')}
+      <circle cx={x0 + w / 2} cy={y0 - r} r={r} fill={PAPER} stroke={INK} strokeWidth="2" />
+      <circle cx={x0 + w / 2} cy={y0 + h + r} r={r} fill={PAPER} stroke={INK} strokeWidth="2" />
+    </g>
+    return { h: y0 + h + 2 * r + 8, g }
+  }
+  if (v.name === 'cone') {
+    const cx = 160, top = 10, L = 110, span = 1.6
+    const a0 = Math.PI / 2 - span / 2, a1 = Math.PI / 2 + span / 2
+    const p0 = [cx + L * Math.cos(a0), top + L * Math.sin(a0)], p1 = [cx + L * Math.cos(a1), top + L * Math.sin(a1)]
+    const r = 28, by = top + L + r
+    g = <g>
+      <path d={`M ${cx} ${top} L ${p0} A ${L} ${L} 0 0 1 ${p1} Z`} fill={PAPER} stroke={INK} strokeWidth="2" strokeLinejoin="round" />
+      <circle cx={cx} cy={by} r={r} fill={PAPER} stroke={INK} strokeWidth="2" />
+    </g>
+    return { h: by + r + 8, g }
+  }
+  return null
+}
+
+// ── Venn and Carroll diagrams ─────────────────────────────────────────────────
+// Sorting numbers by two properties, as both young books do. The part asked about is shaded;
+// the circles and boxes carry their labels, and no number is written in — placing it is the
+// question.
+function venn(v) {
+  const [a, b] = v.labels
+  const cy = 100, r = 70, lx = 122, rx = 198
+  const shade = '#f7dcc0'
+  const id = `vn${v.shade}`
+  const clip = <defs>
+    <clipPath id={`${id}l`}><circle cx={lx} cy={cy} r={r} /></clipPath>
+    <clipPath id={`${id}r`}><circle cx={rx} cy={cy} r={r} /></clipPath>
+  </defs>
+  let fill = null
+  if (v.shade === 'both') fill = <circle cx={rx} cy={cy} r={r} fill={shade} clipPath={`url(#${id}l)`} />
+  if (v.shade === 'left') fill = <g><circle cx={lx} cy={cy} r={r} fill={shade} /><circle cx={rx} cy={cy} r={r} fill="white" clipPath={`url(#${id}l)`} /></g>
+  if (v.shade === 'right') fill = <g><circle cx={rx} cy={cy} r={r} fill={shade} /><circle cx={lx} cy={cy} r={r} fill="white" clipPath={`url(#${id}r)`} /></g>
+  if (v.shade === 'outside') fill = <g><rect x={20} y={14} width={280} height={170} fill={shade} /><circle cx={lx} cy={cy} r={r} fill="white" /><circle cx={rx} cy={cy} r={r} fill="white" /></g>
+  // The "?" sits in the shaded part.
+  const qx = { both: 160, left: 88, right: 232, outside: 40 }[v.shade]
+  const qy = v.shade === 'outside' ? 34 : cy
+  const g = <g>
+    {clip}
+    <rect x={20} y={14} width={280} height={170} fill="white" />
+    {fill}
+    <rect x={20} y={14} width={280} height={170} fill="none" stroke={INK} strokeWidth="2" rx="6" />
+    <circle cx={lx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="2.2" />
+    <circle cx={rx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="2.2" />
+    {txt(lx - 10, 198, a, { size: 12, anchor: 'end' })}
+    {txt(rx + 10, 198, b, { size: 12, anchor: 'start' })}
+    {txt(qx, qy, '?', { size: 22, fill: ORANGE })}
+  </g>
+  return { h: 210, g }
+}
+
+function carroll(v) {
+  const [colLabels, rowLabels] = [v.cols, v.rows]
+  const labelW = 118, colW = 96, rowH = 52, top = 34, ox = 6
+  const cell = (r, c) => <rect key={`${r}${c}`} x={ox + labelW + c * colW} y={top + r * rowH} width={colW} height={rowH}
+    fill={v.cell[0] === r && v.cell[1] === c ? '#f7dcc0' : 'white'} stroke={INK} strokeWidth="2" />
+  const g = <g>
+    {[0, 1].map(c => txt(ox + labelW + (c + 0.5) * colW, top - 13, colLabels[c], { size: 12, key: `c${c}` }))}
+    {[0, 1].map(r => txt(ox + labelW - 8, top + (r + 0.5) * rowH, rowLabels[r], { size: 12, anchor: 'end', key: `r${r}` }))}
+    {[0, 1].flatMap(r => [0, 1].map(c => cell(r, c)))}
+    {txt(ox + labelW + (v.cell[1] + 0.5) * colW, top + (v.cell[0] + 0.5) * rowH, '?', { size: 22, fill: ORANGE, key: 'q' })}
+  </g>
+  return { h: top + 2 * rowH + 10, g }
 }
