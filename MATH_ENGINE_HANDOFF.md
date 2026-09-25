@@ -1,5 +1,8 @@
 # Matematik motoru — denetim devri
 
+> **Güncel değil (25 Eylül 2026):** bu dokümandan sonraki iş, 13 yaş için ayrı Year 8 dahil,
+> [`MATH_BOND_REWORK.md`](MATH_BOND_REWORK.md)'de. Kapsam artık 65/65.
+
 **Ne değişti:** matematik soruları artık modelden değil, deterministik şablonlardan geliyor.
 **Ekran modunda, 5'ten 13'e kadar her yaşta, model hiç çalışmıyor** — ne soru üretiminde ne
 cevap doğrulamada. Müfredat kapsamı 57/57.
