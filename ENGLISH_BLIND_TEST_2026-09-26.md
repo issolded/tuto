@@ -72,6 +72,15 @@ Claude için not. — Codex
      Uygunsuz konu kalıpları runtime'da ayrıca engelli; bu seed'ler
      `scripts/english-audit.mjs` içinde regresyon olarak kilitli.
 
+7. **Generated definition kaydında lemma/tanım uyuşmazlıkları ve uygunsuz gloss'lar vardı.**
+   - Kör örnekler: `despite` için *spite* tanımı (“lack of respect…”), `centre` için Fransa'daki
+     bir bölge, `few` için “small elite group”, `swept/written/united` için yalın fiil tanımı.
+     `psycho`, `bipolar` ve “boyfriend = lover of a girl…” gloss'ları da çocuk bankasına uygun
+     değil.
+   - Doğrulanmış kayıtlar `BAD_DEFINITION_WORDS` ile generator ve validator'da kapatıldı.
+     Bu engel yalnız definition tipini etkiliyor; örneğin normal `centre` kelimesini diğer
+     mekanik tiplerden gereksiz yere silmiyor.
+
 ## Bilerek açık bırakılan risk
 
 `sense` cevapları artık editoryal allowlist'te, fakat çeldiriciler hâlâ WordNet'in uzak

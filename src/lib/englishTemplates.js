@@ -153,6 +153,13 @@ const BAD_SENSE_PAIRS = new Set([
 // unsuitable for a child-facing bank. Keeping the whole stem out is safer than playing
 // whack-a-mole with one answer while another synonym from the same sense remains.
 const BAD_SENSE_WORDS = new Set(['club'])
+// Generated definition records whose dominant lemma/POS does not match the stored gloss, or
+// whose gloss is unsuitable for the child-facing bank. Examples: `despite` received the noun
+// definition of spite; `swept` received "sweep across"; `centre` received a French place sense.
+const BAD_DEFINITION_WORDS = new Set([
+  'bipolar', 'boyfriend', 'centre', 'despite', 'few', 'progressive', 'psycho',
+  'swept', 'united', 'viii', 'willing', 'written', 'years',
+])
 const sentenceProblem = (sentence) => {
   const dark = (sentence.toLowerCase().match(/[a-z]+/g) || []).find(w => DARK_SENTENCE.has(w))
   if (dark) return `the sentence is about "${dark}"`
@@ -1461,7 +1468,7 @@ function genDefinition(r, band, seed) {
   // a lemma and is not easy.
   const words = Object.keys(DEFINITIONS).filter(
     w => askable(band, w) && (!band.familiarOnly || DEFINITIONS[w][1])
-      && !glossMismatch(w, DEFINITIONS[w][0]))
+      && !BAD_DEFINITION_WORDS.has(w) && !glossMismatch(w, DEFINITIONS[w][0]))
   if (!words.length) return null
   const word = pickOne(r, words)
   const avoid = new Set([word])
@@ -3106,6 +3113,9 @@ export function validateItem(item) {
   }
   if (item.type === 'definition' && glossMismatch(answers[0], item.prompt.definition)) {
     return `"${answers[0]}" is not the part of speech its definition is`
+  }
+  if (item.type === 'definition' && BAD_DEFINITION_WORDS.has(item.rule.word)) {
+    return `"${item.rule.word}" has a blocked definition record`
   }
   // Sentences screened at build time, screened again here for what the build's lists missed.
   if (item.prompt.sentence) {
