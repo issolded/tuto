@@ -3163,16 +3163,22 @@ function ratioTemplate(level, lang) {
 // the same defect as the division word problem that read "Mia has 45 candies. Shared equally
 // among 5 teammates. How many each?", written again in a new template a day after that one
 // was fixed.
+//
+// The last two fields say what the mean is OF. "Over 4 weeks Iris read 3, 7, 1 and 1 books. What
+// is the mean?" left a child to work out that each number is one week and that the answer is
+// books per week; Bond asks "the mean number of goals scored per match". English carries the
+// participle ("books read"), Turkish the relative form and the "per" case ("okuduğu",
+// "haftada") — neither can be built from the verb by adding letters.
 const AVG_SUBJECTS = {
-  en: [['goals', 'match', 'matches', 'scored', 0, 6], ['books', 'week', 'weeks', 'read', 1, 7],
-       ['points', 'game', 'games', 'scored', 2, 20], ['lengths', 'session', 'sessions', 'swam', 2, 16],
-       ['birds', 'day', 'days', 'spotted', 1, 18]],
-  tr: [['gol', 'maç', 'maç', 'attı', 0, 6], ['kitap', 'hafta', 'hafta', 'okudu', 1, 7],
-       ['puan', 'oyun', 'oyun', 'topladı', 2, 20], ['tur', 'antrenman', 'antrenman', 'yüzdü', 2, 16],
-       ['kuş', 'gün', 'gün', 'gördü', 1, 18]],
-  es: [['goles', 'partido', 'partidos', 'marcó', 0, 6], ['libros', 'semana', 'semanas', 'leyó', 1, 7],
-       ['puntos', 'juego', 'juegos', 'consiguió', 2, 20], ['largos', 'sesión', 'sesiones', 'nadó', 2, 16],
-       ['pájaros', 'día', 'días', 'vio', 1, 18]],
+  en: [['goals', 'match', 'matches', 'scored', 0, 6, 'scored', 'per match'], ['books', 'week', 'weeks', 'read', 1, 7, 'read', 'per week'],
+       ['points', 'game', 'games', 'scored', 2, 20, 'scored', 'per game'], ['lengths', 'session', 'sessions', 'swam', 2, 16, 'swum', 'per session'],
+       ['birds', 'day', 'days', 'spotted', 1, 18, 'spotted', 'per day']],
+  tr: [['gol', 'maç', 'maç', 'attı', 0, 6, 'attığı', 'maçta'], ['kitap', 'hafta', 'hafta', 'okudu', 1, 7, 'okuduğu', 'haftada'],
+       ['puan', 'oyun', 'oyun', 'topladı', 2, 20, 'topladığı', 'oyunda'], ['tur', 'antrenman', 'antrenman', 'yüzdü', 2, 16, 'yüzdüğü', 'antrenmanda'],
+       ['kuş', 'gün', 'gün', 'gördü', 1, 18, 'gördüğü', 'günde']],
+  es: [['goles', 'partido', 'partidos', 'marcó', 0, 6, 'marcó', 'por partido'], ['libros', 'semana', 'semanas', 'leyó', 1, 7, 'leyó', 'por semana'],
+       ['puntos', 'juego', 'juegos', 'consiguió', 2, 20, 'consiguió', 'por juego'], ['largos', 'sesión', 'sesiones', 'nadó', 2, 16, 'nadó', 'por sesión'],
+       ['pájaros', 'día', 'días', 'vio', 1, 18, 'vio', 'por día']],
 }
 
 // A list of small whole numbers whose mean is whole, built by choosing the mean first.
@@ -3187,7 +3193,7 @@ function meanList(n, lo, hi) {
 
 function avgMean(level, lang) {
   const n = pick([4, 5, 6])
-  const [what, per, pers, verb, lo, hi] = pickL(AVG_SUBJECTS, lang)
+  const [what, per, pers, verb, lo, hi, done, perUnit] = pickL(AVG_SUBJECTS, lang)
   const xs = meanList(n, lo, hi)
   const total = xs.reduce((a, b) => a + b, 0)
   const name = pickL(MULT_NAMES, lang)
@@ -3196,9 +3202,9 @@ function avgMean(level, lang) {
   return {
     topic: 'averages', level,
     question_text: say(lang,
-      `Over ${n} ${pers} ${name} ${verb} ${list} ${what}. What is the mean?`,
-      `${name} ${n} ${per} boyunca ${list} ${what} ${verb}. Ortalama kaçtır?`,
-      `En ${n} ${pers} ${name} ${verb} ${list} ${what}. ¿Cuál es la media?`),
+      `${name} wrote down the ${what} ${done} each ${per} for ${n} ${pers}: ${list}. What is the mean number of ${what} ${done} ${perUnit}?`,
+      `${name}, ${n} ${per} boyunca her ${per} ${done} ${what} sayısını yazdı: ${list}. ${cap(perUnit)} ortalama kaç ${what}?`,
+      `${name} apuntó los ${what} que ${done} cada ${per} durante ${n} ${pers}: ${list}. ¿Cuál es la media de ${what} ${perUnit}?`),
     format: 'numeric',
     correct_answer: total / n,
     operandKey: `avg:mean:${xs.join('-')}`,
