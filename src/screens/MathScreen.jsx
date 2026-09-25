@@ -489,16 +489,22 @@ export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
             fontSize: 13, color: INK,
           }}>{r.label}</span>
           <span style={{ display: 'flex', gap: 4 }}>
-            {Array.from({ length: r.count }).map((_, i) => (
-              <span key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: size, lineHeight: 1.1 }}>{unit}</span>
-                {lit.has(r.label) && (
-                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: GREEN }}>
-                    {each * (i + 1)}
-                  </span>
-                )}
-              </span>
-            ))}
+            {/* A half symbol is the left half of one, clipped — the way a printed pictogram
+                cuts its last face in two. Its running total is half a key more. */}
+            {Array.from({ length: Math.ceil(r.count) }).map((_, i) => {
+              const half = i + 1 > r.count
+              return (
+                <span key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: size, lineHeight: 1.1, display: 'inline-block', overflow: 'hidden',
+                    width: half ? `${size * 0.62}px` : 'auto', whiteSpace: 'nowrap' }}>{unit}</span>
+                  {lit.has(r.label) && (
+                    <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: GREEN }}>
+                      {half ? each * r.count : each * (i + 1)}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
           </span>
         </div>
       ))}

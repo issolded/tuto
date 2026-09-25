@@ -95,6 +95,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       oturumu uçtan uca çözülüp sonuç ekranı görselleriyle görüldü.
       **Hâlâ yok:** yansıma/öteleme, harita ölçeği, çarkla olasılık, 4 bölgeli koordinat, dönüşüm
       grafiği; çizim/işaretleme gerektiren sorular.
+      **Aynı gün ikinci tur, kolay görseller:** harita üstünde ızgara referansı + pusula (8 yaş),
+      kasabalar arası yol haritası (7-8 yaş toplama/çıkarma; etiketler zikzağın cebinde, her yol
+      farklı uzunlukta — eşit yollarda seçim döngüsü sonsuzdu), çarkla olasılık (11+ olasılık
+      sorularının yarısı), harita ölçeği (oran slotunun %20'si), öteleme (10+ geometri, şıklar
+      ızgara içinde), yarım sembollü piktogram (band ≥3, sembol 2/4/5/10). **Yansıma ve dönme
+      bilerek yok** — NVR bulmacaları onları zaten soruyor (kullanıcı kararı). Doğrulama: math:check
+      (1500 soru/konu) bulgu yok, build, 7 görsel TR/EN/ES 390px'te tarayıcıda.
+      **Hâlâ yok:** 4 bölgeli koordinat, dönüşüm grafiği, açıölçer, takvim; çizim/işaretleme.
 
 - [x] 7-9 yaş Bond biçimine geçti, görsellerle (2026-09-24 gece, Claude). Kaynak *Bond Assessment
       Papers Maths 7-8* (22 kâğıt) ve *Bond 10 Minute Tests Maths 8-9* (28 test), ikisi de baştan

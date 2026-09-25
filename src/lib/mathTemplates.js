@@ -1489,11 +1489,17 @@ function pictogramTemplate(level, lang) {
   const many = words.many          // Spanish only: "Cuántas" or "Cuántos", agreed with the noun
   // Year 2 meets "simple pictograms" — one symbol, one thing. The scaled key is Year 3's,
   // and it is what makes the picture worth reading rather than just counting.
-  const each = band <= 2 ? pick([1, 1, 2]) : pick([2, 5, 10])
+  const each = band <= 2 ? pick([1, 1, 2]) : pick([2, 4, 5, 10])
   const names = shuffled(MULT_NAMES[lang] ?? MULT_NAMES.en).slice(0, 3)
   // Distinct counts, so "how many more" always has a positive answer and no two rows are
   // ambiguous to point at.
   const counts = shuffled([1, 2, 3, 4, 5]).slice(0, 3)
+  // Year 3's scaled key comes with half symbols in Bond's 8-9 book ("☺ = 10 children", a half
+  // face for 5). Only with an even key, so half a symbol is a whole number of things.
+  if (band >= 3 && each % 2 === 0 && Math.random() < 0.45) {
+    const halves = shuffled([0, 1, 2]).slice(0, randInt(1, 2))
+    for (const i of halves) counts[i] += 0.5
+  }
   const rows = names.map((label, i) => ({ label, count: counts[i] }))
 
   // Turkish takes no plural after a number; English needs the singular when the key is 1, and
@@ -1507,7 +1513,11 @@ function pictogramTemplate(level, lang) {
     ? say(lang, `Each ${set.unit} is one, so the count you say is the answer.`,
                 `Her sembol 1 demek, saydığın sayı cevaptır.`,
                 `Cada símbolo vale 1, así que el número que cuentes es la respuesta.`)
-    : say(lang, `Each ${set.unit} is ${each} — multiply the number of symbols by ${each}.`,
+    : counts.some(c => !Number.isInteger(c))
+      ? say(lang, `Each whole ${set.unit} is ${each}, and half a ${set.unit} is ${each / 2}.`,
+                  `Her tam sembol ${each}, yarım sembol ${each / 2} demek.`,
+                  `Cada ${set.unit} entero vale ${each} y medio vale ${each / 2}.`)
+      : say(lang, `Each ${set.unit} is ${each} — multiply the number of symbols by ${each}.`,
                 `Her sembol ${each} demek — sembol sayısını ${each} ile çarp.`,
                 `Cada símbolo vale ${each}: multiplica el número de símbolos por ${each}.`)
 
@@ -1935,7 +1945,7 @@ function geometryTemplate(level, lang) {
   // From Year 5 the topic is no longer "how many sides" — the curriculum names angles and
   // area, and counting corners at eleven is not the same question wearing a bigger number.
   // Bond's 10-11 book asks for nets thirteen times; they take a share of the older years too.
-  if (band >= 5) { const r = Math.random(); return r < 0.15 ? geoNet(level, lang) : r < 0.6 ? geometryAngle(level, lang) : geometryArea(level, lang) }
+  if (band >= 5) { const r = Math.random(); return r < 0.12 ? geoNet(level, lang) : r < 0.24 ? geoTranslate(level, lang) : r < 0.62 ? geometryAngle(level, lang) : geometryArea(level, lang) }
   // Years 3 and 4: solids, right angles, turns, symmetry and coordinates (geometryYoung); null
   // keeps the sides-and-corners and naming questions below for a share of the slots.
   const young = band >= 3 ? geometryYoung(level, lang) : null
@@ -3124,6 +3134,8 @@ function ratioTemplate(level, lang) {
     ? ['simplify', 'share', 'proportion', 'rate', 'rate']
     : ['simplify', 'simplify', 'share', 'share', 'proportion']
   const shape = pick(shapes)
+  // A map's scale is Year 6's "scale factor" as a child meets it, and Bond's 10-11 book asks it.
+  if (Math.random() < 0.2) return ratioMapScale(level, lang)
   if (shape === 'share') return ratioShare(level, lang)
   if (shape === 'proportion') return ratioProportion(level, lang)
   if (shape === 'rate') return ratioRate(level, lang)
@@ -3394,7 +3406,7 @@ function averagesTemplate(level, lang) {
   const shape = pick(shapes)
   if (shape === 'reverse') return avgReverseMean(level, lang)
   if (shape === 'other') return avgOther(level, lang)
-  if (shape === 'probability') return avgProbability(level, lang)
+  if (shape === 'probability') return Math.random() < 0.5 ? avgSpinner(level, lang) : avgProbability(level, lang)
   return avgMean(level, lang)
 }
 
@@ -4702,6 +4714,7 @@ function youngAddSub(level, lang, add, columnar) {
   if (columnar || r < 0.3) return add ? additionTemplate(level, lang, columnar, true) : subtractionTemplate(level, lang, columnar, true)
   if (r < 0.55) return missingNumber(level, lang, add)
   if (r < 0.7) return missingSign(level, lang, add ? 'add' : 'sub')
+  if (r < 0.8 && bandForLevel(level) <= 3) return youngRoute(level, lang, add)
   return youngStory(level, lang, add)
 }
 
@@ -5419,8 +5432,9 @@ function geometryYoung(level, lang) {
   const band = bandForLevel(level)
   const r = Math.random()
   if (band === 3) {
-    if (r < 0.2) return null                                   // sides and corners, as before
-    if (r < 0.32) return geoNet(level, lang)
+    if (r < 0.16) return null                                   // sides and corners, as before
+    if (r < 0.28) return geoMap(level, lang)
+    if (r < 0.38) return geoNet(level, lang)
     if (r < 0.45) return geoSolid(level, lang)
     if (r < 0.65) return geoPolygon(level, lang, 'right')
     if (r < 0.82) return geoAngleFacts(level, lang)
@@ -5898,6 +5912,182 @@ function dataSorting(level, lang) {
   }
 }
 
+// ── a map: grid references and compass directions (Bond 7-8 Papers 1 and 8) ───
+// Columns are letters and rows numbers, the way the book's treasure map names its squares, and
+// a north arrow makes "which direction?" answerable from the picture.
+const LANDMARKS = [
+  { icon: '🏠', en: 'the house', tr: 'Ev', trAbl: 'evden', es: 'la casa' },
+  { icon: '🌳', en: 'the tree', tr: 'Ağaç', trAbl: 'ağaçtan', es: 'el árbol' },
+  { icon: '🏫', en: 'the school', tr: 'Okul', trAbl: 'okuldan', es: 'el colegio' },
+  { icon: '🚩', en: 'the flag', tr: 'Bayrak', trAbl: 'bayraktan', es: 'la bandera' },
+  { icon: '⛵', en: 'the boat', tr: 'Tekne', trAbl: 'tekneden', es: 'el barco' },
+  { icon: '⛰️', en: 'the mountain', tr: 'Dağ', trAbl: 'dağdan', es: 'la montaña' },
+]
+function geoMap(level, lang) {
+  const size = 5
+  const marks = shuffle(LANDMARKS).slice(0, 4)
+  const used = new Set()
+  const pts = marks.map(m => {
+    let x, y
+    do { x = randInt(0, size - 1); y = randInt(0, size - 1) } while (used.has(`${x},${y}`))
+    used.add(`${x},${y}`)
+    return { ...m, x, y }
+  })
+  const ref = p => `${'ABCDE'[p.x]}${p.y + 1}`
+  const nameOf = m => (lang === 'tr' ? m.tr.toLocaleLowerCase('tr') : m[lang] ?? m.en)
+  const visual = { kind: 'coords', size, axes: false, compass: true, points: pts.map(p => ({ label: p.icon, x: p.x, y: p.y })) }
+  // Direction needs two landmarks in the same row or column.
+  const pairs = []
+  for (const a of pts) for (const b of pts) if (a !== b && (a.x === b.x || a.y === b.y)) pairs.push([a, b])
+  if (pairs.length && Math.random() < 0.5) {
+    const [a, b] = pick(pairs)
+    const dir = a.x === b.x ? (a.y > b.y ? 'N' : 'S') : (a.x > b.x ? 'E' : 'W')
+    const names = { N: say(lang, 'North', 'Kuzey', 'Norte'), S: say(lang, 'South', 'Güney', 'Sur'), E: say(lang, 'East', 'Doğu', 'Este'), W: say(lang, 'West', 'Batı', 'Oeste') }
+    const opposite = { N: 'S', S: 'N', E: 'W', W: 'E' }[dir]
+    const right = opt(names[dir], say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    const wrongs = [opt(names[opposite], say(lang, 'That is the way from the other one — swap them round.', 'Bu, ötekinden bakınca olan yön — yerlerini değiştirdin.', 'Esa es la dirección desde el otro: los has cambiado.')),
+      ...['N', 'S', 'E', 'W'].filter(d => d !== dir && d !== opposite).map(d => opt(names[d], say(lang, 'Look at the north arrow: North is up the map.', 'Kuzey okuna bak: Kuzey haritanın yukarısıdır.', 'Mira la flecha del norte: el Norte está arriba.')))]
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang, `Which direction is ${a.en} (${a.icon}) from ${b.en} (${b.icon})?`,
+                               `${a.tr} (${a.icon}), ${b.trAbl} (${b.icon}) hangi yönde?`,
+                               `¿En qué dirección está ${a.es} (${a.icon}) desde ${b.es} (${b.icon})?`),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `map:dir:${ref(a)}:${ref(b)}`,
+      hint_steps: [
+        say(lang, 'Put your finger on the second one, then move it to the first.', 'Parmağını ikincisine koy, sonra birinciye doğru götür.', 'Pon el dedo en el segundo y llévalo hasta el primero.'),
+        say(lang, 'Up the map is North, down is South, right is East, left is West.', 'Haritada yukarı Kuzey, aşağı Güney, sağ Doğu, sol Batı.', 'En el mapa, arriba es Norte, abajo Sur, derecha Este e izquierda Oeste.'),
+      ],
+      visual,
+    }
+  }
+  const target = pick(pts)
+  const r = ref(target)
+  const right = opt(r, say(lang, 'Right — letter along the bottom first, then number up the side.', 'Doğru — önce alttaki harf, sonra yandaki sayı.', 'Correcto: primero la letra de abajo y luego el número del lado.'))
+  const swapped = `${'ABCDE'[target.y] ?? 'A'}${target.x + 1}`
+  const wrongs = [opt(swapped, say(lang, 'Those are the wrong way round: the letter is the column along the bottom.', 'Ters okudun: harf, alttaki sütundur.', 'Están al revés: la letra es la columna de abajo.')),
+    ...pts.filter(p => p !== target).map(p => opt(ref(p), say(lang, `That square has ${p.icon} in it.`, `O karede ${p.icon} var.`, `En esa casilla está ${p.icon}.`)))]
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `Which square is ${nameOf(target)} (${target.icon}) in?`, `${target.tr} (${target.icon}) hangi karede?`, `¿En qué casilla está ${target.es} (${target.icon})?`),
+    format: 'choice', options: choiceOf(right, wrongs, { sort: (x, y) => x.value.localeCompare(y.value) }), correct_answer: r,
+    operandKey: `map:ref:${pts.map(ref).join('')}:${r}`,
+    hint_steps: [
+      say(lang, 'Go down from the square to the letter at the bottom.', 'Kareden aşağı inip alttaki harfi bul.', 'Baja desde la casilla hasta la letra de abajo.'),
+      say(lang, 'Then go across to the number at the side. Write the letter first.', 'Sonra yana gidip sayıyı bul. Önce harfi yaz.', 'Luego ve al lado hasta el número. Escribe primero la letra.'),
+    ],
+    visual,
+  }
+}
+
+// ── a route map (Bond 7-8 Paper 8) ─────────────────────────────────────────────
+const TOWNS = { en: ['Oakley', 'Brook', 'Hilton', 'Marsh', 'Ashby'], tr: ['Çamlık', 'Dereköy', 'Tepebaşı', 'Kavaklı', 'Ilıca'], es: ['Robledo', 'Fuentes', 'Olmos', 'Sierra', 'Vega'] }
+function youngRoute(level, lang, add) {
+  const band = bandForLevel(level)
+  const towns = (TOWNS[lang] ?? TOWNS.en).slice(0, band <= 2 ? 4 : 5)
+  const [lo, hi] = band <= 2 ? [5, 30] : [40, 260]
+  // Every road a different length: "how much longer" needs two that differ, and a map of equal
+  // legs made the pick below loop for ever.
+  let legs
+  do { legs = towns.slice(1).map(() => randInt(lo, hi)) } while (new Set(legs).size < legs.length)
+  const visual = { kind: 'route', towns, legs, unit: 'km' }
+  if (add) {
+    const i = randInt(0, towns.length - 3), j = randInt(i + 2, Math.min(towns.length - 1, i + 3))
+    const total = legs.slice(i, j).reduce((a, b) => a + b, 0)
+    return {
+      topic: 'addition', level,
+      question_text: say(lang, `How far is it from ${towns[i]} to ${towns[j]} along the road?`, `Yol boyunca ${towns[i]} ile ${towns[j]} arası kaç km?`, `¿Qué distancia hay de ${towns[i]} a ${towns[j]} por la carretera?`),
+      format: 'numeric', correct_answer: total, operandKey: `route:sum:${legs.join('-')}:${i}:${j}`,
+      hint_steps: [say(lang, 'Follow the road from the first town to the second, stop by stop.', 'Yolu ilk kasabadan ikinciye durak durak takip et.', 'Sigue la carretera del primer pueblo al segundo, tramo a tramo.'),
+                   say(lang, 'Add the distance of every part of the road you pass.', 'Geçtiğin her yol parçasının uzunluğunu topla.', 'Suma la distancia de cada tramo por el que pasas.')],
+      visual,
+    }
+  }
+  let i, j
+  do { i = randInt(0, legs.length - 1); j = randInt(0, legs.length - 1) } while (i === j || legs[i] === legs[j])
+  const [a, b] = legs[i] > legs[j] ? [i, j] : [j, i]
+  return {
+    topic: 'subtraction', level,
+    question_text: say(lang, `How much longer is the road from ${towns[a]} to ${towns[a + 1]} than the road from ${towns[b]} to ${towns[b + 1]}?`,
+                             `${towns[a]}–${towns[a + 1]} yolu, ${towns[b]}–${towns[b + 1]} yolundan kaç km daha uzun?`,
+                             `¿Cuántos km más largo es el tramo de ${towns[a]} a ${towns[a + 1]} que el de ${towns[b]} a ${towns[b + 1]}?`),
+    format: 'numeric', correct_answer: legs[a] - legs[b], operandKey: `route:diff:${legs.join('-')}:${a}:${b}`,
+    hint_steps: [say(lang, 'Find both roads on the map and read their lengths.', 'İki yolu da haritada bul ve uzunluklarını oku.', 'Busca los dos tramos en el mapa y lee sus longitudes.'),
+                 say(lang, '"How much longer" is the difference: take the shorter from the longer.', '"Ne kadar uzun" farkı sorar: kısayı uzundan çıkar.', '"Cuánto más largo" es la diferencia: resta el corto del largo.')],
+    visual,
+  }
+}
+
+// ── spinner probability (Bond 10-11) ──────────────────────────────────────────
+const SPIN = { red: { en: 'red', tr: 'kırmızı', es: 'rojo' }, blue: { en: 'blue', tr: 'mavi', es: 'azul' }, green: { en: 'green', tr: 'yeşil', es: 'verde' }, yellow: { en: 'yellow', tr: 'sarı', es: 'amarillo' } }
+function avgSpinner(level, lang) {
+  const n = pick([4, 5, 6, 8, 10])
+  const colours = shuffle(Object.keys(SPIN)).slice(0, pick([2, 3]))
+  let sectors
+  do { sectors = Array.from({ length: n }, () => pick(colours)) } while (colours.some(c => !sectors.includes(c)))
+  const want = pick(colours)
+  const k = sectors.filter(c => c === want).length
+  const g = gcd(k, n)
+  const correct = `${k / g}/${n / g}`
+  const w = SPIN[want][lang] ?? SPIN[want].en
+  const right = opt(correct, say(lang, `Right — ${k} of the ${n} equal parts are ${w}.`, `Doğru — ${n} eşit parçanın ${k} tanesi ${w}.`, `Correcto: ${k} de las ${n} partes iguales son ${w}.`))
+  const wrongs = [
+    opt(`${k}/${n - k}`, say(lang, `That compares ${w} with the other parts. A probability compares it with ALL of them.`, `Bu, ${w} parçaları diğerleriyle kıyaslıyor. Olasılık HEPSİYLE kıyaslar.`, `Eso compara el ${w} con las otras partes. La probabilidad lo compara con TODAS.`)),
+    opt(`1/${colours.length}`, say(lang, `There are ${colours.length} colours, but they do not have the same number of parts.`, `${colours.length} renk var ama parça sayıları eşit değil.`, `Hay ${colours.length} colores, pero no tienen el mismo número de partes.`)),
+    opt(`${n - k}/${n}`, say(lang, `That is the chance of NOT landing on ${w}.`, `Bu, ${w} gelmeme olasılığı.`, `Esa es la probabilidad de NO caer en ${w}.`)),
+    opt(`1/${n}`, say(lang, `That is one part. Count every ${w} part.`, `Bu tek bir parça. Bütün ${w} parçaları say.`, `Eso es una parte. Cuenta todas las partes de ${w}.`)),
+    ...[[k + 1, n], [k - 1, n], [k, n + 1]].map(([x, y]) => opt(`${x}/${y}`, say(lang, 'Count the parts again.', 'Parçaları yeniden say.', 'Vuelve a contar las partes.'))),
+  ].filter(o => { const [x, y] = o.value.split('/').map(Number); return y > 0 && x > 0 && x < y && x * n !== k * y })
+  return {
+    topic: 'averages', level,
+    question_text: say(lang, `The spinner is spun once. What is the probability that it lands on ${w}?`, `Çark bir kez çevriliyor. ${cap(w)} gelme olasılığı nedir?`, `Se gira la ruleta una vez. ¿Cuál es la probabilidad de que caiga en ${w}?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: correct, operandKey: `spin:${sectors.join('')}:${want}`,
+    hint_steps: [say(lang, 'Count all the equal parts of the spinner — that is the bottom number.', 'Çarkın bütün eşit parçalarını say — bu alttaki sayıdır.', 'Cuenta todas las partes iguales de la ruleta: ese es el número de abajo.'),
+                 say(lang, `Count the ${w} parts — that is the top number. Simplify if you can.`, `${cap(w)} parçaları say — bu üstteki sayıdır. Sadeleştirebiliyorsan sadeleştir.`, `Cuenta las partes de ${w}: ese es el número de arriba. Simplifica si puedes.`)],
+    visual: { kind: 'spinner', sectors: sectors.map(c => ({ colour: c, label: SPIN[c][lang] ?? SPIN[c].en })) },
+  }
+}
+
+// ── map scale (Bond 10-11) ────────────────────────────────────────────────────
+function ratioMapScale(level, lang) {
+  const cm = randInt(3, 9)
+  const per = pick([2, 5, 10, 20, 25, 50])
+  const [from, to] = shuffle(TOWNS[lang] ?? TOWNS.en).slice(0, 2)
+  return {
+    topic: 'ratio', level,
+    question_text: say(lang, `Use the scale. How far apart are ${from} and ${to} in real life, in km?`, `Ölçeği kullan. ${from} ile ${to} arasındaki gerçek uzaklık kaç km?`, `Usa la escala. ¿A cuántos km están ${from} y ${to} en la realidad?`),
+    format: 'numeric', correct_answer: cm * per, operandKey: `mapscale:${cm}:${per}`,
+    hint_steps: [say(lang, 'Count the centimetres between the two places on the map.', 'Haritada iki yer arasındaki santimetreleri say.', 'Cuenta los centímetros entre los dos lugares del mapa.'),
+                 say(lang, `Every centimetre on the map is ${per} km in real life.`, `Haritadaki her santimetre gerçekte ${per} km.`, `Cada centímetro del mapa son ${per} km en la realidad.`)],
+    visual: { kind: 'mapscale', cm, per, from, to },
+  }
+}
+
+// ── translating a point (Bond 10-11) ──────────────────────────────────────────
+function geoTranslate(level, lang) {
+  const size = 8
+  let x, y, dx, dy
+  do { x = randInt(1, 7); y = randInt(1, 7); dx = randInt(-4, 4); dy = randInt(-4, 4) } while (!dx || !dy || x + dx < 0 || x + dx > size || y + dy < 0 || y + dy > size || Math.abs(dx) === Math.abs(dy))
+  const pair = (a, b) => `(${a}, ${b})`
+  const moveX = dx > 0 ? say(lang, `${dx} to the right`, `${dx} sağa`, `${dx} a la derecha`) : say(lang, `${-dx} to the left`, `${-dx} sola`, `${-dx} a la izquierda`)
+  const moveY = dy > 0 ? say(lang, `${dy} up`, `${dy} yukarı`, `${dy} hacia arriba`) : say(lang, `${-dy} down`, `${-dy} aşağı`, `${-dy} hacia abajo`)
+  const right = opt(pair(x + dx, y + dy), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = [
+    [x + dy, y + dx, say(lang, 'The two moves were swapped: left/right changes the first number, up/down the second.', 'İki hareket karıştı: sağ/sol ilk sayıyı, yukarı/aşağı ikinciyi değiştirir.', 'Has cambiado los movimientos: derecha/izquierda cambia el primer número y arriba/abajo el segundo.')],
+    [x - dx, y + dy, say(lang, 'Check which way the across move goes.', 'Yatay hareketin yönünü kontrol et.', 'Comprueba hacia dónde va el movimiento horizontal.')],
+    [x + dx, y - dy, say(lang, 'Check which way the up/down move goes.', 'Yukarı/aşağı hareketin yönünü kontrol et.', 'Comprueba hacia dónde va el movimiento vertical.')],
+    [x, y, say(lang, 'That is where the point started.', 'Bu, noktanın başladığı yer.', 'Ahí es donde empezó el punto.')],
+    ...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([ex, ey]) => [x + dx + ex, y + dy + ey, say(lang, 'Count the squares moved again.', 'Gidilen kareleri yeniden say.', 'Vuelve a contar las casillas.')]),
+  ].filter(([a, b]) => a >= 0 && b >= 0 && a <= size && b <= size).map(([a, b, w]) => opt(pair(a, b), w))
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `Point A moves ${moveX} and ${moveY}. What are its new coordinates?`, `A noktası ${moveX} ve ${moveY} gidiyor. Yeni koordinatları nedir?`, `El punto A se mueve ${moveX} y ${moveY}. ¿Cuáles son sus nuevas coordenadas?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `translate:${x}:${y}:${dx}:${dy}`,
+    hint_steps: [say(lang, `Read where A is now: along first, then up.`, `A'nın şimdi nerede olduğunu oku: önce yatay, sonra dikey.`, `Lee dónde está A ahora: primero horizontal y luego vertical.`),
+                 say(lang, 'Moving right or left changes only the first number; up or down changes only the second.', 'Sağa/sola gitmek yalnız ilk sayıyı, yukarı/aşağı gitmek yalnız ikinciyi değiştirir.', 'Moverse a derecha o izquierda cambia solo el primer número; arriba o abajo, solo el segundo.')],
+    visual: { kind: 'coords', size, points: [{ label: 'A', x, y }] },
+  }
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -5927,7 +6117,7 @@ export { SHAPES }
 
 // The visual kinds drawn by components/MathFigure. Kept here, beside the templates that emit
 // them, so the screen can ask "is this a picture question?" without importing a component.
-export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll'])
+export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale'])
 
 export const TOPICS = Object.keys(REGISTRY)
 

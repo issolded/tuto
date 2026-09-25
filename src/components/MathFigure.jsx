@@ -38,7 +38,10 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
             : v.kind === 'net' ? net(v)
               : v.kind === 'venn' ? venn(v)
                 : v.kind === 'carroll' ? carroll(v)
-                  : polygon(v, hint)
+                  : v.kind === 'route' ? route(v)
+                    : v.kind === 'spinner' ? spinner(v)
+                      : v.kind === 'mapscale' ? mapScale(v, lang)
+                        : polygon(v, hint)
   if (!body) return null
   const schematic = v.kind === 'solid' || v.kind === 'polygon' || v.kind === 'net'
   return (
@@ -583,4 +586,77 @@ function carroll(v) {
     {txt(ox + labelW + (v.cell[1] + 0.5) * colW, top + (v.cell[0] + 0.5) * rowH, '?', { size: 22, fill: ORANGE, key: 'q' })}
   </g>
   return { h: top + 2 * rowH + 10, g }
+}
+
+// ── a route between towns ─────────────────────────────────────────────────────
+// Bond 7-8 Paper 8: towns joined by roads, each road labelled with its length. The zigzag keeps
+// the labels apart; the route is drawn in order, so "from A to C" is read along the line.
+function route(v) {
+  const n = v.towns.length
+  const xs = v.towns.map((_, i) => 28 + (i * 264) / (n - 1))
+  const ys = v.towns.map((_, i) => (i % 2 ? 150 : 60))
+  const g = <g>
+    {v.legs.map((d, i) => {
+      // Each label sits in the pocket to the LEFT of its road (below a "\\", above a "/"), so
+      // every pocket of the zigzag holds exactly one label and neighbours never touch.
+      const dx = xs[i + 1] - xs[i], dy = ys[i + 1] - ys[i], len = Math.hypot(dx, dy)
+      const [nx, ny] = dy > 0 ? [-dy / len, dx / len] : [dy / len, -dx / len]
+      const mx = (xs[i] + xs[i + 1]) / 2 + nx * 26, my = (ys[i] + ys[i + 1]) / 2 + ny * 26
+      return <g key={i}>
+        <line x1={xs[i]} y1={ys[i]} x2={xs[i + 1]} y2={ys[i + 1]} stroke="#c9b48a" strokeWidth="7" strokeLinecap="round" />
+        <line x1={xs[i]} y1={ys[i]} x2={xs[i + 1]} y2={ys[i + 1]} stroke="white" strokeWidth="1.5" strokeDasharray="5 5" />
+        {txt(mx, my, `${d} ${v.unit}`, { size: 12, fill: ORANGE })}
+      </g>
+    })}
+    {v.towns.map((name, i) => <g key={name}>
+      <circle cx={xs[i]} cy={ys[i]} r={7} fill={INK} />
+      {txt(xs[i], ys[i] + (i % 2 ? 22 : -20), name, { size: 13 })}
+    </g>)}
+  </g>
+  return { h: 190, g }
+}
+
+// ── a spinner ─────────────────────────────────────────────────────────────────
+// Equal sectors, each a colour; the colour name is written in the sector so the question does
+// not depend on telling colours apart.
+const SPIN_COLOURS = { red: '#ef8a80', blue: '#8fbfe8', green: '#9fd48a', yellow: '#f5d77a' }
+function spinner(v) {
+  const cx = 160, cy = 102, r = 88, n = v.sectors.length
+  const g = <g>
+    {v.sectors.map((c, i) => {
+      const a0 = (i / n) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2
+      const p0 = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)], p1 = [cx + r * Math.cos(a1), cy + r * Math.sin(a1)]
+      const m = (a0 + a1) / 2
+      return <g key={i}>
+        <path d={`M ${cx} ${cy} L ${p0} A ${r} ${r} 0 0 1 ${p1} Z`} fill={SPIN_COLOURS[c.colour]} stroke="white" strokeWidth="2" />
+        {txt(cx + r * 0.66 * Math.cos(m), cy + r * 0.66 * Math.sin(m), c.label, { size: n > 8 ? 9 : 11 })}
+      </g>
+    })}
+    <circle cx={cx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="2" />
+    <line x1={cx} y1={cy} x2={cx + 30} y2={cy - 48} stroke={INK} strokeWidth="4" strokeLinecap="round" />
+    <circle cx={cx} cy={cy} r={7} fill={INK} />
+  </g>
+  return { h: 204, g }
+}
+
+// ── a map with a scale ────────────────────────────────────────────────────────
+// Two places, the straight line between them marked off in centimetres, and the scale written
+// on the map as a real map writes it. Counting the marks is reading the map; the scale turns
+// it into distance.
+function mapScale(v, lang) {
+  const x0 = 34, x1 = 286, y = 92
+  const step = (x1 - x0) / v.cm
+  const g = <g>
+    <rect x={8} y={8} width={304} height={170} rx={10} fill="#eef6e8" stroke="#b9d3a8" strokeWidth="2" />
+    <path d="M 20 150 C 90 120, 140 170, 220 140 S 300 120, 306 132" fill="none" stroke="#9cc7e6" strokeWidth="9" strokeLinecap="round" />
+    <line x1={x0} y1={y} x2={x1} y2={y} stroke={INK} strokeWidth="2" strokeDasharray="4 4" />
+    {Array.from({ length: v.cm + 1 }, (_, i) => <line key={i} x1={x0 + i * step} y1={y - 6} x2={x0 + i * step} y2={y + 6} stroke={INK} strokeWidth="1.5" />)}
+    <circle cx={x0} cy={y} r={8} fill={ORANGE} /><circle cx={x1} cy={y} r={8} fill={ORANGE} />
+    {txt(x0 + 4, y - 24, v.from, { size: 13, anchor: 'start' })}
+    {txt(x1 - 4, y - 24, v.to, { size: 13, anchor: 'end' })}
+    <rect x={18} y={18} width={132} height={22} rx={6} fill="white" stroke={INK} strokeWidth="1" />
+    {txt(84, 29, say(lang, `Scale: 1 cm = ${v.per} km`, `Ölçek: 1 cm = ${v.per} km`, `Escala: 1 cm = ${v.per} km`), { size: 11 })}
+    {txt(160, y + 22, say(lang, 'each mark is 1 cm', 'her çizgi arası 1 cm', 'cada marca es 1 cm'), { size: 11, weight: 600, fill: '#617383' })}
+  </g>
+  return { h: 186, g }
 }
