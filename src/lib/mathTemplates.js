@@ -6003,7 +6003,10 @@ const TOWNS = { en: ['Oakley', 'Brook', 'Hilton', 'Marsh', 'Ashby'], tr: ['Çaml
 function youngRoute(level, lang, add) {
   const band = bandForLevel(level)
   const towns = (TOWNS[lang] ?? TOWNS.en).slice(0, band <= 2 ? 4 : 5)
-  const [lo, hi] = band <= 2 ? [5, 30] : [40, 260]
+  // Two-digit roads at both ages, as Bond 7-8 Paper 8 draws them (8, 15, 24, 17 km). Eight used
+  // to get 40-260 km, which made "Hilton to Ashby" 182 + 253 + 196: three three-digit numbers
+  // added in the head is a column-addition exercise, not reading a map.
+  const [lo, hi] = band <= 2 ? [5, 30] : [8, 60]
   // Every road a different length: "how much longer" needs two that differ, and a map of equal
   // legs made the pick below loop for ever.
   let legs
