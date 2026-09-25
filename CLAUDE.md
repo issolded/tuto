@@ -81,6 +81,27 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] 11-12 yaş görselleri — merdivenin son basamağı (2026-09-25, Claude). Kaynak *Bond 10 Minute
+      Tests Maths 11+-12+* (30 test baştan sona okundu; not dökümü scratchpad'de `NOTES-bond-1112.md`).
+      Year 7 zaten bu kitabın METNİNDEN yazılmıştı (karekök, oran sadeleştirme, iki taraflı denklem,
+      hız-zaman); eksik olan kitabın resimli yarısıydı. **Yeni (band ≥6, yani 11 ve 12-13 yaş):**
+      dört bölgeli koordinat (`plane`: dikdörtgen/kare/paralelkenarın 4. köşesi, noktaları birleştirip
+      en doğru ad — şıklarda doğru cevabın üst sınıfı yok, kare hiç cevap değil; üçgeni öteleme, sorulan
+      köşe bir ekseni geçiyor), noktalardan kural (`y = 2x − 1`; her yanlış kural çizilen bir noktada
+      tutmuyor ve hangisinde olduğunu söylüyor), açı çizimleri (`angles`: dış açı, dış açıdan iç açı,
+      eşit işaretli ikizkenar, ters açılar, doğru üstünde iki eşit açı — gerçek açılarla çizili),
+      bileşik şekil (`compound`: L-şekli iki kenarı yazılmadan, köşesi kesilmiş taralı dikdörtgen; ölçü
+      çizgileriyle), dörtyüzlü/sekizyüzlü/beşgen ve altıgen prizma (yüz/ayrıt/köşe + ad), fonksiyon
+      makinesi çizimi ve boş kutu (iki giriş-iki çıkış: tek çiftle "× 3" ve "+ 14" ikisi de doğru olurdu),
+      sayı haçı (`numcross`: önce sütundan b, sonra satırdan a), zar sonuç tablosu, üçgensel/kare sayı
+      noktaları, sıfırın altına ve ondalığa uzanan sayı doğrusu (negatif cevap şıklı — klavyede eksi yok).
+      Yansıma/dönme yok (NVR'da var), çizdiren/cümle yazdıran sorular yok.
+      **Ölçüm (1500 oturum):** görselli soru/oturum 12 yaş 3,0 → 4,3, 11 yaş 3,7 → 4,4; görsel türü 5 → 13.
+      `math:check`'e her yeni görsel için cevabı çizimden bağımsız yeniden hesaplayan kontrol eklendi
+      (dörtgen noktalardan sınıflandırılıyor; yanlış şıkkın da doğru olması ayrıca aranıyor); kasıtlı
+      bozulan dört cevapla kontrollerin yakaladığı doğrulandı. Doğrulama: math:check 3 dil × 2000
+      soru/konu bulgu yok, build, font:check, i18n:check değişmedi (38); 24 görsel EN + TR/ES 390px'te,
+      12 yaş gerçek MathScreen oturumu uçtan uca, sonuç ekranında görseller.
 - [x] Pasta grafiği, açınım, Venn/Carroll ve sonuç ekranında görseller (2026-09-25, Claude).
       Kitaplarla görsel karşılaştırmasında açık kalan üçü: **pasta grafiği** (Year 6 müfredat satırı
       "pie charts" ile açılıyor ama 11 yaş istatistiği yalnız ortalama soruyordu; artık `averages`

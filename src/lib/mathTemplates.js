@@ -1945,6 +1945,16 @@ function geometryTemplate(level, lang) {
   // From Year 5 the topic is no longer "how many sides" — the curriculum names angles and
   // area, and counting corners at eleven is not the same question wearing a bigger number.
   // Bond's 10-11 book asks for nets thirteen times; they take a share of the older years too.
+  if (band >= 6) {
+    // Ages 11-12: Bond's 11+-12+ book is mostly pictures here — four-quadrant grids, angle
+    // diagrams, compound shapes, solids past the cube. The text-only angle and area questions
+    // keep a third of the slots.
+    const r = Math.random()
+    return r < 0.08 ? geoNet(level, lang) : r < 0.16 ? solidOlder(level, lang)
+      : r < 0.24 ? planeVertex(level, lang) : r < 0.30 ? planeShape(level, lang) : r < 0.36 ? planeTranslate(level, lang)
+        : r < 0.52 ? angleDiagram(level, lang) : r < 0.64 ? compoundArea(level, lang)
+          : r < 0.82 ? geometryAngle(level, lang) : geometryArea(level, lang)
+  }
   if (band >= 5) { const r = Math.random(); return r < 0.12 ? geoNet(level, lang) : r < 0.24 ? geoTranslate(level, lang) : r < 0.62 ? geometryAngle(level, lang) : geometryArea(level, lang) }
   // Years 3 and 4: solids, right angles, turns, symmetry and coordinates (geometryYoung); null
   // keeps the sides-and-corners and naming questions below for a share of the slots.
@@ -2586,6 +2596,8 @@ function placeValueTemplate(level, lang) {
   const band = bandForLevel(level)
   const young = band >= 3 && band <= 4 ? youngPlaceValue(level, lang) : null
   if (young) return young
+  // Number lines running past zero and between whole numbers, as the 11+-12+ book draws them.
+  if (band >= 6 && Math.random() < 0.22) return numberLineOlder(level, lang)
   // Year 3 does not round and does not use negative numbers — both arrive in Year 4 — so its
   // band gets its own three shapes rather than a softened version of the others.
   const shapes = band <= 3
@@ -2892,6 +2904,9 @@ function algebraTemplate(level, lang) {
   const shapes = band >= 7
     ? ['solve', 'solve', 'substitute', 'substitute', 'simplify', 'think', 'expression']
     : ['think', 'think', 'solve', 'substitute', 'simplify', 'expression']
+  // The book's two algebra pictures: points on a line and the rule they follow, and a cross of
+  // numbers adding to one total both ways.
+  if (band >= 6) { const r = Math.random(); if (r < 0.14) return planeRule(level, lang); if (r < 0.26) return numberCross(level, lang) }
   const shape = pick(shapes)
   if (shape === 'solve') return algSolve(level, lang)
   if (shape === 'substitute') return algSubstitute(level, lang)
@@ -3400,6 +3415,7 @@ function averagesTemplate(level, lang) {
   const band = bandForLevel(level)
   // Year 6's line opens with pie charts, and the book reads them; a third of the slots.
   if (Math.random() < 0.35) return statsPie(level, lang)
+  if (band >= 6 && Math.random() < 0.15) return diceTable(level, lang)
   const shapes = band >= 7
     ? ['mean', 'reverse', 'other', 'other', 'probability']
     : ['mean', 'mean', 'reverse', 'other']
@@ -3565,6 +3581,7 @@ function npSquareRoot(level, lang) {
 }
 
 function numberPropertiesTemplate(level, lang) {
+  if (Math.random() < 0.12) return dotNumbers(level, lang)
   const shape = pick(['factors', 'primes', 'lcm', 'power', 'power'])
   if (shape === 'primes') return npPrimeSum(level, lang)
   if (shape === 'lcm') return npLcm(level, lang)
@@ -3664,6 +3681,7 @@ function seqMachine(level, lang) {
     format: 'numeric',
     correct_answer: backwards ? input : output,
     operandKey: `seq:mach:${backwards ? 'b' : 'f'}:${m}:${add}:${input}`,
+    visual: { kind: 'machine', inputs: [backwards ? '?' : input], ops: [`× ${m}`, `+ ${add}`], outputs: [backwards ? output : '?'] },
     hint_steps: [
       backwards
         ? say(lang, `Going backwards through a machine undoes each step, last one first.`,
@@ -3684,7 +3702,8 @@ function seqMachine(level, lang) {
 }
 
 function sequenceTemplate(level, lang) {
-  const shape = pick(['continue', 'continue', 'rule', 'machine', 'machine'])
+  const shape = pick(['continue', 'continue', 'rule', 'machine', 'machine', 'missing'])
+  if (shape === 'missing') return machineMissing(level, lang)
   if (shape === 'rule') return seqRule(level, lang)
   if (shape === 'machine') return seqMachine(level, lang)
   return seqContinue(level, lang)
@@ -6088,6 +6107,536 @@ function geoTranslate(level, lang) {
   }
 }
 
+// ══ Ages 11-12: the pictures of Bond's 11+-12+ 10 Minute Tests ═══════════════════════════════
+// Year 7 was written from this book's WORDS: its square roots, lowest-terms ratios, unknowns on
+// both sides and speed-distance-time were already here. What was not here is the half of the
+// book that is a picture — a grid running into negative numbers with three corners of a
+// rectangle on it, a triangle with its side pushed out past a corner, an L-shaped floor with two
+// of its lengths missing, a function machine with an empty box, a cross of numbers adding to the
+// same total both ways. Thirty tests, and each of those comes back several times.
+//
+// Left out on purpose: reflection and rotation (the NVR puzzles ask those), and everything the
+// book asks the child to draw, sketch or explain in a sentence — nothing can mark those here.
+
+const minus = n => (n < 0 ? `−${-n}` : String(n))
+const pairOf = (x, y) => `(${minus(x)}, ${minus(y)})`
+
+// ── a grid in four quadrants ───────────────────────────────────────────────────
+// Three corners of a rectangle, a square or a parallelogram, and the fourth to find. The shape
+// always reaches past an axis — the point of the question at this age is the negative numbers.
+function planeVertex(level, lang) {
+  const kind = pick(['rect', 'rect', 'square', 'para'])
+  let P
+  for (;;) {
+    const x0 = randInt(-5, 1), y0 = randInt(-5, 1)
+    if (kind === 'para') {
+      const w = randInt(2, 4), h = randInt(2, 4), s = pick([-2, -1, 1, 2])
+      P = [[x0, y0], [x0 + w, y0], [x0 + w + s, y0 + h], [x0 + s, y0 + h]]
+    } else {
+      const w = randInt(2, 6), h = kind === 'square' ? w : randInt(2, 6)
+      if (kind === 'rect' && w === h) continue
+      P = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h]]
+    }
+    if (P.some(([x, y]) => Math.abs(x) > 5 || Math.abs(y) > 5)) continue
+    if (P.some(([x]) => x < 0) && P.some(([, y]) => y < 0) && P.some(([x]) => x > 0) && P.some(([, y]) => y > 0)) break
+  }
+  const miss = randInt(0, 3)
+  const [A, B, C, D] = [1, 2, 3, 0].map(i => P[(miss + i) % 4])
+  const name = say(lang, { rect: 'rectangle', square: 'square', para: 'parallelogram' }[kind],
+    { rect: 'dikdörtgen', square: 'kare', para: 'paralelkenar' }[kind],
+    { rect: 'rectángulo', square: 'cuadrado', para: 'paralelogramo' }[kind])
+  const right = opt(pairOf(...D), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const other = say(lang, 'That makes a different shape: D has to join to both A and C.', 'Bu başka bir şekil yapar: D hem A\'ya hem C\'ye bağlanmalı.', 'Eso forma otra figura: D tiene que unirse con A y con C.')
+  const side = say(lang, 'Check which side of the axis D is on.', 'D\'nin eksenin hangi tarafında olduğunu kontrol et.', 'Comprueba a qué lado del eje está D.')
+  const wrongs = [
+    [D[1], D[0], say(lang, 'The numbers are swapped: across comes first, then up or down.', 'Sayıların yeri karıştı: önce yatay, sonra dikey.', 'Los números están al revés: primero horizontal, luego vertical.')],
+    [A[0] + B[0] - C[0], A[1] + B[1] - C[1], other],
+    [B[0] + C[0] - A[0], B[1] + C[1] - A[1], other],
+    [-D[0], D[1], side], [D[0], -D[1], side],
+    ...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([ex, ey]) => [D[0] + ex, D[1] + ey, say(lang, 'Count the squares again.', 'Kareleri yeniden say.', 'Vuelve a contar las casillas.')]),
+  ].filter(([x, y]) => (x !== D[0] || y !== D[1]) && Math.abs(x) <= 5 && Math.abs(y) <= 5).map(([x, y, w]) => opt(pairOf(x, y), w))
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `A, B and C are three corners of the ${name} ABCD. What are the coordinates of D?`,
+      `ABCD bir ${name}; A, B ve C köşeleri işaretli. D'nin koordinatları nedir?`,
+      `A, B y C son tres vértices del ${name} ABCD. ¿Cuáles son las coordenadas de D?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
+    operandKey: `plane:v:${kind}:${P.flat().join(',')}:${miss}`,
+    hint_steps: [
+      say(lang, 'Go from B to C and count: how many across, how many up or down?', 'B\'den C\'ye git ve say: kaç kare yatay, kaç kare yukarı ya da aşağı?', 'Ve de B a C y cuenta: ¿cuántas casillas en horizontal y cuántas arriba o abajo?'),
+      say(lang, 'Make the same move starting from A — that is where D is.', 'Aynı hareketi A\'dan başlayarak yap — D orada.', 'Haz el mismo movimiento empezando en A: ahí está D.'),
+    ],
+    visual: { kind: 'plane', min: -5, max: 5, points: [['A', A], ['B', B], ['C', C]].map(([label, [x, y]]) => ({ label, x, y })), path: [A, B, C] },
+  }
+}
+
+// Four points joined in order, and the best name for what they make. "Best" matters: a square is
+// a rectangle and a rhombus is a kite, so no wrong option is ever a family the right answer
+// belongs to — and a square is never the answer, because every other name would then be true.
+const QUADS = {
+  rect: { en: 'rectangle', tr: 'dikdörtgen', es: 'rectángulo', is: { en: 'four right angles and its opposite sides equal', tr: 'dört dik açı ve eşit karşılıklı kenarlar', es: 'cuatro ángulos rectos y los lados opuestos iguales' } },
+  square: { en: 'square', tr: 'kare', es: 'cuadrado', is: { en: 'four equal sides AND four right angles', tr: 'dört eşit kenar VE dört dik açı', es: 'cuatro lados iguales Y cuatro ángulos rectos' } },
+  rhombus: { en: 'rhombus', tr: 'eşkenar dörtgen', es: 'rombo', is: { en: 'four equal sides', tr: 'dört eşit kenar', es: 'cuatro lados iguales' } },
+  kite: { en: 'kite', tr: 'deltoid', es: 'cometa', is: { en: 'two pairs of equal sides that sit next to each other', tr: 'yan yana duran iki çift eşit kenar', es: 'dos pares de lados iguales que están uno junto al otro' } },
+  para: { en: 'parallelogram', tr: 'paralelkenar', es: 'paralelogramo', is: { en: 'two pairs of parallel sides', tr: 'iki çift paralel kenar', es: 'dos pares de lados paralelos' } },
+  trap: { en: 'trapezium', tr: 'yamuk', es: 'trapecio', is: { en: 'only one pair of parallel sides', tr: 'yalnız bir çift paralel kenar', es: 'un solo par de lados paralelos' } },
+}
+const QUAD_WRONG = { rect: ['square', 'rhombus', 'kite', 'trap'], rhombus: ['square', 'rect', 'trap'], kite: ['rhombus', 'para', 'trap', 'rect'], para: ['rhombus', 'rect', 'trap', 'kite'], trap: ['para', 'kite', 'rect', 'rhombus'] }
+
+function planeShape(level, lang) {
+  const kind = pick(Object.keys(QUAD_WRONG))
+  let P
+  for (;;) {
+    if (kind === 'rect') { const w = randInt(2, 7), h = randInt(2, 6); if (w === h) continue; P = [[0, 0], [w, 0], [w, h], [0, h]] }
+    else if (kind === 'rhombus') { const a = randInt(1, 4), b = randInt(2, 5); if (a === b) continue; P = [[0, b], [a, 0], [0, -b], [-a, 0]] }
+    else if (kind === 'kite') { const a = randInt(1, 3), t = randInt(1, 3), u = randInt(3, 6); if (t === u) continue; P = [[0, t], [a, 0], [0, -u], [-a, 0]] }
+    else if (kind === 'para') { const w = randInt(3, 6), h = randInt(2, 5), s = pick([-3, -2, -1, 1, 2, 3]); if (w * w === s * s + h * h) continue; P = [[0, 0], [w, 0], [w + s, h], [s, h]] }
+    else { const w = randInt(4, 8), h = randInt(2, 5), a = randInt(0, 3), b = randInt(1, 3); if (w - a - b < 1 || a === b) continue; P = [[0, 0], [w, 0], [w - b, h], [a, h]] }
+    const xs = P.map(p => p[0]), ys = P.map(p => p[1])
+    const dx = randInt(-5 - Math.min(...xs), 5 - Math.max(...xs)), dy = randInt(-5 - Math.min(...ys), 5 - Math.max(...ys))
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue
+    const Q = P.map(([x, y]) => [x + dx, y + dy])
+    if (Q.some(([x, y]) => Math.abs(x) > 5 || Math.abs(y) > 5)) continue
+    if (!Q.some(([x]) => x < 0) || !Q.some(([, y]) => y < 0)) continue
+    P = Q; break
+  }
+  const start = randInt(0, 3)
+  const pts = [0, 1, 2, 3].map(i => P[(start + i) % 4])
+  const nameOf = k => pickL(QUADS[k], lang)
+  const right = opt(nameOf(kind), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = shuffle(QUAD_WRONG[kind]).map(k => opt(nameOf(k), say(lang,
+    `A ${QUADS[k].en} has ${QUADS[k].is.en}. Check the sides of this one.`,
+    `${cap(QUADS[k].tr)}: ${QUADS[k].is.tr}. Bu şeklin kenarlarına bak.`,
+    `${k === 'kite' ? 'Una' : 'Un'} ${QUADS[k].es} tiene ${QUADS[k].is.es}. Mira los lados de esta figura.`)))
+  const list = pts.map(p => pairOf(...p)).join(', ')
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `The points ${list} are joined in that order. What is the best name for the shape they make?`,
+      `${list} noktaları bu sırayla birleştiriliyor. Oluşan şeklin en doğru adı nedir?`,
+      `Se unen los puntos ${list} en ese orden. ¿Cuál es el nombre más exacto de la figura que forman?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
+    operandKey: `plane:s:${kind}:${pts.flat().join(',')}`,
+    hint_steps: [
+      say(lang, 'Join the points on the grid in order, then back to the first.', 'Noktaları ızgarada sırayla birleştir, sonra ilkine dön.', 'Une los puntos en orden en la cuadrícula y vuelve al primero.'),
+      say(lang, 'Now look for sides that are parallel, sides that are equal and right angles.', 'Şimdi paralel kenarlara, eşit kenarlara ve dik açılara bak.', 'Ahora busca lados paralelos, lados iguales y ángulos rectos.'),
+    ],
+    visual: { kind: 'plane', min: -5, max: 5, points: pts.map(([x, y], i) => ({ label: 'ABCD'[i], x, y })) },
+  }
+}
+
+// A triangle slid across the axes. Moving a whole shape is moving each corner the same way, and
+// the new corner may land in another quadrant — the reason the question lives on this grid.
+function planeTranslate(level, lang) {
+  let T, dx, dy, k
+  for (;;) {
+    const x = randInt(-4, 2), y = randInt(-4, 2)
+    T = [[x, y], [x + randInt(2, 4), y], [x + randInt(0, 3), y + randInt(2, 4)]]
+    dx = pick([-4, -3, -2, 2, 3, 4]); dy = pick([-4, -3, -2, 2, 3, 4])
+    if (Math.abs(dx) === Math.abs(dy)) continue
+    const all = [...T, ...T.map(([a, b]) => [a + dx, b + dy])]
+    if (all.some(([a, b]) => Math.abs(a) > 5 || Math.abs(b) > 5)) continue
+    // The corner asked about must cross an axis, or the negative numbers never come into it.
+    k = randInt(0, 2)
+    const [cx, cy] = T[k]
+    if ((cx > 0) !== (cx + dx > 0) || (cy > 0) !== (cy + dy > 0)) break
+  }
+  const [x, y] = T[k]
+  const moveX = dx > 0 ? say(lang, `${dx} to the right`, `${dx} birim sağa`, `${dx} a la derecha`) : say(lang, `${-dx} to the left`, `${-dx} birim sola`, `${-dx} a la izquierda`)
+  const moveY = dy > 0 ? say(lang, `${dy} up`, `${dy} birim yukarı`, `${dy} hacia arriba`) : say(lang, `${-dy} down`, `${-dy} birim aşağı`, `${-dy} hacia abajo`)
+  const corner = 'ABC'[k]
+  const right = opt(pairOf(x + dx, y + dy), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = [
+    [x + dy, y + dx, say(lang, 'The two moves were swapped: left/right changes the first number, up/down the second.', 'İki hareket karıştı: sağ/sol ilk sayıyı, yukarı/aşağı ikinciyi değiştirir.', 'Has cambiado los movimientos: derecha/izquierda cambia el primer número y arriba/abajo el segundo.')],
+    [x - dx, y + dy, say(lang, 'Check which way the across move goes.', 'Yatay hareketin yönünü kontrol et.', 'Comprueba hacia dónde va el movimiento horizontal.')],
+    [x + dx, y - dy, say(lang, 'Check which way the up/down move goes.', 'Yukarı/aşağı hareketin yönünü kontrol et.', 'Comprueba hacia dónde va el movimiento vertical.')],
+    [-(x + dx), y + dy, say(lang, 'Watch the minus sign when you cross the axis.', 'Ekseni geçerken eksi işaretine dikkat et.', 'Cuidado con el signo menos al cruzar el eje.')],
+    [x + dx, -(y + dy), say(lang, 'Watch the minus sign when you cross the axis.', 'Ekseni geçerken eksi işaretine dikkat et.', 'Cuidado con el signo menos al cruzar el eje.')],
+    ...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([ex, ey]) => [x + dx + ex, y + dy + ey, say(lang, 'Count the squares moved again.', 'Gidilen kareleri yeniden say.', 'Vuelve a contar las casillas.')]),
+  ].filter(([a, b]) => (a !== x + dx || b !== y + dy) && Math.abs(a) <= 5 && Math.abs(b) <= 5).map(([a, b, w]) => opt(pairOf(a, b), w))
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `The triangle is moved ${moveX} and ${moveY}. What are the new coordinates of corner ${corner}?`,
+      `Üçgen ${moveX} ve ${moveY} kaydırılıyor. ${corner} köşesinin yeni koordinatları nedir?`,
+      `El triángulo se desplaza ${moveX} y ${moveY}. ¿Cuáles son las nuevas coordenadas del vértice ${corner}?`),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
+    operandKey: `plane:t:${T.flat().join(',')}:${dx}:${dy}:${k}`,
+    hint_steps: [
+      say(lang, `Read where ${corner} is now: across first, then up or down.`, `${corner} köşesinin şimdi nerede olduğunu oku: önce yatay, sonra dikey.`, `Lee dónde está ${corner} ahora: primero horizontal y luego vertical.`),
+      say(lang, 'Right or left changes only the first number; up or down only the second. Below zero the numbers carry a minus.', 'Sağ/sol yalnız ilk sayıyı, yukarı/aşağı yalnız ikinciyi değiştirir. Sıfırın altında sayılar eksi olur.', 'Derecha o izquierda cambia solo el primer número; arriba o abajo, solo el segundo. Por debajo de cero llevan un menos.'),
+    ],
+    visual: { kind: 'plane', min: -5, max: 5, points: T.map(([a, b], i) => ({ label: 'ABC'[i], x: a, y: b })), path: [...T, T[0]] },
+  }
+}
+
+// Points on a straight line and the rule they follow — Bond's "write the equation that
+// represents the coordinates plotted". Every wrong rule offered fails on a point that is drawn,
+// and says which one.
+const ruleText = (m, c) => `y = ${m === 1 ? '' : m}x${c > 0 ? ` + ${c}` : c < 0 ? ` − ${-c}` : ''}`
+
+function planeRule(level, lang) {
+  const [m, c] = pick([[1, 1], [1, 2], [1, 3], [1, -1], [1, -2], [2, 0], [2, 1], [2, -1], [3, 0], [1, 0]])
+  const xs = []
+  for (let x = 0; x <= 8 && xs.length < 5; x++) { const y = m * x + c; if (y >= 0 && y <= 8) xs.push(x) }
+  const pts = xs.map(x => ({ x, y: m * x + c }))
+  const right = opt(ruleText(m, c), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const pool = [[1, 0], [1, 1], [1, 2], [1, 3], [1, -1], [1, -2], [2, 0], [2, 1], [2, -1], [3, 0], [3, -1]]
+    .filter(([a, b]) => a !== m || b !== c)
+    .map(([a, b]) => ({ a, b, bad: pts.find(p => a * p.x + b !== p.y) }))
+    .filter(r => r.bad)
+    .sort((r, s) => (Math.abs(r.a - m) * 3 + Math.abs(r.b - c)) - (Math.abs(s.a - m) * 3 + Math.abs(s.b - c)))
+  const wrongs = pool.slice(0, 5).map(({ a, b, bad }) => opt(ruleText(a, b), say(lang,
+    `Try it on the point (${bad.x}, ${bad.y}): when x is ${bad.x} this rule gives ${a * bad.x + b}, not ${bad.y}.`,
+    `(${bad.x}, ${bad.y}) noktasında dene: x ${bad.x} iken bu kural ${a * bad.x + b} verir, ${bad.y} değil.`,
+    `Pruébala con el punto (${bad.x}, ${bad.y}): cuando x vale ${bad.x}, esta regla da ${a * bad.x + b}, no ${bad.y}.`)))
+  return {
+    topic: 'algebra', level,
+    question_text: say(lang, 'The points lie on a straight line. Which rule do they follow?', 'Noktalar bir doğru üzerinde. Hangi kurala uyuyorlar?', 'Los puntos están en una recta. ¿Qué regla siguen?'),
+    format: 'choice', options: choiceOf(right, shuffle(wrongs).slice(0, 3)), correct_answer: right.value,
+    operandKey: `plane:r:${m}:${c}`,
+    hint_steps: [
+      say(lang, 'Write the points as pairs: (x, y).', 'Noktaları çift olarak yaz: (x, y).', 'Escribe los puntos como pares: (x, y).'),
+      say(lang, 'What do you do to x to get y? It has to work for every point, not just one.', 'x\'e ne yapınca y çıkıyor? Tek bir noktada değil, hepsinde işe yaramalı.', '¿Qué le haces a x para obtener y? Tiene que funcionar con todos los puntos, no solo con uno.'),
+    ],
+    visual: { kind: 'plane', min: 0, max: 8, points: pts.map(p => ({ ...p, label: '' })) },
+  }
+}
+
+// ── angle diagrams ─────────────────────────────────────────────────────────────
+// The book's angle questions are all pictures: a side pushed out past a corner, two sides
+// marked equal, two lines crossing, two equal angles either side of a known one. Drawn to the
+// real angles; the letters are what is asked.
+function angleDiagram(level, lang) {
+  const type = pick(['exterior', 'exterior', 'exteriorBack', 'isosceles', 'isosceles', 'opposite', 'lineTwo'])
+  const straight = say(lang, 'Angles on a straight line add up to 180°.', 'Bir doğru üzerindeki açılar toplamı 180°\'dir.', 'Los ángulos sobre una recta suman 180°.')
+  const inside = say(lang, 'The angles inside a triangle add up to 180°.', 'Üçgenin iç açıları toplamı 180°\'dir.', 'Los ángulos de un triángulo suman 180°.')
+  const q = say(lang, 'What is the size of the angle marked ?', '? ile gösterilen açı kaç derecedir?', '¿Cuánto mide el ángulo marcado con ?')
+  let v, answer, hints
+  if (type === 'exterior' || type === 'exteriorBack') {
+    let a, b, c
+    do { a = randInt(30, 75); b = randInt(35, 95); c = 180 - a - b } while (c < 30 || c > 80)
+    if (type === 'exterior') {
+      v = { kind: 'angles', type: 'triangle', a, c, labels: { a: `${a}°`, b: `${b}°`, ext: '?' } }
+      answer = a + b
+      hints = [inside, say(lang, 'Find the angle inside at that corner first; it and ? make a straight line.', 'Önce o köşedeki iç açıyı bul; o açı ile ? bir doğru oluşturur.', 'Primero halla el ángulo interior de esa esquina; con ? forma una recta.')]
+    } else {
+      v = { kind: 'angles', type: 'triangle', a, c, labels: { a: `${a}°`, b: '?', ext: `${180 - c}°` } }
+      answer = b
+      hints = [straight, say(lang, 'The outside angle tells you the inside angle next to it. Then use the triangle.', 'Dış açı, yanındaki iç açıyı verir. Sonra üçgeni kullan.', 'El ángulo exterior te da el interior de al lado. Luego usa el triángulo.')]
+    }
+  } else if (type === 'isosceles') {
+    const apex = randInt(10, 70) * 2
+    const base = (180 - apex) / 2
+    const askBase = Math.random() < 0.6
+    v = { kind: 'angles', type: 'triangle', a: base, c: base, ticks: true, labels: askBase ? { b: `${apex}°`, c: '?' } : { a: `${base}°`, b: '?' } }
+    answer = askBase ? base : apex
+    hints = [say(lang, 'The two sides with a mark are equal, so the two angles at the bottom are equal too.', 'İşaretli iki kenar eşit, bu yüzden alttaki iki açı da eşit.', 'Los dos lados marcados son iguales, así que los dos ángulos de abajo también lo son.'), inside]
+  } else if (type === 'opposite') {
+    const a = randInt(28, 76) * 2 + (Math.random() < 0.5 ? 1 : 0)
+    v = { kind: 'angles', type: 'cross', a, labels: { top: `${a}°`, bottom: `${a}°`, left: '?' } }
+    answer = 180 - a
+    hints = [straight, say(lang, 'The ? and the angle above it sit side by side on one straight line.', '? ile üstündeki açı aynı doğru üzerinde yan yana.', 'El ? y el ángulo de arriba están uno al lado del otro sobre una recta.')]
+  } else {
+    const m = randInt(20, 70) * 2
+    v = { kind: 'angles', type: 'line', m, labels: { m: `${m}°`, left: '?', right: '?' } }
+    answer = (180 - m) / 2
+    hints = [straight, say(lang, 'Take the known angle away from 180°, then share what is left between the two equal angles.', 'Bilinen açıyı 180°\'den çıkar, kalanı iki eşit açıya paylaştır.', 'Resta el ángulo conocido de 180° y reparte lo que queda entre los dos ángulos iguales.')]
+  }
+  return {
+    topic: 'geometry', level,
+    question_text: type === 'lineTwo'
+      ? say(lang, 'The two angles marked ? are equal. What size is each one?', '? ile gösterilen iki açı eşit. Her biri kaç derecedir?', 'Los dos ángulos marcados con ? son iguales. ¿Cuánto mide cada uno?')
+      : q,
+    format: 'numeric', correct_answer: answer,
+    operandKey: `angd:${type}:${JSON.stringify(v.labels)}:${v.a ?? v.m}:${v.c ?? ''}`,
+    hint_steps: hints, visual: v,
+  }
+}
+
+// ── compound shapes ─────────────────────────────────────────────────────────────
+// An L-shaped floor with two of its lengths left off, or a rectangle with a corner cut out and
+// the rest shaded. The book's version is a floor in millimetres; the missing lengths are the
+// half of the question that is not multiplication.
+function compoundArea(level, lang) {
+  const mm = bandForLevel(level) >= 7 && Math.random() < 0.3
+  const unit = mm ? 'mm' : 'cm'
+  const k = mm ? 4 : 1
+  let W, H, cw, ch
+  do {
+    W = randInt(10, 24); H = randInt(8, 20); cw = randInt(3, W - 3); ch = randInt(3, H - 3)
+  } while (cw * 2 === W || ch * 2 === H)
+  W *= k; H *= k; cw *= k; ch *= k
+  const style = Math.random() < 0.6 ? 'L' : 'cut'
+  const perimeter = style === 'L' && Math.random() < 0.25
+  const answer = perimeter ? 2 * (W + H) : W * H - cw * ch
+  return {
+    topic: 'geometry', level,
+    question_text: style === 'cut'
+      ? say(lang, `A small rectangle is cut from the corner of a big one. What is the area of the shaded part, in ${unit}²?`,
+        `Büyük bir dikdörtgenin köşesinden küçük bir dikdörtgen kesiliyor. Taralı kısmın alanı kaç ${unit}²?`,
+        `Se recorta un rectángulo pequeño de la esquina de uno grande. ¿Cuál es el área de la parte sombreada, en ${unit}²?`)
+      : perimeter
+        ? say(lang, `All the corners of this shape are right angles. What is its perimeter, in ${unit}?`, `Bu şeklin bütün köşeleri dik açı. Çevresi kaç ${unit}?`, `Todas las esquinas de esta figura son ángulos rectos. ¿Cuál es su perímetro, en ${unit}?`)
+        : say(lang, `All the corners of this shape are right angles. What is its area, in ${unit}²?`, `Bu şeklin bütün köşeleri dik açı. Alanı kaç ${unit}²?`, `Todas las esquinas de esta figura son ángulos rectos. ¿Cuál es su área, en ${unit}²?`),
+    format: 'numeric', correct_answer: answer,
+    operandKey: `cmp:${style}:${perimeter ? 'p' : 'a'}:${W}:${H}:${cw}:${ch}`,
+    hint_steps: perimeter
+      ? [say(lang, 'Two sides have no number. Each is the whole side opposite minus the part you know.', 'İki kenarın sayısı yok. Her biri, karşısındaki bütün kenardan bildiğin parça çıkarılarak bulunur.', 'Dos lados no tienen número. Cada uno es el lado entero de enfrente menos la parte que conoces.'),
+         say(lang, 'Then add all six sides.', 'Sonra altı kenarın hepsini topla.', 'Después suma los seis lados.')]
+      : [say(lang, 'Think of the whole rectangle, then take away the corner that is missing.', 'Bütün dikdörtgeni düşün, sonra eksik köşeyi çıkar.', 'Piensa en el rectángulo entero y quita la esquina que falta.'),
+         style === 'L'
+           ? say(lang, 'The missing corner\'s sides are the whole side minus the part that is written.', 'Eksik köşenin kenarları, bütün kenardan yazılı parçanın çıkarılmasıyla bulunur.', 'Los lados de la esquina que falta son el lado entero menos la parte escrita.')
+           : say(lang, 'Area of a rectangle: one side times the other.', 'Dikdörtgenin alanı: bir kenar çarpı diğeri.', 'Área de un rectángulo: un lado por el otro.')],
+    visual: { kind: 'compound', style, W, H, cw, ch, unit },
+  }
+}
+
+// ── solids beyond the cube ───────────────────────────────────────────────────────
+const SOLIDS_OLD = {
+  tetra: { faces: 4, edges: 6, vertices: 4, name: { en: 'tetrahedron', tr: 'dörtyüzlü', es: 'tetraedro' }, near: ['pyramid', 'prism', 'octa'] },
+  octa: { faces: 8, edges: 12, vertices: 6, name: { en: 'octahedron', tr: 'sekizyüzlü', es: 'octaedro' }, near: ['pyramid', 'tetra', 'hexprism'] },
+  prism: { faces: 5, edges: 9, vertices: 6, name: { en: 'triangular prism', tr: 'üçgen prizma', es: 'prisma triangular' }, near: ['tetra', 'pyramid', 'pentprism'] },
+  pyramid: { faces: 5, edges: 8, vertices: 5, name: { en: 'square-based pyramid', tr: 'kare tabanlı piramit', es: 'pirámide cuadrangular' }, near: ['tetra', 'prism', 'octa'] },
+  pentprism: { faces: 7, edges: 15, vertices: 10, name: { en: 'pentagonal prism', tr: 'beşgen prizma', es: 'prisma pentagonal' }, near: ['hexprism', 'prism', 'pyramid'] },
+  hexprism: { faces: 8, edges: 18, vertices: 12, name: { en: 'hexagonal prism', tr: 'altıgen prizma', es: 'prisma hexagonal' }, near: ['pentprism', 'octa', 'prism'] },
+}
+
+function solidOlder(level, lang) {
+  const name = pick(Object.keys(SOLIDS_OLD))
+  const s = SOLIDS_OLD[name]
+  if (Math.random() < 0.35) {
+    const right = opt(pickL(s.name, lang), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    const wrongs = s.near.map(k => opt(pickL(SOLIDS_OLD[k].name, lang), say(lang,
+      `${k === 'octa' ? 'An' : 'A'} ${SOLIDS_OLD[k].name.en} has ${SOLIDS_OLD[k].faces} faces. Count the faces of this one.`,
+      `${cap(SOLIDS_OLD[k].name.tr)}: ${SOLIDS_OLD[k].faces} yüz. Bu cismin yüzlerini say.`,
+      `${k === 'pyramid' ? 'Una' : 'Un'} ${SOLIDS_OLD[k].name.es} tiene ${SOLIDS_OLD[k].faces} caras. Cuenta las caras de este.`)))
+    return {
+      topic: 'geometry', level,
+      question_text: say(lang, 'What is the name of this 3D shape?', 'Bu cismin adı nedir?', '¿Cómo se llama este cuerpo geométrico?'),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `solid3:name:${name}`,
+      hint_steps: [say(lang, 'Look at the faces: what shapes are they, and how many are there?', 'Yüzlere bak: hangi şekiller ve kaç tane?', 'Mira las caras: ¿qué formas tienen y cuántas hay?'),
+                   say(lang, 'A prism is the same all the way through; a pyramid comes to a point.', 'Prizma baştan sona aynıdır; piramit bir noktada birleşir.', 'Un prisma es igual de principio a fin; una pirámide acaba en punta.')],
+      visual: { kind: 'solid', name },
+    }
+  }
+  const what = pick(['faces', 'edges', 'vertices'])
+  const word = say(lang, what, { faces: 'yüzü', edges: 'ayrıtı', vertices: 'köşesi' }[what], { faces: 'caras', edges: 'aristas', vertices: 'vértices' }[what])
+  const many = lang === 'es' && what !== 'vertices' ? 'Cuántas' : 'Cuántos'
+  return {
+    topic: 'geometry', level,
+    question_text: say(lang, `How many ${word} does this shape have?`, `Bu cismin kaç ${word} var?`, `¿${many} ${word} tiene este cuerpo?`),
+    format: 'numeric', correct_answer: s[what], operandKey: `solid3:${what}:${name}`,
+    hint_steps: [say(lang, 'The dashed lines are the edges at the back that you cannot see.', 'Kesik çizgiler arkada kalan, göremediğin ayrıtlar.', 'Las líneas discontinuas son las aristas de atrás que no se ven.'),
+                 what === 'faces'
+                   ? say(lang, 'Count the top and bottom, then the faces around the side.', 'Önce alt ve üst, sonra yan yüzleri say.', 'Cuenta la de arriba y la de abajo, y luego las de alrededor.')
+                   : what === 'edges'
+                     ? say(lang, 'Count the edges round the top, round the bottom, then the ones joining them.', 'Üstteki, alttaki, sonra ikisini birleştiren ayrıtları say.', 'Cuenta las aristas de arriba, las de abajo y luego las que las unen.')
+                     : say(lang, 'Count the corners at the top, then at the bottom.', 'Önce üstteki, sonra alttaki köşeleri say.', 'Cuenta las esquinas de arriba y luego las de abajo.')],
+    visual: { kind: 'solid', name },
+  }
+}
+
+// ── function machines ─────────────────────────────────────────────────────────────
+const opSym = { mul: '×', div: '÷', add: '+', sub: '−' }
+const applyOp = ([o, k], n) => (o === 'mul' ? n * k : o === 'div' ? n / k : o === 'add' ? n + k : n - k)
+const opText = ([o, k]) => `${opSym[o]} ${k}`
+
+// The empty box: two numbers go in, two come out, and one of the two steps is missing. Two
+// pairs, not one — with a single pair "7 → ? → +9 → 30" is × 3 and + 14 both, and the book's
+// own answer key only accepts one.
+function machineMissing(level, lang) {
+  for (;;) {
+    const first = pick([['mul', randInt(2, 6)], ['add', randInt(3, 15)], ['sub', randInt(2, 9)]])
+    const second = pick([['add', randInt(2, 12)], ['sub', randInt(2, 9)], ['mul', randInt(2, 4)]])
+    if (first[0] === second[0]) continue
+    const i1 = randInt(3, 12), i2 = i1 + randInt(2, 5)
+    const outs = [i1, i2].map(n => applyOp(second, applyOp(first, n)))
+    if (outs.some(o => o <= 0) || [i1, i2].some(n => applyOp(first, n) <= 0)) continue
+    const askFirst = Math.random() < 0.5
+    const ops = askFirst ? [null, opText(second)] : [opText(first), null]
+    const truth = askFirst ? first : second
+    const mid1 = applyOp(first, i1)
+    // Wrong steps that fit the first pair and not the second, plus the inverse.
+    const fromIn = askFirst ? i1 : mid1
+    const toOut = askFirst ? mid1 : outs[0]
+    const cands = [
+      toOut > fromIn ? ['add', toOut - fromIn] : ['sub', fromIn - toOut],
+      toOut % fromIn === 0 && toOut / fromIn > 1 ? ['mul', toOut / fromIn] : null,
+      truth[0] === 'mul' ? ['add', truth[1]] : truth[0] === 'add' ? ['mul', truth[1]] : ['add', truth[1]],
+      [truth[0], truth[1] + 1], [truth[0], Math.max(2, truth[1] - 1)],
+    ].filter(Boolean)
+    const run = (op, n) => (askFirst ? applyOp(second, applyOp(op, n)) : applyOp(op, applyOp(first, n)))
+    const wrongs = cands.filter(op => opText(op) !== opText(truth) && (run(op, i1) !== outs[0] || run(op, i2) !== outs[1]))
+      .map(op => {
+        const bad = run(op, i1) !== outs[0] ? [i1, outs[0]] : [i2, outs[1]]
+        const got = run(op, bad[0])
+        return opt(opText(op), say(lang, `Try it with ${bad[0]}: that gives ${got}, but the machine gives ${bad[1]}.`,
+          `${bad[0]} ile dene: ${got} çıkar, ama makineden ${bad[1]} çıkıyor.`,
+          `Pruébalo con ${bad[0]}: da ${got}, pero la máquina da ${bad[1]}.`))
+      })
+    if (wrongs.length < 2) continue
+    const right = opt(opText(truth), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    return {
+      topic: 'sequence', level,
+      question_text: say(lang, 'Both numbers go through the same machine. What goes in the empty box?', 'İki sayı da aynı makineden geçiyor. Boş kutuya ne gelir?', 'Los dos números pasan por la misma máquina. ¿Qué va en la caja vacía?'),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
+      operandKey: `mach:miss:${opText(first)}:${opText(second)}:${i1}:${i2}:${askFirst ? 1 : 2}`,
+      hint_steps: [
+        askFirst
+          ? say(lang, 'Undo the second box first: work backwards from each output.', 'Önce ikinci kutuyu geri al: her çıkıştan geriye doğru git.', 'Deshaz primero la segunda caja: ve hacia atrás desde cada salida.')
+          : say(lang, 'Put each number through the first box, then compare with what comes out.', 'Her sayıyı birinci kutudan geçir, sonra çıkanla karşılaştır.', 'Pasa cada número por la primera caja y compáralo con lo que sale.'),
+        say(lang, 'The missing step has to work for BOTH numbers.', 'Eksik adım İKİ sayı için de çalışmalı.', 'El paso que falta tiene que funcionar con LOS DOS números.'),
+      ],
+      visual: { kind: 'machine', inputs: [i1, i2], ops, outputs: outs },
+    }
+  }
+}
+
+// ── the number cross ──────────────────────────────────────────────────────────────
+// A row of five and a column of three sharing a square, the row and the column adding to the
+// same total. Two letters, one in each, and the one in the row can only be found after the one
+// in the column — Bond's version is exactly that two-step.
+function numberCross(level, lang) {
+  let row, col, T
+  for (;;) {
+    const b = randInt(2, 9), c2 = randInt(3, 15), c3 = randInt(3, 15)
+    T = b + c2 + c3
+    const r = [randInt(1, 9), 0, randInt(1, 12), b, randInt(1, 9)]
+    const a = T - b - r[0] - r[2] - r[4]
+    if (a < 2 || a > 20) continue
+    r[1] = a
+    row = r; col = [b, c2, c3]
+    break
+  }
+  const askA = Math.random() < 0.65
+  return {
+    topic: 'algebra', level,
+    question_text: say(lang, `The row adds up to ${T} and so does the column. What is the value of ${askA ? 'a' : 'b'}?`,
+      `Satırın toplamı ${T}, sütunun toplamı da ${T}. ${askA ? 'a' : 'b'} kaçtır?`,
+      `La fila suma ${T} y la columna también. ¿Cuánto vale ${askA ? 'a' : 'b'}?`),
+    format: 'numeric', correct_answer: askA ? row[1] : row[3],
+    operandKey: `cross:${row.join(',')}:${col.join(',')}:${askA ? 'a' : 'b'}`,
+    hint_steps: askA
+      ? [say(lang, 'Start with the column: it has only one letter in it, b.', 'Sütundan başla: içinde tek harf var, b.', 'Empieza por la columna: solo tiene una letra, b.'),
+         say(lang, 'Once you know b, the row has only one unknown left.', 'b\'yi bulunca satırda tek bilinmeyen kalır.', 'Cuando sepas b, en la fila solo queda una incógnita.')]
+      : [say(lang, 'Use the column: it has only one letter in it.', 'Sütunu kullan: içinde tek harf var.', 'Usa la columna: solo tiene una letra.'),
+         say(lang, `Add the numbers you know and take them away from ${T}.`, `Bildiğin sayıları topla ve ${T}'den çıkar.`, `Suma los números que conoces y réstalos de ${T}.`)],
+    visual: { kind: 'numcross', row: row.map((n, i) => (i === 1 ? 'a' : i === 3 ? 'b' : n)), col: ['b', ...col.slice(1)], at: 3 },
+  }
+}
+
+// ── results of a dice ─────────────────────────────────────────────────────────────
+// "Dan threw his dice 200 times" with one result rubbed out. The total is in the sentence; the
+// missing count is the total minus the rest.
+function diceTable(level, lang) {
+  const N = pick([60, 100, 120, 150, 200])
+  let f
+  do {
+    f = Array.from({ length: 6 }, () => Math.round(N / 6 + randInt(-N / 15, N / 15)))
+    f[5] = N - f.slice(0, 5).reduce((s, x) => s + x, 0)
+  } while (f[5] < 3 || new Set(f).size < 5)
+  const miss = randInt(0, 5)
+  const name = pickL(MULT_NAMES, lang)
+  const cells = f.map((n, i) => (i === miss ? null : n))
+  const even = Math.random() < 0.25
+  return {
+    topic: 'averages', level,
+    question_text: even
+      ? say(lang, `${name} threw a dice ${N} times. How many times did it land on an even number?`, `${name} bir zarı ${N} kez attı. Kaç kez çift sayı geldi?`, `${name} lanzó un dado ${N} veces. ¿Cuántas veces salió un número par?`)
+      : say(lang, `${name} threw a dice ${N} times and wrote down the results. One is missing. How many times did it land on ${miss + 1}?`,
+        `${name} bir zarı ${N} kez atıp sonuçları yazdı. Biri eksik. Kaç kez ${miss + 1} geldi?`,
+        `${name} lanzó un dado ${N} veces y apuntó los resultados. Falta uno. ¿Cuántas veces salió el ${miss + 1}?`),
+    format: 'numeric', correct_answer: even ? f[1] + f[3] + f[5] : f[miss],
+    operandKey: `dice:${even ? 'even' : miss}:${f.join(',')}`,
+    hint_steps: even
+      ? [say(lang, 'The even numbers on a dice are 2, 4 and 6.', 'Zardaki çift sayılar 2, 4 ve 6.', 'Los números pares de un dado son 2, 4 y 6.'),
+         say(lang, 'Add up how often each of those came up.', 'Her birinin kaç kez geldiğini topla.', 'Suma cuántas veces salió cada uno.')]
+      : [say(lang, `All six results together must make ${N}.`, `Altı sonucun toplamı ${N} etmeli.`, `Los seis resultados juntos tienen que sumar ${N}.`),
+         say(lang, `Add up the five you can see and take that from ${N}.`, `Gördüğün beşini topla ve ${N}'den çıkar.`, `Suma los cinco que ves y réstalo de ${N}.`)],
+    visual: { kind: 'chart', shape: 'table', cols: ['1', '2', '3', '4', '5', '6'], rows: [{ label: say(lang, 'Times', 'Kaç kez', 'Veces'), cells: even ? f : cells }] },
+  }
+}
+
+// ── patterns of dots ──────────────────────────────────────────────────────────────
+// Triangular and square numbers as the book draws them: the pattern, and the next one to find.
+function dotNumbers(level, lang) {
+  const tri = Math.random() < 0.6
+  const term = n => (tri ? (n * (n + 1)) / 2 : n * n)
+  const ask = pick([5, 5, 6])
+  return {
+    topic: 'number-properties', level,
+    question_text: tri
+      ? say(lang, `These are the first four triangular numbers. What is the ${ask === 5 ? 'fifth' : 'sixth'} one?`, `Bunlar ilk dört üçgensel sayı. ${ask === 5 ? 'Beşincisi' : 'Altıncısı'} kaçtır?`, `Estos son los cuatro primeros números triangulares. ¿Cuál es el ${ask === 5 ? 'quinto' : 'sexto'}?`)
+      : say(lang, `These are the first four square numbers. What is the ${ask === 5 ? 'fifth' : 'sixth'} one?`, `Bunlar ilk dört kare sayı. ${ask === 5 ? 'Beşincisi' : 'Altıncısı'} kaçtır?`, `Estos son los cuatro primeros números cuadrados. ¿Cuál es el ${ask === 5 ? 'quinto' : 'sexto'}?`),
+    format: 'numeric', correct_answer: term(ask), operandKey: `dots:${tri ? 't' : 's'}:${ask}`,
+    hint_steps: tri
+      ? [say(lang, 'Each pattern adds a new row along the bottom, one dot longer than the last.', 'Her desen alta bir sıra ekliyor, öncekinden bir nokta uzun.', 'Cada figura añade una fila abajo, con un punto más que la anterior.'),
+         say(lang, 'So the jumps between the numbers go 2, 3, 4, … — keep them going.', 'Yani sayılar arasındaki farklar 2, 3, 4, … diye gidiyor — devam ettir.', 'Así que los saltos entre los números van 2, 3, 4…: sigue la serie.')]
+      : [say(lang, 'Each pattern is a square: the same number of rows as columns.', 'Her desen bir kare: satır sayısı sütun sayısına eşit.', 'Cada figura es un cuadrado: tantas filas como columnas.'),
+         say(lang, 'The number of dots is the side times itself.', 'Nokta sayısı, kenarın kendisiyle çarpımı.', 'El número de puntos es el lado por sí mismo.')],
+    visual: { kind: 'dots', tri, terms: [1, 2, 3, 4].map(term) },
+  }
+}
+
+// ── number lines past zero and between whole numbers ─────────────────────────────
+// Bond labels these at two points only, often not the ends — "0" and "0.1" with the arrow to
+// the left of the zero. Negative answers are offered as choices (the keypad has no minus), and
+// the wrong ones are the real slips: the sign dropped, the step read ten times too big.
+function numberLineOlder(level, lang) {
+  const shape = pick(['neg', 'neg', 'dec', 'forms'])
+  if (shape === 'forms') {
+    const k = randInt(1, 9)
+    const forms = [[`${k * 10}%`, `${k}%`], [`${k}/10`, `${k}/100`], [dnum(`0.${k}`, lang), dnum(`0.0${k}`, lang)]]
+    const [rf, wf] = pick(forms)
+    const right = opt(rf, say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+    const others = forms.filter(f => f[0] !== rf)
+    const wrongs = [opt(wf, say(lang, 'That is ten times too small: each step here is a tenth.', 'Bu on kat küçük: buradaki her adım onda bir.', 'Eso es diez veces más pequeño: cada paso aquí es una décima.')),
+      ...others.map(f => opt(f[1], say(lang, 'Each step here is a tenth, not a hundredth.', 'Buradaki her adım yüzde bir değil, onda bir.', 'Cada paso aquí es una décima, no una centésima.'))),
+      k !== 5 && opt(dnum(`0.${10 - k}`, lang), say(lang, 'Count from 0, the left end.', 'Soldaki 0\'dan say.', 'Cuenta desde el 0, a la izquierda.'))]
+    return {
+      topic: 'place-value', level,
+      question_text: say(lang, 'Which of these is equal to the number the arrow points to?', 'Okun gösterdiği sayıya hangisi eşittir?', '¿Cuál de estos es igual al número que señala la flecha?'),
+      format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `nl:forms:${k}:${rf}`,
+      hint_steps: [say(lang, 'The line from 0 to 1 is cut into ten equal steps.', '0\'dan 1\'e kadar olan doğru on eşit adıma bölünmüş.', 'La recta de 0 a 1 está dividida en diez pasos iguales.'),
+                   say(lang, 'A tenth is the same as 10 hundredths, or 10%.', 'Onda bir, yüzde on ile aynıdır (%10).', 'Una décima es lo mismo que 10 centésimas, o el 10 %.')],
+      visual: { kind: 'scale', type: 'line', min: 0, max: 1, minor: 0.1, value: k / 10, labels: [0, 1] },
+    }
+  }
+  if (shape === 'dec') {
+    const spec = pick([{ min: 0, max: 1.5, minor: 0.1, labels: [0, 1.5] }, { min: 2, max: 3, minor: 0.05, labels: [2, 2.5, 3] }, { min: 0, max: 0.1, minor: 0.01, labels: [0, 0.1] }])
+    const steps = Math.round((spec.max - spec.min) / spec.minor)
+    let value
+    do { value = Math.round((spec.min + randInt(1, steps - 1) * spec.minor) * 1000) / 1000 } while (Number.isInteger(value) || spec.labels.some(l => Math.abs(l - value) < 1e-9))
+    return {
+      topic: 'place-value', level,
+      question_text: say(lang, 'What number is the arrow pointing to?', 'Ok hangi sayıyı gösteriyor?', '¿A qué número apunta la flecha?'),
+      format: 'decimal', correct_answer: value, operandKey: `nl:dec:${spec.min}:${spec.max}:${value}`,
+      hint_steps: [say(lang, 'First find what one small step is worth: the gap between two labels, shared by the steps between them.', 'Önce bir küçük adımın değerini bul: iki etiket arasındaki farkı aradaki adım sayısına böl.', 'Primero averigua cuánto vale un paso pequeño: la distancia entre dos etiquetas entre los pasos que hay.'),
+                   say(lang, 'Then count the steps from the nearest label.', 'Sonra en yakın etiketten adımları say.', 'Luego cuenta los pasos desde la etiqueta más cercana.')],
+      visual: { kind: 'scale', type: 'line', ...spec, value },
+    }
+  }
+  const spec = pick([{ min: -0.1, max: 0.1, minor: 0.01, labels: [0, 0.1] }, { min: -20, max: 20, minor: 2, labels: [0, 20] }, { min: -1, max: 1, minor: 0.1, labels: [0, 1] }, { min: -50, max: 50, minor: 5, labels: [0, 50] }])
+  const steps = Math.round((spec.max - spec.min) / spec.minor)
+  let value
+  do { value = Math.round((spec.min + randInt(1, steps / 2 - 1) * spec.minor) * 1000) / 1000 } while (value >= 0)
+  const show = n => dnum(minus(Math.round(n * 1000) / 1000), lang)
+  const right = opt(show(value), say(lang, 'Right.', 'Doğru.', 'Correcto.'))
+  const wrongs = [
+    opt(show(-value), say(lang, 'The arrow is to the left of 0, so the number is below zero.', 'Ok 0\'ın solunda, yani sayı sıfırın altında.', 'La flecha está a la izquierda del 0: el número es menor que cero.')),
+    opt(show(value + spec.minor), say(lang, 'Count the steps from 0 again.', '0\'dan adımları yeniden say.', 'Vuelve a contar los pasos desde el 0.')),
+    opt(show(value - spec.minor), say(lang, 'Count the steps from 0 again.', '0\'dan adımları yeniden say.', 'Vuelve a contar los pasos desde el 0.')),
+    opt(show(value * 10), say(lang, `Each step is ${dnum(spec.minor, lang)}, not ${dnum(Math.round(spec.minor * 10000) / 1000, lang)}.`, `Her adım ${dnum(spec.minor, lang)}, ${dnum(Math.round(spec.minor * 10000) / 1000, lang)} değil.`, `Cada paso es ${dnum(spec.minor, lang)}, no ${dnum(Math.round(spec.minor * 10000) / 1000, lang)}.`)),
+  ]
+  return {
+    topic: 'place-value', level,
+    question_text: say(lang, 'What number is the arrow pointing to?', 'Ok hangi sayıyı gösteriyor?', '¿A qué número apunta la flecha?'),
+    format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `nl:neg:${spec.max}:${value}`,
+    hint_steps: [say(lang, 'Work out one small step from the two labels.', 'İki etiketten bir küçük adımın değerini bul.', 'Calcula un paso pequeño a partir de las dos etiquetas.'),
+                 say(lang, 'Left of 0 the numbers are negative: count the steps back from 0.', '0\'ın solunda sayılar negatif: 0\'dan geriye adımları say.', 'A la izquierda del 0 los números son negativos: cuenta los pasos hacia atrás desde el 0.')],
+    visual: { kind: 'scale', type: 'line', ...spec, value },
+  }
+}
+
 const REGISTRY = {
   counting: countingTemplate,
   time: timeTemplate,
@@ -6117,7 +6666,7 @@ export { SHAPES }
 
 // The visual kinds drawn by components/MathFigure. Kept here, beside the templates that emit
 // them, so the screen can ask "is this a picture question?" without importing a component.
-export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale'])
+export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale', 'plane', 'angles', 'compound', 'machine', 'numcross', 'dots'])
 
 export const TOPICS = Object.keys(REGISTRY)
 

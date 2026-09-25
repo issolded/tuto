@@ -39,6 +39,115 @@ import { generateProblem, TOPICS, num, measureGridCells } from '../src/lib/mathT
 import { templateTopicFor, startingLevelForAge, clampLevelToAge } from '../src/lib/mathCurriculum.js'
 import { BRITISH_CURRICULUM, ageToSchoolYear, maxQuestionChars } from '../src/lib/gemini.js'
 
+// "−0.05", "0,4", "40%", "4/10" → a number; the choices print numbers the way the reader reads them.
+function asNumber(v) {
+  const t = String(v).replace('−', '-').replace(',', '.').trim()
+  if (t.endsWith('%')) return Number(t.slice(0, -1)) / 100
+  if (t.includes('/')) { const [n, d] = t.split('/').map(Number); return n / d }
+  return Number(t)
+}
+
+const QUAD_NAMES = {
+  rect: ['rectangle', 'dikdörtgen', 'rectángulo'], rhombus: ['rhombus', 'eşkenar dörtgen', 'rombo'], kite: ['kite', 'deltoid', 'cometa'],
+  para: ['parallelogram', 'paralelkenar', 'paralelogramo'], trap: ['trapezium', 'yamuk', 'trapecio'],
+}
+const pairIn = s => String(s).replace(/−/g, '-').match(/-?\d+/g).map(Number)
+const ruleOf = s => { const m = String(s).replace(/−/g, '-').replace(/\s/g, '').match(/^y=(\d*)x([+-]\d+)?$/); return m && [Number(m[1] || 1), Number(m[2] || 0)] }
+
+// Classify four points joined in order without looking at what the template meant.
+function classify(pts) {
+  const v = pts.map((p, i) => { const q = pts[(i + 1) % 4]; return [q.x - p.x, q.y - p.y] })
+  const len = v.map(([x, y]) => x * x + y * y)
+  const par = (a, b) => a[0] * b[1] - a[1] * b[0] === 0
+  const right = v.every((a, i) => { const b = v[(i + 1) % 4]; return a[0] * b[0] + a[1] * b[1] === 0 })
+  const p1 = par(v[0], v[2]), p2 = par(v[1], v[3])
+  const allEq = len.every(l => l === len[0])
+  if (p1 && p2) return right ? (allEq ? 'square' : 'rect') : (allEq ? 'rhombus' : 'para')
+  if (p1 || p2) return 'trap'
+  if ((len[0] === len[1] && len[2] === len[3]) || (len[1] === len[2] && len[3] === len[0])) return 'kite'
+  return 'other'
+}
+
+function checkOlderFigure(p) {
+  const v = p.visual, key = String(p.operandKey)
+  if (!v) return null
+  if (key.startsWith('plane:v:')) {
+    const [A, B, C] = v.points
+    const [x, y] = pairIn(p.correct_answer)
+    if (x !== A.x + C.x - B.x || y !== A.y + C.y - B.y) return 'dördüncü köşe paralelkenar kuralına uymuyor'
+  }
+  if (key.startsWith('plane:s:')) {
+    const kind = classify(v.points)
+    if (!QUAD_NAMES[kind]?.includes(p.correct_answer)) return `noktalar ${kind} yapıyor`
+    for (const o of p.options) if (o.value !== p.correct_answer && QUAD_NAMES[kind].includes(o.value)) return 'yanlış şık da doğru'
+  }
+  if (key.startsWith('plane:t:')) {
+    const [dx, dy, k] = key.split(':').slice(-3).map(Number)
+    const pt = v.points[k]
+    const [x, y] = pairIn(p.correct_answer)
+    if (x !== pt.x + dx || y !== pt.y + dy) return 'öteleme cevabı noktadan hesaplanmıyor'
+  }
+  if (key.startsWith('plane:r:')) {
+    const [m, c] = ruleOf(p.correct_answer)
+    if (v.points.some(q => m * q.x + c !== q.y)) return 'kural noktalara uymuyor'
+    for (const o of p.options) {
+      if (o.value === p.correct_answer) continue
+      const [a, b] = ruleOf(o.value)
+      if (v.points.every(q => a * q.x + b === q.y)) return 'yanlış kural da noktalara uyuyor'
+    }
+  }
+  if (v.kind === 'angles') {
+    const lb = v.labels
+    const vals = v.type === 'triangle' ? { a: v.a, c: v.c, b: 180 - v.a - v.c, ext: 180 - v.c }
+      : v.type === 'cross' ? { top: v.a, bottom: v.a, left: 180 - v.a, right: 180 - v.a }
+        : { m: v.m, left: (180 - v.m) / 2, right: (180 - v.m) / 2 }
+    for (const [k, t] of Object.entries(lb)) {
+      if (t === '?') { if (vals[k] !== Number(p.correct_answer)) return `? açısı ${vals[k]}` }
+      else if (t !== `${vals[k]}°`) return `etiket ${k} ${t}, çizim ${vals[k]}`
+    }
+    if (v.ticks && v.a !== v.c) return 'eşit işaretli kenarlar eşit değil'
+  }
+  if (v.kind === 'compound') {
+    const area = v.W * v.H - v.cw * v.ch, per = 2 * (v.W + v.H)
+    if (Number(p.correct_answer) !== (key.includes(':p:') ? per : area)) return `alan ${area}, çevre ${per}`
+  }
+  if (v.kind === 'machine') {
+    const run = (ops, n) => ops.reduce((x, op) => {
+      const [s, k] = op.split(' '); const kk = Number(k)
+      return s === '×' ? x * kk : s === '÷' ? x / kk : s === '+' ? x + kk : x - kk
+    }, n)
+    const ops = v.ops.map(o => o ?? p.correct_answer)
+    const ins = v.inputs.map(i => (i === '?' ? Number(p.correct_answer) : i))
+    const outs = v.outputs.map(o => (o === '?' ? Number(p.correct_answer) : o))
+    if (ins.some((n, i) => run(ops, n) !== outs[i])) return 'makine girişi çıkışa götürmüyor'
+    if (v.ops.includes(null)) for (const o of p.options) {
+      if (o.value === p.correct_answer) continue
+      const alt = v.ops.map(x => x ?? o.value)
+      if (v.inputs.every((n, i) => run(alt, n) === v.outputs[i])) return 'yanlış şık da makineye uyuyor'
+    }
+  }
+  if (v.kind === 'numcross') {
+    const T = Number(p.question_text.match(/\d+/)[0])
+    const colKnown = v.col.slice(1).reduce((s, x) => s + x, 0)
+    const b = T - colKnown
+    const rowKnown = v.row.filter(x => typeof x === 'number').reduce((s, x) => s + x, 0)
+    const a = T - b - rowKnown
+    if (Number(p.correct_answer) !== (key.endsWith(':a') ? a : b) || a <= 0 || b <= 0) return `a=${a}, b=${b}`
+  }
+  if (key.startsWith('dice:')) {
+    const N = Number(p.question_text.match(/\d+/)[0])
+    const cells = v.rows[0].cells
+    const ans = key.startsWith('dice:even') ? cells[1] + cells[3] + cells[5] : N - cells.filter(c => c != null).reduce((s, x) => s + x, 0)
+    if (Number(p.correct_answer) !== ans) return `tablo ${ans}`
+  }
+  if (v.kind === 'dots') {
+    const t = v.terms, ask = key.endsWith(':6') ? 6 : 5
+    const next = v.tri ? ask * (ask + 1) / 2 : ask * ask
+    if (t.join() !== (v.tri ? '1,3,6,10' : '1,4,9,16') || Number(p.correct_answer) !== next) return `desen ${t}`
+  }
+  return null
+}
+
 const LANGS = ['en', 'tr', 'es']
 const AGES = [5, 6, 7, 8, 9, 10, 11, 12, 13]
 const PER = Number(process.env.MATH_AUDIT_N || 400)
@@ -222,7 +331,7 @@ for (const age of AGES) {
         }
         // The scale and the shaded shape are answered from what is drawn, so the key is recomputed
         // from the drawing: the scale's reading, the shaded (or white) parts over all the parts.
-        if (p.visual?.kind === 'scale' && Number(p.correct_answer) !== p.visual.value) {
+        if (p.visual?.kind === 'scale' && Math.abs(asNumber(p.correct_answer) - p.visual.value) > 1e-9) {
           fail(where, 'ölçek görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${p.visual.value}`)
         }
         if (p.visual?.kind === 'fraction') {
@@ -231,6 +340,9 @@ for (const age of AGES) {
           const [n, d] = String(p.correct_answer).split('/').map(Number)
           if (n * p.visual.parts !== k * d) fail(where, 'kesir görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${k}/${p.visual.parts}`)
         }
+        // The 11-12 pictures, each answered from the drawing and so each re-derived from it here.
+        const figure = checkOlderFigure(p)
+        if (figure) fail(where, 'görsel ile cevap anahtarı uyuşmuyor', `${figure} — ${p.question_text} → ${p.correct_answer}`)
         // A rectangle question has two different side lengths, the longer along the bottom.
         if (p.visual?.kind === 'geometry' && p.visual.shape === 'rect') {
           const other = p.visual.height ?? Number(p.correct_answer)
@@ -350,3 +462,4 @@ for (const [k, v] of [...grouped].sort((a, b) => b[1].n - a[1].n)) {
   if (v.sample) console.log(`          ${v.sample}`)
 }
 process.exit(1)
+

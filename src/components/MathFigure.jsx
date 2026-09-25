@@ -41,9 +41,15 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
                   : v.kind === 'route' ? route(v)
                     : v.kind === 'spinner' ? spinner(v)
                       : v.kind === 'mapscale' ? mapScale(v, lang)
-                        : polygon(v, hint)
+                        : v.kind === 'plane' ? plane(v, lang)
+                          : v.kind === 'angles' ? angles(v)
+                            : v.kind === 'compound' ? compound(v)
+                              : v.kind === 'machine' ? machine(v)
+                                : v.kind === 'numcross' ? numcross(v)
+                                  : v.kind === 'dots' ? dots(v)
+                                    : polygon(v, hint)
   if (!body) return null
-  const schematic = v.kind === 'solid' || v.kind === 'polygon' || v.kind === 'net'
+  const schematic = v.kind === 'solid' || v.kind === 'polygon' || v.kind === 'net' || v.kind === 'angles' || v.kind === 'compound'
   return (
     <figure style={{ margin: 0, width: '100%', maxWidth: 340, flexShrink: 0 }}>
       <svg viewBox={`0 0 ${W} ${body.h}`} role="img"
@@ -346,6 +352,37 @@ function solid(v) {
         <path d={front} fill="none" stroke={INK} strokeWidth="2.4" />
         <path d={back} fill="none" stroke={INK} strokeWidth="1.6" strokeDasharray="5 4" />
       </g>
+  } else if (v.name === 'tetra') {
+    const A = [70, 172], B = [200, 180], C = [252, 128], T = [150, 26]
+    g = <g>
+      {face([A, B, T], 'f')}{face([B, C, T], 'r', '#d4ecef')}
+      {L(A, B)}{L(B, C)}{L(A, T)}{L(B, T)}{L(C, T)}{L(A, C, true)}
+    </g>
+  } else if (v.name === 'octa') {
+    const E = [62, 104], F = [150, 128], G = [258, 102], H = [170, 80], T = [160, 12], Bo = [160, 192]
+    g = <g>
+      {face([E, F, T], 'f1')}{face([F, G, T], 'f2', '#d4ecef')}{face([E, F, Bo], 'f3', '#e3f3f5')}{face([F, G, Bo], 'f4', '#c6e4e8')}
+      {L(E, F)}{L(F, G)}{L(T, E)}{L(T, F)}{L(T, G)}{L(Bo, E)}{L(Bo, F)}{L(Bo, G)}
+      {L(G, H, true)}{L(H, E, true)}{L(T, H, true)}{L(Bo, H, true)}
+    </g>
+  } else if (v.name === 'pentprism' || v.name === 'hexprism') {
+    // Standing on its end, seen from a little above: the top is all visible, and of the bottom
+    // only the edges nearer than the widest points are.
+    const n = v.name === 'pentprism' ? 5 : 6
+    const cx = 160, R = 92, r = 30, top = 48, bottom = 162, off = n === 5 ? 90 : 0
+    const ang = k => ((360 / n) * k + off) * Math.PI / 180
+    const at = (k, y) => [cx + R * Math.cos(ang(k)), y + r * Math.sin(ang(k))]
+    const xs = Array.from({ length: n }, (_, k) => at(k, 0)[0])
+    const sil = new Set([xs.indexOf(Math.min(...xs)), xs.indexOf(Math.max(...xs))])
+    const front = k => Math.sin(ang(k)) > 1e-6 || sil.has(k)
+    const ks = Array.from({ length: n }, (_, k) => k)
+    g = <g>
+      {face(ks.map(k => at(k, top)), 'top', '#e3f3f5')}
+      {ks.filter(k => front(k) && front((k + 1) % n)).map(k => face([at(k, top), at((k + 1) % n, top), at((k + 1) % n, bottom), at(k, bottom)], `s${k}`, k % 2 ? '#d4ecef' : PAPER))}
+      {ks.map(k => L(at(k, top), at((k + 1) % n, top), false, `t${k}`))}
+      {ks.map(k => L(at(k, top), at(k, bottom), !front(k), `v${k}`))}
+      {ks.map(k => L(at(k, bottom), at((k + 1) % n, bottom), !(front(k) && front((k + 1) % n) && Math.sin((ang(k) + ang(k + 1)) / 2) > 0), `b${k}`))}
+    </g>
   } else if (v.name === 'sphere') {
     g = <g>
       <circle cx={160} cy={102} r={78} fill={PAPER} stroke={INK} strokeWidth="2.4" />
@@ -659,4 +696,215 @@ function mapScale(v, lang) {
     {txt(160, y + 22, say(lang, 'each mark is 1 cm', 'her çizgi arası 1 cm', 'cada marca es 1 cm'), { size: 11, weight: 600, fill: '#617383' })}
   </g>
   return { h: 186, g }
+}
+
+// ══ Ages 11-12 ════════════════════════════════════════════════════════════════════════════════
+const TEAL = '#168b91'
+const signed = (n, lang) => label(n, lang).replace(/^-/, '−')
+
+// ── a coordinate grid, in four quadrants or one ───────────────────────────────
+// The axes cross at 0 wherever that is; every whole number is labelled, the way the book's
+// grids are, because reading "−3" off the axis IS the question.
+function plane(v, lang) {
+  const { min, max, points = [], path } = v
+  const n = max - min
+  const cell = Math.min(28, Math.floor(236 / n))
+  const size = n * cell
+  const ox = (W - size) / 2, oy = 14
+  const X = x => ox + (x - min) * cell, Y = y => oy + (max - y) * cell
+  const g = []
+  for (let i = 0; i <= n; i++) {
+    g.push(<line key={`h${i}`} x1={ox} y1={oy + i * cell} x2={ox + size} y2={oy + i * cell} stroke={GRID} strokeWidth="1" />)
+    g.push(<line key={`v${i}`} x1={ox + i * cell} y1={oy} x2={ox + i * cell} y2={oy + size} stroke={GRID} strokeWidth="1" />)
+  }
+  g.push(<line key="ax" x1={ox - 4} y1={Y(0)} x2={ox + size + 10} y2={Y(0)} stroke={INK} strokeWidth="2" />)
+  g.push(<line key="ay" x1={X(0)} y1={oy + size + 4} x2={X(0)} y2={oy - 10} stroke={INK} strokeWidth="2" />)
+  const fs = cell < 22 ? 10 : 12
+  for (let t = min; t <= max; t++) {
+    if (t === 0) continue
+    g.push(txt(X(t), Y(0) + 11, signed(t, lang), { key: `nx${t}`, size: fs, weight: 600 }))
+    g.push(txt(X(0) - (t < 0 ? 12 : 8), Y(t), signed(t, lang), { key: `ny${t}`, size: fs, weight: 600 }))
+  }
+  g.push(txt(X(0) - 7, Y(0) + 10, '0', { key: 'o', size: fs, weight: 600 }))
+  g.push(txt(ox + size + 16, Y(0), 'x', { key: 'lx', size: 13, fill: '#617383' }))
+  g.push(txt(X(0), oy - 16, 'y', { key: 'ly', size: 13, fill: '#617383' }))
+  if (path) g.push(<polyline key="path" points={path.map(([x, y]) => `${X(x)},${Y(y)}`).join(' ')} fill={path.length > 3 ? 'rgba(126,203,208,.25)' : 'none'} stroke={TEAL} strokeWidth="2.5" strokeLinejoin="round" />)
+  for (const p of points) {
+    const cx = X(p.x), cy = Y(p.y)
+    g.push(<g key={`p${p.label}${p.x},${p.y}`}>
+      {p.label
+        ? <><line x1={cx - 5} y1={cy - 5} x2={cx + 5} y2={cy + 5} stroke={INK} strokeWidth="2.5" /><line x1={cx - 5} y1={cy + 5} x2={cx + 5} y2={cy - 5} stroke={INK} strokeWidth="2.5" /></>
+        : <circle cx={cx} cy={cy} r={4.5} fill={INK} />}
+      {p.label && txt(cx + (p.x < 0 ? -10 : 10), cy + (p.y < 0 ? 11 : -11), p.label, { size: 14, fill: ORANGE })}
+    </g>)
+  }
+  return { h: oy + size + 12, g: <g>{g}</g> }
+}
+
+// ── angle diagrams ────────────────────────────────────────────────────────────
+// Drawn to the real angles. Only the angles that carry a label get an arc, so the picture shows
+// exactly what the question gives and asks.
+const P = (cx, cy, r, deg) => [cx + r * Math.cos(deg * Math.PI / 180), cy - r * Math.sin(deg * Math.PI / 180)]
+function arcLabel(key, cx, cy, from, to, text) {
+  const span = to - from
+  const r = span > 100 ? 18 : 24
+  const [x1, y1] = P(cx, cy, r, from), [x2, y2] = P(cx, cy, r, to)
+  const lr = r + (span < 45 ? 22 : 16)
+  const [lx, ly] = P(cx, cy, lr, from + span / 2)
+  const ask = text === '?'
+  return <g key={key}>
+    <path d={`M ${x1} ${y1} A ${r} ${r} 0 ${span > 180 ? 1 : 0} 0 ${x2} ${y2}`} fill="none" stroke={ask ? ORANGE : TEAL} strokeWidth="2" />
+    {txt(lx, ly, text, { size: 14, fill: ask ? ORANGE : INK })}
+  </g>
+}
+function angles(v) {
+  let g
+  if (v.type === 'triangle') {
+    const ta = Math.tan(v.a * Math.PI / 180), tc = Math.tan(v.c * Math.PI / 180)
+    const tx = tc / (ta + tc), ty = ta * tc / (ta + tc)
+    const ext = v.labels.ext != null
+    const s = Math.min(ext ? 190 : 230, 150 / ty)
+    const x0 = (W - s - (ext ? 70 : 0)) / 2, y0 = 176
+    const A = [x0, y0], C = [x0 + s, y0], B = [x0 + s * tx, y0 - s * ty]
+    const dirTo = (p, q) => Math.atan2(p[1] - q[1], q[0] - p[0]) * 180 / Math.PI
+    const lb = v.labels
+    const tick = (p, q, key) => {
+      const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], d = Math.hypot(q[0] - p[0], q[1] - p[1])
+      const nx = -(q[1] - p[1]) / d * 7, ny = (q[0] - p[0]) / d * 7
+      return <line key={key} x1={m[0] - nx} y1={m[1] - ny} x2={m[0] + nx} y2={m[1] + ny} stroke={INK} strokeWidth="2" />
+    }
+    const bDir1 = dirTo(B, C), bDir2 = dirTo(B, A)
+    g = <g>
+      <polygon points={[A, B, C].map(p => p.join(',')).join(' ')} fill={PAPER} stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      {ext && <line x1={C[0]} y1={C[1]} x2={C[0] + 70} y2={C[1]} stroke={INK} strokeWidth="2.5" />}
+      {v.ticks && <>{tick(A, B, 't1')}{tick(C, B, 't2')}</>}
+      {lb.a && arcLabel('a', ...A, 0, v.a, lb.a)}
+      {lb.c && arcLabel('c', ...C, 180 - v.c, 180, lb.c)}
+      {lb.b && arcLabel('b', ...B, (bDir2 + 360) % 360, (bDir1 + 360) % 360, lb.b)}
+      {ext && arcLabel('e', ...C, 0, 180 - v.c, lb.ext)}
+    </g>
+  } else if (v.type === 'cross') {
+    const cx = 160, cy = 100, r = 96, h = v.a / 2
+    const lb = v.labels
+    g = <g>
+      {[90 - h, 90 + h].map(d => { const [x1, y1] = P(cx, cy, r, d), [x2, y2] = P(cx, cy, r, d + 180); return <line key={d} x1={x1} y1={y1} x2={x2} y2={y2} stroke={INK} strokeWidth="2.5" /> })}
+      {lb.top && arcLabel('t', cx, cy, 90 - h, 90 + h, lb.top)}
+      {lb.bottom && arcLabel('b', cx, cy, 270 - h, 270 + h, lb.bottom)}
+      {lb.left && arcLabel('l', cx, cy, 90 + h, 270 - h, lb.left)}
+      {lb.right && arcLabel('r', cx, cy, -90 + h, 90 - h, lb.right)}
+    </g>
+  } else {
+    const cx = 160, cy = 150, r = 120, y = (180 - v.m) / 2
+    const lb = v.labels
+    g = <g>
+      <line x1={cx - 140} y1={cy} x2={cx + 140} y2={cy} stroke={INK} strokeWidth="2.5" />
+      {[y, y + v.m].map(d => { const [x2, y2] = P(cx, cy, r, d); return <line key={d} x1={cx} y1={cy} x2={x2} y2={y2} stroke={INK} strokeWidth="2.5" /> })}
+      {arcLabel('r', cx, cy, 0, y, lb.right)}
+      {arcLabel('m', cx, cy, y, y + v.m, lb.m)}
+      {arcLabel('l', cx, cy, y + v.m, 180, lb.left)}
+    </g>
+  }
+  return { h: v.type === 'line' ? 168 : 200, g }
+}
+
+// ── compound shapes ───────────────────────────────────────────────────────────
+// Every length is a dimension line with its own end bars, so "15 cm" over part of an edge
+// cannot be read as the whole edge.
+function dim(key, x1, y1, x2, y2, text, off) {
+  const vert = x1 === x2
+  const [dx, dy] = vert ? [off, 0] : [0, off]
+  const a = [x1 + dx, y1 + dy], b = [x2 + dx, y2 + dy]
+  const bar = p => vert ? <line x1={p[0] - 4} y1={p[1]} x2={p[0] + 4} y2={p[1]} stroke="#617383" strokeWidth="1.3" /> : <line x1={p[0]} y1={p[1] - 4} x2={p[0]} y2={p[1] + 4} stroke="#617383" strokeWidth="1.3" />
+  const tx = (a[0] + b[0]) / 2 + (vert ? Math.sign(off) * 22 : 0), ty = (a[1] + b[1]) / 2 + (vert ? 0 : Math.sign(off) * 11)
+  return <g key={key}>
+    <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#617383" strokeWidth="1.3" />{bar(a)}{bar(b)}
+    {txt(tx, ty, text, { size: 12 })}
+  </g>
+}
+function compound(v) {
+  const { W: w, H: h, cw, ch, unit, style } = v
+  const s = Math.min(200 / w, 150 / h)
+  const ox = (W - w * s) / 2, oy = 32
+  const X = x => ox + x * s, Y = y => oy + y * s
+  const u = n => `${n} ${unit}`
+  let g
+  if (style === 'L') {
+    const pts = [[0, 0], [w - cw, 0], [w - cw, ch], [w, ch], [w, h], [0, h]]
+    g = <g>
+      <polygon points={pts.map(([x, y]) => `${X(x)},${Y(y)}`).join(' ')} fill={PAPER} stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      {dim('t', X(0), Y(0), X(w - cw), Y(0), u(w - cw), -10)}
+      {dim('b', X(0), Y(h), X(w), Y(h), u(w), 10)}
+      {dim('l', X(0), Y(0), X(0), Y(h), u(h), -10)}
+      {dim('r', X(w), Y(ch), X(w), Y(h), u(h - ch), 10)}
+    </g>
+  } else {
+    g = <g>
+      <rect x={X(0)} y={Y(0)} width={w * s} height={h * s} fill={FILL} stroke={INK} strokeWidth="2.5" />
+      <rect x={X(0)} y={Y(0)} width={cw * s} height={ch * s} fill="white" stroke={INK} strokeWidth="2" />
+      {dim('t', X(0), Y(0), X(cw), Y(0), u(cw), -10)}
+      {dim('l', X(0), Y(0), X(0), Y(ch), u(ch), -10)}
+      {dim('b', X(0), Y(h), X(w), Y(h), u(w), 10)}
+      {dim('r', X(w), Y(0), X(w), Y(h), u(h), 10)}
+    </g>
+  }
+  return { h: oy + h * s + 30, g }
+}
+
+// ── a function machine ────────────────────────────────────────────────────────
+function machine(v) {
+  const n = Math.max(v.inputs.length, v.outputs.length)
+  const cy = 30 + n * 12
+  const col = (list, x, key) => list.map((t, i) => txt(x, cy + (i - (list.length - 1) / 2) * 24, t, { key: `${key}${i}`, size: 16, fill: t === '?' ? ORANGE : INK }))
+  const arrow = (x1, x2, key) => <g key={key}>
+    <line x1={x1} y1={cy} x2={x2 - 7} y2={cy} stroke={INK} strokeWidth="2" />
+    <polygon points={`${x2 - 9},${cy - 5} ${x2},${cy} ${x2 - 9},${cy + 5}`} fill={INK} />
+  </g>
+  const box = (x, op, key) => <g key={key}>
+    <rect x={x} y={cy - 20} width={66} height={40} rx={6} fill={op ? PAPER : 'rgba(184,91,16,.08)'} stroke={op ? INK : ORANGE} strokeWidth="2" strokeDasharray={op ? undefined : '5 4'} />
+    {txt(x + 33, cy, op ?? '?', { size: 16, fill: op ? INK : ORANGE })}
+  </g>
+  const g = <g>
+    {col(v.inputs, 24, 'i')}
+    {arrow(42, 66, 'a1')}{box(66, v.ops[0], 'b1')}{arrow(132, 160, 'a2')}{box(160, v.ops[1], 'b2')}{arrow(226, 256, 'a3')}
+    {col(v.outputs, 284, 'o')}
+  </g>
+  return { h: cy * 2, g }
+}
+
+// ── the number cross ──────────────────────────────────────────────────────────
+function numcross(v) {
+  const c = 42, ox = (W - v.row.length * c) / 2, oy = 10
+  const cellAt = (x, y, t, key) => <g key={key}>
+    <rect x={x} y={y} width={c} height={c} fill="white" stroke={INK} strokeWidth="2" />
+    {txt(x + c / 2, y + c / 2, t, { size: 16, fill: typeof t === 'string' ? ORANGE : INK })}
+  </g>
+  const g = <g>
+    {v.row.map((t, i) => cellAt(ox + i * c, oy, t, `r${i}`))}
+    {v.col.slice(1).map((t, i) => cellAt(ox + v.at * c, oy + (i + 1) * c, t, `c${i}`))}
+  </g>
+  return { h: oy + v.col.length * c + 10, g }
+}
+
+// ── dot patterns ──────────────────────────────────────────────────────────────
+function dots(v) {
+  const d = 9, gap = 20
+  const shapes = [1, 2, 3, 4].map(k => {
+    const pts = []
+    for (let r = 0; r < k; r++) for (let q = 0; q < (v.tri ? r + 1 : k); q++) pts.push(v.tri ? [q * d - r * d / 2, r * d] : [q * d, r * d])
+    return pts
+  })
+  const widths = [1, 2, 3, 4].map(k => (k - 1) * d + 8)
+  let x = 16
+  const g = []
+  shapes.forEach((pts, i) => {
+    const cx = x + widths[i] / 2
+    const minX = Math.min(...pts.map(p => p[0])), maxX = Math.max(...pts.map(p => p[0]))
+    const shift = cx - (minX + maxX) / 2
+    pts.forEach(([px, py], j) => g.push(<circle key={`${i}-${j}`} cx={px + shift} cy={70 - 4 * d + py + (4 - i - 1) * d} r={3.2} fill={TEAL} />))
+    g.push(txt(cx, 92, v.terms[i], { key: `n${i}`, size: 15 }))
+    x += widths[i] + gap + 18
+  })
+  g.push(txt(x + 20, 56, '…', { key: 'e', size: 18 }))
+  g.push(txt(x + 20, 92, '?', { key: 'q', size: 16, fill: ORANGE }))
+  return { h: 104, g: <g>{g}</g> }
 }
