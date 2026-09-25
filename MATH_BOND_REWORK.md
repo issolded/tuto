@@ -161,6 +161,18 @@ elle çözüldü. **Hesap hatası çıkmadı.** Üslup ve gerçekçilik bulgular
 - **İngilizce para sorusu:** "1 5c coin" yan yana iki sayı gibi okunuyordu; artık "one 5c coin".
 - **13 yaş birim fiyat:** "200 g → 400 g" gibi tam katlar çıkmıyor; ikiye katlamak orantı değil.
 
+**İkinci tur, İspanyolca + ipuçları:** 6–13 yaş İspanyolca oturumları okundu, sonra 7, 9, 11 ve
+13 yaşta her sorunun ipuçları ile yanlış şık açıklamaları okundu. Yine hesap hatası çıkmadı.
+Düzeltilenler:
+- **Yuvarlama sorusu:** "a la 100 más cercana" ve "en yakın 100 sayısına" yerine "a la centena
+  más cercana" ve "en yakın yüzlüğe"; ipucu da "Yüzler basamağı" diyor.
+- **Cetvel için yanlış sıfat:** "taller / más alta" yerine "longer / más larga".
+- **İngilizce sıra sayısı:** "A 3th is bigger than a 9th", "the 2th term" yerine "a third",
+  "ninths", "2nd" (`ordinal`, `fracName`).
+- **Venn/Carroll yanlış şık açıklaması:** "12 is not a multiple of 5 and is even" yerine hangi
+  etiketin bozulduğunu söyleyen "12 is even, but it is not a multiple of 5".
+- **Dilbilgisi:** "The 1 left over still need" yerine "needs".
+
 ---
 
 ## 4. Bilinçli kararlar

@@ -69,6 +69,14 @@ function pickL(bank, lang) {
 // printed lower-case). Turkish rules, so "ı" stays dotless and "i" becomes "İ".
 const cap = s => s.charAt(0).toLocaleUpperCase('tr') + s.slice(1)
 
+// English ordinals and fraction names, written the way a book writes them: "the 3rd term",
+// "a third", "ninths". Gluing "th" onto the number printed "a 3th" and "the 2th term".
+const ordinal = n => `${n}${(n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[n % 10] ?? 'th'}`
+const FRAC_NAME = { 2: ['half', 'halves'], 3: ['third', 'thirds'], 4: ['quarter', 'quarters'], 5: ['fifth', 'fifths'], 6: ['sixth', 'sixths'],
+  7: ['seventh', 'sevenths'], 8: ['eighth', 'eighths'], 9: ['ninth', 'ninths'], 10: ['tenth', 'tenths'], 11: ['eleventh', 'elevenths'], 12: ['twelfth', 'twelfths'],
+  14: ['fourteenth', 'fourteenths'], 15: ['fifteenth', 'fifteenths'], 16: ['sixteenth', 'sixteenths'], 18: ['eighteenth', 'eighteenths'], 20: ['twentieth', 'twentieths'], 100: ['hundredth', 'hundredths'] }
+const fracName = (d, plural = false) => (FRAC_NAME[d] ?? [`${ordinal(d)}`, `${ordinal(d)}s`])[plural ? 1 : 0]
+
 function pairKey(a, b) {
   return [a, b].sort((x, y) => x - y).join(',')
 }
@@ -688,11 +696,11 @@ function fractionAddDifferent(level, lang) {
         `Paylar payla, paydalar paydayla toplanmış. Payda parçanın büyüklüğünü söyler — onları toplamak parça boyunu değiştirir.`,
         `Se han sumado los de arriba con los de arriba y los de abajo con los de abajo. El de abajo dice el tamaño del trozo.`) },
     { value: `${n1 + n2}/${d2}`, why: say(lang,
-        `${n1}/${d1} was used as if it were ${n1}/${d2}. A ${d1}th is bigger than a ${d2}th, so it has to be rewritten first.`,
+        `${n1}/${d1} was used as if it were ${n1}/${d2}. A ${fracName(d1)} is bigger than a ${fracName(d2)}, so it has to be rewritten first.`,
         `${n1}/${d1}, sanki ${n1}/${d2} imiş gibi kullanılmış. ${d1}'te bir, ${d2}'de birden büyüktür; önce yeniden yazılmalı.`,
         `Se ha usado ${n1}/${d1} como si fuera ${n1}/${d2}. Un ${d1}avo es mayor que un ${d2}avo, hay que reescribirlo antes.`) },
     { value: `${sum}/${d1}`, why: say(lang,
-        `The right top number over the wrong bottom — the pieces were made ${d2}ths, so the answer is in ${d2}ths.`,
+        `The right top number over the wrong bottom — the pieces were made ${fracName(d2, true)}, so the answer is in ${fracName(d2, true)}.`,
         `Pay doğru ama payda yanlış — parçalar ${d2}'de bire çevrildi, cevap da ${d2}'de bir cinsinden olur.`,
         `El numerador correcto sobre el denominador equivocado: los trozos se pasaron a ${d2}avos.`) },
   ])
@@ -711,7 +719,7 @@ function fractionAddDifferent(level, lang) {
       say(lang, `The pieces are different sizes, so they cannot be added yet.`,
                 `Parçalar farklı büyüklükte, bu hâliyle toplanamaz.`,
                 `Los trozos son de tamaños distintos, así que todavía no se pueden sumar.`),
-      say(lang, `${d2} divides by ${d1}, so rewrite ${n1}/${d1} in ${d2}ths and then add the tops.`,
+      say(lang, `${d2} divides by ${d1}, so rewrite ${n1}/${d1} in ${fracName(d2, true)} and then add the tops.`,
                 `${d2}, ${d1}'e bölünüyor; ${n1}/${d1} kesrini ${d2}'de bir cinsinden yaz, sonra payları topla.`,
                 `${d2} se divide entre ${d1}: reescribe ${n1}/${d1} en ${d2}avos y luego suma los de arriba.`),
     ],
@@ -2338,6 +2346,12 @@ function timeTemplate(level, lang) {
 const ROUND_UNITS = { en: ['10', '100', '1,000', '10,000', '100,000'],
                       tr: ['10', '100', '1.000', '10.000', '100.000'],
                       es: ['10', '100', '1.000', '10.000', '100.000'] }
+// Turkish and Spanish name the place in words: "en yakın yüzlüğe", "a la centena más cercana".
+// "en yakın 100 sayısına" and "a la 100 más cercana" were going out.
+const ROUND_PLACE = {
+  tr: [['onluğa', 'Onlar'], ['yüzlüğe', 'Yüzler'], ['binliğe', 'Binler'], ['on binliğe', 'On binler'], ['yüz binliğe', 'Yüz binler']],
+  es: [['decena', 'las decenas'], ['centena', 'las centenas'], ['unidad de millar', 'las unidades de millar'], ['decena de millar', 'las decenas de millar'], ['centena de millar', 'las centenas de millar']],
+}
 
 // Rounding to a named place. The wrong options are the two neighbouring places and the same
 // number rounded the wrong way — a child who rounds 4,600 down to 4,000 has made a rule
@@ -2356,21 +2370,22 @@ function placeRound(level, lang) {
   do { n = randInt(place * 2, place * 60) } while (n % place === 0 || (n % place) * 2 === place)
   const answer = Math.round(n / place) * place
   const unit = (ROUND_UNITS[lang] || ROUND_UNITS.en)[placeIdx]
+  const [to, col] = (ROUND_PLACE[lang] ?? [])[placeIdx] ?? [unit, unit]
 
   return {
     topic: 'place-value', level,
     question_text: say(lang,
       `Round ${num(n, lang)} to the nearest ${unit}.`,
-      `${num(n, lang)} sayısını en yakın ${unit} sayısına yuvarla.`,
-      `Redondea ${num(n, lang)} a la ${unit} más cercana.`),
+      `${num(n, lang)} sayısını en yakın ${to} yuvarla.`,
+      `Redondea ${num(n, lang)} a la ${to} más cercana.`),
     format: 'numeric',
     correct_answer: answer,
     operandKey: `pv:round:${n}:${place}`,
     hint_steps: [
       say(lang,
         `Look at the digit just to the right of the ${unit} place — that one digit decides it.`,
-        `${unit} basamağının hemen sağındaki rakama bak — kararı o tek rakam verir.`,
-        `Mira la cifra justo a la derecha de la posición de ${unit}: esa sola cifra lo decide.`),
+        `${col} basamağının hemen sağındaki rakama bak — kararı o tek rakam verir.`,
+        `Mira la cifra justo a la derecha de ${col}: esa sola cifra lo decide.`),
       say(lang,
         `5 or more goes up, less than 5 stays. Everything to the right becomes 0.`,
         `5 ve üstü yukarı çıkar, 5'ten küçük olduğu yerde kalır. Sağındaki her şey 0 olur.`,
@@ -3638,18 +3653,18 @@ function seqRule(level, lang) {
     topic: 'sequence', level,
     question_text: less
       ? say(lang,
-          `Each term of a sequence is ${off} less than the ${table} times table. What is the ${which}th term?`,
+          `Each term of a sequence is ${off} less than the ${table} times table. What is the ${ordinal(which)} term?`,
           `Bir dizinin her terimi ${table} çarpım tablosundan ${off} eksiktir. ${which}. terim kaçtır?`,
           `Cada término de una sucesión es ${off} menos que la tabla del ${table}. ¿Cuál es el término ${which}?`)
       : say(lang,
-          `Each term of a sequence is ${off} more than the ${table} times table. What is the ${which}th term?`,
+          `Each term of a sequence is ${off} more than the ${table} times table. What is the ${ordinal(which)} term?`,
           `Bir dizinin her terimi ${table} çarpım tablosundan ${off} fazladır. ${which}. terim kaçtır?`,
           `Cada término de una sucesión es ${off} más que la tabla del ${table}. ¿Cuál es el término ${which}?`),
     format: 'numeric',
     correct_answer: answer,
     operandKey: `seq:rule:${table}:${off}:${which}`,
     hint_steps: [
-      say(lang, `Find the ${which}th number in the ${table} times table first.`,
+      say(lang, `Find the ${ordinal(which)} number in the ${table} times table first.`,
                 `Önce ${table} çarpım tablosunun ${which}. sayısını bul.`,
                 `Halla primero el número ${which} de la tabla del ${table}.`),
       less
@@ -3889,7 +3904,7 @@ function measureDifference(level, lang) {
   const band = bandForLevel(level)
   const set = band <= 2
     ? pick([
-      { unit: 'cm', lo: 5, hi: 30, a: { en: 'pencil', tr: 'kalem', es: 'lápiz', g: 'm' }, b: { en: 'ruler', tr: 'cetvel', es: 'regla', g: 'f' } },
+      { unit: 'cm', lo: 5, hi: 30, long: true, a: { en: 'pencil', tr: 'kalem', es: 'lápiz', g: 'm' }, b: { en: 'ruler', tr: 'cetvel', es: 'regla', g: 'f' } },
       { unit: 'cm', lo: 20, hi: 90, a: { en: 'cat', tr: 'kedi', es: 'gato', g: 'm' }, b: { en: 'dog', tr: 'köpek', es: 'perro', g: 'm' } },
     ])
     : pick([
@@ -3915,7 +3930,9 @@ function measureDifference(level, lang) {
     ? say(lang, 'heavier', 'daha ağır', `más ${esF ? 'pesada' : 'pesado'}`)
     : set.unit === 'ml'
       ? say(lang, 'more', 'daha fazla', 'más')
-      : say(lang, 'taller', 'daha uzun', `más ${esF ? 'alta' : 'alto'}`)
+      // A ruler lying on a desk is longer than a pencil, not taller.
+      : set.long ? say(lang, 'longer', 'daha uzun', `más ${esF ? 'larga' : 'largo'}`)
+        : say(lang, 'taller', 'daha uzun', `más ${esF ? 'alta' : 'alto'}`)
 
   return {
     topic: 'measurement', level,
@@ -4961,7 +4978,7 @@ function youngDivision(level, lang) {
     hint_steps: [
       say(lang, `${n} ÷ ${d} = ${q} remainder ${rem}.`, `${n} ÷ ${d} = ${q}, kalan ${rem}.`, `${n} ÷ ${d} = ${q} y sobran ${rem}.`),
       up
-        ? say(lang, `The ${rem} left over still need ${c.need[0]}.`, `Artan ${rem} için de ${c.need[1]} gerekir.`, `Los ${rem} que sobran también necesitan ${c.need[2]}.`)
+        ? say(lang, `The ${rem} left over still ${rem === 1 ? 'needs' : 'need'} ${c.need[0]}.`, `Artan ${rem} için de ${c.need[1]} gerekir.`, `Los ${rem} que sobran también necesitan ${c.need[2]}.`)
         : say(lang, `The ${rem} left over are not enough for another one.`, `Artan ${rem}, bir tane daha için yetmez.`, `Los ${rem} que sobran no llegan para otro.`),
     ],
   }
@@ -5911,8 +5928,18 @@ function dataSorting(level, lang) {
     const a = A.test(n) ? L(A.is) : L(A.not), b = B.test(n) ? L(B.is) : L(B.not)
     return say(lang, `${n} ${a} and ${b}.`, `${n}: ${a}, ${b}.`, `${n} ${a} y ${b}.`)
   }
+  // A wrong number says which label it breaks: "12 is even, but it is not a multiple of 5", not
+  // "12 is not a multiple of 5 and is even", where the reader has to work out which half matters.
+  const why = n => {
+    const want = [target[0] === '1', target[1] === '1'], has = [A.test(n), B.test(n)]
+    const fact = (P, yes) => (yes ? L(P.is) : L(P.not))
+    const ok = [0, 1].filter(i => has[i] === want[i]).map(i => fact([A, B][i], has[i]))
+    const bad = [0, 1].filter(i => has[i] !== want[i]).map(i => fact([A, B][i], has[i]))
+    if (!ok.length) return describe(n)
+    return say(lang, `${n} ${ok[0]}, but it ${bad[0]}.`, `${n}: ${ok[0]}, ama ${bad[0]}.`, `${n} ${ok[0]}, pero ${bad[0]}.`)
+  }
   const right = opt(answer, describe(answer))
-  const wrongs = others.map(n => opt(n, describe(n)))
+  const wrongs = others.map(n => opt(n, why(n)))
   const carroll = Math.random() < 0.4
   const need = {
     '11': say(lang, `It has to be in both: ${L(A.is)} AND ${L(B.is)}.`, `İkisine birden uymalı: hem ${L(A.is)} hem ${L(B.is)}.`, `Tiene que cumplir las dos: ${L(A.is)} Y ${L(B.is)}.`),
@@ -7231,7 +7258,7 @@ function y8Sequences(level, lang) {
       const n = pick([15, 20, 50, 100])
       return {
         topic: T, level,
-        question_text: say(lang, `${terms.join(', ')}, … What is the ${n}th term?`, `${terms.join(', ')}, … ${n}. terim kaçtır?`, `${terms.join(', ')}, … ¿Cuál es el término ${n}?`),
+        question_text: say(lang, `${terms.join(', ')}, … What is the ${ordinal(n)} term?`, `${terms.join(', ')}, … ${n}. terim kaçtır?`, `${terms.join(', ')}, … ¿Cuál es el término ${n}?`),
         format: 'numeric', correct_answer: d * n + e, operandKey: `sg:h:${d}:${e}:${n}`,
         hint_steps: [say(lang, `The terms go up by ${d} each time, so the rule starts ${d}n.`, `Terimler her seferinde ${d} artıyor, yani kural ${d}n ile başlar.`, `Los términos suben de ${d} en ${d}, así que la regla empieza por ${d}n.`),
                      say(lang, `Check it on the first term (n = 1), fix the number on the end, then put in n = ${n}.`, `İlk terimde (n = 1) dene, sondaki sayıyı düzelt, sonra n = ${n} koy.`, `Compruébalo con el primer término (n = 1), ajusta el número del final y pon n = ${n}.`)],
