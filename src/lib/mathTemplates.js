@@ -4984,11 +4984,15 @@ function youngDivision(level, lang) {
     topic: 'division-word', level,
     question_text: c.q(lang, n, d), format: 'numeric', correct_answer: up ? q + 1 : q,
     operandKey: `yround:${up ? 'u' : 'd'}:${n}:${d}`,
+    // The hint shows the way, not the sum: "21 ÷ 4 = 5 remainder 1" was the answer itself for the
+    // "fill completely" questions, and one step from it for the "how many are needed" ones.
     hint_steps: [
-      say(lang, `${n} ÷ ${d} = ${q} remainder ${rem}.`, `${n} ÷ ${d} = ${q}, kalan ${rem}.`, `${n} ÷ ${d} = ${q} y sobran ${rem}.`),
+      say(lang, `How many ${d}s fit into ${n}? Count up in ${d}s and stop before you go past ${n}.`,
+                `${n} içinde kaç tane ${d} var? ${trDist(d)} ${trDist(d)} say, ${n}${trEk(n, 'acc')} geçmeden dur.`,
+                `¿Cuántas veces cabe ${d} en ${n}? Cuenta de ${d} en ${d} y para antes de pasarte de ${n}.`),
       up
-        ? say(lang, `The ${rem} left over still ${rem === 1 ? 'needs' : 'need'} ${c.need[0]}.`, `Artan ${rem} için de ${c.need[1]} gerekir.`, `Los ${rem} que sobran también necesitan ${c.need[2]}.`)
-        : say(lang, `The ${rem} left over are not enough for another one.`, `Artan ${rem}, bir tane daha için yetmez.`, `Los ${rem} que sobran no llegan para otro.`),
+        ? say(lang, `Some will be left over, and they still need ${c.need[0]} — so count one more.`, `Artanlar olacak; onlar için de ${c.need[1]} gerekir, bir tane daha say.`, `Sobrarán algunos y también necesitan ${c.need[2]}: cuenta uno más.`)
+        : say(lang, `Any left over are not enough for another one, so do not count them.`, `Artanlar bir tane daha için yetmez, onları sayma.`, `Los que sobran no llegan para otro: no los cuentes.`),
     ],
   }
 }
@@ -5379,6 +5383,9 @@ function geoTurn(level, lang) {
                              `${name} ${names[dirs[from]]} yönüne bakıyor ve ${dirWord} ${turnWord} dönüyor. ${name} şimdi hangi yöne bakıyor?`,
                              `${name} mira al ${names[dirs[from]]} y da ${turnWord} ${dirWord}. ¿Hacia dónde mira ahora?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `turn:${from}:${turns}:${cw}`,
+    // The compass, where the child is facing, and which way round the turn goes — not how far,
+    // which is the question.
+    visual: { kind: 'turn', from: dirs[from], cw, names: dirs.map(d => names[d]) },
     hint_steps: [
       say(lang, `Going clockwise the order is North, East, South, West.`, `Saat yönünde sıra: Kuzey, Doğu, Güney, Batı.`, `En el sentido de las agujas del reloj el orden es Norte, Este, Sur, Oeste.`),
       say(lang, `Each quarter turn moves one step along that order${cw ? '' : ', backwards'}.`, `Her çeyrek tur bu sırada bir adım ${cw ? 'ileri' : 'geri'} gider.`, `Cada cuarto de vuelta avanza un paso en ese orden${cw ? '' : ', hacia atrás'}.`),
@@ -7808,7 +7815,7 @@ export { SHAPES }
 
 // The visual kinds drawn by components/MathFigure. Kept here, beside the templates that emit
 // them, so the screen can ask "is this a picture question?" without importing a component.
-export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale', 'plane', 'angles', 'compound', 'machine', 'numcross', 'dots', 'algrects', 'gears', 'cuboid', 'circle', 'righttri', 'garden', 'scatter'])
+export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale', 'plane', 'angles', 'compound', 'machine', 'numcross', 'dots', 'algrects', 'gears', 'cuboid', 'circle', 'righttri', 'garden', 'scatter', 'turn'])
 
 export const TOPICS = Object.keys(REGISTRY)
 

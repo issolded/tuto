@@ -187,6 +187,21 @@ seviyeler lab'da gezilip her SVG'nin çiziminin kendi kutusundan taşıp taşmad
 
 Son ölçümde taşma sıfır.
 
+**Kullanıcı bulguları (aynı gün):**
+- **"Which of these is the largest? 729, 781, 702, 719" şıklı oldu.** Sayılar soruda yazılıydı
+  ve klavyeyle geri yazdırılıyordu. Artık dört sayı şık; her yanlış şık doğru cevaptan ilk
+  ayrıldığı basamağı söylüyor. Bütün konu ve seviyelerde "cevabı soruda listelenen sayılardan
+  biri olan ama yazdırılan" soru arandı; başka yok.
+- **Kalanlı bölme ipucu cevabı veriyordu:** "I have 21 eggs … how many boxes can I fill?"
+  sorusunun ipucu "21 ÷ 4 = 5 remainder 1" idi. Artık "4'er 4'er say, 21'i geçmeden dur" ve
+  "artanlar bir kutu daha için yetmez, onları sayma" diyor. **Denetim bunu neden kaçırdı:**
+  ipucu sızıntısı kontrolü cevabı 20'nin altındaki soruları hiç incelemiyordu (tesadüflere
+  karşı konmuş bir eşik). "= 5" gibi sonuç biçiminde yazılmış bir sayı tesadüf olamayacağı için
+  artık her büyüklükte yakalanıyor. Sıkılaştırılmış kontrol başka sızıntı bulmadı.
+- **Yön/dönme sorusu görselli:** isimli dört yönüyle bir pusula, çocuğun baktığı yön ve dönüşün
+  hangi yöne olduğunu gösteren kısa kavisli bir ok. Ok dönüşün ne kadar olduğunu göstermiyor;
+  soru o.
+
 ---
 
 ## 4. Bilinçli kararlar

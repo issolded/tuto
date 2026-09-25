@@ -54,6 +54,7 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
                                             : v.kind === 'righttri' ? righttri(v)
                                               : v.kind === 'garden' ? garden(v)
                                                 : v.kind === 'scatter' ? scatter(v)
+                                                  : v.kind === 'turn' ? turn(v)
                                                   : polygon(v, hint)
   if (!body) return null
   const schematic = ['solid', 'polygon', 'net', 'angles', 'compound', 'algrects', 'cuboid', 'righttri', 'garden', 'circle'].includes(v.kind)
@@ -1072,3 +1073,36 @@ function scatter(v) {
   </g>
   return { h: 186, g }
 }
+
+// ── facing and turning ────────────────────────────────────────────────────────
+// A compass with the four directions named, the child in the middle facing one of them, and a
+// short curved arrow for which way round they turn. The arrow does not go the whole way: how far
+// is the question.
+function turn(v) {
+  const cx = 160, cy = 112, R = 78
+  const at = { N: -90, E: 0, S: 90, W: 180 }
+  const P2 = (deg, r) => [cx + r * Math.cos(deg * Math.PI / 180), cy + r * Math.sin(deg * Math.PI / 180)]
+  const face = at[v.from]
+  const [hx, hy] = P2(face, 46)
+  const a0 = face + (v.cw ? 18 : -18), a1 = face + (v.cw ? 78 : -78), r = 30
+  const [x0, y0] = P2(a0, r), [x1, y1] = P2(a1, r)
+  const tip = P2(a1 + (v.cw ? 14 : -14), r)
+  const g = <g>
+    <circle cx={cx} cy={cy} r={R} fill="none" stroke={GRID} strokeWidth="2" strokeDasharray="4 5" />
+    {['N', 'E', 'S', 'W'].map((d, i) => {
+      const [x, y] = P2(at[d], R + 16)
+      const [tx, ty] = P2(at[d], R)
+      return <g key={d}>
+        <circle cx={tx} cy={ty} r={4} fill={INK} />
+        {txt(x, y, v.names[i], { size: 13, anchor: d === 'E' ? 'start' : d === 'W' ? 'end' : 'middle' })}
+      </g>
+    })}
+    <line x1={cx} y1={cy} x2={hx} y2={hy} stroke={TEAL} strokeWidth="5" strokeLinecap="round" />
+    <polygon points={[P2(face, 58), P2(face - 12, 42), P2(face + 12, 42)].map(q => q.join(',')).join(' ')} fill={TEAL} />
+    <circle cx={cx} cy={cy} r={11} fill="#fde7cf" stroke={INK} strokeWidth="2" />
+    <path d={`M ${x0} ${y0} A ${r} ${r} 0 0 ${v.cw ? 1 : 0} ${x1} ${y1}`} fill="none" stroke={ORANGE} strokeWidth="3" />
+    <polygon points={`${tip.join(',')} ${P2(a1, r - 6).join(',')} ${P2(a1, r + 6).join(',')}`} fill={ORANGE} />
+  </g>
+  return { h: 222, g }
+}
+

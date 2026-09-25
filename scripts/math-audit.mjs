@@ -271,10 +271,15 @@ function textOf(p) {
 // answer is under 20, which is most of Year 1.
 function hintLeaksAnswer(p) {
   const a = Number(p.correct_answer)
-  if (!Number.isFinite(a) || Math.abs(a) < LEAK_FLOOR) return false
+  if (!Number.isFinite(a)) return false
   const steps = (p.hint_steps || []).map(h => String(h).replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1'))
+  // "= 5" written as a RESULT is never a coincidence, however small the number: the floor below
+  // is for numbers that merely appear. It hid "21 ÷ 4 = 5 remainder 1" on a question whose answer
+  // was 5.
   const asResult = steps.some(h => (h.match(/=\s*(\d+(?:\.\d+)?)/g) || [])
     .some(t => Number(t.replace(/^=\s*/, '')) === a))
+  if (asResult) return true
+  if (Math.abs(a) < LEAK_FLOOR) return false
   const last = steps[steps.length - 1] || ''
   const nums = last.match(/\d+(?:\.\d+)?/g) || []
   // …and only when the last step is the FIRST place the number appears. A mental-subtraction
