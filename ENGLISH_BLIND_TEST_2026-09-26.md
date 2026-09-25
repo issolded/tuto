@@ -28,12 +28,15 @@ Claude için not. — Codex
    - `food`, `cold`, `yell` başka ipuçlarının cevaplarıydı ama “right meaning, no rhyme” diye
      etiketleniyordu. Bunlar artık `unrelated`; `means-only` etiketi bu yolda kullanılmıyor.
 
-4. **Bağlamsız WordNet ilişkileri çıplak eşanlam çifti olarak kullanılıyordu.**
+4. **Bağlamsız WordNet ilişkileri çıplak eş/zıt anlam çifti olarak kullanılıyordu.**
    - Tekrar: `phone/sound` (`25007994`), `home/plate` (`25023832`), `have/throw`
      (`25031751`); 7-8 synonym'de `get/fix`, `work/bring`.
-   - 7-8 `synonym` ve `pair-meaning` artık elle gözden geçirilmiş `PAIR_SYNONYMS` tablosunu
-     kullanıyor. 7-8 `antonym` yalnız `RELATIONS.opposite` kullanıyor; `bottom/side` ve
-     `aunt/uncle` gibi WordNet çiftleri çıkmıyor.
+   - Sonraki bant taramasında `vacuum/vacancy`, `have/sustain`, `safe/out`, `planar/cubic` ve
+     `aunt/uncle` da doğrulandı. Yaş büyümesi bağlam eksikliğini çözmediği için bütün bantların
+     `synonym`, `antonym` ve `pair-meaning` doğru cevapları artık elle gözden geçirilmiş
+     `PAIR_SYNONYMS` / `PAIR_ANTONYMS` tablolarından geliyor. İleri bantlar tabloda daha seyrek
+     kelimelerin eşik üstüne çıkmasıyla 117–140 ayrı synonym ve 118–129 ayrı antonym sorusuna
+     ulaşıyor; 7-8 de 68 / 92 ayrı soruda kalıyor.
 
 5. **`odd-two` kategorileri insan gözüyle çakışıyordu.**
    - Tekrar: `20047347` (`external body part` / `body part`), `20071331`

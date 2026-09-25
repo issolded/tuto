@@ -87,6 +87,39 @@ export const PAIR_SYNONYMS = [
   ['home', 'house'], ['stop', 'halt'], ['pull', 'drag'], ['autumn', 'fall'],
   ['chat', 'talk'], ['child', 'kid'], ['scared', 'afraid'], ['correct', 'right'],
   ['break', 'snap'], ['pebble', 'stone'], ['hole', 'gap'], ['hurry', 'rush'],
+  ['feast', 'banquet'], ['remarkable', 'noteworthy'], ['imminent', 'impending'],
+  ['obligation', 'duty'], ['competitor', 'contender'], ['vanish', 'disappear'],
+  ['nomenclature', 'terminology'], ['clemency', 'mercy'], ['hesitation', 'reluctance'],
+  ['vertex', 'apex'], ['makeshift', 'improvised'], ['barrier', 'roadblock'],
+  ['brink', 'verge'], ['aristocracy', 'nobility'], ['discretion', 'prudence'],
+  ['cognition', 'knowledge'], ['maestro', 'master'], ['thriving', 'prosperous'],
+  ['limelight', 'spotlight'], ['harm', 'damage'], ['infant', 'baby'], ['rapid', 'speedy'],
+  ['strict', 'rigorous'], ['trouble', 'difficulty'], ['element', 'constituent'],
+  ['glow', 'shine'], ['quarry', 'prey'], ['chunk', 'lump'], ['proceed', 'continue'],
+  ['team', 'squad'], ['cry', 'weep'], ['sunset', 'sundown'], ['spouse', 'partner'],
+  ['yell', 'scream'], ['bush', 'shrub'], ['help', 'aid'], ['cease', 'stop'],
+  ['maybe', 'perhaps'], ['soil', 'dirt'], ['task', 'job'], ['client', 'customer'],
+  ['pavement', 'sidewalk'], ['suitcase', 'bag'],
+]
+
+// As above, but for bare opposites. Gender counterparts and context-bound relations are not
+// opposites: aunt/uncle, parent/child, safe/out and planar/cubic all arrived through WordNet.
+export const PAIR_ANTONYMS = [
+  ...Object.entries(RELATIONS.opposite).flatMap(([a, bs]) => bs.map(b => [a, b])),
+  ['false', 'true'], ['inside', 'outside'], ['many', 'few'], ['left', 'right'],
+  ['joy', 'sorrow'], ['front', 'back'], ['more', 'less'], ['laugh', 'cry'],
+  ['leader', 'follower'], ['rich', 'poor'], ['loose', 'tight'], ['best', 'worst'],
+  ['fat', 'thin'], ['beautiful', 'ugly'], ['awake', 'asleep'], ['whole', 'half'],
+  ['sour', 'sweet'], ['north', 'south'], ['refuse', 'accept'], ['lost', 'found'],
+  ['horizontal', 'vertical'], ['practical', 'impractical'], ['extinct', 'extant'],
+  ['regular', 'irregular'], ['adequate', 'inadequate'], ['scarce', 'abundant'],
+  ['explicit', 'implicit'], ['foreign', 'domestic'], ['deep', 'shallow'],
+  ['majority', 'minority'], ['friendly', 'hostile'], ['simplicity', 'complexity'],
+  ['eligible', 'ineligible'], ['minimum', 'maximum'], ['affirm', 'negate'],
+  ['include', 'exclude'], ['natural', 'artificial'], ['active', 'passive'],
+  ['increase', 'decrease'], ['possible', 'impossible'], ['known', 'unknown'],
+  ['certain', 'uncertain'], ['clean', 'dirty'], ['tame', 'wild'], ['agree', 'disagree'],
+  ['noisy', 'quiet'],
 ]
 
 // Sentence-bound synonyms for `sense`. A WordNet synset says that two words share a sense; it

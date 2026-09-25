@@ -60,7 +60,8 @@ import {
 import {
   RELATIONS, LOGIC_SCENES, ORDER_SCENES, NAMES, POSSESSIVES, MISSPELLINGS, CONTRACTIONS,
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
-  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, SENSE_ANSWERS,
+  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, PAIR_ANTONYMS,
+  SENSE_ANSWERS,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -819,10 +820,10 @@ function plausibleLetters(r, truth, fits, count) {
 
 function genSynonym(r, band, seed) {
   const { antonyms, byRhyme } = index()
-  // A bare word gives no context with which to select a rare WordNet sense. At 7-8, use the
-  // hand-reviewed pairs instead: WordNet otherwise calls `fix` a synonym of `get` and `bring`
-  // a synonym of `work`, relationships that only make sense in particular constructions.
-  const source = band.answer >= 40 ? PAIR_SYNONYMS.map(ws => [null, ws]) : SYNSETS
+  // A bare word gives no context with which to select a rare WordNet sense. Use the
+  // hand-reviewed pairs in every band: WordNet otherwise calls `fix` a synonym of `get`,
+  // `vacuum` a synonym of `vacancy`, and `bring` a synonym of `work`.
+  const source = PAIR_SYNONYMS.map(ws => [null, ws])
   const usable = source.filter(([, ws]) => ws.filter(w => askable(band, w)).length >= 2)
   if (!usable.length) return null
   const [, words] = pickOne(r, usable)
@@ -866,11 +867,8 @@ function genSynonym(r, band, seed) {
 function genAntonym(r, band, seed) {
   const { synonyms, byRhyme } = index()
   // The same context rule applies to opposites. The curated relation excludes WordNet's
-  // contextual pairs (`bottom / side`) and gender counterparts (`aunt / uncle`).
-  const source = band.answer >= 40
-    ? Object.entries(RELATIONS.opposite).flatMap(([a, bs]) => bs.map(b => [a, b]))
-    : ANTONYMS
-  const pairs = source.filter(([a, b]) => askable(band, a) && askable(band, b))
+  // contextual pairs (`safe / out`, `planar / cubic`) and gender counterparts (`aunt / uncle`).
+  const pairs = PAIR_ANTONYMS.filter(([a, b]) => askable(band, a) && askable(band, b))
   if (!pairs.length) return null
   const [a, b] = pickOne(r, pairs)
   const [stem, answer] = r() < 0.5 ? [a, b] : [b, a]
@@ -2483,8 +2481,7 @@ function genPairMeaning(r, band, seed) {
   // contain`. The opposites come from the hand table for the same reason.
   const synPairs = memo('curated-syn-pairs', () => PAIR_SYNONYMS.filter(([a, b]) =>
     plainWord(a) && plainWord(b)))
-  const antPairs = memo('ant-pairs', () => Object.entries(RELATIONS.opposite)
-    .flatMap(([a, bs]) => bs.map(b => [a, b])))
+  const antPairs = memo('ant-pairs', () => PAIR_ANTONYMS)
   const catPairs = memo(`cat-pairs|${band.answer}|${band.familiarOnly}`, () => {
     const out = []
     for (const [, , members] of CATEGORIES) {
@@ -3065,9 +3062,15 @@ export function validateItem(item) {
   // Same test for the stem itself: an option that means what the QUESTION word means is either
   // the answer or a broken distractor, never a clean wrong one.
   if (item.type === 'synonym') {
+    const approved = PAIR_SYNONYMS.some(([a, b]) => (a === item.prompt.word && b === answers[0])
+      || (b === item.prompt.word && a === answers[0]))
+    if (!approved) return `"${answers[0]}" is not an approved synonym of "${item.prompt.word}"`
     for (const w of wrong) if (related(w, item.prompt.word)) return `"${w}" also means "${item.prompt.word}"`
   }
   if (item.type === 'antonym') {
+    const approved = PAIR_ANTONYMS.some(([a, b]) => (a === item.prompt.word && b === answers[0])
+      || (b === item.prompt.word && a === answers[0]))
+    if (!approved) return `"${answers[0]}" is not an approved opposite of "${item.prompt.word}"`
     const { antonyms } = index()
     for (const w of wrong) {
       if (antonyms.get(item.prompt.word)?.has(w)) return `"${w}" is also an opposite of "${item.prompt.word}"`
