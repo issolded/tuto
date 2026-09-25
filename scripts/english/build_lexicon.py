@@ -333,14 +333,21 @@ def is_inflected(name):
 _NOT_A_VARIANT = {'timber', 'pier', 'eager', 'mater', 'cater', 'later', 'water', 'gender',
                   'tender', 'render', 'wonder', 'order', 'under', 'over', 'power', 'flower'}
 
+# Only pairs that are the same word in every sense. `check/cheque`, `tire/tyre`, `curb/kerb`,
+# `draft/draught` and `story/storey` were here and are not: each American word is ALSO a
+# British word with its own meaning (to check, to tire, to curb, a first draft, a story), so
+# mapping it to the British spelling printed `cheque` where a question meant `check`.
 _ONE_OFF = {
     'gray': 'grey', 'plow': 'plough', 'aluminum': 'aluminium', 'jewelry': 'jewellery',
-    'mustache': 'moustache', 'pajamas': 'pyjamas', 'tire': 'tyre', 'curb': 'kerb',
-    'draft': 'draught', 'check': 'cheque', 'story': 'storey', 'ax': 'axe',
+    'mustache': 'moustache', 'pajamas': 'pyjamas', 'ax': 'axe', 'chili': 'chilli',
+    'counselor': 'counsellor', 'counseling': 'counselling',
 }
 
+# The endings before which British doubles an `l` that American leaves single.
+_DOUBLE_L_ENDINGS = ('ed', 'ing', 'er', 'ers', 'ery', 'ous', 'ist', 'ity', 'en', 'or', 'ors')
 
-def british_candidates(word):
+
+def british_candidates(word, known=()):
     out = []
     if word in _ONE_OFF:
         out.append(_ONE_OFF[word])
@@ -357,10 +364,17 @@ def british_candidates(word):
     for i in range(2, len(word) - 2):
         if word[i:i + 2] == 'or':
             out.append(word[:i] + 'our' + word[i + 2:])
-    # A single `l` where British doubles it before a vowel ending: traveled/travelled,
-    # canceled/cancelled, jeweler/jeweller, modeling/modelling.
+    # A single `l` where British doubles it before a SUFFIX: traveled/travelled,
+    # canceled/cancelled, jeweler/jeweller, modeling/modelling. Before a suffix, not before any
+    # vowel — the first version doubled every `l` followed by a vowel, and paired `below` with
+    # `bellow`, `filing` with `filling` and `pilar` with `pillar`, so a British question printed
+    # `bellow` wherever it meant `below`.
     for i in range(2, len(word) - 1):
-        if word[i] == 'l' and word[i + 1] in 'aeiou':
+        # And the part before the ending has to be a word ending in that `l` — `travel`,
+        # `label`, `wool` — or `filing` (file + ing) passes for `travelling` and pairs with
+        # `filling`.
+        if (word[i] == 'l' and word[i - 1] in 'aeiou' and word[i + 1:] in _DOUBLE_L_ENDINGS
+                and word[:i + 1] in known):
             out.append(word[:i + 1] + 'l' + word[i + 1:])
     return out
 
@@ -1185,7 +1199,7 @@ def main():
     # `color` in one question and `colour` in the next.
     spelling = {}
     for w in sorted(words):
-        for other in british_candidates(w):
+        for other in british_candidates(w, words):
             if other in words:
                 spelling[w] = {'us': w, 'uk': other}
                 spelling[other] = {'us': w, 'uk': other}

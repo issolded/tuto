@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import {
-  BANDS, BAND_KEYS, BOOK_COVERAGE, VARIETIES,
+  BANDS, BAND_KEYS, BOOK_COVERAGE, VARIETIES, POOL_LIMITS,
   generateItem, generateSession, validateItem, itemSignature,
 } from '../src/lib/englishTemplates.js'
 import { WORD_Z, LEXICON_META, SYLLABLES } from '../src/lib/englishLexicon.generated.js'
@@ -143,10 +143,22 @@ for (const bandKey of BAND_KEYS) {
       // wrong ones are the whole question — `leaded` for the past tense of `lead`, `childs`
       // for the plural of `child`. Measuring those against the band's reading level asks
       // whether a child can read a word that is not supposed to be a word.
+      // The new families add two more kinds of option that are not vocabulary: codes, letters,
+      // sums and names (the letter puzzles), and forms inside a sentence (`could of`,
+      // `cheapest`, `girls' school`). Neither is measured as a word. Their tables are
+      // hand-written and read, which is also why `cygnet` and `gosling` — the book's own
+      // answers, and rare by frequency — are not failures here.
       const letterType = ['letter-pair', 'shared-letters', 'hidden-word',
         'plural', 'past-tense', 'suffix', 'root-word', 'prefix-antonym',
-        'missing-vowel'].includes(type)
-      const words = [
+        'missing-vowel', 'letter-code', 'front-letter', 'join-letter', 'letter-analogy',
+        'letter-sum', 'logic-grid', 'pair-meaning', 'analogy', 'apostrophe', 'misspelt',
+        'ending', 'ie-ei', 'silent-letter', 'contraction', 'homophone-cloze',
+        'grammar-cloze', 'comparative', 'singular', 'gender', 'collective',
+        'proverb'].includes(type)
+      const tableType = ['analogy', 'logic-grid', 'apostrophe', 'contraction',
+        'homophone-cloze', 'grammar-cloze', 'comparative', 'gender', 'collective',
+        'proverb'].includes(type)
+      const words = tableType ? [] : [
         item.prompt.word,
         ...(item.rule.words || []),
         item.rule.answer,
@@ -183,7 +195,9 @@ for (const bandKey of BAND_KEYS) {
     // prefix-antonym question is one of nine prefixes and the answer to a missing-vowel
     // question is one of five vowels. Counting answers called those the two thinnest types in
     // the module when they are among the widest — 184 and 297 distinct questions.
-    if (made >= PER_TYPE && sigs.size < 40) {
+    // A hand-written table can only say as many things as it has rows; its floor is its size.
+    const floor = Math.min(40, POOL_LIMITS[type] ?? 40)
+    if (made >= PER_TYPE && sigs.size < floor) {
       fail(`${bandKey}/${type}: only ${sigs.size} distinct questions across ${made} items`)
     }
   }

@@ -196,3 +196,11 @@ press
 publicity
 reporter
 statement
+
+# Found after the 2026-09-22 build: "they dug a pit to bury the body" was the sentence for
+# `pit`, and two WordNet examples put smoking beside teachers and hospitals.
+bury
+buried
+burial
+burying
+smoking

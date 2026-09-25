@@ -527,6 +527,47 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       beklentisi kurar, "Şekil Bulmacaları" emoji/ikon sorularında yanlış olur), ebeveyn tarafı
       "Şekil ve örüntü bulmacaları (NVR)". İkon `src/assets/puzzle-tile-icon.svg` (2×2 ızgara + ?,
       turkuaz kart — pembe denendi, beğenilmedi, 2026-09-18); çocuk ekranı gelmeden ana ekrana kart koyma — boş sayfaya gider.
+- [ ] English motoru: beş bant, 49 tip (2026-09-25, Claude). Üç yeni Bond kitabı baştan sona okundu:
+      *Verbal Reasoning Assessment Papers 7-8* (22 kâğıt × 30), *English Assessment Papers 10-11
+      Book 1* (10 × 100), *11+ English Multiple-choice Test Papers Pack 2* (4 test). `bandForAge`:
+      ≤8 → **7-8** (yeni), 9 → 8-9, 10 → 9-10, 11 → **10-11** (yeni), 12+ → 11-12. Eskiden 7 yaş 8-9
+      kitabının harf bulmacalarını daha düşük eşikle alıyordu — daha zor bir kitap, daha küçük kelimeler.
+      **7-8 kitabı anlam değil kelimenin YAPISINI soruyor**, o yüzden neredeyse hepsi sözlükten
+      deterministik üretiliyor (17 tip, `YOUNG_VR_TYPES`): TABLE=12345 şifresi (iki yön), aynı harfli iki
+      kelime, dördünün başına gelen harf, alfabetik sıra, peac(h)ome, değişim kalıbı (pit→pot, lit→lot),
+      TEN→?→FIN merdiveni, harflerden yapılamayan kelime, AB:CD harf analojisi, kelime analojisi
+      (yavru/ses/yuva/renk/zıt/dişi — elle tablo), anlamdaş+kafiyeli (elle ipucu tablosu: WordNet
+      eşanlamları duyu karıştırıyordu, "about → most"), bileşik kelimenin başı, en eş/en zıt çift,
+      mantık tablosu (4 kişi × 2 özellik) ve sıralama, karışık harf, harfleri sıralı kelime, harf-sayı
+      işlemi. Kelime havuzu **yalnız Dale-Chall** (somut isim kaçağı `cant`, `mike` getiriyordu).
+      **10-11: 13 tip (`GRAMMAR_TYPES`)**, MC Pack'in kendi çoktan seçmeli biçimleri: sahiplik kesme
+      işareti (girls' school / women's hospital), yanlış yazılmış kelime, ance/ence · ary/ery/ory ·
+      cial/tial · sure/ture, ie/ei (tek ses olanlar), sessiz harf (kn/wr/gn/mb/mn/stle; `wh` aksana göre
+      okunduğu için yok), kısaltma (iki yön, `could of` çeldiricisi), cümlede sesteş, cümlede fiil
+      biçimi, karşılaştırma (cheaper/more cheap/most cheapest), tekil, dişil/eril, topluluk adı,
+      atasözü; ayrıca paylaşılan üç harfle alfabetik sıra (procure/proclaim…). Elle yazılan her şey
+      `src/lib/englishTables.js`'te; tablolar engel listesine takıldı ve temizlendi (`army`, `war`,
+      `judge`, `hell`, `drunk`…), çalışma anında da her basılan kelime engel listesinden geçiyor.
+      **Doğrulayıcı** her yeni tipte cevabı basılandan yeniden hesaplıyor ve kaç şıkkın uyduğunu
+      sayıyor (örn. değişim kalıbında iki örneğin ikisine de uyan HER kural üçüncü kelimeye uygulanıyor;
+      iki farklı gerçek kelime çıkarsa soru atılıyor).
+      **Yolda bulunan eski hatalar:** (1) UK/US yazım tablosunda `below ↔ bellow`, `filing ↔ filling`,
+      `pilar ↔ pillar` vardı — İngiliz ayarında `below` her yerde **`bellow`** basılıyordu; çift-l kuralı
+      "ünlüden önceki her l" idi, artık "l ile biten bir kök + ek" (`travel+ed`). `check→cheque`,
+      `tire→tyre`, `curb→kerb`, `draft→draught`, `story→storey` da çıkarıldı (Amerikan kelimesi aynı
+      zamanda başka anlamda İngilizce). Üretilmiş dosya aynı kuralla süzüldü (nltk yok, yeniden
+      derlenmedi; betik düzeltildi). (2) Kullanıcı bulgusu: 9-10'da `pit` cümlesi "they dug a pit to
+      bury the body" — `bury` ailesi ve `smoking` çalışma anında reddediliyor ve `sentence-topics.txt`'e
+      eklendi. (3) Kullanıcı bulgusu: tanım "make more attractive…", cevap `decorated` — 106 sıfat-fiil
+      fiilin tanımını taşıyordu (`educated: give an education to`, `settled: settle into…`); tanımı fiil
+      gibi okunan fiil-olmayan ya da çekimli kelime artık sorulmuyor.
+      Doğrulama: english:check 5 bant × 2 çeşit × 300 soru/tip bulgu yok; her yeni tipten örnekler elle
+      okundu; lab 7-8 ve 10-11 390px'te taşmasız; build, math:check, i18n:check değişmedi (38).
+      **Kapsam dışı (BOOK_COVERAGE'da):** cümle tamamlama/kelime değiştirme/yer değiştirme, iki kelime
+      arasına saklı kelime, ipuçlu harf ekleme-çıkarma, zaman/yaş bulmacaları; 10-11'de okuduğunu anlama,
+      noktalama (Pack'in 3. bölümü), cümle dönüştürme, cümlede sözcük türü, benzetme/mecaz.
+      **Açık:** `sense` tipinde aynı dilbilgisel uyumsuzluk sınıfı duruyor ("load the truck" → `laden`);
+      çocuk ekranı hâlâ yok.
 - [ ] English motoru: üç bant, 19 tip, lab canlı, çocuk ekranı yok (2026-09-20/21).
       **Üç kitap, iki ayrı ders.** 8-9 "English AND Verbal Reasoning" — kelimeler arası ilişki
       soruyor. 9-10 "Assessment Papers English" ve 11-12 "10 Minute Tests English" — dilbilgisi,

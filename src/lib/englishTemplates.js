@@ -2,9 +2,11 @@
 //
 // Modelled on Bond 11+ English and Verbal Reasoning 10 Minute Tests 8-9 (Michellejoy Hughes),
 // the way src/lib/puzzleTemplates.js is modelled on the Bond non-verbal papers — and built the
-// same way: a generator per question TYPE over one shared vocabulary, so age picks a dial
-// setting rather than a set of templates. Only the 8-9 band exists today; the bands above and
-// below it are threshold changes in BANDS, not new code.
+// same way: a generator per question TYPE over one shared vocabulary. Five bands now, one per
+// Bond book: 7-8 (Verbal Reasoning Assessment Papers), 8-9 (English and Verbal Reasoning 10
+// Minute Tests), 9-10 (English Assessment Papers), 10-11 (English Assessment Papers + the 11+
+// Multiple-choice Pack) and 11-12 (10 Minute Tests English). Each band names its own types —
+// the books are different subjects, not one subject at five levels (see WORD_TYPES).
 //
 // The one real difference from the puzzle engine, and it decides everything else here: there,
 // content was DRAWN — geometry is infinite, free, and means the same thing in every language.
@@ -55,6 +57,11 @@ import {
   SYLLABLES, RIMES, RHYME_GROUPS, HOMOPHONES, SPELLING, SUFFIXED, PREFIXED, PLURALS, PASTS,
   DEFINITIONS, FAMILIAR, LEXICON_META,
 } from './englishLexicon.generated.js'
+import {
+  RELATIONS, LOGIC_SCENES, ORDER_SCENES, NAMES, POSSESSIVES, MISSPELLINGS, CONTRACTIONS,
+  HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
+  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES,
+} from './englishTables.js'
 
 const CONCRETE = new Set([
   'noun.animal', 'noun.artifact', 'noun.body', 'noun.food', 'noun.object', 'noun.plant',
@@ -126,6 +133,12 @@ const wrongSpelling = (w, variety) => !!SPELLING[w] && SPELLING[w][variety] !== 
 // `gin` sitting in options lists, each one a letter group that happened to be a word.
 const BANNED = new Set(BLOCKED)
 
+// Words that make an example SENTENCE unsuitable although each is fine on its own. The build
+// screens sentences against scripts/english/sentence-topics.txt; these were found after the
+// last build — "they dug a pit to bury the body" reached a nine-year-old as the sentence for
+// `pit` — and are also in that file, so the next build drops the sentences at source.
+const DARK_SENTENCE = new Set(['bury', 'buried', 'burial', 'burying', 'smoking'])
+
 // The lexical files a filler option may come from. WordNet sorts every sense into one of 45 of
 // these, and the split that matters here is not part of speech but whether a nine-year-old has
 // ever met the word. The first build drew fillers from the whole list at Zipf 2.8 and produced
@@ -156,7 +169,22 @@ export const WORD_TYPES = [
   'plural', 'past-tense', 'suffix', 'prefix-antonym', 'root-word', 'missing-vowel',
 ]
 
-export const TYPES = [...VR_TYPES, ...WORD_TYPES]
+// The letter-and-word puzzles of Bond's Verbal Reasoning 7-8 — what words are MADE of rather
+// than what they mean. See the section above GENERATORS.
+export const YOUNG_VR_TYPES = [
+  'anagram-pair', 'letter-code', 'front-letter', 'alpha-order', 'join-letter', 'change-pattern',
+  'word-ladder', 'not-from-letters', 'letter-analogy', 'analogy', 'rhyme-synonym',
+  'compound-front', 'pair-meaning', 'logic-grid', 'unscramble', 'letters-in-order', 'letter-sum',
+]
+
+// Spelling and grammar with one right form, from Bond English 10-11 and the 11+
+// Multiple-choice Test Papers.
+export const GRAMMAR_TYPES = [
+  'apostrophe', 'misspelt', 'ending', 'ie-ei', 'silent-letter', 'contraction',
+  'homophone-cloze', 'grammar-cloze', 'comparative', 'singular', 'gender', 'collective', 'proverb',
+]
+
+export const TYPES = [...VR_TYPES, ...WORD_TYPES, ...YOUNG_VR_TYPES, ...GRAMMAR_TYPES]
 
 export const STEM_KEYS = {
   synonym: 'eng_stem_synonym',
@@ -178,6 +206,36 @@ export const STEM_KEYS = {
   'prefix-antonym': 'eng_stem_prefix',
   'root-word': 'eng_stem_root',
   'missing-vowel': 'eng_stem_vowel',
+  'anagram-pair': 'eng_stem_anagram_pair',
+  'letter-code': 'eng_stem_letter_code',
+  'front-letter': 'eng_stem_front_letter',
+  'alpha-order': 'eng_stem_alpha_order',
+  'join-letter': 'eng_stem_join_letter',
+  'change-pattern': 'eng_stem_change_pattern',
+  'word-ladder': 'eng_stem_word_ladder',
+  'not-from-letters': 'eng_stem_not_from_letters',
+  'letter-analogy': 'eng_stem_letter_analogy',
+  analogy: 'eng_stem_analogy',
+  'rhyme-synonym': 'eng_stem_rhyme_synonym',
+  'compound-front': 'eng_stem_compound_front',
+  'pair-meaning': 'eng_stem_pair_meaning',
+  'logic-grid': 'eng_stem_logic',
+  unscramble: 'eng_stem_unscramble',
+  'letters-in-order': 'eng_stem_letters_in_order',
+  'letter-sum': 'eng_stem_letter_sum',
+  apostrophe: 'eng_stem_apostrophe',
+  misspelt: 'eng_stem_misspelt',
+  ending: 'eng_stem_ending',
+  'ie-ei': 'eng_stem_ie_ei',
+  'silent-letter': 'eng_stem_silent',
+  contraction: 'eng_stem_contraction',
+  'homophone-cloze': 'eng_stem_cloze',
+  'grammar-cloze': 'eng_stem_cloze',
+  comparative: 'eng_stem_cloze',
+  singular: 'eng_stem_singular',
+  gender: 'eng_stem_gender',
+  collective: 'eng_stem_collective',
+  proverb: 'eng_stem_proverb',
 }
 
 // ── bands ────────────────────────────────────────────────────────────────────────────────
@@ -193,6 +251,30 @@ export const STEM_KEYS = {
 // `answer`/`option` moved and a `types` line — which is the claim this file has to keep true,
 // so nothing below reads `band.key`.
 export const BANDS = {
+  // ── 7-8 ─────────────────────────────────────────────────────────────────────────────────
+  // J M Bond's Verbal Reasoning Assessment Papers 7-8: 22 papers of 30, read end to end. Before
+  // this band existed a seven-year-old got the 8-9 book's letter-pair and hidden-word puzzles
+  // with a lower frequency bar, which is a harder book with smaller words — not the book for
+  // their age. This one asks what words are MADE of: codes, anagrams, a letter that starts four
+  // words, the word between TEN and FIN. Its meaning questions are the plain ones (closest,
+  // most opposite, odd two out), kept from the older family.
+  '7-8': {
+    book: 'Bond Verbal Reasoning Assessment Papers 7-8 (J M Bond)',
+    types: [...YOUNG_VR_TYPES, 'synonym', 'antonym', 'odd-two'],
+    options: 5,
+    // Every dial a notch above 8-9: the book's words are `dog`, `pen`, `bus`, `cold`, `book`.
+    answer: 40,
+    option: 32,
+    stem: 42,
+    stemMax: 55,
+    familiarOnly: true,
+    filler: 44,
+    gridSize: 12,
+    mask: [2, 3],
+    syllables: [1, 2],
+    hidden: 42,
+  },
+
   '8-9': {
     book: 'Bond 11+ English and Verbal Reasoning 10 Minute Tests 8-9 (Michellejoy Hughes)',
     // This band's book is the only one of the three that is a VERBAL REASONING paper, so it is
@@ -259,6 +341,32 @@ export const BANDS = {
     hidden: 40,
   },
 
+  // ── 10-11 ───────────────────────────────────────────────────────────────────────────────
+  // Bond English Assessment Papers 10-11 Book 1 (10 papers of 100) and the 11+ English
+  // Multiple-choice Test Papers Pack 2 (four papers). The first is nearly all written answers;
+  // the second is Bond's own answer to how that material goes multiple-choice — find the
+  // misspelt word, choose the word that makes the sentence Standard English — and its shapes
+  // are the ones used. Before this band, an eleven-year-old was given the 11-12 book.
+  '10-11': {
+    book: 'Bond English Assessment Papers 10-11 Book 1 + 11+ English Multiple-choice Test Papers Pack 2',
+    types: ['synonym', 'antonym', 'odd-synonym', 'definition', 'homophone', 'plural',
+      'past-tense', 'suffix', 'prefix-antonym', 'root-word', 'missing-vowel',
+      'alpha-order', ...GRAMMAR_TYPES],
+    options: 5,
+    answer: 32,
+    option: 25,
+    stem: 36,
+    stemMax: 55,
+    filler: 38,
+    gridSize: 12,
+    mask: [3, 4],
+    syllables: [3, 4],
+    hidden: 38,
+    // "Put these words in alphabetical order: procure, procession, proclaim, proceed, process,
+    // processor." Five words that share their first three letters.
+    alphaShared: 3,
+  },
+
   // ── 11-12 ───────────────────────────────────────────────────────────────────────────────
   // The 10 Minute Tests for 11+/12+, which sorts its own tests into Spelling, Vocabulary,
   // Sentences, Comprehension and Mixed. Sentences and Comprehension need a passage bank and
@@ -290,10 +398,50 @@ export const BANDS = {
 
 export const BAND_KEYS = Object.keys(BANDS)
 
+// Types built from a hand-written table can only pose as many different questions as the table
+// has rows. The audit's variety floor reads this, so a short table is a known size rather than
+// a failure — and a table that SHRINKS below it still fails.
+export const POOL_LIMITS = {
+  proverb: PROVERBS.length,
+  'grammar-cloze': GRAMMAR_CLOZE.length,
+}
+
 // What the book has that this engine does not — data rather than a comment, so the audit can
 // check it and so it cannot quietly go stale after a type ships. Same contract as the puzzle
 // engine's BOOK_COVERAGE.
 export const BOOK_COVERAGE = {
+  '7-8': {
+    book: BANDS['7-8'].book,
+    missing: [
+      'sentence completion — "The (dog, baby, kitten) was put in its (bucket, net, pram)": three\n'
+      + '        brackets per sentence and one sensible reading. Needs written sentences',
+      'change one word so the sentence makes sense, and find the two words that swapped places —\n'
+      + '        both need a sentence bank and a check that only one repair works',
+      'the four-letter word hidden across two words ("extra time" → rati is not; "hotel by"\n'
+      + '        → elby is not) — needs sentences written so exactly one span is a word',
+      'remove or add one letter with a clue ("BREAK, a part of a bird" → beak) — needs clues a\n'
+      + '        seven-year-old can read, which WordNet definitions are not',
+      'time, date and age puzzles ("If May 1st is a Thursday…", "Meera is half as old as John")\n'
+      + '        — arithmetic, and the maths module already asks it',
+      'number sequences, crosswords, weather-map reading, "a TREE always has (roots)"',
+      'sorting words into two labelled groups — a drag-and-drop, not a choice of five',
+    ],
+  },
+  '10-11': {
+    book: BANDS['10-11'].book,
+    missing: [
+      'comprehension — every paper opens with a passage (Phantom Tollbooth, Alice, Anne Frank,\n'
+      + '        Walt Whitman) and most marks hang off it. Deliberate: that is the Reading module',
+      'punctuation — the Pack 2 section that asks which extract shows the missing mark, and the\n'
+      + '        book\'s "rewrite this passage correctly". Needs written passages',
+      'sentence rewriting: reported speech, active/passive, question/statement, double\n'
+      + '        negatives, clauses and conjunctions, fronted adverbials',
+      'word class in a sentence (underline the preposition, the object, the pronoun)',
+      'similes, metaphors, formal register, abbreviations, onomatopoeia — open answers',
+      'forming nouns and adjectives from a word in bold (Greece → Greek, begin → beginning)',
+      'words that would not have been used 200 years ago; words that apply to both sexes',
+    ],
+  },
   '9-10': {
     book: BANDS['9-10'].book,
     missing: [
@@ -336,8 +484,10 @@ export const BOOK_COVERAGE = {
 
 export function bandForAge(age) {
   const n = Number(age) || 8
+  if (n <= 8) return '7-8'
   if (n <= 9) return '8-9'
   if (n <= 10) return '9-10'
+  if (n <= 11) return '10-11'
   return '11-12'
 }
 
@@ -1222,6 +1372,47 @@ function genOddSynonym(r, band, seed) {
   }
 }
 
+/**
+ * Does this definition read as a VERB — "make more attractive by adding ornament", "give an
+ * education to", "to travel for the purpose of discovery"?
+ *
+ * WordNet files a participle under its verb's gloss, and the lexicon kept that gloss beside the
+ * adjective: `decorated` was defined as "make more attractive by adding ornament, colour, etc.",
+ * whose grammatical answer is `decorate`. A child who knows exactly what the definition means
+ * is then marked right only by choosing a word that does not fit it. 106 entries had this
+ * shape. "to a great extent or degree" is the other use of `to` and is fine — it is how an
+ * adverb is defined.
+ */
+// The verbs WordNet glosses open with whose MAIN sense the lexicon files as a noun or an
+// adjective — `make` is filed under "a make of car", so the lexicon alone said "make more
+// attractive…" was not a verb.
+const GLOSS_VERBS = new Set(['be', 'make', 'give', 'take', 'put', 'bring', 'cause', 'come', 'go',
+  'get', 'have', 'keep', 'set', 'remove', 'move', 'become', 'turn', 'carry', 'hold', 'place',
+  'form', 'change', 'show', 'fail', 'free', 'rid', 'supply', 'provide', 'express', 'declare'])
+
+function glossReadsAsVerb(d) {
+  const [first, second] = d.split(/[ ,;]+/)
+  const isVerb = (w) => GLOSS_VERBS.has(w) || (WORD_LEX[w] || '').startsWith('verb')
+  return isVerb(first) || (first === 'to' && isVerb(second))
+}
+
+// How an ADJECTIVE's definition opens. A participle filed as an adjective (`learned`, `crooked`,
+// `distracted`, `expected`) whose definition does not open like this is carrying its verb's
+// gloss — "gain knowledge or skills", "bend or cause to bend" — which the verb list above
+// cannot catch word by word.
+const ADJ_GLOSS = /^(having|not|being|of|in|on|at|full|showing|marked|characterized|made|done|very|a|an|the|used|capable|relating|lacking|affected|resembling|containing|able|with|without|covered|filled|caused|feeling|so|causing|given|free|set|fixed|provided|possessing|exhibiting|serving|well|highly|fully|completely|thoroughly|deeply|easily|by|from|out|no|more|most|less|too|\()/
+
+/** True when the definition cannot be answered by this word as written. */
+function glossMismatch(w, d) {
+  const pos = partOfSpeech(w)
+  if (pos !== 'verb' && glossReadsAsVerb(d)) return true
+  // An inflected verb against its base form's gloss: "settle into a position" is `settle`, not
+  // `settled`, whatever the lexicon files `settled` under.
+  const base = /ied$/.test(w) ? w.slice(0, -3) + 'y' : /ed$/.test(w) ? w.slice(0, -2) : null
+  if (base && (base in WORD_Z || (base + 'e') in WORD_Z) && glossReadsAsVerb(d)) return true
+  return pos === 'adj' && /ed$/.test(w) && !ADJ_GLOSS.test(d)
+}
+
 function genDefinition(r, band, seed) {
   // "Write one word for each definition." WordNet is a dictionary, so for once the question and
   // its answer are the same lookup — and the distractors are ordinary words of the same class,
@@ -1233,7 +1424,8 @@ function genDefinition(r, band, seed) {
   // word is in the lexicon, and "not in it, so wave it through" is backwards: `larvae` is not
   // a lemma and is not easy.
   const words = Object.keys(DEFINITIONS).filter(
-    w => askable(band, w) && (!band.familiarOnly || DEFINITIONS[w][1]))
+    w => askable(band, w) && (!band.familiarOnly || DEFINITIONS[w][1])
+      && !glossMismatch(w, DEFINITIONS[w][0]))
   if (!words.length) return null
   const word = pickOne(r, words)
   const avoid = new Set([word])
@@ -1635,6 +1827,1087 @@ function genMissingVowel(r, band, seed) {
   return null
 }
 
+
+// ── the letter-and-word puzzles (Bond Verbal Reasoning 7-8) ───────────────────────────────
+//
+// Seventeen generators for the youngest band, from J M Bond's Verbal Reasoning Assessment
+// Papers 7-8 (22 papers × 30 questions, read end to end). That book is a different animal from
+// every other one this engine was built from: it hardly asks what words MEAN. It asks what they
+// are MADE of — which two use the same letters, which letter starts all four, what BAT is in a
+// code where TABLE is 12345, which word sits between TEN and FIN. That is exactly the kind of
+// question a lexicon can answer with certainty, so almost all of it is generated here.
+//
+// Where the whole family stands on one idea: a letter puzzle has an answer that can be CHECKED,
+// not argued. Every validator below recomputes the answer from the prompt and counts how many
+// options satisfy it. The words these puzzles make are read against `anyWord`, which is
+// deliberately generous — the lexicon holds lemmas, so `cats` is not in it, and a distractor
+// that spells `cats` is a second right answer to a child whatever the lexicon says.
+
+const MEMO = new Map()
+const memo = (key, build) => {
+  if (!MEMO.has(key)) MEMO.set(key, build())
+  return MEMO.get(key)
+}
+
+const plainWord = (w) => /^[a-z]+$/.test(w) && !BANNED.has(w) && !SPELLING[w]
+
+/** Is this string an English word in any form a child would recognise — lemma or inflection?
+ *  Used to disqualify distractors, so it leans towards yes. */
+function anyWord(w) {
+  if (!w || BANNED.has(w)) return !!w && w in WORD_Z
+  if (w in WORD_Z) return true
+  const base = [
+    w.endsWith('s') && w.slice(0, -1), w.endsWith('es') && w.slice(0, -2),
+    w.endsWith('ies') && w.slice(0, -3) + 'y', w.endsWith('ed') && w.slice(0, -2),
+    w.endsWith('ed') && w.slice(0, -1), w.endsWith('ing') && w.slice(0, -3),
+    w.endsWith('ing') && w.slice(0, -3) + 'e', w.endsWith('er') && w.slice(0, -2),
+    w.endsWith('er') && w.slice(0, -1), w.endsWith('est') && w.slice(0, -3),
+    w.endsWith('ly') && w.slice(0, -2),
+  ]
+  return base.some(b => b && b.length >= 2 && b in WORD_Z)
+}
+
+/** Short words a child reads, for building letter puzzles out of.
+ *
+ *  In the youngest band this is Dale-Chall and nothing else — not `familiar()`, which also lets
+ *  in any concrete noun. That escape is right for a meaning question, where `saucepan` is a
+ *  word a child knows; it is wrong here, where the puzzle picks words by their LETTERS and so
+ *  finds every short word the lexicon has. The first sample unscrambled ANCT into `cant` and
+ *  put `mike` on an alphabetical-order line. */
+const kidWords = (band, min, max, bar = band.answer) => memo(
+  `kid|${bar}|${min}|${max}|${band.familiarOnly ? 1 : 0}`,
+  () => Object.keys(WORD_Z).filter(w => plainWord(w) && w.length >= min && w.length <= max
+    && z(w) >= bar && (!band.familiarOnly || FAMILIAR_SET.has(w))))
+
+const letterKey = (w) => [...w].sort().join('')
+
+/** How many letters two words share, counted with repeats. */
+function sharedCount(a, b) {
+  const pool = [...b]
+  let n = 0
+  for (const ch of a) {
+    const i = pool.indexOf(ch)
+    if (i >= 0) { n++; pool.splice(i, 1) }
+  }
+  return n
+}
+
+/** Can `small` be spelled from the letters of `big`, each letter used once? */
+const spellableFrom = (small, big) => sharedCount(small, big) === small.length
+
+const ALPHA = 'abcdefghijklmnopqrstuvwxyz'
+
+/** A result row shaped like every other generator's. */
+function finish(r, type, seed, prompt, answers, distractors, rule, count) {
+  const rows = [
+    ...answers.map(text => ({ text, why: null })),
+    ...distractors.slice(0, count - answers.length),
+  ]
+  if (rows.length < count) return null
+  const shuffled = shuffle(r, rows)
+  return {
+    seed, band: null, type, stem_key: STEM_KEYS[type],
+    prompt,
+    options: shuffled,
+    correct: shuffled.map((o, i) => (o.why === null ? i : -1)).filter(i => i >= 0),
+    pick: answers.length,
+    rule,
+  }
+}
+
+function genAnagramPair(r, band, seed) {
+  // "Underline the two words which are made from the same letters. TAR: ATE TAR TEA ALE ARE."
+  // The wrong three are the book's kind too: each one a letter away from the pair, so the child
+  // has to check the letters rather than notice which words look alike.
+  const words = kidWords(band, 3, 5)
+  const groups = memo(`anagram|${band.answer}|${band.familiarOnly}`, () => {
+    const m = new Map()
+    for (const w of words) {
+      const k = letterKey(w)
+      if (!m.has(k)) m.set(k, [])
+      m.get(k).push(w)
+    }
+    return [...m.values()].filter(g => g.length >= 2)
+  })
+  if (!groups.length) return null
+  const [a, b] = shuffle(r, pickOne(r, groups))
+  const key = letterKey(a)
+  const near = shuffle(r, words.filter(w => w.length === a.length && letterKey(w) !== key
+    && sharedCount(w, a) >= a.length - 1))
+  const picked = []
+  for (const w of near) {
+    if (picked.length >= 3) break
+    // No second pair among the wrong three, or the question has two answers.
+    if (picked.some(p => letterKey(p) === letterKey(w))) continue
+    if (sameWordDifferentEnding(w, a) || sameWordDifferentEnding(w, b)) continue
+    picked.push(w)
+  }
+  if (picked.length < 3) return null
+  return finish(r, 'anagram-pair', seed, {}, [a, b],
+    picked.map(text => ({ text, why: 'one-letter-different' })),
+    { kind: 'anagram-pair', words: [a, b] }, 5)
+}
+
+function genLetterCode(r, band, seed) {
+  // "If the code for TABLE is 1 2 3 4 5, what are the codes for BAT, EAT, LATE?" and the other
+  // way round: "The letters SADM are 1 2 3 4 in code. What does 1 2 3 stand for?"
+  const keys = kidWords(band, 4, 6).filter(w => new Set(w).size === w.length)
+  if (!keys.length) return null
+  const key = pickOne(r, keys)
+  const letters = new Set(key)
+  const targets = kidWords(band, 3, 5).filter(w => w !== key
+    && [...w].every(c => letters.has(c)) && !sameWordDifferentEnding(w, key))
+  if (targets.length < 3) return null
+  const code = (w) => [...w].map(c => key.indexOf(c) + 1).join(' ')
+  const decode = targets.length >= 5 && r() < 0.5
+
+  if (decode) {
+    const picks = []
+    for (const w of shuffle(r, targets)) {
+      if (picks.length >= 5) break
+      if (picks.some(p => sameWordDifferentEnding(p, w))) continue
+      picks.push(w)
+    }
+    if (picks.length < 5) return null
+    const [answer, ...rest] = picks
+    return finish(r, 'letter-code', seed,
+      { key: key.toUpperCase(), keyCode: code(key), code: code(answer), decode: true },
+      [answer], rest.map(text => ({ text, why: 'other-code' })),
+      { kind: 'letter-code', key, word: answer, decode: true }, 5)
+  }
+
+  const answer = pickOne(r, targets)
+  const right = code(answer)
+  const digits = right.split(' ')
+  const seen = new Set([right])
+  const wrong = []
+  const tryAdd = (arr, why) => {
+    const s = arr.join(' ')
+    if (seen.has(s)) return
+    seen.add(s)
+    wrong.push({ text: s, why })
+  }
+  // The book's traps are the ones a child makes: the right digits in the wrong order, and a
+  // digit read off the neighbouring letter.
+  tryAdd([...digits].reverse(), 'wrong-order')
+  for (let i = 0; i + 1 < digits.length; i++) {
+    const d = [...digits]
+    ;[d[i], d[i + 1]] = [d[i + 1], d[i]]
+    tryAdd(d, 'wrong-order')
+  }
+  for (let i = 0; i < digits.length; i++) {
+    for (const delta of [1, -1]) {
+      const v = Number(digits[i]) + delta
+      if (v < 1 || v > key.length) continue
+      const d = [...digits]
+      d[i] = String(v)
+      tryAdd(d, 'next-letter')
+    }
+  }
+  if (wrong.length < 4) return null
+  return finish(r, 'letter-code', seed,
+    { key: key.toUpperCase(), keyCode: code(key), word: answer.toUpperCase() },
+    [right], shuffle(r, wrong), { kind: 'letter-code', key, word: answer, decode: false }, 5)
+}
+
+function genFrontLetter(r, band, seed) {
+  // "Which one letter can be added to the front of all of these words to make new words?
+  // _aste _ind _ish _ater" — w. The pieces are not words themselves and do not need to be.
+  const byLetter = memo(`front|${band.answer}|${band.familiarOnly}`, () => {
+    const m = new Map()
+    for (const w of kidWords(band, 4, 6)) {
+      const tail = w.slice(1)
+      if (BANNED.has(tail)) continue
+      if (!m.has(w[0])) m.set(w[0], [])
+      m.get(w[0]).push(tail)
+    }
+    return m
+  })
+  const letters = [...byLetter.keys()].filter(l => byLetter.get(l).length >= 8)
+  if (!letters.length) return null
+  const L = pickOne(r, letters)
+  const tails = shuffle(r, byLetter.get(L)).slice(0, 4)
+  const fits = (m) => tails.filter(t => anyWord(m + t)).length
+  // The traps first: a letter that makes a word with two or three of the four is the one a
+  // child picks after checking only the first piece.
+  const pool = shuffle(r, ALPHA.split('').filter(m => m !== L && fits(m) < 4))
+  const traps = pool.filter(m => fits(m) >= 2)
+  const rest = pool.filter(m => fits(m) < 2)
+  const distractors = [...traps.map(text => ({ text, why: 'fits-some' })),
+    ...rest.map(text => ({ text, why: 'not-a-word' }))]
+  return finish(r, 'front-letter', seed, { tails }, [L], distractors,
+    { kind: 'front-letter', letter: L, words: tails.map(t => L + t) }, 5)
+}
+
+function genAlphaOrder(r, band, seed) {
+  // "In each line, underline the word which would come third if the words were placed in
+  // alphabetical order." At 7-8 the five start with different letters, as the book's first
+  // lines do; in the 10-11 English book they share their first three letters (procure,
+  // procession, proclaim, proceed, process), which is where the skill actually lives.
+  const shared = band.alphaShared || 0
+  let words
+  if (!shared) {
+    const pool = kidWords(band, 3, 7)
+    words = []
+    for (const w of shuffle(r, pool)) {
+      if (words.length >= 5) break
+      if (words.some(x => x[0] === w[0] || sameWordDifferentEnding(x, w))) continue
+      words.push(w)
+    }
+  } else {
+    const groups = memo(`alpha|${shared}|${band.option}`, () => {
+      const m = new Map()
+      for (const w of kidWords(band, shared + 3, 11, band.answer)) {
+        const k = w.slice(0, shared)
+        if (!m.has(k)) m.set(k, [])
+        m.get(k).push(w)
+      }
+      return [...m.values()].filter(g => g.length >= 5)
+    })
+    if (!groups.length) return null
+    words = []
+    for (const w of shuffle(r, pickOne(r, groups))) {
+      if (words.length >= 5) break
+      if (words.some(x => x.startsWith(w) || w.startsWith(x))) continue
+      words.push(w)
+    }
+  }
+  if (words.length < 5) return null
+  const nth = 2 + Math.floor(r() * 3)
+  const sorted = [...words].sort()
+  const answer = sorted[nth - 1]
+  return finish(r, 'alpha-order', seed, { nth }, [answer],
+    words.filter(w => w !== answer).map(text => ({ text, why: 'wrong-place' })),
+    { kind: 'alpha-order', nth, order: sorted }, 5)
+}
+
+function genJoinLetter(r, band, seed) {
+  // "Find the letter which will end the first word and start the second word. peac (h) ome."
+  const words = kidWords(band, 3, 5)
+  const starts = memo(`starts|${band.answer}|${band.familiarOnly}`, () => {
+    const m = new Map()
+    for (const w of words) {
+      if (!m.has(w[0])) m.set(w[0], [])
+      m.get(w[0]).push(w)
+    }
+    return m
+  })
+  const first = pickOne(r, words)
+  const L = first.slice(-1)
+  const second = pickOne(r, (starts.get(L) || []).filter(w => w !== first))
+  if (!second) return null
+  const left = first.slice(0, -1)
+  const right = second.slice(1)
+  if (left.length < 2 || right.length < 2 || BANNED.has(left) || BANNED.has(right)) return null
+  const both = (m) => anyWord(left + m) && anyWord(m + right)
+  const pool = shuffle(r, ALPHA.split('').filter(m => m !== L && !both(m)))
+  const halfway = pool.filter(m => anyWord(left + m) || anyWord(m + right))
+  const rest = pool.filter(m => !anyWord(left + m) && !anyWord(m + right))
+  return finish(r, 'join-letter', seed, { left, right }, [L],
+    [...halfway.map(text => ({ text, why: 'fits-one-side' })),
+      ...rest.map(text => ({ text, why: 'not-a-word' }))],
+    { kind: 'join-letter', words: [first, second] }, 5)
+}
+
+// ── change-pattern: "bind, hind  bare, hare  but, ?" ──────────────────────────────────────
+// Every rule a pair of words could be following, so a question can prove its pattern is the
+// only reading of the two examples. Positions are counted from both ends, because `pit → pot`
+// is "change the second letter" and also "change the middle letter", and on a four-letter
+// third word those two disagree.
+function rulesOf(a, b) {
+  const out = []
+  if (a.length === b.length) {
+    const diff = [...a].map((c, i) => (c !== b[i] ? i : -1)).filter(i => i >= 0)
+    if (diff.length === 1) {
+      const i = diff[0]
+      out.push(`sub:${i}:${a[i]}:${b[i]}`, `subr:${a.length - 1 - i}:${a[i]}:${b[i]}`)
+    }
+  }
+  if (b.length === a.length + 1) {
+    for (let i = 0; i <= a.length; i++) {
+      if (a.slice(0, i) + b[i] + a.slice(i) === b) {
+        out.push(`ins:${i}:${b[i]}`, `insr:${a.length - i}:${b[i]}`)
+      }
+    }
+  }
+  if (a.length === b.length + 1 && a.slice(1) === b) out.push('drop')
+  if (a.length > 2 && [...a].reverse().join('') === b) out.push('rev')
+  return out
+}
+
+function applyRule(rule, w) {
+  const [kind, n, x, y] = rule.split(':')
+  const i = Number(n)
+  if (kind === 'sub') return w[i] === x ? w.slice(0, i) + y + w.slice(i + 1) : null
+  if (kind === 'subr') {
+    const j = w.length - 1 - i
+    return j >= 0 && w[j] === x ? w.slice(0, j) + y + w.slice(j + 1) : null
+  }
+  if (kind === 'ins') return i <= w.length ? w.slice(0, i) + x + w.slice(i) : null
+  if (kind === 'insr') {
+    const j = w.length - i
+    return j >= 0 ? w.slice(0, j) + x + w.slice(j) : null
+  }
+  if (kind === 'drop') return w.slice(1)
+  if (kind === 'rev') return [...w].reverse().join('')
+  return null
+}
+
+function genChangePattern(r, band, seed) {
+  // "Change the first word of the third pair in the same way as the other pairs to give a new
+  // word." pit → pot, lit → lot, file → ? The four changes the book makes: one letter swapped
+  // for another in the same place, one letter added, the first letter dropped, and the word
+  // turned backwards.
+  const words = kidWords(band, 3, 5)
+  const set = new Set(words)
+  const byRule = memo(`change|${band.answer}|${band.familiarOnly}`, () => {
+    const m = new Map()
+    const add = (rule, a, b) => {
+      if (!m.has(rule)) m.set(rule, [])
+      m.get(rule).push([a, b])
+    }
+    for (const a of words) {
+      for (let i = 0; i < a.length; i++) {
+        for (const c of ALPHA) {
+          if (c === a[i]) continue
+          const b = a.slice(0, i) + c + a.slice(i + 1)
+          if (set.has(b)) add(`sub:${i}:${a[i]}:${c}`, a, b)
+        }
+      }
+      for (let i = 0; i <= a.length; i++) {
+        for (const c of ALPHA) {
+          const b = a.slice(0, i) + c + a.slice(i)
+          if (set.has(b)) add(`ins:${i}:${c}`, a, b)
+        }
+      }
+      if (set.has(a.slice(1)) && a.length >= 4) add('drop', a, a.slice(1))
+      const rev = [...a].reverse().join('')
+      if (rev !== a && set.has(rev)) add('rev', a, rev)
+    }
+    return [...m.entries()].filter(([, pairs]) => pairs.length >= 3)
+  })
+  if (!byRule.length) return null
+  const [rule, pairs] = pickOne(r, byRule)
+  const [p1, p2, p3] = shuffle(r, pairs)
+  if (new Set([p1[0], p2[0], p3[0], p1[1], p2[1], p3[1]]).size < 6) return null
+  // Every rule both examples obey, applied to the third word. If two of them make different
+  // real words, the examples do not settle the pattern and the question has two answers.
+  const shared = rulesOf(...p1).filter(x => rulesOf(...p2).includes(x))
+  const readings = new Set(shared.map(x => applyRule(x, p3[0])).filter(w => w && anyWord(w)))
+  if (readings.size !== 1 || !readings.has(p3[1])) return null
+
+  const x = p3[0]
+  const answer = p3[1]
+  const candidates = new Set()
+  // Other one-letter changes to the third word: right idea, wrong letter or wrong place.
+  for (let i = 0; i < x.length; i++) {
+    for (const c of ALPHA) {
+      const w = x.slice(0, i) + c + x.slice(i + 1)
+      if (w !== x && set.has(w)) candidates.add(w)
+    }
+  }
+  for (const w of words) if (w !== x && letterKey(w) === letterKey(x)) candidates.add(w)
+  candidates.delete(answer)
+  const distractors = shuffle(r, [...candidates]).filter(w => !readings.has(w)
+    && !sameWordDifferentEnding(w, answer)).map(text => ({ text, why: 'other-change' }))
+  return finish(r, 'change-pattern', seed,
+    { pairs: [p1, p2], word: x }, [answer], distractors,
+    { kind: 'change-pattern', rule, word: x }, 5)
+}
+
+function genWordLadder(r, band, seed) {
+  // "Change the first word into the last word, by changing one letter at a time and making a
+  // new, different word in the middle. TEN → TIN → FIN."
+  const words = kidWords(band, 3, 4)
+  const nb = memo(`ladder|${band.answer}|${band.familiarOnly}`, () => {
+    const set = new Set(words)
+    const m = new Map()
+    for (const a of words) {
+      const out = []
+      for (let i = 0; i < a.length; i++) {
+        for (const c of ALPHA) {
+          const b = a.slice(0, i) + c + a.slice(i + 1)
+          if (b !== a && set.has(b)) out.push(b)
+        }
+      }
+      m.set(a, out)
+    }
+    return m
+  })
+  const s = pickOne(r, words)
+  const mid = pickOne(r, nb.get(s) || [])
+  if (!mid) return null
+  const diffAt = (a, b) => [...a].findIndex((c, i) => c !== b[i])
+  const ends = (nb.get(mid) || []).filter(e => e !== s && diffAt(s, mid) !== diffAt(mid, e)
+    && [...s].filter((c, i) => c !== e[i]).length === 2)
+  const e = pickOne(r, ends)
+  if (!e) return null
+  const one = (a, b) => a.length === b.length && [...a].filter((c, i) => c !== b[i]).length === 1
+  const bridges = (w) => one(s, w) && one(w, e)
+  const fromStart = (nb.get(s) || []).filter(w => w !== e && !bridges(w))
+  const toEnd = (nb.get(e) || []).filter(w => w !== s && !bridges(w))
+  const distractors = [
+    ...shuffle(r, fromStart).map(text => ({ text, why: 'only-from-first' })),
+    ...shuffle(r, toEnd).map(text => ({ text, why: 'only-to-last' })),
+  ]
+  const seen = new Set([mid, s, e])
+  const uniq = distractors.filter(d => (seen.has(d.text) ? false : seen.add(d.text)))
+  const mixed = shuffle(r, uniq).slice(0, 3)
+  if (mixed.length < 3) return null
+  return finish(r, 'word-ladder', seed, { from: s, to: e }, [mid], mixed,
+    { kind: 'word-ladder', from: s, to: e, middle: mid }, 4)
+}
+
+function genNotFromLetters(r, band, seed) {
+  // "Underline the one word which cannot be made from the letters of the word in capital
+  // letters. HEART: the rat rot tar" — `rot`. The odd one is always ONE letter short of being
+  // spellable, as the book's is, so it cannot be spotted by length or by look.
+  const bigs = kidWords(band, 6, 9)
+  const smalls = kidWords(band, 3, 5)
+  const big = pickOne(r, bigs)
+  const can = shuffle(r, smalls.filter(w => spellableFrom(w, big) && !sameWordDifferentEnding(w, big)))
+  const inside = []
+  for (const w of can) {
+    if (inside.length >= 4) break
+    if (inside.some(x => sameWordDifferentEnding(x, w))) continue
+    inside.push(w)
+  }
+  if (inside.length < 4) return null
+  const cannot = shuffle(r, smalls.filter(w => !spellableFrom(w, big)
+    && sharedCount(w, big) === w.length - 1 && !inside.some(x => sameWordDifferentEnding(x, w))))
+  const outsider = cannot[0]
+  if (!outsider) return null
+  return finish(r, 'not-from-letters', seed, { word: big }, [outsider],
+    inside.map(text => ({ text, why: 'can-be-made' })),
+    { kind: 'not-from-letters', word: big }, 5)
+}
+
+// Letter patterns, as the book writes them: "AB is to CD as EF is to ?", "B is to D as F is
+// to ?", "BA is to DC", "AZ is to BY as CX is to ?", "A2 is to B3 as C4 is to ?".
+const LETTER_PATTERNS = [
+  { name: 'pair', make: (i) => ALPHA[i] + ALPHA[i + 1], span: 1 },
+  { name: 'single', make: (i) => ALPHA[i], span: 0 },
+  { name: 'back-pair', make: (i) => ALPHA[i + 1] + ALPHA[i], span: 1 },
+  { name: 'mirror', make: (i) => ALPHA[i] + ALPHA[25 - i], span: 0, max: 12 },
+  { name: 'number', make: (i) => ALPHA[i] + String(i + 2), span: 0, max: 9 },
+]
+
+function genLetterAnalogy(r, band, seed) {
+  // "Fill in the missing letters. The alphabet has been written out to help you."
+  const pat = pickOne(r, LETTER_PATTERNS)
+  const step = pat.name === 'mirror' || pat.name === 'number' ? 1 : 1 + Math.floor(r() * 3)
+  // The highest start a pattern can take and still be letters: a pair needs the letter after.
+  const last = Math.min(25 - pat.span, pat.max ?? 25)
+  const room = last - step
+  if (room < 2) return null
+  const p = Math.floor(r() * (room + 1))
+  let q = Math.floor(r() * (room + 1))
+  if (q === p) q = (p + step + 1) % (room + 1)
+  if (q === p) return null
+  const a = pat.make(p).toUpperCase()
+  const b = pat.make(p + step).toUpperCase()
+  const c = pat.make(q).toUpperCase()
+  const answer = pat.make(q + step).toUpperCase()
+  // A pattern that lands back on its own example ("PO is to SR as ML is to PO") is correct and
+  // reads as a trick.
+  if (answer === a || answer === b) return null
+  const near = new Set()
+  for (const d of [-1, 1, 2]) {
+    const i = q + step + d
+    if (i >= 0 && i <= last) near.add(pat.make(i).toUpperCase())
+  }
+  if (answer.length === 2 && /^[A-Z]{2}$/.test(answer)) near.add(answer[1] + answer[0])
+  near.add(c)
+  for (const x of [answer, a, b]) near.delete(x)
+  return finish(r, 'letter-analogy', seed, { a, b, c }, [answer],
+    shuffle(r, [...near]).map(text => ({ text, why: 'off-by-one' })),
+    { kind: 'letter-analogy', pattern: pat.name, step, q }, 4)
+}
+
+function genAnalogy(r, band, seed) {
+  // "Complete the following expressions by underlining the missing word. Frog is to tadpole as
+  // swan is to (duckling, baby, cygnet)." The book's wrong answers are the ones this builds:
+  // the same relation for another animal (duckling), a word too general to be it (baby), and
+  // the word itself (dog, when the question was dog's young).
+  const names = Object.keys(RELATIONS)
+  const rel = pickOne(r, names)
+  const table = RELATIONS[rel]
+  const keys = shuffle(r, Object.keys(table))
+  if (keys.length < 3) return null
+  const [a, b] = keys
+  const A = pickOne(r, table[a])
+  const accepted = new Set(table[b])
+  const B = pickOne(r, table[b])
+  if (table[a].some(x => accepted.has(x))) return null
+  const wrong = []
+  const seen = new Set([B, ...accepted])
+  const add = (text, why) => {
+    if (!text || seen.has(text)) return
+    seen.add(text)
+    wrong.push({ text, why })
+  }
+  // The same word, or what the same word is in ANOTHER relation: `bark` for a dog's young.
+  for (const other of shuffle(r, names)) {
+    if (other !== rel && RELATIONS[other][b]) add(pickOne(r, RELATIONS[other][b]), 'other-relation')
+  }
+  if (rel !== 'opposite') add(b, 'the-same-word')
+  for (const k of keys.slice(2)) add(pickOne(r, table[k]), 'same-relation-other-word')
+  if (wrong.length < 3) return null
+  return finish(r, 'analogy', seed, { a, A, b }, [B], wrong.slice(0, 3),
+    { kind: 'analogy', relation: rel, word: b }, 4)
+}
+
+function genRhymeSynonym(r, band, seed) {
+  // "Find a word that is similar in meaning to the word in capital letters and that rhymes with
+  // the second word. CABLE, tyre → wire." Two conditions, so two traps: a word that rhymes but
+  // means something else, and a word from another clue that does not rhyme. The clue and its
+  // answer come from a hand-written table (englishTables.js explains why); the rhyming cue is
+  // drawn from the answer's rhyme group, so the same clue is asked with a different second word.
+  const v = band.variety
+  const table = RHYME_GROUPS[v]
+  const ok = (w) => z(w) >= band.filler && plainWord(w) && (!band.familiarOnly || FAMILIAR_SET.has(w))
+    && (RIMES[v]?.[w] || []).length === 1
+  const [clue, answer] = pickOne(r, RHYME_CLUES)
+  const keys = RIMES[v]?.[answer] || []
+  if (keys.length !== 1) return null
+  const rhymers = (table[keys[0]] || []).filter(w => ok(w) && w !== answer
+    && !sameWordDifferentEnding(w, answer) && !related(w, answer) && !sharesNeighbour(w, answer))
+  if (rhymers.length < 2) return null
+  const [cue, ...others] = shuffle(r, rhymers)
+  const accepted = new Set(RHYME_CLUES.filter(([c]) => c === clue).map(([, a]) => a))
+  const soundOnly = others.slice(0, 2).map(text => ({ text, why: 'rhymes-only' }))
+  const meaningOnly = shuffle(r, RHYME_CLUES.map(([, a]) => a)).filter(w => !accepted.has(w)
+    && !couldPassForRhyme(w, cue, v) && !related(w, answer))
+  const distractors = [...soundOnly]
+  for (const w of meaningOnly) {
+    if (distractors.length >= 4) break
+    if (distractors.some(d => d.text === w)) continue
+    distractors.push({ text: w, why: 'means-only' })
+  }
+  return finish(r, 'rhyme-synonym', seed, { word: clue, rhyme: cue }, [answer], distractors,
+    { kind: 'rhyme-synonym', clue, rhyme: cue, variety: v }, 5)
+}
+
+function genCompoundFront(r, band, seed) {
+  // "Find a word that can be put in front of each of the following words to make new, compound
+  // words. CAKE CUP POT ROOM" — TEA.
+  const heads = memo(`compound|${band.answer}|${band.option}|${band.familiarOnly}`, () => {
+    // The head is the answer and comes from the strict list. The tails are only read, so they
+    // may be any word a child of the band knows — Dale-Chall alone left 29 usable heads.
+    const short = new Set(kidWords(band, 3, 6))
+    const readable = (w) => plainWord(w) && z(w) >= band.answer && (!band.familiarOnly || familiar(w))
+    const m = new Map()
+    for (const w of Object.keys(WORD_Z)) {
+      if (!plainWord(w) || w.length < 6 || w.length > 11 || z(w) < band.option) continue
+      for (let i = 3; i <= w.length - 3; i++) {
+        const head = w.slice(0, i)
+        const tail = w.slice(i)
+        if (!short.has(head) || !readable(tail)) continue
+        if (!m.has(head)) m.set(head, new Set())
+        m.get(head).add(tail)
+      }
+    }
+    return [...m.entries()].map(([h, t]) => [h, [...t]]).filter(([, t]) => t.length >= 4)
+  })
+  if (heads.length < 5) return null
+  const [head, tails] = pickOne(r, heads)
+  const shown = shuffle(r, tails).slice(0, 4)
+  const makes = (h) => shown.filter(t => (h + t) in WORD_Z).length
+  const others = shuffle(r, heads.map(([h]) => h).filter(h => h !== head && makes(h) < 4))
+  const traps = others.filter(h => makes(h) >= 1).map(text => ({ text, why: 'fits-some' }))
+  const rest = others.filter(h => makes(h) === 0).map(text => ({ text, why: 'unrelated' }))
+  return finish(r, 'compound-front', seed, { tails: shown }, [head], [...traps, ...rest],
+    { kind: 'compound-front', head, words: shown.map(t => head + t) }, 5)
+}
+
+function genPairMeaning(r, band, seed) {
+  // "Underline the pair of words most similar in meaning: come, go / roam, wander / fear, fare"
+  // and "most opposite in meaning: cup, mug / coffee, milk / hot, cold". The book's wrong pairs
+  // are the useful half: an opposite pair against a same-meaning question, two things of one
+  // kind (coffee, milk), and two words that only SOUND alike (fear, fare).
+  const { synonyms, antonyms } = index()
+  const opposite = r() < 0.5
+  const kid = (w) => askable(band, w) && plainWord(w)
+  // Both halves of the RIGHT pair come from the strict list and a high frequency bar. WordNet's
+  // relations are made for every sense of a word, and a pair shown with no sentence is read in
+  // its commonest one: its antonyms offered `lie, sit` as opposites, and its synonyms `check,
+  // contain`. The opposites come from the hand table for the same reason.
+  const strict = (w) => FAMILIAR_SET.has(w) && z(w) >= 45 && plainWord(w)
+  const synPairs = memo(`syn-pairs|${band.answer}|${band.familiarOnly}`, () => {
+    const out = []
+    for (const [a, set] of synonyms) {
+      if (!strict(a)) continue
+      for (const b of set) if (a < b && strict(b) && !sameWordDifferentEnding(a, b)) out.push([a, b])
+    }
+    return out
+  })
+  const antPairs = memo('ant-pairs', () => Object.entries(RELATIONS.opposite)
+    .flatMap(([a, bs]) => bs.map(b => [a, b])))
+  const catPairs = memo(`cat-pairs|${band.answer}|${band.familiarOnly}`, () => {
+    const out = []
+    for (const [, , members] of CATEGORIES) {
+      const ms = members.filter(kid)
+      for (let i = 0; i + 1 < ms.length; i++) out.push([ms[i], ms[i + 1]])
+    }
+    return out
+  })
+  if (!synPairs.length || !antPairs.length || !catPairs.length) return null
+  const right = pickOne(r, opposite ? antPairs : synPairs)
+  const used = new Set(right)
+  const clean = (p) => p.every(w => !used.has(w)) && !p.some(w => right.some(x => related(w, x)))
+  const pairs = []
+  const take = (pool, why) => {
+    for (let i = 0; i < 20; i++) {
+      const p = pickOne(r, pool)
+      if (!p || !clean(p)) continue
+      if (why !== 'opposite-pair' && (antonyms.get(p[0])?.has(p[1])
+        || RELATIONS.opposite[p[0]]?.includes(p[1]) || RELATIONS.opposite[p[1]]?.includes(p[0]))) continue
+      if (why !== 'same-meaning-pair' && related(p[0], p[1])) continue
+      p.forEach(w => used.add(w))
+      pairs.push({ text: `${p[0]}, ${p[1]}`, why })
+      return
+    }
+  }
+  take(opposite ? synPairs : antPairs, opposite ? 'same-meaning-pair' : 'opposite-pair')
+  take(catPairs, 'same-group-pair')
+  const avoid = new Set(used)
+  const two = fillers(r, band, avoid, 2)
+  if (two.length === 2 && !related(two[0], two[1]) && !antonyms.get(two[0])?.has(two[1])) {
+    pairs.push({ text: `${two[0]}, ${two[1]}`, why: 'unrelated-pair' })
+  }
+  if (pairs.length < 3) return null
+  return finish(r, 'pair-meaning', seed, { opposite }, [`${right[0]}, ${right[1]}`], pairs,
+    { kind: 'pair-meaning', opposite, pair: right }, 4)
+}
+
+function fill(line, map) {
+  return line.replace(/\{(\w+)\}/g, (_, k) => map[k])
+}
+
+function genLogicGrid(r, band, seed) {
+  // "A and M use yellow paint. D and E use orange paint. A and E paint dogs. D and M paint cats.
+  // Who paints yellow dogs?" Four children, split one way by the first fact and the other way by
+  // the second, so every pairing of the two names exactly one of them. Or the book's other logic
+  // question, the order: "Tom is smaller than Kang and Kang is smaller than Leo. Who is the
+  // smallest?"
+  if (r() < 0.35) {
+    const scene = pickOne(r, ORDER_SCENES)
+    const [x, y, w] = shuffle(r, NAMES).slice(0, 3)
+    // x > y > w on the scene's `more`
+    const lines = r() < 0.5
+      ? [`${x} is ${scene.more} than ${y}.`, `${y} is ${scene.more} than ${w}.`]
+      : [`${w} is ${scene.less} than ${y}.`, `${x} is ${scene.more} than ${y}.`]
+    const askMost = r() < 0.5
+    const answer = askMost ? x : w
+    return finish(r, 'logic-grid', seed,
+      { lines, question: `Who is the ${askMost ? scene.most : scene.least}?` },
+      [answer], [x, y, w].filter(n => n !== answer).map(text => ({ text, why: 'wrong-person' })),
+      { kind: 'logic-order', order: [x, y, w], most: askMost }, 3)
+  }
+  const scene = pickOne(r, LOGIC_SCENES)
+  const [n1, n2, n3, n4] = shuffle(r, NAMES).slice(0, 4)
+  const [v1a, v1b] = shuffle(r, scene.first.values)
+  const [v2a, v2b] = shuffle(r, scene.second.values)
+  // First fact splits {n1, n2} / {n3, n4}; the second splits {n1, n3} / {n2, n4}.
+  const lines = shuffle(r, [
+    fill(scene.first.line, { a: n1, b: n2, v: v1a }),
+    fill(scene.first.line, { a: n3, b: n4, v: v1b }),
+  ]).concat(shuffle(r, [
+    fill(scene.second.line, { a: n1, b: n3, v: v2a }),
+    fill(scene.second.line, { a: n2, b: n4, v: v2b }),
+  ]))
+  const who = { [`${v1a}|${v2a}`]: n1, [`${v1a}|${v2b}`]: n2, [`${v1b}|${v2a}`]: n3, [`${v1b}|${v2b}`]: n4 }
+  const q1 = pickOne(r, [v1a, v1b])
+  const q2 = pickOne(r, [v2a, v2b])
+  const answer = who[`${q1}|${q2}`]
+  return finish(r, 'logic-grid', seed,
+    { lines, question: fill(scene.question, { v1: q1, v2: q2 }) },
+    [answer], [n1, n2, n3, n4].filter(n => n !== answer).map(text => ({ text, why: 'wrong-person' })),
+    { kind: 'logic-grid', who, ask: [q1, q2] }, 4)
+}
+
+function genUnscramble(r, band, seed) {
+  // "Rearrange the muddled letters to make words: LELB, KEIB, HIARC, ESNP, OKHO."
+  const words = kidWords(band, 4, 6).filter(w => partOfSpeech(w) === 'noun' && concrete(w))
+  if (!words.length) return null
+  const answer = pickOne(r, words)
+  let muddled = answer
+  for (let i = 0; i < 12 && (muddled === answer || anyWord(muddled)); i++) {
+    muddled = shuffle(r, [...answer]).join('')
+  }
+  if (muddled === answer || anyWord(muddled) || BANNED.has(muddled)) return null
+  const key = letterKey(answer)
+  const near = shuffle(r, kidWords(band, answer.length, answer.length).filter(w =>
+    letterKey(w) !== key && sharedCount(w, answer) >= answer.length - 1
+    && !sameWordDifferentEnding(w, answer)))
+  const picks = []
+  for (const w of near) {
+    if (picks.length >= 4) break
+    if (picks.some(p => sameWordDifferentEnding(p, w))) continue
+    picks.push(w)
+  }
+  return finish(r, 'unscramble', seed, { letters: muddled.toUpperCase() }, [answer],
+    picks.map(text => ({ text, why: 'one-letter-different' })),
+    { kind: 'unscramble', word: answer }, 5)
+}
+
+const inOrder = (w) => [...w].every((c, i) => i === 0 || w[i - 1] <= c)
+
+function genLettersInOrder(r, band, seed) {
+  // "Underline the words which have their letters in alphabetical order: DRAW BOOT LOST SPOT
+  // SOCK HOST DARK LION" — boot, lost, host.
+  const words = kidWords(band, 3, 5)
+  const yes = words.filter(inOrder)
+  const no = words.filter(w => !inOrder(w))
+  if (!yes.length) return null
+  const answer = pickOne(r, yes)
+  // Near misses: one pair out of place, the ones that look in order at a glance.
+  const nearly = (w) => {
+    let breaks = 0
+    for (let i = 1; i < w.length; i++) if (w[i - 1] > w[i]) breaks++
+    return breaks === 1
+  }
+  const pool = shuffle(r, no.filter(w => w.length === answer.length || w.length === answer.length + 1))
+  const traps = pool.filter(nearly).map(text => ({ text, why: 'one-out-of-order' }))
+  const rest = pool.filter(w => !nearly(w)).map(text => ({ text, why: 'out-of-order' }))
+  return finish(r, 'letters-in-order', seed, {}, [answer], [...traps.slice(0, 3), ...rest],
+    { kind: 'letters-in-order', word: answer }, 5)
+}
+
+function genLetterSum(r, band, seed) {
+  // "If a = 2, b = 3, c = 5, d = 6, find the value of c + d" and "give the answer to these
+  // calculations as letters": e = 2, f = 4, g = 6, h = 8, what is g − f?
+  const start = Math.floor(r() * 5) * 4
+  const letters = ALPHA.slice(start, start + 4).split('')
+  const asLetter = r() < 0.4
+  let values
+  if (asLetter) {
+    const step = 1 + Math.floor(r() * 3)
+    const base = 1 + Math.floor(r() * 3)
+    values = letters.map((_, i) => base + step * i)
+  } else {
+    values = []
+    while (values.length < 4) {
+      const v = 1 + Math.floor(r() * 12)
+      if (!values.includes(v)) values.push(v)
+    }
+    values.sort((a, b) => a - b)
+  }
+  const val = Object.fromEntries(letters.map((l, i) => [l, values[i]]))
+  const pairs = []
+  for (const x of letters) {
+    for (const y of letters) {
+      if (x === y) continue
+      for (const op of ['+', '−']) {
+        const res = op === '+' ? val[x] + val[y] : val[x] - val[y]
+        if (res <= 0) continue
+        if (asLetter && !values.includes(res)) continue
+        pairs.push([x, op, y, res])
+      }
+    }
+  }
+  if (!pairs.length) return null
+  const [x, op, y, res] = pickOne(r, pairs)
+  const table = letters.map(l => `${l} = ${val[l]}`).join(', ')
+  if (asLetter) {
+    const answer = letters[values.indexOf(res)]
+    return finish(r, 'letter-sum', seed, { table, sum: `${x} ${op} ${y}`, asLetter: true }, [answer],
+      letters.filter(l => l !== answer).map(text => ({ text, why: 'wrong-value' })),
+      { kind: 'letter-sum', val, x, op, y }, 4)
+  }
+  const wrong = new Set([res + 1, res - 1, op === '+' ? Math.abs(val[x] - val[y]) : val[x] + val[y], res + 2])
+  wrong.delete(res)
+  return finish(r, 'letter-sum', seed, { table, sum: `${x} ${op} ${y}` }, [String(res)],
+    shuffle(r, [...wrong].filter(n => n > 0)).map(n => ({ text: String(n), why: 'wrong-value' })),
+    { kind: 'letter-sum', val, x, op, y }, 4)
+}
+
+// ── spelling and grammar (Bond English 10-11 Book 1, and the 11+ Multiple-choice Pack 2) ─────
+//
+// The 10-11 English book is almost entirely WRITTEN answers — rewrite this sentence, punctuate
+// that one, give a word that means. What survives the move to a choice of five is what has one
+// right form and a set of predictable wrong ones, and the Multiple-choice Test Papers show
+// exactly how Bond itself makes that move: "one word has been spelt incorrectly — which?",
+// "choose the correct word to complete each sentence". So those are the shapes used here.
+//
+// Half of these are driven by the lexicon (endings, silent letters, singulars, alphabetical
+// order with a shared start) and half by englishTables.js, which holds the closed facts no
+// dictionary encodes: a group of lions is a pride, `could've` is not `could of`.
+
+function genApostrophe(r, band, seed) {
+  // "Rewrite each of the following, using only two words, one of which should have an
+  // apostrophe. basket for a cat → cat's basket; school for girls → girls' school; hospital for
+  // women → women's hospital." The one rule: add 's, unless the owner already ends in s.
+  const [phrase, owner, thing, joiner] = pickOne(r, POSSESSIVES)
+  const right = owner.endsWith('s') ? `${owner}' ${thing}` : `${owner}'s ${thing}`
+  const plain = owner.endsWith('s') ? owner.slice(0, -1) : owner
+  const endsS = owner.endsWith('s')
+  const variants = [
+    [`${owner}'s ${thing}`, 'apostrophe-s-added-to-plural'],
+    [`${owner} ${thing}`, 'no-apostrophe'],
+    [`${plain}'s ${thing}`, 'singular-owner'],
+    [`${owner}' ${thing}`, 'apostrophe-after-s'],
+    // An extra s is only a mistake a child makes on a word that does not already end in one:
+    // `childrens'` is; `horsess'` is not anything.
+    ...(endsS ? [] : [[`${owner}s' ${thing}`, 'extra-s'], [`${owner}s ${thing}`, 'no-apostrophe']]),
+  ]
+  const seen = new Set([right])
+  const wrong = []
+  for (const [text, why] of shuffle(r, variants)) {
+    if (seen.has(text)) continue
+    seen.add(text)
+    wrong.push({ text, why })
+  }
+  // Four options when the owner ends in s: without the invented `horsess'` there are only three
+  // honest mistakes to make.
+  return finish(r, 'apostrophe', seed, { phrase: `${thing} ${joiner} ${phrase}` }, [right], wrong,
+    { kind: 'apostrophe', owner, thing }, Math.min(5, 1 + wrong.length))
+}
+
+function genMisspelt(r, band, seed) {
+  // MC Pack 2, Section 2: "One word has been spelt incorrectly. Which option shows the misspelt
+  // word?" Four correctly spelled words of about the same length and difficulty around it, so
+  // the wrong one is not the longest or the rarest on the line.
+  const [correct, wrong] = pickOne(r, MISSPELLINGS)
+  if (anyWord(wrong)) return null
+  const len = correct.length
+  // The four right spellings are held to the filler bar: they are there to be read and passed
+  // over, and a rare one (`ironman` was the first) draws the eye away from the real mistake.
+  // From Dale-Chall in every band: the first run had `mortgage` and `predecessor` beside them.
+  const pool = memo('misspelt-pool', () => FAMILIAR.filter(w => plainWord(w) && w.length >= 5
+    && w.length <= 13 && !MISSPELLINGS.some(([c]) => c === w)))
+  const near = shuffle(r, pool.filter(w => Math.abs(w.length - len) <= 2
+    && !sameWordDifferentEnding(w, correct)))
+  const others = []
+  for (const w of near) {
+    if (others.length >= 4) break
+    if (others.some(o => sameWordDifferentEnding(o, w))) continue
+    others.push(w)
+  }
+  return finish(r, 'misspelt', seed, {}, [wrong],
+    others.map(text => ({ text, why: 'spelled-right' })),
+    { kind: 'misspelt', word: correct, misspelt: wrong }, 5)
+}
+
+function genEnding(r, band, seed) {
+  // "Add cial or tial", "Add sure or ture", "Add ary, ery or ory", "depend_ncy, excell_nce,
+  // blat_nt". The endings in a group cannot be told apart by ear, which is the whole difficulty,
+  // and the check is that only one of them makes a word: `confident` is out, because
+  // `confidant` is a word too.
+  const groups = memo(`endings|${band.filler}`, () => {
+    const out = []
+    for (const group of ENDING_GROUPS) {
+      for (const w of Object.keys(WORD_Z)) {
+        if (!plainWord(w) || z(w) < band.filler || w.length < 6) continue
+        const end = group.find(e => w.endsWith(e))
+        if (!end) continue
+        const stem = w.slice(0, -end.length)
+        // `mis___` for `misery` and `mem___` for `memory` are correct and unreadable: too little
+        // of the word is left to recognise.
+        if (stem.length < 4) continue
+        if (group.some(e => e !== end && anyWord(stem + e))) continue
+        out.push([w, stem, end, group])
+      }
+    }
+    return out
+  })
+  if (!groups.length) return null
+  const [word, stem, end, group] = pickOne(r, groups)
+  return finish(r, 'ending', seed, { masked: `${stem}___` }, [end],
+    group.filter(e => e !== end).map(text => ({ text, why: 'sounds-the-same' })),
+    { kind: 'ending', word }, group.length)
+}
+
+function genIeEi(r, band, seed) {
+  // "Add ie or ei to each of these to make a word: c__ling, __ght, sh__ld, rec__ve, ach__ve."
+  const words = memo(`ieei|${band.filler}`, () => Object.keys(WORD_Z).filter(w => plainWord(w)
+    && z(w) >= band.filler && w.length >= 4 && (w.match(/ie|ei/g) || []).length === 1
+    // Only where the two letters are ONE sound, which is what the rule is about. In `alien`,
+    // `quiet`, `science` and `cookie` they are two sounds or an ending, and no rule helps.
+    && !/ie$|ien|iet|ienc|eing|eity|eist/.test(w)
+    && !anyWord(w.replace(/ie|ei/, m => (m === 'ie' ? 'ei' : 'ie')))))
+  if (!words.length) return null
+  const word = pickOne(r, words)
+  const at = word.search(/ie|ei/)
+  const pair = word.slice(at, at + 2)
+  return finish(r, 'ie-ei', seed, { masked: word.slice(0, at) + '__' + word.slice(at + 2) }, [pair],
+    [{ text: pair === 'ie' ? 'ei' : 'ie', why: 'swapped' }], { kind: 'ie-ei', word }, 2)
+}
+
+function genSilentLetter(r, band, seed) {
+  // "Rewrite each word, adding the missing silent letter: hym, nock, lim, autum, bom."
+  // The answer bar, with the rare ones cut by hand below it: `_rought` for `wrought` was the
+  // first one out, and the filler bar left too few words for the type to vary.
+  const words = memo(`silent|${band.answer}`, () => {
+    const out = []
+    for (const w of Object.keys(WORD_Z)) {
+      if (!plainWord(w) || z(w) < band.answer || w.length < 4) continue
+      for (const p of SILENT_PATTERNS) {
+        if (!p.re.test(w)) continue
+        const at = p.at < 0 ? w.length + p.at : p.at
+        if (w[at] !== p.letter) continue
+        out.push([w, at])
+        break
+      }
+    }
+    return out
+  })
+  if (!words.length) return null
+  const [word, at] = pickOne(r, words)
+  const masked = word.slice(0, at) + '_' + word.slice(at + 1)
+  const shown = masked.replace('_', '')
+  if (anyWord(shown)) return null
+  const fits = (c) => anyWord(masked.replace('_', c))
+  const pool = shuffle(r, 'bcdghklmnptw'.split('').filter(c => c !== word[at] && !fits(c)))
+  return finish(r, 'silent-letter', seed, { masked }, [word[at]],
+    pool.map(text => ({ text, why: 'not-a-word' })), { kind: 'silent-letter', word }, 5)
+}
+
+function genContraction(r, band, seed) {
+  // "Write the two words each contraction stands for" and "Write the contraction for each of
+  // these". The wrong answers are written into the table because they are specific: `could of`.
+  const [short, full, wrongFull] = pickOne(r, CONTRACTIONS)
+  if (r() < 0.5) {
+    return finish(r, 'contraction', seed, { word: short, expand: true }, [full],
+      wrongFull.map(text => ({ text, why: 'other-words' })),
+      { kind: 'contraction', short, full }, 4)
+  }
+  // The other way: the apostrophe in the wrong place, or missing.
+  const letters = short.replace("'", '')
+  const variants = new Set()
+  for (let i = 1; i < letters.length; i++) variants.add(letters.slice(0, i) + "'" + letters.slice(i))
+  variants.add(letters)
+  variants.delete(short)
+  const wrong = shuffle(r, [...variants]).filter(v => !CONTRACTIONS.some(([s]) => s === v))
+    .map(text => ({ text, why: 'apostrophe-in-the-wrong-place' }))
+  const item = finish(r, 'contraction', seed, { word: full, expand: false }, [short], wrong,
+    { kind: 'contraction', short, full }, 4)
+  // The other direction asks the other question, and the instruction has to say so.
+  if (item) item.stem_key = 'eng_stem_contraction_short'
+  return item
+}
+
+function genHomophoneCloze(r, band, seed) {
+  // "Write there, their or they're in each gap." The whole set is on offer, and the sentences
+  // are written so that only one member reads.
+  const [sentence, answer] = pickOne(r, HOMOPHONE_CLOZE)
+  const set = Object.values(HOMOPHONE_SETS).find(s => s.includes(answer))
+  if (!set) return null
+  return finish(r, 'homophone-cloze', seed, { sentence }, [answer],
+    set.filter(w => w !== answer).map(text => ({ text, why: 'sounds-the-same' })),
+    { kind: 'homophone-cloze', sentence, fill: answer }, set.length)
+}
+
+function genGrammarCloze(r, band, seed) {
+  // MC Pack 2, Section 4: "Choose the correct word or short phrase from the lists below to
+  // complete each sentence. Each sentence must make sense and use Standard English."
+  const [sentence, answer, wrongs] = pickOne(r, GRAMMAR_CLOZE)
+  return finish(r, 'grammar-cloze', seed, { sentence }, [answer],
+    wrongs.map(text => ({ text, why: 'not-standard-english' })),
+    { kind: 'grammar-cloze', sentence, fill: answer }, 4)
+}
+
+function genComparative(r, band, seed) {
+  // "I am going to buy this coat because it is the (cheap, more cheap, cheaper, cheapest, most
+  // cheapest)." / "That idea is (silliest, more silly, most silly, more sillier, sillier) than
+  // the one you had yesterday!" The five options are always the book's five: the word itself,
+  // the right form, the other degree, and the two ways of doing it twice.
+  const [adj, comp, sup] = pickOne(r, COMPARATIVES)
+  const than = r() < 0.5
+  const answer = than ? comp : sup
+  const long = comp.startsWith('more ')
+  const naiveComp = long ? `${adj}er` : `more ${adj}`
+  const naiveSup = long ? `${adj}est` : `most ${adj}`
+  const doubled = than ? (long ? `more ${adj}er` : `more ${comp}`) : (long ? `most ${adj}est` : `most ${sup}`)
+  const rows = [
+    [than ? sup : comp, 'wrong-degree'],
+    [than ? naiveComp : naiveSup, 'wrong-way-to-compare'],
+    [doubled, 'compared-twice'],
+    [adj, 'not-compared'],
+  ]
+  const seen = new Set([answer])
+  const wrong = []
+  for (const [text, why] of rows) {
+    if (seen.has(text)) continue
+    seen.add(text)
+    wrong.push({ text, why })
+  }
+  const frames = than
+    ? ['This one is ___ than that one.', 'Today is ___ than yesterday.', 'My story is ___ than yours.']
+    : ['It is the ___ of them all.', 'That was the ___ day of the year.', 'She chose the ___ one in the shop.']
+  return finish(r, 'comparative', seed, { sentence: pickOne(r, frames), word: adj }, [answer], wrong,
+    { kind: 'comparative', word: adj, than }, 5)
+}
+
+function genSingular(r, band, seed) {
+  // "Write the singular form of each word: torpedoes, calves, valleys, sheep, mice, batteries,
+  // foxes, olives." The plural table read backwards, and the wrong answers are the endings
+  // stripped the wrong way — `calve`, `batterie`, `torpedoe`.
+  const pairs = PLURALS.filter(([a, b, rule]) => askable(band, a) && !BANNED.has(b)
+    && b !== a && (rule !== 'latin' || band.latinPlurals))
+  if (!pairs.length) return null
+  const [single, plural] = pickOne(r, pairs)
+  // Only the strippings this plural's ending invites: `indefe` from `indexes` is not a mistake
+  // anyone makes, `calve` from `calves` and `puppie` from `puppies` are.
+  const shapes = [plural.slice(0, -1), plural, plural.slice(0, -3)]
+  if (plural.endsWith('es')) shapes.push(plural.slice(0, -2))
+  if (plural.endsWith('ies')) shapes.push(plural.slice(0, -2), plural.slice(0, -3) + 'ey')
+  if (plural.endsWith('ves')) shapes.push(plural.slice(0, -3) + 'fe', plural.slice(0, -3) + 'f', plural.slice(0, -3) + 've')
+  if (!/s$/.test(plural)) shapes.push(plural + 's', plural.slice(0, -1) + 'a')
+  const seen = new Set([single])
+  const wrong = []
+  for (const w of shuffle(r, shapes)) {
+    if (!w || w.length < 2 || seen.has(w) || BANNED.has(w)) continue
+    // A stripped form that is itself a word (`calve`) is a trap a child can defend.
+    if (w !== plural && anyWord(w)) continue
+    seen.add(w)
+    wrong.push({ text: w, why: w === plural ? 'still-plural' : 'stripped-wrongly' })
+  }
+  return finish(r, 'singular', seed, { word: plural }, [single], wrong,
+    { kind: 'singular', of: plural }, 4)
+}
+
+function genGender(r, band, seed) {
+  // "Change the words in bold into their feminine form: son, nephew, Lord, men, Duke, hero,
+  // gander." Asked in either direction when the answer is unique that way round: `lady` is the
+  // feminine of both `lord` and `gentleman`, so it is never asked backwards.
+  const [male, female] = pickOne(r, GENDER_PAIRS)
+  const females = GENDER_PAIRS.filter(([, f]) => f === female)
+  const backwards = females.length === 1 && r() < 0.35
+  const ask = backwards ? female : male
+  const answer = backwards ? male : female
+  const accepted = new Set(GENDER_PAIRS.filter(([m, f]) => (backwards ? f === ask : m === ask))
+    .map(([m, f]) => (backwards ? m : f)))
+  const others = shuffle(r, GENDER_PAIRS.map(([m, f]) => (backwards ? m : f)))
+    .filter(w => !accepted.has(w))
+  const wrong = [...new Set(others)].slice(0, 2).map(text => ({ text, why: 'other-pair' }))
+  // The rule applied blindly: -ess on everything, which is right for `host` and wrong for `duke`.
+  const blind = backwards ? null : `${male}ess`
+  if (blind && !accepted.has(blind)) wrong.push({ text: blind, why: 'the-rule-applied-blindly' })
+  else wrong.push({ text: pickOne(r, others.slice(2)) || others[0], why: 'other-pair' })
+  return finish(r, 'gender', seed, { word: ask, backwards }, [answer], wrong,
+    { kind: 'gender', of: ask }, 4)
+}
+
+function genCollective(r, band, seed) {
+  // "Collective nouns": a herd of cows, a gaggle of geese, a swarm of bees.
+  const [noun, things] = pickOne(r, COLLECTIVES)
+  const thing = pickOne(r, things)
+  const accepted = new Set(COLLECTIVES.filter(([, t]) => t.includes(thing)).map(([n]) => n))
+  const wrong = [...new Set(shuffle(r, COLLECTIVES.map(([n]) => n)))].filter(n => !accepted.has(n))
+    .map(text => ({ text, why: 'other-group' }))
+  return finish(r, 'collective', seed, { word: thing }, [noun], wrong,
+    { kind: 'collective', of: thing }, 4)
+}
+
+function genProverb(r, band, seed) {
+  // "Complete the following proverbs. There is no smoke without ___."
+  const [sentence, answer, wrongs] = pickOne(r, PROVERBS)
+  return finish(r, 'proverb', seed, { sentence }, [answer],
+    wrongs.map(text => ({ text, why: 'not-the-saying' })),
+    { kind: 'proverb', sentence, fill: answer }, 4)
+}
+
 const GENERATORS = {
   synonym: genSynonym,
   antonym: genAntonym,
@@ -1655,6 +2928,36 @@ const GENERATORS = {
   'prefix-antonym': genPrefixAntonym,
   'root-word': genRootWord,
   'missing-vowel': genMissingVowel,
+  'anagram-pair': genAnagramPair,
+  'letter-code': genLetterCode,
+  'front-letter': genFrontLetter,
+  'alpha-order': genAlphaOrder,
+  'join-letter': genJoinLetter,
+  'change-pattern': genChangePattern,
+  'word-ladder': genWordLadder,
+  'not-from-letters': genNotFromLetters,
+  'letter-analogy': genLetterAnalogy,
+  analogy: genAnalogy,
+  'rhyme-synonym': genRhymeSynonym,
+  'compound-front': genCompoundFront,
+  'pair-meaning': genPairMeaning,
+  'logic-grid': genLogicGrid,
+  unscramble: genUnscramble,
+  'letters-in-order': genLettersInOrder,
+  'letter-sum': genLetterSum,
+  apostrophe: genApostrophe,
+  misspelt: genMisspelt,
+  ending: genEnding,
+  'ie-ei': genIeEi,
+  'silent-letter': genSilentLetter,
+  contraction: genContraction,
+  'homophone-cloze': genHomophoneCloze,
+  'grammar-cloze': genGrammarCloze,
+  comparative: genComparative,
+  singular: genSingular,
+  gender: genGender,
+  collective: genCollective,
+  proverb: genProverb,
 }
 
 // ── validation ───────────────────────────────────────────────────────────────────────────
@@ -1679,8 +2982,13 @@ export function validateItem(item) {
   // letter groups, where `abi` and `aib` are not the same anything.
   // `root-word` is exempt for the opposite reason to the letter types: its answer IS the
   // stem with its endings taken off, so the check it would fail is the check it passes.
+  // The new families are exempt when their options are not words standing for meanings: a code,
+  // a letter, a phrase with an apostrophe, `seen` against `see` in a sentence gap, `duck`
+  // against `duckling` in an analogy where offering the same word is the book's own trap.
   if (!['letter-pair', 'shared-letters', 'hidden-word', 'missing-vowel', 'prefix-antonym',
-    'plural', 'past-tense', 'suffix', 'root-word'].includes(item.type)) {
+    'plural', 'past-tense', 'suffix', 'root-word', 'letter-code', 'front-letter', 'alpha-order',
+    'join-letter', 'change-pattern', 'letter-analogy', 'analogy', 'pair-meaning', 'logic-grid',
+    'letter-sum', ...GRAMMAR_TYPES].includes(item.type)) {
     for (let i = 0; i < texts.length; i++) {
       for (let j = i + 1; j < texts.length; j++) {
         if (sameWordDifferentEnding(texts[i], texts[j])) {
@@ -1754,6 +3062,14 @@ export function validateItem(item) {
       if (hits.length !== 1) return `${hits.length} options complete "${blank}"`
     }
   }
+  if (item.type === 'definition' && glossMismatch(answers[0], item.prompt.definition)) {
+    return `"${answers[0]}" is not the part of speech its definition is`
+  }
+  // Sentences screened at build time, screened again here for what the build's lists missed.
+  if (item.prompt.sentence) {
+    const dark = (item.prompt.sentence.toLowerCase().match(/[a-z]+/g) || []).find(w => DARK_SENTENCE.has(w))
+    if (dark) return `the sentence is about "${dark}"`
+  }
   if (item.type === 'sense') {
     if (!item.prompt.sentence.toLowerCase().includes(item.prompt.word.toLowerCase())) {
       return 'the sentence does not contain the word'
@@ -1820,7 +3136,161 @@ export function validateItem(item) {
     const filled = texts.filter(v => item.prompt.masked.replace('_', v) in WORD_Z)
     if (filled.length !== 1) return `${filled.length} letters make a word`
   }
-  return null
+  return validateNewFamilies(item, texts, answers, wrong)
+}
+
+// ── the letter puzzles and the grammar types ─────────────────────────────────────────────
+// Every one of these RECOMPUTES the answer from what is printed and counts how many options
+// satisfy it. None of them asks the generator what it meant.
+function validateNewFamilies(item, texts, answers, wrong) {
+  const p = item.prompt
+  const [answer] = answers
+  const exactlyOne = (pred, what) => {
+    const hits = texts.filter(pred)
+    if (hits.length !== 1) return `${hits.length} options ${what} (${hits.join(', ')})`
+    if (hits[0] !== answer && item.pick === 1) return `the option that ${what} is not the answer`
+    return null
+  }
+  // A hand-written table is read once; a blocklist is maintained. Every word these types print
+  // goes past the blocklist too — `hell` was a wrong answer for `he'll` and `drunk` a wrong
+  // form of `drink` before this line existed.
+  const printed = [...texts, p.sentence || '', p.phrase || '', ...(p.lines || [])].join(' ')
+  const hit = (printed.toLowerCase().match(/[a-z]+/g) || []).find(w => BANNED.has(w))
+  if (hit) return `prints the blocked word "${hit}"`
+  switch (item.type) {
+    case 'anagram-pair': {
+      const pairs = []
+      for (let i = 0; i < texts.length; i++) {
+        for (let j = i + 1; j < texts.length; j++) {
+          if (letterKey(texts[i]) === letterKey(texts[j])) pairs.push([texts[i], texts[j]])
+        }
+      }
+      if (pairs.length !== 1) return `${pairs.length} pairs share their letters`
+      if (!pairs[0].every(w => answers.includes(w))) return 'the pair that shares letters is not the answer'
+      return null
+    }
+    case 'letter-code': {
+      const key = item.rule.key
+      const code = (w) => [...w].map(c => key.indexOf(c) + 1).join(' ')
+      if (p.decode) return exactlyOne(w => [...w].every(c => key.includes(c)) && code(w) === p.code, 'match the code')
+      return exactlyOne(t => t === code(item.rule.word), 'are the code')
+    }
+    case 'front-letter':
+      return exactlyOne(l => p.tails.every(t => anyWord(l + t)), 'start all four words')
+    case 'alpha-order': {
+      const sorted = [...texts].sort()
+      if (sorted[p.nth - 1] !== answer) return `the answer is not word ${p.nth} in order`
+      return null
+    }
+    case 'join-letter':
+      return exactlyOne(l => anyWord(p.left + l) && anyWord(l + p.right), 'join both words')
+    case 'change-pattern': {
+      const [[a, b], [c, d]] = p.pairs
+      const shared = rulesOf(a, b).filter(x => rulesOf(c, d).includes(x))
+      if (!shared.length) return 'the two examples share no change'
+      const readings = new Set(shared.map(x => applyRule(x, p.word)).filter(Boolean))
+      return exactlyOne(t => readings.has(t), 'follow the pattern')
+    }
+    case 'word-ladder': {
+      const one = (x, y) => x.length === y.length && [...x].filter((ch, i) => ch !== y[i]).length === 1
+      return exactlyOne(t => one(p.from, t) && one(t, p.to), 'bridge the two words')
+    }
+    case 'not-from-letters':
+      return exactlyOne(t => !spellableFrom(t, p.word), 'cannot be made')
+    case 'letter-analogy': {
+      const pat = LETTER_PATTERNS.find(x => x.name === item.rule.pattern)
+      const right = pat.make(item.rule.q + item.rule.step).toUpperCase()
+      if (pat.make(item.rule.q).toUpperCase() !== p.c) return 'the third term is not the pattern'
+      return exactlyOne(t => t === right, 'continue the pattern')
+    }
+    case 'analogy': {
+      const accepted = RELATIONS[item.rule.relation][p.b] || []
+      if (!accepted.includes(answer)) return `"${answer}" is not what ${p.b} is`
+      for (const w of wrong) if (accepted.includes(w)) return `"${w}" is right too`
+      return null
+    }
+    case 'rhyme-synonym': {
+      const v = item.rule.variety
+      const accepted = RHYME_CLUES.filter(([c]) => c === p.word).map(([, a]) => a)
+      if (!accepted.includes(answer) || !rhymes(answer, p.rhyme, v)) return 'the answer does not do both'
+      for (const w of wrong) {
+        if (accepted.includes(w)) return `"${w}" is an answer to the clue too`
+        if (related(w, answer) && couldPassForRhyme(w, p.rhyme, v)) return `"${w}" means it and rhymes too`
+      }
+      return null
+    }
+    case 'compound-front':
+      return exactlyOne(h => p.tails.every(t => anyWord(h + t)), 'go in front of all four')
+    case 'pair-meaning': {
+      const { antonyms } = index()
+      const split = (t) => t.split(', ')
+      const opposites = (a, b) => antonyms.get(a)?.has(b) || RELATIONS.opposite[a]?.includes(b)
+        || RELATIONS.opposite[b]?.includes(a)
+      if (p.opposite) return exactlyOne(t => { const [a, b] = split(t); return opposites(a, b) }, 'are opposites')
+      return exactlyOne(t => { const [a, b] = split(t); return related(a, b) || sharesNeighbour(a, b) }, 'mean the same')
+    }
+    case 'logic-grid': {
+      if (item.rule.kind === 'logic-order') {
+        const [x, , w] = item.rule.order
+        return answer === (item.rule.most ? x : w) ? null : 'the order does not give that answer'
+      }
+      const [q1, q2] = item.rule.ask
+      return item.rule.who[`${q1}|${q2}`] === answer ? null : 'the facts do not give that answer'
+    }
+    case 'unscramble':
+      return exactlyOne(t => letterKey(t) === letterKey(p.letters.toLowerCase()), 'use those letters')
+    case 'letters-in-order':
+      return exactlyOne(inOrder, 'are in order')
+    case 'letter-sum': {
+      const { val, x, op, y } = item.rule
+      const res = op === '+' ? val[x] + val[y] : val[x] - val[y]
+      if (p.asLetter) return exactlyOne(l => val[l] === res, 'have that value')
+      return exactlyOne(t => Number(t) === res, 'are the answer')
+    }
+    case 'apostrophe': {
+      const { owner, thing } = item.rule
+      const right = owner.endsWith('s') ? `${owner}' ${thing}` : `${owner}'s ${thing}`
+      return exactlyOne(t => t === right, 'are punctuated right')
+    }
+    case 'misspelt':
+      return exactlyOne(t => !anyWord(t), 'are misspelt')
+    case 'ending':
+      return exactlyOne(e => anyWord(p.masked.replace('___', e)), 'make a word')
+    case 'ie-ei':
+      return exactlyOne(e => anyWord(p.masked.replace('__', e)), 'make a word')
+    case 'silent-letter':
+      return exactlyOne(c => anyWord(p.masked.replace('_', c)), 'make a word')
+    case 'contraction': {
+      const row = CONTRACTIONS.find(([sh]) => sh === item.rule.short)
+      const right = p.expand ? row[1] : row[0]
+      return exactlyOne(t => t === right, 'are the contraction')
+    }
+    case 'comparative': {
+      const row = COMPARATIVES.find(([a]) => a === p.word)
+      return exactlyOne(t => t === (item.rule.than ? row[1] : row[2]), 'are the right form')
+    }
+    case 'singular': {
+      const hits = texts.filter(t => PLURALS.some(([a, b]) => a === t && b === p.word))
+      if (hits.length !== 1 || hits[0] !== answer) return 'the singular is not uniquely on the line'
+      for (const w of wrong) if (w !== p.word && anyWord(w)) return `"${w}" is a word`
+      return null
+    }
+    case 'gender': {
+      const right = GENDER_PAIRS.filter(([m, f]) => (p.backwards ? f === p.word : m === p.word))
+        .map(([m, f]) => (p.backwards ? m : f))
+      return exactlyOne(t => right.includes(t), 'are the pair')
+    }
+    case 'collective': {
+      const right = COLLECTIVES.filter(([, t]) => t.includes(p.word)).map(([n]) => n)
+      return exactlyOne(t => right.includes(t), 'collect it')
+    }
+    case 'homophone-cloze':
+    case 'grammar-cloze':
+    case 'proverb':
+      return p.sentence.includes('___') ? null : 'the sentence has no gap'
+    default:
+      return null
+  }
 }
 
 // ── public generation ────────────────────────────────────────────────────────────────────
@@ -1855,8 +3325,14 @@ export function generateItem(bandKey, type, seed, opts = {}) {
 
 /** What makes two items "the same question" for the purposes of not asking it twice. */
 export function itemSignature(item) {
-  const key = item.prompt.word || item.rule.word || (item.prompt.blanks || []).join('|')
-    || item.prompt.sentence || ''
+  // The older types are keyed by their word, blanks or sentence. The letter puzzles are about
+  // something else — four word-ends, two halves, a code key, a set of facts — and keying them
+  // by the first three made every front-letter question with answer `p` the same question.
+  const p = item.prompt
+  const key = p.word || item.rule.word || (p.blanks || []).join('|') || p.sentence
+    || (p.tails || p.lines || []).join('|') || [p.left, p.right, p.letters, p.phrase, p.masked,
+      p.key, p.code, p.a, p.b, p.c, p.table, p.sum, p.from, p.to].filter(Boolean).join('|')
+    || ''
   return `${item.type}:${key}:${item.correct.map(i => item.options[i].text).sort().join('+')}`
 }
 

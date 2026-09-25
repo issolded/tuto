@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
 import {
-  BANDS, BAND_KEYS, BOOK_COVERAGE, LEXICON_META, VARIETIES, DEFAULT_VARIETY,
+  BANDS, BAND_KEYS, BOOK_COVERAGE, LEXICON_META, VARIETIES, DEFAULT_VARIETY, GRAMMAR_TYPES,
   generateItem, generateSession, validateItem,
 } from '../lib/englishTemplates'
 import {
@@ -51,6 +51,53 @@ const WHY_LABEL = {
   'same-group': 'is in the group',
   'not-a-word': 'makes no word',
   unrelated: 'unrelated',
+  // The letter puzzles (VR 7-8)
+  'one-letter-different': 'one letter different',
+  'other-code': 'another word in the same code',
+  'wrong-order': 'right digits, wrong order',
+  'next-letter': 'read off the next letter',
+  'fits-some': 'makes a word with some, not all',
+  'wrong-place': 'is in a different place',
+  'fits-one-side': 'finishes one word only',
+  'other-change': 'a different change',
+  'only-from-first': 'one step from the first word only',
+  'only-to-last': 'one step from the last word only',
+  'can-be-made': 'can be made from the letters',
+  'off-by-one': 'one step out',
+  'other-relation': 'the same word, another relation',
+  'the-same-word': 'the word itself',
+  'same-relation-other-word': 'right relation, wrong word',
+  'rhymes-only': 'rhymes, wrong meaning',
+  'means-only': 'right meaning, no rhyme',
+  'opposite-pair': 'an opposite pair',
+  'same-meaning-pair': 'a same-meaning pair',
+  'same-group-pair': 'two of a kind',
+  'unrelated-pair': 'unrelated',
+  'wrong-person': 'the facts rule them out',
+  'one-out-of-order': 'one letter out of order',
+  'out-of-order': 'out of order',
+  'wrong-value': 'wrong value',
+  // Spelling and grammar (English 10-11, MC Pack 2)
+  'apostrophe-s-added-to-plural': "'s added to a plural ending in s",
+  'extra-s': 'an extra s',
+  'no-apostrophe': 'no apostrophe',
+  'singular-owner': 'one owner, not several',
+  'apostrophe-after-s': 'apostrophe after the s',
+  'spelled-right': 'spelled correctly',
+  'sounds-the-same': 'sounds the same, not this word',
+  swapped: 'the letters swapped',
+  'other-words': 'other words',
+  'apostrophe-in-the-wrong-place': 'apostrophe in the wrong place',
+  'not-standard-english': 'not Standard English here',
+  'wrong-degree': 'compares the wrong number of things',
+  'wrong-way-to-compare': 'the wrong way to compare this word',
+  'compared-twice': 'compared twice',
+  'not-compared': 'not compared',
+  'still-plural': 'still plural',
+  'stripped-wrongly': 'ending taken off wrongly',
+  'other-pair': 'belongs to another word',
+  'other-group': 'a group of something else',
+  'not-the-saying': 'not the saying',
 }
 
 function Stem({ item, lang }) {
@@ -141,6 +188,112 @@ function Stem({ item, lang }) {
         <span style={{ color: C.warm }}>___</span>{p.word}
       </div>
     )
+  }
+  // ── the letter puzzles (VR 7-8) ──────────────────────────────────────────────────────
+  // Everything the question is ABOUT is on the card; the instruction above it says what to do.
+  const big = { fontSize: 20, fontWeight: 700, letterSpacing: 1 }
+  const small = { fontSize: 12, color: C.dim }
+  if (item.type === 'letter-code') {
+    return (
+      <div style={{ fontSize: 15 }}>
+        <div><strong style={{ letterSpacing: 2 }}>{p.key}</strong> = {p.keyCode}</div>
+        <div style={{ marginTop: 4 }}>
+          {p.decode ? <strong style={big}>{p.code} = ?</strong> : <strong style={big}>{p.word} = ?</strong>}
+        </div>
+      </div>
+    )
+  }
+  if (item.type === 'front-letter' || item.type === 'compound-front') {
+    const blank = item.type === 'front-letter' ? '_' : '___'
+    return (
+      <div style={{ ...big, fontSize: 18, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        {p.tails.map((t, i) => <span key={i}>{blank}{item.type === 'compound-front' ? t.toUpperCase() : t}</span>)}
+      </div>
+    )
+  }
+  if (item.type === 'alpha-order') {
+    return <div style={big}>{['', '1st', '2nd', '3rd', '4th', '5th'][p.nth]}</div>
+  }
+  if (item.type === 'join-letter') {
+    return <div style={big}>{p.left} <span style={{ color: C.warm }}>( _ )</span> {p.right}</div>
+  }
+  if (item.type === 'change-pattern') {
+    return (
+      <div style={{ fontSize: 17 }}>
+        {p.pairs.map(([a, b], i) => <span key={i} style={{ marginRight: 16 }}>{a}, {b}</span>)}
+        <strong>{p.word}, <span style={{ color: C.warm }}>?</span></strong>
+      </div>
+    )
+  }
+  if (item.type === 'word-ladder') {
+    return <div style={big}>{p.from.toUpperCase()} → <span style={{ color: C.warm }}>?</span> → {p.to.toUpperCase()}</div>
+  }
+  if (item.type === 'not-from-letters' || item.type === 'unscramble') {
+    return <div style={{ ...big, letterSpacing: 3 }}>{(p.letters || p.word).toUpperCase()}</div>
+  }
+  if (item.type === 'letter-analogy') {
+    return (
+      <div style={{ fontSize: 17 }}>
+        <strong>{p.a}</strong> is to <strong>{p.b}</strong> as <strong>{p.c}</strong> is to{' '}
+        <span style={{ color: C.warm }}>?</span>
+        <div style={{ ...small, letterSpacing: 2, marginTop: 4 }}>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+      </div>
+    )
+  }
+  if (item.type === 'analogy') {
+    return (
+      <div style={{ fontSize: 17 }}>
+        <strong>{p.a}</strong> is to <strong>{p.A}</strong> as <strong>{p.b}</strong> is to{' '}
+        <span style={{ color: C.warm }}>?</span>
+      </div>
+    )
+  }
+  if (item.type === 'rhyme-synonym') {
+    return (
+      <div style={{ fontSize: 17 }}>
+        <strong style={{ letterSpacing: 1 }}>{p.word.toUpperCase()}</strong>
+        <span style={{ ...small, margin: '0 8px' }}>{t('eng_rhymes_with', lang)}</span>
+        <strong>{p.rhyme}</strong>
+      </div>
+    )
+  }
+  if (item.type === 'pair-meaning') {
+    return <div style={small}>{t(p.opposite ? 'eng_pair_most_opposite' : 'eng_pair_most_similar', lang)}</div>
+  }
+  if (item.type === 'logic-grid') {
+    return (
+      <div style={{ fontSize: 15, lineHeight: 1.5 }}>
+        {p.lines.join(' ')}
+        <div style={{ fontWeight: 700, marginTop: 6 }}>{p.question}</div>
+      </div>
+    )
+  }
+  if (item.type === 'letters-in-order' || item.type === 'anagram-pair' || item.type === 'misspelt') return null
+  if (item.type === 'letter-sum') {
+    return (
+      <div style={{ fontSize: 15 }}>
+        <div>{p.table}</div>
+        <div style={{ ...big, marginTop: 4 }}>{p.sum} = ?</div>
+      </div>
+    )
+  }
+  // ── spelling and grammar (English 10-11, MC Pack 2) ───────────────────────────────────
+  if (['homophone-cloze', 'grammar-cloze', 'comparative', 'proverb'].includes(item.type)) {
+    return (
+      <div style={{ fontSize: 17 }}>
+        {p.sentence.split('___').map((x, i, all) => (
+          <span key={i}>{x}{i < all.length - 1 && <span style={{ color: C.warm }}>_____</span>}</span>
+        ))}
+        {item.type === 'comparative' && <span style={{ ...small, marginLeft: 8 }}>({p.word})</span>}
+      </div>
+    )
+  }
+  if (item.type === 'apostrophe') return <div style={{ fontSize: 17, fontStyle: 'italic' }}>{p.phrase}</div>
+  if (['ending', 'ie-ei', 'silent-letter'].includes(item.type)) {
+    return <div style={{ ...big, fontSize: 22, letterSpacing: 2 }}>{p.masked}</div>
+  }
+  if (item.type === 'collective') {
+    return <div style={{ fontSize: 18 }}>a <span style={{ color: C.warm }}>_____</span> of <strong>{p.word}</strong></div>
   }
   return <div style={{ fontSize: 20, fontWeight: 700 }}>{p.word}</div>
 }
@@ -253,7 +406,9 @@ function runAudit(bandKey, perType, variety) {
       // at Zipf 2.6. Counting them as unreadable vocabulary put a red number on the one thing
       // about those options that is working.
       const letters = ['letter-pair', 'shared-letters', 'hidden-word', 'plural', 'past-tense',
-        'suffix', 'root-word', 'prefix-antonym', 'missing-vowel'].includes(type)
+        'suffix', 'root-word', 'prefix-antonym', 'missing-vowel', 'letter-code', 'front-letter',
+        'join-letter', 'letter-analogy', 'letter-sum', 'logic-grid', 'pair-meaning', 'analogy',
+        ...GRAMMAR_TYPES].includes(type)
       if (!letters) {
         for (const o of item.options) {
           if (WORD_Z[o.text] && WORD_Z[o.text] < BANDS[bandKey].option) rare++
