@@ -60,7 +60,7 @@ import {
 import {
   RELATIONS, LOGIC_SCENES, ORDER_SCENES, NAMES, POSSESSIVES, MISSPELLINGS, CONTRACTIONS,
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
-  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES,
+  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -138,6 +138,28 @@ const BANNED = new Set(BLOCKED)
 // last build — "they dug a pit to bury the body" reached a nine-year-old as the sentence for
 // `pit` — and are also in that file, so the next build drops the sentences at source.
 const DARK_SENTENCE = new Set(['bury', 'buried', 'burial', 'burying', 'smoking'])
+const DARK_SENTENCE_PATTERNS = [
+  /\bclinton\b/i, /\brepublican party\b/i, /\bjob applicants?\b/i,
+  /\bfather children\b/i, /\bdon't recognize them\b/i,
+  /\bgood husband for your daughter\b/i, /\bsuitable for their son\b/i,
+  /\bproblem children\b/i, /\bburden of proof\b/i, /\bprosecution\b/i,
+  /\bearthquake losses?\b/i, /\bhard left to the chin\b/i,
+]
+const BAD_SENSE_PAIRS = new Set([
+  'club|nine', 'load|laden', 'bad|tough', 'heart|spirit', 'screen|sieve',
+])
+// Every available sentence for these stems is either misleading without its wider context or
+// unsuitable for a child-facing bank. Keeping the whole stem out is safer than playing
+// whack-a-mole with one answer while another synonym from the same sense remains.
+const BAD_SENSE_WORDS = new Set(['club'])
+const sentenceProblem = (sentence) => {
+  const dark = (sentence.toLowerCase().match(/[a-z]+/g) || []).find(w => DARK_SENTENCE.has(w))
+  if (dark) return `the sentence is about "${dark}"`
+  if (DARK_SENTENCE_PATTERNS.some(re => re.test(sentence))) {
+    return 'the sentence has an unsuitable topic'
+  }
+  return null
+}
 
 // The lexical files a filler option may come from. WordNet sorts every sense into one of 45 of
 // these, and the split that matters here is not part of speech but whether a nine-year-old has
@@ -797,7 +819,11 @@ function plausibleLetters(r, truth, fits, count) {
 
 function genSynonym(r, band, seed) {
   const { antonyms, byRhyme } = index()
-  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => askable(band, w)).length >= 2)
+  // A bare word gives no context with which to select a rare WordNet sense. At 7-8, use the
+  // hand-reviewed pairs instead: WordNet otherwise calls `fix` a synonym of `get` and `bring`
+  // a synonym of `work`, relationships that only make sense in particular constructions.
+  const source = band.answer >= 40 ? PAIR_SYNONYMS.map(ws => [null, ws]) : SYNSETS
+  const usable = source.filter(([, ws]) => ws.filter(w => askable(band, w)).length >= 2)
   if (!usable.length) return null
   const [, words] = pickOne(r, usable)
   const good = shuffle(r, words.filter(w => askable(band, w)))
@@ -839,7 +865,12 @@ function genSynonym(r, band, seed) {
 
 function genAntonym(r, band, seed) {
   const { synonyms, byRhyme } = index()
-  const pairs = ANTONYMS.filter(([a, b]) => askable(band, a) && askable(band, b))
+  // The same context rule applies to opposites. The curated relation excludes WordNet's
+  // contextual pairs (`bottom / side`) and gender counterparts (`aunt / uncle`).
+  const source = band.answer >= 40
+    ? Object.entries(RELATIONS.opposite).flatMap(([a, bs]) => bs.map(b => [a, b]))
+    : ANTONYMS
+  const pairs = source.filter(([a, b]) => askable(band, a) && askable(band, b))
   if (!pairs.length) return null
   const [a, b] = pickOne(r, pairs)
   const [stem, answer] = r() < 0.5 ? [a, b] : [b, a]
@@ -877,17 +908,20 @@ function genSense(r, band, seed) {
   // its distractors are one lookup. Nothing is hand-written and nothing is guessed.
   const words = Object.keys(SENSES).filter(
     w => z(w) >= band.stem && z(w) <= band.stemMax && SENSES[w].length >= 2
-      && (!band.familiarOnly || familiar(w)))
+      && !BAD_SENSE_WORDS.has(w) && (!band.familiarOnly || familiar(w)))
   if (!words.length) return null
   const word = pickOne(r, words)
   const senses = SENSES[word]
 
-  const withAnswer = senses.filter(s => s[2].some(x => z(x) >= band.answer))
+  const withAnswer = senses.filter(s => !sentenceProblem(s[1])
+    && s[2].some(x => z(x) >= band.answer && !BAD_SENSE_PAIRS.has(`${word}|${x}`)
+      && !glossMismatch(x, s[3])))
   if (!withAnswer.length) return null
   const chosenIndex = senses.indexOf(pickOne(r, withAnswer))
   const chosen = senses[chosenIndex]
   const [, sentence, syns, definition, far] = chosen
-  const answer = pickOne(r, syns.filter(x => z(x) >= band.answer))
+  const answer = pickOne(r, syns.filter(x => z(x) >= band.answer
+    && !BAD_SENSE_PAIRS.has(`${word}|${x}`) && !glossMismatch(x, definition)))
   // "What does `listed` mean?" answered `list` is not a question about meaning, it is the same
   // word with its ending taken off.
   //
@@ -960,9 +994,18 @@ function genOddTwo(r, band, seed) {
   const floor = Math.max(band.answer, 34)
   const inGroup = (c) => c[2].filter(
     w => z(w) >= floor && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
+  // WordNet categories may overlap in ordinary language. `container / vessel`, `body part /
+  // external body part`, and the botanical `herb` category (which includes bananas and
+  // pineapples) made questions with four or five defensible answers.
+  const excluded = new Set(['herb.n.01'])
+  const overlappingPairs = new Set([
+    'body_part.n.01|external_body_part.n.01',
+    'container.n.01|vessel.n.03',
+  ])
+  const overlaps = (a, b) => overlappingPairs.has([a[0], b[0]].sort().join('|'))
   const usable = CATEGORIES
     .map((c, i) => [i, c])
-    .filter(([, c]) => inGroup(c).length >= 3)
+    .filter(([, c]) => !excluded.has(c[0]) && inGroup(c).length >= 3)
   if (!usable.length) return null
   const [inIdx, inCat] = pickOne(r, usable)
   const inside = shuffle(r, inGroup(inCat)).slice(0, 3)
@@ -971,7 +1014,8 @@ function genOddTwo(r, band, seed) {
   // strays and the question answers itself; the book's own line is `lamb calf foal donkey pig`,
   // where the odd two are both animals and it is the "young" that separates them.
   const outsiders = (c) => inGroup(c).filter(w => !catsOf.get(w)?.has(inIdx))
-  const others = usable.filter(([i, c]) => i !== inIdx && outsiders(c).length >= 2)
+  const others = usable.filter(([i, c]) => i !== inIdx && !overlaps(inCat, c)
+    && outsiders(c).length >= 2)
   if (!others.length) return null
   const [, outCat] = pickOne(r, others)
   const outside = shuffle(r, outsiders(outCat)).slice(0, 2)
@@ -2376,13 +2420,15 @@ function genRhymeSynonym(r, band, seed) {
   const [cue, ...others] = shuffle(r, rhymers)
   const accepted = new Set(RHYME_CLUES.filter(([c]) => c === clue).map(([, a]) => a))
   const soundOnly = others.slice(0, 2).map(text => ({ text, why: 'rhymes-only' }))
-  const meaningOnly = shuffle(r, RHYME_CLUES.map(([, a]) => a)).filter(w => !accepted.has(w)
+  const otherAnswers = shuffle(r, RHYME_CLUES.map(([, a]) => a)).filter(w => !accepted.has(w)
     && !couldPassForRhyme(w, cue, v) && !related(w, answer))
   const distractors = [...soundOnly]
-  for (const w of meaningOnly) {
+  for (const w of otherAnswers) {
     if (distractors.length >= 4) break
     if (distractors.some(d => d.text === w)) continue
-    distractors.push({ text: w, why: 'means-only' })
+    // This word answers another clue; it does not mean the current clue. Calling it
+    // "right meaning, no rhyme" made the help panel teach a false synonym.
+    distractors.push({ text: w, why: 'unrelated' })
   }
   return finish(r, 'rhyme-synonym', seed, { word: clue, rhyme: cue }, [answer], distractors,
     { kind: 'rhyme-synonym', clue, rhyme: cue, variety: v }, 5)
@@ -2425,22 +2471,15 @@ function genPairMeaning(r, band, seed) {
   // and "most opposite in meaning: cup, mug / coffee, milk / hot, cold". The book's wrong pairs
   // are the useful half: an opposite pair against a same-meaning question, two things of one
   // kind (coffee, milk), and two words that only SOUND alike (fear, fare).
-  const { synonyms, antonyms } = index()
+  const { antonyms } = index()
   const opposite = r() < 0.5
   const kid = (w) => askable(band, w) && plainWord(w)
   // Both halves of the RIGHT pair come from the strict list and a high frequency bar. WordNet's
   // relations are made for every sense of a word, and a pair shown with no sentence is read in
   // its commonest one: its antonyms offered `lie, sit` as opposites, and its synonyms `check,
   // contain`. The opposites come from the hand table for the same reason.
-  const strict = (w) => FAMILIAR_SET.has(w) && z(w) >= 45 && plainWord(w)
-  const synPairs = memo(`syn-pairs|${band.answer}|${band.familiarOnly}`, () => {
-    const out = []
-    for (const [a, set] of synonyms) {
-      if (!strict(a)) continue
-      for (const b of set) if (a < b && strict(b) && !sameWordDifferentEnding(a, b)) out.push([a, b])
-    }
-    return out
-  })
+  const synPairs = memo('curated-syn-pairs', () => PAIR_SYNONYMS.filter(([a, b]) =>
+    plainWord(a) && plainWord(b)))
   const antPairs = memo('ant-pairs', () => Object.entries(RELATIONS.opposite)
     .flatMap(([a, bs]) => bs.map(b => [a, b])))
   const catPairs = memo(`cat-pairs|${band.answer}|${band.familiarOnly}`, () => {
@@ -2637,19 +2676,19 @@ function genLetterSum(r, band, seed) {
 function genApostrophe(r, band, seed) {
   // "Rewrite each of the following, using only two words, one of which should have an
   // apostrophe. basket for a cat → cat's basket; school for girls → girls' school; hospital for
-  // women → women's hospital." The one rule: add 's, unless the owner already ends in s.
-  const [phrase, owner, thing, joiner] = pickOne(r, POSSESSIVES)
-  const right = owner.endsWith('s') ? `${owner}' ${thing}` : `${owner}'s ${thing}`
-  const plain = owner.endsWith('s') ? owner.slice(0, -1) : owner
+  // women → women's hospital." A regular plural ending in s takes only an apostrophe; a
+  // singular ending in s still takes 's. Spelling alone cannot tell those cases apart.
+  const [phrase, owner, thing, joiner, plural = false] = pickOne(r, POSSESSIVES)
   const endsS = owner.endsWith('s')
+  const right = plural && endsS ? `${owner}' ${thing}` : `${owner}'s ${thing}`
   const variants = [
     [`${owner}'s ${thing}`, 'apostrophe-s-added-to-plural'],
     [`${owner} ${thing}`, 'no-apostrophe'],
-    [`${plain}'s ${thing}`, 'singular-owner'],
     [`${owner}' ${thing}`, 'apostrophe-after-s'],
-    // An extra s is only a mistake a child makes on a word that does not already end in one:
-    // `childrens'` is; `horsess'` is not anything.
-    ...(endsS ? [] : [[`${owner}s' ${thing}`, 'extra-s'], [`${owner}s ${thing}`, 'no-apostrophe']]),
+    ...(plural && endsS ? [[`${owner.slice(0, -1)}'s ${thing}`, 'singular-owner']] : []),
+    ...(!plural && !endsS
+      ? [[`${owner}s' ${thing}`, 'extra-s'], [`${owner}s ${thing}`, 'no-apostrophe']]
+      : []),
   ]
   const seen = new Set([right])
   const wrong = []
@@ -2658,10 +2697,10 @@ function genApostrophe(r, band, seed) {
     seen.add(text)
     wrong.push({ text, why })
   }
-  // Four options when the owner ends in s: without the invented `horsess'` there are only three
-  // honest mistakes to make.
+  // Some singular-s rows have only two honest mistakes (`princess'`, no apostrophe), so those
+  // questions deliberately show three choices rather than inventing `princesss'` as filler.
   return finish(r, 'apostrophe', seed, { phrase: `${thing} ${joiner} ${phrase}` }, [right], wrong,
-    { kind: 'apostrophe', owner, thing }, Math.min(5, 1 + wrong.length))
+    { kind: 'apostrophe', owner, thing, plural }, Math.min(5, 1 + wrong.length))
 }
 
 function genMisspelt(r, band, seed) {
@@ -2767,7 +2806,8 @@ function genContraction(r, band, seed) {
   // "Write the two words each contraction stands for" and "Write the contraction for each of
   // these". The wrong answers are written into the table because they are specific: `could of`.
   const [short, full, wrongFull] = pickOne(r, CONTRACTIONS)
-  if (r() < 0.5) {
+  const ambiguous = new Set(["I'd", "she's", "who's", "there's", "what's", "she'd"])
+  if (!ambiguous.has(short) && r() < 0.5) {
     return finish(r, 'contraction', seed, { word: short, expand: true }, [full],
       wrongFull.map(text => ({ text, why: 'other-words' })),
       { kind: 'contraction', short, full }, 4)
@@ -3067,12 +3107,15 @@ export function validateItem(item) {
   }
   // Sentences screened at build time, screened again here for what the build's lists missed.
   if (item.prompt.sentence) {
-    const dark = (item.prompt.sentence.toLowerCase().match(/[a-z]+/g) || []).find(w => DARK_SENTENCE.has(w))
-    if (dark) return `the sentence is about "${dark}"`
+    const problem = sentenceProblem(item.prompt.sentence)
+    if (problem) return problem
   }
   if (item.type === 'sense') {
     if (!item.prompt.sentence.toLowerCase().includes(item.prompt.word.toLowerCase())) {
       return 'the sentence does not contain the word'
+    }
+    if (BAD_SENSE_PAIRS.has(`${item.prompt.word}|${answers[0]}`)) {
+      return `the answer "${answers[0]}" does not replace "${item.prompt.word}" in this sentence`
     }
   }
 
@@ -3248,8 +3291,8 @@ function validateNewFamilies(item, texts, answers, wrong) {
       return exactlyOne(t => Number(t) === res, 'are the answer')
     }
     case 'apostrophe': {
-      const { owner, thing } = item.rule
-      const right = owner.endsWith('s') ? `${owner}' ${thing}` : `${owner}'s ${thing}`
+      const { owner, thing, plural } = item.rule
+      const right = plural && owner.endsWith('s') ? `${owner}' ${thing}` : `${owner}'s ${thing}`
       return exactlyOne(t => t === right, 'are punctuated right')
     }
     case 'misspelt':

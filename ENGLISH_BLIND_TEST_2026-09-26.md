@@ -1,0 +1,75 @@
+# English motoru kör test devir notu — 2026-09-26
+
+Claude için not. — Codex
+
+## Bağlam ve kanıt
+
+- Dal: `codex/english-blind-test-fixes`
+- Başlangıç commit'i: `649392d` (`English engine: 7-8 and 10-11 bands from three more Bond books`)
+- Tarayıcıda yaklaşık 350 soru kör okundu; ardından UK ve US için her yaş/tipte 300 soru
+  tarandı. Tam audit 50.400 tip-sorusu ve 2.000 adet 10 soruluk oturum üretti.
+- Doğrulama: `npm run english:check` ve `npx vite build` exit code 0.
+
+## Düzeltilen bulgular
+
+1. **Tekil `s` ile biten iyelikler çoğul sanılıyordu.**
+   - Tekrar: `10-11 / apostrophe / seed 4079202`.
+   - Eski cevap: `princess' crown`; doğru cevap: `princess's crown`.
+   - `POSSESSIVES` artık çoğulluğu açık bir boolean ile taşıyor; validator da aynı metadata'yı
+     kullanıyor. `class's` ile `classes'` artık birbirinden ayrılıyor.
+
+2. **Belirsiz contractions tek bir açılıma indirgeniyordu.**
+   - Tekrar: seed `16047562` (`she's → she is`) ve `16079238` (`who's → who is`).
+   - `I'd`, `she's`, `who's`, `there's`, `what's`, `she'd` için yalnız tam biçimden kısa biçime
+     soru üretiliyor; kısa biçimden tek bir genişletme sorulmuyor.
+
+3. **`rhyme-synonym` yardım metni yanlış eşanlam öğretiyordu.**
+   - Tekrar: `7-8 / seed 9055460`, `STOP`, `salt → halt`.
+   - `food`, `cold`, `yell` başka ipuçlarının cevaplarıydı ama “right meaning, no rhyme” diye
+     etiketleniyordu. Bunlar artık `unrelated`; `means-only` etiketi bu yolda kullanılmıyor.
+
+4. **Bağlamsız WordNet ilişkileri çıplak eşanlam çifti olarak kullanılıyordu.**
+   - Tekrar: `phone/sound` (`25007994`), `home/plate` (`25023832`), `have/throw`
+     (`25031751`); 7-8 synonym'de `get/fix`, `work/bring`.
+   - 7-8 `synonym` ve `pair-meaning` artık elle gözden geçirilmiş `PAIR_SYNONYMS` tablosunu
+     kullanıyor. 7-8 `antonym` yalnız `RELATIONS.opposite` kullanıyor; `bottom/side` ve
+     `aunt/uncle` gibi WordNet çiftleri çıkmıyor.
+
+5. **`odd-two` kategorileri insan gözüyle çakışıyordu.**
+   - Tekrar: `20047347` (`external body part` / `body part`), `20071331`
+     (`container` / `vessel`), `19418973` (`herb` içinde banana/pineapple).
+   - Çakışan kategori çiftleri birlikte seçilmiyor; botanik `herb` kategorisi bu tipten çıkarıldı.
+
+6. **`sense` örneklerinde yanlış/uygunsuz cümle-cevap çiftleri vardı.**
+   - `129`: baseball club cümlesi → `nine`
+   - `558`: “father children but don't recognize them” → `mother`
+   - `934`: “screen the job applicants” → `sieve`
+   - `136`: Clinton/Republican Party cümlesi → `blast`
+   - `37`: “load the truck” → `laden`
+   - UI seed `17039646`: “my throat feels bad” → `tough`
+   - UI seed `17134674`: “change of heart” → `spirit`
+   - Uygunsuz konu kalıpları runtime'da da engellendi; doğrulanmış kötü çiftler ve bütün `club`
+     sense havuzu çıkarıldı; cevap ayrıca tanımın sözcük türüyle uyuşmak zorunda. Bu seed'ler
+     `scripts/english-audit.mjs` içinde regresyon olarak kilitli.
+
+## Bilerek açık bırakılan risk
+
+`sense` hâlâ WordNet'in örnek cümle + synset verisine dayanıyor. Otomatik validator sözlüğün
+kendi semantiğini bağımsız biçimde doğrulayamaz. Düzeltmeden sonra UI seed `17134674`, örneğin,
+`I have to hit the MAC machine... → reach` üretiyor: savunulabilir ama eski/bölgesel ve çocuk
+bankası için iyi yazılmış bir örnek değil. Uzun vadeli doğru çözüm sense kayıtlarını elle
+onaylanan bir allowlist'e taşımak veya bu tipi o liste hazır olana kadar kapatmak. Bu turda
+doğrulanmış yanlışlar kapatıldı; tüm sense bankasının editoryal olarak temiz olduğu iddia
+edilmiyor.
+
+9-10 çoğul havuzunda `methodology`, `tertiary`, `substantive` gibi yaş için sert kelimeler de
+görüldü. Bunlar mekanik olarak doğru oldukları için bu düzeltme dalında değiştirilmedi; ayrı bir
+yaş seviyesi/editoryal karar.
+
+## Regresyon özeti
+
+- `npm run english:check`: geçti; iki variety, beş bant, her tipte 300 soru; kısa oturum ve
+  oturum içi tekrar yok.
+- `npx vite build`: geçti; yalnız mevcut büyük chunk uyarısı var.
+- `git diff --check`: geçti.
+

@@ -244,6 +244,53 @@ for (const bandKey of BAND_KEYS) {
 }
 }
 
+// ── regressions found by blind review ────────────────────────────────────────────────────
+// These are semantic failures that the lexicon agrees with, so the generic checks above could
+// never catch them: WordNet itself supplied the bad relationship. Keep the concrete seeds that
+// exposed each class beside the structural assertion that prevents it returning.
+{
+  const apostrophe = generateItem('10-11', 'apostrophe', 4079202, { variety: 'uk' })
+  const apostropheAnswer = apostrophe?.correct.map(i => apostrophe.options[i].text)
+  if (!apostropheAnswer?.includes("princess's crown")) {
+    failures.push(`[regression] apostrophe seed 4079202 does not accept princess's crown`)
+  }
+  const singularClass = generateItem('10-11', 'apostrophe', 69, { variety: 'uk' })
+  const pluralClasses = generateItem('10-11', 'apostrophe', 44, { variety: 'uk' })
+  if (!singularClass?.correct.map(i => singularClass.options[i].text).includes("class's trip")
+    || !pluralClasses?.correct.map(i => pluralClasses.options[i].text).includes("classes' concert")) {
+    failures.push('[regression] class/classes possessives no longer distinguish singular and plural')
+  }
+
+  const ambiguous = new Set(["I'd", "she's", "who's", "there's", "what's", "she'd"])
+  for (let seed = 1; seed <= 2000; seed++) {
+    const item = generateItem('10-11', 'contraction', seed, { variety: 'uk' })
+    if (item?.prompt.expand && ambiguous.has(item.prompt.word)) {
+      failures.push(`[regression] contraction seed ${seed} treats ${item.prompt.word} as unambiguous`)
+      break
+    }
+  }
+
+  const rhyme = generateItem('7-8', 'rhyme-synonym', 9055460, { variety: 'uk' })
+  if (rhyme?.options.some(o => o.why === 'means-only')) {
+    failures.push('[regression] rhyme-synonym seed 9055460 teaches a false meaning-only label')
+  }
+
+  const forbiddenSense = [
+    ['9-10', 129, 'each club played six home games', 'nine'],
+    ['9-10', 558, "don't recognize them", 'mother'],
+    ['11-12', 934, 'job applicants', 'sieve'],
+    ['9-10', 136, 'Republican Party', 'blast'],
+    ['9-10', 37, 'load the truck', 'laden'],
+  ]
+  for (const [band, seed, sentence, answer] of forbiddenSense) {
+    const item = generateItem(band, 'sense', seed, { variety: 'uk' })
+    const answers = item?.correct.map(i => item.options[i].text) || []
+    if (item?.prompt.sentence.includes(sentence) || answers.includes(answer)) {
+      failures.push(`[regression] ${band}/sense seed ${seed} still emits ${sentence} / ${answer}`)
+    }
+  }
+}
+
 // ── the one check in this file that is not self-referential ──────────────────
 // Everything above reads the same generated tables the generator reads, so it can prove a
 // question is consistent with the lexicon and can never prove the LEXICON is right. An

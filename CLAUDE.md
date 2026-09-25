@@ -695,9 +695,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Sonra geri gelen 785 kelime **elle okundu** ve `imprisonment`, `handgun`, `leukemia`,
       `sexism`, `holocaust`, `screwing` gibi ~300 madde listeye yazıldı; `hospital`, `tennis`,
       `victory`, `tornado`, `fisherman` bilerek bırakıldı.
-      **Açık işler:** (1) kategori havuzu ince — 26 kullanışlı grup, `odd-two` en dar tip;
-      (2) `sense` havuzu 137 kelimeye indi (güvenlik+okunabilirlik kapıları cümleleri budadı) —
-      verim %85 ama çeşitlilik sınırlı; (3) kitabın cloze
+      **2026-09-26 kör test:** tekil-s iyelik, belirsiz contraction, rhyme-synonym yardım etiketi,
+      bağlamsız WordNet eş/zıt anlam çiftleri, çakışan odd-two kategorileri ve doğrulanmış bozuk
+      sense kayıtları düzeltildi. Seed'ler, ölçümler ve kalan editoryal risk
+      `ENGLISH_BLIND_TEST_2026-09-26.md` içinde. **Açık işler:** (1) kategori havuzu ince — 26
+      kullanışlı grup, `odd-two` en dar tip; (2) `sense` havuzu güvenlik+okunabilirlik kapılarıyla
+      dar ve WordNet cümleleri editoryal allowlist olmadan bütünüyle güvenilir sayılamaz;
+      (3) kitabın cloze
       paragrafı, karışık cümle ve kelime türü tipleri yok (cümle bankası ister);
       (4) çocuk ekranı yok — geldiğinde soru sunucuda üretilmeli, cevap tarayıcıya hiç
       gitmemeli (PuzzleScreen deseni). Sözlük 1.8MB, yalnız lab'a lazy yükleniyor.

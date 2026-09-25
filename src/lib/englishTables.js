@@ -69,6 +69,26 @@ export const RELATION_NAMES = {
   female: 'female', foot: 'foot', travels: 'travels on',
 }
 
+// Bare synonym pairs for questions that provide no sentence. WordNet records every sense of a
+// word, so pairs such as `home / plate` (home plate) and `have / throw` (have/throw a party) are
+// related in a particular construction but are not synonyms on the page. These pairs are the
+// deliberately small, ordinary-vocabulary bank used by pair-meaning and the youngest synonym
+// questions.
+export const PAIR_SYNONYMS = [
+  ['rent', 'hire'], ['friend', 'mate'], ['midday', 'noon'], ['pips', 'seeds'],
+  ['vehicle', 'car'], ['groceries', 'food'], ['instruct', 'teach'], ['graze', 'scratch'],
+  ['brook', 'stream'], ['seashore', 'coast'], ['quarrel', 'fight'], ['shut', 'close'],
+  ['large', 'big'], ['tiny', 'small'], ['angry', 'cross'], ['quick', 'fast'],
+  ['chilly', 'cold'], ['damp', 'wet'], ['glad', 'happy'], ['unhappy', 'sad'],
+  ['shout', 'yell'], ['leap', 'jump'], ['stone', 'rock'], ['path', 'track'],
+  ['sea', 'ocean'], ['hill', 'mound'], ['sleep', 'nap'], ['tale', 'story'],
+  ['present', 'gift'], ['clever', 'bright'], ['beginning', 'start'], ['finish', 'end'],
+  ['boat', 'ship'], ['tidy', 'neat'], ['look', 'see'], ['talk', 'speak'],
+  ['home', 'house'], ['stop', 'halt'], ['pull', 'drag'], ['autumn', 'fall'],
+  ['chat', 'talk'], ['child', 'kid'], ['scared', 'afraid'], ['correct', 'right'],
+  ['break', 'snap'], ['pebble', 'stone'], ['hole', 'gap'], ['hurry', 'rush'],
+]
+
 // ── logic scenes (VR 7-8) ─────────────────────────────────────────────────────────────────
 // "A and M use yellow paint. D and E use orange paint. A and E paint dogs. D and M paint cats.
 // Who paints yellow dogs?" Four children split two ways, so every pair of values names exactly
@@ -119,30 +139,32 @@ export const NAMES = [
 // ── possessive apostrophes (English 10-11, Paper 1) ─────────────────────────────────────
 // "Rewrite each of the following, using only two words, one of which should have an
 // apostrophe. basket for a cat → cat's basket; school for girls → girls' school."
-// [owner as the phrase prints it, owner as it owns, the thing, how the phrase joins them]
+// [owner as the phrase prints it, owner as it owns, the thing, how the phrase joins them,
+//  whether the owner is plural]. The explicit flag matters for singular words ending in s:
+//  princess's and class's take 's; girls' and classes' do not.
 export const POSSESSIVES = [
-  ['a cat', 'cat', 'basket', 'for'], ['girls', 'girls', 'school', 'for'],
-  ['women', 'women', 'hospital', 'for'], ['the workers', 'workers', 'canteen', 'for'],
-  ['children', 'children', 'playground', 'for'], ['a dog', 'dog', 'kennel', 'for'],
-  ['the babies', 'babies', 'toys', 'of'], ['a baby', 'baby', 'cot', 'for'],
-  ['the teachers', 'teachers', 'room', 'for'], ['a teacher', 'teacher', 'desk', 'of'],
-  ['the men', 'men', 'changing room', 'for'], ['a man', 'man', 'hat', 'of'],
-  ['the mice', 'mice', 'nest', 'of'], ['a mouse', 'mouse', 'tail', 'of'],
-  ['the birds', 'birds', 'nests', 'of'], ['a bird', 'bird', 'wing', 'of'],
-  ['the families', 'families', 'picnic', 'of'], ['a family', 'family', 'car', 'of'],
-  ['the players', 'players', 'kit', 'of'], ['a player', 'player', 'boots', 'of'],
-  ['the sheep', 'sheep', 'field', 'for'], ['the geese', 'geese', 'pond', 'for'],
-  ['the horses', 'horses', 'stable', 'for'], ['a horse', 'horse', 'saddle', 'of'],
-  ['the ladies', 'ladies', 'cloakroom', 'for'], ['a lady', 'lady', 'handbag', 'of'],
-  ['the pupils', 'pupils', 'books', 'of'], ['a pupil', 'pupil', 'pencil case', 'of'],
-  ['the people', 'people', 'park', 'for'], ['the puppies', 'puppies', 'basket', 'for'],
-  ['a puppy', 'puppy', 'lead', 'of'], ['the boys', 'boys', 'football', 'of'],
-  ['a boy', 'boy', 'bike', 'of'], ['the doctors', 'doctors', 'meeting', 'of'],
+  ['a cat', 'cat', 'basket', 'for'], ['girls', 'girls', 'school', 'for', true],
+  ['women', 'women', 'hospital', 'for', true], ['the workers', 'workers', 'canteen', 'for', true],
+  ['children', 'children', 'playground', 'for', true], ['a dog', 'dog', 'kennel', 'for'],
+  ['the babies', 'babies', 'toys', 'of', true], ['a baby', 'baby', 'cot', 'for'],
+  ['the teachers', 'teachers', 'room', 'for', true], ['a teacher', 'teacher', 'desk', 'of'],
+  ['the men', 'men', 'changing room', 'for', true], ['a man', 'man', 'hat', 'of'],
+  ['the mice', 'mice', 'nest', 'of', true], ['a mouse', 'mouse', 'tail', 'of'],
+  ['the birds', 'birds', 'nests', 'of', true], ['a bird', 'bird', 'wing', 'of'],
+  ['the families', 'families', 'picnic', 'of', true], ['a family', 'family', 'car', 'of'],
+  ['the players', 'players', 'kit', 'of', true], ['a player', 'player', 'boots', 'of'],
+  ['the sheep', 'sheep', 'field', 'for', true], ['the geese', 'geese', 'pond', 'for', true],
+  ['the horses', 'horses', 'stable', 'for', true], ['a horse', 'horse', 'saddle', 'of'],
+  ['the ladies', 'ladies', 'cloakroom', 'for', true], ['a lady', 'lady', 'handbag', 'of'],
+  ['the pupils', 'pupils', 'books', 'of', true], ['a pupil', 'pupil', 'pencil case', 'of'],
+  ['the people', 'people', 'park', 'for', true], ['the puppies', 'puppies', 'basket', 'for', true],
+  ['a puppy', 'puppy', 'lead', 'of'], ['the boys', 'boys', 'football', 'of', true],
+  ['a boy', 'boy', 'bike', 'of'], ['the doctors', 'doctors', 'meeting', 'of', true],
   ['the princess', 'princess', 'crown', 'of'], ['the class', 'class', 'trip', 'of'],
-  ['the classes', 'classes', 'concert', 'of'], ['the fox', 'fox', 'den', 'of'],
-  ['the foxes', 'foxes', 'den', 'of'], ['the wolves', 'wolves', 'howls', 'of'],
-  ['the fishermen', 'fishermen', 'boats', 'of'], ['my brother', 'brother', 'room', 'of'],
-  ['my sisters', 'sisters', 'room', 'of'], ['the twins', 'twins', 'birthday', 'of'],
+  ['the classes', 'classes', 'concert', 'of', true], ['the fox', 'fox', 'den', 'of'],
+  ['the foxes', 'foxes', 'den', 'of', true], ['the wolves', 'wolves', 'howls', 'of', true],
+  ['the fishermen', 'fishermen', 'boats', 'of', true], ['my brother', 'brother', 'room', 'of'],
+  ['my sisters', 'sisters', 'room', 'of', true], ['the twins', 'twins', 'birthday', 'of', true],
 ]
 
 // ── spelling (English 10-11 Papers 4, 6; MC Pack 2 Section 2) ────────────────────────────
