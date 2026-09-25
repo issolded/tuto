@@ -3634,7 +3634,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       getTreeState(childId, tz),
       supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('math_progress').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
-      supabase.from('stories').select('created_at').eq('child_id', childId).eq('status', 'completed').gte('created_at', since).lte('created_at', nowIso),
+      completedStoriesBetween(childId, since, nowIso),
       supabase.from('paintings').select('created_at').eq('child_id', childId).neq('status', 'blocked').gte('created_at', since).lte('created_at', nowIso),
       // Finished sittings only: one abandoned after two questions is not a puzzle session done.
       supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
@@ -3650,7 +3650,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
     const done = [
       ...(subs || []).map(r => [r.task_type, dayOf(r.created_at)]),
       ...(maths || []).map(r => ['math', dayOf(r.created_at)]),
-      ...(stories || []).map(r => ['writing', dayOf(r.created_at)]),
+      ...(stories || []).map(r => ['writing', dayOf(r.completed_at || r.created_at)]),
       ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
       ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
     ]
@@ -3831,6 +3831,19 @@ function effortScale(words, age) {
   return Math.min(1, EFFORT_FLOOR + (1 - EFFORT_FLOOR) * (words / target))
 }
 
+// Stories finished in [since, until], dated by when they were finished. A draft row is created
+// the day the child starts writing; counting by created_at put a story finished today on the
+// day it was begun, or outside the window entirely. Without the completed_at column
+// (migration 2026-09-25 not run yet) it falls back to the old created_at reading.
+async function completedStoriesBetween(childId, since, until) {
+  const r = await supabase.from('stories').select('created_at, completed_at')
+    .eq('child_id', childId).eq('status', 'completed')
+    .or(`and(completed_at.gte.${since},completed_at.lte.${until}),and(completed_at.is.null,created_at.gte.${since},created_at.lte.${until})`)
+  if (!r.error) return r
+  return supabase.from('stories').select('created_at').eq('child_id', childId).eq('status', 'completed')
+    .gte('created_at', since).lte('created_at', until)
+}
+
 app.post('/api/children/:childId/stories', async (req, res) => {
   const { childId } = req.params
   const { storyId, title, topic, transcribed_text, corrected_text, status, quality, cover_url, cover_color } = req.body
@@ -3894,15 +3907,27 @@ app.post('/api/children/:childId/stories', async (req, res) => {
       if (gemsAwarded > 0) {
         await supabase.from('stories').update({ gems_earned: gemsAwarded }).eq('id', story.id)
       }
+      // The day a story counts for is the day it was finished, not the day its draft row was
+      // made — a draft started Monday and finished Wednesday is Wednesday's story. Written on
+      // its own so a database without the column (migration 2026-09-25) loses only this.
+      const { error: caErr } = await supabase.from('stories')
+        .update({ completed_at: new Date().toISOString() }).eq('id', story.id)
+      if (caErr) console.warn(`[STORIES] completed_at not written: ${caErr.message}`)
     }
 
-    // Parent notification — insert only (no notification on edits/updates)
-    if (!storyId) {
+    // Parent notification — when the story is FINISHED, whether that is a fresh insert or a
+    // saved draft completed later. It used to fire on insert only, which was the wrong event
+    // both ways: saving a half-written draft told the parent "wrote a story!" with half a
+    // story, and completing that draft later said nothing at all. Edits to a story that was
+    // already completed stay silent.
+    if (firstCompletion) {
       try {
         const { data: child } = await supabase
-          .from('children').select('name, parent_id').eq('id', childId).maybeSingle()
+          .from('children').select('name, parent_id, age').eq('id', childId).maybeSingle()
         if (child) {
-          const storyText = corrected_text || transcribed_text || ''
+          // From the saved row: a draft being completed may send only the fields it changed.
+          const storyText = story.corrected_text || story.transcribed_text || corrected_text || transcribed_text || ''
+          const storyTitle = story.title || title
           // A story written past the day's limit is still shared — it is the story the parent
           // wants to read, not the gems. But the message must not leave them assuming it earned
           // something, so it carries the reason in one line. No offer to add gems: the limit is
@@ -3918,7 +3943,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Screening failed — unknown safety status, stay calm (fail-closed)
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}${capLine}`,
+              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${storyTitle || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'attention', child: child.name, detail: {
                 tr: 'yazdığı hikayeye göz atmanda fayda olabilir',
                 en: 'the story they wrote may be worth a look',
@@ -3928,17 +3953,17 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Clean story — joyful share
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}${capLine}`,
+              `${child.name} bir hikaye yazdı! 🌸\n\n${storyTitle || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'activity', child: child.name, detail: {
-                tr: `bir hikaye yazdı: "${title || 'Hikaye'}"`,
-                en: `wrote a story: "${title || 'Story'}"`,
+                tr: `bir hikaye yazdı: "${storyTitle || 'Hikaye'}"`,
+                en: `wrote a story: "${storyTitle || 'Story'}"`,
               } }
             )
           } else if (screening?.appropriateness === 'inappropriate') {
             // Inappropriate language — neutral share, no judgment
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}${capLine}`,
+              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${storyTitle || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'attention', child: child.name, detail: {
                 tr: 'bir hikaye yazdı, okumak istersin diye haber veriyorum',
                 en: 'wrote a story you may want to read yourself',

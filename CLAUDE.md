@@ -81,6 +81,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Taslaktan tamamlanan hikâye (2026-09-25, Claude). "Hikâye yazıldı" ile "hikâye satırı
+      oluştu" karıştırılıyordu. Ebeveyn bildirimi yalnız INSERT'te gidiyordu: yarım taslak
+      kaydedilince ebeveyne yarım hikâye "yazdı!" diye gidiyor, taslak sonra tamamlanınca hiçbir
+      şey gitmiyordu. Artık bildirim `firstCompletion`'da (gem'le aynı an), metin kaydedilen
+      satırdan. Günlük etkinlikler hikâyeyi `created_at` ile sayıyordu (taslağın başladığı gün);
+      artık `completed_at` (migration `2026-09-25_story_completed_at.sql`, sütun yoksa eski
+      okumaya düşer). Ebeveynin "Bugün tamamlananlar"ı zaten ledger'dan geliyor, etkilenmedi.
 - [x] 13 yaş: Year 8 kuruldu, merdivenin gerçek son basamağı (2026-09-25, Claude). Kaynak *Bond Maths
       Assessment Papers 12+-13+* (20 kâğıt × 50 soru baştan sona okundu; not dökümü scratchpad'de
       `NOTES-bond-1213.md`). Önceden 12 ve 13 yaş aynı Year 7 listesini alıyordu; artık 12 → Year 7
