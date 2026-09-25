@@ -132,7 +132,7 @@ const wrongSpelling = (w, variety) => !!SPELLING[w] && SPELLING[w][variety] !== 
 // from the lexicon: they assemble three letters, and three letters spell something unfortunate
 // about once in every three hundred items. The audit found `ass`, `pee`, `tit`, `hoe` and
 // `gin` sitting in options lists, each one a letter group that happened to be a word.
-const BANNED = new Set(BLOCKED)
+const BANNED = new Set([...BLOCKED, 'imprisoned'])
 
 // Words that make an example SENTENCE unsuitable although each is fine on its own. The build
 // screens sentences against scripts/english/sentence-topics.txt; these were found after the
@@ -160,6 +160,19 @@ const BAD_DEFINITION_WORDS = new Set([
   'bipolar', 'boyfriend', 'centre', 'despite', 'few', 'progressive', 'psycho',
   'swept', 'united', 'viii', 'willing', 'written', 'years',
 ])
+// WordNet records every attested inflection, including specialist senses and alternative
+// plurals. Those are not automatically fair "write the plural" questions: `fish/fishes`,
+// `penny/pence` and `index/indexes` all have another defensible answer, while `infos` and
+// `beefs` are sense shifts rather than primary-school spelling rules.
+const BAD_PLURAL_WORDS = new Set([
+  'beef', 'fish', 'fry', 'hash', 'index', 'info', 'may', 'money', 'nobody', 'penny',
+  'polish', 'say', 'security', 'somebody', 'staff', 'stuff', 'trash',
+])
+// `beaten` is a participle, not the simple past of `beat`; `might` is not a mechanical past
+// tense of modal `may` in the sense this question tests.
+const BAD_PAST_WORDS = new Set(['beat', 'may'])
+// Generated derivations can share spelling without being a teachable base+suffix relation.
+const BAD_SUFFIX_PAIRS = new Set(['tense|tensor'])
 const sentenceProblem = (sentence) => {
   const dark = (sentence.toLowerCase().match(/[a-z]+/g) || []).find(w => DARK_SENTENCE.has(w))
   if (dark) return `the sentence is about "${dark}"`
@@ -369,6 +382,7 @@ export const BANDS = {
     mask: [2, 3, 4],
     syllables: [2, 3, 4],
     hidden: 40,
+    pluralFamiliarOnly: true,
   },
 
   // ── 10-11 ───────────────────────────────────────────────────────────────────────────────
@@ -392,6 +406,7 @@ export const BANDS = {
     mask: [3, 4],
     syllables: [3, 4],
     hidden: 38,
+    pluralFamiliarOnly: true,
     // "Put these words in alphabetical order: procure, procession, proclaim, proceed, process,
     // processor." Five words that share their first three letters.
     alphaShared: 3,
@@ -1647,6 +1662,7 @@ function genPlural(r, band, seed) {
   // Latin and Greek plurals are held back to the band whose book asks them: the 9-10 paper
   // asks `thief` and `baby`, and `campus`, `radius` and `criterion` do not appear until 11-12.
   const pairs = PLURALS.filter(([a, b, rule]) => askable(band, a) && !BANNED.has(b)
+    && !BAD_PLURAL_WORDS.has(a) && (!band.pluralFamiliarOnly || familiar(a))
     && (rule !== 'latin' || band.latinPlurals))
   if (!pairs.length) return null
   const [single, answer, rule] = pickOne(r, pairs)
@@ -1684,7 +1700,8 @@ function genPlural(r, band, seed) {
 function genPastTense(r, band, seed) {
   // "Fill each gap by writing the past tense of the verb in bold." Same shape as the plural:
   // the irregular form against the rule applied blindly.
-  const pairs = PASTS.filter(([a, b]) => z(a) >= band.answer && !BANNED.has(b))
+  const pairs = PASTS.filter(([a, b]) => z(a) >= band.answer && !BANNED.has(b)
+    && !BAD_PAST_WORDS.has(a))
   if (!pairs.length) return null
   const [base, answer] = pickOne(r, pairs)
   const naive = REGULAR_PAST(base)
@@ -1715,7 +1732,8 @@ function genSuffix(r, band, seed) {
   // spelling change IS the question — `beauty` + `ful` is `beautiful`, not `beautyful` — so the
   // lexicon only keeps pairs where something changed, and the naive join is option one.
   const pairs = SUFFIXED.filter(
-    ([a, b]) => z(a) >= band.answer && z(b) >= band.option && !BANNED.has(b))
+    ([a, b]) => z(a) >= band.answer && z(b) >= band.option && !BANNED.has(b)
+      && !BAD_SUFFIX_PAIRS.has(`${a}|${b}`))
   if (!pairs.length) return null
   const [base, answer, suffix] = pickOne(r, pairs)
   const naive = base + suffix
@@ -2882,6 +2900,7 @@ function genSingular(r, band, seed) {
   // foxes, olives." The plural table read backwards, and the wrong answers are the endings
   // stripped the wrong way — `calve`, `batterie`, `torpedoe`.
   const pairs = PLURALS.filter(([a, b, rule]) => askable(band, a) && !BANNED.has(b)
+    && !BAD_PLURAL_WORDS.has(a) && (!band.pluralFamiliarOnly || familiar(a))
     && b !== a && (rule !== 'latin' || band.latinPlurals))
   if (!pairs.length) return null
   const [single, plural] = pickOne(r, pairs)
@@ -2902,7 +2921,7 @@ function genSingular(r, band, seed) {
     wrong.push({ text: w, why: w === plural ? 'still-plural' : 'stripped-wrongly' })
   }
   return finish(r, 'singular', seed, { word: plural }, [single], wrong,
-    { kind: 'singular', of: plural }, 4)
+    { kind: 'singular', of: plural, single }, 4)
 }
 
 function genGender(r, band, seed) {
@@ -3181,6 +3200,18 @@ export function validateItem(item) {
   if (item.type === 'plural' || item.type === 'past-tense' || item.type === 'suffix') {
     const real = texts.filter(t => t in WORD_Z)
     if (real.length > 1) return `${real.length} options are real words (${real.join(', ')})`
+  }
+  if (item.type === 'plural' && BAD_PLURAL_WORDS.has(item.rule.of)) {
+    return `"${item.rule.of}" has no single unambiguous school plural`
+  }
+  if (item.type === 'singular' && BAD_PLURAL_WORDS.has(item.rule.single)) {
+    return `"${item.rule.single}" has no single unambiguous school plural`
+  }
+  if (item.type === 'past-tense' && BAD_PAST_WORDS.has(item.rule.of)) {
+    return `"${item.rule.of}" has no single simple-past answer here`
+  }
+  if (item.type === 'suffix' && BAD_SUFFIX_PAIRS.has(`${item.rule.of}|${answers[0]}`)) {
+    return `"${item.rule.of}" and "${answers[0]}" are not an approved suffix pair`
   }
   if (item.type === 'prefix-antonym') {
     for (const w of wrong) {

@@ -90,8 +90,31 @@ Allowlist genişletilirken her yeni cümle–cevap ikamesi yüksek sesle okunmal
 tek başına kabul ölçütü değil.
 
 9-10 çoğul havuzunda `methodology`, `tertiary`, `substantive` gibi yaş için sert kelimeler de
-görüldü. Bunlar mekanik olarak doğru oldukları için bu düzeltme dalında değiştirilmedi; ayrı bir
-yaş seviyesi/editoryal karar.
+görüldü. 9-10 ve 10-11 çoğul/singular havuzları artık elle tanımlı tanıdık kelime kümesiyle
+sınırlı; 11-12'nin kitabında Latin/Greek plurals bulunduğu için ileri havuz orada korunuyor.
+
+8. **Çoğul tablosu alternatif ve anlam değiştiren biçimleri tek doğru sayıyordu.**
+   - `8-9 / plural / 21843`: `penny → pence` (`pennies` de doğru bağlama sahip).
+   - `8-9 / plural / 21028`: `fish → fishes` (`fish` de standart çoğul).
+   - Kör taramada ayrıca `index → indexes`, `staff → staffs`, `money → moneys`,
+     `info → infos`, `beef → beefs` gibi bağlama/sense'e bağlı biçimler görüldü.
+   - Doğrulanmış belirsiz tabanlar plural ve singular yollarından kapatıldı; 9-10 ve 10-11
+     kural soruları tanıdık kelimelerle sınırlandı. Validator aynı engeli metadata'dan bağımsız
+     olarak tekrar denetliyor.
+
+9. **Basit geçmiş zaman tablosunda participle/modal cevapları vardı.**
+   - `9-10 / past-tense / 19235`: `beat → beaten`; basit geçmiş `beat` olmalı.
+   - `9-10 / past-tense / 5543`: `may → might`; bu, mekanik bir past-tense dönüşümü değil.
+   - İki kayıt generator ve validator'da kapatıldı.
+
+10. **Suffix tablosunda yazım benzerliği ilişki sanılıyordu.**
+    - `9-10 / suffix / 60474`: `tense + or → tensor`.
+    - Bu çift okul düzeyinde geçerli bir kök+ek türetimi olmadığı için kapatıldı.
+
+11. **Kaynak blocklist'in çekimli biçimi runtime lexicon'da kalmıştı.**
+    - `11-12 / missing-vowel / 11900`: `impr_soned → imprisoned`.
+    - `imprison` ve `imprisonment` engelliydi, fakat çekimli `imprisoned` ayrı kayıt olarak
+      sızıyordu. Kaynak blocklist'e ve yeniden build beklemeyen runtime engeline eklendi.
 
 ## Regresyon özeti
 

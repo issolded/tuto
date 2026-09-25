@@ -289,6 +289,22 @@ for (const bandKey of BAND_KEYS) {
       failures.push(`[regression] ${band}/sense seed ${seed} still emits ${sentence} / ${answer}`)
     }
   }
+
+  const forbiddenForms = [
+    ['8-9', 'plural', 21843, 'penny'],
+    ['8-9', 'plural', 21028, 'fish'],
+    ['9-10', 'past-tense', 19235, 'beat'],
+    ['9-10', 'past-tense', 5543, 'may'],
+    ['9-10', 'suffix', 60474, 'tense'],
+    ['11-12', 'missing-vowel', 11900, 'imprisoned'],
+  ]
+  for (const [band, type, seed, word] of forbiddenForms) {
+    const item = generateItem(band, type, seed, { variety: 'uk' })
+    const printed = [item?.prompt.word, item?.rule.word, item?.rule.of, item?.rule.single]
+    if (printed.includes(word)) {
+      failures.push(`[regression] ${band}/${type} seed ${seed} still emits ${word}`)
+    }
+  }
 }
 
 // ── the one check in this file that is not self-referential ──────────────────
