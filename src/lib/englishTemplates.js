@@ -173,6 +173,18 @@ const BAD_PLURAL_WORDS = new Set([
 const BAD_PAST_WORDS = new Set(['beat', 'may'])
 // Generated derivations can share spelling without being a teachable base+suffix relation.
 const BAD_SUFFIX_PAIRS = new Set(['tense|tensor'])
+// A bare base is not a fair prefix question when the table itself gives it two answers.
+// `dislike` is the opposite of the verb `like`; `unlike` belongs to a different sense/POS.
+// Without a sentence the child cannot know which relation the generator selected.
+const PREFIXES_BY_BASE = new Map()
+for (const [base, whole, prefix] of PREFIXED) {
+  const variants = PREFIXES_BY_BASE.get(base) || new Set()
+  variants.add(`${whole}|${prefix}`)
+  PREFIXES_BY_BASE.set(base, variants)
+}
+const AMBIGUOUS_PREFIX_BASES = new Set(
+  [...PREFIXES_BY_BASE].filter(([, variants]) => variants.size > 1).map(([base]) => base),
+)
 const sentenceProblem = (sentence) => {
   const dark = (sentence.toLowerCase().match(/[a-z]+/g) || []).find(w => DARK_SENTENCE.has(w))
   if (dark) return `the sentence is about "${dark}"`
@@ -1777,7 +1789,8 @@ function genPrefixAntonym(r, band, seed) {
   // themselves, which is what makes it a question about English rather than about vocabulary:
   // the child knows the word means the opposite, and has to know it is `impossible` and not
   // `unpossible`.
-  const pairs = PREFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option)
+  const pairs = PREFIXED.filter(([a, b]) => z(a) >= band.answer && z(b) >= band.option
+    && !AMBIGUOUS_PREFIX_BASES.has(a))
   if (!pairs.length) return null
   const [stem, whole, prefix] = pickOne(r, pairs)
   const others = ['un', 'in', 'im', 'dis', 'non', 'mis', 'il', 'ir', 'anti']
@@ -2888,10 +2901,12 @@ function genComparative(r, band, seed) {
     seen.add(text)
     wrong.push({ text, why })
   }
-  const frames = than
-    ? ['This one is ___ than that one.', 'Today is ___ than yesterday.', 'My story is ___ than yours.']
-    : ['It is the ___ of them all.', 'That was the ___ day of the year.', 'She chose the ___ one in the shop.']
-  return finish(r, 'comparative', seed, { sentence: pickOne(r, frames), word: adj }, [answer], wrong,
+  // The adjective is selected independently, so the frame has to work for every adjective.
+  // Contextual frames produced grammatical nonsense such as “Today is younger than yesterday”
+  // and “My story is stronger than yours”. These neutral frames test the form without also
+  // demanding a lucky adjective–noun pairing.
+  const sentence = than ? 'This one is ___ than that one.' : 'It is the ___ of them all.'
+  return finish(r, 'comparative', seed, { sentence, word: adj }, [answer], wrong,
     { kind: 'comparative', word: adj, than }, 5)
 }
 
@@ -3213,6 +3228,9 @@ export function validateItem(item) {
   if (item.type === 'suffix' && BAD_SUFFIX_PAIRS.has(`${item.rule.of}|${answers[0]}`)) {
     return `"${item.rule.of}" and "${answers[0]}" are not an approved suffix pair`
   }
+  if (item.type === 'prefix-antonym' && AMBIGUOUS_PREFIX_BASES.has(item.rule.of)) {
+    return `"${item.rule.of}" has more than one valid prefixed form`
+  }
   if (item.type === 'prefix-antonym') {
     for (const w of wrong) {
       if ((w + item.prompt.word) in WORD_Z) return `"${w}${item.prompt.word}" is also a word`
@@ -3369,6 +3387,8 @@ function validateNewFamilies(item, texts, answers, wrong) {
     }
     case 'comparative': {
       const row = COMPARATIVES.find(([a]) => a === p.word)
+      const frame = item.rule.than ? 'This one is ___ than that one.' : 'It is the ___ of them all.'
+      if (p.sentence !== frame) return 'the comparative sentence does not fit every adjective'
       return exactlyOne(t => t === (item.rule.than ? row[1] : row[2]), 'are the right form')
     }
     case 'singular': {

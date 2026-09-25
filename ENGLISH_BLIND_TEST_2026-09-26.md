@@ -116,6 +116,20 @@ sınırlı; 11-12'nin kitabında Latin/Greek plurals bulunduğu için ileri havu
     - `imprison` ve `imprisonment` engelliydi, fakat çekimli `imprisoned` ayrı kayıt olarak
       sızıyordu. Kaynak blocklist'e ve yeniden build beklemeyen runtime engeline eklendi.
 
+12. **Comparative sıfatları rastgele bağlamlarla anlamsız cümleler kuruyordu.**
+    - `10-11 / comparative / 1`: `young` için “Today is younger than yesterday.”
+    - Aynı yol `strong` için “My story is stronger than yours.” gibi dilbilgisel biçimi doğru
+      olsa da çocuk sorusu olarak doğal olmayan eşleşmeler üretiyordu.
+    - Comparative ve superlative artık her sıfatla çalışan nötr iki cümle kalıbı kullanıyor;
+      validator kalıbı ayrıca doğruluyor.
+
+13. **Bare prefix sorusunda aynı kökün iki cevabı vardı.**
+    - `10-11 / prefix-antonym / 7810`: `like → dislike`.
+    - `10-11 / prefix-antonym / 14112`: `like → unlike`.
+    - Cümlesiz `like` fiil/sıfat anlamını ayırmadığı için hangi prefix'in istendiği bilinemez.
+      Lexicon'da birden fazla farklı prefixed biçimi olan tabanlar generator'dan çıkarıldı ve
+      validator'da aynı kural kilitlendi.
+
 ## Regresyon özeti
 
 - `npm run english:check`: geçti; iki variety, beş bant, her tipte 300 soru; kısa oturum ve

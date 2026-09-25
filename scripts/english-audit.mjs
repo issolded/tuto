@@ -305,6 +305,17 @@ for (const bandKey of BAND_KEYS) {
       failures.push(`[regression] ${band}/${type} seed ${seed} still emits ${word}`)
     }
   }
+
+  for (const seed of [7810, 14112]) {
+    const item = generateItem('10-11', 'prefix-antonym', seed, { variety: 'uk' })
+    if (item?.prompt.word === 'like') {
+      failures.push(`[regression] 10-11/prefix-antonym seed ${seed} asks ambiguous bare "like"`)
+    }
+  }
+  const comparative = generateItem('10-11', 'comparative', 1, { variety: 'uk' })
+  if (comparative?.prompt.sentence !== 'This one is ___ than that one.') {
+    failures.push('[regression] comparative seed 1 uses a frame that may not fit its adjective')
+  }
 }
 
 // ── the one check in this file that is not self-referential ──────────────────
