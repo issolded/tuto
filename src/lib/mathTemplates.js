@@ -2584,17 +2584,26 @@ function placeCompare(level, lang) {
   const xs = [...set]
   const askBiggest = Math.random() < 0.5
   const answer = askBiggest ? Math.max(...xs) : Math.min(...xs)
+  // The four numbers are the options: they were printed in the question and then had to be
+  // typed back in, which tests the keypad, not the comparing. Each wrong one names the first
+  // place where it differs from the answer — that place is what decides it.
+  const PLACE = [say(lang, 'hundreds', 'yüzler', 'centenas'), say(lang, 'tens', 'onlar', 'decenas'), say(lang, 'ones', 'birler', 'unidades')]
+  const why = x => {
+    const a = String(x), c = String(answer)
+    const i = [...a].findIndex((d, k) => d !== c[k])
+    const [dx, dc] = [a[i], c[i]]
+    return say(lang, `Compare it with ${c}: in the ${PLACE[i]} place ${dx} is ${askBiggest ? 'smaller' : 'bigger'} than ${dc}.`,
+                     `${c} ile karşılaştır: ${PLACE[i]} basamağında ${dx}, ${dc}'${askBiggest ? 'den küçük' : 'den büyük'}.`.replace(/'den/, trEk(dc, 'abl')),
+                     `Compáralo con ${c}: en las ${PLACE[i]}, ${dx} es ${askBiggest ? 'menor' : 'mayor'} que ${dc}.`)
+  }
   return {
     topic: 'place-value', level,
     question_text: askBiggest
-      ? say(lang, `Which of these is the largest? ${xs.map(x => num(x, lang)).join(', ')}`,
-                  `Bunlardan hangisi en büyük? ${xs.map(x => num(x, lang)).join(', ')}`,
-                  `¿Cuál de estos es el mayor? ${xs.map(x => num(x, lang)).join(', ')}`)
-      : say(lang, `Which of these is the smallest? ${xs.map(x => num(x, lang)).join(', ')}`,
-                  `Bunlardan hangisi en küçük? ${xs.map(x => num(x, lang)).join(', ')}`,
-                  `¿Cuál de estos es el menor? ${xs.map(x => num(x, lang)).join(', ')}`),
-    format: 'numeric',
-    correct_answer: answer,
+      ? say(lang, 'Which of these numbers is the largest?', 'Bu sayılardan hangisi en büyük?', '¿Cuál de estos números es el mayor?')
+      : say(lang, 'Which of these numbers is the smallest?', 'Bu sayılardan hangisi en küçük?', '¿Cuál de estos números es el menor?'),
+    format: 'choice',
+    options: choiceOf(opt(answer, say(lang, 'Right.', 'Doğru.', 'Correcto.')), xs.filter(x => x !== answer).map(x => opt(x, why(x)))),
+    correct_answer: String(answer),
     operandKey: `pv:cmp:${xs.slice().sort((a, b) => a - b).join('-')}`,
     hint_steps: [
       say(lang, `Compare the hundreds first, then the tens, then the ones.`,
