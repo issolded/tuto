@@ -3250,9 +3250,10 @@ function avgMean(level, lang) {
 }
 
 // Working backwards from a known mean to a missing value.
+const esFem = w => ['semanas', 'sesiones'].includes(w)
 function avgReverseMean(level, lang) {
   const n = pick([4, 5])
-  const [what, per, pers, verb, lo, hi] = pickL(AVG_SUBJECTS, lang)
+  const [what, per, pers, verb, lo, hi, , perLoc] = pickL(AVG_SUBJECTS, lang)
   // The mean has to sit inside the subject's own range, or the values built around it leave it.
   const mean = randInt(Math.max(lo + 1, 2), Math.max(lo + 2, hi - 1))
   const total = mean * n
@@ -3270,8 +3271,9 @@ function avgReverseMean(level, lang) {
     topic: 'averages', level,
     question_text: say(lang,
       `Over ${n} ${pers} ${name} ${verb} a mean of ${mean} ${what}. In the first ${n - 1} ${pers} ${name} ${verb} ${list}. How many in the last one?`,
-      `${name} ${n} ${per} boyunca ortalama ${mean} ${what} ${verb}. İlk ${n - 1} ${per} içinde ${list} ${verb}. Sonuncusunda kaç tane?`,
-      `En ${n} ${pers} ${name} ${verb} una media de ${mean} ${what}. En los primeros ${n - 1} ${pers} ${verb} ${list}. ¿Cuántos en el último?`),
+      `${name} ${n} ${per} boyunca ortalama ${mean} ${what} ${verb}. İlk ${n - 1} ${perLoc} ${list} ${what} ${verb}. Son ${perLoc} kaç ${what} ${verb}?`,
+      // semanas and sesiones are feminine: "los primeros 3 sesiones … el último" was going out.
+      `En ${n} ${pers} ${name} ${verb} una media de ${mean} ${what}. En ${esFem(pers) ? 'las primeras' : 'los primeros'} ${n - 1} ${pers} ${verb} ${list}. ¿Cuántos en ${esFem(pers) ? 'la última' : 'el último'}?`),
     format: 'numeric',
     correct_answer: missing,
     operandKey: `avg:rev:${mean}:${xs.join('-')}`,
@@ -3735,7 +3737,8 @@ function moneyCombine(level, lang) {
   const parts = kinds.map(v => ({ v, n: randInt(1, 4) }))
   const total = parts.reduce((s, p) => s + p.v * p.n, 0)
   const list = listWithAnd(parts.map(p => say(lang,
-    `${p.n} ${p.v}${many === 'cents' ? 'c' : ''} ${p.n === 1 ? 'coin' : 'coins'}`,
+    // In words, because "1 5c coin" puts two numbers side by side and reads as "15c".
+    `${['', 'one', 'two', 'three', 'four'][p.n]} ${p.v}${many === 'cents' ? 'c' : ''} ${p.n === 1 ? 'coin' : 'coins'}`,
     `${p.n} tane ${p.v} kuruşluk`,
     `${p.n} ${p.n === 1 ? 'moneda' : 'monedas'} de ${p.v}`)), lang)
 
@@ -3892,10 +3895,11 @@ function measureDifference(level, lang) {
     : pick([
       { unit: 'g', lo: 150, hi: 900, a: { en: 'apple', tr: 'elma', es: 'manzana', g: 'f' }, b: { en: 'melon', tr: 'kavun', es: 'melón', g: 'm' } },
       { unit: 'ml', lo: 100, hi: 900, a: { en: 'cup', tr: 'bardak', es: 'vaso', g: 'm' }, b: { en: 'bottle', tr: 'şişe', es: 'botella', g: 'f' } },
-      { unit: 'cm', lo: 30, hi: 200, a: { en: 'chair', tr: 'sandalye', es: 'silla', g: 'f' }, b: { en: 'door', tr: 'kapı', es: 'puerta', g: 'f' } },
+      // A door is about two metres: one range for both things made a 159 cm door.
+      { unit: 'cm', lo: 40, hi: 230, aHi: 110, bLo: 190, a: { en: 'chair', tr: 'sandalye', es: 'silla', g: 'f' }, b: { en: 'door', tr: 'kapı', es: 'puerta', g: 'f' } },
     ])
-  const small = randInt(set.lo, Math.floor((set.lo + set.hi) / 2))
-  const large = randInt(small + 2, set.hi)
+  const small = randInt(set.lo, set.aHi ?? Math.floor((set.lo + set.hi) / 2))
+  const large = randInt(Math.max(small + 2, set.bLo ?? 0), set.hi)
   const A = pickL(set.a, lang), B = pickL(set.b, lang)
   // "A apple" and "Un manzana" were both being printed. English takes its article from the
   // sound, Spanish from the noun's gender, which the bank now carries.
@@ -3917,11 +3921,11 @@ function measureDifference(level, lang) {
     topic: 'measurement', level,
     question_text: set.unit === 'ml'
       ? say(lang, `${enA} ${A} holds ${small} ml and ${enB} ${B} holds ${large} ml. How much more does the ${B} hold?`,
-                  `Bir ${A} ${small} ml, bir ${B} ${large} ml alıyor. ${B} kaç ml daha fazla alır?`,
+                  `Bir ${A} ${small} ml, bir ${B} ${large} ml alıyor. ${cap(B)} kaç ml daha fazla alır?`,
                   `${esA} ${A} contiene ${small} ml y ${esB} ${B} contiene ${large} ml. ¿Cuántos ml más contiene ${esTheB} ${B}?`)
       : say(lang, `${enA} ${A} is ${small} ${set.unit} and ${enB} ${B} is ${large} ${set.unit}. How much ${heavier} is the ${B}?`,
-                  `Bir ${A} ${small} ${set.unit}, bir ${B} ${large} ${set.unit}. ${B} kaç ${set.unit} ${heavier}?`,
-                  `${esA} ${A} mide ${small} ${set.unit} y ${esB} ${B} mide ${large} ${set.unit}. ¿Cuánto ${heavier} es ${esTheB} ${B}?`),
+                  `Bir ${A} ${small} ${set.unit}, bir ${B} ${large} ${set.unit}. ${cap(B)} kaç ${set.unit} ${heavier}?`,
+                  `${esA} ${A} ${set.unit === 'g' ? 'pesa' : 'mide'} ${small} ${set.unit} y ${esB} ${B} ${set.unit === 'g' ? 'pesa' : 'mide'} ${large} ${set.unit}. ¿Cuánto ${heavier} es ${esTheB} ${B}?`),
     format: 'numeric',
     correct_answer: large - small,
     operandKey: `meas:diff:${set.unit}:${small}:${large}`,
@@ -4095,19 +4099,19 @@ const TR_DAYS = ['pazartesi', 'salı', 'çarşamba', 'perşembe', 'cuma']
 const ES_DAYS = ['el lunes', 'el martes', 'el miércoles', 'el jueves', 'el viernes']
 const CHART_SETS = {
   en: [
-    { what: 'books borrowed', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'books', at: EN_DAYS },
-    { what: 'goals scored', labels: ['Sep', 'Oct', 'Nov', 'Dec'], unit: 'goals', at: ['in September', 'in October', 'in November', 'in December'] },
-    { what: 'visitors', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'people', at: EN_DAYS },
+    { what: 'books borrowed', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'books', at: EN_DAYS, period: 'day' },
+    { what: 'goals scored', labels: ['Sep', 'Oct', 'Nov', 'Dec'], unit: 'goals', maxStep: 2, at: ['in September', 'in October', 'in November', 'in December'], period: 'month' },
+    { what: 'visitors', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], unit: 'people', at: EN_DAYS, period: 'day' },
   ],
   tr: [
-    { what: 'ödünç alınan kitap', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kitap', at: TR_DAYS.map(d => `${d} günü`), from: TR_DAYS.map(d => `${d} gününden`) },
-    { what: 'atılan gol', labels: ['Eyl', 'Eki', 'Kas', 'Ara'], unit: 'gol', at: ['eylülde', 'ekimde', 'kasımda', 'aralıkta'], from: ['eylülden', 'ekimden', 'kasımdan', 'aralıktan'] },
-    { what: 'ziyaretçi', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kişi', at: TR_DAYS.map(d => `${d} günü`), from: TR_DAYS.map(d => `${d} gününden`) },
+    { what: 'ödünç alınan kitap', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kitap', at: TR_DAYS.map(d => `${d} günü`), from: TR_DAYS.map(d => `${d} gününden`), period: 'günde' },
+    { what: 'atılan gol', labels: ['Eyl', 'Eki', 'Kas', 'Ara'], unit: 'gol', maxStep: 2, at: ['eylülde', 'ekimde', 'kasımda', 'aralıkta'], from: ['eylülden', 'ekimden', 'kasımdan', 'aralıktan'], period: 'ayda' },
+    { what: 'ziyaretçi', labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'], unit: 'kişi', at: TR_DAYS.map(d => `${d} günü`), from: TR_DAYS.map(d => `${d} gününden`), period: 'günde' },
   ],
   es: [
-    { what: 'libros prestados', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'libros', at: ES_DAYS },
-    { what: 'goles marcados', labels: ['Sep', 'Oct', 'Nov', 'Dic'], unit: 'goles', at: ['en septiembre', 'en octubre', 'en noviembre', 'en diciembre'] },
-    { what: 'visitantes', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'personas', at: ES_DAYS, many: 'Cuántas' },
+    { what: 'libros prestados', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'libros', at: ES_DAYS, period: 'día' },
+    { what: 'goles marcados', labels: ['Sep', 'Oct', 'Nov', 'Dic'], unit: 'goles', maxStep: 2, at: ['en septiembre', 'en octubre', 'en noviembre', 'en diciembre'], period: 'mes' },
+    { what: 'visitantes', labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], unit: 'personas', at: ES_DAYS, many: 'Cuántas', period: 'día' },
   ],
 }
 
@@ -4189,7 +4193,9 @@ function chartTemplate(level, lang) {
   if (band === 4 && Math.random() < 0.25) return { ...dataSorting(level, lang), topic: 'chart' }
   const line = band >= 5
   const set = pickL(CHART_SETS, lang)
-  const step = pick(line ? [5, 10, 20] : [2, 5, 10])
+  // A school team does not score 160 goals in a month: a set can cap its own scale.
+  const steps = (line ? [5, 10, 20] : [2, 5, 10]).filter(x => x <= (set.maxStep ?? Infinity))
+  const step = steps.length ? pick(steps) : set.maxStep
   const values = chartData(step, set.labels.length)
   const ask = pick(line ? ['read', 'difference', 'total', 'most'] : ['read', 'read', 'difference', 'most'])
 
@@ -4225,9 +4231,10 @@ function chartTemplate(level, lang) {
           say(lang, `Add them in pairs that make a round number if you can.`, `Yuvarlak sayı yapan çiftleri önce topla.`, `Suma primero las parejas que den un número redondo.`)],
     },
     most: {
-      q: say(lang, `How many ${set.unit} were there on the busiest one?`,
-                   `En yoğun olanında kaç ${set.unit} vardı?`,
-                   `¿${set.many ?? 'Cuántos'} ${set.unit} hubo en el de más?`),
+      // "On the busiest one" left the reader to work out one what; the chart's own period says it.
+      q: say(lang, `What is the largest number of ${set.unit} in a single ${set.period}?`,
+                   `Bir ${set.period} en fazla kaç ${set.unit}?`,
+                   `¿Cuál es el mayor número de ${set.unit} en un solo ${set.period}?`),
       a: values[iMax], highlight: [set.labels[iMax]],
       h: [say(lang, `Find the tallest one first.`, `Önce en yükseğini bul.`, `Busca primero el más alto.`),
           say(lang, `Then read its height off the numbers on the left.`, `Sonra yüksekliğini soldaki sayılardan oku.`, `Luego lee su altura en los números de la izquierda.`)],
@@ -7399,7 +7406,8 @@ function y8Ratio(level, lang) {
   }
   if (shape === 'unit') {
     let q1, p1, q2
-    do { q1 = pick([50, 75, 100, 120, 150, 200, 250]); p1 = randInt(20, 99); q2 = pick([30, 45, 60, 80, 90, 180, 270, 300, 400]) } while ((p1 * q2) % q1 || q1 === q2)
+    // Never a whole multiple either way: 200 g → 400 g is doubling, not proportion.
+    do { q1 = pick([50, 75, 100, 120, 150, 200, 250]); p1 = randInt(20, 99); q2 = pick([30, 45, 60, 80, 90, 180, 270, 300, 400]) } while ((p1 * q2) % q1 || q2 % q1 === 0 || q1 % q2 === 0)
     return {
       topic: T, level,
       question_text: say(lang, `${q1} g of sweets costs ${p1} cents. How many cents would ${q2} g cost?`, `${q1} g şeker ${p1} kuruş. ${q2} g kaç kuruş tutar?`, `${q1} g de caramelos cuestan ${p1} céntimos. ¿Cuántos céntimos costarían ${q2} g?`),

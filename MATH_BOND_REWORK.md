@@ -144,6 +144,23 @@ band ≥6'da, yani 11 ve 12 yaşta çıkıyor:
 - **Yeni görseller:** dişli, ölçülü prizma, daire, dik üçgen, bahçe planı, serpilme grafiği,
   paralel doğrular, ızgarada doğrular, cebirsel dikdörtgenler.
 
+### 3.6 Her yaştan okuma turu (25 Eylül)
+5–13 yaş × EN, artı 6–13 yaş × TR için gerçek oturum planlarıyla ~260 soru üretildi, her biri
+elle çözüldü. **Hesap hatası çıkmadı.** Üslup ve gerçekçilik bulguları düzeltildi:
+- **Belirsiz grafik sorusu:** "How many books were there on the busiest one?" (TR "En yoğun
+  olanında…"). Artık "in a single day / month" diyor (TR: "Bir günde en fazla kaç kitap?").
+- **Gerçek dışı gol sayısı:** grafik ölçeği 20'şer çıkınca bir ayda 160 gol oluyordu. Veri
+  kümeleri artık kendi ölçek sınırını taşıyor; gol en fazla 2'şer, yani ayda en fazla 18.
+- **Türkçe ölçü farkı sorusu:** "…bir kapı 159 cm. kapı kaç cm daha uzun?" Cümle küçük harfle
+  başlıyordu ve kapı gerçekçi değildi. Artık sandalye 40–110 cm, kapı 190–230 cm ve cümle büyük
+  harfle başlıyor. İspanyolcada ağırlık için "mide" yerine "pesa".
+- **Türkçe ortalama sorusu:** "İlk 3 maç içinde … Sonuncusunda kaç tane?" yerine "İlk 3 maçta …
+  gol attı. Son maçta kaç gol attı?"
+- **İspanyolca cinsiyet uyumu:** "los primeros 3 sesiones … el último" yerine "las primeras …
+  la última" (semanas, sesiones dişil).
+- **İngilizce para sorusu:** "1 5c coin" yan yana iki sayı gibi okunuyordu; artık "one 5c coin".
+- **13 yaş birim fiyat:** "200 g → 400 g" gibi tam katlar çıkmıyor; ikiye katlamak orantı değil.
+
 ---
 
 ## 4. Bilinçli kararlar
