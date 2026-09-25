@@ -203,19 +203,56 @@ export function planSession(age, count, recentTopicIds = [], weighting = {}) {
   const seen = topics.filter(t => recent.has(t.id))
   const ordered = [...shuffle(fresh), ...shuffle(seen)]
 
-  const plan = []
+  // First lap: every topic once, fresh ones first.
+  const plan = ordered.slice(0, remaining)
+
+  // Slots left after the lap go to the STRAND the session has least of, not to a random topic.
+  // The year's topic list is not balanced: Year 6 names seven topics and five of them are number
+  // or algebra, so random extras doubled two number topics in 85% of sessions and a session
+  // came out seven parts number to one of shape and one of data. Bond's 10-11 skills tests are
+  // five shape, five number, three data and two algebra out of fifteen — the balance a child
+  // sitting the 11+ is actually asked for. Filling by strand gives Year 6 about 5 / 3 / 2.
+  // Within a strand the least-used topic goes next, so no topic comes round a third time while
+  // another in its strand has been used once.
+  const used = new Map()
+  for (const t of [...weighted, ...plan]) used.set(t.id, (used.get(t.id) || 0) + 1)
+  const strandCount = () => {
+    const c = new Map()
+    for (const t of [...weighted, ...plan]) c.set(strandOf(t.id), (c.get(strandOf(t.id)) || 0) + 1)
+    return c
+  }
   while (plan.length < remaining) {
-    // A year with eight topics and a ten-question session covers all eight, then comes back
-    // round for two. Re-shuffling each lap keeps which two from being the same every time.
-    const lap = plan.length === 0 ? ordered : shuffle(topics)
-    for (const t of lap) {
-      if (plan.length >= remaining) break
-      plan.push(t)
-    }
+    const counts = strandCount()
+    const strands = [...new Set(topics.map(t => strandOf(t.id)))]
+    // Number counts at half weight: it is still the heart of every year, it just no longer gets
+    // the spare slots by default. Year 1, whose six topics are four number and two shape, stays
+    // mostly number; Year 6 moves from 7/1/1 to about 5/3/2.
+    const load = s => (counts.get(s) || 0) / (s === 'number' ? 2 : 1)
+    const least = Math.min(...strands.map(load))
+    const strand = pick(strands.filter(s => load(s) === least))
+    const pool = topics.filter(t => strandOf(t.id) === strand)
+    const fewest = Math.min(...pool.map(t => used.get(t.id) || 0))
+    const next = pick(pool.filter(t => (used.get(t.id) || 0) === fewest))
+    plan.push(next)
+    used.set(next.id, (used.get(next.id) || 0) + 1)
   }
   // Interleaved rather than front-loaded: three fraction questions in a row reads as a
   // punishment, the same three spread through the session read as a session.
   return shuffle([...weighted, ...plan])
+}
+
+// Which part of maths a curriculum topic belongs to, read off its id. Measurement sits with
+// shape because Bond files it there ("Shape and Space" holds perimeter, units and scales);
+// time and money are their own strand in the young years, where they are whole topics.
+export function strandOf(id) {
+  if (/geometry|shapes|measurement/.test(id)) return 'shape'
+  if (/statistics/.test(id)) return 'data'
+  if (/time|money/.test(id)) return 'measure'
+  return 'number'
+}
+
+function pick(list) {
+  return list[Math.floor(Math.random() * list.length)]
 }
 
 function shuffle(list) {
