@@ -60,7 +60,7 @@ import {
 import {
   RELATIONS, LOGIC_SCENES, ORDER_SCENES, NAMES, POSSESSIVES, MISSPELLINGS, CONTRACTIONS,
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
-  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS,
+  PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, SENSE_ANSWERS,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -903,9 +903,10 @@ function genAntonym(r, band, seed) {
 }
 
 function genSense(r, band, seed) {
-  // The book's most-asked question, and the one WordNet was made for: a polysemous word comes
-  // with a sentence per sense AND the synonyms of each sense, so the question, its answer and
-  // its distractors are one lookup. Nothing is hand-written and nothing is guessed.
+  // The book's most-asked question. WordNet supplies the polysemous word, its sentence and its
+  // candidate synonyms, but a synset does not guarantee sentence-level substitution. Answers
+  // therefore pass through the hand-reviewed SENSE_ANSWERS table; the other senses still make
+  // useful distractors.
   const words = Object.keys(SENSES).filter(
     w => z(w) >= band.stem && z(w) <= band.stemMax && SENSES[w].length >= 2
       && !BAD_SENSE_WORDS.has(w) && (!band.familiarOnly || familiar(w)))
@@ -913,14 +914,16 @@ function genSense(r, band, seed) {
   const word = pickOne(r, words)
   const senses = SENSES[word]
 
-  const withAnswer = senses.filter(s => !sentenceProblem(s[1])
-    && s[2].some(x => z(x) >= band.answer && !BAD_SENSE_PAIRS.has(`${word}|${x}`)
+  const withAnswer = senses.filter(s => SENSE_ANSWERS[s[1]] && !sentenceProblem(s[1])
+    && s[2].some(x => SENSE_ANSWERS[s[1]].includes(x) && z(x) >= band.answer
+      && !BAD_SENSE_PAIRS.has(`${word}|${x}`)
       && !glossMismatch(x, s[3])))
   if (!withAnswer.length) return null
   const chosenIndex = senses.indexOf(pickOne(r, withAnswer))
   const chosen = senses[chosenIndex]
   const [, sentence, syns, definition, far] = chosen
-  const answer = pickOne(r, syns.filter(x => z(x) >= band.answer
+  const answer = pickOne(r, syns.filter(x => SENSE_ANSWERS[sentence].includes(x)
+    && z(x) >= band.answer
     && !BAD_SENSE_PAIRS.has(`${word}|${x}`) && !glossMismatch(x, definition)))
   // "What does `listed` mean?" answered `list` is not a question about meaning, it is the same
   // word with its ending taken off.
@@ -3116,6 +3119,9 @@ export function validateItem(item) {
     }
     if (BAD_SENSE_PAIRS.has(`${item.prompt.word}|${answers[0]}`)) {
       return `the answer "${answers[0]}" does not replace "${item.prompt.word}" in this sentence`
+    }
+    if (!SENSE_ANSWERS[item.prompt.sentence]?.includes(answers[0])) {
+      return `the answer "${answers[0]}" is not approved for this sentence`
     }
   }
 

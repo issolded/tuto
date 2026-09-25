@@ -48,19 +48,22 @@ Claude için not. — Codex
    - `37`: “load the truck” → `laden`
    - UI seed `17039646`: “my throat feels bad” → `tough`
    - UI seed `17134674`: “change of heart” → `spirit`
-   - Uygunsuz konu kalıpları runtime'da da engellendi; doğrulanmış kötü çiftler ve bütün `club`
-     sense havuzu çıkarıldı; cevap ayrıca tanımın sözcük türüyle uyuşmak zorunda. Bu seed'ler
+   - İlk kara liste düzeltmesinden sonraki editoryal taramada yeni örnekler çıktı: “hit the MAC
+     machine → attain/gain”, “matters came to a head → pass”, “soft tapping → easy”. Kök neden
+     tekil kayıtlar değil, synset üyeliğinin cümle içinde birebir ikame sanılmasıydı.
+   - `sense` artık yalnız `SENSE_ANSWERS` içindeki elle okunmuş cümle–cevap ikamelerini
+     üretiyor. WordNet diğer anlamlardan çeldirici bulmak için kullanılmaya devam ediyor.
+     Havuz UK/US audit'inde banda göre 77–82 ayrı soru ve %49–62 üretim verimi sağlıyor.
+     Uygunsuz konu kalıpları runtime'da ayrıca engelli; bu seed'ler
      `scripts/english-audit.mjs` içinde regresyon olarak kilitli.
 
 ## Bilerek açık bırakılan risk
 
-`sense` hâlâ WordNet'in örnek cümle + synset verisine dayanıyor. Otomatik validator sözlüğün
-kendi semantiğini bağımsız biçimde doğrulayamaz. Düzeltmeden sonra UI seed `17134674`, örneğin,
-`I have to hit the MAC machine... → reach` üretiyor: savunulabilir ama eski/bölgesel ve çocuk
-bankası için iyi yazılmış bir örnek değil. Uzun vadeli doğru çözüm sense kayıtlarını elle
-onaylanan bir allowlist'e taşımak veya bu tipi o liste hazır olana kadar kapatmak. Bu turda
-doğrulanmış yanlışlar kapatıldı; tüm sense bankasının editoryal olarak temiz olduğu iddia
-edilmiyor.
+`sense` cevapları artık editoryal allowlist'te, fakat çeldiriciler hâlâ WordNet'in uzak
+anlamlarından geliyor. Validator ikinci doğru cevabı sözlük ilişkileriyle eliyor; buna rağmen
+yardım metinlerinin ve her çeldiricinin yaşa uygunluğunu yalnız kör okuma doğrulayabilir.
+Allowlist genişletilirken her yeni cümle–cevap ikamesi yüksek sesle okunmalı; synset'te bulunması
+tek başına kabul ölçütü değil.
 
 9-10 çoğul havuzunda `methodology`, `tertiary`, `substantive` gibi yaş için sert kelimeler de
 görüldü. Bunlar mekanik olarak doğru oldukları için bu düzeltme dalında değiştirilmedi; ayrı bir
@@ -72,4 +75,3 @@ yaş seviyesi/editoryal karar.
   oturum içi tekrar yok.
 - `npx vite build`: geçti; yalnız mevcut büyük chunk uyarısı var.
 - `git diff --check`: geçti.
-

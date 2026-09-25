@@ -699,8 +699,9 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       bağlamsız WordNet eş/zıt anlam çiftleri, çakışan odd-two kategorileri ve doğrulanmış bozuk
       sense kayıtları düzeltildi. Seed'ler, ölçümler ve kalan editoryal risk
       `ENGLISH_BLIND_TEST_2026-09-26.md` içinde. **Açık işler:** (1) kategori havuzu ince — 26
-      kullanışlı grup, `odd-two` en dar tip; (2) `sense` havuzu güvenlik+okunabilirlik kapılarıyla
-      dar ve WordNet cümleleri editoryal allowlist olmadan bütünüyle güvenilir sayılamaz;
+      kullanışlı grup, `odd-two` en dar tip; (2) `sense` cevapları artık elle okunmuş
+      `SENSE_ANSWERS` allowlist'inde (77–82 ayrı soru, üretim verimi %49–62); çeldiricileri
+      WordNet'ten geldiği için kör okuma sürmeli;
       (3) kitabın cloze
       paragrafı, karışık cümle ve kelime türü tipleri yok (cümle bankası ister);
       (4) çocuk ekranı yok — geldiğinde soru sunucuda üretilmeli, cevap tarayıcıya hiç
