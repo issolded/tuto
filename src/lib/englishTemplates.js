@@ -1586,7 +1586,12 @@ function genHomophone(r, band, seed) {
   // away `air/heir`, `brake/break`, `cellar/seller`, `cereal/serial`, `cite/sight/site`,
   // `cue/queue`, `dear/deer`, `dual/duel` and `fair/fare` — 92 groups down to 32, and the ones
   // lost are the ones the 11+ papers actually ask.
+  // A spelling with two pronunciations cannot be a context-free homophone question. The US
+  // dictionary groups the verb pronunciation of `desert` with `dessert`, the past tense of
+  // `read` with `red`, and one pronunciation of `bow` with `beau`; the printed bare word does
+  // not tell the child which pronunciation was selected.
   const ok = (w) => z(w) >= band.answer && !wrongSpelling(w, band.variety)
+    && rimesOf(w, band.variety).length === 1
     && (!band.familiarOnly || familiar(w))
   const groups = soundPool(`homo|${band.answer}|${band.variety}`,
     () => table.map(g => g.filter(ok)).filter(g => g.length >= 2))
@@ -3200,6 +3205,10 @@ export function validateItem(item) {
   }
   if (item.type === 'homophone') {
     const group = item.rule.group
+    const v = item.rule.variety
+    if ([item.prompt.word, answers[0]].some(w => rimesOf(w, v).length !== 1)) {
+      return 'a bare homophone word has more than one pronunciation'
+    }
     for (const w of wrong) if (group.includes(w)) return `"${w}" is a homophone too`
   }
   if (item.type === 'syllables') {

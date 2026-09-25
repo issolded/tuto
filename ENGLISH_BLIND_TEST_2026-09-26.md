@@ -130,6 +130,14 @@ sınırlı; 11-12'nin kitabında Latin/Greek plurals bulunduğu için ileri havu
       Lexicon'da birden fazla farklı prefixed biçimi olan tabanlar generator'dan çıkarıldı ve
       validator'da aynı kural kilitlendi.
 
+14. **Homophone motoru bir kelimenin seçili telaffuzunu çıplak yazımın tek okunuşu sanıyordu.**
+    - US kör örnekleri: `desert → dessert` (`845`), `bow → beau` (`16881`),
+      `read → red` (`14560`), `close → clothes` (`29752`), `route → root` (`40091`).
+    - Bunların her biri yalnız belirli anlam/zaman/telaffuzda aynı sesi veriyor; soruda cümle
+      olmadığı için çocuk hangi okunuşun kastedildiğini bilemez.
+    - Homophone generator ve validator artık yalnız pronunciation kaynağında tek rhyme anahtarı
+      olan yazımları kabul ediyor. UK/US havuzları ayrı kaldığı için aksan farkları korunuyor.
+
 ## Regresyon özeti
 
 - `npm run english:check`: geçti; iki variety, beş bant, her tipte 300 soru; kısa oturum ve

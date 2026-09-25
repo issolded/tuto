@@ -316,6 +316,17 @@ for (const bandKey of BAND_KEYS) {
   if (comparative?.prompt.sentence !== 'This one is ___ than that one.') {
     failures.push('[regression] comparative seed 1 uses a frame that may not fit its adjective')
   }
+
+  const ambiguousHomophones = [
+    [845, 'desert'], [16881, 'bow'], [14560, 'read'], [29752, 'close'], [40091, 'route'],
+  ]
+  for (const [seed, word] of ambiguousHomophones) {
+    const item = generateItem('8-9', 'homophone', seed, { variety: 'us' })
+    const answer = item?.correct.map(i => item.options[i].text) || []
+    if (item?.prompt.word === word || answer.includes(word)) {
+      failures.push(`[regression] us homophone seed ${seed} still asks ambiguous "${word}"`)
+    }
+  }
 }
 
 // ── the one check in this file that is not self-referential ──────────────────
