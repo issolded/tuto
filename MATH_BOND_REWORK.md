@@ -173,6 +173,20 @@ Düzeltilenler:
   etiketin bozulduğunu söyleyen "12 is even, but it is not a multiple of 5".
 - **Dilbilgisi:** "The 1 left over still need" yerine "needs".
 
+**Üçüncü tur, 5/6/8 yaş (EN) ve 10/12 yaş (TR) ipuçları + gerçek ekran:** ipuçlarında hesap ya da
+mantık hatası çıkmadı; Türkçede "ortak bölene sahip" ifadesi "ortak bir böleni var" oldu.
+Türkçe 10 ve 13 yaş, İspanyolca 7 yaş oturumları MathScreen'de uçtan uca çözüldü. Sonuç
+ekranında bir görselin altındaki yazıya bindiği görüldü; bunun üzerine bütün konular ve
+seviyeler lab'da gezilip her SVG'nin çiziminin kendi kutusundan taşıp taşmadığı ölçüldü (EN
+25, TR 40 soru/konu/seviye). Dört taşma bulundu ve düzeltildi:
+- **Koordinat ızgarası ve düzlem:** "y" etiketi kutunun 11–14 px üstüne taşıyordu.
+- **Alt satırdaki nokta etiketi:** 6 px alttan taşıyordu.
+- **Dişli:** yanlış ortalanmıştı, 14 px taşıyordu.
+- **Paralel doğrular:** kesen doğru sabit uzunlukla çizildiği için 135 px taşıyordu; artık
+  çizim alanına kırpılıyor.
+
+Son ölçümde taşma sıfır.
+
 ---
 
 ## 4. Bilinçli kararlar

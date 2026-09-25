@@ -257,7 +257,7 @@ function fraction(v) {
 function coords(v, lang, hint) {
   const { size, points = [], axes = true, compass = false } = v
   const cell = Math.floor(170 / size)
-  const ox = 56, oy = 12
+  const ox = 56, oy = 30 // room for the "y" above the axis, which was drawn outside the box
   const g = []
   for (let i = 0; i <= size; i++) {
     g.push(<line key={`h${i}`} x1={ox} y1={oy + i * cell} x2={ox + size * cell} y2={oy + i * cell} stroke={GRID} strokeWidth="1.2" />)
@@ -717,7 +717,7 @@ function plane(v, lang) {
   const n = max - min
   const cell = Math.min(28, Math.floor(236 / n))
   const size = n * cell
-  const ox = (W - size) / 2, oy = 14
+  const ox = (W - size) / 2, oy = 30
   const X = x => ox + (x - min) * cell, Y = y => oy + (max - y) * cell
   const g = []
   for (let i = 0; i <= n; i++) {
@@ -757,7 +757,7 @@ function plane(v, lang) {
       {p.label && txt(cx + (p.x < 0 ? -10 : 10), cy + (p.y < 0 ? 11 : -11), p.label, { size: 14, fill: ORANGE })}
     </g>)
   }
-  return { h: oy + size + 12, g: <g>{g}</g> }
+  return { h: oy + size + 22, g: <g>{g}</g> } // a label under a point on the bottom row
 }
 
 // ── angle diagrams ────────────────────────────────────────────────────────────
@@ -808,7 +808,10 @@ function angles(v) {
     const t = v.t, yT = 56, yB = 150, xB = 120
     const xT = xB + (yB - yT) / Math.tan(t * Math.PI / 180)
     const arrow = (x, y, key) => <polygon key={key} points={`${x - 5},${y - 5} ${x + 3},${y} ${x - 5},${y + 5}`} fill="none" stroke={INK} strokeWidth="1.8" />
-    const [e1, e2] = [P(xB, yB, 200, t + 180), P(xB, yB, 150, t)]
+    // The slanted line runs from just above the top line to just below the bottom one — a fixed
+    // length along a steep angle ran it 135px out of the drawing.
+    const xAt = y => xB + (yB - y) / Math.tan(t * Math.PI / 180)
+    const [e1, e2] = [[xAt(186), 186], [xAt(20), 20]]
     const topGiven = v.ask === 'alt' ? [180, 180 + t] : v.ask === 'corr' ? [0, t] : [180 + t, 360]
     g = <g>
       <line x1={20} y1={yT} x2={300} y2={yT} stroke={INK} strokeWidth="2.5" />
@@ -978,7 +981,8 @@ function gears(v) {
   const Ra = 22 + a * 1.6, Rb = 22 + b * 1.6
   const cy = 12 + Math.max(Ra, Rb)
   const total = Ra + Rb - 7
-  const ax = (W - total) / 2 + Ra * 0.2 + 20
+  // Centred on the outside edges of both wheels, so the bigger one never leaves the box.
+  const ax = (W - (Ra + total + Rb)) / 2 + Ra
   return { h: cy + Math.max(Ra, Rb) + 10, g: <g>{gear(ax, cy, a, 'A', 'a')}{gear(ax + total, cy, b, 'B', 'b')}</g> }
 }
 

@@ -640,7 +640,7 @@ function fractionSimplify(level, lang) {
         `Correcto: arriba y abajo se dividen los dos entre ${f}.`) },
     { value: `${n * 2}/${d * 2}`, why: say(lang,
         `Not all the way — ${n * 2} and ${d * 2} still share a factor.`,
-        `Sonuna kadar sadeleşmemiş — ${n * 2} ile ${d * 2} hâlâ ortak bölene sahip.`,
+        `Sonuna kadar sadeleşmemiş — ${n * 2} ile ${d * 2} sayılarının hâlâ ortak bir böleni var.`,
         `No del todo: ${n * 2} y ${d * 2} todavía comparten un divisor.`) },
     { value: `${N - f}/${D - f}`, why: say(lang,
         `${f} was subtracted from each. Simplifying DIVIDES both by the same number, it does not take it away.`,
