@@ -327,6 +327,15 @@ for (const bandKey of BAND_KEYS) {
       failures.push(`[regression] us homophone seed ${seed} still asks ambiguous "${word}"`)
     }
   }
+
+  const badRhymePrompts = [[1689, 'mall'], [8652, 'one']]
+  for (const [seed, word] of badRhymePrompts) {
+    const item = generateItem('8-9', 'rhyme', seed, { variety: 'uk' })
+    const answer = item?.correct.map(i => item.options[i].text) || []
+    if (item?.prompt.word === word || answer.includes(word)) {
+      failures.push(`[regression] uk rhyme seed ${seed} still uses source-specific "${word}"`)
+    }
+  }
 }
 
 // ── the one check in this file that is not self-referential ──────────────────

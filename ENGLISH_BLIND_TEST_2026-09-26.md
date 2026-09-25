@@ -138,6 +138,14 @@ sınırlı; 11-12'nin kitabında Latin/Greek plurals bulunduğu için ileri havu
     - Homophone generator ve validator artık yalnız pronunciation kaynağında tek rhyme anahtarı
       olan yazımları kabul ediyor. UK/US havuzları ayrı kaldığı için aksan farkları korunuyor.
 
+15. **UK pronunciation kaynağındaki bağlamsız özel okunuşlar yanlış rhyme üretiyordu.**
+    - `8-9 / rhyme / uk / 8652`: `one → don`; vendor kaydı `one` kelimesini `/wɒn/`
+      gösteriyor, yaygın UK okunuşu bu değil.
+    - `8-9 / rhyme / uk / 1689`: `mall → canal`; kaynak yalnız Londra'daki *The Mall* için
+      kullanılan `/mæl/` okunuşunu tutuyor, çıplak alışveriş merkezi kelimesini ayırmıyor.
+    - Bu iki yazım normal rhyme ve rhyme-synonym yollarında variety bazında karantinaya alındı;
+      validator aynı telaffuz engelini yeniden uyguluyor.
+
 ## Regresyon özeti
 
 - `npm run english:check`: geçti; iki variety, beş bant, her tipte 300 soru; kısa oturum ve

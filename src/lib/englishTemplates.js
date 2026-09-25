@@ -1401,6 +1401,15 @@ const couldPassForRhyme = (a, b, variety) => {
   return !!ta && ta === tail(b)
 }
 const syllablesOf = (w, variety) => SYLLABLES[variety]?.[w]
+// Context-free rhyme questions cannot use a source pronunciation that is wrong for the common
+// reading of the printed word. The UK vendor has `one` as /wɒn/ (making it rhyme with `don`),
+// and gives bare `mall` only the /mæl/ pronunciation used in the London street name rather
+// than the ordinary shopping-centre word. Keep the source data intact and quarantine the
+// affected prompts at the question boundary.
+const BAD_RHYME_WORDS = {
+  uk: new Set(['mall', 'one']),
+  us: new Set(),
+}
 
 function genOddSynonym(r, band, seed) {
   // The 9-10 book: "Underline one word in each group which is not a synonym for the rest."
@@ -1528,6 +1537,7 @@ function genRhyme(r, band, seed) {
   // and /ˈɡærɪdʒ/, so it rhymes with `massage` and with `carriage`, and the question can only
   // print one of them as the answer.
   const ok = (w) => z(w) >= band.filler && !wrongSpelling(w, band.variety)
+    && !BAD_RHYME_WORDS[band.variety].has(w)
     && (RIMES[band.variety]?.[w] || []).length === 1
     && (!band.familiarOnly || familiar(w))
   const keys = Object.keys(table).filter(k => table[k].filter(ok).length >= 2)
@@ -2444,7 +2454,8 @@ function genRhymeSynonym(r, band, seed) {
   // drawn from the answer's rhyme group, so the same clue is asked with a different second word.
   const v = band.variety
   const table = RHYME_GROUPS[v]
-  const ok = (w) => z(w) >= band.filler && plainWord(w) && (!band.familiarOnly || FAMILIAR_SET.has(w))
+  const ok = (w) => z(w) >= band.filler && plainWord(w) && !BAD_RHYME_WORDS[v].has(w)
+    && (!band.familiarOnly || FAMILIAR_SET.has(w))
     && (RIMES[v]?.[w] || []).length === 1
   const [clue, answer] = pickOne(r, RHYME_CLUES)
   const keys = RIMES[v]?.[answer] || []
@@ -3198,6 +3209,9 @@ export function validateItem(item) {
   if (item.type === 'rhyme') {
     const stem = item.prompt.word
     const v = item.rule.variety
+    if (BAD_RHYME_WORDS[v].has(stem) || BAD_RHYME_WORDS[v].has(answers[0])) {
+      return 'the rhyme relies on a blocked pronunciation'
+    }
     for (const w of wrong) {
       if (couldPassForRhyme(w, stem, v)) return `"${w}" could pass for a rhyme with "${stem}"`
     }
@@ -3340,6 +3354,9 @@ function validateNewFamilies(item, texts, answers, wrong) {
     }
     case 'rhyme-synonym': {
       const v = item.rule.variety
+      if (BAD_RHYME_WORDS[v].has(p.rhyme) || BAD_RHYME_WORDS[v].has(answer)) {
+        return 'the rhyme relies on a blocked pronunciation'
+      }
       const accepted = RHYME_CLUES.filter(([c]) => c === p.word).map(([, a]) => a)
       if (!accepted.includes(answer) || !rhymes(answer, p.rhyme, v)) return 'the answer does not do both'
       for (const w of wrong) {
