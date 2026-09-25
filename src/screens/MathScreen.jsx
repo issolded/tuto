@@ -210,6 +210,18 @@ function sameAnswer(given, expected) {
 // way it goes — a descending pattern was previously unanswerable for the same reason.
 const stepLabel = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)}`
 
+// The two numbers the counting picture should draw, or null when the text's numbers are not the
+// sum. A template's topic says "addition" for far more than "a + b = ?": a route map whose
+// distances are in the picture (no numbers in the text at all — the panel drew 0 + 0 and showed
+// an empty "Count them all!"), "5 + ? = 12" (whose operands are not 5 and 12), and "55 ? 18 = 73".
+function countableOperands(question, visual) {
+  if (visual) return null
+  const text = String(question ?? '')
+  if (text.includes('=') && !/=\s*\?\s*$/.test(text)) return null
+  const nums = numbersIn(text)
+  return nums.length === 2 && isCountable(nums[0], nums[1]) ? nums : null
+}
+
 function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   if (templateTopic) {
     // Addition and subtraction used to be unconditionally helpable because they were only ever
@@ -217,8 +229,7 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
     // dial now reaches four digits, and sixty-two circles on screen is not help — past what a
     // child would count, the template's written steps carry it instead.
     if (templateTopic === 'addition' || templateTopic === 'subtraction') {
-      const nums = numbersIn(question)
-      return isCountable(nums[0], nums[1]) || (hintSteps?.length ?? 0) > 0
+      return !!countableOperands(question, visual) || (hintSteps?.length ?? 0) > 0
     }
     return !!visual || (hintSteps?.length ?? 0) > 0
   }
@@ -791,8 +802,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Same gate as hasRealHelp: the emoji drawing only stands in for numbers a child would
   // actually count, otherwise the panel falls through to the written steps below.
   const drawable = isCountable(n0, n1)
-  const isPlus  = templateTopic ? (templateTopic === 'addition' && drawable)    : (canTrustText && question.includes('+') && drawable)
-  const isMinus = templateTopic ? (templateTopic === 'subtraction' && drawable) : (canTrustText && question.includes('-') && drawable)
+  const operands = !!countableOperands(question, visual)
+  const isPlus  = templateTopic ? (templateTopic === 'addition' && operands)    : (canTrustText && question.includes('+') && drawable)
+  const isMinus = templateTopic ? (templateTopic === 'subtraction' && operands) : (canTrustText && question.includes('-') && drawable)
   // Only a constant-step pattern can be walked arrow by arrow (see constantPatternStep);
   // an alternating one falls through to the steps like any other question.
   const patternStep = isBareSequence(question) ? constantPatternStep(question) : null
