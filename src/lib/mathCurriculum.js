@@ -117,6 +117,16 @@ const TEMPLATE_FOR_TOPIC = {
   y6_ratio: 'ratio',
   y7_ratio: 'ratio',
 
+  // Year 8, one template each (Bond 12+-13+).
+  y8_number: 'powers-primes',
+  y8_negatives: 'negatives-decimals',
+  y8_fractions: 'fdp',
+  y8_algebra: 'algebra-8',
+  y8_sequences: 'sequences-graphs',
+  y8_ratio: 'ratio-8',
+  y8_geometry: 'geometry-8',
+  y8_statistics: 'stats-8',
+
   // Deliberately absent, and it is worth saying why rather than leaving a silent gap:
   // money (no template), place value past 100 (the counting template draws objects),
   // measurement, area and perimeter, decimals and percentages, angles beyond
@@ -141,7 +151,10 @@ export function templateTopicFor(topic) {
 // parent screens and the levelling rules are all built on it — but it now means "how hard",
 // not "about what", so a child starts at their year's footing rather than at whichever rung
 // happened to name an operation they could do.
-const BASE_LEVEL_FOR_YEAR = { year1: 2, year2: 4, year3: 6, year4: 8, year5: 10, year6: 12, year7: 14 }
+// Year 8 sits on 15, the top of the dial (the server never levels past it). Its band overlaps
+// Year 7's by one rung, which is harmless: every Year 8 topic has its own template, so the year's
+// content is chosen by the topic, not by the level.
+const BASE_LEVEL_FOR_YEAR = { year1: 2, year2: 4, year3: 6, year4: 8, year5: 10, year6: 12, year7: 14, year8: 15 }
 
 export function startingLevelForAge(age) {
   return BASE_LEVEL_FOR_YEAR[ageToSchoolYear(age)] ?? 6

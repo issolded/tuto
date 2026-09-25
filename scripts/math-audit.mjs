@@ -96,7 +96,9 @@ function checkOlderFigure(p) {
       if (v.points.every(q => a * q.x + b === q.y)) return 'yanlış kural da noktalara uyuyor'
     }
   }
-  if (v.kind === 'angles') {
+  if (v.kind === 'angles' && v.type === 'parallel') {
+    if (Number(p.correct_answer) !== v.t) return `paralel açı ${v.ask} ${v.t}`
+  } else if (v.kind === 'angles') {
     const lb = v.labels
     const vals = v.type === 'triangle' ? { a: v.a, c: v.c, b: 180 - v.a - v.c, ext: 180 - v.c }
       : v.type === 'cross' ? { top: v.a, bottom: v.a, left: 180 - v.a, right: 180 - v.a }
@@ -140,6 +142,57 @@ function checkOlderFigure(p) {
     const ans = key.startsWith('dice:even') ? cells[1] + cells[3] + cells[5] : N - cells.filter(c => c != null).reduce((s, x) => s + x, 0)
     if (Number(p.correct_answer) !== ans) return `tablo ${ans}`
   }
+  // Year 8
+  if (v.kind === 'cuboid') {
+    const h = v.h === '?' ? Number(p.correct_answer) : v.h
+    const want = key.includes(':v:') ? v.l * v.w * h : key.includes(':sa:') ? 2 * (v.l * v.w + v.l * h + v.w * h) : Number(key.split(':').pop())
+    if (Math.abs(Number(p.correct_answer) - want) > 1e-9) return `prizma ${want}`
+    if (v.h === '?' && Math.abs(v.l * v.w * h - asNumber(p.question_text.match(/[\d.,]+(?= cm³)/)[0])) > 1e-6) return 'hacim tutmuyor'
+  }
+  if (v.kind === 'circle') {
+    const form = key.split(':')[2], r = v.r
+    const want = form === 'circ' ? Math.round(6.28 * r * 100) / 100 : form === 'area' ? Math.round(3.14 * r * r * 100) / 100 : r
+    if (Math.abs(Number(p.correct_answer) - want) > 1e-9) return `daire ${want}`
+  }
+  if (v.kind === 'righttri') {
+    const a = v.a, b = v.b === '?' ? Number(p.correct_answer) : v.b, c = v.c === '?' ? Number(p.correct_answer) : v.c
+    if (a * a + b * b !== c * c) return `pisagor ${a},${b},${c}`
+  }
+  if (v.kind === 'gears') {
+    const [, , tA, tB, n] = key.split(':').map(Number)
+    if (tA !== v.teeth[0] || tB !== v.teeth[1] || Number(p.correct_answer) * tB !== n * tA) return 'dişli'
+  }
+  if (v.kind === 'garden') {
+    const bw = (v.W - (v.n + 1) * v.p) / v.n, bh = v.H - 2 * v.p
+    const beds = v.n * bw * bh
+    if (!Number.isInteger(bw) || bw <= 0 || Number(p.correct_answer) !== (key.endsWith('true') ? v.W * v.H - beds : beds)) return `bahçe ${beds}`
+  }
+  if (v.kind === 'algrects') {
+    const [, , x, a, b, h, c, askX] = key.split(':')
+    const X = Number(x), area = Number(h) * (Number(a) * X + Number(b))
+    if (area !== Number(v.B.h) * Number(c) * X) return 'alanlar eşit değil'
+    if (Number(p.correct_answer) !== (askX === 'true' ? X : area)) return `x=${X}, alan ${area}`
+  }
+  if (v.kind === 'plane' && v.lines && key.startsWith('sg:m')) {
+    const [x, y] = pairIn(p.correct_answer)
+    if (v.lines.some(l => Math.abs(l.m * x + l.c - y) > 1e-9)) return 'kesişim noktası iki doğruda değil'
+  }
+  if (key.startsWith('g8:e:')) {
+    const k = Number(key.split(':')[3]), i = Number(key.split(':')[4])
+    const [x, y] = pairIn(p.correct_answer)
+    if (x !== v.points[i].x * k || y !== v.points[i].y * k) return 'büyütme'
+  }
+  if (key.startsWith('s8:f:')) {
+    const cells = v.rows[0].cells, vals = v.cols.map(Number)
+    const mean = cells.reduce((s2, f, i) => s2 + f * vals[i], 0) / cells.reduce((a, b) => a + b, 0)
+    if (Math.abs(mean - Number(p.correct_answer)) > 1e-9) return `ortalama ${mean}`
+  }
+  if (v.kind === 'scatter') {
+    const n = v.pts.length, mx = v.pts.reduce((a, q) => a + q[0], 0) / n, my = v.pts.reduce((a, q) => a + q[1], 0) / n
+    const cov = v.pts.reduce((a, q) => a + (q[0] - mx) * (q[1] - my), 0)
+    const t = key.split(':')[2]
+    if ((t === 'pos' && cov <= 0) || (t === 'neg' && cov >= 0)) return 'serpilme yönü tutmuyor'
+  }
   if (v.kind === 'dots') {
     const t = v.terms, ask = key.endsWith(':6') ? 6 : 5
     const next = v.tri ? ask * (ask + 1) / 2 : ask * ask
@@ -149,7 +202,7 @@ function checkOlderFigure(p) {
 }
 
 const LANGS = ['en', 'tr', 'es']
-const AGES = [5, 6, 7, 8, 9, 10, 11, 12, 13]
+const AGES = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 const PER = Number(process.env.MATH_AUDIT_N || 400)
 const LEAK_FLOOR = 20
 
@@ -179,7 +232,8 @@ const NOT_SPANISH = /[çÇöÖ]/u
 
 // Words that belong to exactly one language. Question words and, above all, the shape names,
 // which are the table that has already been mistranslated once.
-const TR_WORDS = /(kaç|tane|sayı|kadar|şeklin|yuvarla|hangi|toplam|üçgen|dörtgen|beşgen|altıgen|sekizgen|kenar|köşe|açı|derece|oran|kesir)/iu
+// `tane` only at the start of a word: inside one it is English ("simultaneous").
+const TR_WORDS = /(kaç|(?<!\p{L})tane|sayı|kadar|şeklin|yuvarla|hangi|toplam|üçgen|dörtgen|beşgen|altıgen|sekizgen|kenar|köşe|açı|derece|oran|kesir)/iu
 const ES_WORDS = /(cuántos|cuántas|figura|redondea|cuál|triángulo|cuadrilátero|pentágono|hexágono|octágono|ángulo|grados|razón)/iu
 const EN_WORDS = /\b(how many|what is|round|which|altogether|nearest|triangle|quadrilateral|pentagon|hexagon|octagon|angle|degrees|ratio)\b/iu
 
@@ -416,6 +470,14 @@ const TEMPLATE_WORDS = {
   'area-grid': ['area', 'perimeter', 'square', 'rectilinear'],
   chart: ['chart', 'graph', 'data', 'table', 'comparison'],
   measurement: ['length', 'mass', 'capacity', 'volume', 'measure', 'perimeter', 'money', 'time'],
+  'powers-primes': ['prime', 'power', 'indices', 'factor'],
+  'negatives-decimals': ['negative', 'decimal'],
+  fdp: ['fraction', 'decimal', 'percent'],
+  'algebra-8': ['bracket', 'equation', 'factorise'],
+  'sequences-graphs': ['sequence', 'graph', 'term'],
+  'ratio-8': ['ratio', 'proportion', 'speed'],
+  'geometry-8': ['volume', 'circle', 'angle', 'area'],
+  'stats-8': ['mean', 'median', 'probability'],
 }
 // Topic ids whose wording cannot contain the word, with the reason spelled out.
 const MATCH_EXEMPT = {

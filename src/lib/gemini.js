@@ -92,11 +92,9 @@ const BRITISH_CURRICULUM = {
   // asks. That book is where the square roots, the ratio-to-lowest-terms, the unknown on both
   // sides of an equation and the speed-distance-time all come from.
   //
-  // Year 8 is deliberately NOT here. Thirteen still lands on Year 7, which is better than
-  // landing on Year 6 but is still two ages sharing a list — and inventing a Year 8 from memory
-  // is exactly the thing this block exists to stop. It needs its own source.
+  // Year 8 is below, from its own book; this list is now twelve-year-olds' only.
   year7: {
-    label: "Year 7", age: [11, 13],
+    label: "Year 7", age: [11, 12],
     topics: [
       { id: "y7_number", name: "Factors, Multiples and Primes", description: "Find factors, multiples, common factors and common multiples. Find the lowest common multiple and highest common factor. Recognise prime numbers, square numbers and cube numbers, and find square roots of square numbers.", operations: ["place_value","multiplication"] },
       { id: "y7_negatives", name: "Negative Numbers and Rounding", description: "Order and calculate with positive and negative numbers in all four operations. Round to a given number of decimal places. Estimate the answer to a calculation by rounding each number first.", operations: ["addition","subtraction","place_value"] },
@@ -106,6 +104,22 @@ const BRITISH_CURRICULUM = {
       { id: "y7_ratio", name: "Ratio, Proportion and Rates", description: "Simplify a ratio to its lowest terms. Divide a quantity in a given ratio. Solve direct proportion problems including unit conversion. Use the relationship between speed, distance and time.", operations: ["ratio","division"] },
       { id: "y7_geometry", name: "Area, Perimeter and Angles", description: "Find the area of rectangles, triangles, parallelograms and compound shapes. Work backwards from a known area or perimeter. Find missing angles in triangles, on a straight line, at a point and in parallel lines.", operations: ["geometry","measurement"] },
       { id: "y7_statistics", name: "Averages and Probability", description: "Find and interpret the mean, median, mode and range of a set of data, and work backwards from a known average. Express the probability of a single event as a fraction.", operations: ["statistics"] }
+    ]
+  },
+  // Sourced from Bond's Maths Assessment Papers 12+-13+, read paper by paper — the book the
+  // Year 7 comment above was waiting for. Each line is what that book actually asks, and every
+  // topic has its own template (see the Year 8 block in mathTemplates.js).
+  year8: {
+    label: "Year 8", age: [12, 13],
+    topics: [
+      { id: "y8_number", name: "Indices, Primes and Powers", description: "Write a number as a product of prime factors using indices. Find the highest common factor and lowest common multiple of larger numbers. Work with square numbers, square roots, cube numbers and powers, and use the order of operations with nested brackets.", operations: ["multiplication"] },
+      { id: "y8_negatives", name: "Negative Numbers and Decimals", description: "Add, subtract, multiply and divide negative numbers, including decimals and squares. Multiply and divide decimals and round to one or two decimal places. Multiply and divide by 10, 100 and 1000. Compare calculations using <, > and =.", operations: ["addition","subtraction","place_value"] },
+      { id: "y8_fractions", name: "Fractions, Decimals and Percentages", description: "Add, subtract, multiply and divide fractions and mixed numbers, giving answers in lowest terms. Find a percentage of an amount, a percentage discount and the original amount before a percentage change. Order fractions, decimals and percentages, and write decimals as fractions.", operations: ["fractions","decimals"] },
+      { id: "y8_algebra", name: "Algebra: Brackets and Equations", description: "Expand and simplify expressions with brackets, including two brackets multiplied together. Factorise by taking out common factors. Solve linear equations with brackets and unknowns on both sides, and simultaneous equations. Substitute into formulae, and form an equation from two shapes of equal area.", operations: ["algebra"] },
+      { id: "y8_sequences", name: "Sequences and Straight-line Graphs", description: "Find the nth term of a linear sequence and use it to find any term. Continue sequences that are not linear. Complete a table of values for a function, match straight-line graphs to their equations and find where two lines cross.", operations: ["algebra"] },
+      { id: "y8_ratio", name: "Ratio, Proportion and Rates", description: "Share in a ratio of three or four parts and use equivalent ratios. Solve direct and inverse proportion problems, gear-wheel problems and average speed. Convert between metric and imperial units, units of area and units of time, and find the effect of a scale factor on area.", operations: ["ratio","division"] },
+      { id: "y8_geometry", name: "Volume, Circles and Angles", description: "Find the volume and surface area of cuboids. Use the circumference and area of a circle with π taken as 3.14. Use Pythagoras' theorem. Find angles with parallel lines, in isosceles triangles and in regular polygons. Find areas of compound shapes and enlarge a shape from the origin.", operations: ["geometry","measurement"] },
+      { id: "y8_statistics", name: "Statistics and Probability", description: "Find the mean, median and range, including the mean from a frequency table and of two groups combined. Count data into groups and describe correlation on a scatter graph. Find probabilities for two dice, a pack of cards and a bag of counters as fractions in lowest terms.", operations: ["statistics"] }
     ]
   }
 }
@@ -119,10 +133,11 @@ export function ageToSchoolYear(age) {
   if (n === 10) return 'year5'
   // Eleven is the last year of primary and keeps Year 6. Everything above it used to keep Year 6
   // as well, so a thirteen-year-old was offered a ten-year-old's topic list — the audit found
-  // the same starting question at 11 and at 13 and named it. Twelve and thirteen now share
-  // Year 7, which is one list for two ages rather than one for three; Year 8 waits on a source.
+  // the same starting question at 11 and at 13 and named it. Twelve is Year 7 (Bond 11+-12+);
+  // thirteen and up is Year 8 (Bond 12+-13+), the last book on the ladder.
   if (n === 11) return 'year6'
-  return 'year7'
+  if (n === 12) return 'year7'
+  return 'year8'
 }
 
 export { BRITISH_CURRICULUM }

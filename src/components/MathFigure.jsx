@@ -47,9 +47,16 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
                               : v.kind === 'machine' ? machine(v)
                                 : v.kind === 'numcross' ? numcross(v)
                                   : v.kind === 'dots' ? dots(v)
-                                    : polygon(v, hint)
+                                    : v.kind === 'algrects' ? algrects(v)
+                                      : v.kind === 'gears' ? gears(v)
+                                        : v.kind === 'cuboid' ? cuboid(v)
+                                          : v.kind === 'circle' ? circle(v)
+                                            : v.kind === 'righttri' ? righttri(v)
+                                              : v.kind === 'garden' ? garden(v)
+                                                : v.kind === 'scatter' ? scatter(v)
+                                                  : polygon(v, hint)
   if (!body) return null
-  const schematic = v.kind === 'solid' || v.kind === 'polygon' || v.kind === 'net' || v.kind === 'angles' || v.kind === 'compound'
+  const schematic = ['solid', 'polygon', 'net', 'angles', 'compound', 'algrects', 'cuboid', 'righttri', 'garden', 'circle'].includes(v.kind)
   return (
     <figure style={{ margin: 0, width: '100%', maxWidth: 340, flexShrink: 0 }}>
       <svg viewBox={`0 0 ${W} ${body.h}`} role="img"
@@ -728,6 +735,18 @@ function plane(v, lang) {
   g.push(txt(X(0) - 7, Y(0) + 10, '0', { key: 'o', size: fs, weight: 600 }))
   g.push(txt(ox + size + 16, Y(0), 'x', { key: 'lx', size: 13, fill: '#617383' }))
   g.push(txt(X(0), oy - 16, 'y', { key: 'ly', size: 13, fill: '#617383' }))
+  for (const l of v.lines || []) {
+    // Clip y = mx + c to the grid, then label it at the far end, inside the grid.
+    const xs = [min, max], cand = []
+    for (const x of xs) { const y = l.m * x + l.c; if (y >= min - 1e-9 && y <= max + 1e-9) cand.push([x, y]) }
+    if (l.m) for (const y of [min, max]) { const x = (y - l.c) / l.m; if (x > min && x < max) cand.push([x, y]) }
+    cand.sort((p, q) => p[0] - q[0])
+    const [p0, p1] = [cand[0], cand[cand.length - 1]]
+    if (!p0 || !p1) continue
+    g.push(<line key={`L${l.label}`} x1={X(p0[0])} y1={Y(p0[1])} x2={X(p1[0])} y2={Y(p1[1])} stroke={TEAL} strokeWidth="2.5" />)
+    const lx = p0[0] + (p1[0] - p0[0]) * 0.86, ly = p0[1] + (p1[1] - p0[1]) * 0.86
+    g.push(txt(X(lx) + 9, Y(ly) - 9, l.label, { key: `LL${l.label}`, size: 15, fill: ORANGE }))
+  }
   if (path) g.push(<polyline key="path" points={path.map(([x, y]) => `${X(x)},${Y(y)}`).join(' ')} fill={path.length > 3 ? 'rgba(126,203,208,.25)' : 'none'} stroke={TEAL} strokeWidth="2.5" strokeLinejoin="round" />)
   for (const p of points) {
     const cx = X(p.x), cy = Y(p.y)
@@ -782,6 +801,22 @@ function angles(v) {
       {lb.c && arcLabel('c', ...C, 180 - v.c, 180, lb.c)}
       {lb.b && arcLabel('b', ...B, (bDir2 + 360) % 360, (bDir1 + 360) % 360, lb.b)}
       {ext && arcLabel('e', ...C, 0, 180 - v.c, lb.ext)}
+    </g>
+  } else if (v.type === 'parallel') {
+    // Two parallel lines (arrow-marked) cut by a slanted line; the given angle at the top
+    // crossing, the asked one at the bottom — alternate, corresponding or co-interior.
+    const t = v.t, yT = 56, yB = 150, xB = 120
+    const xT = xB + (yB - yT) / Math.tan(t * Math.PI / 180)
+    const arrow = (x, y, key) => <polygon key={key} points={`${x - 5},${y - 5} ${x + 3},${y} ${x - 5},${y + 5}`} fill="none" stroke={INK} strokeWidth="1.8" />
+    const [e1, e2] = [P(xB, yB, 200, t + 180), P(xB, yB, 150, t)]
+    const topGiven = v.ask === 'alt' ? [180, 180 + t] : v.ask === 'corr' ? [0, t] : [180 + t, 360]
+    g = <g>
+      <line x1={20} y1={yT} x2={300} y2={yT} stroke={INK} strokeWidth="2.5" />
+      <line x1={20} y1={yB} x2={300} y2={yB} stroke={INK} strokeWidth="2.5" />
+      {arrow(60, yT, 'a1')}{arrow(60, yB, 'a2')}
+      <line x1={e1[0]} y1={e1[1]} x2={e2[0]} y2={e2[1]} stroke={INK} strokeWidth="2.5" />
+      {arcLabel('top', xT, yT, topGiven[0], topGiven[1], `${v.ask === 'co' ? 180 - t : t}°`)}
+      {arcLabel('bot', xB, yB, 0, t, '?')}
     </g>
   } else if (v.type === 'cross') {
     const cx = 160, cy = 100, r = 96, h = v.a / 2
@@ -907,4 +942,129 @@ function dots(v) {
   g.push(txt(x + 20, 56, '…', { key: 'e', size: 18 }))
   g.push(txt(x + 20, 92, '?', { key: 'q', size: 16, fill: ORANGE }))
   return { h: 104, g: <g>{g}</g> }
+}
+
+// ══ Year 8 ════════════════════════════════════════════════════════════════════════════════════
+// Two rectangles with sides written in x: the drawing carries the algebra, not the numbers.
+function algrects(v) {
+  const box = (x, w, h, label, sides) => <g>
+    <rect x={x} y={34} width={w} height={h} fill={PAPER} stroke={INK} strokeWidth="2.5" />
+    {txt(x + w / 2, 34 + h / 2, label, { size: 18, fill: TEAL })}
+    {txt(x + w / 2, 20, `${/[+−]/.test(sides.w) ? `(${sides.w})` : sides.w} cm`, { size: 13 })}
+    {txt(x - 8, 34 + h / 2, `${sides.h} cm`, { size: 13, anchor: 'end' })}
+  </g>
+  return { h: 150, g: <g>{box(52, 96, 80, 'A', v.A)}{box(212, 88, 96, 'B', v.B)}</g> }
+}
+
+// Two gear wheels, touching, each with its own number of teeth drawn and written.
+function gears(v) {
+  const gear = (cx, cy, n, name, key) => {
+    const R = 22 + n * 1.6, r = R - 9
+    const pts = []
+    for (let i = 0; i < n * 2; i++) {
+      const a = (i / (n * 2)) * 2 * Math.PI
+      const rr = i % 2 ? r : R
+      const a0 = a - Math.PI / (n * 2) * 0.55, a1 = a + Math.PI / (n * 2) * 0.55
+      pts.push([cx + rr * Math.cos(a0), cy + rr * Math.sin(a0)], [cx + rr * Math.cos(a1), cy + rr * Math.sin(a1)])
+    }
+    return <g key={key}>
+      <polygon points={pts.map(p => p.join(',')).join(' ')} fill={key === 'a' ? '#d4ecef' : '#fde7cf'} stroke={INK} strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx={cx} cy={cy} r={6} fill={INK} />
+      {txt(cx, cy - 16, name, { size: 16 })}
+      {txt(cx, cy + 18, `${n}`, { size: 13, fill: ORANGE })}
+    </g>
+  }
+  const [a, b] = v.teeth
+  const Ra = 22 + a * 1.6, Rb = 22 + b * 1.6
+  const cy = 12 + Math.max(Ra, Rb)
+  const total = Ra + Rb - 7
+  const ax = (W - total) / 2 + Ra * 0.2 + 20
+  return { h: cy + Math.max(Ra, Rb) + 10, g: <g>{gear(ax, cy, a, 'A', 'a')}{gear(ax + total, cy, b, 'B', 'b')}</g> }
+}
+
+// A cuboid with its three edges measured. An unknown edge is written "?".
+function cuboid(v) {
+  const { l, w, h, unit = 'cm' } = v
+  const hv = h === '?' ? Math.max(3, Math.min(l, w)) : h
+  const s = Math.min(170 / (l + w * 0.5), 120 / (hv + w * 0.35))
+  const L = l * s, H = hv * s, dx = w * s * 0.5, dy = w * s * 0.35
+  const x = (W - L - dx) / 2, y = 20 + dy
+  const A = [x, y + H], B = [x + L, y + H], C = [x + L, y], D = [x, y]
+  const F = [B[0] + dx, B[1] - dy], G = [C[0] + dx, C[1] - dy], Hh = [D[0] + dx, D[1] - dy], E = [A[0] + dx, A[1] - dy]
+  const Ln = (p, q, hidden, key) => <line key={key} x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke={INK} strokeWidth={hidden ? 1.4 : 2.2} strokeDasharray={hidden ? '5 4' : undefined} />
+  const lab = n => (n === '?' ? '?' : `${label(n)} ${unit}`)
+  const g = <g>
+    <polygon points={[A, B, C, D].map(p => p.join(',')).join(' ')} fill={PAPER} />
+    <polygon points={[D, C, G, Hh].map(p => p.join(',')).join(' ')} fill="#e3f3f5" />
+    <polygon points={[B, F, G, C].map(p => p.join(',')).join(' ')} fill="#d4ecef" />
+    {Ln(A, B)}{Ln(B, C)}{Ln(C, D)}{Ln(D, A)}{Ln(D, Hh)}{Ln(C, G)}{Ln(B, F)}{Ln(Hh, G)}{Ln(G, F)}
+    {Ln(A, E, true)}{Ln(E, F, true)}{Ln(E, Hh, true)}
+    {txt((A[0] + B[0]) / 2, A[1] + 16, lab(l), { size: 13 })}
+    {txt(x - 8, (A[1] + D[1]) / 2, lab(h), { size: 13, anchor: 'end', fill: h === '?' ? ORANGE : INK })}
+    {txt((B[0] + F[0]) / 2 + 12, (B[1] + F[1]) / 2 + 6, lab(w), { size: 13, anchor: 'start' })}
+  </g>
+  return { h: y + H + 30, g }
+}
+
+// A circle with its radius or diameter drawn and measured — or only the circle, when the
+// question gives the measurement in words and asks for the radius.
+function circle(v) {
+  const cx = 160, cy = 96, R = 78
+  const g = <g>
+    <circle cx={cx} cy={cy} r={R} fill={PAPER} stroke={INK} strokeWidth="2.5" />
+    <circle cx={cx} cy={cy} r={3.5} fill={INK} />
+    {v.show === 'r' && <><line x1={cx} y1={cy} x2={cx + R} y2={cy} stroke={TEAL} strokeWidth="2.5" />{txt(cx + R / 2, cy - 12, `${v.r} cm`, { size: 14 })}</>}
+    {v.show === 'd' && <><line x1={cx - R} y1={cy} x2={cx + R} y2={cy} stroke={TEAL} strokeWidth="2.5" />{txt(cx, cy - 12, `${v.r * 2} cm`, { size: 14 })}</>}
+    {!v.show && <><line x1={cx} y1={cy} x2={cx + R * 0.7} y2={cy - R * 0.7} stroke={ORANGE} strokeWidth="2.5" strokeDasharray="5 4" />{txt(cx + R * 0.42, cy - R * 0.25, 'r = ?', { size: 14, fill: ORANGE })}</>}
+  </g>
+  return { h: 184, g }
+}
+
+// A right-angled triangle, the right angle marked, two sides given and one asked.
+function righttri(v) {
+  const a = v.a, b = v.b === '?' ? Math.sqrt(v.c * v.c - a * a) : v.b
+  const s = Math.min(220 / b, 140 / a)
+  const x0 = (W - b * s) / 2 + 10, y0 = 160
+  const A = [x0, y0], B = [x0 + b * s, y0], C = [x0, y0 - a * s]
+  const show = n => (n === '?' ? '?' : `${n} ${v.unit}`)
+  const g = <g>
+    <polygon points={[A, B, C].map(p => p.join(',')).join(' ')} fill={PAPER} stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+    <path d={`M ${x0 + 14} ${y0} v -14 h -14`} fill="none" stroke={INK} strokeWidth="1.8" />
+    {txt(x0 - 10, (A[1] + C[1]) / 2, show(v.a), { size: 14, anchor: 'end' })}
+    {txt((A[0] + B[0]) / 2, y0 + 18, show(v.b), { size: 14, fill: v.b === '?' ? ORANGE : INK })}
+    {txt((B[0] + C[0]) / 2 + 14, (B[1] + C[1]) / 2 - 8, show(v.c), { size: 14, anchor: 'start', fill: v.c === '?' ? ORANGE : INK })}
+  </g>
+  return { h: 188, g }
+}
+
+// A garden: the outline measured, the paths shaded, the flower beds left plain.
+function garden(v) {
+  const { W: gw, H: gh, p, n } = v
+  const s = Math.min(240 / gw, 130 / gh)
+  const ox = (W - gw * s) / 2, oy = 34
+  const bw = (gw - (n + 1) * p) / n, bh = gh - 2 * p
+  const g = <g>
+    <rect x={ox} y={oy} width={gw * s} height={gh * s} fill="#eadbc4" stroke={INK} strokeWidth="2.5" />
+    {Array.from({ length: n }, (_, i) => <g key={i}>
+      <rect x={ox + (p + i * (bw + p)) * s} y={oy + p * s} width={bw * s} height={bh * s} fill="#bfe3b0" stroke={INK} strokeWidth="1.8" />
+    </g>)}
+    {dim('t', ox, oy, ox + gw * s, oy, `${gw} m`, -10)}
+    {dim('r', ox + gw * s, oy, ox + gw * s, oy + gh * s, `${gh} m`, 10)}
+    {txt(ox + (p * s) / 2, oy + gh * s + 16, `${p} m`, { size: 11, fill: '#617383' })}
+  </g>
+  return { h: oy + gh * s + 26, g }
+}
+
+// Dots only: no axis numbers, because the question is about the shape of the cloud.
+function scatter(v) {
+  const x0 = 50, y0 = 176, w = 230, h = 160
+  const g = <g>
+    <line x1={x0} y1={y0} x2={x0 + w} y2={y0} stroke={INK} strokeWidth="2" />
+    <line x1={x0} y1={y0} x2={x0} y2={y0 - h} stroke={INK} strokeWidth="2" />
+    {v.pts.map(([x, y], i) => {
+      const cx = x0 + 8 + x * (w - 16), cy = y0 - 8 - y * (h - 16)
+      return <g key={i}><line x1={cx - 4} y1={cy - 4} x2={cx + 4} y2={cy + 4} stroke={TEAL} strokeWidth="2" /><line x1={cx - 4} y1={cy + 4} x2={cx + 4} y2={cy - 4} stroke={TEAL} strokeWidth="2" /></g>
+    })}
+  </g>
+  return { h: 186, g }
 }

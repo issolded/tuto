@@ -81,6 +81,38 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] 13 yaş: Year 8 kuruldu, merdivenin gerçek son basamağı (2026-09-25, Claude). Kaynak *Bond Maths
+      Assessment Papers 12+-13+* (20 kâğıt × 50 soru baştan sona okundu; not dökümü scratchpad'de
+      `NOTES-bond-1213.md`). Önceden 12 ve 13 yaş aynı Year 7 listesini alıyordu; artık 12 → Year 7
+      (11+-12+ kitabı), 13+ → Year 8. **Seviye kadranı 15'te bitiyor** (sunucu 15'in üstüne çıkarmıyor)
+      ve Year 7 zaten 13-14'te, o yüzden Year 8 15'e oturuyor ve **her konusu kendi şablonunda**
+      (`powers-primes`, `negatives-decimals`, `fdp`, `algebra-8`, `sequences-graphs`, `ratio-8`,
+      `geometry-8`, `stats-8`) — içeriği bant değil konu seçiyor.
+      **Kitabın biçimleri:** asal çarpanlar üslü (şıkta "4 × 3 × 25" gibi asal olmayan gruplama),
+      EBOB/EKOK büyük sayılarla, iç içe parantez; negatiflerle dört işlem (cevap negatifse şıklı),
+      ondalık yuvarlama, 10/100/1000; `<`, `>`, `=` işareti; tam sayılı kesirlerle dört işlem (en sade),
+      kesirli yüzde (%17½), indirim yüzdesi, ters yüzde, KOY sıralama, ondalıktan kesire; parantez açma
+      ve sadeleştirme, çarpanlara ayırma ("tamamen" — eksik çarpan eşit değerli ama yanlış şık, açıklamasıyla),
+      iki parantez çarpımı, iki taraflı denklem, iki bilinmeyenli denklem, yerine koyma, alanları eşit
+      iki dikdörtgenden x; n. terim (her yanlış şık hangi terimde tutmadığını söylüyor), 100. terim,
+      doğrusal olmayan diziler, değer tablosu, doğruyu denklemine eşleme, iki doğrunun kesişimi;
+      3-4 parçalı oran, denk oran, ters orantı, mil↔km / cm²↔m² / zaman birimleri, ortalama hız,
+      dişli çarklar, ölçek çarpanının alana etkisi; prizma hacmi/yüzey alanı/yükseklik, paralel doğrularda
+      açılar (iç ters, yöndeş, karşı durumlu), π = 3,14 ile çevre/alan/yarıçap, Pisagor, düzgün çokgen
+      iç/dış açısı, bahçe yolları, orijinden büyütme; ortanca/ortalama/açıklık, sıklık tablosundan
+      ortalama, iki grubun birleşik ortalaması, iki zar (1/11 çeldiricisi), deste, torbadan çıkarma,
+      gruplama, serpilme grafiğinde ilişki. **Yeni görseller:** dişli çark, ölçülü prizma, daire, dik
+      üçgen, bahçe planı, serpilme, paralel doğrular, koordinat düzleminde doğrular, cebirsel dikdörtgenler.
+      **Türkçe ek hatası kapandı:** sayıdan sonraki ek sabit yazılıyordu ("11'nin", "%20'ini");
+      `trEk(sayı, hâl)` sayının okunuşunun son kelimesine bakıyor (11'in, %20'sini, 4'e, 60'tan, 17½'si)
+      ve 11-12 ile 13 bloklarındaki bütün sayı ekleri ondan geçiyor. (Eski bloklarda aynı sabit ek
+      kalıbı hâlâ var, taranmadı.)
+      Bırakılanlar: grafik/pasta çizdirme, açıölçer ve cetvelle ölçme, yansıtma, karar ağacı, kerteriz
+      (ölçme gerektiriyor), cümle yazdırma.
+      Ölçüm (1500 oturum, 13 yaş): 58 farklı soru biçimi, görselli soru 3,1/oturum, 10 görsel türü.
+      Doğrulama: math:check 10 yaş (5-14) × 3 dil × 2000 soru/konu bulgu yok (65/65 konu şablonlu),
+      her yeni görsel için cevabı çizimden yeniden hesaplayan kontrol; build, font:check, i18n:check
+      değişmedi (38); 18 görsel EN + 8 TR 390px'te; gerçek MathScreen'de 13 yaş oturumu uçtan uca.
 - [x] 11-12 yaş görselleri — merdivenin son basamağı (2026-09-25, Claude). Kaynak *Bond 10 Minute
       Tests Maths 11+-12+* (30 test baştan sona okundu; not dökümü scratchpad'de `NOTES-bond-1112.md`).
       Year 7 zaten bu kitabın METNİNDEN yazılmıştı (karekök, oran sadeleştirme, iki taraflı denklem,
