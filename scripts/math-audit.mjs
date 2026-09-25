@@ -231,6 +231,11 @@ for (const age of AGES) {
           const [n, d] = String(p.correct_answer).split('/').map(Number)
           if (n * p.visual.parts !== k * d) fail(where, 'kesir görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${k}/${p.visual.parts}`)
         }
+        // A rectangle question has two different side lengths, the longer along the bottom.
+        if (p.visual?.kind === 'geometry' && p.visual.shape === 'rect') {
+          const other = p.visual.height ?? Number(p.correct_answer)
+          if (other >= p.visual.base) fail(where, 'dikdörtgen kare ya da dikey çıktı', p.question_text)
+        }
         // A question that talks about a picture must carry one. "What is this 3D shape called?"
         // shipped for a day with no solid drawn under it, and every other check passed it.
         if (/\b(this|these) (shape|3D shape|clock|chart|scale|jug|thermometer|pencil|tally chart|grid)\b|shaded|the time shown|arrow is pointing|each child's/i.test(p.question_text)

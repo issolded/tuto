@@ -1828,8 +1828,10 @@ function geometryAngle(level, lang) {
 function geometryArea(level, lang) {
   const band = bandForLevel(level)
   const shape = pick(band >= 7 ? ['rect', 'triangle', 'para', 'reverse'] : ['rect', 'rect', 'triangle', 'reverse'])
-  const w = randInt(3, 18)
-  const h = randInt(3, 18)
+  // Two different lengths, the longer one along the bottom. Equal sides made a square that the
+  // question called a rectangle ("area 16 cm², one side 4 cm" — the other side is 4 too) under a
+  // drawing that is always wider than it is tall.
+  const [w, h] = rectSides(3, 18)
 
   if (shape === 'triangle') {
     // Base and height chosen so half of their product is whole.
@@ -3892,8 +3894,18 @@ function measureDifference(level, lang) {
   }
 }
 
+// Two different side lengths, longer first: the drawing is a landscape rectangle with the first
+// length along the bottom, and "9 cm long and 16 cm wide" or a square called a rectangle both
+// contradict it.
+function rectSides(lo, hi) {
+  const a = randInt(lo, hi)
+  let b
+  do { b = randInt(lo, hi) } while (b === a)
+  return a > b ? [a, b] : [b, a]
+}
+
 function measurePerimeter(level, lang) {
-  const w = randInt(3, 24), h = randInt(3, 24)
+  const [w, h] = rectSides(3, 24)
   return {
     topic: 'measurement', level,
     question_text: say(lang,
