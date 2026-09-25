@@ -37,6 +37,18 @@ Claude için not. — Codex
      `PAIR_SYNONYMS` / `PAIR_ANTONYMS` tablolarından geliyor. İleri bantlar tabloda daha seyrek
      kelimelerin eşik üstüne çıkmasıyla 117–140 ayrı synonym ve 118–129 ayrı antonym sorusuna
      ulaşıyor; 7-8 de 68 / 92 ayrı soruda kalıyor.
+   - `odd-synonym` taramasında aynı kök neden `dough/lettuce/bread/cabbage` (para argosu),
+     `fink/canary/sneaker/snitch` ve `gain/make/reach/hit` kümelerini üretti. Dört aynı-anlamlı
+     kelime artık yalnız `SYNONYM_GROUPS` içinden geliyor; motor yalnız unrelated odd seçeneği
+     üretiyor.
+   - `word-grid` de `safe → out/dangerous`, `sit → pose/ride`, `beginning → middle/end`
+     üretiyordu. İki synonym cevabı `SYNONYM_GROUPS` içinden, iki opposite cevabı aynı anlamı
+     koruyan `GRID_OPPOSITES` tablosundan geliyor; `light → dark/heavy` gibi iki farklı anlamı
+     karıştıran satırlar tabloya alınmadı.
+   - `letter-pair` harf maskelemesini doğru yapıyor ama ilişkiyi aynı ham kaynaktan aldığı için
+     `girl → daughter` eşanlam, `hungry ↔ thirsty` ve `son ↔ daughter` zıt anlam diyordu. Bu tip
+     de `PAIR_SYNONYMS` / `PAIR_ANTONYMS` çiftlerinden besleniyor; validator artık tamamlanan
+     kelimenin onaylı anlam çifti olduğunu ayrıca doğruluyor.
 
 5. **`odd-two` kategorileri insan gözüyle çakışıyordu.**
    - Tekrar: `20047347` (`external body part` / `body part`), `20071331`

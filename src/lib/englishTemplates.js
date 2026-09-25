@@ -61,7 +61,7 @@ import {
   RELATIONS, LOGIC_SCENES, ORDER_SCENES, NAMES, POSSESSIVES, MISSPELLINGS, CONTRACTIONS,
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
   PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, PAIR_ANTONYMS,
-  SENSE_ANSWERS,
+  SYNONYM_GROUPS, GRID_OPPOSITES, SENSE_ANSWERS,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -1066,19 +1066,15 @@ function genWordGrid(r, band, seed) {
   const { synonyms, antonyms } = index()
   const wantOpposite = r() < 0.5
 
-  let target = null
-  let answers = null
-  const source = wantOpposite ? antonyms : synonyms
-  const candidates = [...source.keys()].filter(
-    w => z(w) >= band.stem && z(w) <= band.stemMax && (!band.familiarOnly || familiar(w)))
-  for (let tries = 0; tries < 40 && !answers; tries++) {
-    const w = pickOne(r, candidates)
-    const hits = [...(source.get(w) || [])].filter(x => z(x) >= band.answer)
-    if (hits.length >= 2) {
-      target = w
-      answers = shuffle(r, hits).slice(0, 2)
-    }
-  }
+  const candidates = wantOpposite
+    ? Object.entries(GRID_OPPOSITES)
+    : SYNONYM_GROUPS.flatMap(group => group.map(target => [target, group.filter(w => w !== target)]))
+  const usable = candidates.filter(([target, hits]) => z(target) >= band.stem
+    && z(target) <= band.stemMax && (!band.familiarOnly || familiar(target))
+    && hits.filter(w => askable(band, w)).length >= 2)
+  if (!usable.length) return null
+  const [target, hits] = pickOne(r, usable)
+  const answers = shuffle(r, hits.filter(w => askable(band, w))).slice(0, 2)
   if (!answers) return null
 
   const avoid = new Set([target, ...answers])
@@ -1114,22 +1110,14 @@ function genWordGrid(r, band, seed) {
 function genLetterPair(r, band, seed) {
   // `tired  sl__py` — the book's Test 5. A meaning question and a spelling question at once,
   // and it needs no sentence, which is why it is in the first set of types.
-  const { synonyms, antonyms } = index()
   const wantOpposite = r() < 0.5
-  const source = wantOpposite ? antonyms : synonyms
-  const keys = [...source.keys()].filter(
-    w => z(w) >= band.stem && z(w) <= band.stemMax && (!band.familiarOnly || familiar(w)))
-  if (!keys.length) return null
-
-  let stem = null
-  let answer = null
-  for (let tries = 0; tries < 60 && !answer; tries++) {
-    const w = pickOne(r, keys)
-    const hits = [...(source.get(w) || [])]
-      .filter(x => z(x) >= band.answer && x.length >= 5 && x.length <= 10)
-    if (hits.length) { stem = w; answer = pickOne(r, hits) }
-  }
-  if (!answer) return null
+  const source = wantOpposite ? PAIR_ANTONYMS : PAIR_SYNONYMS
+  const pairs = source.flatMap(([a, b]) => [[a, b], [b, a]]).filter(([stem, answer]) =>
+    z(stem) >= band.stem && z(stem) <= band.stemMax
+      && (!band.familiarOnly || familiar(stem)) && z(answer) >= band.answer
+      && answer.length >= 5 && answer.length <= 10)
+  if (!pairs.length) return null
+  const [stem, answer] = pickOne(r, pairs)
 
   // Leave at least three letters showing. `foremost → f___t` is not a question: three of the
   // five letters of `first` are gone and what is left fits a dozen words. The book never takes
@@ -1384,10 +1372,13 @@ function genOddSynonym(r, band, seed) {
   // The 9-10 book: "Underline one word in each group which is not a synonym for the rest."
   // Four words that mean nearly the same and one that does not — the mirror image of odd-two,
   // which groups by what a thing IS rather than by what a word MEANS.
-  const usable = SYNSETS.filter(([, ws]) => ws.filter(w => askable(band, w)).length >= 4)
+  // The table itself is the age/readability review, so do not re-apply Dale-Chall here. It omits
+  // ordinary words such as cheerful, enormous and miniature and left 8-9 with one repeating
+  // group. The frequency floor still rises with the band.
+  const usable = SYNONYM_GROUPS.filter(ws => ws.every(w => z(w) >= band.answer))
   if (!usable.length) return null
-  const [, words] = pickOne(r, usable)
-  const inside = shuffle(r, words.filter(w => askable(band, w))).slice(0, 4)
+  const words = pickOne(r, usable)
+  const inside = shuffle(r, words)
   if (inside.length < 4) return null
   // Same rule as odd-two: a synset holds `chimpanzee` and `chimp`, and a line that shows both
   // is asking a child to tell one word from itself.
@@ -3079,6 +3070,11 @@ export function validateItem(item) {
   if (item.type === 'word-grid') {
     const { synonyms, antonyms } = index()
     const source = item.prompt.opposite ? antonyms : synonyms
+    const approved = item.prompt.opposite
+      ? answers.every(w => GRID_OPPOSITES[item.prompt.word]?.includes(w))
+      : SYNONYM_GROUPS.some(group => group.includes(item.prompt.word)
+        && answers.every(w => group.includes(w)))
+    if (!approved) return 'the grid answers are not an approved relation'
     for (const w of wrong) {
       if (source.get(item.prompt.word)?.has(w)) return `grid filler "${w}" is also an answer`
     }
@@ -3135,6 +3131,10 @@ export function validateItem(item) {
   // that makes them absolute rather than probabilistic.
   if (item.type === 'odd-synonym') {
     const [answer] = answers
+    const group = [...item.rule.group].sort()
+    if (!SYNONYM_GROUPS.some(ws => [...ws].sort().every((w, i) => w === group[i]))) {
+      return 'the four matching words are not an approved synonym group'
+    }
     for (const w of wrong) {
       if (related(w, answer) || sharesNeighbour(w, answer)) {
         return `"${w}" and the odd one out "${answer}" share a meaning`
@@ -3220,6 +3220,15 @@ function validateNewFamilies(item, texts, answers, wrong) {
       if (pairs.length !== 1) return `${pairs.length} pairs share their letters`
       if (!pairs[0].every(w => answers.includes(w))) return 'the pair that shares letters is not the answer'
       return null
+    }
+    case 'letter-pair': {
+      const source = item.prompt.opposite ? PAIR_ANTONYMS : PAIR_SYNONYMS
+      const approved = source.some(([a, b]) => (a === item.rule.of && b === item.rule.answer)
+        || (b === item.rule.of && a === item.rule.answer))
+      if (!approved) return 'the completed word is not an approved meaning pair'
+      const hits = texts.filter(t => item.prompt.masked.replace(/_+/, t) in WORD_Z)
+      return hits.length === 1 && hits[0] === answer
+        ? null : `${hits.length} options complete the word (${hits.join(', ')})`
     }
     case 'letter-code': {
       const key = item.rule.key

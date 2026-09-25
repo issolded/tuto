@@ -122,6 +122,87 @@ export const PAIR_ANTONYMS = [
   ['noisy', 'quiet'],
 ]
 
+// Four genuinely interchangeable/near-equivalent words for `odd-synonym`. These are groups,
+// not all pairwise combinations inferred from a dictionary sense: contextual and slang groups
+// such as dough/lettuce/bread/cabbage and fink/canary/sneaker/snitch are deliberately absent.
+export const SYNONYM_GROUPS = [
+  ['happy', 'glad', 'joyful', 'cheerful'],
+  ['big', 'large', 'huge', 'enormous'],
+  ['small', 'little', 'tiny', 'miniature'],
+  ['quick', 'fast', 'rapid', 'speedy'],
+  ['shout', 'yell', 'scream', 'cry'],
+  ['begin', 'start', 'commence', 'initiate'],
+  ['end', 'finish', 'stop', 'cease'],
+  ['clever', 'smart', 'bright', 'intelligent'],
+  ['angry', 'cross', 'mad', 'annoyed'],
+  ['scared', 'afraid', 'frightened', 'fearful'],
+  ['talk', 'speak', 'chat', 'converse'],
+  ['wet', 'damp', 'moist', 'soggy'],
+  ['friend', 'mate', 'pal', 'companion'],
+  ['story', 'tale', 'narrative', 'account'],
+  ['path', 'track', 'trail', 'route'],
+  ['pull', 'drag', 'tug', 'haul'],
+  ['hurry', 'rush', 'hasten', 'speed'],
+  ['help', 'aid', 'assist', 'support'],
+  ['harm', 'damage', 'hurt', 'injure'],
+  ['choose', 'select', 'pick', 'opt'],
+  ['copy', 'imitate', 'mimic', 'reproduce'],
+  ['important', 'significant', 'major', 'vital'],
+  ['difficult', 'hard', 'tough', 'challenging'],
+  ['beautiful', 'pretty', 'lovely', 'attractive'],
+  ['strange', 'odd', 'unusual', 'peculiar'],
+  ['honest', 'truthful', 'sincere', 'frank'],
+  ['brave', 'bold', 'courageous', 'daring'],
+  ['calm', 'peaceful', 'tranquil', 'serene'],
+  ['mistake', 'error', 'fault', 'blunder'],
+  ['build', 'make', 'create', 'construct'],
+  ['destroy', 'ruin', 'wreck', 'demolish'],
+  ['jump', 'leap', 'hop', 'spring'],
+  ['house', 'home', 'dwelling', 'residence'],
+  ['notable', 'famous', 'famed', 'noted'],
+  ['decrease', 'fall', 'diminish', 'lessen'],
+  ['terrible', 'dreadful', 'awful', 'dire'],
+  ['pair', 'duo', 'duet', 'couple'],
+  ['combine', 'fuse', 'merge', 'mix'],
+  ['effect', 'result', 'outcome', 'consequence'],
+  ['cargo', 'freight', 'shipment', 'payload'],
+  ['scent', 'fragrance', 'perfume', 'aroma'],
+  ['salary', 'wage', 'earnings', 'remuneration'],
+  ['cloth', 'fabric', 'textile', 'material'],
+  ['sequential', 'consecutive', 'successive', 'serial'],
+  ['deadlock', 'impasse', 'standstill', 'stalemate'],
+  ['eternal', 'perpetual', 'everlasting', 'unending'],
+  ['repair', 'mend', 'restore', 'fix'],
+]
+
+// Word-grid asks for TWO opposites, so ordinary antonym pairs are not enough. Every row keeps
+// both answers in the same ordinary sense of the target; mixed-sense rows such as
+// `light → dark/heavy` and `soft → loud/hard` are deliberately excluded.
+export const GRID_OPPOSITES = {
+  accept: ['reject', 'refuse'],
+  allow: ['ban', 'forbid'],
+  arrive: ['depart', 'leave'],
+  begin: ['end', 'finish'],
+  build: ['destroy', 'demolish'],
+  enter: ['exit', 'leave'],
+  give: ['take', 'receive'],
+  hide: ['show', 'reveal'],
+  increase: ['decrease', 'reduce'],
+  join: ['leave', 'separate'],
+  laugh: ['cry', 'weep'],
+  love: ['hate', 'dislike'],
+  rise: ['fall', 'drop'],
+  start: ['stop', 'finish'],
+  win: ['lose', 'fail'],
+  happy: ['sad', 'unhappy'],
+  hot: ['cold', 'cool'],
+  big: ['small', 'little'],
+  fast: ['slow', 'sluggish'],
+  loud: ['quiet', 'silent'],
+  strong: ['weak', 'frail'],
+  early: ['late', 'tardy'],
+}
+
 // Sentence-bound synonyms for `sense`. A WordNet synset says that two words share a sense; it
 // does NOT say that every member can replace the printed word in the example sentence. That
 // distinction produced `hit the MAC machine → attain`, `matters came to a head → pass`, and
