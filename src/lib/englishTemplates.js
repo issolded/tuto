@@ -1886,8 +1886,9 @@ function genMissingVowel(r, band, seed) {
   // `repugn_nt`, `profici_nt` — always an unstressed vowel, which is exactly the letter nobody
   // can hear. Five options and five vowels, so the options ARE the alphabet's vowels.
   const VOWELS = ['a', 'e', 'i', 'o', 'u']
-  const pool = soundPool(`vowel|${band.answer}`, () => Object.keys(WORD_Z).filter(
-    w => z(w) >= band.answer && w.length >= 6 && w.length <= 12 && !BANNED.has(w)))
+  const pool = soundPool(`vowel|${band.variety}|${band.answer}`, () => Object.keys(WORD_Z).filter(
+    w => z(w) >= band.answer && w.length >= 6 && w.length <= 12 && !BANNED.has(w)
+      && !wrongSpelling(w, band.variety)))
   if (!pool.length) return null
   for (let tries = 0; tries < 60; tries++) {
     const word = pickOne(r, pool)
@@ -3267,6 +3268,9 @@ export function validateItem(item) {
     }
   }
   if (item.type === 'missing-vowel') {
+    if (wrongSpelling(item.rule.word, item.variety)) {
+      return `"${item.rule.word}" is the other variety's spelling`
+    }
     const filled = texts.filter(v => item.prompt.masked.replace('_', v) in WORD_Z)
     if (filled.length !== 1) return `${filled.length} letters make a word`
   }

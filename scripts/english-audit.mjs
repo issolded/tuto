@@ -348,6 +348,11 @@ for (const bandKey of BAND_KEYS) {
       failures.push(`[regression] suffix builder labels ${base} → ${derived} as ${row?.[2] || 'missing'}, not ial`)
     }
   }
+
+  const ukVowel = generateItem('10-11', 'missing-vowel', 11206721, { variety: 'uk' })
+  if (ukVowel?.rule.word === 'demeanor' || ukVowel?.prompt.masked === 'd_meanor') {
+    failures.push('[regression] uk missing-vowel seed 11206721 uses US spelling "demeanor"')
+  }
 }
 
 // ── the one check in this file that is not self-referential ──────────────────

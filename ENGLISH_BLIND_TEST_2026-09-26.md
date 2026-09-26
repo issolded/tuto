@@ -154,6 +154,13 @@ sınırlı; 11-12'nin kitabında Latin/Greek plurals bulunduğu için ileri havu
     - Builder'ın suffix listesine uzun `ial`, kısa `al`dan önce eklendi; generated lexicon
       yeniden üretildi. Audit sekiz çiftin de artık `ial` taşıdığını doğrudan doğruluyor.
 
+17. **Missing-vowel sorusu UK oturumunda US yazımı gösterebiliyordu.**
+    - Bağımsız oturum: `10-11 / missing-vowel / uk / seed 11206721`:
+      `d_meanor → demeanor`; UK karşılığı `demeanour`.
+    - `generateItem` normal kelime promptlarını variety'ye çeviriyordu fakat bu tip kelimeyi
+      önce maskelediği için dönüşüm boşluğun içine erişemiyordu. Havuz artık yanlış variety
+      yazımlarını baştan eliyor; validator tam, maskesiz kelimeyi ayrıca kontrol ediyor.
+
 ## Regresyon özeti
 
 - `npm run english:check`: geçti; iki variety, beş bant, her tipte 300 soru; kısa oturum ve
