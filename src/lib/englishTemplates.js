@@ -132,7 +132,7 @@ const wrongSpelling = (w, variety) => !!SPELLING[w] && SPELLING[w][variety] !== 
 // from the lexicon: they assemble three letters, and three letters spell something unfortunate
 // about once in every three hundred items. The audit found `ass`, `pee`, `tit`, `hoe` and
 // `gin` sitting in options lists, each one a letter group that happened to be a word.
-const BANNED = new Set([...BLOCKED, 'imprisoned'])
+const BANNED = new Set(BLOCKED)
 
 // Words that make an example SENTENCE unsuitable although each is fine on its own. The build
 // screens sentences against scripts/english/sentence-topics.txt; these were found after the

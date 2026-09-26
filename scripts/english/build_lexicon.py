@@ -915,8 +915,11 @@ def main():
         'spell', 'spill', 'spoil', 'stave', 'strive', 'sweat', 'thrive', 'wake', 'weave', 'wet',
     }
 
+    # Longest/specific endings must come first. Without `ial`, `office -> official`,
+    # `face -> facial` and six similar records matched the shorter `al` and told the child to
+    # add the wrong suffix even though the derived spelling happened to be right.
     SUFFIXES = ['ful', 'ous', 'ness', 'ment', 'able', 'ible', 'less', 'tion', 'sion',
-                'ity', 'ance', 'ence', 'ive', 'al', 'ist', 'er', 'or', 'ly', 'ish', 'y']
+                'ity', 'ance', 'ence', 'ive', 'ial', 'al', 'ist', 'er', 'or', 'ly', 'ish', 'y']
     PREFIXES = ['un', 'in', 'im', 'il', 'ir', 'dis', 'non', 'mis', 're', 'pre', 'over',
                 'under', 'sub', 'super', 'anti', 'inter', 'micro', 'trans', 'semi', 'co']
 

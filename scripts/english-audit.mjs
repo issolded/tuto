@@ -29,7 +29,7 @@ import {
   BANDS, BAND_KEYS, BOOK_COVERAGE, VARIETIES, POOL_LIMITS,
   generateItem, generateSession, validateItem, itemSignature,
 } from '../src/lib/englishTemplates.js'
-import { WORD_Z, LEXICON_META, SYLLABLES } from '../src/lib/englishLexicon.generated.js'
+import { WORD_Z, LEXICON_META, SYLLABLES, SUFFIXED } from '../src/lib/englishLexicon.generated.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PER_TYPE = Number(process.argv[2]) || 300
@@ -334,6 +334,18 @@ for (const bandKey of BAND_KEYS) {
     const answer = item?.correct.map(i => item.options[i].text) || []
     if (item?.prompt.word === word || answer.includes(word)) {
       failures.push(`[regression] uk rhyme seed ${seed} still uses source-specific "${word}"`)
+    }
+  }
+
+  const ialPairs = [
+    ['commerce', 'commercial'], ['face', 'facial'], ['finance', 'financial'],
+    ['office', 'official'], ['prejudice', 'prejudicial'], ['province', 'provincial'],
+    ['race', 'racial'], ['sacrifice', 'sacrificial'],
+  ]
+  for (const [base, derived] of ialPairs) {
+    const row = SUFFIXED.find(([a, b]) => a === base && b === derived)
+    if (!row || row[2] !== 'ial') {
+      failures.push(`[regression] suffix builder labels ${base} → ${derived} as ${row?.[2] || 'missing'}, not ial`)
     }
   }
 }

@@ -146,6 +146,14 @@ sınırlı; 11-12'nin kitabında Latin/Greek plurals bulunduğu için ileri havu
     - Bu iki yazım normal rhyme ve rhyme-synonym yollarında variety bazında karantinaya alındı;
       validator aynı telaffuz engelini yeniden uyguluyor.
 
+16. **Lexicon builder `-ial` ekini daha kısa `-al` sanıyordu.**
+    - Kör örnek: `9-10 / suffix / 6888`: `office + al → official`.
+    - Aynı kök neden `commerce → commercial`, `face → facial`, `finance → financial`,
+      `prejudice → prejudicial`, `province → provincial`, `race → racial` ve
+      `sacrifice → sacrificial` kayıtlarını da yanlış suffix etiketiyle üretiyordu.
+    - Builder'ın suffix listesine uzun `ial`, kısa `al`dan önce eklendi; generated lexicon
+      yeniden üretildi. Audit sekiz çiftin de artık `ial` taşıdığını doğrudan doğruluyor.
+
 ## Regresyon özeti
 
 - `npm run english:check`: geçti; iki variety, beş bant, her tipte 300 soru; kısa oturum ve
