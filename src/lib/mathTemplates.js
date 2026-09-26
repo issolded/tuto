@@ -391,6 +391,82 @@ function subtractionTemplate(level, lang, columnar = false, plain = false) {
   }
 }
 
+// The gap from `from` up to `to` — the answer to 198 + ? = 604, to 604 − ? = 198, to "how many
+// more". These hints used to say "count up from 198 to 604", which is a method only in name:
+// counting four hundred and six ones is not something a child does. Two methods that ARE done,
+// picked from the numbers:
+//
+//   · Near a round number, round and adjust. 198 is 2 short of 200, 604 − 200 is easy, and the
+//     2 goes back on. Only when the adjustment is small (≤ 3) — adjusting by 7 is its own sum.
+//   · Otherwise, count up in jumps to round numbers: 198 → 200 → 600 → 604, then add the jumps.
+//     The landmarks are shown, the jump sizes are not, and the total never is.
+//
+// A small gap under 100 is still counted one by one, stopping short of the count itself.
+export function roundNear(n) {
+  for (const p of [1000, 100, 10]) {
+    if (n < p) continue
+    const r = Math.round(n / p) * p
+    if (r !== n && Math.abs(n - r) <= 3) return r
+  }
+  return null
+}
+
+export function gapLandmarks(from, to) {
+  const pts = [from]
+  let cur = from
+  for (const p of [10, 100, 1000, 10000]) {
+    const up = Math.ceil(cur / p) * p
+    if (up > cur && up <= to) { pts.push(up); cur = up }
+  }
+  // Coming down to the target, the last jump may be a two-digit number (800 → 815): a child adds
+  // 15 as easily as 10 + 5, and a stop at 810 only makes the list longer.
+  const last = to >= 100 ? 100 : 10
+  for (const p of [10000, 1000, 100, 10]) {
+    if (p < last) break
+    const down = Math.floor(to / p) * p
+    if (down > cur) { pts.push(down); cur = down }
+  }
+  if (to > cur) pts.push(to)
+  return pts
+}
+
+// "Easy" means no exchanging: every digit of `to` is at least the digit of `r` under it.
+const noExchange = (to, r) => String(r).padStart(String(to).length, '0').split('').every((d, i) => Number(String(to)[i]) >= Number(d))
+
+function gapSteps(from, to, lang) {
+  const N = (n) => num(n, lang)
+  if (to - from <= 10 && to <= 100) {
+    const run = Array.from({ length: to - from }, (_, i) => from + i + 1).join(', ')
+    return [say(lang, `Count on from ${N(from)} to ${N(to)} on your fingers: ${run}. How many did you count?`,
+                      `${N(from)} sayısından ${N(to)} sayısına parmaklarınla say: ${run}. Kaç tane saydın?`,
+                      `Cuenta con los dedos desde ${N(from)} hasta ${N(to)}: ${run}. ¿Cuántos has contado?`)]
+  }
+  const r = roundNear(from)
+  if (r !== null && r < to && noExchange(to, r)) {
+    const d = Math.abs(from - r)
+    return from < r
+      ? [say(lang, `${N(from)} is just ${d} less than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy.`,
+                   `${N(from)}, ${N(r)} sayısından sadece ${d} eksik. Önce ${N(to)} sayısından ${N(r)} çıkar — bu kolay.`,
+                   `${N(from)} es solo ${d} menos que ${N(r)}. Primero resta ${N(r)} de ${N(to)}: esa es fácil.`),
+         say(lang, `You took away ${d} too many, so add ${d} back on.`,
+                   `${d} fazla çıkardın, o yüzden ${d} geri ekle.`,
+                   `Has quitado ${d} de más, así que vuelve a sumar ${d}.`)]
+      : [say(lang, `${N(from)} is just ${d} more than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy.`,
+                   `${N(from)}, ${N(r)} sayısından sadece ${d} fazla. Önce ${N(to)} sayısından ${N(r)} çıkar — bu kolay.`,
+                   `${N(from)} es solo ${d} más que ${N(r)}. Primero resta ${N(r)} de ${N(to)}: esa es fácil.`),
+         say(lang, `Then take away ${d} more.`,
+                   `Sonra ${d} daha çıkar.`,
+                   `Luego quita ${d} más.`)]
+  }
+  const path = gapLandmarks(from, to).map(N).join(' → ')
+  return [say(lang, `Count up in jumps to round numbers: ${path}.`,
+                    `Yuvarlak sayılara zıplayarak say: ${path}.`,
+                    `Cuenta a saltos hasta números redondos: ${path}.`),
+          say(lang, `How big is each jump? Add the jumps together.`,
+                    `Her zıplama kaç? Zıplamaları topla.`,
+                    `¿Cuánto mide cada salto? Suma los saltos.`)]
+}
+
 // Same limit as counting on, for the same reason: counting back three thousand is not a hint.
 function countingBackSteps(a, b, lang) {
   if (isCountable(a, b)) {
@@ -1380,9 +1456,7 @@ function addSubShort(level, lang, columnar) {
       say(lang, `The people without a meal are the gap between the people and the meals.`,
                 `Yemeksiz kalanlar, gelen kişi sayısı ile yemek sayısı arasındaki farktır.`,
                 `Los que se quedan sin comida son la diferencia entre personas y comidas.`),
-      say(lang, `Take ${made} away from ${came}, or count up from ${made} to ${came}.`,
-                `${came} sayısından ${made} çıkar ya da ${made} sayısından ${came} sayısına kadar say.`,
-                `Resta ${made} de ${came}, o cuenta desde ${made} hasta ${came}.`),
+      ...gapSteps(made, came, lang),
     ],
   }
 }
@@ -4552,9 +4626,7 @@ function missingNumber(level, lang, add) {
         say(lang, `The missing number and ${num(known, lang)} make ${num(total, lang)} together.`,
                   `Eksik sayı ile ${num(known, lang)} birlikte ${num(total, lang)} eder.`,
                   `El número que falta y ${num(known, lang)} suman ${num(total, lang)}.`),
-        say(lang, `So take ${num(known, lang)} away from ${num(total, lang)}, or count up from ${num(known, lang)} to ${num(total, lang)}.`,
-                  `Yani ${num(total, lang)} sayısından ${num(known, lang)} çıkar ya da ${num(known, lang)} sayısından ${num(total, lang)} sayısına kadar say.`,
-                  `Así que resta ${num(known, lang)} de ${num(total, lang)}, o cuenta desde ${num(known, lang)} hasta ${num(total, lang)}.`),
+        ...gapSteps(known, total, lang),
       ],
     }
   }
@@ -4587,9 +4659,10 @@ function missingNumber(level, lang, add) {
       say(lang, `How much do you take from ${num(start, lang)} to get down to ${num(left, lang)}?`,
                 `${num(start, lang)} sayısından ne kadar çıkarırsan ${num(left, lang)} kalır?`,
                 `¿Cuánto hay que quitar a ${num(start, lang)} para llegar a ${num(left, lang)}?`),
-      say(lang, `That is the gap between them: count up from ${num(left, lang)} to ${num(start, lang)}.`,
-                `Bu, aradaki farktır: ${num(left, lang)} sayısından ${num(start, lang)} sayısına kadar say.`,
-                `Es la diferencia entre los dos: cuenta desde ${num(left, lang)} hasta ${num(start, lang)}.`),
+      say(lang, `That is the gap between ${num(left, lang)} and ${num(start, lang)}.`,
+                `Bu, ${num(left, lang)} ile ${num(start, lang)} arasındaki farktır.`,
+                `Es la diferencia entre ${num(left, lang)} y ${num(start, lang)}.`),
+      ...gapSteps(left, start, lang),
     ],
   }
 }
@@ -4752,9 +4825,7 @@ function youngStory(level, lang, add) {
                    `${N(s.a)} ile ${N(s.b)} sayısını topla — işine yararsa küçük olanı parçalarına ayır.`,
                    `Suma ${N(s.a)} y ${N(s.b)}; si te ayuda, separa el menor en partes.`)]
       : [say(lang, `You know the whole and one part, so take the part away.`, `Bütünü ve bir parçasını biliyorsun, parçayı bütünden çıkar.`, `Conoces el total y una parte: resta la parte.`),
-         say(lang, `Work out ${N(s.a)} − ${N(s.b)}, or count up from ${N(s.b)} to ${N(s.a)}.`,
-                   `${N(s.a)} − ${N(s.b)} işlemini yap ya da ${N(s.b)} sayısından ${N(s.a)} sayısına kadar say.`,
-                   `Calcula ${N(s.a)} − ${N(s.b)}, o cuenta desde ${N(s.b)} hasta ${N(s.a)}.`)],
+         ...gapSteps(s.b, s.a, lang)],
   }
 }
 
@@ -5914,11 +5985,13 @@ function sortProps(band) {
   const multiples = band <= 2 ? [2, 5, 10] : band === 3 ? [3, 4, 5, 8] : [3, 4, 6, 7, 9]
   const big = band <= 2 ? 30 : band === 3 ? 50 : 100
   const props = [
-    { id: 'even', test: n => n % 2 === 0, en: 'Even numbers', tr: 'Çift sayılar', es: 'Números pares', not: { en: 'is odd', tr: 'tek', es: 'es impar' }, is: { en: 'is even', tr: 'çift', es: 'es par' } },
-    { id: 'odd', test: n => n % 2 === 1, en: 'Odd numbers', tr: 'Tek sayılar', es: 'Números impares', not: { en: 'is even', tr: 'çift', es: 'es par' }, is: { en: 'is odd', tr: 'tek', es: 'es impar' } },
-    ...multiples.map(k => ({ id: `m${k}`, test: n => n % k === 0, en: `Multiples of ${k}`, tr: `${TR_GEN[k]} katları`, es: `Múltiplos de ${k}`,
+    { id: 'even', test: n => n % 2 === 0, en: 'Even numbers', tr: 'Çift sayılar', es: 'Números pares', neg: { en: 'Not even', tr: 'Çift olmayanlar', es: 'No pares' }, not: { en: 'is odd', tr: 'tek', es: 'es impar' }, is: { en: 'is even', tr: 'çift', es: 'es par' } },
+    { id: 'odd', test: n => n % 2 === 1, en: 'Odd numbers', tr: 'Tek sayılar', es: 'Números impares', neg: { en: 'Not odd', tr: 'Tek olmayanlar', es: 'No impares' }, not: { en: 'is even', tr: 'çift', es: 'es par' }, is: { en: 'is odd', tr: 'tek', es: 'es impar' } },
+    ...multiples.map(k => ({ id: `m${k}`, test: n => n % k === 0, en: `Multiples of ${k}`, tr: `${TR_GEN[k]} katları`, es: `Múltiplos de ${k}`, k,
+      neg: { en: `Not multiples of ${k}`, tr: `${TR_GEN[k]} katı olmayanlar`, es: `No múltiplos de ${k}` },
       not: { en: `is not a multiple of ${k}`, tr: `${TR_GEN[k]} katı değil`, es: `no es múltiplo de ${k}` }, is: { en: `is a multiple of ${k}`, tr: `${TR_GEN[k]} katı`, es: `es múltiplo de ${k}` } })),
     { id: `gt${big}`, test: n => n > big, en: `More than ${big}`, tr: `${big}'den büyük`.replace("50'den", "50'den").replace("100'den", "100'den").replace("30'den", "30'dan"), es: `Mayores que ${big}`,
+      neg: { en: `Not more than ${big}`, tr: `${big}'den büyük olmayanlar`.replace("30'den", "30'dan"), es: `No mayores que ${big}` },
       not: { en: `is not more than ${big}`, tr: `${big}'den büyük değil`.replace("30'den", "30'dan"), es: `no es mayor que ${big}` }, is: { en: `is more than ${big}`, tr: `${big}'den büyük`.replace("30'den", "30'dan"), es: `es mayor que ${big}` } },
   ]
   return { props, max: band <= 2 ? 60 : band === 3 ? 100 : 150 }
@@ -5933,8 +6006,12 @@ function dataSorting(level, lang) {
     || (A.id.startsWith('m') && B.id.startsWith('m') && (Number(A.id.slice(1)) % Number(B.id.slice(1)) === 0 || Number(B.id.slice(1)) % Number(A.id.slice(1)) === 0)))
   const region = n => `${A.test(n) ? 1 : 0}${B.test(n) ? 1 : 0}`
   const buckets = { '11': [], '10': [], '01': [], '00': [] }
+  // Every number on the card is tested against the label, wrong options included, so every one
+  // has to be decidable from the table the child knows: up to 12 × k. An 8-year-old was asked to
+  // rule out 81 as "not a multiple of 3" — true, but 27 × 3 is not in anyone's 3 times table.
+  const top = Math.min(max, ...[A, B].filter(P => P.k).map(P => 12 * P.k))
   // The threshold of "more than 50" is never an answer: the hint would have to name it.
-  for (let n = 2; n <= max; n++) if (!props.some(p => p.id === `gt${n}`)) buckets[region(n)].push(n)
+  for (let n = 2; n <= top; n++) if (!props.some(p => p.id === `gt${n}`)) buckets[region(n)].push(n)
   if (Object.values(buckets).some(b => !b.length)) return dataSorting(level, lang)
   const target = pick(['11', '11', '10', '01', '00'])
   const answer = pick(buckets[target])
@@ -5964,7 +6041,7 @@ function dataSorting(level, lang) {
     '00': say(lang, `It fits neither label: it ${L(A.not)} and ${L(B.not)}.`, `İki etikete de uymaz: ${L(A.not)} ve ${L(B.not)}.`, `No cumple ninguna: ${L(A.not)} y ${L(B.not)}.`),
   }[target]
   const visual = carroll
-    ? { kind: 'carroll', cols: [L(B), say(lang, 'Others', 'Diğerleri', 'Los demás')], rows: [L(A), say(lang, 'Others', 'Diğerleri', 'Los demás')], cell: [target[0] === '1' ? 0 : 1, target[1] === '1' ? 0 : 1] }
+    ? { kind: 'carroll', cols: [L(B), L(B.neg)], rows: [L(A), L(A.neg)], cell: [target[0] === '1' ? 0 : 1, target[1] === '1' ? 0 : 1] }
     : { kind: 'venn', labels: [L(A), L(B)], shade: { '11': 'both', '10': 'left', '01': 'right', '00': 'outside' }[target] }
   return {
     topic: 'pictogram', level,

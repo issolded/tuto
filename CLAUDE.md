@@ -81,6 +81,21 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] "Count up from 198 to 604" ipuçları ve 8 yaş Carroll (2026-09-26, Claude; kullanıcı bulgusu).
+      **İpucu:** eksik toplanan, eksik çıkan, "kaç kişi yemeksiz" ve çıkarma hikâyesi "198'den
+      604'e say" diyordu — 406 tane birer birer saymak yöntem değil. Hint ile yardım paneli aynı
+      `hint_steps`'i okuduğu için ikisi de böyleydi. Artık `gapSteps(from, to)` sayıdan seçiyor:
+      yuvarlağa ≤3 yakınsa ve yuvarlaktan çıkarma onluk bozmuyorsa **yuvarla-düzelt** ("198,
+      200'den 2 eksik; önce 604'ten 200 çıkar, sonra 2 geri ekle"), değilse **yuvarlak sayılara
+      zıplama** ("198 → 200 → 600 → 604; zıplamaları topla" — duraklar var, zıplama büyüklüğü ve
+      toplam yok), 100'ün altında 10'dan küçük farkta parmakla sayma. Para üstü ipucu ("verilen
+      paraya kadar say") bırakıldı: hedef zaten yuvarlak.
+      **Carroll/Venn:** 8 yaşa "81 3'ün katı mı?" soruluyordu (27 × 3, tabloda yok). Her sayı —
+      yanlış şıklar dahil — etiketteki çarpım tablosunun içinde kalıyor (≤ 12 × k). Carroll'ın
+      "Others" satır/sütunu kitaptaki gibi "Not even / Not multiples of 3" (TR "Çift olmayanlar",
+      ES "No pares"); uzun etiket iki satıra bölünüyor, 3 dilde 358px'te sığıyor.
+      Doğrulama: math:check 65/65 bulgu yok.
+
 - [x] NVR kod sorusunda çizimle çelişen etiket + küpte kare/eşkenar dörtgen (2026-09-26, Claude).
       Kör çözümde (47/47) bulundu, iki denetimin de göremediği şeyler. **(1) Kod:** eksenlerin
       değerleri yalnız taban figürde görünür mü diye bakılıyordu; öbür eksen şekli üçgene

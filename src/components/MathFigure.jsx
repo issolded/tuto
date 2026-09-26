@@ -619,14 +619,26 @@ function venn(v) {
   return { h: 210, g }
 }
 
+// A label that does not fit its width goes onto two lines, broken at the space nearest the middle.
+// "Not multiples of 3" is a sixth wider than a Carroll column, and "3'ün katı olmayanlar" more.
+function wrapLabel(s, chars) {
+  if (s.length <= chars || !s.includes(' ')) return [s]
+  const spaces = [...s.matchAll(/ /g)].map(m => m.index)
+  const at = spaces.reduce((best, i) => (Math.abs(i - s.length / 2) < Math.abs(best - s.length / 2) ? i : best))
+  return [s.slice(0, at), s.slice(at + 1)]
+}
+const txtLines = (x, y, lines, opts) => lines.map((line, i) =>
+  txt(x, y + (i - (lines.length - 1) / 2) * 14, line, { ...opts, key: `${opts.key}-${i}` }))
+
 function carroll(v) {
-  const [colLabels, rowLabels] = [v.cols, v.rows]
-  const labelW = 118, colW = 96, rowH = 52, top = 34, ox = 6
+  const [colLabels, rowLabels] = [v.cols.map(s => wrapLabel(s, 13)), v.rows.map(s => wrapLabel(s, 16))]
+  const labelW = 118, colW = 96, rowH = 52, ox = 6
+  const top = colLabels.some(l => l.length > 1) ? 46 : 34
   const cell = (r, c) => <rect key={`${r}${c}`} x={ox + labelW + c * colW} y={top + r * rowH} width={colW} height={rowH}
     fill={v.cell[0] === r && v.cell[1] === c ? '#f7dcc0' : 'white'} stroke={INK} strokeWidth="2" />
   const g = <g>
-    {[0, 1].map(c => txt(ox + labelW + (c + 0.5) * colW, top - 13, colLabels[c], { size: 12, key: `c${c}` }))}
-    {[0, 1].map(r => txt(ox + labelW - 8, top + (r + 0.5) * rowH, rowLabels[r], { size: 12, anchor: 'end', key: `r${r}` }))}
+    {[0, 1].flatMap(c => txtLines(ox + labelW + (c + 0.5) * colW, top - 13 - (colLabels[c].length - 1) * 7, colLabels[c], { size: 12, key: `c${c}` }))}
+    {[0, 1].flatMap(r => txtLines(ox + labelW - 8, top + (r + 0.5) * rowH, rowLabels[r], { size: 12, anchor: 'end', key: `r${r}` }))}
     {[0, 1].flatMap(r => [0, 1].map(c => cell(r, c)))}
     {txt(ox + labelW + (v.cell[1] + 0.5) * colW, top + (v.cell[0] + 0.5) * rowH, '?', { size: 22, fill: ORANGE, key: 'q' })}
   </g>
