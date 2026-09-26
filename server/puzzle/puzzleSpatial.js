@@ -235,13 +235,21 @@ function mark(shape, fill, x, y, radius = 11) {
   const attrs = `fill="${paint}" stroke="${ink}" stroke-width="2.5" stroke-linejoin="round"`
   if (shape === 'circle') return `<circle cx="${x}" cy="${y}" r="${radius}" ${attrs}/>`
   if (shape === 'square') return `<rect x="${x-radius}" y="${y-radius}" width="${radius*2}" height="${radius*2}" ${attrs}/>`
+  if (shape === 'dots') {
+    const d = radius * 0.55, dot = radius * 0.3
+    return [[-d,-d],[d,-d],[-d,d],[d,d]].map(([dx,dy]) => `<circle cx="${x+dx}" cy="${y+dy}" r="${dot}" fill="${ink}"/>`).join('')
+  }
   if (shape === 'diamond') return `<path d="M${x} ${y-radius*1.2}L${x+radius*1.2} ${y}L${x} ${y+radius*1.2}L${x-radius*1.2} ${y}Z" ${attrs}/>`
   const w = radius * 0.38
   const points = [[-w,-radius],[w,-radius],[w,-w],[radius,-w],[radius,w],[w,w],
     [w,radius],[-w,radius],[-w,w],[-radius,w],[-radius,-w],[-w,-w]]
   return `<polygon points="${points.map(([dx,dy]) => `${x+dx},${y+dy}`).join(' ')}" ${attrs}/>`
 }
-const cubeMark = (symbol, x, y, radius) => mark(['circle','circle','square','square','diamond','cross'][symbol], [0,1,0,1,0,0][symbol], x, y, radius)
+// No diamond on a cube. A face is drawn in isometric projection, and there a square turns into a
+// diamond and a diamond into a flat rectangle: a blind solve read a square on the top face as a
+// diamond, which the net did not have. Every mark here has to keep its identity when projected,
+// and a square and a diamond are the same outline turned 45°. Four dots (a die face) replaces it.
+const cubeMark = (symbol, x, y, radius) => mark(['circle','circle','square','square','dots','cross'][symbol], [0,1,0,1,1,0][symbol], x, y, radius)
 export function renderSpatial(s, opts = {}) {
   const px = opts.px || 84
   let body = ''

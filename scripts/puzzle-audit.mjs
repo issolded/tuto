@@ -127,9 +127,14 @@ function answerProblem(q) {
     // attribute (the same value labelled two ways), a value in the answer never appears
     // labelled anywhere (unanswerable, not hard), or the figure being asked about is already
     // on display (a lookup, not reasoning).
+    //
+    // Values are read off the DRAWN figure (normalizeSpec), not the spec. A triangle cannot show a
+    // half-fill, so a spec saying `half: tl` draws a plain triangle; read from the spec, a page
+    // labelling that plain triangle "Y" (half-filled) beside plain figures labelled "X" passed
+    // here, and a blind solve found it.
     const [a1, a2] = q.rule.attr.slice(5).split('+')
-    const ask = q.prompt[q.prompt.length - 1]
-    const shown = q.prompt.slice(0, -1)
+    const ask = normalizeSpec(q.prompt[q.prompt.length - 1])
+    const shown = q.prompt.slice(0, -1).map(normalizeSpec)
     const labels = q.promptLabels.slice(0, -1)
     const m1 = new Map(); const m2 = new Map()
     shown.forEach((s, k) => { m1.set(val(s[a1]), labels[k][0]); m2.set(val(s[a2]), labels[k][1]) })

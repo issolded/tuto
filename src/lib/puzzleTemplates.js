@@ -1440,20 +1440,46 @@ function genCodeOnce(r, band, seed) {
     return out.length === 3 ? out : null
   }
 
+  // valuesFor checks each axis against the BASE figure only, and the other axis can take away
+  // what it saw: a half-fill is visible on the base pentagon and not drawn at all on the
+  // triangle the shape axis turns it into. The page then labelled a plain triangle "Y" — half
+  // filled — next to plain figures labelled "X". So all nine combinations are drawn and asked:
+  // does each keep both coded values, and is it a different picture from every figure that
+  // differs from it in one letter?
+  const gridFor = (a, b) => {
+    const grid = [0, 1, 2].map(i => [0, 1, 2].map(j => makeSpec({ ...base, [a.attr]: a.values[i], [b.attr]: b.values[j] })))
+    const flat = grid.flat()
+    const kept = flat.every(f => {
+      const drawn = normalizeSpec(f)
+      return valueKey(drawn[a.attr]) === valueKey(f[a.attr]) && valueKey(drawn[b.attr]) === valueKey(f[b.attr])
+    })
+    if (!kept) return null
+    for (let i = 0; i < 3; i++) {
+      for (let k = 0; k < 3; k++) {
+        for (let m = k + 1; m < 3; m++) {
+          if (tooAlike(grid[i][k], grid[i][m]) || tooAlike(grid[k][i], grid[m][i])) return null
+        }
+      }
+    }
+    return grid
+  }
+
   let axes = null
+  let grid = null
   for (let i = 0; i < attrs.length && !axes; i++) {
     for (let j = i + 1; j < attrs.length && !axes; j++) {
       if (heldApart(attrs[i], attrs[j])) continue
       const a = valuesFor(attrs[i])
       const b = valuesFor(attrs[j])
-      if (a && b) axes = [{ attr: attrs[i], values: a }, { attr: attrs[j], values: b }]
+      if (!a || !b) continue
+      const pair = [{ attr: attrs[i], values: a }, { attr: attrs[j], values: b }]
+      grid = gridFor(...pair)
+      if (grid) axes = pair
     }
   }
   if (!axes) return null
 
-  const figure = (i, j) => makeSpec({
-    ...base, [axes[0].attr]: axes[0].values[i], [axes[1].attr]: axes[1].values[j],
-  })
+  const figure = (i, j) => grid[i][j]
   const codeOf = (i, j) => CODE_LETTERS[0][i] + CODE_LETTERS[1][j]
 
   const cells = shuffle(r, [0, 1, 2].flatMap(i => [0, 1, 2].map(j => [i, j])))
@@ -1972,6 +1998,12 @@ export function validateQuestion(q) {
     if (new Set(codes).size !== n) return 'two options offer the same code'
     if (q.promptLabels?.length !== q.prompt.length) return 'a prompt figure has no label'
     if (q.prompt.some(c => !c || !geometryKey(c))) return 'unrenderable prompt cell'
+    // A label names a value the figure must SHOW. normalizeSpec drops what a shape cannot draw
+    // (no half-fill on a triangle), and a dropped value leaves a label the picture contradicts.
+    const coded = q.rule?.attr?.startsWith('code:') ? q.rule.attr.slice(5).split('+') : []
+    if (q.prompt.some(c => { const d = normalizeSpec(c); return coded.some(a => valueKey(d[a]) !== valueKey(c[a])) })) {
+      return 'a coded value is not drawn on one of the figures'
+    }
     // Two figures on display with the same picture but different labels is a contradiction the
     // child cannot resolve; with the SAME label it is a freebie. Either way the page is wrong.
     const keys = q.prompt.map(geometryKey)

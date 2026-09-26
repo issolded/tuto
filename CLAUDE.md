@@ -81,6 +81,24 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] NVR kod sorusunda çizimle çelişen etiket + küpte kare/eşkenar dörtgen (2026-09-26, Claude).
+      Kör çözümde (47/47) bulundu, iki denetimin de göremediği şeyler. **(1) Kod:** eksenlerin
+      değerleri yalnız taban figürde görünür mü diye bakılıyordu; öbür eksen şekli üçgene
+      çevirince yarım dolgu çizilmiyor (`HALF_SHAPES`'te üçgen yok), sayfa düz bir üçgene "Y"
+      (yarısı siyah) diyordu. Aynı sınıf: üçgende iç şekil/esnetme, çemberde dolgu. Ölçüm,
+      etiketi ÇİZİMDEN okuyarak: canlıdaki 9-10 kod sorularının 769/1500'ü, 10-11 ve 11-12'nin
+      526/1500'ü çizimle çelişiyor ya da cevabın değeri hiç etiketlenmemiş → düzeltmeden sonra
+      0/1500. Üreteç artık 3×3 kombinasyonun dokuzunu da çizip soruyor (kodlanan değer
+      `normalizeSpec`'ten sağ çıkıyor mu, tek harf farklı her çift ayrı resim mi);
+      `validateQuestion` çalışma anında aynısını reddediyor; `puzzle-audit` değerleri spec'ten
+      değil çizimden okuyor (eski hâli bu yüzden geçiyordu). **(2) Küp:** izometrik yüzde
+      kare eşkenar dörtgene, eşkenar dörtgen yassı dikdörtgene dönüşüyor — üst yüzdeki kare
+      açınımda olmayan "siyah eşkenar dörtgen" okunuyordu. Küpte eşkenar dörtgen yok, yerine
+      zar yüzü (dört nokta). Kural: küp sembolü izdüşümde kimliğini korumalı; 45° dönmüş hâli
+      başka bir sembol olan şekil (kare/eşkenar dörtgen, +/×) aynı küpte olamaz.
+      Not: soru seed'den yeniden üretildiği için yayın anında yarım kalan kod/küp oturumlarının
+      cevap kontrolü yeni soruya göre yapılır.
+
 - [x] NVR 6-7 ve 11-12 kaynak bantları (2026-09-26, Codex).
       Kullanıcının Schofield & Sims Rapid Tests 1 (6-7) ve Bond Assessment Papers
       11+-12+ Book 1/2 kaynaklarından 36 sayfa görsel örnekleme; tam kitap kapsamı iddiası yok.
