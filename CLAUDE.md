@@ -81,6 +81,37 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] NVR 6-7 ve 11-12 kaynak bantları (2026-09-26, Codex).
+      Kullanıcının Schofield & Sims Rapid Tests 1 (6-7) ve Bond Assessment Papers
+      11+-12+ Book 1/2 kaynaklarından 36 sayfa görsel örnekleme; tam kitap kapsamı iddiası yok.
+      **Yeni:** `puzzleSpatial.js` — şekil içinde parça, üst üste birleştirme, çok parçalı
+      dönme+dolguyu tersleme analojisi, çok parçalı ayna, 3×3 matris, küp açınımı
+      (oluşabilir/oluşamaz; üç açınım, altı farklı yönsüz simge). 6-7 beş şık ve tek
+      değişimli kurallar; 11-12 tamamen geometrik. Sunucu kopyası sync listesinde.
+      **Yaşın tek kaynağı:** sunucu artık ortak `bandForAge`'i kullanır. Canlıdaki yaklaşım
+      korunur: 5→5-6, 6→6-7, 7→7-8, 8→8-9, 9→9-10, 10→10-11, 11+→11-12.
+      EN/TR/ES yönerge ve açıklama; aynı PuzzleView ile lab/çocuk ekranı. DB değişikliği yok.
+      Bağımsız uzamsal cevap denetçisi; 6-7/11-12 motor taramaları, 1.200 yeni soru ve
+      yanlış anahtar mutasyonları geçti. Çocuk ekranı taklit API ile WebKit telefon/iPad
+      boyutlarında 3 dil × 6 tip, sonuç dahil; canlı DB'ye erişilmedi.
+      Ek test: 30.000 taze soru + 120.000 yanlış anahtar mutasyonu, 1.000 tam ve
+      tekrar üretilebilir oturum geçti. Görsel kör örnekleme 11/12; kaçırılan ayna
+      sorusunda anahtar çizimden yeniden doğrulandı. 667×375 yatay WebKit'te yanlış
+      cevap açıklamasının altı erişilemezdi; PuzzleScreen geri bildirim katmanı artık
+      uzun içerikte kayar. 320×568/667×375 × 3 dil × 6 tür ve doğru cevap akışı geçti.
+      Betikler: `scripts/puzzle-spatial-stress.mjs`, `scripts/puzzle-ui-check.mjs`.
+      Kullanıcı 2026-09-26 tarihinde İngilizce düzeltmeleriyle birlikte main üzerinden
+      Vercel/Railway yayınına onay verdi.
+      **Claude incelemesi sonrası:** küpte ortak yanlış determinant varsayımı düzeltildi
+      (-1); önceki yüksek test sayıları fiziksel kiralite kanıtı değildi. Sabit artı
+      açınımda [0,2,3] geçerli, [0,3,2] geçersiz testi motoru ve oracle'ı kilitler.
+      11-12, 10-11'in tüm dokuz tipini korur + beş yeni tip. 6-7'ye glyph-analogy
+      eklendi; geometrik/ikon/emoji ağırlığı 4/2/4 (ürün tercihi, kitap sayımı değil).
+      **Sınırlar ve kanıt:** `NVR_AGE_BANDS_2026-09-26.md`. Gizli kontur/serbest çizgi,
+      yatay-eğik ayna, yönlü/tekrarlı küp yüzleri, küpten açınım seçme hâlâ yok;
+      `BOOK_COVERAGE` bunları açıkça tutar. Mevcut diğer bantların ayarları değiştirilmedi.
+
+
 - [x] Taslaktan tamamlanan hikâye (2026-09-25, Claude). "Hikâye yazıldı" ile "hikâye satırı
       oluştu" karıştırılıyordu. Ebeveyn bildirimi yalnız INSERT'te gidiyordu: yarım taslak
       kaydedilince ebeveyne yarım hikâye "yazdı!" diye gidiyor, taslak sonra tamamlanınca hiçbir

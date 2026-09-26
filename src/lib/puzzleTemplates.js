@@ -1,11 +1,9 @@
+import { SPATIAL_TYPES, SPATIAL_GENERATORS, validateSpatial } from './puzzleSpatial.js'
 // Question generation for the puzzle (non-verbal reasoning) module.
 //
-// The taxonomy is the standard one — the same six question types the Bond 5-6 papers open
-// with, and the same six that reappear in every age band above them. That is the design this
-// file is built on: THE TYPES DO NOT CHANGE WITH AGE. What changes is how subtle the
-// difference is, how many attributes move at once, and which types are unlocked. So age picks
-// a BAND (a dial setting), not a set of templates — the same split src/lib/mathCurriculum.js
-// makes between what a session is about and how hard it is.
+// The original six question types share a geometric attribute vocabulary. Bands select
+// their visible differences, number of simultaneous changes and available types. Source-backed
+// spatial types extend that vocabulary with parts and folded faces (puzzleSpatial.js).
 //
 // Written the other way — a template per age per attribute per type — this file would be six
 // types × six attributes × three bands of hand-written generators. Split along its real axes
@@ -71,6 +69,12 @@ export const GLYPH_TYPES = ['glyph-odd', 'glyph-trait', 'glyph-belongs', 'glyph-
 export const ICON_TYPES = ['icon-odd', 'icon-belongs', 'icon-sequence']
 
 export const STEM_KEYS = {
+  'hidden-part': 'puzzle_stem_hidden',
+  overlay: 'puzzle_stem_overlay',
+  matrix: 'puzzle_stem_pattern',
+  'compound-analogy': 'puzzle_stem_analogy',
+  'compound-mirror': 'puzzle_stem_mirror',
+  'cube-net': 'puzzle_stem_cube',
   'odd-one-out': 'puzzle_stem_odd',
   identical: 'puzzle_stem_same',
   sequence: 'puzzle_stem_next',
@@ -215,6 +219,35 @@ export const BANDS = {
     seqPeriod: 2,             // dolu / boş / dolu / boş — the alternation the 5-6 papers open on
     seqLength: 4,
     seqSteps: 1,                // one thing moving: find the period and copy
+  },
+  // Schofield & Sims Rapid Tests 1 (6–7): five choices, one visible change,
+  // AB series, similarities, embedded parts and reflection. The new band is
+  // explicit; the previously calibrated 5–6 and 7–8 settings remain intact.
+  '6-7': {
+    maxAttempts: 180, // narrow pools + five distinct options sometimes need more draws
+    types: ['odd-one-out', 'belongs', 'sequence', 'analogy', 'reflection', 'hidden-part'],
+    glyphTypes: ['glyph-odd', 'glyph-belongs', 'glyph-sequence', 'glyph-analogy'],
+    iconTypes: ICON_TYPES,
+    // Pictorial majority plus Schofield geometry; a product mix, not a book census.
+    sources: { geometric: 4, icon: 2, glyph: 4 },
+    options: 5,
+    attributes: ['shape', 'fill', 'rotation', 'size', 'inner', 'dots'],
+    noise: ['stretch', 'half', 'corner'],
+    shapes: ['circle', 'triangle', 'square', 'hexagon', 'arrow'],
+    fills: ['none', 'solid', 'hatch-45'],
+    rotations: [0, 90, 180, 270],
+    sizes: SIZES,
+    stretches: [1, 0.62],
+    halves: [null, null, null, 'tl', 'br'],
+    inners: [null, null, null, ...INNER_NODES.slice(1, 4)],
+    dots: [0, 2, 4],
+    corners: [null, 'tl', 'br'],
+    positions: [null],
+    analogySteps: 1,
+    mirrorNeedsOutline: true,
+    seqPeriod: 2,
+    seqLength: 4,
+    seqSteps: 1,
   },
   '7-8': {
     types: ['odd-one-out', 'identical', 'sequence', 'belongs', 'grid-complete', 'analogy', 'reflection'],
@@ -389,6 +422,18 @@ export const BANDS = {
   },
 }
 
+// Bond Assessment Papers 11+–12+, Books 1 & 2. Spatial compositions are a
+// separate vocabulary, so each component can move and change independently.
+// Retain every established 10–11 type and its difficulty settings alongside them.
+BANDS['11-12'] = {
+  ...BANDS['10-11'],
+  types: [...BANDS['10-11'].types, 'overlay', 'matrix',
+    'compound-analogy', 'compound-mirror', 'cube-net'],
+  glyphTypes: [],
+  iconTypes: [],
+  sources: { geometric: 10, icon: 0, glyph: 0 },
+}
+
 export const BAND_KEYS = Object.keys(BANDS)
 
 // What each band answers to, and what it still cannot do — as data rather than prose, so the
@@ -406,6 +451,23 @@ export const BOOK_COVERAGE = {
     // Nothing. Every category in these papers is posed, which is what "calibrated question by
     // question" was supposed to mean and now has a check behind it.
     missing: [],
+  },
+  '6-7': {
+    book: 'Schofield & Sims 11+ Non-verbal Reasoning Rapid Tests 1, 6-7 (Rebecca Brant)',
+    missing: [
+      'Embedded contour drawings — hidden-part currently finds separate geometric components, not shared lines',
+      'Reflections of real-world pictures and irregular silhouettes',
+      'Continuous shading and detailed pictorial transformations',
+    ],
+  },
+  '11-12': {
+    book: 'Bond Assessment Papers Non-verbal Reasoning 11+-12+, Books 1 (Alison Primrose) & 2 (Nic Morgan)',
+    missing: [
+      'Arbitrary connected line/curve compositions and continuous jigsaw-style pattern completion',
+      'Horizontal and diagonal mirror axes',
+      'Directional face symbols, repeated face symbols and selecting a net from a cube',
+      'Codes based on composite-part relationships; codes still use the established two-attribute vocabulary',
+    ],
   },
   '7-8': {
     book: 'Bond 11+ Assessment Papers: Non-verbal Reasoning 7-8 (Andrew Baines)',
@@ -439,12 +501,14 @@ export const BOOK_COVERAGE = {
 }
 
 export function bandForAge(age) {
-  const n = Number(age) || 7
-  if (n <= 6) return '5-6'
-  if (n <= 8) return '7-8'
-  if (n <= 9) return '8-9'
-  if (n <= 10) return '9-10'
-  return '10-11'
+  const n = Math.trunc(Number(age))
+  if (!Number.isFinite(n) || n <= 5) return '5-6'
+  if (n === 6) return '6-7'
+  if (n === 7) return '7-8'
+  if (n === 8) return '8-9'
+  if (n === 9) return '9-10'
+  if (n === 10) return '10-11'
+  return '11-12'
 }
 
 // Seeded so a question is reproducible from its seed alone. When a child hits a figure that
@@ -1863,6 +1927,7 @@ function shuffle(r, arr) {
 }
 
 const GENERATORS = {
+  ...SPATIAL_GENERATORS,
   'odd-one-out': genOddOneOut,
   identical: genIdentical,
   sequence: genSequence,
@@ -1891,9 +1956,11 @@ export function validateQuestion(q) {
   // The count itself is a band decision (a–d at 5-6, a–e above it), so what is checked is that
   // it is one the noise tables can actually keep distinct — anything else means a generator
   // built a set nothing downstream can reason about.
-  const n = q.options?.length
+  const n = q?.options?.length
   if (!q || !Array.isArray(q.options) || !NOISE_VECTORS[n] || n < 4) return `options: ${n}`
   if (!(q.correct_index >= 0 && q.correct_index < n)) return 'correct_index out of range'
+
+  if (SPATIAL_TYPES.includes(q.type)) return validateSpatial(q)
 
   // A code question's options are STRINGS, not figures, so every check below — which is about
   // pictures being distinguishable — has nothing to hold. It gets its own short list instead of
@@ -2092,7 +2159,7 @@ function buildOne(bandKey, band, types, seed) {
   // A rejected draw costs nothing but a retry, so the loop is generous. It has never needed
   // more than a handful of rounds in the lab; the cap exists so a future band that is too
   // narrow to satisfy its own rules fails loudly instead of hanging.
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < (band.maxAttempts ?? 60); i++) {
     const r = rng(seed + i * 7919)
     const t = types[Math.floor(rng(seed + i)() * types.length)]
     const q = GENERATORS[t](r, band, seed + i * 7919)

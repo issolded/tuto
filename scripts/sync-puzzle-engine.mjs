@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 
 const FILES = [
-  'puzzleTemplates.js', 'puzzleFigures.js', 'puzzleGlyphs.js', 'puzzleIcons.js',
+  'puzzleSpatial.js', 'puzzleTemplates.js', 'puzzleFigures.js', 'puzzleGlyphs.js', 'puzzleIcons.js',
   'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js',
 ]
 const FROM = 'src/lib'

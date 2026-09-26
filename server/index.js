@@ -1,3 +1,4 @@
+import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -5736,6 +5737,10 @@ const PUZZLE_SKILLS = {
   identical: 'finding the identical figure',
   sequence: 'what comes next (sequences)', 'glyph-sequence': 'what comes next (sequences)', 'icon-sequence': 'what comes next (sequences)',
   belongs: 'which one belongs with a group', 'glyph-belongs': 'which one belongs with a group', 'icon-belongs': 'which one belongs with a group',
+  'hidden-part': 'finding a shape inside a picture',
+  overlay: 'combining shapes', matrix: 'completing a pattern grid',
+  'compound-analogy': 'analogies (A is to B as C is to ?)',
+  'compound-mirror': 'mirror images', 'cube-net': 'folding cube nets',
   'grid-complete': 'completing a pattern grid',
   analogy: 'analogies (A is to B as C is to ?)', 'glyph-analogy': 'analogies (A is to B as C is to ?)',
   reflection: 'mirror images', symmetry: 'lines of symmetry', code: 'letter codes',
@@ -5768,16 +5773,6 @@ async function puzzleStanding(childId) {
   }).sort((a, b) => a.accuracy - b.accuracy)
 }
 const PUZZLE_QUESTIONS = 10
-
-// Age to band. The bands are named for the papers they follow and overlap at the edges (7-8,
-// 8-9); a child is put in the one that STARTS at their age, so a seven-year-old gets 7-8 and a
-// nine-year-old 9-10.
-function puzzleBandForAge(age) {
-  const a = Math.trunc(Number(age))
-  if (!Number.isFinite(a) || a <= 6) return '5-6'
-  if (a >= 10) return '10-11'
-  return { 7: '7-8', 8: '8-9', 9: '9-10' }[a]
-}
 
 // What the browser may know about a figure: enough to draw it, nothing more. A glyph spec carries
 // its `group` and `trait`, and in "which one is different" those ARE the answer — the odd one is

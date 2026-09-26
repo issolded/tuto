@@ -118,6 +118,40 @@ export function explainQuestion(q, lang = 'en') {
   const cap = (x) => x.charAt(0).toLocaleUpperCase(L) + x.slice(1)
 
   switch (q.type) {
+    case 'hidden-part':
+      return P('Find the small shape inside the picture. Its outline and shading must both match.',
+        'Resmin içindeki küçük şekli bul. Hem şekli hem de dolgusu aynı olmalı.',
+        'Busca la figura pequeña dentro del dibujo. Deben coincidir su forma y su relleno.')
+    case 'overlay':
+      return P('Keep every mark in its place and combine both pictures. Do not turn either picture.',
+        'Her parçayı yerinde tutup iki resmi birleştir. Resimleri döndürme.',
+        'Mantén cada marca en su sitio y combina los dos dibujos sin girarlos.')
+    case 'matrix':
+      return P('Across each row the whole arrangement turns a quarter turn each time. Down each column the outlines change in order, and filled and empty marks alternate.',
+        'Her satırda parçaların tümü birer çeyrek tur dönüyor. Her sütunda şekiller sırayla değişiyor; dolu ve boş parçalar da yer değiştiriyor.',
+        'En cada fila el conjunto gira un cuarto de vuelta cada vez. En cada columna las formas cambian en orden y se alternan las marcas llenas y vacías.')
+    case 'compound-analogy': {
+      const turn = q.rule.to
+      const direction = turn === 1 ? P('a quarter turn clockwise', 'saat yönünde çeyrek tur', 'un cuarto de vuelta en sentido horario')
+        : turn === 2 ? P('half a turn', 'yarım tur', 'media vuelta')
+          : P('a quarter turn anticlockwise', 'saatin tersine çeyrek tur', 'un cuarto de vuelta en sentido antihorario')
+      return P(`Turn the whole arrangement ${direction}, then swap filled and empty marks. Do both to the third picture.`,
+        `Parçaların tümünü ${direction} döndür, sonra doluları boş, boşları dolu yap. Üçüncü resme de ikisini uygula.`,
+        `Gira todo el conjunto ${direction} y cambia las marcas llenas por vacías y las vacías por llenas. Haz lo mismo con el tercer dibujo.`)
+    }
+    case 'compound-mirror':
+      return P('Every part swaps left and right. Its shading stays the same; the whole picture is reflected, not turned.',
+        'Her parça sağdan sola, soldan sağa geçer. Dolgusu değişmez; resim aynalanır.',
+        'Cada parte cambia de izquierda a derecha. El relleno no cambia; se refleja todo el dibujo.')
+    case 'cube-net':
+      return q.rule.to
+        ? P('This view cannot be made: opposite faces cannot touch, and the three faces must keep their order around a corner.',
+          'Bu görünüm oluşamaz: karşılıklı yüzler yan yana gelemez ve köşede buluşan üç yüzün sırası korunmalı.',
+          'Esta vista no es posible: las caras opuestas no se tocan y las tres caras deben conservar su orden alrededor de una esquina.')
+        : P('These three faces meet at a corner in this order when you fold the net. Opposite faces never touch.',
+          'Açınımı katlayınca bu üç yüz köşede bu sırayla buluşur. Karşılıklı yüzler birbirine değmez.',
+          'Al plegar el desarrollo, estas tres caras se unen en una esquina en este orden. Las caras opuestas no se tocan.')
+
     case 'odd-one-out':
       if (!A) break
       return P(`They all have the same ${A} — only this one's is different.`, `Hepsinin ${A} aynı, yalnızca bunun ${A} farklı.`,

@@ -31,10 +31,23 @@ const pw = await loadPlaywright()
 installStubFonts()
 const G = await import('../src/lib/puzzleGlyphs.js')
 const I = await import('../src/lib/puzzleIcons.js')
+const T = await import('../src/lib/puzzleTemplates.js')
+const { SPATIAL_TYPES } = await import('../src/lib/puzzleSpatial.js')
 
 const PX = 64
 const COLS = 16
+const spatialFigures = SPATIAL_TYPES.flatMap(type => Array.from({ length: 12 }, (_, i) => {
+  const q = T.generateQuestion(type === 'hidden-part' ? '6-7' : '11-12', type, 260926 + i * 41)
+  if (!q) throw new Error(`could not generate ${type}`)
+  return [...q.prompt.filter(Boolean), ...q.options.map(o => o.spec)].map((s, cell) => ({
+    // A single 14px outline has less ink than a whole emoji; still require
+    // dozens of dark pixels in each engine, so blank output always fails.
+    minInk: s.form === 'parts' && s.parts.length === 1 ? 0.008 : 0.02,
+    label: `${type} ${q.seed} cell ${cell}`, svg: T.renderFigure(s, { px: PX }),
+  }))
+}).flat())
 const figures = [
+  ...spatialFigures,
   ...G.ALL_GLYPHS.map(glyph => ({ label: glyph, svg: G.renderGlyph(G.makeGlyphSpec({ glyph }), { px: PX }) })),
   ...I.ALL_ICONS.flatMap(icon => [0, 1].map(fill => ({
     label: `${icon} FILL ${fill}`, svg: I.renderIcon(I.makeIconSpec({ icon, fill }), { px: PX }),
@@ -119,11 +132,11 @@ const findings = []
 figures.forEach((f, i) => {
   const w = results.webkit[i]
   const c = results.chromium[i]
-  if (w < MIN_INK || c < MIN_INK) findings.push(`${f.label}: ink webkit ${(w * 100).toFixed(1)}% · chromium ${(c * 100).toFixed(1)}%`)
+  if (w < (f.minInk ?? MIN_INK) || c < (f.minInk ?? MIN_INK)) findings.push(`${f.label}: ink webkit ${(w * 100).toFixed(1)}% · chromium ${(c * 100).toFixed(1)}%`)
   else if (Math.abs(w - c) > Math.max(w, c) * 0.5) findings.push(`${f.label}: engines disagree — webkit ${(w * 100).toFixed(1)}% · chromium ${(c * 100).toFixed(1)}%`)
 })
 
-console.log(`${figures.length} figures drawn in webkit and chromium (${G.ALL_GLYPHS.length} emoji, ${I.ALL_ICONS.length} icons × FILL 0/1)`)
+console.log(`${figures.length} figures drawn in webkit and chromium (${spatialFigures.length} spatial, ${G.ALL_GLYPHS.length} emoji, ${I.ALL_ICONS.length} icons × FILL 0/1)`)
 if (findings.length) {
   console.error(`\n✗ ${findings.length} finding${findings.length > 1 ? 's' : ''}:`)
   for (const f of findings) console.error(`  ${f}`)

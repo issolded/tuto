@@ -38,7 +38,7 @@ export function Figure({ spec, px = FIG_PX, state, colors = PUZZLE_COLORS }) {
         background: '#fff', color: '#12131A', borderRadius: 12, padding: 6,
         border: `3px solid ${border}`, lineHeight: 0, display: 'inline-block',
       }}
-      dangerouslySetInnerHTML={FIG(spec, px)}
+      dangerouslySetInnerHTML={FIG(spec, spec.form === 'net' ? Math.max(px, 132) : px)}
     />
   )
 }
@@ -99,9 +99,20 @@ export function Prompt({ q, px = FIG_PX, colors = PUZZLE_COLORS }) {
       </div>
     )
   }
-  if (q.layout === 'grid2x2') {
+  if (q.layout === 'overlay') {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, max-content)', gap: 6, marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+        <Figure spec={q.prompt[0]} px={px} colors={colors} />
+        <span style={{ color: C.dim }}>+</span>
+        <Figure spec={q.prompt[1]} px={px} colors={colors} />
+        <span style={{ color: C.dim }}>=</span>
+        <Blank px={px} />
+      </div>
+    )
+  }
+  if (q.layout === 'grid2x2' || q.layout === 'grid3x3') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${q.layout === 'grid3x3' ? 3 : 2}, max-content)`, gap: 6, marginBottom: 12 }}>
         {q.prompt.map((cell, i) => (cell ? <Figure key={i} spec={cell} px={px} colors={colors} /> : <Blank key={i} px={px} />))}
       </div>
     )

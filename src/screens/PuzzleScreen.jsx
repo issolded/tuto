@@ -41,6 +41,7 @@ const ANIM = `
 .pz-press:active { transform: scale(.96) !important; }
 .pz-scroll { overflow-y: auto; min-height: 0; }
 .pz-scroll::-webkit-scrollbar { display: none; }
+.pz-feedback > * { flex-shrink: 0; }
 `
 
 // The icon font decides whether the sheet may contain icon questions, and the server has to be
@@ -338,34 +339,37 @@ export default function PuzzleScreen() {
         {flash && (
           <div onClick={() => { if (!flash.correct) advance() }} style={{
             position: 'fixed', inset: 0, zIndex: 300,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+            overflowY: 'auto',
             background: flash.correct ? 'rgba(76,182,133,.94)' : 'rgba(247,148,51,.94)',
             animation: flash.correct ? 'flashIn 1.4s ease both' : 'flashHold .22s ease both',
-            padding: '0 26px', cursor: flash.correct ? 'default' : 'pointer',
+            padding: '24px 26px', cursor: flash.correct ? 'default' : 'pointer',
           }}>
-            <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
-            <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
-              {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
-            </div>
-            {!flash.correct && rightOption && (
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>{t('math_answer_is', language)}</div>
-            )}
-            {!flash.correct && rightOption && (
-              <>
-                <div style={{ animation: 'pop .35s ease .1s both' }}>
-                  {rightOption.spec ? <Figure spec={rightOption.spec} px={px + 20} />
-                    : <CodeChip code={rightOption.code} px={px + 20} />}
-                </div>
-                {flash.why && (
-                  <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: 'white', textAlign: 'center', lineHeight: 1.45, maxWidth: 420, marginTop: 6 }}>
-                    {flash.why}
+            {/* Center short feedback; let a long explanation grow and scroll on landscape phones. */}
+            <div className="pz-feedback" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+              <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
+                {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
+              </div>
+              {!flash.correct && rightOption && (
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>{t('math_answer_is', language)}</div>
+              )}
+              {!flash.correct && rightOption && (
+                <>
+                  <div style={{ animation: 'pop .35s ease .1s both' }}>
+                    {rightOption.spec ? <Figure spec={rightOption.spec} px={px + 20} />
+                      : <CodeChip code={rightOption.code} px={px + 20} />}
                   </div>
-                )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, marginTop: 8, fontSize: 15, color: 'white', opacity: .8 }}>
-                  {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
-                </div>
-              </>
-            )}
+                  {flash.why && (
+                    <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: 'white', textAlign: 'center', lineHeight: 1.45, maxWidth: 420, marginTop: 6 }}>
+                      {flash.why}
+                    </div>
+                  )}
+                  <div style={{ fontFamily: FRED, fontWeight: 600, marginTop: 8, fontSize: 15, color: 'white', opacity: .8 }}>
+                    {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 

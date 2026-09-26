@@ -674,6 +674,10 @@ const STRINGS = {
   // The six stems are the whole text of the module — the figures carry everything else, which
   // is the point of a non-verbal test. They live here rather than with the generator so the
   // generator stays free of language entirely: it returns a stem_key, the screen reads it.
+  puzzle_stem_hidden: { en: 'Which picture contains this small shape? Match its shape and shading.', tr: 'Bu küçük şekil hangi resmin içinde? Şekline ve dolgusuna bak.', es: '¿Qué dibujo contiene esta figura pequeña? Fíjate en su forma y relleno.' },
+  puzzle_stem_overlay: { en: 'Place one picture over the other without turning. What do you get?', tr: 'Resimleri çevirmeden üst üste koyunca hangisi oluşur?', es: 'Pon un dibujo sobre el otro sin girarlos. ¿Qué obtienes?' },
+  puzzle_stem_cube: { en: 'Which cube can you fold from this net?', tr: 'Bu açınım katlanınca hangi küp oluşabilir?', es: '¿Qué cubo se puede formar al plegar este desarrollo?' },
+  puzzle_stem_cube_not: { en: 'Which cube CANNOT be folded from this net?', tr: 'Bu açınım katlanınca hangi küp OLUŞAMAZ?', es: '¿Qué cubo NO se puede formar al plegar este desarrollo?' },
   puzzle_stem_odd:    { en: 'Which one is different?',        tr: 'Hangisi farklı?',
                         es: '¿Cuál es diferente?' },
   puzzle_stem_same:   { en: 'Which one is the same as this?', tr: 'Hangisi bunun aynısı?',

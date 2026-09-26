@@ -18,7 +18,7 @@
 // Which is the point: THE DEAD-FILL LIST GOES STALE WHENEVER THE ICON TABLE CHANGES, and a stale
 // entry is invisible from the node side. Run this after editing it.
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { installStubFonts } from './lib/stub-fonts.mjs'
 
@@ -27,7 +27,7 @@ import { installStubFonts } from './lib/stub-fonts.mjs'
 // So it is resolved wherever it happens to live — the project, or a global install — and when it
 // is nowhere the script says what to do rather than failing with a stack trace.
 async function loadChromium() {
-  for (const spec of ['playwright', globalPlaywright()]) {
+  for (const spec of [process.env.PLAYWRIGHT_CORE && `${process.env.PLAYWRIGHT_CORE}/index.mjs`, 'playwright', globalPlaywright()]) {
     if (!spec) continue
     try { return (await import(spec)).chromium } catch { /* try the next one */ }
   }
@@ -57,7 +57,9 @@ const PER_BAND = Number(process.env.PUZZLE_PIXEL_DRAWS || 40)   // per band PER 
 const PX = 84
 const findings = []
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+const executablePath = process.env.CHROMIUM_PATH
+  || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined)
+const browser = await chromium.launch(executablePath ? { executablePath } : {})
 const page = await browser.newPage()
 await page.setContent(`<canvas id=c width=${PX} height=${PX}></canvas>`)
 

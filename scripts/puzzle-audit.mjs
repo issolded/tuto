@@ -1,3 +1,5 @@
+import { spatialOracle } from './lib/spatial-oracle.mjs'
+import { SPATIAL_TYPES } from '../src/lib/puzzleSpatial.js'
 // Every check on the puzzle engine that does not need a browser.
 //
 //   npm run puzzle:check
@@ -38,6 +40,9 @@ const { iconGroupOf, ICON_GROUPS } = await import('../src/lib/puzzleIcons.js')
 const { ATTRIBUTES, geometryKey, normalizeSpec } = await import('../src/lib/puzzleFigures.js')
 const { drawn, mirrorImage, sameDrawing, hasLineOfSymmetry } = await import('./lib/drawn-geometry.mjs')
 
+const AUDIT_BANDS = process.env.PUZZLE_AUDIT_BANDS?.split(',') || BAND_KEYS
+if (AUDIT_BANDS.some(b => !BAND_KEYS.includes(b))) throw new Error('unknown PUZZLE_AUDIT_BANDS')
+
 const DRAWS = Number(process.env.PUZZLE_AUDIT_DRAWS || 4000)
 const findings = []
 const fail = (band, kind, detail) => findings.push(`[${band}] ${kind}: ${detail}`)
@@ -65,6 +70,7 @@ function readRule(attr) {
 // Whether the marked answer is the one the page implies, read the way a child has to read it.
 // Returns null when it is, or what is wrong.
 function answerProblem(q) {
+  if (SPATIAL_TYPES.includes(q.type)) return spatialOracle(q)
   const ans = q.options[q.correct_index].spec
   const others = q.options.filter((_, k) => k !== q.correct_index).map(o => o.spec)
   let why = null
@@ -251,7 +257,7 @@ function answerProblem(q) {
   return why
 }
 
-for (const band of BAND_KEYS) {
+for (const band of AUDIT_BANDS) {
   const qs = []
   for (let i = 0; i < DRAWS; i++) {
     const q = generateQuestion(band, null, 6_100_000 + i * 79)
@@ -507,7 +513,7 @@ for (const band of BAND_KEYS) {
 // comment it would outlive the gap — a note saying "no symmetry yet" reads the same the day
 // symmetry ships and for years afterwards. Written as data it can be checked: every band must
 // name its book, and no `missing` line may name a type the band now poses.
-for (const band of BAND_KEYS) {
+for (const band of AUDIT_BANDS) {
   const cover = BOOK_COVERAGE[band]
   if (!cover?.book) { findings.push(`[${band}] coverage: no book recorded`); continue }
   const posed = [...BANDS[band].types, ...BANDS[band].glyphTypes, ...BANDS[band].iconTypes]

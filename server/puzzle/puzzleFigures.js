@@ -1,3 +1,4 @@
+import { spatialKey, renderSpatial } from './puzzleSpatial.js'
 // The drawing vocabulary for the puzzle (non-verbal reasoning) module — and deliberately the
 // ONLY thing that can appear on a child's screen in it.
 //
@@ -464,6 +465,7 @@ function collect(spec, radius, depth, out) {
 // The visual fingerprint. Two specs with the same key draw the same picture, whatever their
 // fields say.
 export function geometryKey(rawSpec) {
+  if (rawSpec.kind === 'spatial') return spatialKey(rawSpec)
   const { head, points, marks } = drawnParts(rawSpec)
   const parts = points.map(([tag, p]) => tag + fmt(p))
   parts.push(...marks)   // orientation-free; never transformed
@@ -476,6 +478,7 @@ export function geometryKey(rawSpec) {
 // 270° came out 37.7 and 37.6 — so "the keys differ" does not prove "the pictures differ". Use
 // this wherever the question is whether a child would see two of the same thing.
 export function samePicture(a, b) {
+  if (a.kind === 'spatial' || b.kind === 'spatial') return a.kind === b.kind && spatialKey(a) === spatialKey(b)
   return partsMatch(drawnParts(a), drawnParts(b))
 }
 
@@ -569,6 +572,7 @@ export const MIN_SHIFT = 12
 // The test every "are these two different pictures?" question should ask: not only the same
 // picture, but one a child cannot tell from it.
 export function tooAlike(a, b) {
+  if (a.kind === 'spatial' || b.kind === 'spatial') return samePicture(a, b)
   if (samePicture(a, b)) return true
   const { degrees, shift } = orientationGap(a, b)
   return degrees < MIN_TURN || shift < MIN_SHIFT
@@ -697,6 +701,7 @@ function nodeMarkup(spec, radius, ctx) {
 // what a standalone SVG document needs to be rasterised — which is how the figures are checked
 // for being visually distinguishable, a thing geometryKey cannot judge.
 export function renderFigure(rawSpec, opts = {}) {
+  if (rawSpec.kind === 'spatial') return renderSpatial(rawSpec, opts)
   const spec = normalizeSpec(rawSpec)
   const px = opts.px || 84
   const ctx = { bg: opts.bg || '#FFFFFF' }

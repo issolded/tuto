@@ -1,3 +1,4 @@
+import { SPATIAL_TYPES } from '../lib/puzzleSpatial'
 import { useEffect, useMemo, useState } from 'react'
 import { childLang, t } from '../lib/i18n'
 import { Figure, Prompt, CodeChip } from '../components/PuzzleView'
@@ -211,7 +212,7 @@ export default function PuzzleLab() {
           ))}
           <span style={{ width: 14 }} />
           <button style={btn(type === '')} onClick={() => setType('')}>all types</button>
-          {[...TYPES, ...GLYPH_TYPES, ...ICON_TYPES].map(ty => {
+          {[...TYPES, ...SPATIAL_TYPES, ...GLYPH_TYPES, ...ICON_TYPES].map(ty => {
             const on = cfg.types.includes(ty) || cfg.glyphTypes.includes(ty) || cfg.iconTypes.includes(ty)
             return (
               <button
