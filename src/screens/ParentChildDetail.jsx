@@ -26,6 +26,7 @@ const TASK_LABELS = {
   homework: { key: 'task_homework', type: null },
   drawing:  { key: 'task_drawing',  type: null },
   puzzle:   { key: 'task_puzzle',   type: 'puzzle' },
+  english:  { key: 'task_english',  type: 'english' },
   bonus:    { parentKey: 'cd_bonus', type: null },
   daily_bonus: { parentKey: 'ts_bonus_title', type: null },
 }
@@ -985,7 +986,7 @@ export default function ParentChildDetail() {
   // A session that hit the day's limit belongs here too. It earned nothing, and filtering on
   // the amount alone hid it — so a parent whose child did four maths sessions was told about
   // three, which is the one number here they could be misled by.
-  const reviewable = (sub) => (sub.task_type === 'math' || sub.task_type === 'puzzle') && !!sub.ledgerId
+  const reviewable = (sub) => ['math', 'puzzle', 'english'].includes(sub.task_type) && !!sub.ledgerId
   const todayDone = (ledger || [])
     .filter(e => (e.amount > 0 || e.capped) && isToday(e.created_at) && e.reason !== 'Welcome bonus')
     .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, ledgerId: e.id, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))
@@ -1290,7 +1291,7 @@ export default function ParentChildDetail() {
                 return (
                   <Card key={sub.id} pad={12} style={{ display: 'flex', flexDirection: 'column', gap: open ? 12 : 0, opacity: sub.capped ? 0.85 : 1 }}>
                     <div
-                      // Reading opens in place; a maths or puzzle sitting opens its questions.
+                      // Reading opens in place; a maths, puzzle or English sitting opens its questions.
                       onClick={detail ? () => setOpenReading(open ? null : sub.id)
                         : reviewable(sub) ? () => nav(`/parent/child/${id}/review/${sub.ledgerId}`) : undefined}
                       className={detail || reviewable(sub) ? 'tc-tap' : undefined}

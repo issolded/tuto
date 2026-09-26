@@ -30,6 +30,7 @@ export const PC = {
   homework: '#e0a93b', homeworkBg: '#FBF1D6',
   drawing:  '#d97ab0', drawingBg: '#FBE6F1',
   puzzle:   '#2BA59A', puzzleBg:  '#D9F3F1',
+  english:  '#D9577A', englishBg: '#FBDDE5',
 }
 
 export const FONT = "'Plus Jakarta Sans', sans-serif"
@@ -105,6 +106,8 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
     pencil:  <g {...p}><path d="M14 4l6 6M4 20l1.2-4L16 5.2 18.8 8 8 18.8z"/></g>,
     // The child tile's 2×2 grid with the last cell left open — src/assets/puzzle-tile-icon.svg.
     puzzle:  <g {...p}><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M15 15.2a1.6 1.6 0 1 1 2.2 1.5c-.5.2-.7.6-.7 1.1M16.5 19.6h0"/></g>,
+    // The child tile's speech bubble with "Aa".
+    speech:  <g {...p}><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5z"/><path d="M7.5 13l2.2-6 2.2 6M8.3 11h2.8"/><path d="M16.3 9.5v3.5"/><circle cx="14.9" cy="11.3" r="1.5"/></g>,
     house:   <g {...p}><path d="M4 11l8-6.5 8 6.5"/><path d="M6 10v9h12v-9"/></g>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24">{M[name] || null}</svg>
@@ -112,7 +115,7 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
 
 export function TaskIcon({ type, size = 24, color }) {
   const c = color || PC[type] || PC.teal
-  const map = { reading: 'book', math: 'calc', writing: 'pencil', homework: 'camera', drawing: 'pencil', puzzle: 'puzzle' }
+  const map = { reading: 'book', math: 'calc', writing: 'pencil', homework: 'camera', drawing: 'pencil', puzzle: 'puzzle', english: 'speech' }
   return <Icon name={map[type] || 'book'} size={size} color={c} sw={2.1} />
 }
 

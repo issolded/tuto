@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { t, childLang, formatDay } from '../lib/i18n'
 import { useUiLang } from '../lib/parentI18n'
 import { useIsTablet } from '../components/Shell'
-import { PuzzleReviewList, MathReviewList } from '../components/SittingReview'
+import { PuzzleReviewList, MathReviewList, EnglishReviewList } from '../components/SittingReview'
 import { ensureIconFont } from '../lib/puzzleIcons'
 
-// A finished maths or puzzle sitting, opened again. The child reaches it from a gem history row,
+// A finished maths, puzzle or English sitting, opened again. The child reaches it from a gem history row,
 // the parent from the child's card — the same questions and marks either way, because what a
 // parent is looking at when their child asks "why was that wrong?" should be what the child saw.
 //
@@ -41,8 +41,9 @@ export default function ReviewScreen({ parent = false }) {
   }, [childId, ledgerId, lang])
 
   const back = () => (parent ? nav(`/parent/child/${id}`) : nav('/child/gems'))
-  const title = data?.kind === 'puzzle' ? t('task_puzzle', lang) : data?.kind === 'math' ? t('task_math', lang) : ''
-  const score = data?.kind === 'puzzle' ? `${data.correct ?? 0}/${data.total ?? 0}`
+  const title = data?.kind === 'puzzle' ? t('task_puzzle', lang) : data?.kind === 'english' ? t('task_english', lang)
+    : data?.kind === 'math' ? t('task_math', lang) : ''
+  const score = data?.kind === 'puzzle' || data?.kind === 'english' ? `${data.correct ?? 0}/${data.total ?? 0}`
     : data?.kind === 'math' ? `${data.items.filter(r => r.correct).length}/${data.items.length}` : ''
 
   return (
@@ -67,6 +68,8 @@ export default function ReviewScreen({ parent = false }) {
           <div style={{ textAlign: 'center', color: INK_SOFT, fontWeight: 700, padding: 40 }}>{t('review_loading', lang)}</div>
         ) : data.kind === 'puzzle' && data.questions ? (
           <PuzzleReviewList questions={data.questions} answers={data.answers} lang={lang} px={isTablet ? 56 : 40} />
+        ) : data.kind === 'english' && data.questions ? (
+          <EnglishReviewList questions={data.questions} answers={data.answers} lang={lang} />
         ) : data.kind === 'math' && data.items?.length ? (
           <MathReviewList items={data.items} lang={lang} />
         ) : (

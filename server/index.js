@@ -21,14 +21,14 @@ const HOMEWORK_DEFAULT_GEMS = 25
 // Fallback gem rate per task type when a child's task_settings has no entry
 // yet — mirrors src/lib/taskDefaults.js's TASK_DEFAULTS gems values (kept as
 // a separate copy since frontend and backend are deployed independently).
-const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20, puzzle: 30 }
+const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20, puzzle: 30, english: 30 }
 // How many sessions a day earn gems, per task type, when the parent hasn't set
 // their own number. Every gem-earning task has a cap now — the limit existed in
 // code for maths/reading/writing/drawing long before there was a dial for it,
 // and homework (which used to have none) joins them so the dashboard's setting
 // means the same thing everywhere. Mirrors src/lib/taskDefaults.js, same reason
 // as TASK_DEFAULT_GEMS: the two halves deploy independently.
-const TASK_DEFAULT_CAPS = { reading: 3, math: 3, writing: 3, homework: 3, drawing: 2, puzzle: 3 }
+const TASK_DEFAULT_CAPS = { reading: 3, math: 3, writing: 3, homework: 3, drawing: 2, puzzle: 3, english: 3 }
 
 // The one place a finished activity becomes a line in the child's history. Every
 // caller used to write its own `if (gems > 0) insert` — which is exactly why a
@@ -74,7 +74,7 @@ async function recordGems(childId, amount, reason, { capped = false, ref = null 
 }
 
 // Scored tasks: the configured figure is the most a session can pay, not what it will pay.
-const VARIABLE_TASKS = new Set(['reading', 'math', 'writing', 'puzzle'])
+const VARIABLE_TASKS = new Set(['reading', 'math', 'writing', 'puzzle', 'english'])
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -182,7 +182,8 @@ function toLocalTimes(value, tz) {
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
-    supabase.from('children').select('id, name, age, birth_date, task_settings, math_focus').eq('parent_id', parentId),
+    // `*` so english_variety (a later migration) is read when it exists and never breaks the read.
+    supabase.from('children').select('*').eq('parent_id', parentId),
   ])
   if (!children?.length) return []
 
@@ -224,6 +225,8 @@ async function getParentContext(parentId) {
       { data: goalRequests },
       { data: puzzleSessions },
       puzzleSkills,
+      { data: englishSessions },
+      englishSkills,
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -277,6 +280,11 @@ async function getParentContext(parentId) {
         .eq('child_id', child.id).not('finished_at', 'is', null)
         .order('created_at', { ascending: false }).limit(10),
       puzzleStanding(child.id).catch(() => null),
+      supabase.from('english_sessions')
+        .select('band, variety, correct, question_count, gems_earned, capped, created_at')
+        .eq('child_id', child.id).not('finished_at', 'is', null)
+        .order('created_at', { ascending: false }).limit(10),
+      englishStanding(child.id).catch(() => null),
     ])
 
     const sub = submissions || []
@@ -355,6 +363,21 @@ async function getParentContext(parentId) {
                 standing: `only ${k.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
             : k)
         : `not enough puzzles answered yet to say anything per skill for ${child.name}`,
+      // English: native-level verbal reasoning, spelling and grammar (the Bond 11+ English papers),
+      // not English as a foreign language. Same rules as puzzleSkills.
+      englishSessions: (englishSessions || []).length
+        ? englishSessions.map(p => ({ date: p.created_at, band: p.band, correct: `${p.correct}/${p.question_count}`,
+            gems: p.capped ? 'none — daily limit already reached' : p.gems_earned }))
+        : `${child.name} has not done any English sessions yet`,
+      englishSkills: englishSkills?.length
+        ? englishSkills.map(k => k.standing === 'not enough yet'
+            ? { skill: k.skill, attempts: k.attempts,
+                standing: `only ${k.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
+            : k)
+        : `not enough English answered yet to say anything per skill for ${child.name}`,
+      englishVariety: child.english_variety
+        ? `${child.english_variety === 'us' ? 'American' : 'British'} English — chosen by the parent`
+        : `${englishVarietyForZone(tz) === 'us' ? 'American' : 'British'} English — from the family's time zone (the parent has not chosen)`,
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,
@@ -1480,9 +1503,16 @@ const CONTRIBUTION_TOOLS = [{
         'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
         '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ödev"/"homework" ' +
         '→ homework, "çizim"/"resim"/"drawing" → drawing, "bulmaca"/"şekil bulmacası"/"puzzle"/"NVR" → puzzle, ' +
+        '"ingilizce"/"english"/"inglés"/"kelime soruları" → english, ' +
         '"günlük bonus"/"hezarfen"/"all-rounder"/"todoterreno"/"hepsini yapınca verilen bonus" → bonus (the once-a-day bonus for doing ' +
-        'every activity; it takes gems and active, never daily_cap). If you cannot tell which task type they mean, ASK — ' +
+        'every activity; it takes gems, active and bonus_types, never daily_cap). If you cannot tell which task type they mean, ASK — ' +
         'do not guess between two.\n' +
+        'bonus_types (task_type bonus only) is WHICH activities the bonus asks for ("hezarfen için ingilizce şart olmasın", ' +
+        '"bonus sadece matematik, okuma ve bulmaca olsun"): send the complete list the bonus should count afterwards — read the ' +
+        'current one from dailyBonus in context and add or remove what the parent said. At least two.\n' +
+        'variety (task_type english only) is British or American English — spelling and which words rhyme or sound the same ' +
+        '("Amerikan İngilizcesi olsun", "British spelling please"): uk, us, or auto (back to the family\'s time zone). The ' +
+        'current one is englishVariety in context.\n' +
         'The server enforces 1-500 for gems and 0-50 for daily_cap. Only call this when the parent explicitly ' +
         'states a task type AND a specific new number — an unclear or partial request ("matematiği artıralım ' +
         'biraz", "çok fazla resim yapıyor") means asking for the exact number, never picking one yourself. ' +
@@ -1491,10 +1521,12 @@ const CONTRIBUTION_TOOLS = [{
         type: 'OBJECT',
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child whose task settings to change, from the children list in context.' },
-          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle, bonus.' },
+          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle, english, bonus.' },
           gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Omit entirely if they only asked to change the daily limit.' },
           daily_cap: { type: 'NUMBER', description: 'The exact new number of gem-earning sessions per day the parent said (whole number, 0-50). Omit entirely if they only asked to change the gem amount.' },
           active: { type: 'BOOLEAN', description: 'Only for task_type bonus: false switches the daily bonus off, true back on. Omit otherwise.' },
+          bonus_types: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Only for task_type bonus: the full list of activities the bonus counts afterwards, from math, reading, writing, drawing, puzzle, english. Omit unless the parent changed which activities count.' },
+          variety: { type: 'STRING', description: 'Only for task_type english: uk, us or auto. Omit unless the parent asked for British/American English.' },
         },
         required: ['child_id', 'task_type'],
       },
@@ -2294,10 +2326,16 @@ async function deductGemsTool(childId, amount, parentId, note) {
 // so the other types' settings — and the dial that wasn't touched — survive.
 // The daily all-rounder bonus: its amount and whether it is on. Separate from the task tool
 // because it has no daily cap (it pays once a day by definition) and it can be switched off here.
-async function updateBonusTool(childId, gems, active, parentId) {
+async function updateBonusTool(childId, gems, active, parentId, types) {
   const wantsGems = gems !== undefined && gems !== null
   const wantsActive = typeof active === 'boolean'
-  if (!wantsGems && !wantsActive) return { success: false, error: 'nothing to change: give gems, active, or both' }
+  const wantsTypes = Array.isArray(types)
+  if (!wantsGems && !wantsActive && !wantsTypes) return { success: false, error: 'nothing to change: give gems, active, bonus_types, or any of them' }
+  if (wantsTypes) {
+    const bad = types.filter(k => !BONUS_TYPES.includes(k))
+    if (bad.length) return { success: false, error: `unknown bonus activity ${bad.join(', ')} — use only ${BONUS_TYPES.join(', ')}` }
+    if (types.length < 2) return { success: false, error: 'the bonus needs at least two activities — with one it is just that activity paying twice' }
+  }
   const n = Math.round(Number(gems))
   if (wantsGems && (!Number.isFinite(n) || n < 1 || n > 500)) return { success: false, error: 'gems must be between 1 and 500' }
   const { data: child } = await supabase.from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -2306,18 +2344,26 @@ async function updateBonusTool(childId, gems, active, parentId) {
   const current = child.task_settings?.bonus || {}
   const next = { ...(child.task_settings || {}), bonus: {
     ...current, active: wantsActive ? active : (current.active ?? true), gems: wantsGems ? n : (current.gems ?? BONUS_DEFAULTS.gems),
+    ...(wantsTypes ? { types: [...new Set(types)] } : {}),
   } }
   const { error } = await supabase.from('children').update({ task_settings: next }).eq('id', childId)
   if (error) return { success: false, error: error.message }
   return { success: true, childName: child.name, taskType: 'bonus', gems: next.bonus.gems, active: next.bonus.active,
+    counts: bonusSettings(next, child.age).types,
     ...(Number(child.age) < BONUS_MIN_AGE ? { note: `saved, but the bonus only runs for children aged ${BONUS_MIN_AGE} and up — say so` } : {}) }
 }
 
-async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap) {
+async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap, variety) {
   if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
 
   const wantsGems = gems !== undefined && gems !== null
   const wantsCap = dailyCap !== undefined && dailyCap !== null
+  const wantsVariety = variety !== undefined && variety !== null
+  if (wantsVariety) {
+    if (taskType !== 'english') return { success: false, error: 'variety is only for task_type english' }
+    if (!['uk', 'us', 'auto'].includes(variety)) return { success: false, error: 'variety must be uk, us or auto' }
+    if (!wantsGems && !wantsCap) return setEnglishVarietyTool(childId, variety, parentId)
+  }
   if (!wantsGems && !wantsCap) return { success: false, error: 'nothing to change: give gems, daily_cap, or both' }
 
   let n = null
@@ -2351,9 +2397,24 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap)
   const { error } = await supabase.from('children').update({ task_settings: nextSettings }).eq('id', childId)
   if (error) return { success: false, error: error.message }
 
+  const varietyResult = wantsVariety ? await setEnglishVarietyTool(childId, variety, parentId) : null
   return { success: true, childName: child.name, taskType,
     gems: nextSettings[taskType].gems, dailyCap: nextSettings[taskType].daily_cap,
-    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null].filter(Boolean) }
+    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null, wantsVariety ? 'variety' : null].filter(Boolean),
+    ...(varietyResult ? { variety: varietyResult.variety, varietyError: varietyResult.error } : {}) }
+}
+
+// British or American English for one child: spelling, and the sound questions (rhyme,
+// homophones) that differ between them. 'auto' clears the choice back to the family's time zone.
+async function setEnglishVarietyTool(childId, variety, parentId) {
+  const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+  const value = variety === 'auto' ? null : variety
+  const { error } = await supabase.from('children').update({ english_variety: value }).eq('id', childId)
+  if (error) return { success: false, error: /english_variety/.test(error.message) ? 'the English setting is not available yet (database not migrated)' : error.message }
+  const effective = value || englishVarietyForZone(await tzForChild(childId))
+  return { success: true, childName: child.name, variety: effective, chosen: value ? 'by the parent' : 'from the family time zone' }
 }
 
 async function approveContributionTool(contributionId, parentId) {
@@ -2881,8 +2942,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'update_task_reward') {
         toolResult = args.task_type === 'bonus'
-          ? await updateBonusTool(args.child_id, args.gems, args.active, parentId)
-          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap)
+          ? await updateBonusTool(args.child_id, args.gems, args.active, parentId, args.bonus_types)
+          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety)
       } else if (name === 'send_drawing_photo') {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
       } else if (name === 'add_reward') {
@@ -3541,18 +3602,22 @@ app.get('/api/children/:childId/gems', async (req, res) => {
 // what the Today card counts — a finished maths session or puzzle round, a finished reading, a
 // completed story, a drawing sent (and not refused by the safety screen) — including a session
 // past the day's gem limit, because it was still done.
-const BONUS_TYPES = ['math', 'reading', 'writing', 'drawing', 'puzzle']
+const BONUS_TYPES = ['math', 'reading', 'writing', 'drawing', 'puzzle', 'english']
 const BONUS_DEFAULTS = { gems: 50 }
 // From seven (2026-09-19). Five different things in a day is a lot to ask of a six-year-old, and
 // a daily target they cannot reach is a daily failure; the younger home keeps the plain Today card.
 const BONUS_MIN_AGE = 7
 
+// The parent may choose which activities count (`bonus.types`, 2026-09-26): English joined the set
+// and six a day is a lot, so a family can leave any of them out. No list means all of them, and a
+// list can only narrow — a type the parent switched off never counts, whatever the list says.
 function bonusSettings(taskSettings, age) {
   const s = taskSettings?.bonus || {}
+  const chosen = Array.isArray(s.types) ? s.types.filter(k => BONUS_TYPES.includes(k)) : BONUS_TYPES
   return {
     active: s.active !== false && Number(age) >= BONUS_MIN_AGE,
     gems: Number.isFinite(s.gems) ? Math.max(1, Math.min(500, Math.trunc(s.gems))) : BONUS_DEFAULTS.gems,
-    types: BONUS_TYPES.filter(k => taskSettings?.[k]?.active !== false),
+    types: chosen.filter(k => taskSettings?.[k]?.active !== false),
   }
 }
 
@@ -3561,14 +3626,15 @@ async function bonusDoneOn(childId, now) {
   const from = now.startOf('day').toUTC().toISO()
   const to = now.endOf('day').toUTC().toISO()
   const has = (q) => q.gte('created_at', from).lte('created_at', to).limit(1).then(({ data }) => (data || []).length > 0)
-  const [reading, math, writing, drawing, puzzle] = await Promise.all([
+  const [reading, math, writing, drawing, puzzle, english] = await Promise.all([
     has(supabase.from('submissions').select('id').eq('child_id', childId).eq('task_type', 'reading')),
     has(supabase.from('math_progress').select('id').eq('child_id', childId)),
     has(supabase.from('stories').select('id').eq('child_id', childId).eq('status', 'completed')),
     has(supabase.from('paintings').select('id').eq('child_id', childId).neq('status', 'blocked')),
     has(supabase.from('puzzle_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null)),
+    has(supabase.from('english_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null)),
   ])
-  return { reading, math, writing, drawing, puzzle }
+  return { reading, math, writing, drawing, puzzle, english }
 }
 
 // Called after each activity finishes. Pays at most once a day. Runs one at a time per child —
@@ -3626,6 +3692,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       { data: stories },
       { data: paintings },
       { data: puzzles },
+      { data: englishes },
       { data: ledger },
       { data: rewards },
       { data: child },
@@ -3639,6 +3706,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       supabase.from('paintings').select('created_at').eq('child_id', childId).neq('status', 'blocked').gte('created_at', since).lte('created_at', nowIso),
       // Finished sittings only: one abandoned after two questions is not a puzzle session done.
       supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('english_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
       supabase.from('children').select('age, task_settings').eq('id', childId).maybeSingle(),
@@ -3654,8 +3722,9 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       ...(stories || []).map(r => ['writing', dayOf(r.completed_at || r.created_at)]),
       ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
       ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
+      ...(englishes || []).map(r => ['english', dayOf(r.created_at)]),
     ]
-    const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle']
+    const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
     const blank = () => Object.fromEntries(TYPES.map(k => [k, 0]))
     const byDay = new Map()
     for (const [type, day] of done) {
@@ -3706,7 +3775,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
   } catch (err) {
     res.status(500).json({
       today: 0, monthTreeCount: 0,
-      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 },
+      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0, english: 0 },
       week: [], weekByType: {}, streak: 0, mathLevel: null, puzzleBand: null,
       gems: 0, nearestGoal: null, hasAnyGoals: false,
       error: err.message,
@@ -5966,6 +6035,30 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
       })
     }
 
+    if (row.reason === 'english') {
+      let session = null
+      if (row.ref_id) ({ data: session } = await supabase.from('english_sessions').select('*').eq('id', row.ref_id).maybeSingle())
+      if (!session) {
+        const { data: cands } = await supabase.from('english_sessions').select('*').eq('child_id', childId)
+          .not('finished_at', 'is', null).gte('finished_at', span[0]).lte('finished_at', span[1])
+        session = (cands || []).sort((x, y) => near(x.finished_at) - near(y.finished_at))[0] || null
+      }
+      if (!session?.finished_at) return res.status(404).json({ error: 'no sitting found for this row' })
+      const [sheet, { data: attempts }] = await Promise.all([
+        englishSheet(session),
+        supabase.from('english_attempts').select('question_index, chosen, correct').eq('session_id', session.id),
+      ])
+      const byIndex = new Map((attempts || []).map(a => [a.question_index, a]))
+      return res.json({
+        kind: 'english', at: row.created_at, band: session.band, correct: session.correct, total: session.question_count,
+        questions: sheet.map(publicEnglishItem),
+        answers: sheet.map((q, i) => {
+          const a = byIndex.get(i)
+          return a ? { chosen: a.chosen, correct: a.correct, ...englishFeedback(q, a.chosen || []) } : null
+        }),
+      })
+    }
+
     if (row.reason === 'math') {
       let sessionId = row.ref_id || null
       if (!sessionId) {
@@ -6078,6 +6171,273 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
     done({ correct, gems_earned: gems, capped })
   } catch (err) {
     console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── English sessions (verbal reasoning, spelling and grammar) ────────────────────────────────
+// The puzzle contract, word for word: the server deals the sheet from a seed it chooses, keeps the
+// answers, sends the browser the words to show and nothing that says which option is right, and
+// marks every answer itself. The engine is a byte-for-byte copy of src/lib (server/english, `npm
+// run puzzle:sync`); its lexicon is 3.8 MB and never goes near a phone.
+//
+// Two differences from puzzles. Some questions ask for TWO answers ("which TWO do not belong"), so
+// an answer is a set of indices and is right only as the whole set. And the English is British or
+// American per child (children.english_variety), because spelling and which words rhyme differ.
+const ENGLISH_DEFAULTS = { gems: 30, dailyCap: TASK_DEFAULT_CAPS.english }
+const ENGLISH_QUESTIONS = 10
+
+// A family in a US time zone gets American English unless the parent says otherwise; everyone
+// else British, which is what the Bond books and the 11+ are written in.
+const US_ZONES = /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Adak|Boise|Detroit|Juneau|Sitka|Yakutat|Nome|Metlakatla|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+)|Pacific\/Honolulu|US\/.+)$/
+function englishVarietyForZone(tz) {
+  return US_ZONES.test(tz || '') ? 'us' : 'uk'
+}
+async function englishVarietyFor(child) {
+  if (child?.english_variety === 'uk' || child?.english_variety === 'us') return child.english_variety
+  return englishVarietyForZone(await tzForChild(child.id))
+}
+
+// Question types as a parent would name the skill. The per-skill read follows the maths rules.
+const ENGLISH_SKILLS = {
+  synonym: 'word meanings (same and opposite)', antonym: 'word meanings (same and opposite)',
+  'odd-synonym': 'word meanings (same and opposite)', 'word-grid': 'word meanings (same and opposite)',
+  'pair-meaning': 'word meanings (same and opposite)', 'letter-pair': 'word meanings (same and opposite)',
+  'rhyme-synonym': 'word meanings (same and opposite)', 'prefix-antonym': 'word meanings (same and opposite)',
+  sense: 'what a word means', definition: 'what a word means',
+  'odd-two': 'word groups and analogies', analogy: 'word groups and analogies', 'compound-front': 'word groups and analogies',
+  'letter-code': 'letter and code puzzles', 'letter-analogy': 'letter and code puzzles', 'letter-sum': 'letter and code puzzles',
+  'alpha-order': 'letter and code puzzles', 'letters-in-order': 'letter and code puzzles', 'front-letter': 'letter and code puzzles',
+  'join-letter': 'letter and code puzzles', 'change-pattern': 'letter and code puzzles', 'word-ladder': 'letter and code puzzles',
+  'not-from-letters': 'letter and code puzzles', unscramble: 'letter and code puzzles', 'anagram-pair': 'letter and code puzzles',
+  'shared-letters': 'letter and code puzzles', 'hidden-word': 'letter and code puzzles',
+  'logic-grid': 'logic puzzles',
+  rhyme: 'sounds of words (rhymes, homophones, syllables)', homophone: 'sounds of words (rhymes, homophones, syllables)',
+  syllables: 'sounds of words (rhymes, homophones, syllables)', 'homophone-cloze': 'sounds of words (rhymes, homophones, syllables)',
+  plural: 'grammar and word forms', 'past-tense': 'grammar and word forms', suffix: 'grammar and word forms',
+  'root-word': 'grammar and word forms', singular: 'grammar and word forms', comparative: 'grammar and word forms',
+  'grammar-cloze': 'grammar and word forms', gender: 'grammar and word forms', collective: 'grammar and word forms',
+  'missing-vowel': 'spelling', misspelt: 'spelling', ending: 'spelling', 'ie-ei': 'spelling', 'silent-letter': 'spelling',
+  apostrophe: 'apostrophes and short forms', contraction: 'apostrophes and short forms',
+  proverb: 'sayings',
+}
+
+async function englishStanding(childId) {
+  const { data, error } = await supabase.from('english_attempts')
+    .select('type, correct, created_at').eq('child_id', childId)
+    .order('created_at', { ascending: false }).limit(400)
+  if (error) return null
+  const bySkill = new Map()
+  for (const row of data || []) {
+    const skill = ENGLISH_SKILLS[row.type] || row.type
+    const rows = bySkill.get(skill) || []
+    if (rows.length < MASTERY_WINDOW) rows.push(row)
+    bySkill.set(skill, rows)
+  }
+  return [...bySkill.entries()].map(([skill, rows]) => {
+    const correct = rows.filter(r => r.correct).length
+    const accuracy = Math.round((correct / rows.length) * 100)
+    return {
+      skill, attempts: rows.length, correct, accuracy,
+      standing: rows.length < MASTERY_MIN_ATTEMPTS ? 'not enough yet'
+        : accuracy < MASTERY_WEAK_BELOW ? 'weak'
+        : accuracy >= MASTERY_CLEARS_AT ? 'strong'
+        : 'getting there',
+    }
+  }).sort((a, b) => a.accuracy - b.accuracy)
+}
+
+// What the browser may know: the prompt and the option texts. `correct`, each option's `why` and
+// the `rule` are the key and stay here until the question is answered.
+function publicEnglishItem(item) {
+  return {
+    type: item.type, stem_key: item.stem_key, pick: item.pick, variety: item.variety,
+    prompt: item.prompt,
+    options: item.options.map(o => ({ text: o.text })),
+  }
+}
+// After the answer: which options were right, and for each wrong one the child chose, why not.
+function englishFeedback(item, chosen) {
+  return {
+    correct_indices: item.correct,
+    why: chosen.filter(i => !item.correct.includes(i)).map(i => ({ index: i, key: item.options[i]?.why || null })),
+  }
+}
+
+const englishSheets = new Map()
+const englishOpen = new Map()
+function keepEnglishOpen(session) {
+  englishOpen.set(session.id, session)
+  if (englishOpen.size > 500) englishOpen.delete(englishOpen.keys().next().value)
+}
+async function englishSheet(session) {
+  const hit = englishSheets.get(session.id)
+  if (hit) return hit
+  if (Array.isArray(session.sheet) && session.sheet.length) {
+    englishSheets.set(session.id, session.sheet)
+    if (englishSheets.size > 500) englishSheets.delete(englishSheets.keys().next().value)
+    return session.sheet
+  }
+  const { generateSession } = await import('./english/englishTemplates.js')
+  const sheet = generateSession(session.band, session.question_count, Number(session.seed), { variety: session.variety })
+  englishSheets.set(session.id, sheet)
+  return sheet
+}
+
+app.post('/api/children/:childId/english-session', async (req, res) => {
+  const { childId } = req.params
+  try {
+    // `*`, not a column list: english_variety arrives with a migration, and naming a column that
+    // does not exist yet fails the whole read.
+    const { data: child } = await supabase.from('children').select('*').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
+    if (!settings.active) return res.status(403).json({ error: 'English is switched off for this child' })
+
+    const { bandForAge, generateSession } = await import('./english/englishTemplates.js')
+    const band = bandForAge(child.age)
+    const variety = await englishVarietyFor(child)
+    const seed = crypto.randomInt(1, 2 ** 31)
+    const sheet = generateSession(band, ENGLISH_QUESTIONS, seed, { variety })
+    if (sheet.length < ENGLISH_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
+
+    const { data: session, error } = await supabase.from('english_sessions')
+      .insert({ child_id: childId, band, variety, seed, question_count: sheet.length, sheet })
+      .select('id').single()
+    if (error) return res.status(500).json({ error: error.message })
+    englishSheets.set(session.id, sheet)
+    keepEnglishOpen({ id: session.id, child_id: childId, band, variety, seed, question_count: sheet.length, finished_at: null, sheet })
+
+    const tz = await tzForChild(childId)
+    const doneToday = await rewardedToday(childId, tz, 'english')
+    res.json({
+      session_id: session.id, band, variety,
+      questions: sheet.map(publicEnglishItem),
+      gems: settings.gems, daily_cap: settings.dailyCap,
+      will_pay: doneToday !== null && doneToday < settings.dailyCap,
+    })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/english-sessions/:sessionId/answer', async (req, res) => {
+  const { sessionId } = req.params
+  const index = Number(req.body?.question_index)
+  const raw = Array.isArray(req.body?.chosen) ? req.body.chosen : [req.body?.chosen]
+  try {
+    let session = englishOpen.get(sessionId)
+    if (!session) {
+      ;({ data: session } = await supabase.from('english_sessions').select('*').eq('id', sessionId).maybeSingle())
+      if (!session) return res.status(404).json({ error: 'session not found' })
+      if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
+      keepEnglishOpen(session)
+    }
+    const sheet = await englishSheet(session)
+    const q = sheet[index]
+    if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
+    const chosen = [...new Set(raw.map(Number))].sort((a, b) => a - b)
+    if (chosen.length !== q.pick || chosen.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length)) {
+      return res.status(400).json({ error: `choose exactly ${q.pick}` })
+    }
+    const correct = chosen.length === q.correct.length && q.correct.every(i => chosen.includes(i))
+
+    const { error } = await supabase.from('english_attempts').insert({
+      session_id: session.id, child_id: session.child_id, question_index: index,
+      type: q.type, band: session.band, chosen, correct,
+    })
+    if (error?.code === '23505') {
+      const { data: first } = await supabase.from('english_attempts')
+        .select('chosen, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
+      const was = first?.chosen || chosen
+      return res.json({ correct: !!first?.correct, chosen: was, ...englishFeedback(q, was), repeated: true })
+    }
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ correct, chosen, ...englishFeedback(q, chosen) })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/english-sessions/:sessionId/finish', async (req, res) => {
+  const { sessionId } = req.params
+  englishOpen.delete(sessionId)
+  try {
+    const { data: session } = await supabase.from('english_sessions')
+      .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
+    if (!session) return res.status(404).json({ error: 'session not found' })
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id, task_settings').eq('id', session.child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
+    const done = (s) => res.json({
+      correct: s.correct, total: session.question_count, gems_earned: s.gems_earned ?? 0,
+      capped: !!s.capped, daily_cap: settings.dailyCap,
+    })
+    if (session.finished_at) return done(session)
+
+    const { data: attempts, error: attErr } = await supabase.from('english_attempts')
+      .select('correct').eq('session_id', session.id)
+    if (attErr) return res.status(500).json({ error: attErr.message })
+    if ((attempts || []).length < session.question_count) return res.status(400).json({ error: 'not every question is answered' })
+    const correct = attempts.filter(a => a.correct).length
+
+    // Claimed before anything is paid, as puzzles do: of two racing finish calls one pays.
+    const { data: claimed } = await supabase.from('english_sessions')
+      .update({ finished_at: new Date().toISOString(), correct })
+      .eq('id', session.id).is('finished_at', null).select('id')
+    if (!claimed?.length) {
+      let again = null
+      for (let i = 0; i < 10; i++) {
+        ;({ data: again } = await supabase.from('english_sessions')
+          .select('correct, gems_earned, capped').eq('id', session.id).maybeSingle())
+        if (again?.gems_earned != null) break
+        await new Promise(r => setTimeout(r, 200))
+      }
+      return done(again || { correct })
+    }
+
+    const tz = await tzForChild(child.id)
+    const doneToday = await rewardedToday(child.id, tz, 'english')
+    let gems = 0
+    let capped = false
+    if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) capped = true
+    else gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+    const led = await recordGems(child.id, gems, 'english', { capped, ref: session.id })
+    if (gems > 0 && !led.ok) gems = 0
+    await supabase.from('english_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
+    queueDailyBonus(child.id)
+    englishSheets.delete(session.id)
+
+    const { data: prefsRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    const language = parentLang(prefsRow?.prefs)
+    const total = session.question_count
+    if (gems > 0 && (perTask || doneToday === 0)) {
+      sendNotification(child.parent_id, say(language,
+        `${child.name} did their English — ${correct}/${total} correct. +${gems} gems 💎`,
+        `${child.name} İngilizce sorularını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`,
+        `${child.name} ha hecho su inglés — ${correct}/${total} correctas. +${gems} gems 💎`),
+      { kind: 'activity', child: child.name, detail: {
+        tr: `İngilizce, ${correct}/${total} doğru, +${gems} gem`,
+        en: `English, ${correct}/${total} correct, +${gems} gems`,
+      } }).catch(() => {})
+    } else if (capped && settings.active && perTask) {
+      sendNotification(child.parent_id, say(language,
+        `${child.name} did another round of English — ${correct}/${total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} bir tur İngilizce daha çözdü — ${correct}/${total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha hecho otra ronda de inglés — ${correct}/${total} correctas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`),
+      { kind: 'activity', child: child.name, detail: {
+        tr: `İngilizce, ${correct}/${total} doğru, günlük sınır dolduğu için gem yok`,
+        en: `English, ${correct}/${total} correct, past the daily limit so no gems`,
+      } }).catch(() => {})
+    }
+
+    done({ correct, gems_earned: gems, capped })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
     res.status(500).json({ error: err.message })
   }
 })

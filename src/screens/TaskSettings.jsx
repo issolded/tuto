@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, PCSS, TopBar, Card, Toggle, TaskIcon } from '../lib/parentUI'
-import { CAP_RANGE, TASK_DEFAULTS, capNote } from '../lib/taskDefaults'
+import { CAP_RANGE, TASK_DEFAULTS, BONUS_TYPES, capNote } from '../lib/taskDefaults'
 import { useT, useUiLang } from '../lib/parentI18n'
 
 // Keys only. The names are the CHILD's tile names, read from the child dictionary at render
 // so the parent and the child are looking at the same word for the same thing.
-const TASKS = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle']
+const TASKS = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
 
 // Every task has a daily cap and every one of them is set here. The dial was
 // drawing-only for a while, on the reasoning that drawing rewards instantly with
@@ -39,6 +39,11 @@ export default function TaskSettings() {
   // Lives on the child row, not in task_settings: it is not a task and task_settings is
   // rewritten wholesale on every toggle here, which would take the language with it.
   const [childLang, setChildLang] = useState('en')
+  // British or American English. null is "from the family's time zone", which is what the server
+  // does with null too; the zone is read so the automatic choice can be said, not guessed.
+  const [englishVariety, setEnglishVariety] = useState(null)
+  const [familyZone, setFamilyZone] = useState('')
+  const [varietyReady, setVarietyReady] = useState(false)
   const [saving, setSaving] = useState(false)
   const saveTimer = useRef(null)
 
@@ -52,7 +57,8 @@ export default function TaskSettings() {
 
   useEffect(() => {
     if (!id) return
-    supabase.from('children').select('name, age, task_settings, language').eq('id', id).single()
+    // `*`: english_variety arrives with a migration, and naming it before then fails the read.
+    supabase.from('children').select('*').eq('id', id).single()
       .then(({ data }) => {
         if (!data) return
         setChildName(data.name)
@@ -60,6 +66,12 @@ export default function TaskSettings() {
         setChildLang(childLangOf(data))
         if (data.task_settings) {
           setSettings({ ...DEFAULT_SETTINGS, ...data.task_settings })
+        }
+        setEnglishVariety(data.english_variety ?? null)
+        setVarietyReady('english_variety' in data)
+        if (data.parent_id) {
+          supabase.from('parents').select('timezone').eq('id', data.parent_id).maybeSingle()
+            .then(({ data: p }) => setFamilyZone(p?.timezone || ''))
         }
       })
   }, [id])
@@ -77,6 +89,13 @@ export default function TaskSettings() {
     setChildLang(lang)
     setSaving(true)
     await supabase.from('children').update({ language: lang }).eq('id', id)
+    setSaving(false)
+  }
+
+  const saveVariety = async (v) => {
+    setEnglishVariety(v)
+    setSaving(true)
+    await supabase.from('children').update({ english_variety: v }).eq('id', id)
     setSaving(false)
   }
 
@@ -208,14 +227,53 @@ export default function TaskSettings() {
                   </div>
                 </div>
               )}
+
+              {/* British or American — English only, and only once the column exists. */}
+              {key === 'english' && cfg.active && varietyReady && (() => {
+                const auto = /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Adak|Boise|Detroit|Juneau|Sitka|Yakutat|Nome|Metlakatla|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+)|Pacific\/Honolulu|US\/.+)$/.test(familyZone) ? 'us' : 'uk'
+                const opts = [
+                  { v: null, label: s('ts_eng_auto') },
+                  { v: 'uk', label: `🇬🇧 ${s('ts_eng_uk')}` },
+                  { v: 'us', label: `🇺🇸 ${s('ts_eng_us')}` },
+                ]
+                return (
+                  <div style={{ marginTop: 14, borderTop: `1px solid ${PC.line}`, paddingTop: 12 }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>{s('ts_eng_variety')}</div>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 2, lineHeight: 1.4 }}>{s('ts_eng_variety_sub')}</div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      {opts.map(o => {
+                        const on = englishVariety === o.v
+                        return (
+                          <button key={String(o.v)} className="tc-press tc-tap" onClick={() => saveVariety(o.v)} style={{
+                            flex: 1, minWidth: 0, background: on ? PC.englishBg : '#fff', border: `2px solid ${on ? PC.english : PC.line}`,
+                            borderRadius: 12, padding: '9px 6px', cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 13,
+                            color: on ? PC.english : PC.inkSoft,
+                          }}>{o.label}</button>
+                        )
+                      })}
+                    </div>
+                    {englishVariety === null && (
+                      <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 6 }}>
+                        {s('ts_eng_auto_is', { v: s(auto === 'us' ? 'ts_eng_us' : 'ts_eng_uk') })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </Card>
           )
         })}
 
-        {/* The once-a-day bonus for doing every activity. No daily cap — it pays once a day by
-            definition — and the amount runs higher than a task's, since it follows five of them. */}
+        {/* The once-a-day bonus for doing every activity the parent ticks. No daily cap — it pays
+            once a day by definition — and the amount runs higher than a task's, since it follows
+            several of them. */}
         {(() => {
           const b = { active: true, gems: 50, ...(settings.bonus || {}) }
+          const counted = Array.isArray(b.types) ? b.types : BONUS_TYPES
+          const toggleCounted = (k) => {
+            const next = counted.includes(k) ? counted.filter(x => x !== k) : [...counted, k]
+            if (next.length >= 2) setBonus({ types: BONUS_TYPES.filter(x => next.includes(x)) })
+          }
           const setBonus = (patch) => { const next = { ...settings, bonus: { ...b, ...patch } }; setSettings(next); persist(next) }
           const pct = ((b.gems - 10) / (200 - 10)) * 100
           return (
@@ -243,6 +301,28 @@ export default function TaskSettings() {
                     <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>10</span>
                     <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color: PC.inkFaint }}>200</span>
                   </div>
+                </div>
+              )}
+              {b.active && (
+                <div style={{ marginTop: 14, borderTop: `1px solid ${PC.line}`, paddingTop: 12 }}>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>{s('ts_bonus_counts')}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                    {BONUS_TYPES.map(k => {
+                      // A task switched off above never counts, whatever is ticked here.
+                      const off = settings[k]?.active === false
+                      const on = counted.includes(k) && !off
+                      return (
+                        <button key={k} className="tc-press tc-tap" disabled={off} onClick={() => toggleCounted(k)} style={{
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 999, cursor: off ? 'default' : 'pointer',
+                          background: on ? PC.amberBg : '#fff', border: `2px solid ${on ? PC.amber : PC.line}`, opacity: off ? 0.45 : 1,
+                          fontFamily: FONT, fontWeight: 800, fontSize: 12.5, color: on ? PC.ink : PC.inkSoft,
+                        }}>
+                          <TaskIcon type={k} size={16} />{childT(`task_${k}`, lang)}{on ? ' ✓' : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: PC.inkFaint, marginTop: 6 }}>{s('ts_bonus_min_two')}</div>
                 </div>
               )}
             </Card>

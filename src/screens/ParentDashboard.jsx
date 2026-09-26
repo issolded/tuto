@@ -147,7 +147,7 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 // What a parent opens the dashboard to find out, without opening the child: what they did today,
 // their gems, the day's bonus, and whether anything is waiting on the parent. Today comes from the
 // same summary the child's home reads, so the two never disagree.
-const ACT_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', homework: '📸' }
+const ACT_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', english: '🔤', homework: '📸' }
 
 function ChildCard({ child, pending, onClick }) {
   const s = useT()

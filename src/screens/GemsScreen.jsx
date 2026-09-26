@@ -25,7 +25,7 @@ const REASON_KEYS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  homework: '📸', drawing: '🎨', puzzle: '🧩', bonus: '🫴', story: '📖', daily_bonus: '🏅',
+  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', bonus: '🫴', story: '📖', daily_bonus: '🏅',
   adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
@@ -115,13 +115,13 @@ export default function GemsScreen() {
               // reason (a reward's own name, a parent's note) is shown as written.
               const TASK_KEYS = { math: 'task_math', reading: 'task_reading', writing: 'task_writing',
                                   story: 'task_writing', homework: 'task_homework', drawing: 'task_drawing',
-                                  puzzle: 'task_puzzle' }
+                                  puzzle: 'task_puzzle', english: 'task_english' }
               const labelKey = TASK_KEYS[key] || REASON_KEYS[key]
               const label = labelKey ? t(labelKey, lang) : (key || t('gem_task', lang))
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               const day = row.created_at ? formatDate(row.created_at, lang) : ''
-              // A maths or puzzle sitting opens again, question by question.
-              const opens = (key === 'math' || key === 'puzzle') && row.id
+              // A maths, puzzle or English sitting opens again, question by question.
+              const opens = (key === 'math' || key === 'puzzle' || key === 'english') && row.id
               return (
                 <div
                   key={row.id ?? i}

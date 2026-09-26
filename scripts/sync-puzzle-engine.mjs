@@ -13,24 +13,33 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 
-const FILES = [
-  'puzzleSpatial.js', 'puzzleTemplates.js', 'puzzleFigures.js', 'puzzleGlyphs.js', 'puzzleIcons.js',
-  'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js',
+// The English engine rides the same rule for the same reason (server/english): the server deals
+// the questions and keeps the answers. Its lexicon is 3.8 MB and would never be sent to a phone;
+// on the server it is one import.
+const ENGINES = [
+  { to: 'server/puzzle', files: [
+    'puzzleSpatial.js', 'puzzleTemplates.js', 'puzzleFigures.js', 'puzzleGlyphs.js', 'puzzleIcons.js',
+    'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js',
+  ] },
+  { to: 'server/english', files: ['englishTemplates.js', 'englishTables.js', 'englishLexicon.generated.js'] },
 ]
 const FROM = 'src/lib'
-const TO = 'server/puzzle'
 
 if (process.argv.includes('--check')) {
-  const stale = FILES.filter(f => !existsSync(`${TO}/${f}`)
-    || !readFileSync(`${FROM}/${f}`).equals(readFileSync(`${TO}/${f}`)))
-  if (stale.length) {
-    console.error(`✗ server/puzzle is behind src/lib: ${stale.join(', ')}\n\nRun: npm run puzzle:sync`)
-    process.exit(1)
+  let bad = false
+  for (const { to, files } of ENGINES) {
+    const stale = files.filter(f => !existsSync(`${to}/${f}`)
+      || !readFileSync(`${FROM}/${f}`).equals(readFileSync(`${to}/${f}`)))
+    if (stale.length) {
+      console.error(`✗ ${to} is behind src/lib: ${stale.join(', ')}\n\nRun: npm run puzzle:sync`)
+      bad = true
+    } else console.log(`✓ ${to} matches src/lib (${files.length} files)`)
   }
-  console.log(`✓ server/puzzle matches src/lib (${FILES.length} files)`)
-  process.exit(0)
+  process.exit(bad ? 1 : 0)
 }
 
-mkdirSync(TO, { recursive: true })
-for (const f of FILES) writeFileSync(`${TO}/${f}`, readFileSync(`${FROM}/${f}`))
-console.log(`copied ${FILES.length} files to ${TO}`)
+for (const { to, files } of ENGINES) {
+  mkdirSync(to, { recursive: true })
+  for (const f of files) writeFileSync(`${to}/${f}`, readFileSync(`${FROM}/${f}`))
+  console.log(`copied ${files.length} files to ${to}`)
+}

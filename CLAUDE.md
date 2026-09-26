@@ -81,6 +81,33 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] İngilizce çocuk ekranı ve bütün bağlantıları (2026-09-26, Claude). **Migration önce:**
+      `server/migrations/2026-09-26_english_sessions.sql` (`english_sessions`, `english_attempts`,
+      `children.english_variety`) çalışmadan deploy edilirse kart herkese görünür ama oturum açılmaz,
+      ve İngilizce varsayılan olarak Hezarfen'de olduğu için bonus hiç kazanılamaz.
+      **Sözleşme bulmacanınki:** soruyu sunucu üretir (motorun birebir kopyası `server/english`,
+      `npm run puzzle:sync` iki motoru da kopyalıyor, `english:check` senkronu da denetliyor),
+      tarayıcıya yalnız istem + şık metni gider; `correct`, `why`, `rule` cevaptan sonra. Sheet baştan
+      saklanıyor (bulmacada sonradan eklenmişti). "Hangi İKİSİ" soruları: cevap bir küme, tamamı
+      doğruysa doğru. Yanlış cevapta seçilen şıkkın `why` anahtarı çocuğun dilinde cümleye dönüyor
+      (`eng_why_*`, 59 anahtar × 3 dil; aynı sebepli iki şık tek satır).
+      **Kararlar (kullanıcı):** herkese açık (ebeveyn kapatabilir); İngiliz/Amerikan çocuk başına,
+      boşsa ailenin saat dilimi ABD ise Amerikan, değilse İngiliz — Görev Ayarları'nda ve sohbette
+      (`update_task_reward` task_type english + `variety`); kart adı "English / İngilizce";
+      Hezarfen'e dahil ama ebeveyn hangi etkinliklerin sayılacağını seçiyor (`task_settings.bonus.types`,
+      en az iki; Görev Ayarları'nda çipler, sohbette `bonus_types`).
+      **Bağlananlar:** ChildHome kartı + ikon (üç yaş görünümü), `/child/english`, gem geçmişinden ve
+      ebeveyn çocuk sayfasından oturumu yeniden açma, Bugün özeti/haftalık grafik, ebeveyn panosu,
+      ebeveyn bildirimi (sınıra takılan dahil), sohbet bağlamı (`englishSessions`, `englishSkills`,
+      `englishVariety`), 30 gem / günde 3. Onboarding'e eklenmedi (bulmaca da orada yok).
+      Doğrulama: build, english:check (senkron dahil), i18n:check değişmedi (41), font:check;
+      gerçek motorla taklit API'ye karşı tarayıcıda 390px ve 1180px: 8-9 ve 7-8 oturumları uçtan uca,
+      iki cevaplı soru, yanlış cevap açıklaması, sonuç listesi, ana ekran kartı, Görev Ayarları'nda
+      UK/US ve Hezarfen çipleri (yazılan JSON doğrulandı). Gerçek Supabase/Railway ile denenmedi.
+      **İçerik bulgusu (motor):** 8-9 `odd-two` "seafood, yogurt, pup, butter, lamb" — cevap
+      pup+lamb ama lamb aynı zamanda yiyecek; kategori çakışması taraması `lamb`/`chicken` gibi
+      hem hayvan hem yiyecek kelimeleri görmüyor.
+
 - [x] "Count up from 198 to 604" ipuçları ve 8 yaş Carroll (2026-09-26, Claude; kullanıcı bulgusu).
       **İpucu:** eksik toplanan, eksik çıkan, "kaç kişi yemeksiz" ve çıkarma hikâyesi "198'den
       604'e say" diyordu — 406 tane birer birer saymak yöntem değil. Hint ile yardım paneli aynı

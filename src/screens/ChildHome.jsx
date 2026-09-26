@@ -32,12 +32,12 @@ const HOME_CSS = `
 // My Tree has no entry here on purpose — it earns no gems (see TASK_ACCENT's
 // comment), so its tile skips the "+N gems" badge entirely rather than
 // falling back to a number that isn't true.
-const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, puzzle: 30 }
+const DEFAULT_TASK_GEMS = { reading: 30, math: 30, writing: 30, puzzle: 30, english: 30 }
 
 
 // 'tree' isn't a gem-earning task type (no task_settings entry exists for it
 // — it's always on), it just needs an accent color for its tile icon.
-const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', puzzle: '#2BA59A', tree: '#f3a35a', homework: '#e89a39', drawing: '#ef7d9d' }
+const TASK_ACCENT = { reading: '#a98ce6', math: '#5aa9e6', writing: '#6cc28a', puzzle: '#2BA59A', english: '#e0607e', tree: '#f3a35a', homework: '#e89a39', drawing: '#ef7d9d' }
 
 function TaskIcon({ type, c }) {
   if (type === 'reading') return (
@@ -60,6 +60,15 @@ function TaskIcon({ type, c }) {
       <rect x="16.5" y="37.5" width="10" height="10" rx="2" fill={c}/>
       <path d="M39.5 39.5 C39.5 36.5 45.5 36.5 45.5 39.5 C45.5 42 42.5 42 42.5 44.5" stroke="#20201e" strokeWidth="2.8" strokeLinecap="round"/>
       <circle cx="42.5" cy="48.3" r="1.6" fill="#20201e"/>
+    </svg>
+  )
+  // English: a speech bubble with "Aa" — words, not a school subject's crest.
+  if (type === 'english') return (
+    <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
+      <path d="M12 16 C12 13 14 11 17 11 H47 C50 11 52 13 52 16 V38 C52 41 50 43 47 43 H28 L18 52 V43 H17 C14 43 12 41 12 38 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
+      <path d="M20 36 L26.5 18 L33 36 M22.6 29 H30.4" stroke={c} strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="40.5" cy="31" r="5" stroke={c} strokeWidth="3.4"/>
+      <path d="M45.5 26 V36" stroke={c} strokeWidth="3.4" strokeLinecap="round"/>
     </svg>
   )
   if (type === 'tree') return (
@@ -127,7 +136,7 @@ function cachedToday(childId) {
 
 const EMPTY_TODAY = {
   today: 0, monthTreeCount: 0,
-  activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 },
+  activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0, english: 0 },
   nearestGoal: null, hasAnyGoals: false, loaded: false,
 }
 
@@ -171,13 +180,14 @@ const MID_TILES = [
   { type: 'math',     nameKey: 'task_math',     route: '/child/math',     well: MID.sky },
   { type: 'reading',  nameKey: 'task_reading',  route: '/child/library',  well: MID.lilac },
   { type: 'puzzle',   nameKey: 'task_puzzle',   route: '/child/puzzle',   well: MID.teal },
+  { type: 'english',  nameKey: 'task_english',  route: '/child/english',  well: '#FBDDE5' },
   { type: 'writing',  nameKey: 'task_writing',  route: '/child/stories',  well: MID.mint },
   { type: 'homework', nameKey: 'task_homework', route: '/child/homework', well: MID.cream },
   { type: 'drawing',  nameKey: 'task_drawing',  route: '/child/drawings', well: '#EFE3FF' },
   { type: 'tree',     nameKey: 'task_tree',     route: '/child/task',     well: MID.peach },
 ]
 // The order the quest suggests things in: the scored, paying ones first.
-const QUEST_ORDER = ['math', 'reading', 'puzzle', 'writing', 'drawing', 'homework']
+const QUEST_ORDER = ['math', 'reading', 'puzzle', 'english', 'writing', 'drawing', 'homework']
 const QUEST_TARGET = 3
 
 function Ring({ value, label, color }) {
@@ -194,8 +204,8 @@ function Ring({ value, label, color }) {
 // The day's all-rounder bonus: one slot per activity it asks for, filled with that activity's icon
 // once it is done today. The server decides the set (what the parent has on) and pays; this only
 // shows it. `tone` is 'mid' for the outlined 9–11 card, 'plain' inside the other ages' Today card.
-const BONUS_ROUTES = { math: '/child/math', reading: '/child/library', writing: '/child/stories', drawing: '/child/drawings', puzzle: '/child/puzzle' }
-const BONUS_NAMES = { math: 'task_math', reading: 'task_reading', writing: 'task_writing', drawing: 'task_drawing', puzzle: 'task_puzzle' }
+const BONUS_ROUTES = { math: '/child/math', reading: '/child/library', writing: '/child/stories', drawing: '/child/drawings', puzzle: '/child/puzzle', english: '/child/english' }
+const BONUS_NAMES = { math: 'task_math', reading: 'task_reading', writing: 'task_writing', drawing: 'task_drawing', puzzle: 'task_puzzle', english: 'task_english' }
 
 function BonusCard({ today, lang, nav, tone = 'mid', placeholder = false }) {
   const [why, setWhy] = useState(false)
@@ -270,7 +280,7 @@ function BonusCard({ today, lang, nav, tone = 'mid', placeholder = false }) {
 
 // The week, one bar a day. A bar is a button: tapping a day says what was done on it. Today is
 // picked to begin with. `teen` draws the flat 12+ version.
-const TYPE_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', homework: '📸' }
+const TYPE_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', english: '🔤', homework: '📸' }
 
 function WeekChart({ week: weekIn, lang, teen = false }) {
   let week = weekIn
@@ -603,7 +613,7 @@ function Stars({ n }) {
   )
 }
 
-const YOUNG_WELL = { math: '#D4E4FB', reading: '#E7DDF6', writing: '#D4EED9', puzzle: '#D9F3F1', homework: '#FFF1CF', drawing: '#F8D9E6', tree: '#FCE4CF' }
+const YOUNG_WELL = { math: '#D4E4FB', reading: '#E7DDF6', writing: '#D4EED9', puzzle: '#D9F3F1', english: '#FBDDE5', homework: '#FFF1CF', drawing: '#F8D9E6', tree: '#FCE4CF' }
 
 function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
   const [streakWhy, setStreakWhy] = useState(false)

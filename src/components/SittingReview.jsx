@@ -1,5 +1,6 @@
 import { t } from '../lib/i18n'
 import { Figure, Prompt, CodeChip } from './PuzzleView'
+import { EnglishStem, EnglishOptions, englishWhyLines } from './EnglishView'
 
 // One finished sitting, question by question: the card at the end of a puzzle sitting, and the
 // same card when a sitting is opened again from the gem history (the child's) or the child's
@@ -81,6 +82,32 @@ export function MathReviewList({ items, lang }) {
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+// questions: the public English sheet; answers[i]: { chosen, correct, correct_indices, why: [{ index, key }] }.
+export function EnglishReviewList({ questions, answers, lang }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {answers.map((a, i) => {
+        const q = questions[i]
+        if (!a || !q) return null
+        const states = q.options.map((_, j) => (a.correct_indices?.includes(j) ? 'ok' : a.chosen?.includes(j) ? 'bad' : null))
+        const whys = englishWhyLines(q, a.why, lang)
+        return (
+          <div key={i} style={card(i)}>
+            {heading(a.correct, `${i + 1}. ${t(q.stem_key, lang)}`)}
+            <div style={{ marginBottom: 8 }}><EnglishStem item={q} lang={lang} /></div>
+            <EnglishOptions item={q} states={states} size="sm" />
+            {!a.correct && whys.map((w, k) => (
+              <div key={k} style={{ marginTop: 8, background: '#FFF4E8', borderRadius: 12, padding: '9px 12px', fontWeight: 700, fontSize: 13.5, color: INK, lineHeight: 1.45 }}>
+                💡 {w}
+              </div>
+            ))}
+          </div>
+        )
+      })}
     </div>
   )
 }

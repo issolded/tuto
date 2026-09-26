@@ -22,7 +22,13 @@ export const TASK_DEFAULTS = {
   drawing:  { gems: 20, variable: false, daily_cap: 2 },
   // Shape & pattern puzzles (NVR). Scored and paid on the server, like maths.
   puzzle:   { gems: 30, variable: true, daily_cap: 3 },
+  // English (verbal reasoning, spelling, grammar). Scored and paid on the server, like puzzles.
+  english:  { gems: 30, variable: true, daily_cap: 3 },
 }
+
+// The activities the daily all-rounder bonus can ask for. The parent chooses which (at least two);
+// the server keeps the same list (BONUS_TYPES in server/index.js).
+export const BONUS_TYPES = ['math', 'reading', 'writing', 'drawing', 'puzzle', 'english']
 
 // How far the per-day dial travels. 0 is deliberately not reachable from the UI:
 // a parent who wants a task to stop earning turns the task off, which also stops
@@ -45,6 +51,6 @@ export function gemHint(key, s) {
 // The sentence under the per-day dial. Same promise every time — the child is
 // never blocked, the work is always kept — worded for what they actually made.
 export function capNote(key, s) {
-  const known = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle']
+  const known = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
   return s(known.includes(key) ? `cap_note_${key}` : 'cap_note_other')
 }
