@@ -62,13 +62,13 @@ function TaskIcon({ type, c }) {
       <circle cx="42.5" cy="48.3" r="1.6" fill="#20201e"/>
     </svg>
   )
-  // English: a speech bubble with "Aa" — words, not a school subject's crest.
+  // English: a speech bubble saying "Hi!" — the language, with no country's flag on it (a Union
+  // Jack says nothing to an American child). "Hi!" rather than "Hello": five letters stop being
+  // readable in the small bonus slots.
   if (type === 'english') return (
     <svg width="58" height="58" viewBox="0 0 64 64" fill="none">
       <path d="M12 16 C12 13 14 11 17 11 H47 C50 11 52 13 52 16 V38 C52 41 50 43 47 43 H28 L18 52 V43 H17 C14 43 12 41 12 38 Z" fill="#fff" stroke="#20201e" strokeWidth="4" strokeLinejoin="round"/>
-      <path d="M20 36 L26.5 18 L33 36 M22.6 29 H30.4" stroke={c} strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="40.5" cy="31" r="5" stroke={c} strokeWidth="3.4"/>
-      <path d="M45.5 26 V36" stroke={c} strokeWidth="3.4" strokeLinecap="round"/>
+      <text x="32" y="28" textAnchor="middle" dominantBaseline="middle" fontFamily={FRED} fontWeight="700" fontSize="19" fill={c}>Hi!</text>
     </svg>
   )
   if (type === 'tree') return (

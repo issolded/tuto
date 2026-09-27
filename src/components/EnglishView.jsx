@@ -13,7 +13,7 @@ export const LIGHT = { text: '#241f3a', dim: '#8d83ad', warm: '#e0607e' }
 export function englishWhy(key, type, lang) {
   if (!key) return null
   const m = /^syllables-(\d+)$/.exec(key)
-  if (m) return t('eng_why_syllables', lang).replace('%n%', m[1])
+  if (m) return m[1] === '1' ? t('eng_why_syllables_one', lang) : t('eng_why_syllables', lang).replace('%n%', m[1])
   const base = `eng_why_${key.replace(/-/g, '_')}`
   const specific = `${base}__${type.replace(/-/g, '_')}`
   const own = t(specific, lang)
