@@ -1,41 +1,13 @@
-// Tuto Care — parent-side design kit (shared tokens + primitives)
+// Tuto Care — parent-side primitives. Tokens live in parentTokens.js and are re-exported below.
 import TutoMascotComponent from '../components/TutoMascot'
 import { LANGS } from './i18n'
 import { useUiLang, setUiLang, useT } from './parentI18n'
 import { ageFromBirthDate, birthDateBounds } from './age'
 
-export const PC = {
-  bg:       '#F4F6F7',
-  card:     '#FFFFFF',
-  ink:      '#21262E',
-  inkSoft:  '#79808C',
-  inkFaint: '#A9AFB9',
-  line:     '#ECEEF1',
-  field:    '#F3F5F7',
-  teal:     '#3FB7AC',
-  tealDeep: '#2EA298',
-  tealBg:   '#E4F4F2',
-  peach:    '#F0A368',
-  peachDeep:'#E08B49',
-  peachBg:  '#FCEEE1',
-  amber:    '#E9A23B',
-  amberBg:  '#FBF0D9',
-  green:    '#56BD8C',
-  greenBg:  '#E6F5EC',
-  danger:   '#E8695C',
-  dangerBg: '#FCEAE8',
-  reading:  '#a98ce6', readingBg: '#EFE9FB',
-  math:     '#5aa9e6', mathBg:    '#E2F0FB',
-  writing:  '#6cc28a', writingBg: '#E4F4EA',
-  homework: '#e0a93b', homeworkBg: '#FBF1D6',
-  drawing:  '#d97ab0', drawingBg: '#FBE6F1',
-  puzzle:   '#2BA59A', puzzleBg:  '#D9F3F1',
-  english:  '#D9577A', englishBg: '#FBDDE5',
-}
+import { PC, FONT, SHADOW, SHADOW_SM, SPACE, RADIUS, TAP, ELEV, TEXT } from './parentTokens'
 
-export const FONT = "'Plus Jakarta Sans', sans-serif"
-export const SHADOW    = '0 14px 34px -16px rgba(40,55,75,.18), 0 3px 10px -4px rgba(40,55,75,.06)'
-export const SHADOW_SM = '0 6px 18px -8px rgba(40,55,75,.16), 0 1px 4px rgba(40,55,75,.04)'
+/* Re-exported so every screen keeps one import site for the kit. */
+export { PC, FONT, SHADOW, SHADOW_SM, SPACE, RADIUS, TAP, ELEV, TEXT } from './parentTokens'
 
 export const PCSS = `
 *{box-sizing:border-box;}
@@ -146,16 +118,20 @@ export function TopBar({ title, onBack, right, sub }) {
 // ── Button ────────────────────────────────────────────────────────────────────
 export function Btn({ children, onClick, variant = 'primary', disabled, full = true, color, style: extStyle = {} }) {
   const base = {
-    fontFamily: FONT, fontWeight: 700, fontSize: 16, borderRadius: 16, padding: '15px 22px',
+    fontFamily: FONT, ...TEXT.body, fontWeight: 700,
+    borderRadius: RADIUS.md, padding: `0 ${SPACE.s5}px`, minHeight: TAP.controlH,
     cursor: disabled ? 'not-allowed' : 'pointer', width: full ? '100%' : 'auto',
-    border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s2,
     ...extStyle,
   }
-  const c = color || PC.teal
+  /* White on teal measures 2.45:1 — below the 4.5:1 bar, on the app's most-tapped control.
+     tealInk is the same hue darkened until white clears it at 4.80:1. A caller that passes
+     its own colour still gets that colour. */
+  const c = color || PC.tealInk
   let v = {}
   if (variant === 'primary') v = { background: disabled ? '#C5CDD3' : c, color: '#fff', boxShadow: disabled ? 'none' : `0 10px 22px -8px ${c}cc` }
   else if (variant === 'soft')    v = { background: PC.tealBg, color: PC.tealDeep }
-  else if (variant === 'outline') v = { background: '#fff', color: PC.ink, border: `1.5px solid ${PC.line}`, boxShadow: SHADOW_SM }
+  else if (variant === 'outline') v = { background: '#fff', color: PC.ink, border: `1.5px solid ${PC.line}`, boxShadow: ELEV.e1 }
   else if (variant === 'ghost')   v = { background: 'transparent', color: PC.inkSoft, fontWeight: 700 }
   else if (variant === 'danger')  v = { background: PC.dangerBg, color: PC.danger }
   return (
