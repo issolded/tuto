@@ -695,6 +695,10 @@ const HELP_WORDS = {
     timesDone:      'Bak, hepsi eşit! Toplam kaç eder?',
     fillTap:        'Kutuları sırayla doldur — noktalara dokun! 📦',
     jumpsTap:       'Yuvarlak sayılara zıplayarak gidelim! Bir oka dokun, zıplamayı yaz 🦘',
+    addJumpsTap:    'Önce büyük parçayı ekle, sonra küçüğü. Nereye vardın? Yaz! 🦘',
+    tallyTap:       'Turuncu satıra dokun: her dokunuş bir beşli ya da bir tek çizgi sayar 👆',
+    fracCountAll:   'Önce bütün parçaları say — çubuğa dokun 👆',
+    fracCompare:    'Hepsi aynı uzunlukta. Boyalı parçalardan hangisi en uzun? 👀',
     fillExact:      'Hepsi kutulara girdi! Kaç kutu oldu?',
     fillRem:        'Bazıları dolu bir kutuya sığmadı — onlar kalan. Kaç tane?',
     fillUp:         'Son kutu dolmadı — ama onlara da yer lazım! Onu da say.',
@@ -725,6 +729,10 @@ const HELP_WORDS = {
     timesDone:      '¡Mira, todos los grupos son iguales! ¿Cuántos hay en total?',
     fillTap:        'Llena las cajas una a una: ¡toca los puntos! 📦',
     jumpsTap:       '¡Vamos a saltos hasta números redondos! Toca una flecha y escribe el salto 🦘',
+    addJumpsTap:    'Suma primero la parte grande y luego la pequeña. ¿Dónde caes? ¡Escríbelo! 🦘',
+    tallyTap:       'Toca la fila naranja: cada toque cuenta un grupo de cinco o una raya suelta 👆',
+    fracCountAll:   'Primero cuenta todas las partes: toca la barra 👆',
+    fracCompare:    'Todas miden lo mismo. ¿Cuál de las partes coloreadas es la más larga? 👀',
     fillExact:      '¡Todos están en cajas! ¿Cuántas cajas hay?',
     fillRem:        'Algunos no caben en una caja llena: son el resto. ¿Cuántos son?',
     fillUp:         'La última caja no está llena, ¡pero esos también necesitan sitio! Cuéntala.',
@@ -755,6 +763,10 @@ const HELP_WORDS = {
     timesDone:      'See — every group is the same! How many altogether?',
     fillTap:        'Fill the boxes one by one — tap the dots! 📦',
     jumpsTap:       'Let\'s jump to round numbers! Tap an arrow and type the jump 🦘',
+    addJumpsTap:    'Add the big part first, then the small one. Where do you land? Type it! 🦘',
+    tallyTap:       'Tap the orange row: each tap counts a five or a single line 👆',
+    fracCountAll:   'First count all the parts — tap the bar 👆',
+    fracCompare:    'They are all the same length. Which coloured piece is the longest? 👀',
     fillExact:      'They all fit in boxes! How many boxes?',
     fillRem:        'Some did not fit in a full box — they are the remainder. How many?',
     fillUp:         'The last box is not full — but those still need a place! Count it too.',
@@ -854,6 +866,12 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // The gap between two numbers, walked in jumps to round numbers (198 → 200 → 600 → 604). The
   // child types each jump and adds them — the method the 💡 hint names, done rather than read.
   const jumps = visual?.kind === 'jumps' ? visual : null
+  // A tally chart read the way the hint says to: tap each gate of five, then each single line,
+  // and the row's count climbs 5, 10, 15, 16… — only the rows the question is about.
+  const tallyHelp = visual?.kind === 'tally' && visual.use ? visual : null
+  // Fractions on a bar: count all the parts, then the coloured ones (shade); colour the second
+  // fraction onto the first (add); equal bars cut into different numbers of pieces (cmp).
+  const fracBar = visual?.kind === 'fracbar' ? visual : null
   const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
@@ -862,11 +880,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -891,7 +909,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -1114,6 +1132,204 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: done ? GREEN : MATH_DEEP }}>
           {dealt}
         </div>
+      </div>
+    )
+  } else if (fracBar) {
+    const f = fracBar
+    // Called as a function, not mounted as <Bar>: a component defined inside the render is a new
+    // type every render, so each tap remounted the bar and a quick second tap landed on a node
+    // that was already gone.
+    const bar = ({ parts, colour, onTap, numbered = 0, width = 290 }) => (
+      <div onClick={onTap} style={{ display: 'flex', width, height: 46, border: `2.5px solid ${INK}`, borderRadius: 10, overflow: 'hidden', cursor: onTap ? 'pointer' : 'default' }}>
+        {Array.from({ length: parts }, (_, i) => (
+          <div key={i} style={{
+            flex: 1, borderLeft: i ? `2px solid ${INK}` : 'none', background: colour(i) || '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FRED, fontWeight: 700, fontSize: 14, color: INK,
+          }}>{i < numbered ? i + 1 : ''}</div>
+        ))}
+      </div>
+    )
+    let bubble, body
+    if (f.mode === 'shade') {
+      // Tap 1..parts numbers every part; the next taps number only the parts asked about.
+      const want = f.white ? [...Array(f.parts).keys()].filter(i => !f.shaded.includes(i)) : f.shaded
+      const all = Math.min(dealt, f.parts)
+      const top = Math.max(0, Math.min(dealt - f.parts, want.length))
+      const isShaded = (i) => f.shaded.includes(i)
+      bubble = all < f.parts ? t.fracCountAll
+        : top < want.length ? say(language, `${f.parts} parts in all — that is the bottom number. Now tap the ${f.white ? 'white' : 'coloured'} ones.`,
+            `Toplam ${f.parts} parça — bu alttaki sayı. Şimdi ${f.white ? 'boyasız' : 'boyalı'} olanlara dokun.`,
+            `${f.parts} partes en total: ese es el número de abajo. Ahora toca las ${f.white ? 'blancas' : 'coloreadas'}.`)
+          : say(language, `${want.length} of the ${f.parts} parts. Which fraction says that? 💪`,
+            `${f.parts} parçanın ${want.length} tanesi. Bunu hangi kesir söylüyor? 💪`,
+            `${want.length} de las ${f.parts} partes. ¿Qué fracción lo dice? 💪`)
+      body = (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          {bar({ parts: f.parts, numbered: all < f.parts ? all : 0,
+            colour: (i) => (all >= f.parts && want.slice(0, top).includes(i) ? ORANGE : isShaded(i) ? MATH : null),
+            onTap: all < f.parts || top < want.length ? () => setDealt(d => d + 1) : undefined })}
+          <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 26, color: MATH_DEEP, lineHeight: 1.1, textAlign: 'center' }}>
+            <div style={{ borderBottom: `3px solid ${MATH_DEEP}`, minWidth: 40 }}>{all >= f.parts ? top : '?'}</div>
+            <div>{all >= f.parts ? f.parts : all || '?'}</div>
+          </div>
+        </div>
+      )
+    } else if (f.mode === 'add') {
+      const added = Math.min(dealt, f.b)
+      bubble = added < f.b
+        ? say(language, `${f.a} parts are coloured. Tap to colour ${f.b} more!`, `${f.a} parça boyalı. Dokunarak ${f.b} parça daha boya!`, `Hay ${f.a} partes coloreadas. ¡Toca para colorear ${f.b} más!`)
+        : say(language, `How many parts are coloured now? The pieces are still ${f.parts}ths — the bottom number stays ${f.parts}.`,
+            `Şimdi kaç parça boyalı? Parçalar hâlâ aynı büyüklükte — alttaki sayı ${f.parts} kalır.`,
+            `¿Cuántas partes hay coloreadas ahora? Los trozos siguen siendo iguales: abajo se queda ${f.parts}.`)
+      body = bar({ parts: f.parts, colour: (i) => (i < f.a ? MATH : i < f.a + added ? ORANGE : null),
+        onTap: added < f.b ? () => setDealt(d => d + 1) : undefined })
+    } else {
+      bubble = t.fracCompare
+      body = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+          {f.denoms.map(d => (
+            <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 15, color: INK, width: 34, textAlign: 'right' }}>1/{d}</span>
+              {bar({ parts: d, width: 240, colour: (i) => (i === 0 ? MATH : null) })}
+            </div>
+          ))}
+        </div>
+      )
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 290,
+        }}>{bubble}</div>
+        {body}
+      </div>
+    )
+  } else if (tallyHelp) {
+    // solvedArrows holds, per row, how many marks (gates and singles) have been tapped.
+    const marksOf = (n) => [...Array(Math.floor(n / 5)).fill(5), ...Array(n % 5).fill(1)]
+    const tapped = (r) => solvedArrows[r] || 0
+    const countOf = (r) => marksOf(tallyHelp.rows[r].count).slice(0, tapped(r)).reduce((a, b) => a + b, 0)
+    const rowDone = (r) => tapped(r) >= marksOf(tallyHelp.rows[r].count).length
+    const allDone = tallyHelp.use.every(rowDone)
+    const tap = (r) => { if (!rowDone(r)) setSolvedArrows({ ...solvedArrows, [r]: tapped(r) + 1 }) }
+    const [a, b] = tallyHelp.use
+    const nums2 = tallyHelp.use.map(r => tallyHelp.rows[r].count)
+    const lastStep = !allDone ? t.tallyTap
+      : tallyHelp.ask === 'read' ? say(language, `That row is ${nums2[0]}. Type it in! 💪`, `O satır ${nums2[0]} ediyor. Şimdi cevabı yaz! 💪`, `Esa fila son ${nums2[0]}. ¡Escríbelo! 💪`)
+        : tallyHelp.ask === 'more' ? say(language, `Now the difference: ${nums2[0]} − ${nums2[1]} = ?`, `Şimdi farkı bul: ${nums2[0]} − ${nums2[1]} = ?`, `Ahora la diferencia: ${nums2[0]} − ${nums2[1]} = ?`)
+          : say(language, `Now add them all: ${nums2.join(' + ')} = ?`, `Şimdi hepsini topla: ${nums2.join(' + ')} = ?`, `Ahora súmalas todas: ${nums2.join(' + ')} = ?`)
+    const gate = ({ lit, five, key }) => (
+      <svg key={key} width={five ? 34 : 10} height={28} viewBox={`0 0 ${five ? 34 : 10} 28`}>
+        {(five ? [4, 11, 18, 25] : [5]).map(x => <line key={x} x1={x} y1={4} x2={x} y2={24} stroke={lit ? MATH : INK} strokeWidth="2.4" strokeLinecap="round" />)}
+        {five && <line x1={1} y1={22} x2={31} y2={6} stroke={lit ? MATH : INK} strokeWidth="2.4" strokeLinecap="round" />}
+      </svg>
+    )
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 290,
+        }}>{lastStep}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 330 }}>
+          {tallyHelp.rows.map((row, r) => {
+            const inUse = tallyHelp.use.includes(r)
+            const marks = marksOf(row.count)
+            return (
+              <div key={r} onClick={inUse ? () => tap(r) : undefined} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 12,
+                background: inUse ? (rowDone(r) ? `${GREEN}12` : '#fff7ef') : 'transparent',
+                border: `2px ${inUse && !rowDone(r) ? 'dashed' : 'solid'} ${inUse ? (rowDone(r) ? GREEN : ORANGE) : '#eee9f7'}`,
+                opacity: inUse ? 1 : 0.35, cursor: inUse && !rowDone(r) ? 'pointer' : 'default',
+              }}>
+                <span style={{ width: 78, fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK, flexShrink: 0 }}>{row.label}</span>
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, flex: 1, alignItems: 'center' }}>
+                  {marks.map((m, k) => gate({ key: k, five: m === 5, lit: inUse && k < tapped(r) }))}
+                </span>
+                {inUse && <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 18, color: rowDone(r) ? GREEN : MATH_DEEP, minWidth: 26, textAlign: 'right' }}>{countOf(r)}</span>}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  } else if (jumps && jumps.mode === 'add') {
+    // Adding on: the jumps are given (+10, +3) and the child writes where each one lands. The
+    // next stop to find is always the first unfound one, so there is nothing to tap but keys.
+    const stops = jumps.stops
+    const count = stops.length - 1
+    const N = (n) => num(n, language)
+    const found = (i) => solvedArrows[i] !== undefined
+    const nextI = [...Array(count).keys()].map(k => k + 1).find(k => !found(k))
+    const confirm = (input) => {
+      if (Number(input) !== stops[nextI]) {
+        setTutoBubble(say(language, `Not quite — ${N(stops[nextI - 1])} + ${N(stops[nextI] - stops[nextI - 1])}?`,
+          `Tam değil — ${N(stops[nextI - 1])} + ${N(stops[nextI] - stops[nextI - 1])} kaç eder?`,
+          `Casi — ¿${N(stops[nextI - 1])} + ${N(stops[nextI] - stops[nextI - 1])}?`))
+        setArrowInput('')
+        return
+      }
+      setSolvedArrows({ ...solvedArrows, [nextI]: stops[nextI] })
+      setArrowInput('')
+      setTutoBubble(nextI === count
+        ? say(language, `You landed! Now type that in as your answer 💪`, `Vardın! Şimdi bunu cevap olarak yaz 💪`, `¡Has llegado! Ahora escríbelo como respuesta 💪`)
+        : say(language, `Yes! Now jump +${N(stops[nextI + 1] - stops[nextI])}.`, `Evet! Şimdi +${N(stops[nextI + 1] - stops[nextI])} zıpla.`, `¡Sí! Ahora salta +${N(stops[nextI + 1] - stops[nextI])}.`))
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 290,
+        }}>
+          {tutoBubble || t.addJumpsTap}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
+          {stops.map((n, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{
+                minWidth: 44, height: 44, padding: '0 9px', borderRadius: 13, boxSizing: 'border-box',
+                background: i === 0 || found(i) ? MATH : 'transparent', color: i === 0 || found(i) ? 'white' : ORANGE,
+                border: i === 0 || found(i) ? 'none' : `3px dashed ${i === nextI ? ORANGE : '#d9d2ee'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FRED, fontWeight: 600, fontSize: 17,
+              }}>{i === 0 || found(i) ? N(n) : '?'}</div>
+              {i < count && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38 }}>
+                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1, color: found(i + 1) ? GREEN : ORANGE }}>
+                    +{N(stops[i + 1] - n)}
+                  </span>
+                  <span style={{ fontSize: 24, lineHeight: 1, color: found(i + 1) ? GREEN : INK_SOFT }}>⤻</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {nextI !== undefined && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
+            <div style={{
+              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
+              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
+            }}>{arrowInput || '?'}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
+              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
+                <button key={k} className="math-press"
+                  onClick={() => {
+                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
+                    if (k === '✓') { if (arrowInput) confirm(arrowInput); return }
+                    if (arrowInput.length < 5) setArrowInput(v => v + k)
+                  }}
+                  style={{
+                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
+                    color: k === '✓' || k === '⌫' ? 'white' : INK,
+                  }}>{k}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   } else if (jumps) {

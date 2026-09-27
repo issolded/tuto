@@ -324,6 +324,23 @@ for (const age of AGES) {
           if (want !== Number(p.correct_answer)) fail(where, `yardım resmi ${want} veriyor, cevap ${p.correct_answer}`, p.question_text)
           if (h.mode === 'exact' && h.total % h.size) fail(where, 'tam bölünmeyen "exact" kutu resmi', p.question_text)
         }
+        if (p.help?.kind === 'jumps') {
+          const st = p.help.stops
+          const got = p.help.mode === 'add' ? st[st.length - 1] : st[st.length - 1] - st[0]
+          if (got !== Number(p.correct_answer)) fail(where, `zıplama yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          if (st.some((x, i) => i && x <= st[i - 1])) fail(where, 'zıplama durakları artmıyor', JSON.stringify(st))
+        }
+        if (p.help?.kind === 'tally') {
+          const c = p.help.use.map(r => p.help.rows[r].count)
+          const got = p.help.ask === 'read' ? c[0] : p.help.ask === 'more' ? c[0] - c[1] : c.reduce((x, y) => x + y, 0)
+          if (got !== Number(p.correct_answer)) fail(where, `çetele yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
+        if (p.help?.kind === 'fracbar') {
+          const h = p.help
+          const got = h.mode === 'shade' ? `${h.white ? h.parts - h.shaded.length : h.shaded.length}/${h.parts}`
+            : h.mode === 'add' ? `${h.a + h.b}/${h.parts}` : `1/${Math.min(...h.denoms)}`
+          if (got !== String(p.correct_answer)) fail(where, `kesir yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
         if (p.help?.kind === 'groups' && p.help.groups * p.help.per !== Number(p.correct_answer)) {
           fail(where, `yardım grupları ${p.help.groups}×${p.help.per}, cevap ${p.correct_answer}`, p.question_text)
         }
@@ -529,7 +546,7 @@ console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / to
 // the same text twice. Reported rather than failed: the number is a direction, and each tool
 // added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
 {
-  const TAUGHT = new Set(['share', 'fill', 'jumps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const TAUGHT = new Set(['share', 'fill', 'jumps', 'tally', 'fracbar', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
   const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
   const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
   console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')

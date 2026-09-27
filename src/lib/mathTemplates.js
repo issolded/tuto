@@ -441,6 +441,17 @@ export function jumpsHelp(from, to) {
   return stops.length >= 2 && stops.length <= 7 ? { help: { kind: 'jumps', from, to, stops } } : {}
 }
 
+// Adding on in place-value pieces: 44 + 13 walks 44 → 54 → 57, hundreds then tens then ones.
+// The jumps are given and the child writes where each one lands — the partitioning the hints
+// describe ("add the tens, then the ones"), done on a line.
+export function addJumpsHelp(from, add) {
+  if (!(add > 0) || add >= 1000) return {}
+  const parts = [Math.floor(add / 100) * 100, Math.floor((add % 100) / 10) * 10, add % 10].filter(Boolean)
+  const stops = [from]
+  for (const p of parts) stops.push(stops[stops.length - 1] + p)
+  return { help: { kind: 'jumps', mode: 'add', from, to: from + add, stops } }
+}
+
 function gapSteps(from, to, lang) {
   const N = (n) => num(n, lang)
   if (to - from <= 10 && to <= 100) {
@@ -946,6 +957,7 @@ function fractionAddSame(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `frac:add:${d}:${pairKey(a, b)}`,
+    help: { kind: 'fracbar', mode: 'add', parts: d, a, b },
     hint_steps: [
       say(lang, 'Both fractions cut the whole into the same number of pieces.',
                 'İki kesir de bütünü aynı sayıda parçaya bölüyor.',
@@ -984,6 +996,7 @@ function fractionCompare(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `frac:cmp:${[...denoms].sort((x, y) => x - y).join('-')}`,
+    help: { kind: 'fracbar', mode: 'cmp', denoms: [...denoms].sort((x, y) => x - y) },
     hint_steps: [
       say(lang, 'The bottom number says how many pieces the whole was cut into.',
                 'Alttaki sayı, bütünün kaç parçaya bölündüğünü söyler.',
@@ -3962,7 +3975,10 @@ function measureConvert(level, lang) {
   const u = { per: u0.per, big: pickL(u0.big, lang), small: pickL(u0.small, lang) }
   const toSmall = Math.random() < 0.6
   // Whole numbers both ways: going down multiplies, going up needs an exact multiple.
-  const big = u.per >= 1000 ? randInt(2, 9) : randInt(2, 40)
+  // Never the conversion number itself: "100 mm is how many cm?" has the answer 10, and the
+  // hint's "1 cm is 10 mm" says it.
+  let big
+  do { big = u.per >= 1000 ? randInt(2, 9) : randInt(2, 40) } while (big === u.per)
   const small = big * u.per
 
   return {
@@ -4652,6 +4668,7 @@ function missingNumber(level, lang, add) {
       topic: 'subtraction', level,
       question_text: `? − ${num(takeAway, lang)} = ${num(left, lang)}`, format: 'numeric', correct_answer: start,
       operandKey: `miss:subA:${takeAway}:${left}`,
+      ...addJumpsHelp(left, takeAway),
       hint_steps: [
         say(lang, `Something had ${num(takeAway, lang)} taken away and ${num(left, lang)} was left.`,
                   `Bir sayıdan ${num(takeAway, lang)} çıkarılmış, geriye ${num(left, lang)} kalmış.`,
@@ -4831,7 +4848,7 @@ function youngStory(level, lang, add) {
     topic: add ? 'addition' : 'subtraction', level,
     question_text: s.q, format: 'numeric', correct_answer: ans,
     operandKey: `story:${s.key}:${s.a}:${s.b}`,
-    ...(add ? {} : jumpsHelp(s.b, s.a)),
+    ...(add ? addJumpsHelp(Math.max(s.a, s.b), Math.min(s.a, s.b)) : jumpsHelp(s.b, s.a)),
     hint_steps: add
       ? [say(lang, `Both amounts go together, so this is an adding question.`, `İki miktar bir araya geliyor, yani bu bir toplama sorusu.`, `Las dos cantidades se juntan: es una suma.`),
          say(lang, `Add ${N(s.a)} and ${N(s.b)} — split the smaller one into its parts if it helps.`,
@@ -5147,6 +5164,9 @@ function fractionShaded(level, lang) {
     topic: 'fraction-of-number', level, question_text: q, format: 'choice',
     options: choiceOf(right, wrongs), correct_answer: answer,
     operandKey: `fshade:${n}/${d}:${askWhite ? 'w' : 's'}:${shape}`,
+    // Counting the parts, then the coloured ones, on the picture itself. Not for Year 4's "which
+    // is equal", where the count is the start of the question, not the answer.
+    ...(equalMode ? {} : { help: { kind: 'fracbar', mode: 'shade', parts: d, shaded, white: askWhite } }),
     hint_steps: [
       say(lang, `Count all the equal parts — that is the bottom number.`, `Bütün eş parçaları say — bu alttaki sayıdır.`,
                 `Cuenta todas las partes iguales: ese es el número de abajo.`),
@@ -5824,6 +5844,8 @@ function dataTally(level, lang) {
           : say(lang, 'Find the right row first.', 'Önce doğru satırı bul.', 'Busca primero la fila correcta.'),
     ],
     visual: { kind: 'tally', rows },
+    // The rows the question is about, counted gate by gate in the help panel.
+    help: { kind: 'tally', rows, ask, use: ask === 'read' ? [i] : ask === 'more' ? [hi, lo] : [0, 1, 2, 3] },
   }
 }
 
@@ -5859,6 +5881,9 @@ function moneyShop(level, lang) {
                                `${cap(nm(a))} ve ${nm(b)} birlikte kaç ${unitQ} tutar?`,
                                `¿Cuánto cuestan juntos ${nm(a)} y ${nm(b)}, en ${unitQ}?`),
       format: Number.isInteger(value(total)) ? 'numeric' : fmt, correct_answer: value(total), operandKey: `shop:pair:${a.cents}:${b.cents}`,
+      // In cents only: from Year 3 the prices are pounds and pence, and a line of whole cents
+      // would not be the sum the question asks for.
+      ...(band <= 2 ? addJumpsHelp(Math.max(a.cents, b.cents), Math.min(a.cents, b.cents)) : {}),
       hint_steps: [say(lang, `Find both prices on the tags.`, `İki fiyatı da etiketlerden bul.`, `Busca los dos precios en las etiquetas.`),
                    say(lang, `Add them — the cents first, then the ${band <= 2 ? 'tens' : 'dollars'}.`, `Topla — önce kuruşları, sonra ${band <= 2 ? 'onlukları' : 'liraları'}.`, `Súmalos: primero los céntimos y luego ${band <= 2 ? 'las decenas' : 'los euros'}.`)],
       visual,
