@@ -147,7 +147,7 @@ function checkOlderFigure(p) {
     const h = v.h === '?' ? Number(p.correct_answer) : v.h
     const want = key.includes(':v:') ? v.l * v.w * h : key.includes(':sa:') ? 2 * (v.l * v.w + v.l * h + v.w * h) : Number(key.split(':').pop())
     if (Math.abs(Number(p.correct_answer) - want) > 1e-9) return `prizma ${want}`
-    if (v.h === '?' && Math.abs(v.l * v.w * h - asNumber(p.question_text.match(/[\d.,]+(?= cm³)/)[0])) > 1e-6) return 'hacim tutmuyor'
+    if (v.h === '?' && Math.abs(v.l * v.w * h - Number(p.question_text.match(/[\d.,]+(?= cm³)/)[0].replace(/[.,](?=\d{3}(\D|$))/g, "")) /* whole cm³, grouped by dnum */) > 1e-6) return 'hacim tutmuyor'
   }
   if (v.kind === 'circle') {
     const form = key.split(':')[2], r = v.r
@@ -439,6 +439,18 @@ for (const age of AGES) {
           const decimalMark = lang === 'en' ? '.' : ','
           const bad = tok.includes(grouping) && !new RegExp(`^\\d{1,3}(\\${grouping}\\d{3})+(\\${decimalMark}\\d+)?$`).test(tok)
           if (bad) { fail(where, 'ondalık işareti dile uymuyor', `${tok} — ${p.question_text}`); break }
+        }
+        // "÷ 1,000" on a Turkish screen: a decimal never ends in three zeros, so a comma followed
+        // by exactly ",000" is an English thousands group that slipped through.
+        if (lang !== 'en') for (const tok of read.match(/\d[\d.,]*\d/g) || []) {
+          if (/^\d{1,3}(,000)+$/.test(tok)) { fail(where, 'İngilizce binlik ayırıcı', `${tok} — ${p.question_text}`); break }
+        }
+        // Values stay plain — the screen groups them in the reader's language (`dnum`). A value
+        // that arrives grouped cannot be told from a decimal: "30.000" became "30,000" in Turkish.
+        for (const v of [...(p.options || []).map(o => o.value), p.correct_answer]) {
+          if (/^-?\d{1,3}([.,]\d{3})+$/.test(String(v)) && Number.isInteger(Number(String(v).replace(/[.,]/g, ''))) && lang === 'en' && String(v).includes(',')) {
+            fail(where, 'şık değeri önceden gruplanmış', `${v} — ${p.question_text}`); break
+          }
         }
         // The scale and the shaded shape are answered from what is drawn, so the key is recomputed
         // from the drawing: the scale's reading, the shaded (or white) parts over all the parts.

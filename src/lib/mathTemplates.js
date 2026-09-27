@@ -142,6 +142,11 @@ export function dnum(v, lang = 'en') {
   // String(null) would print the word.
   if (v == null) return v
   const s = String(v)
+  // A whole number keeps its value plain and gets its thousands grouped here, where the
+  // language is known. The place-value options used to arrive pre-grouped ("30.000") and the
+  // decimal rule below turned them into "30,000" on a Turkish screen — the point cannot say
+  // whether it is a thousands point or a decimal one, so values never carry a grouping.
+  if (/^-?\d+$/.test(s)) return num(s, lang)
   return lang === 'tr' || lang === 'es' ? s.replace(/(\d)\.(\d)/g, '$1,$2') : s
 }
 
@@ -2543,7 +2548,7 @@ function placeDigitValue(level, lang) {
   const answer = digit * Math.pow(10, power)
 
   const options = shuffle([
-    { value: num(answer, lang), why: say(lang,
+    { value: String(answer), why: say(lang,
         `Right — the ${digit} sits ${power} place${power === 1 ? '' : 's'} up from the ones, so it is worth ${num(answer, lang)}.`,
         `Doğru — ${digit} rakamı birler basamağından ${power} basamak yukarıda, yani ${num(answer, lang)} değerinde.`,
         `Correcto: el ${digit} está ${power} posición${power === 1 ? '' : 'es'} por encima de las unidades, así que vale ${num(answer, lang)}.`) },
@@ -2551,11 +2556,11 @@ function placeDigitValue(level, lang) {
         `That is the digit itself. The question asks what it is WORTH, which depends on where it sits.`,
         `Bu rakamın kendisi. Soru rakamın DEĞERİNİ soruyor, o da bulunduğu basamağa bağlı.`,
         `Esa es la cifra en sí. La pregunta es cuánto VALE, y eso depende de su posición.`) },
-    { value: num(digit * Math.pow(10, Math.max(0, power - 1)), lang), why: say(lang,
+    { value: String(digit * Math.pow(10, Math.max(0, power - 1))), why: say(lang,
         `One place too low — count the places to the right of the ${digit} again.`,
         `Bir basamak eksik — ${digit} rakamının sağındaki basamakları tekrar say.`,
         `Una posición de menos: vuelve a contar las posiciones a la derecha del ${digit}.`) },
-    { value: num(digit * Math.pow(10, power + 1), lang), why: say(lang,
+    { value: String(digit * Math.pow(10, power + 1)), why: say(lang,
         `One place too high — the ${digit} has ${power} digit${power === 1 ? '' : 's'} after it, not ${power + 1}.`,
         `Bir basamak fazla — ${digit} rakamından sonra ${power} rakam var, ${power + 1} değil.`,
         `Una posición de más: después del ${digit} hay ${power} cifra${power === 1 ? '' : 's'}, no ${power + 1}.`) },
@@ -2569,7 +2574,7 @@ function placeDigitValue(level, lang) {
       `En ${num(n, lang)}, ¿cuánto vale el ${digit}?`),
     format: 'choice',
     options,
-    correct_answer: num(answer, lang),
+    correct_answer: String(answer),
     operandKey: `pv:digit:${n}:${at}`,
     hint_steps: [
       say(lang, `Name the places from the right: ones, tens, hundreds, thousands…`,
@@ -7165,9 +7170,11 @@ function y8Negatives(level, lang) {
     const f = pick([10, 100, 1000])
     const mul = Math.random() < 0.5
     const ans = Number((mul ? x * f : x / f).toPrecision(10))
-    const q = `${x} ${mul ? '×' : '÷'} ${num(f, lang)}`
+    // The decimal and the power of ten are localised apart: run through `dnum` together, the
+    // Turkish "1.000" came out "1,000" — one thousand read as one.
+    const q = `${dnum(x, lang)} ${mul ? '×' : '÷'} ${num(f, lang)}`
     return {
-      topic: T, level, question_text: `${dnum(q, lang)} = ?`, format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `nd:p:${q}`,
+      topic: T, level, question_text: `${q} = ?`, format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `nd:p:${x} ${mul ? '×' : '÷'} ${f}`,
       hint_steps: [say(lang, `${mul ? 'Multiplying' : 'Dividing'} by ${num(f, lang)} moves every digit ${String(f).length - 1} place${f > 10 ? 's' : ''} to the ${mul ? 'left' : 'right'}.`,
         `${num(f, lang)} ile ${mul ? 'çarpmak' : 'bölmek'} her rakamı ${String(f).length - 1} basamak ${mul ? 'sola' : 'sağa'} kaydırır.`,
         `${mul ? 'Multiplicar' : 'Dividir'} por ${num(f, lang)} mueve cada cifra ${String(f).length - 1} lugar${f > 10 ? 'es' : ''} a la ${mul ? 'izquierda' : 'derecha'}.`),
