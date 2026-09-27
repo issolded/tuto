@@ -557,7 +557,7 @@ const STRINGS = {
   math_on_paper:      { en: 'On Paper',      tr: 'Kâğıtta',  es: 'En papel' },
   math_on_screen:     { en: 'On Screen',     tr: 'Ekranda',  es: 'En la pantalla' },
   math_paper_desc:    { en: 'We love pen and paper! Your brain grows every time you write! 🧠',
-                        tr: 'Gerçek uzmanlar kalem ve kâğıt kullanır, ekran amatörlerin işi! 🧠',
+                        tr: 'Kâğıtta çöz, çalışmanı fotoğrafla paylaş. Yazarken beynin büyür! 🧠',
                         es: '¡Nos encanta el papel y el lápiz! Tu cerebro crece cada vez que escribes 🧠' },
   math_screen_desc:   { en: 'Type your answers right here, one by one.',
                         tr: 'Cevaplarını burada tek tek yaz.',

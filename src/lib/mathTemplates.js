@@ -5091,7 +5091,9 @@ function youngDivision(level, lang) {
     const d = pick(tables), k = randInt(3, 10)
     return {
       topic: 'division-word', level,
-      question_text: say(lang, `How many ${d}s are there in ${d * k}?`, `${d * k} sayısında kaç tane ${d} vardır?`, `¿Cuántas veces cabe el ${d} en ${d * k}?`),
+      // "12 sayısında kaç tane 2 var" has a second honest answer — one, the digit — so the
+      // question names the grouping it means.
+      question_text: say(lang, `Put ${d * k} things into groups of ${d}. How many groups are there?`, `${d * k} nesneyi ${trDist(d)} ${trDist(d)} gruplarsan kaç grup olur?`, `Si haces grupos de ${d} con ${d * k} cosas, ¿cuántos grupos salen?`),
       format: 'numeric', correct_answer: k, operandKey: `ygroup:${d}:${k}`,
       ...(d * k <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: d * k, size: d, mode: 'exact' } } : {}),
       hint_steps: [
@@ -5736,9 +5738,11 @@ function pvDigits(level, lang) {
   const answer = Number(sorted.join(''))
   return {
     topic: 'place-value', level,
-    question_text: say(lang, `What is the ${biggest ? 'biggest' : 'smallest'} number you can make with these digits: ${digits.join(', ')}?`,
-                             `Bu rakamlarla yazabileceğin en ${biggest ? 'büyük' : 'küçük'} sayı kaçtır: ${digits.join(', ')}?`,
-                             `¿Cuál es el número más ${biggest ? 'grande' : 'pequeño'} que puedes formar con estas cifras: ${digits.join(', ')}?`),
+    // "Each digit once" and the length are stated: without them 3 alone, or 33348, is a
+    // smaller or bigger number the child could fairly write.
+    question_text: say(lang, `Use each digit once. What is the ${biggest ? 'biggest' : 'smallest'} ${digits.length}-digit number you can make with ${digits.join(', ')}?`,
+                             `Her rakamı bir kez kullan. ${digits.join(', ')} ile yazabileceğin en ${biggest ? 'büyük' : 'küçük'} ${digits.length} basamaklı sayı kaçtır?`,
+                             `Usa cada cifra una vez. ¿Cuál es el número de ${digits.length} cifras más ${biggest ? 'grande' : 'pequeño'} que puedes formar con ${digits.join(', ')}?`),
     format: 'numeric', correct_answer: answer, operandKey: `pvd:${biggest}:${digits.join('')}`,
     hint_steps: [
       say(lang, `The first digit is worth the most, so put the ${biggest ? 'biggest' : 'smallest'} digit there.`,
@@ -6665,8 +6669,8 @@ function compoundArea(level, lang) {
         `Büyük bir dikdörtgenin köşesinden küçük bir dikdörtgen kesiliyor. Taralı kısmın alanı kaç ${unit}²?`,
         `Se recorta un rectángulo pequeño de la esquina de uno grande. ¿Cuál es el área de la parte sombreada, en ${unit}²?`)
       : perimeter
-        ? say(lang, `All the corners of this shape are right angles. What is its perimeter, in ${unit}?`, `Bu şeklin bütün köşeleri dik açı. Çevresi kaç ${unit}?`, `Todas las esquinas de esta figura son ángulos rectos. ¿Cuál es su perímetro, en ${unit}?`)
-        : say(lang, `All the corners of this shape are right angles. What is its area, in ${unit}²?`, `Bu şeklin bütün köşeleri dik açı. Alanı kaç ${unit}²?`, `Todas las esquinas de esta figura son ángulos rectos. ¿Cuál es su área, en ${unit}²?`),
+        ? say(lang, `Each side of this shape meets the next at a right angle. What is its perimeter, in ${unit}?`, `Bu şeklin yan yana kenarları birbirine dik. Çevresi kaç ${unit}?`, `Cada lado de esta figura es perpendicular al siguiente. ¿Cuál es su perímetro, en ${unit}?`)
+        : say(lang, `Each side of this shape meets the next at a right angle. What is its area, in ${unit}²?`, `Bu şeklin yan yana kenarları birbirine dik. Alanı kaç ${unit}²?`, `Cada lado de esta figura es perpendicular al siguiente. ¿Cuál es su área, en ${unit}²?`),
     format: 'numeric', correct_answer: answer,
     operandKey: `cmp:${style}:${perimeter ? 'p' : 'a'}:${W}:${H}:${cw}:${ch}`,
     hint_steps: perimeter

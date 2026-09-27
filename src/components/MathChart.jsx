@@ -1,4 +1,5 @@
 import { say } from '../lib/i18n'
+import { describeVisual } from '../lib/mathVisualText'
 
 // Charts and grids for the three topics that cannot be asked in words alone:
 //
@@ -31,8 +32,10 @@ const PAD = { l: 34, r: 8, t: 12, b: 30 }
 
 const axisLabel = { font: '600 11px Nunito, sans-serif', fill: '#617383' }
 
-export default function MathChart({ visual: v, language = 'en', description }) {
+export default function MathChart({ visual: v, language = 'en', description: question }) {
   if (v?.kind !== 'chart') return null
+  // What the chart holds, in words, for a screen reader: role="img" hides every label inside it.
+  const description = describeVisual(v, language, question)
 
   // ── a pie chart ─────────────────────────────────────────────────────────────
   // Year 6's line is "interpret pie charts", and Bond's are read the way a child reads a clock:

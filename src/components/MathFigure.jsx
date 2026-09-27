@@ -1,5 +1,6 @@
 import { say } from '../lib/i18n'
 import { num, dnum, FIGURE_KINDS } from '../lib/mathTemplates'
+import { describeVisual } from '../lib/mathVisualText'
 
 // The pictures Bond's 7-8 and 8-9 books are built on, and which a sentence cannot stand in for:
 // a scale to read, a shape with a fraction of it shaded, a grid with points on it, a solid to
@@ -61,7 +62,7 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
   return (
     <figure style={{ margin: 0, width: '100%', maxWidth: 340, flexShrink: 0 }}>
       <svg viewBox={`0 0 ${W} ${body.h}`} role="img"
-        aria-label={description || say(lang, 'Picture', 'Resim', 'Imagen')}
+        aria-label={describeVisual(v, lang, description) || say(lang, 'Picture', 'Resim', 'Imagen')}
         style={{ display: 'block', width: '100%', maxHeight: 230, overflow: 'visible' }}>
         {body.g}
       </svg>
