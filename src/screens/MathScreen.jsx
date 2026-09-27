@@ -698,6 +698,8 @@ const HELP_WORDS = {
     addJumpsTap:    'Önce büyük parçayı ekle, sonra küçüğü. Nereye vardın? Yaz! 🦘',
     tallyTap:       'Turuncu satıra dokun: her dokunuş bir beşli ya da bir tek çizgi sayar 👆',
     fracCountAll:   'Önce bütün parçaları say — çubuğa dokun 👆',
+    coinsTap:       'Paralara sırayla dokun, toplam büyüsün 🪙',
+    sortTap:        'Her kutuya dokun: bu sayı o etikete uyuyor mu? ✓ ya da ✗',
     fracCompare:    'Hepsi aynı uzunlukta. Boyalı parçalardan hangisi en uzun? 👀',
     fillExact:      'Hepsi kutulara girdi! Kaç kutu oldu?',
     fillRem:        'Bazıları dolu bir kutuya sığmadı — onlar kalan. Kaç tane?',
@@ -732,6 +734,8 @@ const HELP_WORDS = {
     addJumpsTap:    'Suma primero la parte grande y luego la pequeña. ¿Dónde caes? ¡Escríbelo! 🦘',
     tallyTap:       'Toca la fila naranja: cada toque cuenta un grupo de cinco o una raya suelta 👆',
     fracCountAll:   'Primero cuenta todas las partes: toca la barra 👆',
+    coinsTap:       'Toca las monedas una a una y mira cómo sube el total 🪙',
+    sortTap:        'Toca cada casilla: ¿este número cumple esa etiqueta? ✓ o ✗',
     fracCompare:    'Todas miden lo mismo. ¿Cuál de las partes coloreadas es la más larga? 👀',
     fillExact:      '¡Todos están en cajas! ¿Cuántas cajas hay?',
     fillRem:        'Algunos no caben en una caja llena: son el resto. ¿Cuántos son?',
@@ -766,6 +770,8 @@ const HELP_WORDS = {
     addJumpsTap:    'Add the big part first, then the small one. Where do you land? Type it! 🦘',
     tallyTap:       'Tap the orange row: each tap counts a five or a single line 👆',
     fracCountAll:   'First count all the parts — tap the bar 👆',
+    coinsTap:       'Tap the coins one by one and watch the total grow 🪙',
+    sortTap:        'Tap each box: does this number fit that label? ✓ or ✗',
     fracCompare:    'They are all the same length. Which coloured piece is the longest? 👀',
     fillExact:      'They all fit in boxes! How many boxes?',
     fillRem:        'Some did not fit in a full box — they are the remainder. How many?',
@@ -872,6 +878,12 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Fractions on a bar: count all the parts, then the coloured ones (shade); colour the second
   // fraction onto the first (add); equal bars cut into different numbers of pieces (cmp).
   const fracBar = visual?.kind === 'fracbar' ? visual : null
+  // Coins counted by touch: tap each one and the purse's total climbs (sum), or keep adding the
+  // same coin until the amount is reached and count the coins (make).
+  const coins = visual?.kind === 'coins' ? visual : null
+  // Venn and Carroll: each number tested against each label, one tap per cell, so "belongs in
+  // the shaded part" becomes two yes/no questions the child answers for every option.
+  const sortTest = visual?.kind === 'sorttest' ? visual : null
   const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
@@ -880,11 +892,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !coins && !sortTest && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || !!coins || !!sortTest || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -909,7 +921,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || coins || sortTest || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -1132,6 +1144,84 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: done ? GREEN : MATH_DEEP }}>
           {dealt}
         </div>
+      </div>
+    )
+  } else if (sortTest) {
+    const open = (k) => !!solvedArrows[k]
+    const mark = (ok) => <span style={{ fontSize: 20, fontWeight: 800, color: ok ? GREEN : '#E2586A' }}>{ok ? '✓' : '✗'}</span>
+    const allOpen = sortTest.rows.every((_, r) => open(`${r}:0`) && open(`${r}:1`))
+    const pattern = sortTest.want.map((w, c) => `${sortTest.labels[c]} ${w ? '✓' : '✗'}`).join(' · ')
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 300,
+        }}>
+          {allOpen ? say(language, `Which number has ${pattern}?`, `Hangi sayı: ${pattern}?`, `¿Qué número tiene ${pattern}?`) : t.sortTap}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr', gap: 4, width: '100%', maxWidth: 320 }}>
+          <span />
+          {sortTest.labels.map((l, c) => (
+            <span key={c} style={{ fontFamily: FRED, fontWeight: 600, fontSize: 12.5, color: INK, textAlign: 'center', lineHeight: 1.2 }}>
+              {l} <span style={{ color: sortTest.want[c] ? GREEN : '#E2586A' }}>{sortTest.want[c] ? '✓' : '✗'}</span>
+            </span>
+          ))}
+          {sortTest.rows.map((row, r) => [
+            <span key={`n${r}`} style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: MATH_DEEP, alignSelf: 'center', textAlign: 'center' }}>{row.n}</span>,
+            ...[0, 1].map(c => (
+              <button key={`${r}:${c}`} className="math-press" onClick={() => setSolvedArrows(s => ({ ...s, [`${r}:${c}`]: true }))} style={{
+                height: 40, borderRadius: 10, cursor: open(`${r}:${c}`) ? 'default' : 'pointer',
+                border: `2px ${open(`${r}:${c}`) ? 'solid #e6e1f3' : `dashed ${ORANGE}`}`, background: open(`${r}:${c}`) ? '#fff' : '#fff7ef',
+                fontFamily: FRED, fontWeight: 700, fontSize: 15, color: ORANGE,
+              }}>{open(`${r}:${c}`) ? mark(row.fits[c]) : '?'}</button>
+            )),
+          ])}
+        </div>
+      </div>
+    )
+  } else if (coins) {
+    const coin = (v, lit, key) => (
+      <div key={key} style={{
+        width: v >= 25 ? 50 : v >= 10 ? 44 : 38, height: v >= 25 ? 50 : v >= 10 ? 44 : 38, borderRadius: '50%',
+        background: lit ? (v >= 10 ? '#e8e3f7' : '#f7d88a') : '#f3f1f8', border: `3px solid ${lit ? (v >= 10 ? '#a9a2c4' : '#d4a53a') : '#dcd7ea'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: FRED, fontWeight: 700, fontSize: 15, color: lit ? INK : INK_SOFT, flexShrink: 0,
+      }}>{v}</div>
+    )
+    let bubble, row, total
+    if (coins.mode === 'sum') {
+      const done = Math.min(dealt, coins.coins.length)
+      total = coins.coins.slice(0, done).reduce((a, b) => a + b, 0)
+      bubble = done < coins.coins.length ? t.coinsTap
+        : say(language, `That is all of them: ${total} ${coins.unit}. Type it in! 💪`, `Hepsi bu kadar: ${total} ${coins.unit}. Şimdi cevabı yaz! 💪`, `Ya están todas: ${total} ${coins.unit}. ¡Escríbelo! 💪`)
+      row = (
+        <div onClick={done < coins.coins.length ? () => setDealt(d => d + 1) : undefined}
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 300, cursor: done < coins.coins.length ? 'pointer' : 'default' }}>
+          {coins.coins.map((v, i) => coin(v, i < done, i))}
+        </div>
+      )
+    } else {
+      const have = Math.min(dealt, Math.ceil(coins.target / coins.coin))
+      total = have * coins.coin
+      const reached = total >= coins.target
+      bubble = !reached ? say(language, `Tap to add a ${coins.coin} — stop when you reach ${coins.target}!`, `Dokunarak bir ${coins.coin} ekle — ${coins.target} olunca dur!`, `Toca para añadir una de ${coins.coin}: ¡para al llegar a ${coins.target}!`)
+        : say(language, `${coins.target}! Now count the coins 💪`, `${coins.target} oldu! Şimdi paraları say 💪`, `¡${coins.target}! Ahora cuenta las monedas 💪`)
+      row = (
+        <div onClick={!reached ? () => setDealt(d => d + 1) : undefined}
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 300, minHeight: 56, padding: 8,
+            borderRadius: 16, border: `2px dashed ${reached ? '#ded8f0' : ORANGE}`, background: reached ? 'transparent' : '#fff7ef', cursor: reached ? 'default' : 'pointer' }}>
+          {have ? Array.from({ length: have }, (_, i) => coin(coins.coin, true, i)) : coin(coins.coin, false, 0)}
+        </div>
+      )
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 290,
+        }}>{bubble}</div>
+        {row}
+        <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 24, color: MATH_DEEP }}>{total} {coins.unit}</div>
       </div>
     )
   } else if (fracBar) {

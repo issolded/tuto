@@ -3872,12 +3872,13 @@ function moneyCombine(level, lang) {
     format: 'numeric',
     correct_answer: total,
     operandKey: `money:comb:${parts.map(p => `${p.n}x${p.v}`).sort().join('-')}`,
+    help: { kind: 'coins', mode: 'sum', coins: parts.flatMap(p => Array(p.n).fill(p.v)), unit: many },
     hint_steps: [
       say(lang, `Work out each kind of coin on its own first.`,
                 `Önce her bozuk paranın kendi toplamını bul.`,
                 `Calcula primero cada clase de moneda por separado.`),
       say(lang, `${parts[0].n} coins of ${parts[0].v} is ${parts[0].n} lots of ${parts[0].v}. Then add the other piles on.`,
-                `${parts[0].n} tane ${parts[0].v} kuruşluk demek ${parts[0].v}'nin ${parts[0].n} katı demek. Sonra diğer öbekleri ekle.`,
+                `${parts[0].n} tane ${parts[0].v} kuruşluk demek ${parts[0].v}${trEk(parts[0].v, 'gen')} ${parts[0].n} katı demek. Sonra diğer öbekleri ekle.`,
                 `${parts[0].n} monedas de ${parts[0].v} son ${parts[0].n} veces ${parts[0].v}. Luego suma los otros montones.`),
     ],
   }
@@ -3930,9 +3931,10 @@ function moneyMakeValue(level, lang) {
     format: 'numeric',
     correct_answer: n,
     operandKey: `money:make:${coin}:${total}`,
+    help: { kind: 'coins', mode: 'make', coin, target: total, unit: many },
     hint_steps: [
       say(lang, `Count up in ${coin}s and keep track of how many you have said.`,
-                `${coin}'şer sayarak ilerle ve kaç kez saydığını takip et.`,
+                `${trDist(coin)} ${trDist(coin)} sayarak ilerle ve kaç kez saydığını takip et.`,
                 `Cuenta de ${coin} en ${coin} y lleva la cuenta de cuántas veces.`),
       say(lang, `Or ask: how many ${coin}s fit inside ${total}?`,
                 `Ya da şunu sor: ${total} içine kaç tane ${coin} sığar?`,
@@ -6099,6 +6101,9 @@ function dataSorting(level, lang) {
       : say(lang, 'Which number belongs in the shaded part?', 'Hangi sayı boyalı bölgeye girer?', '¿Qué número va en la parte coloreada?'),
     format: 'choice', options: choiceOf(right, wrongs, { sort: (x, y) => Number(x.value) - Number(y.value) }), correct_answer: right.value,
     operandKey: `sort:${carroll ? 'c' : 'v'}:${A.id}:${B.id}:${target}:${answer}`,
+    // Every option tested against both labels, one cell at a time, in the help panel.
+    help: { kind: 'sorttest', labels: [L(A), L(B)], want: [target[0] === '1', target[1] === '1'],
+            rows: [answer, ...others].sort((x, y) => x - y).map(n => ({ n, fits: [A.test(n), B.test(n)] })) },
     hint_steps: [
       say(lang, 'Read both labels, then test each number against them one at a time.', 'İki etiketi oku, sonra her sayıyı tek tek ikisine göre dene.', 'Lee las dos etiquetas y comprueba cada número con ellas, uno por uno.'),
       need,
