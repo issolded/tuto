@@ -2,7 +2,7 @@ name: Tuto Android preview
 on:
   push:
     branches: [mobile/native-tablet-preview]
-    paths: ['mobile/**', 'src/lib/**', 'src/components/**', 'design/native-icons/**', '.github/workflows/tuto-mobile-preview.yml']
+    paths: ['mobile/**', 'src/lib/**', 'src/components/**', 'design/native-icons/**', 'server/puzzle/**', '.github/workflows/tuto-mobile-preview.yml']
   workflow_dispatch:
 permissions:
   contents: read
