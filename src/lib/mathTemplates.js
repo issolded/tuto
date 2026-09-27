@@ -3869,16 +3869,26 @@ function sequenceTemplate(level, lang) {
 // CHARACTER — "Kerem 50 k veriyor". Same trap as the unit banks in the ratio template, from
 // the other side.
 const MINOR = { en: ['cents', 'cent'], tr: ['kuruş', 'kuruş'], es: ['céntimos', 'céntimo'] }
-// The coins a child actually handles, in the minor unit.
-const COINS = [1, 5, 10, 25, 50]
+// The coins a child actually handles, in the minor unit — the reader's own coins. Turkey mints
+// 1, 5, 10, 25 and 50 kuruş and no 2 or 20 (Darphane's current series); the US has no 2 or 20
+// cent coin either; the euro has both. "How many 2 kuruş coins make 14 kuruş" was a coin that
+// does not exist.
+const COINS_BY_LANG = { en: [1, 5, 10, 25, 50], tr: [1, 5, 10, 25, 50], es: [1, 2, 5, 10, 20, 50] }
+const coinsFor = (lang) => COINS_BY_LANG[lang] ?? COINS_BY_LANG.en
 
 function moneyCombine(level, lang) {
   const [many] = MINOR[lang] ?? MINOR.en
   // Two or three different coins, each with a small count — a purse, not an arithmetic problem
   // in disguise.
-  const kinds = shuffle(COINS).slice(0, randInt(2, 3))
-  const parts = kinds.map(v => ({ v, n: randInt(1, 4) }))
-  const total = parts.reduce((s, p) => s + p.v * p.n, 0)
+  // Year 1 adds within 20: small coins only, and the purse never comes to more — "3 of 5 and 2
+  // of 50" was reaching five-year-olds.
+  const young = bandForLevel(level) <= 1
+  let parts, total
+  do {
+    const kinds = shuffle(coinsFor(lang).filter(v => !young || v <= 10)).slice(0, young ? 2 : randInt(2, 3))
+    parts = kinds.map(v => ({ v, n: randInt(1, young ? 3 : 4) }))
+    total = parts.reduce((s, p) => s + p.v * p.n, 0)
+  } while (young && total > 20)
   const list = listWithAnd(parts.map(p => say(lang,
     // In words, because "1 5c coin" puts two numbers side by side and reads as "15c".
     `${['', 'one', 'two', 'three', 'four'][p.n]} ${p.v}${many === 'cents' ? 'c' : ''} ${p.n === 1 ? 'coin' : 'coins'}`,
@@ -3940,7 +3950,7 @@ function moneyChange(level, lang) {
 
 function moneyMakeValue(level, lang) {
   const [many] = MINOR[lang] ?? MINOR.en
-  const coin = pick([2, 5, 10, 20, 25])
+  const coin = pick(coinsFor(lang).filter(v => v >= 2 && v <= 25))
   const n = randInt(3, 9)
   const total = coin * n
 
@@ -4039,7 +4049,11 @@ function measureConvert(level, lang) {
 
 function measureDifference(level, lang) {
   const band = bandForLevel(level)
-  const set = band <= 2
+  // Year 1 compares within 20 (the curriculum's own line); "a cat is 27 cm, a dog 90 cm" was
+  // reaching five-year-olds from the Year 2 pair.
+  const set = band <= 1
+    ? { unit: 'cm', lo: 4, hi: 20, long: true, a: { en: 'pencil', tr: 'kalem', es: 'lápiz', g: 'm' }, b: { en: 'ruler', tr: 'cetvel', es: 'regla', g: 'f' } }
+    : band <= 2
     ? pick([
       { unit: 'cm', lo: 5, hi: 30, long: true, a: { en: 'pencil', tr: 'kalem', es: 'lápiz', g: 'm' }, b: { en: 'ruler', tr: 'cetvel', es: 'regla', g: 'f' } },
       { unit: 'cm', lo: 20, hi: 90, a: { en: 'cat', tr: 'kedi', es: 'gato', g: 'm' }, b: { en: 'dog', tr: 'köpek', es: 'perro', g: 'm' } },

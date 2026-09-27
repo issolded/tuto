@@ -5472,6 +5472,16 @@ function previousLevelAccuracy(rows, lastProgressRow) {
   return weightedAccuracy(rows.filter(r => r.session_id === newest.session_id)) ?? lastProgressRow.accuracy
 }
 
+// Mirrors src/lib/mathCurriculum.js (BASE_LEVEL_FOR_YEAR + clampLevelToAge) and gemini.js
+// ageToSchoolYear: a year owns the rungs [base - 1, base]. The two halves deploy separately, so
+// this is a copy — change one, change the other.
+const MATH_BASE_LEVEL_BY_AGE = [[6, 2], [7, 4], [8, 6], [9, 8], [10, 10], [11, 12], [12, 14]]
+function mathLevelBand(age) {
+  const n = Number(age)
+  const base = Number.isFinite(n) ? (MATH_BASE_LEVEL_BY_AGE.find(([a]) => n <= a)?.[1] ?? 15) : 6
+  return [base - 1, base]
+}
+
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
   const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
@@ -5483,7 +5493,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // "Checking your work". One read each, and everything that does not depend on another
     // read goes out together.
     const { data: child } = await supabase
-      .from('children').select('id, name, parent_id, task_settings, math_focus').eq('id', childId).maybeSingle()
+      .from('children').select('id, name, age, parent_id, task_settings, math_focus').eq('id', childId).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
     const settings = taskSettingsFor(child.task_settings, 'math', MATH_DEFAULTS)
@@ -5549,10 +5559,16 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     const lastLevelAcc = previousLevelAccuracy(recentRows, last)
     const earnedHereBefore = !!last && last.level === level && lastLevelAcc >= 80 && last.level_change !== 'up'
 
-    let newLevel = level
+    // The year's two rungs, the same band the screen clamps to (mathCurriculum clampLevelToAge).
+    // Only 15 used to stop the climb here, so a child at the top of their year was moved up, the
+    // screen put them back at the start of the next session, and two good sessions later they
+    // were "moved up" again: 2 > 3 > 2 > 3, with "You unlocked a new level!" every time.
+    const [lo, hi] = mathLevelBand(child.age)
+    const at = Math.min(Math.max(Number(level) || lo, lo), hi)
+    let newLevel = at
     let levelChange = 'same'
-    if (levelAcc >= 80 && earnedHereBefore && level < 15) { newLevel = level + 1; levelChange = 'up' }
-    else if (levelAcc < 40 && level > 1) { newLevel = level - 1; levelChange = 'down' }
+    if (levelAcc >= 80 && earnedHereBefore && at < hi) { newLevel = at + 1; levelChange = 'up' }
+    else if (levelAcc < 40 && at > lo) { newLevel = at - 1; levelChange = 'down' }
 
     const { error: progErr } = await supabase.from('math_progress').insert({
       child_id: childId,
