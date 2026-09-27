@@ -433,6 +433,14 @@ export function gapLandmarks(from, to) {
 // "Easy" means no exchanging: every digit of `to` is at least the digit of `r` under it.
 const noExchange = (to, r) => String(r).padStart(String(to).length, '0').split('').every((d, i) => Number(String(to)[i]) >= Number(d))
 
+// The help-panel side of the same gap: the child walks the landmarks, typing each jump, and
+// adds them up. The stops are computed here so the picture and the hint name the same ones.
+export function jumpsHelp(from, to) {
+  if (!(to > from)) return {}
+  const stops = gapLandmarks(from, to)
+  return stops.length >= 2 && stops.length <= 7 ? { help: { kind: 'jumps', from, to, stops } } : {}
+}
+
 function gapSteps(from, to, lang) {
   const N = (n) => num(n, lang)
   if (to - from <= 10 && to <= 100) {
@@ -1452,6 +1460,7 @@ function addSubShort(level, lang, columnar) {
       `Para un concierto se preparan ${made} comidas, pero llegan ${came} personas. ¿Cuántas se quedan sin comida?`),
     answer: came - made,
     key: `asw:short:${made}:${came}`,
+    ...jumpsHelp(made, came),
     hints: [
       say(lang, `The people without a meal are the gap between the people and the meals.`,
                 `Yemeksiz kalanlar, gelen kişi sayısı ile yemek sayısı arasındaki farktır.`,
@@ -1523,6 +1532,7 @@ function addSubWordTemplate(level, lang, columnar = false) {
     correct_answer: p.answer,
     operandKey: p.key,
     hint_steps: p.hints,
+    ...(p.help ? { help: p.help } : {}),
   }
 }
 
@@ -3882,13 +3892,12 @@ function moneyChange(level, lang) {
     format: 'numeric',
     correct_answer: paid - cost,
     operandKey: `money:chg:${paid}:${cost}`,
+    ...jumpsHelp(cost, paid),
     hint_steps: [
       say(lang, `Change is what is left of what you handed over.`,
                 `Para üstü, verdiğin paradan geriye kalandır.`,
                 `El cambio es lo que sobra de lo que has dado.`),
-      say(lang, `Count up from ${cost} to ${paid}, or take ${cost} away from ${paid} — both give the same answer.`,
-                `${cost}'ten ${paid}'e kadar sayarak çık, ya da ${paid}'ten ${cost} çıkar — ikisi de aynı sonucu verir.`,
-                `Cuenta desde ${cost} hasta ${paid}, o resta ${cost} de ${paid}: dan lo mismo.`),
+      ...gapSteps(cost, paid, lang),
     ],
   }
 }
@@ -4029,6 +4038,7 @@ function measureDifference(level, lang) {
     format: 'numeric',
     correct_answer: large - small,
     operandKey: `meas:diff:${set.unit}:${small}:${large}`,
+    ...jumpsHelp(small, large),
     hint_steps: [
       say(lang, `"How much more" asks for the gap between the two, not for either one.`,
                 `"Kaç fazla" sorusu ikisinin arasındaki farkı ister, sayılardan birini değil.`,
@@ -4622,6 +4632,7 @@ function missingNumber(level, lang, add) {
     return {
       topic: 'addition', level, question_text: q, format: 'numeric', correct_answer: total - known,
       operandKey: `miss:add:${known}:${total}`,
+      ...jumpsHelp(known, total),
       hint_steps: [
         say(lang, `The missing number and ${num(known, lang)} make ${num(total, lang)} together.`,
                   `Eksik sayı ile ${num(known, lang)} birlikte ${num(total, lang)} eder.`,
@@ -4655,6 +4666,7 @@ function missingNumber(level, lang, add) {
     topic: 'subtraction', level,
     question_text: `${num(start, lang)} − ? = ${num(left, lang)}`, format: 'numeric', correct_answer: takeAway,
     operandKey: `miss:subB:${start}:${left}`,
+    ...jumpsHelp(left, start),
     hint_steps: [
       say(lang, `How much do you take from ${num(start, lang)} to get down to ${num(left, lang)}?`,
                 `${num(start, lang)} sayısından ne kadar çıkarırsan ${num(left, lang)} kalır?`,
@@ -4819,6 +4831,7 @@ function youngStory(level, lang, add) {
     topic: add ? 'addition' : 'subtraction', level,
     question_text: s.q, format: 'numeric', correct_answer: ans,
     operandKey: `story:${s.key}:${s.a}:${s.b}`,
+    ...(add ? {} : jumpsHelp(s.b, s.a)),
     hint_steps: add
       ? [say(lang, `Both amounts go together, so this is an adding question.`, `İki miktar bir araya geliyor, yani bu bir toplama sorusu.`, `Las dos cantidades se juntan: es una suma.`),
          say(lang, `Add ${N(s.a)} and ${N(s.b)} — split the smaller one into its parts if it helps.`,

@@ -529,7 +529,7 @@ console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / to
 // the same text twice. Reported rather than failed: the number is a direction, and each tool
 // added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
 {
-  const TAUGHT = new Set(['share', 'fill', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const TAUGHT = new Set(['share', 'fill', 'jumps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
   const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
   const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
   console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
