@@ -1,0 +1,34 @@
+# Groups and members that survive every automatic gate and still do not work in an odd-two
+# line. Reviewed by eye in the lab, which is what the lab is for.
+#
+# Everything here passed: safe, common, a noun, not inflected, primary sense, under a
+# child-recognisable root. What no rule can see is the last thing — whether a nine-year-old
+# looking at five words can find the group. Most of these are the `murphy` problem again, a
+# word whose frequency was earned by a sense the category is not about:
+#
+#   organs   variety meat in WordNet, insides to everyone else; `organs` is its own lemma, so
+#            the plural gate does not reach it
+#   das      a hyrax, an African mammal. It scores Zipf 4.6 on the German article
+#   mount    a horse you ride. Nobody under forty means that
+#   vibes    a vibraphone (removed by the plural gate; noted here because it is the same class)
+#
+# The rest are groups that are real and invisible: `nutriment` holds meal, treat and vitamin,
+# which share an ancestor and nothing a child could name.
+#
+# Two sections. `group:` drops a whole category by its WordNet key; a bare word drops that
+# member from every category it appears in, and leaves it in the lexicon — `architecture` and
+# `mount` are perfectly good words to ask the meaning of, they are just not a building and
+# not a horse.
+
+group: placental.n.01
+group: nutriment.n.01
+group: official.n.01
+
+organs
+das
+mount
+architecture
+portfolio
+capsule
+boiler
+fisher

@@ -259,7 +259,7 @@ export default function GoalsScreen() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, paddingTop: 40 }}>
             <TutoMascot size={150} expression="default" style={{ animation: 'fadeUp 0.4s ease both' }} />
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 18, fontWeight: 800, color: '#2D2D2D', textAlign: 'center', lineHeight: 1.6, animation: 'fadeUp 0.4s ease 0.1s both' }}>
-              No goals yet!<br />Ask your parent to add some 🎯
+              {t('goals_empty_1', lang)}<br />{t('goals_empty_2', lang)} 🎯
             </div>
           </div>
         ) : (

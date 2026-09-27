@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 import Opening from './screens/Opening'
@@ -18,8 +18,23 @@ import ParentOnboarding from './screens/ParentOnboarding'
 import ParentChildDetail from './screens/ParentChildDetail'
 import MathScreen from './screens/MathScreen'
 import MathLab from './screens/MathLab'
+// Loaded only when the page is opened. It is a developer page no child reaches, and it pulls
+// the whole puzzle engine and its font gate with it — none of which belongs in the bundle every
+// child downloads to open their home screen.
+const PuzzleLab = lazy(() => import('./screens/PuzzleLab'))
+// Lazy for a sharper version of the same reason: the English engine's lexicon is a 3.8MB data
+// file. The child's screen (EnglishScreen) never imports it — it reads the questions from the
+// server, the way PuzzleScreen does, so the answer never reaches the browser at all.
+const EnglishLab = lazy(() => import('./screens/EnglishLab'))
+const EnglishScreen = lazy(() => import('./screens/EnglishScreen'))
+// Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
+// screen needs.
+const PuzzleScreen = lazy(() => import('./screens/PuzzleScreen'))
+const ReviewScreen = lazy(() => import('./screens/ReviewScreen'))
 import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
+const ChildSettings = lazy(() => import('./screens/ChildSettings'))
+const ScreenControlSettings = lazy(() => import('./screens/ScreenControlSettings'))
 import HomeworkScreen from './screens/HomeworkScreen'
 import DrawingsScreen from './screens/DrawingsScreen'
 
@@ -51,18 +66,28 @@ export default function App() {
         <Route path="/parent/login" element={<ParentLogin />} />
         <Route path="/parent/signup" element={<ParentSignup />} />
         <Route path="/parent/dashboard"   element={session ? <ParentDashboard />   : <Navigate to="/parent/login" />} />
+        <Route path="/parent/settings"    element={session ? <ParentDashboard view="settings" /> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/settings/screen-control" element={session ? <Suspense fallback={null}><ScreenControlSettings /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/settings" element={session ? <TaskSettings /> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/child/:id/review/:ledgerId" element={session ? <Suspense fallback={null}><ReviewScreen parent /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/setup" element={<FamilySetup />} />
         <Route path="/child" element={<ChildPin />} />
+        <Route path="/child/settings" element={<Suspense fallback={null}><ChildSettings /></Suspense>} />
+        <Route path="/child/settings/screen-control" element={<Suspense fallback={null}><ChildSettings screenControl /></Suspense>} />
         <Route path="/child/home" element={<ChildHome />} />
         <Route path="/child/task" element={<MyTree />} />
         <Route path="/child/math" element={<MathScreen />} />
         <Route path="/math-lab" element={<MathLab />} />
+        <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
+        <Route path="/english-lab" element={<Suspense fallback={null}><EnglishLab /></Suspense>} />
         <Route path="/child/stories" element={<StoriesScreen />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
+        <Route path="/child/puzzle" element={<Suspense fallback={null}><PuzzleScreen /></Suspense>} />
+        <Route path="/child/english" element={<Suspense fallback={null}><EnglishScreen /></Suspense>} />
+        <Route path="/child/review/:ledgerId" element={<Suspense fallback={null}><ReviewScreen /></Suspense>} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />
         <Route path="/child/reading" element={<ReadingFlow />} />

@@ -1,4 +1,5 @@
-import { downscale, toBase64 } from './image'
+import { downscale, toBase64 } from './image.js'
+import { langName } from './i18n.js'
 
 // ── British National Curriculum ───────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const BRITISH_CURRICULUM = {
       { id: "y2_subtraction", name: "Subtraction within 100", description: "Subtract ones from a two-digit number, tens from a two-digit number, and two two-digit numbers. Recognise inverse relationship with addition.", operations: ["subtraction"] },
       { id: "y2_multiplication", name: "Multiplication: 2, 5 and 10 tables", description: "Recall and use multiplication facts for the 2, 5 and 10 tables. Calculate multiplication statements using × and = signs. Understand multiplication as repeated addition.", operations: ["multiplication"] },
       { id: "y2_division", name: "Division: 2, 5 and 10", description: "Recall and use division facts related to 2, 5 and 10 tables. Calculate division statements using ÷ and = signs. Solve division problems using arrays.", operations: ["division"] },
-      { id: "y2_fractions", name: "Fractions: ½ ¼ ¾", description: "Recognise, find, name and write fractions 1/3, 1/4, 2/4 and 3/4 of a length, shape, set of objects or quantity. Write simple fractions such as 1/2 of 6 = 3.", operations: ["fractions"] },
+      { id: "y2_fractions", name: "Fractions: ½ ⅓ ¼ ¾", description: "Recognise, find, name and write fractions 1/3, 1/4, 2/4 and 3/4 of a length, shape, set of objects or quantity. Write simple fractions such as 1/2 of 6 = 3.", operations: ["fractions"] },
       { id: "y2_money", name: "Money", description: "Recognise and use symbols for pounds and pence. Combine amounts to make a particular value. Solve simple problems involving addition and subtraction of money including giving change.", operations: ["measurement","addition","subtraction"] },
       { id: "y2_time", name: "Time", description: "Tell and write the time to five minutes including quarter past/to the hour. Draw clock hands. Know the number of minutes in an hour and hours in a day.", operations: ["measurement"] },
       { id: "y2_statistics", name: "Data and Charts", description: "Interpret and construct simple pictograms, tally charts, block diagrams and tables. Ask and answer questions about data.", operations: ["statistics"] }
@@ -81,6 +82,45 @@ const BRITISH_CURRICULUM = {
       { id: "y6_geometry", name: "Geometry", description: "Find unknown angles in triangles, quadrilaterals and regular polygons. Recognise angles where they meet at a point, on a straight line or are vertically opposite.", operations: ["geometry"] },
       { id: "y6_statistics", name: "Statistics", description: "Interpret and construct pie charts and line graphs. Calculate and interpret the mean as an average.", operations: ["statistics"] }
     ]
+  },
+  // Key Stage 3. Added because ages 11, 12 and 13 all collapsed onto Year 6: a hundred-question
+  // audit asked the same question of an eleven-year-old and a thirteen-year-old and got the same
+  // one back, which is what happens when three ages share one topic list and one footing.
+  //
+  // Sourced from the KS3 programme of study, checked line by line against Bond's 11+-12+ Maths
+  // 10 Minute Tests so that what a child is asked here is what a book for this age actually
+  // asks. That book is where the square roots, the ratio-to-lowest-terms, the unknown on both
+  // sides of an equation and the speed-distance-time all come from.
+  //
+  // Year 8 is below, from its own book; this list is now twelve-year-olds' only.
+  year7: {
+    label: "Year 7", age: [11, 12],
+    topics: [
+      { id: "y7_number", name: "Factors, Multiples and Primes", description: "Find factors, multiples, common factors and common multiples. Find the lowest common multiple and highest common factor. Recognise prime numbers, square numbers and cube numbers, and find square roots of square numbers.", operations: ["place_value","multiplication"] },
+      { id: "y7_negatives", name: "Negative Numbers and Rounding", description: "Order and calculate with positive and negative numbers in all four operations. Round to a given number of decimal places. Estimate the answer to a calculation by rounding each number first.", operations: ["addition","subtraction","place_value"] },
+      { id: "y7_fractions", name: "Fractions, Decimals and Percentages", description: "Convert between fractions, decimals and percentages. Order fractions with different denominators. Find a percentage of an amount, including percentage increase and decrease.", operations: ["fractions","decimals"] },
+      { id: "y7_algebra", name: "Algebra: Expressions and Equations", description: "Simplify expressions by collecting like terms. Substitute numbers, including negative numbers, into expressions and formulae. Solve linear equations with the unknown on one or both sides. Write an expression or equation from a description in words.", operations: ["algebra"] },
+      { id: "y7_sequences", name: "Sequences and Function Machines", description: "Continue and describe linear sequences. Generate a sequence from a term-to-term or position-to-term rule. Find the input or the output of a function machine.", operations: ["algebra"] },
+      { id: "y7_ratio", name: "Ratio, Proportion and Rates", description: "Simplify a ratio to its lowest terms. Divide a quantity in a given ratio. Solve direct proportion problems including unit conversion. Use the relationship between speed, distance and time.", operations: ["ratio","division"] },
+      { id: "y7_geometry", name: "Area, Perimeter and Angles", description: "Find the area of rectangles, triangles, parallelograms and compound shapes. Work backwards from a known area or perimeter. Find missing angles in triangles, on a straight line, at a point and in parallel lines.", operations: ["geometry","measurement"] },
+      { id: "y7_statistics", name: "Averages and Probability", description: "Find and interpret the mean, median, mode and range of a set of data, and work backwards from a known average. Express the probability of a single event as a fraction.", operations: ["statistics"] }
+    ]
+  },
+  // Sourced from Bond's Maths Assessment Papers 12+-13+, read paper by paper — the book the
+  // Year 7 comment above was waiting for. Each line is what that book actually asks, and every
+  // topic has its own template (see the Year 8 block in mathTemplates.js).
+  year8: {
+    label: "Year 8", age: [12, 13],
+    topics: [
+      { id: "y8_number", name: "Indices, Primes and Powers", description: "Write a number as a product of prime factors using indices. Find the highest common factor and lowest common multiple of larger numbers. Work with square numbers, square roots, cube numbers and powers, and use the order of operations with nested brackets.", operations: ["multiplication"] },
+      { id: "y8_negatives", name: "Negative Numbers and Decimals", description: "Add, subtract, multiply and divide negative numbers, including decimals and squares. Multiply and divide decimals and round to one or two decimal places. Multiply and divide by 10, 100 and 1000. Compare calculations using <, > and =.", operations: ["addition","subtraction","place_value"] },
+      { id: "y8_fractions", name: "Fractions, Decimals and Percentages", description: "Add, subtract, multiply and divide fractions and mixed numbers, giving answers in lowest terms. Find a percentage of an amount, a percentage discount and the original amount before a percentage change. Order fractions, decimals and percentages, and write decimals as fractions.", operations: ["fractions","decimals"] },
+      { id: "y8_algebra", name: "Algebra: Brackets and Equations", description: "Expand and simplify expressions with brackets, including two brackets multiplied together. Factorise by taking out common factors. Solve linear equations with brackets and unknowns on both sides, and simultaneous equations. Substitute into formulae, and form an equation from two shapes of equal area.", operations: ["algebra"] },
+      { id: "y8_sequences", name: "Sequences and Straight-line Graphs", description: "Find the nth term of a linear sequence and use it to find any term. Continue sequences that are not linear. Complete a table of values for a function, match straight-line graphs to their equations and find where two lines cross.", operations: ["algebra"] },
+      { id: "y8_ratio", name: "Ratio, Proportion and Rates", description: "Share in a ratio of three or four parts and use equivalent ratios. Solve direct and inverse proportion problems, gear-wheel problems and average speed. Convert between metric and imperial units, units of area and units of time, and find the effect of a scale factor on area.", operations: ["ratio","division"] },
+      { id: "y8_geometry", name: "Volume, Circles and Angles", description: "Find the volume and surface area of cuboids. Use the circumference and area of a circle with π taken as 3.14. Use Pythagoras' theorem. Find angles with parallel lines, in isosceles triangles and in regular polygons. Find areas of compound shapes and enlarge a shape from the origin.", operations: ["geometry","measurement"] },
+      { id: "y8_statistics", name: "Statistics and Probability", description: "Find the mean, median and range, including the mean from a frequency table and of two groups combined. Count data into groups and describe correlation on a scatter graph. Find probabilities for two dice, a pack of cards and a bag of counters as fractions in lowest terms.", operations: ["statistics"] }
+    ]
   }
 }
 
@@ -91,7 +131,13 @@ export function ageToSchoolYear(age) {
   if (n === 8) return 'year3'
   if (n === 9) return 'year4'
   if (n === 10) return 'year5'
-  return 'year6'
+  // Eleven is the last year of primary and keeps Year 6. Everything above it used to keep Year 6
+  // as well, so a thirteen-year-old was offered a ten-year-old's topic list — the audit found
+  // the same starting question at 11 and at 13 and named it. Twelve is Year 7 (Bond 11+-12+);
+  // thirteen and up is Year 8 (Bond 12+-13+), the last book on the ladder.
+  if (n === 11) return 'year6'
+  if (n === 12) return 'year7'
+  return 'year8'
 }
 
 export { BRITISH_CURRICULUM }
@@ -101,7 +147,10 @@ export { BRITISH_CURRICULUM }
 // Gemini calls go through the backend now — the API key must never ship in
 // the client bundle (it did before, got scraped and flagged as leaked by
 // Google, which broke Gemini access everywhere, frontend and backend alike).
-const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
+// Optional chaining because this module is also imported by `npm run math:check`, where
+// there is no Vite and `import.meta.env` is undefined — reading a property off it threw at
+// module load and took the curriculum data down with it.
+const SERVER = import.meta.env?.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 const API_URL = `${SERVER}/api/gemini/generate`
 
 // Camera photos are shrunk first: a full-resolution capture is several MB, base64 inflates
@@ -210,7 +259,7 @@ export async function callGeminiJSON(prompt) {
 // by matching the word in that text.
 export async function readStory(photos, topic, age, language = 'en') {
   const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `You are an expert at reading young children's handwriting. A ${n}-year-old child has written a story on the topic: "${topic}". Read it, then judge it.
 
 First read the WHOLE page and understand the story the child is telling — its meaning and flow. THEN, for each part, infer the word the child most likely INTENDED, using sentence and story context.
@@ -257,14 +306,14 @@ Rules:
 // The language matters here or the check does harm: a Turkish title run through an English
 // spell check comes back "corrected" into nonsense.
 export async function checkTitleSpelling(title, language = 'en') {
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `Check this ${lang} story title for spelling errors: "${title}". The title is written in ${lang} — judge it as ${lang}, and if it is already correct return it unchanged. Return JSON only: { "corrected": "corrected title or same if no errors", "has_errors": true or false }`
   return callGemini([{ text: prompt }])
 }
 
 export async function generateStoryIdeas(age, language = 'en') {
   const n = Number(age) || 7
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `Generate 4 creative and imaginative story ideas for a ${n}-year-old child in ${lang}. Each idea should be fun, age-appropriate, and spark curiosity. Return JSON only: { "ideas": [ { "emoji": string, "title": string, "topic": string, "description": string } ] }`
   return callGemini([{ text: prompt }])
 }
@@ -295,7 +344,7 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
   // answer "A baker has 1 kg of flour" however Turkish the buttons around it are. The topic
   // descriptions stay in English — they are curriculum text written for the model, not for the
   // child — and only the questions themselves change language.
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const list = topics.map((t, i) => `Q${i + 1} — "${t.name}": ${t.description}`).join('\n')
   const avoidClause = previousQuestions.length > 0
     ? `\nDo NOT repeat or lightly reword these recent questions: ${JSON.stringify(previousQuestions.slice(-20))}`
@@ -311,7 +360,12 @@ export async function generateCurriculumQuestions(age, level, topics, previousQu
   // amount was never the problem — the coin NAMES were, since "quarter" and "kuruş" only mean
   // something where they are spent. Dollars rather than pounds for English: these readers are not
   // all in Britain, and $ is the one symbol a child anywhere has seen.
-  const currency = language === 'tr' ? 'Turkish lira, written as "15 TL"' : 'dollars, written as "$15"'
+  // Spanish gets euros for the same reason English gets dollars rather than pounds: the symbol
+  // has to be one the reader has actually seen. It is the one place the choice is tied to a
+  // country rather than a language — see the es-ES note in i18n.js.
+  const currency = language === 'tr' ? 'Turkish lira, written as "15 TL"'
+    : language === 'es' ? 'euros, written as "15 €"'
+    : 'dollars, written as "$15"'
   // A minority, not none: the curriculum asks for reasoning as its own strand, and a session of
   // nothing but bare sums stops testing whether the child can find the sum in the first place.
   const wordBudget = Math.max(1, Math.round(topics.length * 0.3))
@@ -355,6 +409,15 @@ FORMAT — the question is shown to the child as ONE run of plain text, so:
   and 5 cats" points at a blank space. Write "There are 8 dogs and 5 cats" instead. Same for
   angles and shapes: state every measurement the child needs, never "the angle marked x in the
   diagram".
+- SAYING IT WITHOUT A PICTURE MUST STILL BE TRUE. Having to describe a figure in words tempts a
+  false shorthand, and a hundred-question audit caught one: "A straight line has 2 angles. If 1
+  angle is 45 degrees, what is the other angle?" A straight line does not have two angles. What
+  is meant is two adjacent angles on it: "Two angles sit next to each other on a straight line.
+  One is 45 degrees. What is the other?" Check the same way for triangles, quadrilaterals and
+  anything at a point — name what the angles BELONG to.
+- THOUSANDS SEPARATORS in any number of five digits or more, in the local style: 4,200,000 and
+  6,270,000 in English, 4.200.000 in Turkish and Spanish. "6270000" is a wall of digits a child
+  has to count through before the question can even start.
 
 NUMBERS THE CHILD CAN HOLD IN THEIR HEAD — most children answer on screen, with nothing to
 write on, so a question that needs a column method gets abandoned rather than failed. A real
@@ -412,7 +475,7 @@ export async function evaluateMath(photos, questions, answers, age, level, langu
   // their Telegram message. Both follow the child's language — in a family where the two
   // differ the note arrives in the child's language, which is the lesser oddity of the two
   // and the one that keeps the child's own screen right.
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const clampedLevel = Math.min(Math.max(Number(level) || 1, 1), 15)
   const questionsText = questions.map((q, i) => `Q${i + 1}: ${q} (correct answer: ${answers[i]})`).join('\n')
   const prompt = `Evaluate this ${age}-year-old child's math work photo.

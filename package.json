@@ -8,7 +8,18 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "fonts": "node scripts/fetch-puzzle-fonts.mjs",
+    "fonts:check": "node scripts/fetch-puzzle-fonts.mjs --check",
+    "puzzle:check": "node scripts/sync-puzzle-engine.mjs --check && node --test scripts/tests/puzzle-spatial.test.mjs && node scripts/puzzle-audit.mjs",
+    "puzzle:sync": "node scripts/sync-puzzle-engine.mjs",
+    "puzzle:pixels": "node scripts/puzzle-pixels.mjs",
+    "puzzle:webkit": "node scripts/puzzle-webkit.mjs",
+    "font:check": "node scripts/font-check.mjs",
+    "english:lexicon": "python3 scripts/english/build_lexicon.py",
+    "english:check": "node scripts/sync-puzzle-engine.mjs --check && node scripts/english-audit.mjs",
+    "math:check": "node --test scripts/tests/*.test.mjs && node scripts/math-audit.mjs",
+    "test": "node --test scripts/tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

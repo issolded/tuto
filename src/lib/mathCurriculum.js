@@ -18,7 +18,7 @@
 //
 // A session draws across topics rather than drilling one, which is what makes a quiz look
 // like a quiz instead of a worksheet.
-import { BRITISH_CURRICULUM, ageToSchoolYear } from './gemini'
+import { BRITISH_CURRICULUM, ageToSchoolYear } from './gemini.js'
 
 // Which curriculum topics a code template can actually express, decided one topic at a time.
 //
@@ -65,10 +65,67 @@ const TEMPLATE_FOR_TOPIC = {
   y4_fractions: 'fraction-of-number',
   y4_geometry: 'geometry',
 
-  y5_addition: 'addition',
+  // Year 5 is where addition leaves the bare "a + b = ?" and goes inside a story, the way
+  // Bond's 10-11 book asks it; the bare template stays for the years that are learning the sum.
+  y5_addition: 'add-sub-word',
   y5_multiplication: 'multiplication-word',
   y5_division: 'division-word',
   y5_fractions: 'fraction-of-number',
+  y5_decimals: 'decimals-percentages',
+
+  // ── Year 6 and Year 7 ──────────────────────────────────────────────────────
+  // Year 6 had no entry at all until now, which is the single fact behind the hundred-question
+  // audit's "every question for ages 11-13 came from the model": three ages mapped onto a year
+  // with nothing to map to.
+  // Years 4 and 5 name a place-value topic too, and it is the same template one band down —
+  // its rounding places and its number sizes follow the year. Year 3's "Numbers to 1000" is
+  // NOT mapped: that year's line is comparing and ordering, and it does not round at all, so
+  // pointing it here would label an ordering topic with a rounding question — the exact
+  // mismatch the hundred-question audit's first finding was about.
+  y3_place_value: 'place-value',
+  y4_measurement: 'area-grid',
+  y4_statistics: 'chart',
+  y5_statistics: 'chart',
+  y4_place_value: 'place-value',
+  y5_place_value: 'place-value',
+  y6_place_value: 'place-value',
+  // Year 7's rounding-and-negatives topic is the same template one band up — the shapes it
+  // adds there (decimal places) belong to exactly this topic.
+  y7_negatives: 'place-value',
+  y6_algebra: 'algebra',
+  y7_algebra: 'algebra',
+  y6_multiplication: 'long-mult-div',
+  y1_measurement: 'measurement',
+  y2_money: 'money',
+  y3_measurement: 'measurement',
+  y7_number: 'number-properties',
+  y7_sequences: 'sequence',
+  // y5_statistics is NOT mapped, and it was, which is the mistake worth leaving written here.
+  // Year 5's line reads "solve comparison, sum and difference problems using information in a
+  // line graph; complete and interpret information in a table" — no mean anywhere. The mean
+  // arrives in Year 6. Pointing Year 5 at the averages template put a mean question under a
+  // topic labelled line graphs and tables, which is precisely the mismatch the hundred-question
+  // audit's first finding was about, committed in the change that claimed to be avoiding it.
+  // It needs a line-graph and table template, and that needs drawing code.
+  y6_statistics: 'averages',
+  y7_statistics: 'averages',
+  y5_geometry: 'geometry',
+  y6_geometry: 'geometry',
+  y7_geometry: 'geometry',
+  y6_fractions: 'fraction-of-number',
+  y7_fractions: 'fraction-of-number',
+  y6_ratio: 'ratio',
+  y7_ratio: 'ratio',
+
+  // Year 8, one template each (Bond 12+-13+).
+  y8_number: 'powers-primes',
+  y8_negatives: 'negatives-decimals',
+  y8_fractions: 'fdp',
+  y8_algebra: 'algebra-8',
+  y8_sequences: 'sequences-graphs',
+  y8_ratio: 'ratio-8',
+  y8_geometry: 'geometry-8',
+  y8_statistics: 'stats-8',
 
   // Deliberately absent, and it is worth saying why rather than leaving a silent gap:
   // money (no template), place value past 100 (the counting template draws objects),
@@ -94,7 +151,10 @@ export function templateTopicFor(topic) {
 // parent screens and the levelling rules are all built on it — but it now means "how hard",
 // not "about what", so a child starts at their year's footing rather than at whichever rung
 // happened to name an operation they could do.
-const BASE_LEVEL_FOR_YEAR = { year1: 2, year2: 4, year3: 6, year4: 8, year5: 10, year6: 12 }
+// Year 8 sits on 15, the top of the dial (the server never levels past it). Its band overlaps
+// Year 7's by one rung, which is harmless: every Year 8 topic has its own template, so the year's
+// content is chosen by the topic, not by the level.
+const BASE_LEVEL_FOR_YEAR = { year1: 2, year2: 4, year3: 6, year4: 8, year5: 10, year6: 12, year7: 14, year8: 15 }
 
 export function startingLevelForAge(age) {
   return BASE_LEVEL_FOR_YEAR[ageToSchoolYear(age)] ?? 6
@@ -156,19 +216,56 @@ export function planSession(age, count, recentTopicIds = [], weighting = {}) {
   const seen = topics.filter(t => recent.has(t.id))
   const ordered = [...shuffle(fresh), ...shuffle(seen)]
 
-  const plan = []
+  // First lap: every topic once, fresh ones first.
+  const plan = ordered.slice(0, remaining)
+
+  // Slots left after the lap go to the STRAND the session has least of, not to a random topic.
+  // The year's topic list is not balanced: Year 6 names seven topics and five of them are number
+  // or algebra, so random extras doubled two number topics in 85% of sessions and a session
+  // came out seven parts number to one of shape and one of data. Bond's 10-11 skills tests are
+  // five shape, five number, three data and two algebra out of fifteen — the balance a child
+  // sitting the 11+ is actually asked for. Filling by strand gives Year 6 about 5 / 3 / 2.
+  // Within a strand the least-used topic goes next, so no topic comes round a third time while
+  // another in its strand has been used once.
+  const used = new Map()
+  for (const t of [...weighted, ...plan]) used.set(t.id, (used.get(t.id) || 0) + 1)
+  const strandCount = () => {
+    const c = new Map()
+    for (const t of [...weighted, ...plan]) c.set(strandOf(t.id), (c.get(strandOf(t.id)) || 0) + 1)
+    return c
+  }
   while (plan.length < remaining) {
-    // A year with eight topics and a ten-question session covers all eight, then comes back
-    // round for two. Re-shuffling each lap keeps which two from being the same every time.
-    const lap = plan.length === 0 ? ordered : shuffle(topics)
-    for (const t of lap) {
-      if (plan.length >= remaining) break
-      plan.push(t)
-    }
+    const counts = strandCount()
+    const strands = [...new Set(topics.map(t => strandOf(t.id)))]
+    // Number counts at half weight: it is still the heart of every year, it just no longer gets
+    // the spare slots by default. Year 1, whose six topics are four number and two shape, stays
+    // mostly number; Year 6 moves from 7/1/1 to about 5/3/2.
+    const load = s => (counts.get(s) || 0) / (s === 'number' ? 2 : 1)
+    const least = Math.min(...strands.map(load))
+    const strand = pick(strands.filter(s => load(s) === least))
+    const pool = topics.filter(t => strandOf(t.id) === strand)
+    const fewest = Math.min(...pool.map(t => used.get(t.id) || 0))
+    const next = pick(pool.filter(t => (used.get(t.id) || 0) === fewest))
+    plan.push(next)
+    used.set(next.id, (used.get(next.id) || 0) + 1)
   }
   // Interleaved rather than front-loaded: three fraction questions in a row reads as a
   // punishment, the same three spread through the session read as a session.
   return shuffle([...weighted, ...plan])
+}
+
+// Which part of maths a curriculum topic belongs to, read off its id. Measurement sits with
+// shape because Bond files it there ("Shape and Space" holds perimeter, units and scales);
+// time and money are their own strand in the young years, where they are whole topics.
+export function strandOf(id) {
+  if (/geometry|shapes|measurement/.test(id)) return 'shape'
+  if (/statistics/.test(id)) return 'data'
+  if (/time|money/.test(id)) return 'measure'
+  return 'number'
+}
+
+function pick(list) {
+  return list[Math.floor(Math.random() * list.length)]
 }
 
 function shuffle(list) {

@@ -1,0 +1,62 @@
+# Words that may appear INSIDE a WordNet definition without disqualifying the word being
+# defined — but that still may never be an answer or an option themselves.
+#
+# The definition scan does two jobs and they are not the same job. It keeps an unsafe SENSE
+# out of the child's sight, which is right: `crack` and `pot` are innocent lemmas carrying
+# senses a nine-year-old's quiz has no business in. It also decides whether a WORD exists at
+# all, and there it does collateral damage, because WordNet's phrasing is a lexicographer's.
+#
+# `valley` is "a long depression in the surface of the land". `clan` and `akin` are "related
+# by blood". `cattle` is "domesticated bovine animals... regardless of sex". Each of those
+# words is entirely safe and each was absent from the lexicon. Measured: 142 common words
+# whose lemma is clean and whose every sense trips this scan.
+#
+# So a word on this list stops a definition from being SHOWN — `valley` gets no definition
+# question — without stopping the word from existing. Everything not on this list still does
+# both, which is why the sexual vocabulary, the slurs and the drugs are not here: a word
+# whose only meaning is one of those should not exist in a children's lexicon at all.
+
+blood
+bleed
+depression
+disease
+death
+dead
+die
+dying
+kill
+killing
+war
+warfare
+crime
+criminal
+sick
+sickness
+wound
+wounded
+violence
+violent
+drunk
+alcohol
+tobacco
+prison
+victim
+weapon
+gun
+knife
+army
+soldier
+battle
+enemy
+holy
+sacred
+religion
+religious
+god
+faith
+prayer
+pray
+worship
+church
+temple
+priest

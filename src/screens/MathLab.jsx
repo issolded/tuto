@@ -1,6 +1,9 @@
+import MathGeometry from '../components/MathGeometry'
+import MathChart from '../components/MathChart'
+import MathFigure from '../components/MathFigure'
 import { t, childLang } from '../lib/i18n'
 import { useState } from 'react'
-import { generateProblem, TOPICS } from '../lib/mathTemplates'
+import { generateProblem, TOPICS, dnum } from '../lib/mathTemplates'
 import { HelpPanel, Pictogram } from './MathScreen'
 
 // Isolated pilot for the math template engine (src/lib/mathTemplates.js). Not linked from
@@ -30,10 +33,15 @@ export default function MathLab() {
     setHelp(null)
   }
 
-  const check = () => {
-    if (input.trim() === '') return
-    const numeric = Number(input)
-    const ok = numeric === problem.correct_answer
+  // A choice answer is the option's own text — "7:4", "5/8" — which Number() turns into NaN,
+  // so it compares as text. The same rule MathScreen's sameAnswer uses, for the same reason.
+  const check = (picked = null) => {
+    const given = picked ?? input
+    if (String(given).trim() === '') return
+    const numeric = Number(given)
+    const ok = Number.isFinite(numeric) && Number.isFinite(Number(problem.correct_answer))
+      ? numeric === Number(problem.correct_answer)
+      : String(given).trim() === String(problem.correct_answer).trim()
     setResult(ok ? 'correct' : 'wrong')
     if (!ok) {
       setHelp(h => ({ guess: numeric, round: (h?.round ?? 0) + 1 }))
@@ -80,21 +88,60 @@ export default function MathLab() {
             <Pictogram unit={problem.visual.unit} each={problem.visual.each} rows={problem.visual.rows} />
           </div>
         )}
+        <div style={{ background: 'white', borderRadius: 12, marginBottom: 12 }}>
+          <MathGeometry visual={problem.visual} language={lang} hint={hintShown > 0} description={problem.question_text} />
+          <MathChart visual={problem.visual} language={lang} description={problem.question_text} />
+          <MathFigure visual={problem.visual} language={lang} hint={hintShown > 0} description={problem.question_text} />
+        </div>
         <div style={{ fontSize: 18, marginBottom: 16 }}>{problem.question_text}</div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input
-            type="number"
-            value={input}
-            onChange={e => { setInput(e.target.value); setResult(null) }}
-            onKeyDown={e => e.key === 'Enter' && check()}
-            placeholder={t('lab_your_answer', lang)}
-            style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, padding: '8px 10px', borderRadius: 8, border: 'none' }}
-          />
-          <button onClick={check} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#2EC486', color: 'white', fontFamily: 'monospace', cursor: 'pointer' }}>
-            Check
-          </button>
-        </div>
+        {/* A choice question has no typable answer — 7:4 and 5/8 are not numbers — so until now
+            the sandbox showed a number pad against a question the number pad cannot answer, and
+            every fraction, ratio and probability template was untestable here. Each option
+            carries its own `why`, which is the part worth seeing: it is what the child is told
+            after picking that particular wrong one. */}
+        {problem.format === 'choice' ? (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {problem.options.map(o => {
+              const chosen = input === o.value
+              const isRight = String(o.value) === String(problem.correct_answer)
+              return (
+                <button
+                  key={o.value}
+                  onClick={() => { setInput(o.value); check(o.value) }}
+                  style={{
+                    textAlign: 'left', padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+                    fontFamily: 'monospace', fontSize: 15, border: '1px solid #2c2f4a',
+                    background: result && chosen ? (isRight ? '#1d4b38' : '#4b1d24') : '#242844',
+                    color: 'white',
+                  }}
+                >
+                  <div>{dnum(o.value, lang)}{result && isRight ? '  ✓' : ''}</div>
+                  {result && chosen && (
+                    <div style={{ fontSize: 12, color: '#b9b2d0', marginTop: 6 }}>{o.why}</div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input
+              /* 'decimal' templates answer with a point in them, and type="number" on its own
+                 is fine for that — it is the step attribute that would reject it. */
+              type="number"
+              step="any"
+              value={input}
+              onChange={e => { setInput(e.target.value); setResult(null) }}
+              onKeyDown={e => e.key === 'Enter' && check()}
+              placeholder={t('lab_your_answer', lang)}
+              style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, padding: '8px 10px', borderRadius: 8, border: 'none' }}
+            />
+            <button onClick={() => check()} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#2EC486', color: 'white', fontFamily: 'monospace', cursor: 'pointer' }}>
+              Check
+            </button>
+          </div>
+        )}
 
         {result === 'correct' && <div style={{ marginTop: 12, color: '#2EC486' }}>✅ correct — answer was {problem.correct_answer}</div>}
         {result === 'wrong' && <div style={{ marginTop: 12, color: '#FF6B6B' }}>❌ not quite — you said {input}</div>}
@@ -111,7 +158,7 @@ export default function MathLab() {
             questionType="symbolic"
             templateTopic={problem.topic}
             hintSteps={problem.hint_steps}
-            visual={problem.visual}
+            visual={problem.help ?? problem.visual}
             onDone={() => { setHelp(null); setInput(''); setResult(null) }}
             onHelpUsed={() => {}}
             language={lang}

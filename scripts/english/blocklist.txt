@@ -1,0 +1,1223 @@
+# Words and senses that never enter the English module's lexicon.
+#
+# WordNet is an adult dictionary. It carries slurs, sexual vocabulary, weapons, drugs and
+# self-harm, and its own markers do not catch them: `slut` is zipf 3.8 with an empty
+# usage_domains and the lexname `noun.person`, exactly like `teacher`. Frequency does not
+# separate them either — `kill` and `damn` are more common than `pillow`. So the separation
+# has to be a list, written down and reviewed, not inferred.
+#
+# Three gates use this file (scripts/english/build_lexicon.py):
+#   1. the lemma itself is dropped
+#   2. any SENSE whose definition or example sentence contains one of these (on a word
+#      boundary) is dropped — this is the one that matters, because a safe word can carry an
+#      unsafe sense: `crack`, `pot`, `joint`, `shot`, `high` are all innocent as lemmas
+#   3. any CATEGORY whose hypernym name matches is dropped whole
+#
+# Matching is whole-word, case-insensitive, plus the simple inflections (-s -es -ed -ing).
+# Substrings are NOT matched: `kill` must not take `skill`, `rape` must not take `grape`,
+# `arse` must not take `coarse`, `ass` must not take `class`, `cock` must not take `cockpit`.
+#
+# A line starting with # is a comment. One word per line.
+
+# --- profanity, slurs, insults ---
+arse
+arsehole
+ass
+asshole
+bastard
+bitch
+bloody
+bollocks
+bugger
+crap
+cunt
+damn
+dick
+dickhead
+dyke
+fag
+faggot
+fuck
+git
+goddamn
+hell
+hoe
+idiot
+imbecile
+jerk
+loser
+moron
+nigger
+piss
+prick
+pussy
+queer
+retard
+retarded
+shit
+slag
+slut
+spastic
+tart
+tosser
+twat
+wanker
+whore
+
+# --- sexual ---
+adultery
+affair
+aroused
+bordello
+breast
+brothel
+carnal
+climax
+coitus
+condom
+copulate
+erection
+erotic
+escort
+fetish
+fondle
+foreplay
+fornicate
+genital
+genitalia
+gigolo
+groin
+hooker
+horny
+incest
+intercourse
+lesbian
+lewd
+libido
+lingerie
+lust
+masturbate
+naked
+nude
+nudity
+obscene
+orgasm
+orgy
+penis
+pervert
+phallus
+porn
+pornography
+prostitute
+prostitution
+puberty
+rape
+rapist
+seduce
+seduction
+semen
+sex
+sexual
+sexy
+sperm
+strip
+stripper
+testicle
+topless
+vagina
+virgin
+virginity
+vulva
+whorehouse
+
+# --- violence, weapons, war ---
+# `knife` is NOT here, and was. It is cutlery before it is a weapon, it is in every kitchen a
+# child has ever been in, and it is the canonical example of the plural rule the 9-10 book
+# teaches — `knife`, `wife`, `life`, `leaf`, `half` all take -ves. Blocking it cost the best
+# example of a rule for the sake of a sense nobody was going to ask about.
+ammunition
+artillery
+assassin
+assassinate
+assault
+atrocity
+bayonet
+behead
+bloodshed
+bomb
+bombing
+brutal
+brutality
+bullet
+carnage
+cartridge
+combat
+dagger
+detonate
+execute
+execution
+firearm
+genocide
+grenade
+gun
+gunfire
+gunman
+gunshot
+hostage
+lynch
+machete
+manslaughter
+massacre
+maul
+militia
+missile
+molest
+mortar
+munition
+murder
+murderer
+mutilate
+pistol
+rifle
+revolver
+sabotage
+savage
+shoot
+shooting
+shotgun
+slaughter
+slay
+sniper
+stab
+strangle
+sword
+terrorism
+terrorist
+torture
+warfare
+weapon
+
+# --- death, self-harm, grief ---
+autopsy
+bereaved
+bereavement
+casket
+coffin
+corpse
+cremate
+cremation
+dead
+deadly
+death
+deceased
+decompose
+dying
+embalm
+euthanasia
+fatal
+funeral
+grave
+graveyard
+hearse
+hospice
+morgue
+mortuary
+mourn
+mourning
+obituary
+overdose
+posthumous
+suicidal
+suicide
+tomb
+undertaker
+widow
+widower
+
+# --- drugs, alcohol, tobacco, gambling ---
+addict
+addiction
+alcohol
+alcoholic
+amphetamine
+beer
+booze
+brandy
+cannabis
+casino
+champagne
+cider
+cigar
+cigarette
+cocaine
+drunk
+drunkard
+drunken
+gamble
+gambling
+gin
+hashish
+heroin
+inebriated
+intoxicated
+jackpot
+junkie
+liquor
+lottery
+marijuana
+morphine
+narcotic
+nicotine
+opium
+pub
+rum
+sedative
+sober
+stoned
+tavern
+tipsy
+tobacco
+vodka
+whisky
+whiskey
+wine
+
+# --- crime, abuse, cruelty ---
+abduct
+abuse
+arson
+bigot
+bigotry
+blackmail
+bribe
+bribery
+bully
+bullying
+burglar
+burglary
+convict
+corruption
+cruelty
+deport
+extortion
+felon
+felony
+fraud
+gang
+gangster
+harass
+harassment
+hatred
+hijack
+hostility
+humiliate
+imprison
+imprisoned
+interrogate
+kidnap
+kidnapper
+loot
+mafia
+mugger
+mugging
+neglect
+oppression
+persecute
+persecution
+pimp
+prison
+prisoner
+racism
+racist
+ransom
+robber
+robbery
+sadism
+sadistic
+slave
+slavery
+smuggle
+smuggler
+terror
+theft
+thug
+torment
+trafficking
+vandalism
+victim
+
+# --- bodily functions, toilet ---
+bowel
+buttock
+constipation
+defecate
+diarrhoea
+diarrhea
+excrement
+faeces
+feces
+flatulence
+manure
+menstruate
+menstruation
+mucus
+pee
+phlegm
+poo
+pus
+sewage
+urinate
+urine
+vomit
+
+# --- illness, medical distress ---
+abortion
+amputate
+amputation
+anorexia
+autopsy
+bulimia
+cancer
+carcinoma
+chemotherapy
+coma
+contagion
+dementia
+depression
+disease
+euthanize
+hallucinate
+hemorrhage
+haemorrhage
+infection
+insane
+insanity
+leprosy
+lunatic
+madhouse
+malignant
+miscarriage
+paralysis
+plague
+psychiatric
+psychotic
+schizophrenia
+seizure
+stillbirth
+stroke
+terminal
+trauma
+tumour
+tumor
+ulcer
+
+# --- religion and politics, where a quiz has no business ---
+blasphemy
+communism
+crucifixion
+crusade
+damnation
+fascism
+fascist
+heathen
+heresy
+heretic
+infidel
+jihad
+martyr
+nazi
+pagan
+sacrilege
+sect
+sin
+sinner
+damned
+
+# --- second pass, after scanning what the first build let through ---------------------
+# The first build kept `kill` (it was in the docstring, not the list). Scanning a wider probe
+# turned up the rest. The line drawn here is distressing-or-adult on one side, ordinary
+# children's-book vocabulary on the other, and the book itself settles several of the calls:
+# Bond 8-9 has "Snow White took a bite out of a poisonous apple" and "the fierce waves
+# smashed against the harbour wall", so `poison`, `bite`, `fierce` and `smash` stay. So do
+# `ghost`, `witch`, `scream`, `nightmare`, `burn`, `bruise`, `hurt`, `flood`, `earthquake`,
+# `army`, `battle` and `fight` — a quiz that cannot say `fight` cannot describe a playground.
+# What goes is the vocabulary of real harm: dying, bleeding, going without.
+kill
+killer
+killing
+die
+dying
+bleed
+blood
+wound
+wounded
+violence
+violent
+revenge
+threat
+threaten
+suffocate
+drown
+choke
+agony
+despair
+starve
+starvation
+famine
+refugee
+orphan
+poverty
+beggar
+divorce
+tragedy
+spank
+whip
+demon
+devil
+curse
+
+# --- words whose frequency lies -------------------------------------------------------
+# Not a safety entry. wordfreq counts a token, not a meaning, so a common NAME lends its
+# frequency to a rare common-noun spelling of itself. `murphy` scores Zipf 4.3 — higher than
+# `pillow` — on the strength of every Murphy ever written, and WordNet's only sense for it is
+# a slang word for potato. The capitalised-elsewhere gate catches this class wherever WordNet
+# also holds the name; these are the ones where it does not.
+murphy
+
+# --- innocent spellings with a playground second life ---------------------------------
+# These reach a quiz as ordinary nouns (`cock` is a male bird, `tit` is a small one) and land
+# in a classroom as something else. A word whose first reading to a nine-year-old is a
+# snigger is not testing vocabulary.
+cock
+tit
+knob
+willy
+fanny
+booby
+bum
+grief
+
+# --- found in the browser, in the first question on the screen ------------------------
+# "received con___med reports of casualties" — a hidden-word question about `confirmed`,
+# built from a WordNet example sentence. Every word in it cleared the readability bar;
+# `casualties` is common enough to pass any frequency gate ever written. It means dead
+# people. The words below are the rest of that class: safe-looking, unsafe in meaning.
+# The grown-up-but-harmless vocabulary that came with it (war, court, economy, president)
+# is in scripts/english/sentence-topics.txt instead, because those words are fine to ask
+# about and only wrong as a scene.
+casualty
+fatality
+fatalities
+mortality
+bereave
+maimed
+mutilated
+slain
+massacred
+perish
+perished
+
+# --- found in the lab, second browser pass ---------------------------------------------
+# `drug` itself was missing while ten of its hyponyms were listed, and it turned up as a
+# filler option next to `vary, send, adjust, examine`. The rest came out of sentences that
+# the concrete-noun rule was rejecting for a different reason ("Please don't advertise the
+# fact that he has AIDS") — caught there by luck, listed here on purpose.
+drug
+drugs
+aids
+hiv
+dope
+overdosed
+addicted
+
+# --- absorbed from profane-words, which was then dropped -------------------------------
+# scripts/english/vendor/ held a fourth list, zacanger/profane-words, under LGPL-3.0. It was
+# removed: it is the only copyleft licence among the four and the lists ship inside the app
+# bundle, which is not a question worth carrying for a word list. What it protected against
+# that the other three did not, once its plurals of already-blocked words are set aside, was
+# 50 entries in our frequency band. Half of those were false alarms it would have cost us
+# (`leper`, `licking`, `clamps`, `vixen`, `bombers`, `hummer`, `nimrod`, `penthouse`). The
+# real ones are here, read one by one.
+aryan
+bimbo
+doggie
+dogging
+douche
+ganja
+goddam
+klan
+labia
+lucifer
+lusty
+nazism
+pcp
+perversion
+phallic
+rectal
+reich
+sadist
+snuff
+squirting
+stoner
+transsexual
+uzi
+valium
+wench
+
+# --- religion, all of it -----------------------------------------------------------------
+# A decision rather than a safety finding. The lab showed 110 of 3200 questions touching a
+# religious word, nearly all of them harmless — `pray` and `bishop` sitting as unrelated
+# distractors. But some were not: `religious → secular` generates today, and the lexicon holds
+# `holy ↔ unholy`, `sacred ↔ profane`, `pray = beg = implore` and `saint = ideal`. A child's
+# quiz has no business asking for the opposite of holy, and no business telling a family that
+# praying is begging.
+#
+# The narrower line was available and was not taken: keep the BUILDINGS, which are general
+# knowledge and appear in the odd-two group `chapel, mosque, shrine, synagogue, temple`, and
+# drop only the concepts. Taking everything is the clearer rule and the easier one to defend,
+# and it costs one category out of twenty-six.
+#
+# Symmetry is the one thing that is not negotiable here. Removing `mosque` while `church`
+# stayed would be worse than doing nothing at all, so every tradition goes or none does.
+#
+# Kept on purpose, because their everyday sense is not religious and a quiz needs them:
+# `spirit` (team spirit), `belief`, `cardinal`, `crescent`, `wedding`, and `minister` (already
+# held out of sentences as government vocabulary).
+#
+# `grace`, `cross` and `mass` were on that list until it was checked: none of them is in the
+# lexicon anyway, and none was removed by this section. They had already gone through the
+# capitalised-elsewhere gate, as Grace the name, the Red Cross and Mass. for Massachusetts.
+
+# places
+abbey
+basilica
+bethel
+cathedral
+chapel
+church
+convent
+kirk
+masjid
+minaret
+monastery
+mosque
+pagoda
+parish
+sanctuary
+shrine
+synagogue
+tabernacle
+temple
+
+# people
+abbot
+apostle
+bishop
+chaplain
+clergy
+clergyman
+congregation
+deacon
+disciple
+friar
+imam
+missionary
+monk
+nun
+pastor
+pilgrim
+pope
+preacher
+priest
+prophet
+rabbi
+saint
+vicar
+worshipper
+
+# practice and objects
+altar
+baptise
+baptism
+baptize
+bless
+blessed
+blessing
+communion
+confession
+crucifix
+hymn
+liturgy
+pilgrimage
+pray
+prayer
+preach
+psalm
+pulpit
+rosary
+sacrament
+sermon
+worship
+
+# concepts
+afterlife
+almighty
+angel
+divine
+divinity
+eternity
+faith
+faithful
+godly
+gospel
+heaven
+heavenly
+holiness
+holy
+messiah
+miracle
+paradise
+parable
+piety
+pious
+prophecy
+purgatory
+redemption
+resurrection
+profane
+religion
+religious
+sacred
+salvation
+scripture
+secular
+soul
+spiritual
+spirituality
+unholy
+worshipful
+
+# names and traditions
+agnostic
+allah
+apostolic
+atheist
+atheism
+biblical
+buddha
+buddhism
+buddhist
+catholic
+catholicism
+christ
+christian
+christianity
+christmas
+diwali
+easter
+eid
+episcopal
+evangelical
+god
+goddess
+hanukkah
+hindu
+hinduism
+islam
+islamic
+jesus
+jewish
+judaism
+koran
+krishna
+lent
+lord
+muslim
+passover
+protestant
+quran
+ramadan
+sikh
+testament
+torah
+
+# --- nationality words that slipped in as common nouns ---------------------------------
+# Dropping the capitalised-elsewhere gate recovered 520 ordinary words and let these back in.
+# Each is a genuine lowercase lemma — `siamese` a cat, `japan` a lacquer, `danish` a pastry,
+# `roman` a typeface, `oriental` a rug — and each reads to a child as a word about people.
+# `china` (the porcelain), `turkey` (the bird) and `polish` (the verb) are kept: their everyday
+# sense is the thing, not the nation.
+siamese
+japan
+danish
+roman
+oriental
+eskimo
+negro
+gypsy
+gipsy
+mongol
+mongoloid
+
+# --- words the definition scan was removing by accident ---------------------------------
+# The scan over WordNet's definitions used to decide two things at once: whether a sense could
+# be SHOWN, and whether the word existed at all. The second was never intended and was never
+# written down, so the list of words it removed had no author. Splitting the two put 142
+# common words back — `valley`, `clan`, `cattle`, `chew`, `certainly` — and with them these,
+# which were being kept out for the right reason by the wrong mechanism. Now they are on a
+# list, where a decision belongs.
+acne
+apartheid
+apocalypse
+bisexual
+bra
+brassiere
+diabetes
+diabetic
+epidemic
+inflammation
+obesity
+obese
+segregation
+slavery
+tumour
+
+# --- found by a blind round, after the lemma list became the authority -------------------
+# `holocaust` was the stem of a rhyme question. It reached the lexicon when the definition
+# scan stopped deciding which words exist — which was the right change and left this list
+# carrying weight it had not been checked for. A ten-year-old's spelling quiz does not rhyme
+# with the name of a genocide.
+holocaust
+ghetto
+internment
+exile
+deportation
+persecuted
+oppressed
+colonial
+colonialism
+imperial
+imperialism
+dictator
+dictatorship
+tyranny
+tyrant
+propaganda
+
+# --- promoted from sentence-topics.txt ---------------------------------------------------
+# These three sections — war and the military, law and crime and policing, medicine and the
+# clinic — were on the sentence list, where a word is kept out of a SENTENCE and still allowed
+# to be an answer. That split was made on the reasoning that `market` and `court` are words a
+# child knows and can be asked about, and it holds for the money, politics and media sections,
+# which stay where they are.
+#
+# It does not hold for these. Reviewing the 785 words that entered when the definition scan
+# stopped deciding existence turned up `imprisonment`, `handgun`, `guerrilla`, `misdemeanor`,
+# `weaponry`, `coroner`, `tuberculosis`, `leukemia`, `pulmonary`, `hypertension` and
+# `oncology` sitting in the lexicon as ordinary vocabulary. A nine-year-old is not being
+# tested on those, in a sentence or out of one.
+accuse
+acquit
+ailment
+alibi
+ally
+ambulance
+ammo
+antibiotic
+appeal
+armed
+armor
+armour
+army
+arrest
+attorney
+bail
+barracks
+barrister
+battalion
+battle
+battlefield
+brigade
+campaign
+casualty
+caution
+cavalry
+charge
+clinic
+clinical
+colonel
+commander
+conquest
+conscript
+constable
+convict
+corps
+counsel
+court
+courtroom
+custody
+defeat
+defence
+defendant
+defense
+detective
+diagnose
+diagnosis
+disarm
+dosage
+dose
+enemy
+evacuate
+evidence
+fleet
+fortress
+garrison
+general
+guerrilla
+guilty
+hearing
+inject
+injection
+inmate
+innocent
+inquest
+invade
+invasion
+investigate
+judge
+judgment
+judicial
+jury
+justice
+lawful
+lawsuit
+lawyer
+legal
+magistrate
+marine
+medical
+medication
+medicine
+military
+navy
+nurse
+occupation
+offence
+offense
+outpatient
+patient
+patrol
+penalty
+pharmacy
+physician
+plaintiff
+platoon
+plea
+police
+policeman
+policewoman
+prescribe
+prescription
+proceedings
+prosecute
+prosecutor
+raid
+rebel
+recruit
+regiment
+remedy
+retreat
+sentence
+sergeant
+sheriff
+siege
+solicitor
+squadron
+statute
+strategic
+surgeon
+surgery
+surgical
+surrender
+suspect
+symptom
+tactical
+testify
+testimony
+therapy
+treatment
+treaty
+trial
+tribunal
+troop
+uniformed
+unlawful
+vaccine
+verdict
+veteran
+war
+ward
+warrant
+warrior
+wartime
+witness
+
+# --- the rest of that review, by hand ------------------------------------------------------
+# What the three promoted sections did not cover, read off the same list of 785. Grouped by
+# why, so the next person can disagree with a group rather than with a word.
+#
+# Diseases and the body's machinery: a quiz about words is not a quiz about anatomy.
+arthritis
+asbestos
+chromosome
+coronary
+dysfunction
+estrogen
+hepatitis
+hormone
+hormonal
+influenza
+intestinal
+leukemia
+leukaemia
+lung
+malaria
+measles
+microbial
+oncology
+ovarian
+pancreatic
+pelvic
+pneumonia
+pulmonary
+tuberculosis
+uranium
+vaccine
+viral
+# Harm, and words whose whole job is to frighten.
+catastrophic
+disastrous
+frenzy
+havoc
+heartbreak
+horrendous
+horrible
+horribly
+horrific
+horrifying
+insanely
+jeopardy
+lethal
+madness
+menace
+murderous
+nemesis
+ominous
+outrageous
+ruthless
+terrifying
+vengeance
+violently
+# Drink, and the adult vocabulary around it.
+ale
+bartender
+brewery
+alcoholism
+# Bodies, and words about who people are attracted to.
+heterosexual
+homosexual
+sensual
+sexism
+adolescence
+unmarried
+# More religion, missed on the first pass.
+archbishop
+baptized
+cleric
+diocese
+karma
+oracle
+papal
+pew
+shiva
+theology
+theological
+
+# --- the long tail of the same review ------------------------------------------------------
+# Read off the list a second time. The discipline here is not to over-reach: `hospital`,
+# `tennis`, `victory`, `teenager`, `habitat`, `tornado`, `limestone`, `fisherman`, `dialect`,
+# and `courtyard` are ordinary words a ten-year-old meets and they stay. What goes is the
+# vocabulary of processes a child has no business modelling.
+
+# Courts, police and punishment as a machine.
+accusation
+accused
+acquittal
+alleged
+allegation
+arbitration
+candidacy
+conviction
+cop
+espionage
+executed
+executing
+foreclosure
+fraudulent
+guilt
+illegitimate
+illicit
+imprisonment
+indictment
+judiciary
+kidnapping
+legalization
+litigation
+mayhem
+misuse
+plead
+probation
+punish
+punished
+punitive
+rampage
+repeal
+retaliation
+shootout
+slayer
+statutory
+surveillance
+undercover
+# Armies and operations.
+ballistic
+deployment
+infantry
+martial
+naval
+supremacy
+# Medicine as a profession and a diagnosis.
+allergy
+biomedical
+cardiac
+clinically
+diagnostic
+genome
+insulin
+kidney
+medically
+neurological
+paediatric
+pandemic
+pediatric
+psychiatric
+psychiatrist
+psychiatry
+quarantine
+serum
+therapeutic
+therapist
+vaccination
+veterinary
+womb
+# Words whose work is to frighten or to sneer.
+arrogance
+cursed
+detrimental
+furious
+harassed
+hideous
+infamous
+nightmare
+notorious
+shameful
+tragic
+# Crude.
+screwing
+eff
+criminal
+jail
+shooter
+inmate
+convicted
+offender
+
+# Slang for a lavatory, and a name. Reached the 8-9 band as a stem.
+john
+
+# Anatomical, and reached an 8-9 options line as a filler.
+cleavage
+
+# --- found by scanning definitions for a sexual signal ------------------------------------
+# A blind round put `seductive` on an eleven-year-old's syllable line. It is not profane, so
+# none of the published lists holds it, and it is common, so no frequency bar sees it. What
+# finds this class is its DEFINITION: scanning the first two senses of every word in the
+# lexicon for `sexual`, `seduce`, `lust`, `erotic`, `amorous`, `carnal`, `genital` and the
+# rest returns 109 candidates.
+#
+# The scan is a finder, not a decider, and two things had to be read off it by hand.
+#
+# It has a false-positive family: `lust\w*` also matches `lustrous`, so it flagged `pearl`,
+# `zinc`, `titanium`, `mink`, `dull` and `dim`.
+#
+# And most of what it correctly flags is a word that is perfectly ordinary and happens to
+# carry one rude sense: `come`, `straight`, `gay`, `beauty`, `peach`, `fairy`, `hug`,
+# `relation`, `temptation`, `wander`, `vent`. Those stay. Their rude sense cannot be shown,
+# because the strict definition scan already refuses to print it, and the word itself is one
+# a child needs. What follows is the other kind — where the word IS the problem.
+alluring
+amour
+arousal
+chastity
+consummate
+courtesan
+degenerate
+deviant
+deviate
+erotica
+flirt
+flirting
+frigid
+harlot
+hunk
+indecent
+intimacy
+juicy
+liaison
+luscious
+lustful
+madam
+mating
+mistress
+naughty
+pornographic
+procure
+provocative
+racy
+seductive
+seductress
+siren
+slit
+solicit
+steamy
+stud
+sultry
+tease
+titillate
+unfaithful
+voluptuous
+woo
+
+# --- place and brand names that entered as common nouns -----------------------------------
+# `manhattan` is a cocktail in WordNet and a borough to everyone else; it reached an
+# eleven-year-old's syllable line. `cheddar`, `denim`, `tweed`, `cashmere`, `tuxedo`,
+# `bikini`, `marathon`, `turkey`, `china` and `jersey` are not here: they started as place
+# names and stopped being them.
+manhattan
+burgundy
+madras
+cologne
+afghan
+bohemian
+mocha
+bordeaux
+champagne

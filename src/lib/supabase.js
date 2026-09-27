@@ -37,10 +37,21 @@ export const PHOTO_BUCKET = 'submission-photos'
 export const DRAWINGS_BUCKET = 'drawings'
 
 // Panel URLs are DERIVED, never stored in the database — id + age group + step
-// number is all it takes.
+// number is all it takes. The source bucket contains several very large panels (up to
+// 2.9 MB, including PNG bytes uploaded with a .webp name). Supabase's image renderer
+// gives the guide a real WebP capped at the resolution the iPad can use: the largest
+// measured panel falls from 2.9 MB to about 237 KB at 1024 px.
 export function drawingStepUrl(drawingId, ageGroup, step) {
   const n = String(step).padStart(2, '0')
-  return `${supabaseUrl}/storage/v1/object/public/${DRAWINGS_BUCKET}/${drawingId}/${ageGroup}/step-${n}.webp`
+  return `${supabaseUrl}/storage/v1/render/image/public/${DRAWINGS_BUCKET}/${drawingId}/${ageGroup}/step-${n}.webp?width=1024&height=1024&resize=contain&quality=80`
+}
+
+// Catalogue cards are only ~155-300 CSS pixels wide. Asking them to download the full final
+// guide panel made the 40-card 6-8 catalogue reference 18.4 MB of images. A 320 px derivative
+// keeps the cards crisp while the worst measured thumbnail drops from 2.9 MB to about 35 KB.
+export function drawingThumbUrl(drawingId, ageGroup, step) {
+  const n = String(step).padStart(2, '0')
+  return `${supabaseUrl}/storage/v1/render/image/public/${DRAWINGS_BUCKET}/${drawingId}/${ageGroup}/step-${n}.webp?width=320&height=320&resize=contain&quality=70`
 }
 
 // A small (~160px) derivative of a drawing's finished panel, for places that
@@ -168,7 +179,7 @@ export async function getChildGems(childId) {
 // gems and nearest goal in one request (server aggregates it, see
 // server/index.js's /today-summary route for why this isn't 6 client queries).
 export async function getTodaySummary(childId) {
-  const empty = { today: 0, monthTreeCount: 0, activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 }, gems: 0, nearestGoal: null }
+  const empty = { today: 0, monthTreeCount: 0, activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0 }, gems: 0, nearestGoal: null }
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/today-summary`)
     const data = await res.json()
@@ -271,11 +282,16 @@ export async function deleteChildStory(childId, storyId) {
 }
 
 export async function uploadStoryCover(childId, file) {
-  const imageBase64 = await toBase64(file)
+  // Shrunk first, like every other photo that leaves this app. This one was going up at the
+  // camera's full resolution and then base64 on top of that, which inflates it by a third —
+  // for a picture that is drawn 180px wide on a book cover.
+  let payload
+  try { payload = await downscale(file) } catch { payload = file }
+  const imageBase64 = await toBase64(payload)
   const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories/cover`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg' }),
+    body: JSON.stringify({ imageBase64, mimeType: payload.type || 'image/jpeg' }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`)

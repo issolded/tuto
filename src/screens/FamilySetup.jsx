@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import TutoMascot from '../components/TutoMascot'
+import { useT } from '../lib/parentI18n'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -21,6 +22,7 @@ const codeFromUrl = new URLSearchParams(window.location.search).get('code')
 
 export default function FamilySetup() {
   const nav = useNavigate()
+  const s = useT()
   const [status, setStatus] = useState(codeFromUrl ? 'success' : 'idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [manualCode, setManualCode] = useState('')
@@ -96,7 +98,7 @@ export default function FamilySetup() {
       console.error('[FamilySetup] camera error:', e)
       if (mountedRef.current) {
         setStatus('error')
-        setErrorMsg('Camera not available. Check permissions and try again.')
+        setErrorMsg(s('fs_no_camera'))
       }
     }
   }
@@ -114,11 +116,11 @@ export default function FamilySetup() {
         setStatus('success')
         setTimeout(() => nav('/child'), 1400)
       } else {
-        setManualError('Code not found. Try again.')
+        setManualError(s('fs_not_found'))
         setManualLoading(false)
       }
     } catch {
-      setManualError('Connection error. Try again.')
+      setManualError(s('fs_conn_error'))
       setManualLoading(false)
     }
   }
@@ -132,10 +134,10 @@ export default function FamilySetup() {
       </div>
 
       <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 26, fontWeight: 900, marginTop: 20, textAlign: 'center', color: '#FFD93D' }}>
-        Family Setup
+        {s('fs_title')}
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: 6, textAlign: 'center', lineHeight: 1.6 }}>
-        Scan the QR code from your parent's dashboard
+        {s('fs_sub')}
       </div>
 
       {/* QR scanner container — always in DOM while scanning */}
@@ -156,10 +158,10 @@ export default function FamilySetup() {
         <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, animation: 'fadeUp 0.4s ease both' }}>
           <div style={{ fontSize: 64 }}>✅</div>
           <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#2EC486', textAlign: 'center' }}>
-            Connected! ✅
+            {s('fs_connected')}
           </div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
-            Now enter your PIN
+            {s('fs_now_pin')}
           </div>
         </div>
       )}
@@ -184,13 +186,13 @@ export default function FamilySetup() {
               boxShadow: '0 8px 24px rgba(255,211,61,0.3)',
             }}
           >
-            {status === 'scanning' ? 'Cancel' : '📷 Scan QR Code'}
+            {status === 'scanning' ? s('cancel') : s('fs_scan')}
           </button>
 
           {/* Manual code entry */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
             <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>
-              Or enter code manually
+              {s('fs_manual')}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
@@ -203,7 +205,12 @@ export default function FamilySetup() {
                 placeholder="XXXXXXXX"
                 maxLength={8}
                 style={{
-                  flex: 1, padding: '14px 16px', border: '2px solid rgba(255,255,255,0.15)',
+                  // minWidth: 0 for the same reason the onboarding grid uses minmax(0, 1fr):
+                  // a flex item's implicit minimum is its content, and eight monospace
+                  // characters at letter-spacing 3 are wider than the room left over — so the
+                  // Connect button was pushed off the right edge. English lost 20px of it,
+                  // Spanish 26. Now the field shrinks and the button stays on screen.
+                  flex: 1, minWidth: 0, padding: '14px 16px', border: '2px solid rgba(255,255,255,0.15)',
                   borderRadius: 14, background: 'rgba(255,255,255,0.08)', color: 'white',
                   fontFamily: 'monospace', fontSize: 18, fontWeight: 800,
                   letterSpacing: 3, outline: 'none', textAlign: 'center',
@@ -222,7 +229,7 @@ export default function FamilySetup() {
                   transition: 'background 0.2s, color 0.2s', whiteSpace: 'nowrap',
                 }}
               >
-                {manualLoading ? '...' : 'Connect →'}
+                {manualLoading ? '…' : s('fs_connect')}
               </button>
             </div>
             {manualError && (
@@ -236,7 +243,7 @@ export default function FamilySetup() {
             onClick={() => nav('/')}
             style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 18, background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
           >
-            ← Back
+            {s('fs_back')}
           </button>
         </div>
       )}

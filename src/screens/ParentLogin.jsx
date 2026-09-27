@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, PCSS, TopBar, Btn, Field, GoogleMark } from '../lib/parentUI'
+import { useT } from '../lib/parentI18n'
 
 export default function ParentLogin() {
   const nav = useNavigate()
+  const s = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -40,18 +42,18 @@ export default function ParentLogin() {
         {/* heading */}
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, letterSpacing: '-.5px', lineHeight: 1.15 }}>
-            Welcome back 👋
+            {s('li_welcome')}
           </div>
           <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 15, color: PC.inkSoft, marginTop: 6 }}>
-            Sign in to your account
+            {s('li_sub')}
           </div>
         </div>
 
-        <Field label="Email">
+        <Field label={s('li_email')}>
           <input className="tc-input" type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
         </Field>
 
-        <Field label="Password">
+        <Field label={s('li_password')}>
           <input className="tc-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
         </Field>
 
@@ -60,24 +62,24 @@ export default function ParentLogin() {
         )}
 
         <Btn onClick={login} disabled={loading}>
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? s('li_signing_in') : s('li_signin')}
         </Btn>
 
         {/* divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, height: 1, background: PC.line }} />
-          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>or</span>
+          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.inkFaint }}>{s('li_or')}</span>
           <div style={{ flex: 1, height: 1, background: PC.line }} />
         </div>
 
         <Btn variant="outline" onClick={googleLogin}>
-          <GoogleMark size={20} /> Continue with Google
+          <GoogleMark size={20} /> {s('li_google')}
         </Btn>
 
         <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 600, fontSize: 14, color: PC.inkSoft }}>
-          No account?{' '}
+          {s('li_no_account')}{' '}
           <span style={{ color: PC.teal, fontWeight: 800, cursor: 'pointer' }} onClick={() => nav('/parent/signup')}>
-            Sign up free
+            {s('li_signup_free')}
           </span>
         </div>
       </div>

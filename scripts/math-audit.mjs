@@ -1,0 +1,572 @@
+// Runs the maths template engine against itself, without a browser. `npm run math:check`.
+//
+// The same position scripts/english-audit.mjs and scripts/puzzle-audit.mjs hold for their
+// engines. This one is late: the maths templates ran for months with no program checking
+// them, and three separate defects lived in main because of it —
+//
+//   * a ten-year-old was handed `2 × 2`, because a level threshold cut a school year's band
+//     in half and nothing compared what came out against the year it came from
+//   * Year 1, whose curriculum line says "a half and a quarter", was asked for thirds
+//   * numbers over five digits printed as unbroken walls, a finding that was written down in
+//     an August audit and found again in September
+//
+// Every one of them is a property a program can state. That is what this file is.
+//
+// What it checks, and why each one is here rather than trusted:
+//
+//   1. the answer is among the options        a choice question whose answer is not on screen
+//                                             is unanswerable; the reverse — two options
+//                                             carrying the same text — makes two of them right
+//   2. nothing renders as undefined/NaN       the loudest failure and the easiest to ship: a
+//                                             word bank indexed the wrong way printed
+//                                             "to the nearest undefined" and still returned a
+//                                             correct answer, so only the text showed it
+//   3. hints never state the answer           hint_steps stop at method by contract. A hint
+//                                             that hands over the answer turns help into a
+//                                             button that says the answer
+//   4. questions fit the age's reading limit  maxQuestionChars is enforced at generation by a
+//                                             reroll, so a template whose EVERY wording is too
+//                                             long fails silently, thirty rerolls at a time
+//   5. no language leaks                      a template that forgot say() prints English
+//                                             inside a Turkish session
+//   6. a sitting does not repeat itself       ten questions, ten different questions
+//   7. every year can fill a whole sitting    the check that would have caught Year 6 having
+//                                             no templates at all
+//
+// Non-zero exit on any failure, so it can gate a commit.
+
+import { generateProblem, TOPICS, num, measureGridCells } from '../src/lib/mathTemplates.js'
+import { templateTopicFor, startingLevelForAge, clampLevelToAge } from '../src/lib/mathCurriculum.js'
+import { BRITISH_CURRICULUM, ageToSchoolYear, maxQuestionChars } from '../src/lib/gemini.js'
+
+// "−0.05", "0,4", "40%", "4/10" → a number; the choices print numbers the way the reader reads them.
+function asNumber(v) {
+  const t = String(v).replace('−', '-').replace(',', '.').trim()
+  if (t.endsWith('%')) return Number(t.slice(0, -1)) / 100
+  if (t.includes('/')) { const [n, d] = t.split('/').map(Number); return n / d }
+  return Number(t)
+}
+
+const QUAD_NAMES = {
+  rect: ['rectangle', 'dikdörtgen', 'rectángulo'], rhombus: ['rhombus', 'eşkenar dörtgen', 'rombo'], kite: ['kite', 'deltoid', 'cometa'],
+  para: ['parallelogram', 'paralelkenar', 'paralelogramo'], trap: ['trapezium', 'yamuk', 'trapecio'],
+}
+const pairIn = s => String(s).replace(/−/g, '-').match(/-?\d+/g).map(Number)
+const ruleOf = s => { const m = String(s).replace(/−/g, '-').replace(/\s/g, '').match(/^y=(\d*)x([+-]\d+)?$/); return m && [Number(m[1] || 1), Number(m[2] || 0)] }
+
+// Classify four points joined in order without looking at what the template meant.
+function classify(pts) {
+  const v = pts.map((p, i) => { const q = pts[(i + 1) % 4]; return [q.x - p.x, q.y - p.y] })
+  const len = v.map(([x, y]) => x * x + y * y)
+  const par = (a, b) => a[0] * b[1] - a[1] * b[0] === 0
+  const right = v.every((a, i) => { const b = v[(i + 1) % 4]; return a[0] * b[0] + a[1] * b[1] === 0 })
+  const p1 = par(v[0], v[2]), p2 = par(v[1], v[3])
+  const allEq = len.every(l => l === len[0])
+  if (p1 && p2) return right ? (allEq ? 'square' : 'rect') : (allEq ? 'rhombus' : 'para')
+  if (p1 || p2) return 'trap'
+  if ((len[0] === len[1] && len[2] === len[3]) || (len[1] === len[2] && len[3] === len[0])) return 'kite'
+  return 'other'
+}
+
+function checkOlderFigure(p) {
+  const v = p.visual, key = String(p.operandKey)
+  if (!v) return null
+  if (key.startsWith('plane:v:')) {
+    const [A, B, C] = v.points
+    const [x, y] = pairIn(p.correct_answer)
+    if (x !== A.x + C.x - B.x || y !== A.y + C.y - B.y) return 'dördüncü köşe paralelkenar kuralına uymuyor'
+  }
+  if (key.startsWith('plane:s:')) {
+    const kind = classify(v.points)
+    if (!QUAD_NAMES[kind]?.includes(p.correct_answer)) return `noktalar ${kind} yapıyor`
+    for (const o of p.options) if (o.value !== p.correct_answer && QUAD_NAMES[kind].includes(o.value)) return 'yanlış şık da doğru'
+  }
+  if (key.startsWith('plane:t:')) {
+    const [dx, dy, k] = key.split(':').slice(-3).map(Number)
+    const pt = v.points[k]
+    const [x, y] = pairIn(p.correct_answer)
+    if (x !== pt.x + dx || y !== pt.y + dy) return 'öteleme cevabı noktadan hesaplanmıyor'
+  }
+  if (key.startsWith('plane:r:')) {
+    const [m, c] = ruleOf(p.correct_answer)
+    if (v.points.some(q => m * q.x + c !== q.y)) return 'kural noktalara uymuyor'
+    for (const o of p.options) {
+      if (o.value === p.correct_answer) continue
+      const [a, b] = ruleOf(o.value)
+      if (v.points.every(q => a * q.x + b === q.y)) return 'yanlış kural da noktalara uyuyor'
+    }
+  }
+  if (v.kind === 'angles' && v.type === 'parallel') {
+    if (Number(p.correct_answer) !== v.t) return `paralel açı ${v.ask} ${v.t}`
+  } else if (v.kind === 'angles') {
+    const lb = v.labels
+    const vals = v.type === 'triangle' ? { a: v.a, c: v.c, b: 180 - v.a - v.c, ext: 180 - v.c }
+      : v.type === 'cross' ? { top: v.a, bottom: v.a, left: 180 - v.a, right: 180 - v.a }
+        : { m: v.m, left: (180 - v.m) / 2, right: (180 - v.m) / 2 }
+    for (const [k, t] of Object.entries(lb)) {
+      if (t === '?') { if (vals[k] !== Number(p.correct_answer)) return `? açısı ${vals[k]}` }
+      else if (t !== `${vals[k]}°`) return `etiket ${k} ${t}, çizim ${vals[k]}`
+    }
+    if (v.ticks && v.a !== v.c) return 'eşit işaretli kenarlar eşit değil'
+  }
+  if (v.kind === 'compound') {
+    const area = v.W * v.H - v.cw * v.ch, per = 2 * (v.W + v.H)
+    if (Number(p.correct_answer) !== (key.includes(':p:') ? per : area)) return `alan ${area}, çevre ${per}`
+  }
+  if (v.kind === 'machine') {
+    const run = (ops, n) => ops.reduce((x, op) => {
+      const [s, k] = op.split(' '); const kk = Number(k)
+      return s === '×' ? x * kk : s === '÷' ? x / kk : s === '+' ? x + kk : x - kk
+    }, n)
+    const ops = v.ops.map(o => o ?? p.correct_answer)
+    const ins = v.inputs.map(i => (i === '?' ? Number(p.correct_answer) : i))
+    const outs = v.outputs.map(o => (o === '?' ? Number(p.correct_answer) : o))
+    if (ins.some((n, i) => run(ops, n) !== outs[i])) return 'makine girişi çıkışa götürmüyor'
+    if (v.ops.includes(null)) for (const o of p.options) {
+      if (o.value === p.correct_answer) continue
+      const alt = v.ops.map(x => x ?? o.value)
+      if (v.inputs.every((n, i) => run(alt, n) === v.outputs[i])) return 'yanlış şık da makineye uyuyor'
+    }
+  }
+  if (v.kind === 'numcross') {
+    const T = Number(p.question_text.match(/\d+/)[0])
+    const colKnown = v.col.slice(1).reduce((s, x) => s + x, 0)
+    const b = T - colKnown
+    const rowKnown = v.row.filter(x => typeof x === 'number').reduce((s, x) => s + x, 0)
+    const a = T - b - rowKnown
+    if (Number(p.correct_answer) !== (key.endsWith(':a') ? a : b) || a <= 0 || b <= 0) return `a=${a}, b=${b}`
+  }
+  if (key.startsWith('dice:')) {
+    const N = Number(p.question_text.match(/\d+/)[0])
+    const cells = v.rows[0].cells
+    const ans = key.startsWith('dice:even') ? cells[1] + cells[3] + cells[5] : N - cells.filter(c => c != null).reduce((s, x) => s + x, 0)
+    if (Number(p.correct_answer) !== ans) return `tablo ${ans}`
+  }
+  // Year 8
+  if (v.kind === 'cuboid') {
+    const h = v.h === '?' ? Number(p.correct_answer) : v.h
+    const want = key.includes(':v:') ? v.l * v.w * h : key.includes(':sa:') ? 2 * (v.l * v.w + v.l * h + v.w * h) : Number(key.split(':').pop())
+    if (Math.abs(Number(p.correct_answer) - want) > 1e-9) return `prizma ${want}`
+    if (v.h === '?' && Math.abs(v.l * v.w * h - asNumber(p.question_text.match(/[\d.,]+(?= cm³)/)[0])) > 1e-6) return 'hacim tutmuyor'
+  }
+  if (v.kind === 'circle') {
+    const form = key.split(':')[2], r = v.r
+    const want = form === 'circ' ? Math.round(6.28 * r * 100) / 100 : form === 'area' ? Math.round(3.14 * r * r * 100) / 100 : r
+    if (Math.abs(Number(p.correct_answer) - want) > 1e-9) return `daire ${want}`
+  }
+  if (v.kind === 'righttri') {
+    const a = v.a, b = v.b === '?' ? Number(p.correct_answer) : v.b, c = v.c === '?' ? Number(p.correct_answer) : v.c
+    if (a * a + b * b !== c * c) return `pisagor ${a},${b},${c}`
+  }
+  if (v.kind === 'gears') {
+    const [, , tA, tB, n] = key.split(':').map(Number)
+    if (tA !== v.teeth[0] || tB !== v.teeth[1] || Number(p.correct_answer) * tB !== n * tA) return 'dişli'
+  }
+  if (v.kind === 'garden') {
+    const bw = (v.W - (v.n + 1) * v.p) / v.n, bh = v.H - 2 * v.p
+    const beds = v.n * bw * bh
+    if (!Number.isInteger(bw) || bw <= 0 || Number(p.correct_answer) !== (key.endsWith('true') ? v.W * v.H - beds : beds)) return `bahçe ${beds}`
+  }
+  if (v.kind === 'algrects') {
+    const [, , x, a, b, h, c, askX] = key.split(':')
+    const X = Number(x), area = Number(h) * (Number(a) * X + Number(b))
+    if (area !== Number(v.B.h) * Number(c) * X) return 'alanlar eşit değil'
+    if (Number(p.correct_answer) !== (askX === 'true' ? X : area)) return `x=${X}, alan ${area}`
+  }
+  if (v.kind === 'plane' && v.lines && key.startsWith('sg:m')) {
+    const [x, y] = pairIn(p.correct_answer)
+    if (v.lines.some(l => Math.abs(l.m * x + l.c - y) > 1e-9)) return 'kesişim noktası iki doğruda değil'
+  }
+  if (key.startsWith('g8:e:')) {
+    const k = Number(key.split(':')[3]), i = Number(key.split(':')[4])
+    const [x, y] = pairIn(p.correct_answer)
+    if (x !== v.points[i].x * k || y !== v.points[i].y * k) return 'büyütme'
+  }
+  if (key.startsWith('s8:f:')) {
+    const cells = v.rows[0].cells, vals = v.cols.map(Number)
+    const mean = cells.reduce((s2, f, i) => s2 + f * vals[i], 0) / cells.reduce((a, b) => a + b, 0)
+    if (Math.abs(mean - Number(p.correct_answer)) > 1e-9) return `ortalama ${mean}`
+  }
+  if (v.kind === 'scatter') {
+    const n = v.pts.length, mx = v.pts.reduce((a, q) => a + q[0], 0) / n, my = v.pts.reduce((a, q) => a + q[1], 0) / n
+    const cov = v.pts.reduce((a, q) => a + (q[0] - mx) * (q[1] - my), 0)
+    const t = key.split(':')[2]
+    if ((t === 'pos' && cov <= 0) || (t === 'neg' && cov >= 0)) return 'serpilme yönü tutmuyor'
+  }
+  if (v.kind === 'dots') {
+    const t = v.terms, ask = key.endsWith(':6') ? 6 : 5
+    const next = v.tri ? ask * (ask + 1) / 2 : ask * ask
+    if (t.join() !== (v.tri ? '1,3,6,10' : '1,4,9,16') || Number(p.correct_answer) !== next) return `desen ${t}`
+  }
+  return null
+}
+
+const LANGS = ['en', 'tr', 'es']
+const AGES = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+const PER = Number(process.env.MATH_AUDIT_N || 400)
+const LEAK_FLOOR = 20
+
+const findings = []
+function fail(where, msg, sample) {
+  findings.push({ where, msg, sample })
+}
+
+// ── 5. language leak ─────────────────────────────────────────────────────────
+// Words that only ever belong to one language, checked with a Unicode-aware boundary.
+// JavaScript's \b is ASCII-only, so \bÇocuk\b never matches — the first version of this idea
+// in the i18n checker missed every Turkish word it was written to catch.
+// Two leak tests, because one of them is not enough and it is worth saying why.
+//
+// The word lists are the real test. They carry the closed maths vocabulary each language
+// uses — the shape names, the question words — so a Spanish entry filled in with the Turkish
+// word is caught by name. That is not hypothetical: `es: 'sekizgen'` shipped in the polygon
+// table and sat there until the output was read by eye.
+//
+// The letter test is the backstop for words no list will ever hold. It is weaker than it
+// looks and the limit is worth writing down: "sekizgen", "üçgen", "dörtgen" and "kaç" are
+// all invisible to it, because a letter class can only see letters that differ. It catches
+// ğ ş ı İ anywhere outside Turkish, and ç ö outside Turkish — but NOT ü, which Spanish has
+// of its own (pingüino), and not the bare Latin letters that most Turkish words are made of.
+const TR_ONLY = /[ğĞşŞıİ]/u
+const NOT_SPANISH = /[çÇöÖ]/u
+
+// Words that belong to exactly one language. Question words and, above all, the shape names,
+// which are the table that has already been mistranslated once.
+// `tane` only at the start of a word: inside one it is English ("simultaneous").
+const TR_WORDS = /(kaç|(?<!\p{L})tane|sayı|kadar|şeklin|yuvarla|hangi|toplam|üçgen|dörtgen|beşgen|altıgen|sekizgen|kenar|köşe|açı|derece|oran|kesir)/iu
+const ES_WORDS = /(cuántos|cuántas|figura|redondea|cuál|triángulo|cuadrilátero|pentágono|hexágono|octágono|ángulo|grados|razón)/iu
+const EN_WORDS = /\b(how many|what is|round|which|altogether|nearest|triangle|quadrilateral|pentagon|hexagon|octagon|angle|degrees|ratio)\b/iu
+
+const LEAK = {
+  en: [TR_WORDS, ES_WORDS, TR_ONLY, NOT_SPANISH],
+  tr: [ES_WORDS, EN_WORDS],
+  es: [TR_WORDS, EN_WORDS, TR_ONLY, NOT_SPANISH],
+}
+
+function textOf(p) {
+  const opts = (p.options || []).map(o => `${o.value} ${o.why}`).join(' ')
+  return `${p.question_text} ${(p.hint_steps || []).join(' ')} ${opts}`
+}
+
+// "The hint hands over the answer". Two narrowings were needed before this said anything
+// useful, and both are worth keeping written down:
+//
+//   * numbers compare as NUMBERS. A substring test reported "659 - 600 = ?" for leaking its
+//     answer 59, because "59" sits inside "659": 37 findings, none of them real.
+//   * merely CONTAINING the answer is not leaking it. A mental-subtraction hint splits 42 into
+//     "40 + 2", and when the answer is 40 that is a coincidence, not a giveaway — the hint is
+//     decomposing the number being taken away, not computing the result.
+//
+// So the test is where the number sits: a hint leaks when it writes the answer as a RESULT —
+// straight after an "=", or as the last number of the last step, which is where a
+// counting-on ladder ends up if it runs one rung too far. That last one is how "count 5, 6,
+// 7… 12" used to finish on the answer it was supposed to be walking towards.
+//
+// The floor is measured, not guessed. Below it the answer keeps colliding with a number the
+// method has to name anyway — a pictogram whose key is "each book stands for 5" and whose
+// answer is 5, a clock hint that says 12 about a question whose answer is 12. Sweeping the
+// whole engine at four settings: floor 0 gives 120 findings, 5 gives 34, 10 gives 17, 20
+// gives none, and every finding below 20 that I read was one of those collisions. So 20 is
+// where the signal starts. The cost is stated plainly: this check is blind to a leak whose
+// answer is under 20, which is most of Year 1.
+function hintLeaksAnswer(p) {
+  const a = Number(p.correct_answer)
+  if (!Number.isFinite(a)) return false
+  const steps = (p.hint_steps || []).map(h => String(h).replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1'))
+  // "= 5" written as a RESULT is never a coincidence, however small the number: the floor below
+  // is for numbers that merely appear. It hid "21 ÷ 4 = 5 remainder 1" on a question whose answer
+  // was 5.
+  const asResult = steps.some(h => (h.match(/=\s*(\d+(?:\.\d+)?)/g) || [])
+    .some(t => Number(t.replace(/^=\s*/, '')) === a))
+  if (asResult) return true
+  if (Math.abs(a) < LEAK_FLOOR) return false
+  const last = steps[steps.length - 1] || ''
+  const nums = last.match(/\d+(?:\.\d+)?/g) || []
+  // …and only when the last step is the FIRST place the number appears. A mental-subtraction
+  // hint splits 8200 into "8000 + 200" in step one and finishes "now take away the 200" in
+  // step two; when the answer happens to be 200 the closing number is the part it named at
+  // the start, not a result it worked out. A counting ladder that runs one rung too far, or a
+  // hint that ends "…, written 0.25", names the answer for the first time at the end.
+  const earlier = steps.slice(0, -1).join(' ')
+  const seenEarlier = (earlier.match(/\d+(?:\.\d+)?/g) || []).some(t => Number(t) === a)
+  const endsOnIt = nums.length > 0 && Number(nums[nums.length - 1]) === a && !seenEarlier
+  return asResult || endsOnIt
+}
+
+console.log(`Matematik şablon denetimi — ${AGES.length} yaş × ${LANGS.length} dil × ${PER} soru/konu\n`)
+
+// ── per age, per language ────────────────────────────────────────────────────
+const coverage = {}
+for (const age of AGES) {
+  const year = ageToSchoolYear(age)
+  const topics = BRITISH_CURRICULUM[year].topics
+  const level = clampLevelToAge(startingLevelForAge(age), age)
+  const cap = maxQuestionChars(age)
+  const withTemplate = topics.filter(t => templateTopicFor(t))
+  coverage[year] = { age, total: topics.length, templated: withTemplate.length,
+                     missing: topics.filter(t => !templateTopicFor(t)).map(t => t.name) }
+
+  for (const lang of LANGS) {
+    for (const t of withTemplate) {
+      const tt = templateTopicFor(t)
+      const where = `${year}/${t.id}/${tt}/${lang}`
+      for (let i = 0; i < PER; i++) {
+        let p
+        try { p = generateProblem(tt, level, null, lang, { maxChars: cap }) }
+        catch (e) { fail(where, `üretim hatası: ${e.message}`); break }
+
+        const all = textOf(p)
+        // The help picture has to lead to the same answer as the key: a box-filling picture whose
+        // boxes come out to 5 on a question marked 6 teaches the wrong thing with the right method.
+        if (p.help?.kind === 'fill') {
+          const h = p.help
+          const want = { exact: h.total / h.size, remainder: h.total % h.size, up: Math.ceil(h.total / h.size), down: Math.floor(h.total / h.size) }[h.mode]
+          if (want !== Number(p.correct_answer)) fail(where, `yardım resmi ${want} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          if (h.mode === 'exact' && h.total % h.size) fail(where, 'tam bölünmeyen "exact" kutu resmi', p.question_text)
+        }
+        if (p.help?.kind === 'groups' && p.help.groups * p.help.per !== Number(p.correct_answer)) {
+          fail(where, `yardım grupları ${p.help.groups}×${p.help.per}, cevap ${p.correct_answer}`, p.question_text)
+        }
+        // 2. undefined / NaN anywhere a child can read
+        if (/undefined|NaN|\[object/.test(all)) fail(where, 'metinde undefined/NaN', p.question_text)
+        // 1. options well-formed
+        if (p.format === 'choice') {
+          const vals = (p.options || []).map(o => String(o.value))
+          if (vals.length < 3) fail(where, `şık sayısı ${vals.length}`, p.question_text)
+          if (new Set(vals).size !== vals.length) fail(where, 'çakışan şık', `${p.question_text} ${JSON.stringify(vals)}`)
+          if (!vals.includes(String(p.correct_answer))) fail(where, 'cevap şıklarda yok', p.question_text)
+          if ((p.options || []).some(o => !o.why)) fail(where, 'gerekçesiz şık', p.question_text)
+        } else if (p.correct_answer === '' || p.correct_answer == null || Number.isNaN(Number(p.correct_answer))) {
+          fail(where, `yazılamaz cevap: ${JSON.stringify(p.correct_answer)}`, p.question_text)
+        } else if (p.format !== 'decimal' && !Number.isInteger(Number(p.correct_answer))) {
+          // The keypad only shows its decimal point for format 'decimal'; a non-integer answer
+          // anywhere else is a question the child cannot type.
+          fail(where, `tam sayı olmayan cevap ama format '${p.format}'`, `${p.question_text} → ${p.correct_answer}`)
+        } else if (p.format === 'decimal' && Number.isInteger(Number(p.correct_answer))) {
+          // The mirror of the rule above, and the one that was missing: 'decimal' opens the
+          // keypad's point, so declaring it for a whole-number answer offers a key the child
+          // cannot use and can mistype into.
+          fail(where, `tam sayı cevap ama format 'decimal'`, `${p.question_text} → ${p.correct_answer}`)
+        } else if (Number(p.correct_answer) < 0) {
+          // There is no minus key.
+          fail(where, 'negatif cevap, tuş takımında eksi yok', p.question_text)
+        }
+        // The sharing picture is the automatic help for ages eight and under, and it is
+        // dropped above a size limit. A question those children can be asked that loses its
+        // picture leaves them with written steps at the moment they just got it wrong — which
+        // is what "50 pencils among 5 friends" did, for a fifth of Year 3's division.
+        // A division word problem is recognised by the shape of its answer, not by its
+        // operandKey — that key is a bare "5,40" pair with no prefix, which is why the first
+        // version of this check never fired.
+        if (age <= 8 && (tt === 'division-word' || tt === 'long-mult-div')
+            && /\bshares\b|\bpaylaş|\breparte\b/.test(p.question_text) && !p.visual) {
+          fail(where, 'paylaştırma görseli düştü (sınırın üstünde)', p.question_text)
+        }
+        // 3. hint must not hand over the answer
+        if (hintLeaksAnswer(p)) fail(where, 'ipucu cevabı söylüyor', `${p.question_text} → ${p.correct_answer}`)
+        // A grid question is answered from the same filled cells the child sees. This catches
+        // the worst possible diagram bug: counting the visible boundary correctly and being
+        // marked wrong because the key describes a different shape.
+        if (p.topic === 'area-grid') {
+          const measured = measureGridCells(p.visual?.cells)
+          const expected = p.operandKey.startsWith('grid:a:') ? measured.area : measured.perimeter
+          if (Number(p.correct_answer) !== expected) {
+            fail(where, 'ızgara görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${expected}`)
+          }
+        }
+        // A two-way table is answered from the cells the child sees: what is printed plus the
+        // answer has to make the total the question states, or the "?" has no right answer.
+        if (p.visual?.shape === 'table' && p.operandKey.startsWith('chart:t:')) {
+          const total = Number(p.operandKey.split(':')[2])
+          const shown = p.visual.rows.flatMap(r => r.cells).filter(c => c != null).reduce((x, y) => x + y, 0)
+          const holes = p.visual.rows.flatMap(r => r.cells).filter(c => c == null).length
+          if (holes !== 1 || shown + Number(p.correct_answer) !== total) {
+            fail(where, 'tablo görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}`)
+          }
+        }
+        // Decimal mark. Turkish and Spanish write thousands with a point (1.500), so a decimal
+        // printed with a point in those languages reads as a different number — "8.312" was
+        // eight point three one two in one Year 5 question and "8.412" eight thousand in the
+        // next. A pointed number there has to be a well-formed thousands group; in English a
+        // comma has to be. (A three-decimal "8.312" is indistinguishable from thousands by
+        // spelling alone, which is why the source uses `dnum` rather than trusting this.)
+        // Option VALUES are left out: they are compared as numbers and the screen localises them
+        // when it draws them, so only the words around them are checked here.
+        const read = `${p.question_text} ${(p.hint_steps || []).join(' ')} ${(p.options || []).map(o => o.why).join(' ')}`
+        for (const tok of read.match(/\d[\d.,]*\d/g) || []) {
+          const grouping = lang === 'en' ? ',' : '.'
+          const decimalMark = lang === 'en' ? '.' : ','
+          const bad = tok.includes(grouping) && !new RegExp(`^\\d{1,3}(\\${grouping}\\d{3})+(\\${decimalMark}\\d+)?$`).test(tok)
+          if (bad) { fail(where, 'ondalık işareti dile uymuyor', `${tok} — ${p.question_text}`); break }
+        }
+        // The scale and the shaded shape are answered from what is drawn, so the key is recomputed
+        // from the drawing: the scale's reading, the shaded (or white) parts over all the parts.
+        if (p.visual?.kind === 'scale' && Math.abs(asNumber(p.correct_answer) - p.visual.value) > 1e-9) {
+          fail(where, 'ölçek görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${p.visual.value}`)
+        }
+        if (p.visual?.kind === 'fraction') {
+          const white = /NOT|DEĞİL|NO está/.test(p.question_text)
+          const k = white ? p.visual.parts - p.visual.shaded.length : p.visual.shaded.length
+          const [n, d] = String(p.correct_answer).split('/').map(Number)
+          if (n * p.visual.parts !== k * d) fail(where, 'kesir görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${k}/${p.visual.parts}`)
+        }
+        // The 11-12 pictures, each answered from the drawing and so each re-derived from it here.
+        const figure = checkOlderFigure(p)
+        if (figure) fail(where, 'görsel ile cevap anahtarı uyuşmuyor', `${figure} — ${p.question_text} → ${p.correct_answer}`)
+        // A rectangle question has two different side lengths, the longer along the bottom.
+        if (p.visual?.kind === 'geometry' && p.visual.shape === 'rect') {
+          const other = p.visual.height ?? Number(p.correct_answer)
+          if (other >= p.visual.base) fail(where, 'dikdörtgen kare ya da dikey çıktı', p.question_text)
+        }
+        // A question that talks about a picture must carry one. "What is this 3D shape called?"
+        // shipped for a day with no solid drawn under it, and every other check passed it.
+        if (/\b(this|these) (shape|3D shape|clock|chart|scale|jug|thermometer|pencil|tally chart|grid)\b|shaded|the time shown|arrow is pointing|each child's/i.test(p.question_text)
+            && !p.visual) fail(where, 'soru bir resimden söz ediyor ama görsel yok', p.question_text)
+        // 4. reading limit
+        if (String(p.question_text).length > cap) {
+          fail(where, `okuma sınırı aşıldı (${p.question_text.length} > ${cap})`, p.question_text)
+        }
+        // 5. language leak
+        if (LEAK[lang].some(re => re.test(all))) fail(where, 'dil sızıntısı', p.question_text)
+        // hint_steps present at all
+        if (!Array.isArray(p.hint_steps) || !p.hint_steps.length) fail(where, 'ipucu yok', p.question_text)
+      }
+    }
+  }
+}
+
+// ── 6. a sitting does not repeat itself ──────────────────────────────────────
+for (const age of AGES) {
+  const year = ageToSchoolYear(age)
+  const level = clampLevelToAge(startingLevelForAge(age), age)
+  const cap = maxQuestionChars(age)
+  const tts = BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)
+  if (!tts.length) continue
+  for (let s = 0; s < 60; s++) {
+    const keys = new Set(), texts = new Set()
+    for (let q = 0; q < 10; q++) {
+      const tt = tts[q % tts.length]
+      const p = generateProblem(tt, level, keys, 'tr', { maxChars: cap, avoidText: texts })
+      if (texts.has(p.question_text)) fail(`${year}/oturum`, 'aynı cümle iki kez', p.question_text)
+      keys.add(p.operandKey); texts.add(p.question_text)
+    }
+  }
+}
+
+// ── 8. does the template match the topic it was given? ───────────────────────
+// A curriculum topic maps to exactly one template and the template has no idea which topic it
+// is filling, so a wrong mapping is invisible at every other level: the question is correct,
+// the answer is correct, and the LABEL the parent reads is about something else. The audit's
+// first finding was that mismatch, and it happened again a day later — y5_statistics was
+// pointed at the averages template although Year 5's line is line graphs and tables and the
+// mean does not arrive until Year 6.
+//
+// The test is coarse on purpose: at least one word the template is about has to appear in the
+// topic's own name or description. Exemptions are listed with a reason, never silently.
+const TEMPLATE_WORDS = {
+  'place-value': ['round', 'place value', 'negative', 'order', 'compare'],
+  'fraction-of-number': ['fraction', 'decimal', 'percent'],
+  geometry: ['angle', 'area', 'perimeter', 'shape', '2d', '3d', 'side'],
+  averages: ['mean', 'median', 'mode', 'range', 'average', 'probability'],
+  ratio: ['ratio', 'proportion', 'scale', 'speed'],
+  algebra: ['algebra', 'formula', 'equation', 'unknown'],
+  sequence: ['sequence', 'function', 'term'],
+  'number-properties': ['factor', 'multiple', 'prime', 'square', 'cube', 'root'],
+  'long-mult-div': ['multipl', 'divi'],
+  'multiplication-word': ['multipl'],
+  'division-word': ['divi'],
+  addition: ['add'],
+  'add-sub-word': ['add', 'subtract'],
+  subtraction: ['subtract'],
+  counting: ['count', 'place value', 'number'],
+  time: ['time', 'clock'],
+  pictogram: ['chart', 'pictogram', 'bar', 'graph', 'table', 'data'],
+  'decimals-percentages': ['decimal', 'percent'],
+  money: ['money', 'pound', 'pence', 'coin', 'change', 'value'],
+  'area-grid': ['area', 'perimeter', 'square', 'rectilinear'],
+  chart: ['chart', 'graph', 'data', 'table', 'comparison'],
+  measurement: ['length', 'mass', 'capacity', 'volume', 'measure', 'perimeter', 'money', 'time'],
+  'powers-primes': ['prime', 'power', 'indices', 'factor'],
+  'negatives-decimals': ['negative', 'decimal'],
+  fdp: ['fraction', 'decimal', 'percent'],
+  'algebra-8': ['bracket', 'equation', 'factorise'],
+  'sequences-graphs': ['sequence', 'graph', 'term'],
+  'ratio-8': ['ratio', 'proportion', 'speed'],
+  'geometry-8': ['volume', 'circle', 'angle', 'area'],
+  'stats-8': ['mean', 'median', 'probability'],
+}
+// Topic ids whose wording cannot contain the word, with the reason spelled out.
+const MATCH_EXEMPT = {
+  y1_fractions: 'named "Half and Quarter"; halves and quarters are fractions, the word is not used',
+}
+for (const year of Object.keys(BRITISH_CURRICULUM)) {
+  for (const t of BRITISH_CURRICULUM[year].topics) {
+    const tt = templateTopicFor(t)
+    if (!tt || MATCH_EXEMPT[t.id]) continue
+    const words = TEMPLATE_WORDS[tt]
+    if (!words) { fail(`${year}/eşleme`, `'${tt}' şablonu için anahtar kelime tanımlı değil`); continue }
+    const text = `${t.name} ${t.description}`.toLowerCase()
+    if (!words.some(w => text.includes(w))) {
+      fail(`${year}/eşleme`, `konu '${t.name}' → '${tt}' şablonu; konunun tarifinde şablonun hiçbir konusu geçmiyor`, t.description)
+    }
+  }
+}
+
+// ── 7. coverage ──────────────────────────────────────────────────────────────
+console.log('Şablon kapsamı:')
+let templated = 0, total = 0
+for (const [year, c] of Object.entries(coverage)) {
+  templated += c.templated; total += c.total
+  const bar = c.templated === c.total ? '✓' : ' '
+  console.log(`  ${bar} ${year.padEnd(6)} ${String(c.templated).padStart(2)}/${c.total}` +
+    (c.missing.length ? `   eksik: ${c.missing.join(', ')}` : ''))
+}
+console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / total * 100)})\n`)
+
+// ── 8. help that teaches, ages 5-8 ───────────────────────────────────────────
+// After a wrong answer a child of eight or under gets the help panel. A question with a picture
+// or tool of its own is taught; one without falls back to the 💡 hint's own sentences, which is
+// the same text twice. Reported rather than failed: the number is a direction, and each tool
+// added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
+{
+  const TAUGHT = new Set(['share', 'fill', 'jumps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
+  const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
+  console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
+  for (const age of [5, 6, 7, 8]) {
+    const year = ageToSchoolYear(age)
+    const level = clampLevelToAge(startingLevelForAge(age), age)
+    const tts = BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)
+    let taught = 0, n = 0
+    for (let i = 0; i < 1500; i++) {
+      const p = generateProblem(tts[i % tts.length], level, null, 'en')
+      n++
+      const pic = p.help ?? p.visual
+      const nums = numsIn(p.question_text)
+      const small = (p.topic === 'addition' || p.topic === 'subtraction') && !p.visual && nums.length === 2
+        && nums[0] + nums[1] <= 30 && (!p.question_text.includes('=') || /=\s*\?\s*$/.test(p.question_text))
+      if ((pic && TAUGHT.has(pic.kind)) || small || bareSeq(p.question_text)) taught++
+    }
+    console.log(`  ${age} yaş  %${Math.round(taught / n * 100)} öğretici, %${100 - Math.round(taught / n * 100)} ipucu metninin tekrarı`)
+  }
+  console.log('')
+}
+
+// ── report ───────────────────────────────────────────────────────────────────
+if (!findings.length) {
+  console.log('Bulgu yok.')
+  process.exit(0)
+}
+const grouped = new Map()
+for (const f of findings) {
+  const k = `${f.where} :: ${f.msg}`
+  if (!grouped.has(k)) grouped.set(k, { n: 0, sample: f.sample })
+  grouped.get(k).n++
+}
+console.log(`${findings.length} bulgu, ${grouped.size} farklı:\n`)
+for (const [k, v] of [...grouped].sort((a, b) => b[1].n - a[1].n)) {
+  console.log(`  ×${String(v.n).padStart(4)}  ${k}`)
+  if (v.sample) console.log(`          ${v.sample}`)
+}
+process.exit(1)
+

@@ -1,3 +1,4 @@
+import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -10,6 +11,7 @@ import crypto, { randomUUID } from 'crypto'
 import { homeworkObservationPrompt, parseObservation, filterForParent, homeworkCaptionPrompt, fallbackCaption } from './prompts/homework.js'
 import { imageSafetyPrompt, parseImageSafety } from './prompts/imageSafety.js'
 import { purgeOldPhotos } from './jobs/purgeOldPhotos.js'
+import { parentLang, say, PARENT_LANGS, DEFAULT_PARENT_LANG } from './lang.js'
 
 // Default homework reward when a child's task_settings has no homework entry
 // yet. Parent can override it from Task settings (dashboard). Read SERVER-SIDE
@@ -19,10 +21,60 @@ const HOMEWORK_DEFAULT_GEMS = 25
 // Fallback gem rate per task type when a child's task_settings has no entry
 // yet — mirrors src/lib/taskDefaults.js's TASK_DEFAULTS gems values (kept as
 // a separate copy since frontend and backend are deployed independently).
-const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20 }
+const TASK_DEFAULT_GEMS = { reading: 30, math: 30, writing: 30, homework: HOMEWORK_DEFAULT_GEMS, drawing: 20, puzzle: 30, english: 30 }
+// How many sessions a day earn gems, per task type, when the parent hasn't set
+// their own number. Every gem-earning task has a cap now — the limit existed in
+// code for maths/reading/writing/drawing long before there was a dial for it,
+// and homework (which used to have none) joins them so the dashboard's setting
+// means the same thing everywhere. Mirrors src/lib/taskDefaults.js, same reason
+// as TASK_DEFAULT_GEMS: the two halves deploy independently.
+const TASK_DEFAULT_CAPS = { reading: 3, math: 3, writing: 3, homework: 3, drawing: 2, puzzle: 3, english: 3 }
+
+// The one place a finished activity becomes a line in the child's history. Every
+// caller used to write its own `if (gems > 0) insert` — which is exactly why a
+// session that hit the daily limit left no trace at all: the child saw four
+// sessions on the home screen and three rows in their history, and the missing
+// one was the one that needed explaining. A capped session is a row now, amount 0
+// and capped true, so the history can say "hit the limit" where it used to say
+// nothing. Readers are unaffected: they either sum `amount` (a zero changes
+// nothing) or filter `amount > 0` (the cap counters, the autopilot sweep).
+//
+// `capped` marks a session that earned nothing BECAUSE of the limit — not any
+// zero. A parent approving homework for 0 gems on purpose is a different thing
+// and must not read as the limit being spent.
+// `ref` is the sitting the row pays for (a puzzle session or a maths session_id), so the gem
+// history can open its questions.
+async function recordGems(childId, amount, reason, { capped = false, ref = null } = {}) {
+  // A zero that isn't the limit is nobody's history: a parent approving homework for
+  // nothing has said their piece to the child directly, and a row saying "+0" would
+  // only confuse it. Rows exist for sessions that paid, and for sessions the limit
+  // stopped from paying.
+  if (!amount && !capped) return { ok: true, skipped: true }
+
+  const row = { child_id: childId, amount, reason }
+  let { error } = await supabase.from('bt_ledger').insert({ ...row, capped, ...(ref ? { ref_id: ref } : {}) })
+
+  // ref_id not migrated yet: the row matters, the link does not — the history falls back to
+  // matching by time.
+  if (error && ref && /ref_id/i.test(error.message || '')) {
+    console.warn('[LEDGER] ref_id column missing — RUN THE MIGRATION (server/migrations/2026-09-19_birth_date_and_review_links.sql)')
+    ;({ error } = await supabase.from('bt_ledger').insert({ ...row, capped }))
+  }
+
+  // Column not migrated yet: never let that cost a child their gems. The paid row
+  // is rewritten without the flag; a capped row is skipped instead, because
+  // without the flag it would show up as a bare "+0" — worse than the gap it fills.
+  if (error && /capped/i.test(error.message || '')) {
+    console.warn('[LEDGER] capped column missing — RUN THE MIGRATION (server/migrations/2026-09-04_ledger_capped.sql)')
+    if (capped) return { ok: false, skipped: true, error }
+    ;({ error } = await supabase.from('bt_ledger').insert(row))
+  }
+  if (error) console.error(`[LEDGER] ${reason} insert failed for ${childId}: ${error.message}`)
+  return { ok: !error, error }
+}
 
 // Scored tasks: the configured figure is the most a session can pay, not what it will pay.
-const VARIABLE_TASKS = new Set(['reading', 'math', 'writing'])
+const VARIABLE_TASKS = new Set(['reading', 'math', 'writing', 'puzzle', 'english'])
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -83,9 +135,25 @@ async function fetchGeminiOnce(body) {
   return res.json()
 }
 
+// Appended to the system prompt of the tools-less re-ask in handleMessage. See the note there.
+const NO_TOOLS_NOTE = {
+  tr: `\n\nBU CEVAP İÇİN ELİNDE HİÇBİR ARAÇ (TOOL) YOK. Bu çağrıda tool tanımlı değil ve bu turda hiçbir ` +
+    `işlem yapılmadı: gem gönderilmedi ya da düşülmedi, hiçbir şey onaylanmadı, eklenmedi, kaydedilmedi. ` +
+    `Tool çağırmaya çalışma; bir tool çağrısını yazıyla da anlatma ("gönderiyorum", "hallediyorum", ` +
+    `"çağırıyorum" gibi); id yazma. Ebeveyn bir işlem istediyse ve önce bir şey sorman gerekiyorsa ` +
+    `(örneğin gem hediyesine açıklama notu eklemek isteyip istemediği — notsuz göndermek de bir seçenek) SADECE o soruyu sor — işlem ebeveyn cevap verince yapılacak. ` +
+    `Sorman gereken bir şey yoksa, isteği bir kez daha net yazmasını rica et.`,
+  en: `\n\nYOU HAVE NO TOOLS FOR THIS REPLY. No tool is declared in this call and nothing was done this ` +
+    `turn: no gems were given or taken, nothing was approved, added or saved. Do not try to call a tool, do ` +
+    `not describe a tool call in words ("sending it now", "calling..."), and never write an id. If the ` +
+    `parent asked for an action and you need to ask something first (e.g. whether they want a note on a gem gift — sending it without one is also fine), ask ONLY ` +
+    `that — the action happens when they answer. If there is nothing to ask, ask them to restate the request.`,
+}
+
 const GEMINI_FALLBACK_REPLY = {
   tr: 'Şu an yapay zeka platformumdaki bir teknik sorun nedeniyle mesajla yanıt veremiyorum. Bunu çözene kadar tüm ayarlara ve onaylara Tuto uygulaması üzerinden erişebilirsiniz.',
   en: "I'm currently unable to reply due to a technical issue with my AI platform. Until this is resolved, you can access all settings and approvals through the Tuto app.",
+  es: 'Ahora mismo no puedo responder por un problema técnico de mi plataforma de IA. Hasta que se resuelva, puedes ver todos los ajustes y las aprobaciones en la aplicación de Tuto.',
 }
 
 // Every timestamp handed to the model is a raw UTC ISO string, while the prompt tells it the
@@ -114,7 +182,8 @@ function toLocalTimes(value, tz) {
 async function getParentContext(parentId) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
-    supabase.from('children').select('id, name, age, task_settings, math_focus').eq('parent_id', parentId),
+    // `*` so english_variety (a later migration) is read when it exists and never breaks the read.
+    supabase.from('children').select('*').eq('parent_id', parentId),
   ])
   if (!children?.length) return []
 
@@ -154,11 +223,15 @@ async function getParentContext(parentId) {
       { data: lastMathQuestions },
       { data: goals },
       { data: goalRequests },
+      { data: puzzleSessions },
+      puzzleSkills,
+      { data: englishSessions },
+      englishSkills,
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
       supabase.from('math_progress').select('level, topic, accuracy, level_change, help_used, questions_total, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(10),
-      supabase.from('bt_ledger').select('amount, reason, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('bt_ledger').select('*').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('stories').select('title, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('books').select('title, completed, created_at').eq('child_id', child.id).order('created_at', { ascending: false }).limit(5).then(r => r).catch(() => ({ data: [] })),
       supabase.from('contribution_log').select('id, label, category, created_at').eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
@@ -201,6 +274,17 @@ async function getParentContext(parentId) {
       supabase.from('reward_suggestions')
         .select('id, name, icon, suggested_gems, created_at')
         .eq('child_id', child.id).eq('status', 'pending').order('created_at', { ascending: false }),
+      // Shape & pattern puzzles: the finished sittings, and the per-skill read below.
+      supabase.from('puzzle_sessions')
+        .select('band, correct, question_count, gems_earned, capped, created_at')
+        .eq('child_id', child.id).not('finished_at', 'is', null)
+        .order('created_at', { ascending: false }).limit(10),
+      puzzleStanding(child.id).catch(() => null),
+      supabase.from('english_sessions')
+        .select('band, variety, correct, question_count, gems_earned, capped, created_at')
+        .eq('child_id', child.id).not('finished_at', 'is', null)
+        .order('created_at', { ascending: false }).limit(10),
+      englishStanding(child.id).catch(() => null),
     ])
 
     const sub = submissions || []
@@ -217,6 +301,8 @@ async function getParentContext(parentId) {
     return toLocalTimes({
       name: child.name,
       age: child.age,
+      // The parent gave it for this: "when is her birthday", and a birthday gift_gems note.
+      birthDate: child.birth_date || `${child.name}'s birth date has not been given — the parent can add it on the child's card`,
       totalGems: led.reduce((s, r) => s + (r.amount || 0), 0),
       todaySubmissions: today.length ? today : `${child.name} has not completed any tasks today`,
       // Reading stores what it asked and what the child said, and the parent can open it in
@@ -264,26 +350,76 @@ async function getParentContext(parentId) {
             .map(r => ({ topic: r.topic_name, question: r.question, child_answer: r.child_answer,
                          was_correct: r.correct, used_hint: r.help_used }))
         : `no maths questions recorded for ${child.name} yet`,
+      // Puzzles are not maths and must not be reported as maths: they are shape-and-pattern
+      // reasoning (the 11+ "non-verbal reasoning" papers). Same rule as mathTopics for the
+      // per-skill read: the verdict is code's, and a skill under the floor carries no figures.
+      puzzleSessions: (puzzleSessions || []).length
+        ? puzzleSessions.map(p => ({ date: p.created_at, band: p.band, correct: `${p.correct}/${p.question_count}`,
+            gems: p.capped ? 'none — daily limit already reached' : p.gems_earned }))
+        : `${child.name} has not done any shape & pattern puzzles yet`,
+      puzzleSkills: puzzleSkills?.length
+        ? puzzleSkills.map(k => k.standing === 'not enough yet'
+            ? { skill: k.skill, attempts: k.attempts,
+                standing: `only ${k.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
+            : k)
+        : `not enough puzzles answered yet to say anything per skill for ${child.name}`,
+      // English: native-level verbal reasoning, spelling and grammar (the Bond 11+ English papers),
+      // not English as a foreign language. Same rules as puzzleSkills.
+      englishSessions: (englishSessions || []).length
+        ? englishSessions.map(p => ({ date: p.created_at, band: p.band, correct: `${p.correct}/${p.question_count}`,
+            gems: p.capped ? 'none — daily limit already reached' : p.gems_earned }))
+        : `${child.name} has not done any English sessions yet`,
+      englishSkills: englishSkills?.length
+        ? englishSkills.map(k => k.standing === 'not enough yet'
+            ? { skill: k.skill, attempts: k.attempts,
+                standing: `only ${k.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
+            : k)
+        : `not enough English answered yet to say anything per skill for ${child.name}`,
+      englishVariety: child.english_variety
+        ? `${child.english_variety === 'us' ? 'American' : 'British'} English — chosen by the parent`
+        : `${englishVarietyForZone(tz) === 'us' ? 'American' : 'British'} English — from the family's time zone (the parent has not chosen)`,
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,
-      gemHistory: led.length ? led : `${child.name} has no gem history yet`,
+      // A row with amount 0 is a session that hit the day's limit: it happened, it was saved,
+      // it earned nothing. Handed over bare it reads as "0 gems" and the agent reports a
+      // session as worthless, so the row carries its own explanation. Row ids are dropped —
+      // nothing asks about them and twenty of them is twenty lines of noise.
+      gemHistory: led.length
+        ? led.map(({ id, child_id, capped, ...r }) => capped
+            ? { ...r, capped: true,
+                note: 'this session hit the daily limit for that activity — it was done and saved, it just earned nothing' }
+            : r)
+        : `${child.name} has no gem history yet`,
       stories: (stories || []).length ? stories : `${child.name} has not written any stories yet`,
       books: (books || []).length ? books : `${child.name} has not read any books yet`,
-      // The CURRENT gem reward per task type — ground truth for "kaç gem
-      // veriyoruz" questions and the before/after numbers update_task_reward
-      // reports. Falls back to TASK_DEFAULT_GEMS for any type the parent
-      // hasn't customized yet.
+      // The CURRENT settings per task type — ground truth for "kaç gem veriyoruz"
+      // and "günde kaç tanesine gem gidiyor" questions, and the before/after
+      // numbers update_task_reward reports. Falls back to TASK_DEFAULT_GEMS /
+      // TASK_DEFAULT_CAPS for any type the parent hasn't customized yet.
       // Reading, maths and writing are scored, so the figure is a CEILING — the server pays it
       // scaled by how the child did, and again by a third if they took help. A bare number read
       // as a flat rate: asked what maths was worth, the model answered "exactly 30 gems every
       // time" for a session that had just paid 15.
+      // The daily limit belongs here for the same reason: it is enforced for every task type, so
+      // a parent asking why the fourth session paid nothing has an answer that isn't a guess.
       taskRewards: Object.fromEntries(
         Object.entries(TASK_DEFAULT_GEMS).map(([type, def]) => {
-          const gems = child.task_settings?.[type]?.gems ?? def
-          return [type, VARIABLE_TASKS.has(type) ? `up to ${gems} (scaled by score)` : gems]
+          const s = child.task_settings?.[type] || {}
+          const gems = s.gems ?? def
+          const cap = s.daily_cap ?? TASK_DEFAULT_CAPS[type]
+          const rate = VARIABLE_TASKS.has(type) ? `up to ${gems} gems (scaled by score)` : `${gems} gems`
+          return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
+      // The once-a-day bonus for doing every activity (Hezarfen / All-Rounder / Todoterreno).
+      dailyBonus: (() => {
+        const b = bonusSettings(child.task_settings, child.age)
+        if (Number(child.age) < BONUS_MIN_AGE) return `not running for ${child.name} — the daily bonus is for children aged ${BONUS_MIN_AGE} and up`
+        return b.active
+          ? `on: +${b.gems} gems once a day when ${child.name} does all of ${b.types.join(', ')} in the same day (homework and the tree do not count toward it)`
+          : `switched off by the parent`
+      })(),
       pendingContributions: pendingError
         ? `${child.name}'s pending contributions could not be read right now (temporary error) — do NOT say there are none, tell the parent you couldn't check and to ask again shortly`
         : (pendingContributions.length ? pendingContributions : `${child.name} has no contributions awaiting approval`),
@@ -710,12 +846,19 @@ async function sendWhatsAppNotice(parentId, phone, notice, lang, tag) {
     console.log(`[${tag}] ⚠️ parent ${parentId} outside the 24h window and this notification has no template — dropped`)
     return false
   }
+  // The per-notice detail lines are written in tr and en only, and Spanish is not being added
+  // to them: this is the WhatsApp path, where the template itself has to be registered and
+  // approved by Meta per language. Writing a Spanish detail with no Spanish template behind it
+  // would be a translation that never reaches anyone. Spanish falls through to the generic
+  // line below, which is the same thing an untranslated notice kind already gets. Telegram —
+  // the only channel in use — never comes through here.
   const detail = typeof notice.detail === 'string' ? notice.detail : notice.detail?.[lang]
   const name = notice.child || await firstChildName(parentId)
   try {
     await sendWhatsAppTemplate(phone, notice.kind, lang,
-      templateVar(name, lang === 'en' ? 'your child' : 'çocuğunuz'),
-      templateVar(detail, lang === 'en' ? 'there is something new in the app' : 'uygulamada yeni bir şey var'))
+      templateVar(name, say(lang, 'your child', 'çocuğunuz', 'su hijo')),
+      templateVar(detail, say(lang, 'there is something new in the app', 'uygulamada yeni bir şey var',
+                                    'hay algo nuevo en la aplicación')))
     console.log(`[${tag}] ✅ Sent ${notice.kind}/${lang} template → parent ${parentId} (window shut)`)
     return true
   } catch (err) {
@@ -743,6 +886,37 @@ async function sendWhatsAppPhoto(to, photoUrl, caption) {
 // remember. Reading parts[0].text has the same fault when the first part is a thought.
 function textFromParts(parts) {
   return (parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim()
+}
+
+// ── What may not reach a parent ───────────────────────────────────────────
+// The model is told not to write ids or talk about its tools, and on 2026-09-16 it sent a parent
+// "Odin'in çocuklarından Ada'ya (id: dd07444d-…) 10 gem göndereceğim. Hallediyorum." — a tool
+// call written out as prose, a child's UUID in it, and a name from nowhere. Reproduced with
+// scripts/chat-probe.mjs on the same conversation, one run in six sent "Let's grant 10 gems to
+// Ada. Calling tool...". A rule about what leaves is a rule, so it is checked here and not asked.
+//
+// Only what is unambiguous is caught: a UUID, one of our own tool names, or a sentence about
+// calling a tool. None of those belongs in a message to a parent under any reading.
+const UUID_RE = /`?\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b`?/gi
+function replyLeak(text) {
+  if (!text) return null
+  if (text.match(UUID_RE)) return 'an internal id'
+  const tool = CONTRIBUTION_TOOLS[0].functionDeclarations.map(f => f.name).find(n => text.includes(n))
+  if (tool) return `the tool name ${tool}`
+  if (/\b(calling|call(ed)?|invoking)\s+(the\s+)?(tool|function)\b|\bfunction ?call\b|\btool ?call\b/i.test(text)) return 'narration of a tool call'
+  return null
+}
+
+// Last resort for a reply that reports something real (a tool has already run) but carries an id:
+// the fact is worth sending, the id is not. "(id: …)" and "id: …" go with it, not just the digits.
+function stripInternalIds(text) {
+  return text
+    .replace(new RegExp(`\\s*\\(\\s*(?:id\\s*[:=]\\s*)?${UUID_RE.source}\\s*\\)`, 'gi'), '')
+    .replace(new RegExp(`\\s*\\bid\\s*[:=]\\s*${UUID_RE.source}`, 'gi'), '')
+    .replace(UUID_RE, '')
+    .replace(/ +([,.;:!?)])/g, '$1')
+    .replace(/ {2,}/g, ' ')
+    .trim()
 }
 
 // ── The exit gate ─────────────────────────────────────────────────────────
@@ -876,7 +1050,7 @@ async function sendNotification(parentId, message, notice) {
 
   // ── WhatsApp (Twilio) ─────────────────────────────────────────────────────
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const lang = parentLang(parent?.prefs)
     if (await whatsappWindowOpen(parentId)) {
       try {
         await sendWhatsAppBusinessMessage(parent.whatsapp_phone, message)
@@ -941,7 +1115,7 @@ async function sendNotificationWithPhoto(parentId, message, photoUrl, bucket = P
   // app — re-sending it once they reply would mean queueing images, which is a bigger thing
   // than it looks and not what this is.
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const lang = parentLang(parent?.prefs)
     if (await whatsappWindowOpen(parentId)) {
       try {
         await sendWhatsAppPhoto(parent.whatsapp_phone, photoUrl, message)
@@ -1010,7 +1184,7 @@ async function sendNotificationWithPhotos(parentId, message, photoUrls, notice) 
   }
 
   if (channel === 'whatsapp' && parent?.whatsapp_phone) {
-    const lang = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const lang = parentLang(parent?.prefs)
     if (!(await whatsappWindowOpen(parentId))) {
       if (await sendWhatsAppNotice(parentId, parent.whatsapp_phone, notice, lang, 'NOTIFY-PHOTOS')) {
         // The template deliberately does not carry the caption, so it is the caption sitting
@@ -1315,26 +1489,46 @@ const CONTRIBUTION_TOOLS = [{
     {
       name: 'update_task_reward',
       description:
-        'Changes how many gems a TASK TYPE pays out going forward — completely different from gift_gems/' +
-        'deduct_gems, which move gems right now. This changes the future rate ("matematiğe 40 gem verelim", ' +
-        '"kitap okumayı 20 yap", "set homework to 15 gems"). The CURRENT rate for each ' +
-        'type is already in context under each child\'s taskRewards — use it to answer "kaç gem veriyoruz" ' +
-        'questions directly, with NO tool call, and to confirm the new number after a change.\n' +
+        'Changes what a TASK TYPE is worth going forward — completely different from gift_gems/' +
+        'deduct_gems, which move gems right now. Two separate dials, and you may set either or both:\n' +
+        '• gems — the rate one session pays ("matematiğe 40 gem verelim", "kitap okumayı 20 yap", "set ' +
+        'homework to 15 gems").\n' +
+        '• daily_cap — how many sessions A DAY earn gems, after which the child can keep going but stops ' +
+        'earning ("günde 3 matematikten fazlasına gem verme", "sadece 2 hikayeye gem versin", "ödevde günlük ' +
+        'sınır 1 olsun", "limit the drawings to 4 a day"). EVERY task type has this limit — it is not a ' +
+        'drawings-only thing.\n' +
+        'Both CURRENT values for each type are already in context under each child\'s taskRewards — use them ' +
+        'to answer "kaç gem veriyoruz" / "günde kaça gem gidiyor" questions directly, with NO tool call, and ' +
+        'to confirm the new number after a change.\n' +
         'Map the parent\'s words to exactly one of these task_type keys: "matematik"/"math" → math, "kitap"/' +
         '"okuma"/"books"/"reading" → reading, "hikaye"/"yazı"/"stories"/"writing" → writing, "ödev"/"homework" ' +
-        '→ homework, "çizim"/"resim"/"drawing" → drawing. If you cannot tell which task type they mean, ASK — ' +
+        '→ homework, "çizim"/"resim"/"drawing" → drawing, "bulmaca"/"şekil bulmacası"/"puzzle"/"NVR" → puzzle, ' +
+        '"ingilizce"/"english"/"inglés"/"kelime soruları" → english, ' +
+        '"günlük bonus"/"hezarfen"/"all-rounder"/"todoterreno"/"hepsini yapınca verilen bonus" → bonus (the once-a-day bonus for doing ' +
+        'every activity; it takes gems, active and bonus_types, never daily_cap). If you cannot tell which task type they mean, ASK — ' +
         'do not guess between two.\n' +
-        'The server enforces a 1-500 range. Only call this when the parent explicitly states a task type AND a ' +
-        'specific new number — an unclear or partial request ("matematiği artıralım biraz") means asking for the ' +
-        'exact number, never picking one yourself.',
+        'bonus_types (task_type bonus only) is WHICH activities the bonus asks for ("hezarfen için ingilizce şart olmasın", ' +
+        '"bonus sadece matematik, okuma ve bulmaca olsun"): send the complete list the bonus should count afterwards — read the ' +
+        'current one from dailyBonus in context and add or remove what the parent said. At least two.\n' +
+        'variety (task_type english only) is British or American English — spelling and which words rhyme or sound the same ' +
+        '("Amerikan İngilizcesi olsun", "British spelling please"): uk, us, or auto (back to the family\'s time zone). The ' +
+        'current one is englishVariety in context.\n' +
+        'The server enforces 1-500 for gems and 0-50 for daily_cap. Only call this when the parent explicitly ' +
+        'states a task type AND a specific new number — an unclear or partial request ("matematiği artıralım ' +
+        'biraz", "çok fazla resim yapıyor") means asking for the exact number, never picking one yourself. ' +
+        'Never send a dial the parent did not mention: changing the rate is not changing the limit.',
       parameters: {
         type: 'OBJECT',
         properties: {
-          child_id: { type: 'STRING', description: 'The exact id of the child whose task reward to change, from the children list in context.' },
-          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing.' },
-          gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500).' },
+          child_id: { type: 'STRING', description: 'The exact id of the child whose task settings to change, from the children list in context.' },
+          task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle, english, bonus.' },
+          gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Omit entirely if they only asked to change the daily limit.' },
+          daily_cap: { type: 'NUMBER', description: 'The exact new number of gem-earning sessions per day the parent said (whole number, 0-50). Omit entirely if they only asked to change the gem amount.' },
+          active: { type: 'BOOLEAN', description: 'Only for task_type bonus: false switches the daily bonus off, true back on. Omit otherwise.' },
+          bonus_types: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Only for task_type bonus: the full list of activities the bonus counts afterwards, from math, reading, writing, drawing, puzzle, english. Omit unless the parent changed which activities count.' },
+          variety: { type: 'STRING', description: 'Only for task_type english: uk, us or auto. Omit unless the parent asked for British/American English.' },
         },
-        required: ['child_id', 'task_type', 'gems'],
+        required: ['child_id', 'task_type'],
       },
     },
     {
@@ -1471,6 +1665,15 @@ const CONTRIBUTION_TOOLS = [{
           dont_ask_before: {
             type: 'ARRAY', items: { type: 'STRING' },
             description: 'Types to approve automatically instead of asking: submission, drawing, contribution.',
+          },
+          language: {
+            type: 'STRING',
+            description: 'The language YOU write to this parent in, as a code: tr, en or es. Set it when they ' +
+              'ask for it in words ("bana İngilizce yaz", "escríbeme en español", "can you write in English?"). ' +
+              'Do NOT set it just because they wrote to you in another language once — people switch languages ' +
+              'mid-conversation and you already reply in whichever they used. This changes the messages you send ' +
+              'on your own, which they may not be reading when it happens. It does not touch the language their ' +
+              'CHILD is taught in; that one is per child, in the app.',
           },
         },
       },
@@ -1614,6 +1817,15 @@ async function updatePreferencesTool(parentId, args) {
     changed.push('notify_level')
   }
 
+  if (args.language != null) {
+    const code = String(args.language).trim().toLowerCase()
+    if (!PARENT_LANGS.some(l => l.code === code)) {
+      return { success: false, error: `language must be one of: ${PARENT_LANGS.map(l => l.code).join(', ')}` }
+    }
+    prefs.language = code
+    changed.push('language')
+  }
+
   if (args.quiet_off === true) {
     prefs.quiet_hours = null
     changed.push('quiet_hours')
@@ -1661,6 +1873,7 @@ async function updatePreferencesTool(parentId, args) {
     success: true,
     changed,
     now: {
+      language: parentLang(prefs),
       notify_level: prefs.notify_level ?? 'all',
       notify_per_task: prefs.notify_per_task !== false,
       quiet_hours: prefs.quiet_hours ?? null,
@@ -1767,19 +1980,24 @@ async function setAutopilotTool(parentId, args) {
 // window in which Tuto spent the parent's authority. What it says has to match what happened
 // exactly, and "usually phrases it accurately" is not the standard for that.
 function autopilotClosingMessage(handled, language) {
-  const en = language === 'en'
+  const L = (en, tr, es) => say(language, en, tr, es)
   const gems = handled.earned.map(e => `${e.child} +${e.gems}`).join(', ')
-  const head = en ? "Autopilot's done — approvals are back with you." : 'Otomatik pilot bitti — onaylar yine sende.'
+  const head = L("Autopilot's done — approvals are back with you.",
+                 'Otomatik pilot bitti — onaylar yine sende.',
+                 'El piloto automático ha terminado: las aprobaciones vuelven a ser tuyas.')
 
   const body = handled.approved > 0 || handled.earned.length
-    ? (en ? `While you were busy I approved ${handled.approved} thing${handled.approved === 1 ? '' : 's'}.`
-          : `Sen meşgulken ${handled.approved} şeyi ben onayladım.`) +
-      (gems ? (en ? ` Gems: ${gems} 💎` : ` Gem: ${gems} 💎`) : '')
-    : (en ? 'Nothing came in while you were busy.' : 'Sen meşgulken yeni bir şey gelmedi.')
+    ? L(`While you were busy I approved ${handled.approved} thing${handled.approved === 1 ? '' : 's'}.`,
+        `Sen meşgulken ${handled.approved} şeyi ben onayladım.`,
+        `Mientras estabas ocupado aprobé ${handled.approved} cosa${handled.approved === 1 ? '' : 's'}.`) +
+      (gems ? L(` Gems: ${gems} 💎`, ` Gem: ${gems} 💎`, ` Gems: ${gems} 💎`) : '')
+    : L('Nothing came in while you were busy.', 'Sen meşgulken yeni bir şey gelmedi.',
+        'No llegó nada mientras estabas ocupado.')
 
   const tail = handled.waiting > 0
-    ? (en ? `\n\n${handled.waiting} thing${handled.waiting === 1 ? ' is' : 's are'} still waiting on you — I don't decide those.`
-          : `\n\n${handled.waiting} şey hâlâ seni bekliyor — onlara ben karar vermiyorum.`)
+    ? L(`\n\n${handled.waiting} thing${handled.waiting === 1 ? ' is' : 's are'} still waiting on you — I don't decide those.`,
+        `\n\n${handled.waiting} şey hâlâ seni bekliyor — onlara ben karar vermiyorum.`,
+        `\n\nQueda${handled.waiting === 1 ? '' : 'n'} ${handled.waiting} cosa${handled.waiting === 1 ? '' : 's'} esperándote: esas no las decido yo.`)
     : ''
 
   return `${head}\n\n${body}${tail}`
@@ -1814,7 +2032,7 @@ async function closeExpiredAutopilots() {
       continue
     }
 
-    const language = parent.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parent.prefs)
     console.log(`[AUTOPILOT] window closed for parent ${parent.id} — approved ${handled.approved}, waiting ${handled.waiting}`)
     sendNotification(parent.id, autopilotClosingMessage(handled, language), {
       kind: 'autopilot',
@@ -1877,10 +2095,21 @@ async function sendDrawingPhotoTool(paintingId, parentId) {
   return { success: true, child: child.name }
 }
 
+// How many homeworks sent on the same local day as `sub` have already been paid. null when the
+// count cannot be read, which every cap treats as full.
+async function homeworkPaidOnDayOf(sub, tz) {
+  const day = DateTime.fromISO(sub.created_at, { zone: 'utc' }).setZone(tz)
+  const { data, error } = await supabase.from('submissions')
+    .select('id').eq('child_id', sub.child_id).eq('task_type', 'homework').eq('status', 'approved').gt('gems_earned', 0)
+    .gte('created_at', day.startOf('day').toUTC().toISO()).lte('created_at', day.endOf('day').toUTC().toISO())
+  if (error) { console.error(`[CAP] homework check failed: ${error.message}`); return null }
+  return (data || []).length
+}
+
 async function approveSubmissionTool(submissionId, parentId, gems) {
   const { data: sub } = await supabase
     .from('submissions')
-    .select('id, child_id, task_type, status, suggested_gems')
+    .select('id, child_id, task_type, status, suggested_gems, created_at')
     .eq('id', submissionId)
     .maybeSingle()
   if (!sub) return { success: false, error: 'submission not found' }
@@ -1907,13 +2136,36 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
   const ts = child.task_settings || {}
   const configured = ts[sub.task_type]?.gems ?? (sub.task_type === 'homework' ? HOMEWORK_DEFAULT_GEMS : (sub.suggested_gems ?? HOMEWORK_DEFAULT_GEMS))
 
-  let awarded
-  if (gems === undefined || gems === null || Number.isNaN(Number(gems))) {
-    awarded = configured
-  } else {
-    awarded = Math.max(0, Math.min(Number(gems), configured * 2))
-  }
+  const namedAmount = !(gems === undefined || gems === null || Number.isNaN(Number(gems)))
+  let awarded = namedAmount
+    ? Math.max(0, Math.min(Number(gems), configured * 2))
+    : configured
   awarded = Math.round(awarded)
+
+  // Rule 4b — the daily cap, applied at APPROVAL time because that is when gems
+  // move (same rule and same fail-closed stance as drawings). Homework used to
+  // be the one task with no limit at all, which mattered most under autopilot:
+  // with approval_required off the server approves by itself, so a stack of
+  // photos was a stack of gems. Over the limit the submission is still approved
+  // and still shown to the parent — it just pays nothing, and `capped` tells the
+  // caller to say so rather than report a silent zero.
+  //
+  // A parent who NAMES an amount overrides the cap: that is a person deciding on
+  // this one submission, not the automatic path the cap exists to bound. They are
+  // still told the limit is spent (capped comes back either way).
+  const capSettings = taskSettingsFor(ts, sub.task_type, {
+    gems: configured,
+    dailyCap: TASK_DEFAULT_CAPS[sub.task_type] ?? TASK_DEFAULT_CAPS.homework,
+  })
+  const tz = await tzForChild(sub.child_id)
+  // Homework is counted against the day it was SENT, not the day it is approved: a parent
+  // clearing a week's backlog on Sunday is approving five days of homework, not five pieces of
+  // one day's — counted by approval day, the fourth of them paid nothing.
+  const already = sub.task_type === 'homework'
+    ? await homeworkPaidOnDayOf(sub, tz)
+    : await rewardedToday(sub.child_id, tz, sub.task_type || 'task')
+  const capped = !capSettings.active || already === null || already >= capSettings.dailyCap
+  if (capped && !namedAmount) awarded = 0
 
   // Rule 5 — single ledger path, identical to the dashboard approve button:
   // flip status + write gems_earned, then one bt_ledger insert (reason=type).
@@ -1924,17 +2176,14 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
     .eq('status', 'pending') // guard against a concurrent approval racing us
   if (updErr) return { success: false, error: updErr.message }
 
-  if (awarded > 0) {
-    const { error: ledErr } = await supabase
-      .from('bt_ledger')
-      .insert({ child_id: sub.child_id, amount: awarded, reason: sub.task_type || 'task' })
-    if (ledErr) {
-      console.error(`[SUBMISSION] ledger insert failed for ${sub.id}: ${ledErr.message}`)
-      return { success: false, error: 'reward could not be recorded' }
-    }
-  }
+  // A parent who named an amount is paid it even past the limit, so the row is only
+  // marked capped when the limit is what made it zero.
+  const led = await recordGems(sub.child_id, awarded, sub.task_type || 'task',
+    { capped: capped && awarded === 0 })
+  if (awarded > 0 && !led.ok) return { success: false, error: 'reward could not be recorded' }
 
-  return { success: true, id: sub.id, childName: child.name, taskType: sub.task_type, gems: awarded }
+  return { success: true, id: sub.id, childName: child.name, taskType: sub.task_type, gems: awarded,
+    capped, dailyCap: capSettings.dailyCap }
 }
 
 // Re-sends a submission's photos into the chat on request. Ownership is checked
@@ -2070,14 +2319,66 @@ async function deductGemsTool(childId, amount, parentId, note) {
   return { success: true, childName: child.name, amount: n, remainingGems: gems - n }
 }
 
-// Changes how many gems a task type pays out going forward — a DIFFERENT
-// thing from gift_gems/deduct_gems (those move gems now; this changes the
-// future rate). Merges into the existing task_settings JSONB rather than
-// overwriting it, so other types' settings (and drawing's daily_cap) survive.
-async function updateTaskRewardTool(childId, taskType, gems, parentId) {
-  if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
+// Changes what a task type is worth going forward — a DIFFERENT thing from
+// gift_gems/deduct_gems (those move gems now; this changes the future rate).
+// Two dials, either or both: the gem amount, and how many sessions a day earn
+// gems. Merges into the existing task_settings JSONB rather than overwriting it,
+// so the other types' settings — and the dial that wasn't touched — survive.
+// The daily all-rounder bonus: its amount and whether it is on. Separate from the task tool
+// because it has no daily cap (it pays once a day by definition) and it can be switched off here.
+async function updateBonusTool(childId, gems, active, parentId, types) {
+  const wantsGems = gems !== undefined && gems !== null
+  const wantsActive = typeof active === 'boolean'
+  const wantsTypes = Array.isArray(types)
+  if (!wantsGems && !wantsActive && !wantsTypes) return { success: false, error: 'nothing to change: give gems, active, bonus_types, or any of them' }
+  if (wantsTypes) {
+    const bad = types.filter(k => !BONUS_TYPES.includes(k))
+    if (bad.length) return { success: false, error: `unknown bonus activity ${bad.join(', ')} — use only ${BONUS_TYPES.join(', ')}` }
+    if (types.length < 2) return { success: false, error: 'the bonus needs at least two activities — with one it is just that activity paying twice' }
+  }
   const n = Math.round(Number(gems))
-  if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'gems must be between 1 and 500' }
+  if (wantsGems && (!Number.isFinite(n) || n < 1 || n > 500)) return { success: false, error: 'gems must be between 1 and 500' }
+  const { data: child } = await supabase.from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+  const current = child.task_settings?.bonus || {}
+  const next = { ...(child.task_settings || {}), bonus: {
+    ...current, active: wantsActive ? active : (current.active ?? true), gems: wantsGems ? n : (current.gems ?? BONUS_DEFAULTS.gems),
+    ...(wantsTypes ? { types: [...new Set(types)] } : {}),
+  } }
+  const { error } = await supabase.from('children').update({ task_settings: next }).eq('id', childId)
+  if (error) return { success: false, error: error.message }
+  return { success: true, childName: child.name, taskType: 'bonus', gems: next.bonus.gems, active: next.bonus.active,
+    counts: bonusSettings(next, child.age).types,
+    ...(Number(child.age) < BONUS_MIN_AGE ? { note: `saved, but the bonus only runs for children aged ${BONUS_MIN_AGE} and up — say so` } : {}) }
+}
+
+async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap, variety) {
+  if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
+
+  const wantsGems = gems !== undefined && gems !== null
+  const wantsCap = dailyCap !== undefined && dailyCap !== null
+  const wantsVariety = variety !== undefined && variety !== null
+  if (wantsVariety) {
+    if (taskType !== 'english') return { success: false, error: 'variety is only for task_type english' }
+    if (!['uk', 'us', 'auto'].includes(variety)) return { success: false, error: 'variety must be uk, us or auto' }
+    if (!wantsGems && !wantsCap) return setEnglishVarietyTool(childId, variety, parentId)
+  }
+  if (!wantsGems && !wantsCap) return { success: false, error: 'nothing to change: give gems, daily_cap, or both' }
+
+  let n = null
+  if (wantsGems) {
+    n = Math.round(Number(gems))
+    if (!Number.isFinite(n) || n < 1 || n > 500) return { success: false, error: 'gems must be between 1 and 500' }
+  }
+
+  // 0 is a real answer here ("maths shouldn't pay at all today"), so the floor is
+  // 0, not 1 — unlike the gem amount, where 0 means "off" and the toggle says that.
+  let cap = null
+  if (wantsCap) {
+    cap = Math.round(Number(dailyCap))
+    if (!Number.isFinite(cap) || cap < 0 || cap > 50) return { success: false, error: 'daily_cap must be between 0 and 50' }
+  }
 
   const { data: child } = await supabase
     .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
@@ -2085,12 +2386,35 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId) {
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
   const nextSettings = { ...(child.task_settings || {}) }
-  nextSettings[taskType] = { ...(nextSettings[taskType] || {}), active: nextSettings[taskType]?.active ?? true, gems: n }
+  const current = nextSettings[taskType] || {}
+  nextSettings[taskType] = {
+    ...current,
+    active: current.active ?? true,
+    gems: wantsGems ? n : (current.gems ?? TASK_DEFAULT_GEMS[taskType]),
+    daily_cap: wantsCap ? cap : (current.daily_cap ?? TASK_DEFAULT_CAPS[taskType]),
+  }
 
   const { error } = await supabase.from('children').update({ task_settings: nextSettings }).eq('id', childId)
   if (error) return { success: false, error: error.message }
 
-  return { success: true, childName: child.name, taskType, gems: n }
+  const varietyResult = wantsVariety ? await setEnglishVarietyTool(childId, variety, parentId) : null
+  return { success: true, childName: child.name, taskType,
+    gems: nextSettings[taskType].gems, dailyCap: nextSettings[taskType].daily_cap,
+    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null, wantsVariety ? 'variety' : null].filter(Boolean),
+    ...(varietyResult ? { variety: varietyResult.variety, varietyError: varietyResult.error } : {}) }
+}
+
+// British or American English for one child: spelling, and the sound questions (rhyme,
+// homophones) that differ between them. 'auto' clears the choice back to the family's time zone.
+async function setEnglishVarietyTool(childId, variety, parentId) {
+  const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+  const value = variety === 'auto' ? null : variety
+  const { error } = await supabase.from('children').update({ english_variety: value }).eq('id', childId)
+  if (error) return { success: false, error: /english_variety/.test(error.message) ? 'the English setting is not available yet (database not migrated)' : error.message }
+  const effective = value || englishVarietyForZone(await tzForChild(childId))
+  return { success: true, childName: child.name, variety: effective, chosen: value ? 'by the parent' : 'from the family time zone' }
 }
 
 async function approveContributionTool(contributionId, parentId) {
@@ -2229,7 +2553,7 @@ async function handleMessage(parentId, replyCb, text) {
   // Declared here (not inside try) so the catch block can still send a
   // localized fallback reply if we made it far enough to know the parent's
   // language before something failed.
-  let language = 'tr'
+  let language = DEFAULT_PARENT_LANG
   try {
     const historyContents = await fetchConversationHistory(parentId)
     await logMessage(parentId, 'parent', text)
@@ -2239,7 +2563,7 @@ async function handleMessage(parentId, replyCb, text) {
       supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
       supabase.from('children').select('id, name').eq('parent_id', parentId),
     ])
-    language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+    language = parentLang(parentRow?.prefs)
     const tz = parentRow?.timezone || 'UTC'
     const userNow = DateTime.now().setZone(tz)
     const localTimeStr = `${userNow.toFormat('yyyy-MM-dd HH:mm')} (${tz})`
@@ -2254,6 +2578,12 @@ async function handleMessage(parentId, replyCb, text) {
     }[NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all']
     const settingsBlock =
       `BU EBEVEYNİN BİLDİRİM AYARLARI (okuma sorusu gelirse buradan cevapla, tool çağırma):\n` +
+      // The parent can ask which language the messages you SEND are in, and it is not the same
+      // question as which language this conversation is happening in — they can write to you in
+      // English and still be getting Turkish notifications at nine at night.
+      `- Kendiliğinden gönderdiğin mesajların dili: ${language} (tr/en/es). Cevaplarını her zaman ` +
+      `ebeveynin yazdığı dilde veriyorsun; bu ayar sadece senin başlattığın bildirimleri etkiliyor. ` +
+      `Değiştirmelerini isterlerse update_preferences'ı language ile çağır.\n` +
       `- Kademe: "${NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all'}" — ${levelSaid}.\n` +
       ((NOTIFY_LEVEL_ALLOWS[p.notify_level] ? p.notify_level : 'all') === 'all'
         ? `- Biten seanslar: ${p.notify_per_task !== false ? 'her seansı yazıyorsun' : 'günün sadece ilkini yazıyorsun'}. ` +
@@ -2474,6 +2804,25 @@ async function handleMessage(parentId, replyCb, text) {
         `recurrence system yet, so that part of what the parent said is simply dropped, not stored. This ` +
         `stripping is ONLY for the label argument you pass into add_card — never apply it when reading, ` +
         `listing, or counting existing pending contributions elsewhere in this prompt.\n\n` +
+        `GÜNLÜK SINIRA TAKILAN SEANSLAR:\n` +
+        `- Her aktivitenin günlük bir sınırı var; taskRewards'ta her tip için hem tutar hem "günde kaç tanesi ` +
+        `gem kazandırır" yazıyor. Sınırdan sonraki seans yine YAPILDI ve kaydedildi, sadece gem kazandırmadı. ` +
+        `gemHistory'de capped=true olan satır tam olarak budur. Bunu "hiçbir şey yapmamış" ya da "0 gem ` +
+        `kazanmış" diye aktarma — çocuk çalışmış, ödül gitmemiş.\n` +
+        `- Bu durumu KENDİLİĞİNDEN fırsata çevirme: "istersen gem ekleyeyim mi", "sınırı artıralım mı" diye ` +
+        `ÖNERME. Sınırı ebeveyn koydu; her takılışta delmeyi teklif etmek sınırı anlamsızlaştırır ve seni ` +
+        `ısrarcı bir satıcıya çevirir. Ebeveyn sormadıkça sadece ne olduğunu söyle.\n` +
+        `- Ebeveyn KENDİSİ o seans için gem vermek isterse ("verelim buna da gem", "bu sayılsın"), bunun iki ` +
+        `ayrı şey olduğunu BİR KEZ sor: bu seferlik mi olsun, yoksa günlük sınır kalıcı olarak mı değişsin. ` +
+        `Sorarken mevcut sınırı söyle — örn. "şu an günde 3 matematiğe gem veriyoruz; bunu kalıcı olarak 4 ` +
+        `yapayım mı, yoksa sadece bugünküne mi ekleyeyim?". Tek soru, iki seçenek.\n` +
+        `- "Bu seferlik" → gift_gems. Tutar için o aktivitenin taskRewards'taki gem değeri makul bir ` +
+        `varsayılandır; ebeveyn bir sayı söylediyse onunkini kullan. note olarak seansı yaz (örn. "matematik ` +
+        `— günlük sınırdan sonra"). Bu durumda "açıklama ekleyeyim mi" diye AYRICA sorma, sebep zaten belli.\n` +
+        `- "Kalıcı olsun" → update_task_reward'ı SADECE daily_cap ile çağır, gems'e dokunma.\n` +
+        `- Kalıcı değişiklik geçmişe işlemez: sınırı artırmak bugün takılmış olan seansa gem EKLEMEZ. Ebeveyn ` +
+        `ikisini birden istiyorsa (hem bugünküne ver hem bundan sonrası için artır) iki ayrı çağrı gerekir — ` +
+        `ikisini de yap ve ikisini de yaptığını söyle. Tek çağrıyla ikisini yaptığını ASLA ima etme.\n\n` +
         `General guidelines:\n` +
         `- Respond in the SAME LANGUAGE as the parent's message\n` +
         `- Be conversational and warm, like a trusted friend who knows the kids\n` +
@@ -2515,28 +2864,45 @@ async function handleMessage(parentId, replyCb, text) {
       // not this input being unanswerable. One extra plain-call attempt on an
       // empty result is cheap and buys back most of those fluke cases before
       // the parent ever sees a dead-end reply.
+      //
+      // The re-ask has a cost of its own, measured with scripts/chat-probe.mjs on a gem request:
+      // the model still believes it has tools, so it tries to call one — five runs in six came
+      // back MALFORMED_FUNCTION_CALL, and one wrote the call out as prose ("Calling tool...").
+      // So this call is told plainly that it has no tools and that nothing has happened this
+      // turn, and every candidate reply is checked before it can be sent.
+      const plainPrompt = systemPrompt + (language === 'tr' ? NO_TOOLS_NOTE.tr : NO_TOOLS_NOTE.en)
       let reply = ''
       for (let attempt = 0; attempt < 2 && !reply; attempt++) {
         try {
           const plainData = await callGeminiWithRetry(() => fetchGeminiOnce({
-            system_instruction: { parts: [{ text: systemPrompt }] },
+            system_instruction: { parts: [{ text: plainPrompt }] },
             contents,
           }))
           const finishReason = plainData.candidates?.[0]?.finishReason
-          reply = textFromParts(plainData.candidates?.[0]?.content?.parts)
-          if (!reply) console.warn(`[MSG] plain-retry attempt ${attempt + 1} came back empty (finishReason=${finishReason}) for parent ${parentId}`)
+          const candidate = textFromParts(plainData.candidates?.[0]?.content?.parts)
+          const leak = replyLeak(candidate)
+          if (leak) console.warn(`[MSG] plain-retry attempt ${attempt + 1} held back: it contained ${leak} (parent ${parentId})`)
+          else reply = candidate
+          if (!candidate) console.warn(`[MSG] plain-retry attempt ${attempt + 1} came back empty (finishReason=${finishReason}) for parent ${parentId}`)
         } catch (err) {
           console.warn(`[MSG] plain-retry attempt ${attempt + 1} threw: ${err.message}`)
         }
       }
       // Both plain attempts came back blank — fall back to the tools-attached
       // call's own text, and only then to a message that at least gives the
-      // parent something to DO instead of a dead end.
-      if (!reply) reply = firstCallText
+      // parent something to DO instead of a dead end. That text is what a model
+      // writes BEFORE a tool call it did not make, so it is the likeliest of the
+      // three to be a call described in words — it gets the same check.
       if (!reply) {
-        reply = language === 'en'
-          ? "Sorry, I couldn't quite catch that — could you try rephrasing, or use the app to approve directly?"
-          : 'Üzgünüm, bunu tam anlayamadım — farklı bir şekilde söyler misin? Ya da uygulamadan doğrudan onaylayabilirsin.'
+        const leak = replyLeak(firstCallText)
+        if (leak) console.warn(`[MSG] first-call text held back: it contained ${leak} (parent ${parentId})`)
+        else reply = firstCallText
+      }
+      if (!reply) {
+        reply = say(language,
+          "Sorry, I couldn't quite catch that — could you try rephrasing, or use the app to approve directly?",
+          'Üzgünüm, bunu tam anlayamadım — farklı bir şekilde söyler misin? Ya da uygulamadan doğrudan onaylayabilirsin.',
+          'Perdona, no te he entendido del todo. ¿Puedes decírmelo de otra forma? También puedes aprobarlo directamente en la aplicación.')
       }
       await logMessage(parentId, 'tuto', reply)
       await replyCb(reply)
@@ -2575,7 +2941,9 @@ async function handleMessage(parentId, replyCb, text) {
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'update_task_reward') {
-        toolResult = await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId)
+        toolResult = args.task_type === 'bonus'
+          ? await updateBonusTool(args.child_id, args.gems, args.active, parentId, args.bonus_types)
+          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety)
       } else if (name === 'send_drawing_photo') {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
       } else if (name === 'add_reward') {
@@ -2632,7 +3000,27 @@ async function handleMessage(parentId, replyCb, text) {
       ],
       tools: CONTRIBUTION_TOOLS,
     }))
-    const finalText = textFromParts(secondData.candidates?.[0]?.content?.parts) || 'Tamamlandı.'
+    let finalText = textFromParts(secondData.candidates?.[0]?.content?.parts) || 'Tamamlandı.'
+    // A tool has run, so this reply reports something real and is worth sending — just not
+    // with an id or a tool name in it. Asked once more; then the ids are cut out; and if a tool
+    // name is still there, the plain word is all that can safely go.
+    let leak = replyLeak(finalText)
+    if (leak) {
+      console.warn(`[MSG] post-tool reply held back: it contained ${leak} (parent ${parentId})`)
+      const retry = await callGeminiWithRetry(() => fetchGeminiOnce({
+        system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
+        contents: [
+          ...contents,
+          firstData.candidates[0].content,
+          { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
+        ],
+        tools: CONTRIBUTION_TOOLS,
+      })).catch(() => null)
+      const again = textFromParts(retry?.candidates?.[0]?.content?.parts)
+      finalText = again && !replyLeak(again) ? again : stripInternalIds(again || finalText)
+      leak = replyLeak(finalText)
+      if (leak) finalText = say(language, 'Done.', 'Tamamlandı.', 'Hecho.')
+    }
     await logMessage(parentId, 'tuto', finalText)
     await replyCb(finalText)
     console.log(`[MSG] Reply sent to parent ${parentId}`)
@@ -2830,16 +3218,18 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
       if (now - state.notifiedAt > PIN_NOTIFY_GAP_MS) {
         state.notifiedAt = now
         const { data: p } = await supabase.from('parents').select('prefs').eq('id', parent.id).maybeSingle()
-        const en = p?.prefs?.language === 'en'
-        sendNotification(parent.id, en
-          ? `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`
-          : `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
+        const lang = parentLang(p?.prefs)
+        sendNotification(parent.id, say(lang,
+          `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`,
+          `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
+          `Se han introducido ${PIN_MAX_FAILS} PIN incorrectos seguidos en el Tuto de tu familia. Lo he bloqueado 10 minutos. Si no ha sido ninguno de tus hijos, puedes cambiar su PIN en los ajustes. 🔒`),
           // No child name: a wrong PIN belongs to whoever typed it, and that is the one
           // thing a failed attempt cannot tell us. The template falls back to the family's
           // first child, which is the same guess the welcome message already makes.
           { kind: 'attention', detail: {
             tr: `art arda ${PIN_MAX_FAILS} yanlış PIN denemesi oldu, 10 dakika kilitledim`,
             en: `${PIN_MAX_FAILS} wrong PIN attempts in a row — locked for 10 minutes`,
+            es: `${PIN_MAX_FAILS} intentos de PIN incorrectos seguidos: bloqueado 10 minutos`,
           } }
         ).catch(() => {})
       }
@@ -2914,15 +3304,16 @@ app.post('/api/children/:childId/reward-claims', async (req, res) => {
     const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', childId).maybeSingle()
     if (child?.parent_id) {
       // Parent's own language preference, not the child's — every other
-      // notification in this file reads it the same way (parents.prefs.language,
-      // defaulting to 'tr'). child.language is a different, unrelated field
+      // notification in this file reads it the same way, through parentLang().
+      // child.language is a different, unrelated field
       // (every child gets 'en' there with no way to change it — using it here
       // sent this exact message in English to a parent who only reads Turkish).
       const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
-      const msg = language === 'en'
-        ? `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`
-        : `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`
+      const language = parentLang(parentRow?.prefs)
+      const msg = say(language,
+        `${child.name} wants to claim "${reward.name}" (${reward.bt_cost} gems). Approve it from the Tuto app.`,
+        `${child.name}, "${reward.name}" ödülünü almak istiyor (${reward.bt_cost} gem). Tuto uygulamasından onaylayabilirsin.`,
+        `${child.name} quiere canjear «${reward.name}» (${reward.bt_cost} gems). Puedes aprobarlo desde la aplicación de Tuto.`)
       // An approval, not an alarm. 'attention' now means one thing only — a safety screen has
       // something to say about this child — and it is the one kind the parent cannot silence,
       // so a reward claim at ten at night must not borrow it.
@@ -3075,13 +3466,15 @@ app.post('/api/children/:childId/reward-suggestions', async (req, res) => {
 
     if (child.parent_id) {
       const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       const price = suggested
-        ? (language === 'en' ? ` — they think it should cost ${suggested} gems` : ` — ${suggested} gem olmasını düşünüyor`)
+        ? say(language, ` — they think it should cost ${suggested} gems`, ` — ${suggested} gem olmasını düşünüyor`,
+                        ` — cree que debería costar ${suggested} gems`)
         : ''
-      const msg = language === 'en'
-        ? `${child.name} is asking for a new goal: "${label}"${price}. You decide what it actually costs — add it from the Tuto app, or tell me the number here.`
-        : `${child.name} yeni bir hedef istiyor: "${label}"${price}. Kaç gem olacağına sen karar veriyorsun — Tuto uygulamasından ekleyebilir ya da buraya sayıyı yazabilirsin.`
+      const msg = say(language,
+        `${child.name} is asking for a new goal: "${label}"${price}. You decide what it actually costs — add it from the Tuto app, or tell me the number here.`,
+        `${child.name} yeni bir hedef istiyor: "${label}"${price}. Kaç gem olacağına sen karar veriyorsun — Tuto uygulamasından ekleyebilir ya da buraya sayıyı yazabilirsin.`,
+        `${child.name} pide una meta nueva: «${label}»${price}. Tú decides lo que cuesta de verdad: añádela desde la aplicación de Tuto o dime aquí el número.`)
       sendNotification(child.parent_id, msg, { kind: 'approval', child: child.name, detail: {
         tr: `yeni bir hedef istiyor: "${label}"`,
         en: `is asking for a new goal: "${label}"`,
@@ -3195,31 +3588,167 @@ app.get('/api/children/:childId/gems', async (req, res) => {
 // each type's own real table/task_type, never approximated from bt_ledger
 // (its `reason` column is inconsistent — e.g. reading writes the book title,
 // not 'reading' — so it can't be used to detect "did X happen today").
+// What the child home shows about the child's own activity: today, the last seven days day by
+// day, the run of days in a row, and where they stand in maths and puzzles. Counted from the
+// activity tables themselves, not the ledger — a session past the day's limit paid nothing and
+// still happened, and homework waiting for a parent is still homework done today.
+//
+// The seven-day and streak figures are COUNTS OF THINGS DONE, not time: nothing records how long
+// a child spent, and the home says "activities", never minutes.
+// ── The day's all-rounder bonus ("Günün Hezarfeni") ─────────────────────────────
+// Every one of these done in a day pays a bonus once. Homework and the tree are left out on
+// purpose: neither is something a child can do on any day they choose. A task the parent has
+// switched off drops out of the set, so four of four is as good as five of five. What counts is
+// what the Today card counts — a finished maths session or puzzle round, a finished reading, a
+// completed story, a drawing sent (and not refused by the safety screen) — including a session
+// past the day's gem limit, because it was still done.
+const BONUS_TYPES = ['math', 'reading', 'writing', 'drawing', 'puzzle', 'english']
+const BONUS_DEFAULTS = { gems: 50 }
+// From seven (2026-09-19). Five different things in a day is a lot to ask of a six-year-old, and
+// a daily target they cannot reach is a daily failure; the younger home keeps the plain Today card.
+const BONUS_MIN_AGE = 7
+
+// The parent may choose which activities count (`bonus.types`, 2026-09-26): English joined the set
+// and six a day is a lot, so a family can leave any of them out. No list means all of them, and a
+// list can only narrow — a type the parent switched off never counts, whatever the list says.
+function bonusSettings(taskSettings, age) {
+  const s = taskSettings?.bonus || {}
+  const chosen = Array.isArray(s.types) ? s.types.filter(k => BONUS_TYPES.includes(k)) : BONUS_TYPES
+  return {
+    active: s.active !== false && Number(age) >= BONUS_MIN_AGE,
+    gems: Number.isFinite(s.gems) ? Math.max(1, Math.min(500, Math.trunc(s.gems))) : BONUS_DEFAULTS.gems,
+    types: chosen.filter(k => taskSettings?.[k]?.active !== false),
+  }
+}
+
+// Which of the bonus activities the child has done on the local day `now` falls on.
+async function bonusDoneOn(childId, now) {
+  const from = now.startOf('day').toUTC().toISO()
+  const to = now.endOf('day').toUTC().toISO()
+  const has = (q) => q.gte('created_at', from).lte('created_at', to).limit(1).then(({ data }) => (data || []).length > 0)
+  const [reading, math, writing, drawing, puzzle, english] = await Promise.all([
+    has(supabase.from('submissions').select('id').eq('child_id', childId).eq('task_type', 'reading')),
+    has(supabase.from('math_progress').select('id').eq('child_id', childId)),
+    has(supabase.from('stories').select('id').eq('child_id', childId).eq('status', 'completed')),
+    has(supabase.from('paintings').select('id').eq('child_id', childId).neq('status', 'blocked')),
+    has(supabase.from('puzzle_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null)),
+    has(supabase.from('english_sessions').select('id').eq('child_id', childId).not('finished_at', 'is', null)),
+  ])
+  return { reading, math, writing, drawing, puzzle, english }
+}
+
+// Called after each activity finishes. Pays at most once a day. Runs one at a time per child —
+// two activities finishing together would otherwise both see "not paid yet" and both pay.
+const bonusQueue = new Map()
+function queueDailyBonus(childId) {
+  const prev = bonusQueue.get(childId) || Promise.resolve()
+  const next = prev.then(() => payDailyBonus(childId)).catch(err => console.error(`[BONUS] ${childId}: ${err.message}`))
+  bonusQueue.set(childId, next)
+  next.finally(() => { if (bonusQueue.get(childId) === next) bonusQueue.delete(childId) })
+  return next
+}
+
+async function payDailyBonus(childId) {
+  const { data: child } = await supabase.from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
+  if (!child) return
+  const settings = bonusSettings(child.task_settings, child.age)
+  if (!settings.active || !settings.types.length) return
+  const tz = await tzForChild(childId)
+  const now = DateTime.now().setZone(tz)
+  const done = await bonusDoneOn(childId, now)
+  if (!settings.types.every(k => done[k])) return
+  const already = await rewardedToday(childId, tz, 'daily_bonus')
+  if (already === null || already > 0) return
+  const led = await recordGems(childId, settings.gems, 'daily_bonus')
+  if (!led.ok) return
+  console.log(`[BONUS] ${child.name}: +${settings.gems}`)
+
+  const { data: parent } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const language = parentLang(parent?.prefs)
+  sendNotification(child.parent_id, say(language,
+    `🏅 ${child.name} did every activity today — All-Rounder of the Day: +${settings.gems} gems.`,
+    `🏅 ${child.name} bugün bütün etkinlikleri yaptı — Günün Hezarfeni bonusu: +${settings.gems} gem.`,
+    `🏅 ${child.name} ha hecho todas las actividades hoy: bonus de Todoterreno del día, +${settings.gems} gems.`),
+  { kind: 'activity', child: child.name, detail: {
+    tr: `bugün bütün etkinlikleri yaptı, +${settings.gems} gem bonus`,
+    en: `did every activity today, +${settings.gems} gem bonus`,
+  } }).catch(() => {})
+}
+
+const STREAK_LOOKBACK_DAYS = 60
+
 app.get('/api/children/:childId/today-summary', async (req, res) => {
   const { childId } = req.params
   try {
     const tz = await tzForChild(childId)
     const now = DateTime.now().setZone(tz)
-    const todayStart = now.startOf('day').toUTC().toISO()
-    const todayEnd = now.endOf('day').toUTC().toISO()
+    const since = now.startOf('day').minus({ days: STREAK_LOOKBACK_DAYS - 1 }).toUTC().toISO()
+    const nowIso = now.endOf('day').toUTC().toISO()
 
     const [
       tree,
-      { data: subsToday },
-      { data: mathToday },
-      { data: storiesToday },
-      { data: paintingsToday },
+      { data: subs },
+      { data: maths },
+      { data: stories },
+      { data: paintings },
+      { data: puzzles },
+      { data: englishes },
       { data: ledger },
       { data: rewards },
+      { data: child },
+      { data: lastMath },
+      bonusPaid,
     ] = await Promise.all([
       getTreeState(childId, tz),
-      supabase.from('submissions').select('task_type').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', todayStart).lte('created_at', todayEnd),
-      supabase.from('math_progress').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
-      supabase.from('stories').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
-      supabase.from('paintings').select('id').eq('child_id', childId).gte('created_at', todayStart).lte('created_at', todayEnd),
+      supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework']).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('math_progress').select('created_at').eq('child_id', childId).gte('created_at', since).lte('created_at', nowIso),
+      completedStoriesBetween(childId, since, nowIso),
+      supabase.from('paintings').select('created_at').eq('child_id', childId).neq('status', 'blocked').gte('created_at', since).lte('created_at', nowIso),
+      // Finished sittings only: one abandoned after two questions is not a puzzle session done.
+      supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
+      supabase.from('english_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
+      supabase.from('children').select('age, task_settings').eq('id', childId).maybeSingle(),
+      supabase.from('math_progress').select('level').eq('child_id', childId).order('created_at', { ascending: false }).limit(1),
+      rewardedToday(childId, tz, 'daily_bonus'),
     ])
+
+    // Every activity as [type, local day].
+    const dayOf = (iso) => DateTime.fromISO(iso, { zone: 'utc' }).setZone(tz).toISODate()
+    const done = [
+      ...(subs || []).map(r => [r.task_type, dayOf(r.created_at)]),
+      ...(maths || []).map(r => ['math', dayOf(r.created_at)]),
+      ...(stories || []).map(r => ['writing', dayOf(r.completed_at || r.created_at)]),
+      ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
+      ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
+      ...(englishes || []).map(r => ['english', dayOf(r.created_at)]),
+    ]
+    const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
+    const blank = () => Object.fromEntries(TYPES.map(k => [k, 0]))
+    const byDay = new Map()
+    for (const [type, day] of done) {
+      if (!byDay.has(day)) byDay.set(day, blank())
+      byDay.get(day)[type]++
+    }
+    const todayIso = now.toISODate()
+    const countOn = (iso) => Object.values(byDay.get(iso) || {}).reduce((a, b) => a + b, 0)
+
+    // Oldest first, today last — the order a bar chart reads in.
+    const week = Array.from({ length: 7 }, (_, i) => {
+      const d = now.minus({ days: 6 - i })
+      return { date: d.toISODate(), count: countOn(d.toISODate()), byType: byDay.get(d.toISODate()) || blank() }
+    })
+    const weekByType = blank()
+    for (const { date } of week) for (const k of TYPES) weekByType[k] += (byDay.get(date) || {})[k] || 0
+
+    // Days in a row with something done, ending today — or yesterday, while today is still
+    // ahead of the child: a streak is not broken at breakfast.
+    let streak = 0
+    for (let d = countOn(todayIso) ? now : now.minus({ days: 1 }); countOn(d.toISODate()) > 0; d = d.minus({ days: 1 })) {
+      streak++
+      if (streak >= STREAK_LOOKBACK_DAYS) break
+    }
 
     const gems = (ledger || []).reduce((sum, r) => sum + (r.amount || 0), 0)
     const nearestGoal = (rewards || []).find(r => r.bt_cost > gems) || null
@@ -3227,13 +3756,16 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
     res.json({
       today: tree.today,
       monthTreeCount: tree.monthTreeCount,
-      activities: {
-        reading: (subsToday || []).filter(s => s.task_type === 'reading').length,
-        math: (mathToday || []).length,
-        writing: (storiesToday || []).length,
-        homework: (subsToday || []).filter(s => s.task_type === 'homework').length,
-        drawing: (paintingsToday || []).length,
-      },
+      activities: { ...blank(), ...(byDay.get(todayIso) || {}) },
+      week,
+      weekByType,
+      streak,
+      mathLevel: lastMath?.[0]?.level ?? null,
+      bonus: (() => {
+        const b = bonusSettings(child?.task_settings, child?.age)
+        return { active: b.active, gems: b.gems, types: b.types, earned: (bonusPaid || 0) > 0 }
+      })(),
+      puzzleBand: child?.age != null ? puzzleBandForAge(child.age) : null,
       gems,
       nearestGoal: nearestGoal ? { id: nearestGoal.id, name: nearestGoal.name, icon: nearestGoal.icon, bt_cost: nearestGoal.bt_cost } : null,
       // Distinguishes "no rewards configured at all" from "gems already cover
@@ -3243,7 +3775,8 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
   } catch (err) {
     res.status(500).json({
       today: 0, monthTreeCount: 0,
-      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0 },
+      activities: { reading: 0, math: 0, writing: 0, homework: 0, drawing: 0, puzzle: 0, english: 0 },
+      week: [], weekByType: {}, streak: 0, mathLevel: null, puzzleBand: null,
       gems: 0, nearestGoal: null, hasAnyGoals: false,
       error: err.message,
     })
@@ -3329,7 +3862,7 @@ app.get('/api/children/:childId/stories', async (req, res) => {
 // and the client passed it straight through to the ledger — so the parent's configured amount
 // was never consulted and the number moved with the model's mood. The model judges the writing
 // now; the amount is worked out here.
-const WRITING_DEFAULTS = { gems: 30, dailyCap: 3 }
+const WRITING_DEFAULTS = { gems: TASK_DEFAULT_GEMS.writing, dailyCap: TASK_DEFAULT_CAPS.writing }
 
 // Words a child of each school year might reasonably write in one sitting. Not a target shown
 // to anyone: it is the point where the effort multiplier reaches its ceiling.
@@ -3366,6 +3899,19 @@ const EFFORT_FLOOR = 0.15
 function effortScale(words, age) {
   const target = WORDS_FOR_YEAR[schoolYearForAge(age)] || 50
   return Math.min(1, EFFORT_FLOOR + (1 - EFFORT_FLOOR) * (words / target))
+}
+
+// Stories finished in [since, until], dated by when they were finished. A draft row is created
+// the day the child starts writing; counting by created_at put a story finished today on the
+// day it was begun, or outside the window entirely. Without the completed_at column
+// (migration 2026-09-25 not run yet) it falls back to the old created_at reading.
+async function completedStoriesBetween(childId, since, until) {
+  const r = await supabase.from('stories').select('created_at, completed_at')
+    .eq('child_id', childId).eq('status', 'completed')
+    .or(`and(completed_at.gte.${since},completed_at.lte.${until}),and(completed_at.is.null,created_at.gte.${since},created_at.lte.${until})`)
+  if (!r.error) return r
+  return supabase.from('stories').select('created_at').eq('child_id', childId).eq('status', 'completed')
+    .gte('created_at', since).lte('created_at', until)
 }
 
 app.post('/api/children/:childId/stories', async (req, res) => {
@@ -3405,6 +3951,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
     const firstCompletion = status === 'completed' && prevStatus !== 'completed'
     let gemsAwarded = 0
     let capped = false
+    let writingCap = null      // the limit that stopped it, for the sentence in the notification
     if (firstCompletion) {
       const { data: kid } = await supabase
         .from('children').select('age, task_settings').eq('id', childId).maybeSingle()
@@ -3419,24 +3966,45 @@ app.post('/api/children/:childId/stories', async (req, res) => {
 
       if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
         capped = true
+        if (settings.active) writingCap = settings.dailyCap
       } else {
         // Quality and effort multiply: a long story told poorly and a good story of two lines
         // both land in the middle, which is the honest place for each of them.
         gemsAwarded = Math.round(settings.gems * rewardScale(q) * effortScale(words, kid?.age))
       }
+      await recordGems(childId, gemsAwarded, 'story', { capped })
+      queueDailyBonus(childId)
       if (gemsAwarded > 0) {
-        await supabase.from('bt_ledger').insert({ child_id: childId, amount: gemsAwarded, reason: 'story' })
         await supabase.from('stories').update({ gems_earned: gemsAwarded }).eq('id', story.id)
       }
+      // The day a story counts for is the day it was finished, not the day its draft row was
+      // made — a draft started Monday and finished Wednesday is Wednesday's story. Written on
+      // its own so a database without the column (migration 2026-09-25) loses only this.
+      const { error: caErr } = await supabase.from('stories')
+        .update({ completed_at: new Date().toISOString() }).eq('id', story.id)
+      if (caErr) console.warn(`[STORIES] completed_at not written: ${caErr.message}`)
     }
 
-    // Parent notification — insert only (no notification on edits/updates)
-    if (!storyId) {
+    // Parent notification — when the story is FINISHED, whether that is a fresh insert or a
+    // saved draft completed later. It used to fire on insert only, which was the wrong event
+    // both ways: saving a half-written draft told the parent "wrote a story!" with half a
+    // story, and completing that draft later said nothing at all. Edits to a story that was
+    // already completed stay silent.
+    if (firstCompletion) {
       try {
         const { data: child } = await supabase
-          .from('children').select('name, parent_id').eq('id', childId).maybeSingle()
+          .from('children').select('name, parent_id, age').eq('id', childId).maybeSingle()
         if (child) {
-          const storyText = corrected_text || transcribed_text || ''
+          // From the saved row: a draft being completed may send only the fields it changed.
+          const storyText = story.corrected_text || story.transcribed_text || corrected_text || transcribed_text || ''
+          const storyTitle = story.title || title
+          // A story written past the day's limit is still shared — it is the story the parent
+          // wants to read, not the gems. But the message must not leave them assuming it earned
+          // something, so it carries the reason in one line. No offer to add gems: the limit is
+          // the parent's, and Tuto does not talk them out of it (see the chat prompt).
+          const capLine = capped && writingCap != null
+            ? `\n\nBugünkü hikaye sınırı (günde ${writingCap}) dolmuştu, bu yüzden gem eklenmedi. 🌙`
+            : ''
           let screening
           try { screening = await screenChildInput(storyText, child.age ?? 7) } catch { /* skip */ }
 
@@ -3445,7 +4013,7 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Screening failed — unknown safety status, stay calm (fail-closed)
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              `${child.name} bir hikaye yazdı. Bir göz atmanda fayda olabilir.\n\n${storyTitle || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'attention', child: child.name, detail: {
                 tr: 'yazdığı hikayeye göz atmanda fayda olabilir',
                 en: 'the story they wrote may be worth a look',
@@ -3455,17 +4023,17 @@ app.post('/api/children/:childId/stories', async (req, res) => {
             // Clean story — joyful share
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı! 🌸\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              `${child.name} bir hikaye yazdı! 🌸\n\n${storyTitle || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'activity', child: child.name, detail: {
-                tr: `bir hikaye yazdı: "${title || 'Hikaye'}"`,
-                en: `wrote a story: "${title || 'Story'}"`,
+                tr: `bir hikaye yazdı: "${storyTitle || 'Hikaye'}"`,
+                en: `wrote a story: "${storyTitle || 'Story'}"`,
               } }
             )
           } else if (screening?.appropriateness === 'inappropriate') {
             // Inappropriate language — neutral share, no judgment
             await sendNotification(
               child.parent_id,
-              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${title || 'Hikaye'}\n\n${storyText}`,
+              `${child.name} bir hikaye yazdı, okumak istersin diye paylaşıyorum.\n\n${storyTitle || 'Hikaye'}\n\n${storyText}${capLine}`,
               { kind: 'attention', child: child.name, detail: {
                 tr: 'bir hikaye yazdı, okumak istersin diye haber veriyorum',
                 en: 'wrote a story you may want to read yourself',
@@ -3588,7 +4156,7 @@ app.get('/api/cards', async (req, res) => {
 async function screenContributionPhoto(photoPath, child) {
   const { data: parentRow } = await supabase
     .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-  const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+  const language = parentLang(parentRow?.prefs)
 
   let image = null
   try {
@@ -3629,12 +4197,14 @@ async function screenContributionPhoto(photoPath, child) {
 
   try {
     const canSee = heldId
-      ? (language === 'en' ? ' I have kept it for a week in case you want to see it — just ask.'
-                           : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
+      ? say(language, ' I have kept it for a week in case you want to see it — just ask.',
+                      ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.',
+                      ' La he guardado una semana por si quieres verla: solo tienes que pedírmela.')
       : ''
-    deferNotify('HOMEWORK', () => sendNotification(child.parent_id, (language === 'en'
-      ? `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`
-      : `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`) + canSee,
+    deferNotify('HOMEWORK', () => sendNotification(child.parent_id, say(language,
+      `${child.name} tried to attach a photo to a home contribution that isn't appropriate for a kids' app. I did not forward the image.`,
+      `${child.name} bir ev katkısına uygun olmayan bir görsel eklemeye çalıştı. Görseli paylaşmadım.`,
+      `${child.name} ha intentado adjuntar a una tarea de casa una foto que no es apropiada para una aplicación infantil. No he reenviado la imagen.`) + canSee,
       { kind: 'attention', child: child.name, detail: {
         tr: 'uygun olmayan bir görsel yüklemeye çalıştı, ben paylaşmadım',
         en: 'tried to upload a photo that is not appropriate for a kids app — I did not forward it',
@@ -3643,9 +4213,10 @@ async function screenContributionPhoto(photoPath, child) {
     console.error(`[CONTRIBUTIONS] inappropriate alert failed: ${err.message}`)
   }
 
-  return language === 'en'
-    ? "I couldn't send that photo. Want to take another one?"
-    : 'Bu fotoğrafı gönderemedim. Başka bir tane çeker misin?'
+  return say(language,
+    "I couldn't send that photo. Want to take another one?",
+    'Bu fotoğrafı gönderemedim. Başka bir tane çeker misin?',
+    'No he podido enviar esa foto. ¿Quieres hacer otra?')
 }
 
 app.post('/api/contributions', async (req, res) => {
@@ -4261,7 +4832,7 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const { data: parentRow } = await supabase
       .from('parents').select('prefs, timezone').eq('id', child.parent_id).maybeSingle()
     const prefs = parentRow?.prefs || {}
-    const language = prefs.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(prefs)
     const tone = typeof prefs.tone === 'string' && prefs.tone ? prefs.tone : null
     const tz = parentRow?.timezone || 'UTC'
 
@@ -4363,9 +4934,10 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       if (heldErr) console.error(`[HOMEWORK] held-row insert failed: ${heldErr.message}`)
 
       try {
-        await sendNotification(child.parent_id, language === 'en'
-          ? `${child.name} sent something as homework that I hesitated to forward automatically — I may well be wrong. I've kept it: just say "show me" and I'll send it here so you can decide for yourself.`
-          : `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`,
+        await sendNotification(child.parent_id, say(language,
+          `${child.name} sent something as homework that I hesitated to forward automatically — I may well be wrong. I've kept it: just say "show me" and I'll send it here so you can decide for yourself.`,
+          `${child.name} ödev olarak bir görsel gönderdi ama otomatik iletmekte tereddüt ettim — yanılıyor da olabilirim. Görseli sakladım: "göster" dersen buraya yollarım, kararı sen verirsin.`,
+          `${child.name} ha enviado como deberes algo que he dudado en reenviar automáticamente, y puede que me equivoque. Lo he guardado: dime «enséñamelo» y te lo mando aquí para que decidas tú.`),
           { kind: 'attention', child: child.name, detail: {
             tr: 'ödev olarak gönderdiği bir görseli iletmekte tereddüt ettim, kararı sana bırakıyorum',
             en: 'sent a homework photo I hesitated to forward — I would rather you decided',
@@ -4494,6 +5066,10 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     const { ask: askApproval, because: approvalBecause } = await needsParentApproval(child.parent_id, 'submission')
     const autoApproved = askApproval ? null : await approveSubmissionTool(submission.id, child.parent_id)
     const awardedGems = autoApproved?.success ? autoApproved.gems : null
+    // An auto-approval that landed past the day's homework limit pays 0. The caption has to say
+    // WHY, or the parent reads "onayladım, 0 gem ekledim" and thinks something broke.
+    const awardCapped = !!(autoApproved?.success && autoApproved.capped)
+    const homeworkDailyCap = autoApproved?.dailyCap ?? null
 
     // 6. Parent notification. Gemini writes the caption honoring tone+language;
     //    CODE filters low-confidence errors out and supplies the date sentence.
@@ -4502,18 +5078,21 @@ app.post('/api/children/:childId/homework', async (req, res) => {
     async function deliverHomeworkNotification(doneToday) {
       let dateNote = ''
       if (photoTakenAt && takenLocal !== todayLocal) {
-        dateNote = language === 'en'
-          ? "This photo doesn't look like it was taken today."
-          : 'Bu fotoğraf bugün çekilmiş görünmüyor.'
+        dateNote = say(language,
+          "This photo doesn't look like it was taken today.",
+          'Bu fotoğraf bugün çekilmiş görünmüyor.',
+          'Esta foto no parece hecha hoy.')
       } else if (!photoTakenAt) {
         // Couldn't read the date — relay the child's own answer, hedged. Name as
         // subject (no case suffix) so it reads right for any Turkish name.
-        if (doneToday === true) dateNote = language === 'en'
-          ? `I couldn't confirm the photo's date, but ${child.name} said they did this homework today — I could be wrong.`
-          : `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yaptığını söyledi. Yine de yanılıyor olabilirim.`
-        else if (doneToday === false) dateNote = language === 'en'
-          ? `I couldn't confirm the photo's date; ${child.name} said they did not do this homework today.`
-          : `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yapmadığını söyledi.`
+        if (doneToday === true) dateNote = say(language,
+          `I couldn't confirm the photo's date, but ${child.name} said they did this homework today — I could be wrong.`,
+          `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yaptığını söyledi. Yine de yanılıyor olabilirim.`,
+          `No he podido confirmar la fecha de la foto, pero ${child.name} dice que hizo estos deberes hoy. Puedo estar equivocado.`)
+        else if (doneToday === false) dateNote = say(language,
+          `I couldn't confirm the photo's date; ${child.name} said they did not do this homework today.`,
+          `Fotoğrafın tarihini kesinleştiremedim; ${child.name} bu ödevi bugün yapmadığını söyledi.`,
+          `No he podido confirmar la fecha de la foto; ${child.name} dice que estos deberes no los hizo hoy.`)
         // doneToday undefined (child never answered) → no date sentence
       }
 
@@ -4521,21 +5100,22 @@ app.post('/api/children/:childId/homework', async (req, res) => {
       try {
         const filtered = observation?.looks_like_homework ? filterForParent(observation) : null
         if (!filtered) {
-          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems })
+          caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardCapped })
         } else {
           const capData = await callGeminiWithRetry(() => fetchGeminiOnce({
             contents: [{ parts: [{ text: homeworkCaptionPrompt({
               filteredObservation: filtered, childName: child.name, tone, language,
               photoCount: photoUrls.length, staleNote: dateNote, gems: hwGems,
               awarded: awardedGems, awardedBecause: approvalBecause,
+              capped: awardCapped, dailyCap: homeworkDailyCap,
             }) }] }],
           }))
           caption = textFromParts(capData.candidates?.[0]?.content?.parts)
-          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems })
+          if (!caption) caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardCapped })
         }
       } catch (err) {
         console.error(`[HOMEWORK] caption failed: ${err.message}`)
-        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems })
+        caption = fallbackCaption({ childName: child.name, language, staleNote: dateNote, awarded: awardedGems, capped: awardCapped })
       }
       if (caption.length > 1024) caption = caption.slice(0, 1021) + '…'
 
@@ -4626,14 +5206,13 @@ app.get('/api/children/:childId/homework', async (req, res) => {
 // the client's opinion of it is never read. A free-draw upload is a photo of
 // anything at all, so the same daily cap covers it.
 
-const DRAWING_DEFAULTS = { gems: 20, dailyCap: 2 }
+const DRAWING_DEFAULTS = { gems: TASK_DEFAULT_GEMS.drawing, dailyCap: TASK_DEFAULT_CAPS.drawing }
 
-// Parent-tunable per child via children.task_settings.drawing.
+// Parent-tunable per child via children.task_settings.drawing. Reads the same
+// clamps as every other task — this used to be its own copy of taskSettingsFor,
+// which is how drawing ended up the only task with a dial for its cap.
 function drawingSettings(taskSettings) {
-  const s = taskSettings?.drawing || {}
-  const gems = Number.isFinite(s.gems) ? Math.max(0, Math.min(200, Math.trunc(s.gems))) : DRAWING_DEFAULTS.gems
-  const cap = Number.isFinite(s.daily_cap) ? Math.max(0, Math.min(50, Math.trunc(s.daily_cap))) : DRAWING_DEFAULTS.dailyCap
-  return { gems, dailyCap: cap, active: s.active !== false }
+  return taskSettingsFor(taskSettings, 'drawing', DRAWING_DEFAULTS)
 }
 
 // How many rewarded drawings this child already has today, in THEIR timezone.
@@ -4693,7 +5272,7 @@ app.get('/api/drawings', async (req, res) => {
 // the server to generate the questions and hold the answers, which is a larger change.
 // What it does fix is everything that follows from the score: the amount, the cap, the
 // settings and the write are all decided here now.
-const MATH_DEFAULTS = { gems: 30, dailyCap: 3 }
+const MATH_DEFAULTS = { gems: TASK_DEFAULT_GEMS.math, dailyCap: TASK_DEFAULT_CAPS.math }
 
 // What a rung practised, back when a rung practised one thing. Kept only so sessions posted
 // by a client that has not reloaded yet still record something sensible; the level no longer
@@ -4710,7 +5289,7 @@ const TOPIC_FOR_LEVEL = {
 // that ignored what the parent had configured, had no daily limit, told the parent nothing,
 // and wrote the ledger from the browser. It earns the same treatment, so the pieces below
 // are shared rather than copied — one settings reader and one cap counter for both.
-const READING_DEFAULTS = { gems: 30, dailyCap: 3 }
+const READING_DEFAULTS = { gems: TASK_DEFAULT_GEMS.reading, dailyCap: TASK_DEFAULT_CAPS.reading }
 
 // What this session was about, for the column the parent's chat agent reads. A session now
 // spans several curriculum topics instead of drilling one, so it lists them — "Year 5:
@@ -4818,14 +5397,17 @@ async function topicStanding(childId) {
 app.get('/api/children/:childId/math-plan', async (req, res) => {
   const { childId } = req.params
   try {
-    const [{ data: child }, { data: prevRows }] = await Promise.all([
+    // All three go out together. topicStanding only ever needed the id from the URL, so
+    // waiting for the other two first bought nothing and cost a whole round trip — and this
+    // call is the only thing standing between tapping Maths and seeing a question, now that
+    // the questions themselves take 0.04 ms to build.
+    const [{ data: child }, { data: prevRows }, standing] = await Promise.all([
       supabase.from('children').select('id, age, math_focus').eq('id', childId).maybeSingle(),
       supabase.from('math_progress').select('level').eq('child_id', childId)
         .order('created_at', { ascending: false }).limit(1),
+      topicStanding(childId),
     ])
     if (!child) return res.status(404).json({ error: 'child not found' })
-
-    const standing = await topicStanding(childId)
     res.json({
       level: prevRows?.[0]?.level ?? null,   // null = the client falls back to the age footing
       focus: child.math_focus ?? null,
@@ -4854,35 +5436,77 @@ function weightedAccuracy(rows) {
 // recomputed from that session's own attempt rows, which already record help_used per
 // question. Falls back to the stored figure for sessions that have no rows — history from
 // before per-question records existed, or a session whose attempts write failed.
-async function previousLevelAccuracy(childId, lastProgressRow) {
-  if (!lastProgressRow) return null
+// Clears a parent-set focus topic once the child has actually mastered it. Takes the focus the
+// caller already has rather than reading the child row again, and answers null when there is
+// nothing to check, so it can sit inside a Promise.all with the writes beside it.
+async function clearFocusIfMastered(childId, focus, hasNewAttempts) {
+  if (!hasNewAttempts || !focus?.topic_id) return null
+  const standing = await topicStanding(childId)
+  const t = standing?.find(x => x.topic_id === focus.topic_id)
+  if (!t || t.attempts < MASTERY_MIN_ATTEMPTS || t.accuracy < MASTERY_CLEARS_AT) return null
+  await supabase.from('children').update({ math_focus: null }).eq('id', childId)
+  return { topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
+}
+
+// Split in two so the read can go out alongside the other reads this request needs: the query
+// does not depend on the previous progress row, only the comparison does.
+async function recentAttempts(childId) {
   const { data } = await supabase
     .from('math_attempts')
     .select('session_id, correct, help_used, created_at')
     .eq('child_id', childId)
     .order('created_at', { ascending: false })
     .limit(60)
-  const newest = data?.[0]
+  return data || []
+}
+
+function previousLevelAccuracy(rows, lastProgressRow) {
+  if (!lastProgressRow) return null
+  const newest = rows?.[0]
   if (!newest) return lastProgressRow.accuracy
   // Both rows are written by the same request seconds apart. If the newest attempts belong to
   // some older session the two are not describing the same sitting, and pairing them would
   // silently judge the ladder on the wrong evidence.
   const drift = Math.abs(new Date(newest.created_at) - new Date(lastProgressRow.created_at))
   if (!Number.isFinite(drift) || drift > 10 * 60 * 1000) return lastProgressRow.accuracy
-  return weightedAccuracy(data.filter(r => r.session_id === newest.session_id)) ?? lastProgressRow.accuracy
+  return weightedAccuracy(rows.filter(r => r.session_id === newest.session_id)) ?? lastProgressRow.accuracy
 }
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
   const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
   try {
+    // Finishing a session used to cost eleven database round trips in a row, and four of them
+    // re-read a row the request already had in hand: the child row three times (here, inside
+    // tzForChild, and again for math_focus) and the parent row twice (timezone, then prefs).
+    // Against Supabase from Railway that is most of a second the child spends watching
+    // "Checking your work". One read each, and everything that does not depend on another
+    // read goes out together.
     const { data: child } = await supabase
-      .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+      .from('children').select('id, name, parent_id, task_settings, math_focus').eq('id', childId).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
 
     const settings = taskSettingsFor(child.task_settings, 'math', MATH_DEFAULTS)
-    const tz = await tzForChild(childId)
-    const doneToday = await rewardedToday(childId, tz, 'math')
+
+    // Timezone and prefs come off the same row. tzForChild would fetch the child again just to
+    // learn parent_id, which this already has.
+    const { data: parentRow } = await supabase
+      .from('parents').select('timezone, prefs').eq('id', child.parent_id).maybeSingle()
+    const tz = parentRow?.timezone || 'UTC'
+
+    // Three different tables, none depending on the others: today's rewarded count, the last
+    // session row, and the attempts behind it. One wall-clock step instead of three.
+    const [doneToday, { data: prevRows }, recentRows] = await Promise.all([
+      rewardedToday(childId, tz, 'math'),
+      supabase
+        .from('math_progress')
+        .select('level, accuracy, level_change, created_at')
+        .eq('child_id', childId)
+        .order('created_at', { ascending: false })
+        .limit(1),
+      recentAttempts(childId),
+    ])
+    const last = prevRows?.[0]
 
     // Maths is declared `variable` in taskDefaults, and the parent is shown "up to N" —
     // but only paper mode ever scaled, via whatever figure the model returned, while
@@ -4912,14 +5536,6 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // A stored row records the level the child ENDED on but the accuracy they earned at the
     // one before it, so a row that advanced cannot also count as the first of the next
     // pair — otherwise "twice in a row" would collapse back into "every session".
-    const { data: prevRows } = await supabase
-      .from('math_progress')
-      .select('level, accuracy, level_change, created_at')
-      .eq('child_id', childId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-    const last = prevRows?.[0]
-
     // A right answer found only after the help panel was shown is not the same evidence as one
     // the child produced unaided, but it used to score identically — so "wrong, open help,
     // read the answer off the picture" was indistinguishable from "knew it", and the ladder
@@ -4930,7 +5546,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // gems are scaled by, and neither should change — the point is an honest level, not a
     // punishment the child can feel.
     const levelAcc = weightedAccuracy(attempts) ?? acc
-    const lastLevelAcc = await previousLevelAccuracy(childId, last)
+    const lastLevelAcc = previousLevelAccuracy(recentRows, last)
     const earnedHereBefore = !!last && last.level === level && lastLevelAcc >= 80 && last.level_change !== 'up'
 
     let newLevel = level
@@ -4967,40 +5583,32 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
         level,
         question: typeof a.question === 'string' ? a.question.slice(0, 500) : null,
         child_answer: a.child_answer == null ? null : String(a.child_answer).slice(0, 120),
+        correct_answer: a.correct_answer == null ? null : String(a.correct_answer).slice(0, 120),
         correct: !!a.correct,
         help_used: !!a.help_used,
       }))
-    if (rows.length) {
-      const { error: attErr } = await supabase.from('math_attempts').insert(rows)
-      if (attErr) console.error(`[MATH] attempts insert failed for ${childId}: ${attErr.message}`)
-    }
-
-    // A focus the parent asked for lasts until the child masters it, not for a fixed run of
-    // sessions — so the parent hears the outcome of what they asked for, which is the whole
-    // point of their having asked.
-    let focusCleared = null
-    if (rows.length) {
-      const { data: focusRow } = await supabase
-        .from('children').select('math_focus').eq('id', childId).maybeSingle()
-      const focus = focusRow?.math_focus
-      if (focus?.topic_id) {
-        const standing = await topicStanding(childId)
-        const t = standing?.find(x => x.topic_id === focus.topic_id)
-        if (t && t.attempts >= MASTERY_MIN_ATTEMPTS && t.accuracy >= MASTERY_CLEARS_AT) {
-          await supabase.from('children').update({ math_focus: null }).eq('id', childId)
-          focusCleared = { topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
-        }
-      }
-    }
-
-    if (gems > 0) {
-      const { error: ledErr } = await supabase
-        .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'math' })
-      if (ledErr) {
-        console.error(`[MATH] ledger insert failed for ${childId}: ${ledErr.message}`)
-        gems = 0
-      }
-    }
+    // The attempts insert, the mastery check and the ledger write touch three different tables
+    // and none reads what another writes, so they go together. The ordering the old comment
+    // above cares about is kept: math_progress is already written, and each of these still
+    // fails on its own terms — a lost attempts row costs the history, never the gems.
+    const [, focusCleared, mathLed] = await Promise.all([
+      rows.length
+        ? supabase.from('math_attempts').insert(rows)
+            // Before the correct_answer column exists the rows go in without it rather than not at all.
+            .then(({ error }) => (error && /correct_answer/i.test(error.message || '')
+              ? supabase.from('math_attempts').insert(rows.map(({ correct_answer: _drop, ...r }) => r))
+              : { error }))
+            .then(({ error }) => { if (error) console.error(`[MATH] attempts insert failed for ${childId}: ${error.message}`) })
+        : null,
+      // A focus the parent asked for lasts until the child masters it, not for a fixed run of
+      // sessions — so the parent hears the outcome of what they asked for, which is the whole
+      // point of their having asked. math_focus came off the child row this request already
+      // read; it used to be fetched again here.
+      clearFocusIfMastered(childId, child.math_focus, rows.length),
+      recordGems(childId, gems, 'math', { capped, ref: rows.length ? sessionId : null }),
+    ])
+    if (gems > 0 && !mathLed.ok) gems = 0
+    queueDailyBonus(childId)
 
     // Whether every rewarded session is announced or only the day's first. This was hardcoded
     // to the first — three in an afternoon says no more than one does — but a parent who did a
@@ -5008,24 +5616,43 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // prefs.notify_per_task has existed all along for exactly this decision with nothing
     // reading it. Default true: a parent who has never chosen hears about each session, which
     // is the behaviour they expect before they know there is a choice.
-    const { data: prefsRow } = await supabase
-      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    const perTask = parentRow?.prefs?.notify_per_task !== false
     if (gems > 0 && (perTask || doneToday === 0)) {
-      const parentRow = prefsRow
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       // Paper mode asks the model how the work actually went, and that read used to be
       // written to a column nothing has ever selected. "Strong at addition, word problems
       // need practice" is the sort of thing this product exists to tell a parent, so when
       // there is one it goes in the message rather than sitting in the table unread.
       const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
-      const head = language === 'en'
-        ? `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`
-        : `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`
+      const head = say(language,
+        `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`,
+        `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`,
+        `${child.name} ha hecho sus mates — ${questions_correct}/${questions_total} correctas. +${gems} gems 💎`)
       sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
         { kind: 'activity', child: child.name, detail: {
           tr: `matematik, ${questions_correct}/${questions_total} doğru, +${gems} gem`,
           en: `maths, ${questions_correct}/${questions_total} correct, +${gems} gems`,
+        } }).catch(() => {})
+    } else if (capped && settings.active && perTask) {
+      // The session that hit the day's limit is told too — a child who sat down for a fourth
+      // round did something, and a parent who hears nothing about it is being told, by silence,
+      // that it never happened. It goes out as an activity, so the same gate decides it: a
+      // parent on notify_level quiet/required never sees it, and one who asked for only the
+      // day's first session doesn't either (a capped session is never the day's first).
+      //
+      // Deliberately NOT an offer. Tuto does not propose gems or a higher limit here — the
+      // parent set that limit, and offering to break it every evening would empty it of
+      // meaning. If the parent asks, the agent knows what to do with it (see the prompt).
+      const language = parentLang(parentRow?.prefs)
+      const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
+      const head = say(language,
+        `${child.name} did another maths session — ${questions_correct}/${questions_total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} bir matematik daha yaptı — ${questions_correct}/${questions_total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha hecho otra sesión de mates — ${questions_correct}/${questions_total} correctas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
+      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
+        { kind: 'activity', child: child.name, detail: {
+          tr: `matematik, ${questions_correct}/${questions_total} doğru, günlük sınır dolduğu için gem yok`,
+          en: `maths, ${questions_correct}/${questions_total} correct, past the daily limit so no gems`,
         } }).catch(() => {})
     }
 
@@ -5033,12 +5660,11 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // it is the answer to something the parent asked for, and the once-a-day rule exists to
     // stop routine progress becoming noise, not to swallow this.
     if (focusCleared) {
-      const { data: parentRow } = await supabase
-        .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
-      const msg = language === 'en'
-        ? `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`
-        : `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`
+      const language = parentLang(parentRow?.prefs)
+      const msg = say(language,
+        `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`,
+        `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`,
+        `${child.name} ya domina ${focusCleared.topic_name}: ${focusCleared.accuracy} % en las últimas ${focusCleared.attempts}. He dejado de darle prioridad. 🎉`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `${focusCleared.topic_name} artık oturdu, son ${focusCleared.attempts} soruda %${focusCleared.accuracy}`,
         en: `${focusCleared.topic_name} is solid now — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}`,
@@ -5105,14 +5731,9 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
     }).select('id').maybeSingle()
     if (subErr) return res.status(500).json({ error: subErr.message })
 
-    if (gems > 0) {
-      const { error: ledErr } = await supabase
-        .from('bt_ledger').insert({ child_id: childId, amount: gems, reason: 'reading' })
-      if (ledErr) {
-        console.error(`[READING] ledger insert failed for ${childId}: ${ledErr.message}`)
-        gems = 0
-      }
-    }
+    const readLed = await recordGems(childId, gems, 'reading', { capped })
+    queueDailyBonus(childId)
+    if (gems > 0 && !readLed.ok) gems = 0
 
     // current_page used to be incremented by one here, once per session, which made it a count
     // of sittings wearing the name of a page. The page now comes from the session itself —
@@ -5137,20 +5758,686 @@ app.post('/api/children/:childId/reading-session', async (req, res) => {
     const { data: parentRow } = await supabase
       .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
     if (gems > 0 && (parentRow?.prefs?.notify_per_task !== false || doneToday === 0)) {
-      const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+      const language = parentLang(parentRow?.prefs)
       const title = book_title ? String(book_title).slice(0, 120) : null
-      const msg = language === 'en'
-        ? `${child.name} read${title ? ` "${title}"` : ''} — ${correct}/${total} on the questions. +${gems} gems 💎`
-        : `${child.name} kitap okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. +${gems} gem 💎`
+      const msg = say(language,
+        `${child.name} read${title ? ` "${title}"` : ''} — ${correct}/${total} on the questions. +${gems} gems 💎`,
+        `${child.name} kitap okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. +${gems} gem 💎`,
+        `${child.name} ha leído${title ? ` «${title}»` : ''} — ${correct}/${total} en las preguntas. +${gems} gems 💎`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `okuma${title ? ` — "${title}"` : ''}, sorularda ${correct}/${total}, +${gems} gem`,
         en: `reading${title ? ` — "${title}"` : ''}, ${correct}/${total} on the questions, +${gems} gems`,
+      } }).catch(() => {})
+    } else if (capped && settings.active && parentRow?.prefs?.notify_per_task !== false) {
+      // Same as maths: the session past the limit is reported, never offered a way around.
+      const language = parentLang(parentRow?.prefs)
+      const title = book_title ? String(book_title).slice(0, 120) : null
+      const msg = say(language,
+        `${child.name} read some more${title ? ` of "${title}"` : ''} — ${correct}/${total} on the questions. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} biraz daha okudu${title ? ` — "${title}"` : ''} — sorularda ${correct}/${total}. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha leído un poco más${title ? ` de «${title}»` : ''} — ${correct}/${total} en las preguntas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `okuma${title ? ` — "${title}"` : ''}, günlük sınır dolduğu için gem yok`,
+        en: `reading${title ? ` — "${title}"` : ''}, past the daily limit so no gems`,
       } }).catch(() => {})
     }
 
     res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, accuracy: acc, submission_id: sub?.id ?? null })
   } catch (err) {
     console.error('[READING]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Puzzle sessions (shape & pattern / NVR) ──────────────────────────────────────────────────
+// Maths is scored in the browser and believed; this is not. The server generates the sheet from
+// a seed it chooses, sends the child's browser the figures to draw and nothing that says which
+// option is right, and checks every answer against the question it regenerates from that seed.
+// The engine is deterministic and pure, so the seed IS the sheet — nothing but the seed has to be
+// stored. The engine itself is a byte-for-byte copy of src/lib (server/puzzle, `npm run
+// puzzle:sync`), because the server is deployed on its own and imports nothing from src/.
+const PUZZLE_DEFAULTS = { gems: 30, dailyCap: TASK_DEFAULT_CAPS.puzzle }
+
+// Question types, grouped into the skills a parent would recognise. Three vocabularies (shapes,
+// emoji, icons) ask the same thing, and a parent asking "how is she at sequences" means all three.
+const PUZZLE_SKILLS = {
+  'odd-one-out': 'spotting the odd one out', 'glyph-odd': 'spotting the odd one out', 'icon-odd': 'spotting the odd one out',
+  'glyph-trait': 'spotting the odd one out by a feature',
+  identical: 'finding the identical figure',
+  sequence: 'what comes next (sequences)', 'glyph-sequence': 'what comes next (sequences)', 'icon-sequence': 'what comes next (sequences)',
+  belongs: 'which one belongs with a group', 'glyph-belongs': 'which one belongs with a group', 'icon-belongs': 'which one belongs with a group',
+  'hidden-part': 'finding a shape inside a picture',
+  overlay: 'combining shapes', matrix: 'completing a pattern grid',
+  'compound-analogy': 'analogies (A is to B as C is to ?)',
+  'compound-mirror': 'mirror images', 'cube-net': 'folding cube nets',
+  'grid-complete': 'completing a pattern grid',
+  analogy: 'analogies (A is to B as C is to ?)', 'glyph-analogy': 'analogies (A is to B as C is to ?)',
+  reflection: 'mirror images', symmetry: 'lines of symmetry', code: 'letter codes',
+}
+
+// Per-skill standing from the raw answers, on the maths rules (MASTERY_*): the last twelve per
+// skill, nothing said under five, and the verdict decided here rather than by the model.
+async function puzzleStanding(childId) {
+  const { data, error } = await supabase.from('puzzle_attempts')
+    .select('type, correct, created_at').eq('child_id', childId)
+    .order('created_at', { ascending: false }).limit(400)
+  if (error) { console.error(`[PUZZLE] standing read failed for ${childId}: ${error.message}`); return null }
+  const bySkill = new Map()
+  for (const row of data || []) {
+    const skill = PUZZLE_SKILLS[row.type] || row.type
+    const rows = bySkill.get(skill) || []
+    if (rows.length < MASTERY_WINDOW) rows.push(row)
+    bySkill.set(skill, rows)
+  }
+  return [...bySkill.entries()].map(([skill, rows]) => {
+    const correct = rows.filter(r => r.correct).length
+    const accuracy = Math.round((correct / rows.length) * 100)
+    return {
+      skill, attempts: rows.length, correct, accuracy,
+      standing: rows.length < MASTERY_MIN_ATTEMPTS ? 'not enough yet'
+        : accuracy < MASTERY_WEAK_BELOW ? 'weak'
+        : accuracy >= MASTERY_CLEARS_AT ? 'strong'
+        : 'getting there',
+    }
+  }).sort((a, b) => a.accuracy - b.accuracy)
+}
+const PUZZLE_QUESTIONS = 10
+
+// What the browser may know about a figure: enough to draw it, nothing more. A glyph spec carries
+// its `group` and `trait`, and in "which one is different" those ARE the answer — the odd one is
+// the one whose group differs. Geometric specs are drawing attributes all the way down.
+function publicFigure(spec) {
+  if (!spec) return null
+  if (spec.kind === 'glyph') return { kind: 'glyph', glyph: spec.glyph, count: spec.count, size: spec.size, rotation: spec.rotation }
+  if (spec.kind === 'icon') return { kind: 'icon', icon: spec.icon, fill: spec.fill, count: spec.count, size: spec.size, rotation: spec.rotation }
+  return spec
+}
+function publicQuestion(q) {
+  return {
+    type: q.type, layout: q.layout, stem_key: q.stem_key,
+    prompt: (q.prompt || []).map(publicFigure),
+    ...(q.promptLabels ? { promptLabels: q.promptLabels } : {}),
+    // Options in their shown order, without `why` — which is null on exactly the right one.
+    options: q.options.map(o => (o.code !== undefined ? { code: o.code } : { spec: publicFigure(o.spec) })),
+  }
+}
+
+// Regenerating ten questions takes a few milliseconds, but an answer arrives every few seconds
+// for the length of a sitting, so the sheet is kept for the sittings in progress.
+const puzzleSheets = new Map()
+// And the session row itself, for the same sittings. Looking it up was one of the two database
+// round trips between a child's tap and the flash — about a fifth of a second each from Railway,
+// on top of the request — and a sitting in progress does not change until its finish call, which
+// drops it from here. A restart just means the first answer after it reads the row again.
+const puzzleOpen = new Map()
+function keepOpen(session) {
+  puzzleOpen.set(session.id, session)
+  if (puzzleOpen.size > 500) puzzleOpen.delete(puzzleOpen.keys().next().value)
+}
+// The sheet a sitting was dealt. Stored on the session since 2026-09-19 and read from there: the
+// seed regenerates the same sheet only while the engine is unchanged, and every engine fix
+// changes it — a deploy in the middle of a sitting marked the rest of its answers against
+// different questions, and a sitting opened from the gem history showed questions the child was
+// never asked. Regenerating is the fallback for sittings from before the column.
+async function puzzleSheet(session) {
+  const hit = puzzleSheets.get(session.id)
+  if (hit) return hit
+  if (Array.isArray(session.sheet) && session.sheet.length) {
+    puzzleSheets.set(session.id, session.sheet)
+    return session.sheet
+  }
+  const { generateSession } = await import('./puzzle/puzzleTemplates.js')
+  const sheet = generateSession(session.band, session.question_count, Number(session.seed), { icons: session.icons })
+  puzzleSheets.set(session.id, sheet)
+  if (puzzleSheets.size > 500) puzzleSheets.delete(puzzleSheets.keys().next().value)
+  return sheet
+}
+
+app.post('/api/children/:childId/puzzle-session', async (req, res) => {
+  const { childId } = req.params
+  try {
+    const { data: child } = await supabase
+      .from('children').select('id, age, task_settings').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'puzzle', PUZZLE_DEFAULTS)
+    if (!settings.active) return res.status(403).json({ error: 'puzzles are switched off for this child' })
+
+    const band = puzzleBandForAge(child.age)
+    const icons = req.body?.icons !== false
+    const seed = crypto.randomInt(1, 2 ** 31)
+    const { generateSession } = await import('./puzzle/puzzleTemplates.js')
+    const sheet = generateSession(band, PUZZLE_QUESTIONS, seed, { icons })
+    if (sheet.length < PUZZLE_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
+
+    const { data: session, error } = await supabase.from('puzzle_sessions')
+      .insert({ child_id: childId, band, seed, icons, question_count: sheet.length, sheet })
+      .select('id').single()
+      // Until the sheet column exists the session is kept without it, as before.
+      .then(r => (r.error && /sheet/i.test(r.error.message || '')
+        ? supabase.from('puzzle_sessions').insert({ child_id: childId, band, seed, icons, question_count: sheet.length }).select('id').single()
+        : r))
+    if (error) return res.status(500).json({ error: error.message })
+    puzzleSheets.set(session.id, sheet)
+    keepOpen({ id: session.id, child_id: childId, band, seed, icons, question_count: sheet.length, finished_at: null })
+
+    // Said up front, so the screen can tell the child before the first question rather than after
+    // the last that this sitting will not pay.
+    const tz = await tzForChild(childId)
+    const doneToday = await rewardedToday(childId, tz, 'puzzle')
+    res.json({
+      session_id: session.id, band,
+      questions: sheet.map(publicQuestion),
+      gems: settings.gems, daily_cap: settings.dailyCap,
+      will_pay: doneToday !== null && doneToday < settings.dailyCap,
+    })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
+  const { sessionId } = req.params
+  const index = Number(req.body?.question_index)
+  const chosen = Number(req.body?.chosen_index)
+  try {
+    let session = puzzleOpen.get(sessionId)
+    if (!session) {
+      ;({ data: session } = await supabase.from('puzzle_sessions')
+        .select('*').eq('id', sessionId).maybeSingle())
+      if (!session) return res.status(404).json({ error: 'session not found' })
+      if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
+      keepOpen(session)
+    }
+    const sheet = await puzzleSheet(session)
+    const q = sheet[index]
+    if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
+    if (!Number.isInteger(chosen) || chosen < 0 || chosen >= q.options.length) return res.status(400).json({ error: 'no such option' })
+
+    const correct = chosen === q.correct_index
+    // Why the answer is the answer, for the child who missed it. Only here, after the answer is
+    // in: it names the rule, which is the key.
+    const { explainQuestion } = await import('./puzzle/puzzleExplain.js')
+    const why = explainQuestion(q, ['tr', 'es'].includes(req.body?.lang) ? req.body.lang : 'en')
+    const { error } = await supabase.from('puzzle_attempts').insert({
+      session_id: session.id, child_id: session.child_id, question_index: index,
+      type: q.type, rule: q.rule?.attr ?? null, band: session.band, chosen_index: chosen, correct,
+    })
+    if (error?.code === '23505') {
+      // Already answered — a double tap, or a retry after a dropped response. The first answer
+      // stands; the second gets told what the first was.
+      const { data: first } = await supabase.from('puzzle_attempts')
+        .select('chosen_index, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
+      return res.json({ correct: !!first?.correct, chosen_index: first?.chosen_index, correct_index: q.correct_index, why, repeated: true })
+    }
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ correct, chosen_index: chosen, correct_index: q.correct_index, why })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// The questions behind one gem history row — what was asked, what the child answered, and the
+// right answer — so a finished sitting can be opened again, by the child from their gem history
+// and by the parent from the child's card. Only for finished sittings: a puzzle's answers are
+// sent here because the child has already answered all of them.
+//
+// A row written since ref_id exists names its sitting. An older one is matched to the sitting
+// that finished in the same request: same child, same activity, closest in time within a few
+// minutes — the ledger write is the last thing that request does.
+app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
+  const { childId, ledgerId } = req.params
+  const lang = ['tr', 'es'].includes(req.query.lang) ? req.query.lang : 'en'
+  try {
+    const { data: row } = await supabase.from('bt_ledger').select('*')
+      .eq('id', ledgerId).eq('child_id', childId).maybeSingle()
+    if (!row) return res.status(404).json({ error: 'not found' })
+    const at = DateTime.fromISO(row.created_at, { zone: 'utc' })
+    const near = (iso) => Math.abs(DateTime.fromISO(iso, { zone: 'utc' }).diff(at).as('milliseconds'))
+    const span = [at.minus({ minutes: 3 }).toISO(), at.plus({ minutes: 1 }).toISO()]
+
+    if (row.reason === 'puzzle') {
+      let session = null
+      const cols = '*'
+      if (row.ref_id) ({ data: session } = await supabase.from('puzzle_sessions').select(cols).eq('id', row.ref_id).maybeSingle())
+      if (!session) {
+        const { data: cands } = await supabase.from('puzzle_sessions').select(cols).eq('child_id', childId)
+          .not('finished_at', 'is', null).gte('finished_at', span[0]).lte('finished_at', span[1])
+        session = (cands || []).sort((x, y) => near(x.finished_at) - near(y.finished_at))[0] || null
+      }
+      if (!session?.finished_at) return res.status(404).json({ error: 'no sitting found for this row' })
+      const [sheet, { data: attempts }, { explainQuestion }] = await Promise.all([
+        puzzleSheet(session),
+        supabase.from('puzzle_attempts').select('question_index, chosen_index, correct, type, rule').eq('session_id', session.id),
+        import('./puzzle/puzzleExplain.js'),
+      ])
+      const byIndex = new Map((attempts || []).map(a => [a.question_index, a]))
+      // A sitting from before sheets were stored is regenerated, and that is only the sitting the
+      // child saw if the engine has not changed since. Each answer recorded its question's type
+      // and rule; if the regenerated sheet disagrees anywhere, it is a different sheet, and the
+      // score is all that can honestly be shown.
+      const same = sheet.every((q, i) => {
+        const a = byIndex.get(i)
+        return !a || (a.type === q.type && (a.rule ?? null) === (q.rule?.attr ?? null))
+      })
+      if (!same) {
+        return res.json({ kind: 'puzzle', at: row.created_at, band: session.band, correct: session.correct,
+          total: session.question_count, questions: null, reason: 'sheet_changed' })
+      }
+      return res.json({
+        kind: 'puzzle', at: row.created_at, band: session.band, correct: session.correct, total: session.question_count,
+        questions: sheet.map(publicQuestion),
+        answers: sheet.map((q, i) => {
+          const a = byIndex.get(i)
+          return a ? { chosen_index: a.chosen_index, correct_index: q.correct_index, correct: a.correct, why: explainQuestion(q, lang) } : null
+        }),
+      })
+    }
+
+    if (row.reason === 'english') {
+      let session = null
+      if (row.ref_id) ({ data: session } = await supabase.from('english_sessions').select('*').eq('id', row.ref_id).maybeSingle())
+      if (!session) {
+        const { data: cands } = await supabase.from('english_sessions').select('*').eq('child_id', childId)
+          .not('finished_at', 'is', null).gte('finished_at', span[0]).lte('finished_at', span[1])
+        session = (cands || []).sort((x, y) => near(x.finished_at) - near(y.finished_at))[0] || null
+      }
+      if (!session?.finished_at) return res.status(404).json({ error: 'no sitting found for this row' })
+      const [sheet, { data: attempts }] = await Promise.all([
+        englishSheet(session),
+        supabase.from('english_attempts').select('question_index, chosen, correct').eq('session_id', session.id),
+      ])
+      const byIndex = new Map((attempts || []).map(a => [a.question_index, a]))
+      return res.json({
+        kind: 'english', at: row.created_at, band: session.band, correct: session.correct, total: session.question_count,
+        questions: sheet.map(publicEnglishItem),
+        answers: sheet.map((q, i) => {
+          const a = byIndex.get(i)
+          return a ? { chosen: a.chosen, correct: a.correct, ...englishFeedback(q, a.chosen || []) } : null
+        }),
+      })
+    }
+
+    if (row.reason === 'math') {
+      let sessionId = row.ref_id || null
+      if (!sessionId) {
+        const { data: cands } = await supabase.from('math_attempts').select('session_id, created_at').eq('child_id', childId)
+          .gte('created_at', span[0]).lte('created_at', span[1])
+        sessionId = (cands || []).sort((x, y) => near(x.created_at) - near(y.created_at))[0]?.session_id || null
+      }
+      if (!sessionId) return res.status(404).json({ error: 'no sitting found for this row' })
+      const { data: items } = await supabase.from('math_attempts').select('*').eq('session_id', sessionId).eq('child_id', childId)
+      return res.json({
+        kind: 'math', at: row.created_at,
+        items: (items || []).map(r => ({
+          question: r.question, child_answer: r.child_answer, correct: r.correct,
+          correct_answer: r.correct_answer ?? null, help_used: r.help_used, topic_name: r.topic_name,
+        })),
+      })
+    }
+    res.status(404).json({ error: 'nothing to review for this kind of row' })
+  } catch (err) {
+    console.error('[REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
+  const { sessionId } = req.params
+  puzzleOpen.delete(sessionId)
+  try {
+    const { data: session } = await supabase.from('puzzle_sessions')
+      .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
+    if (!session) return res.status(404).json({ error: 'session not found' })
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id, task_settings').eq('id', session.child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'puzzle', PUZZLE_DEFAULTS)
+    const done = (s) => res.json({
+      correct: s.correct, total: session.question_count, gems_earned: s.gems_earned ?? 0,
+      capped: !!s.capped, daily_cap: settings.dailyCap,
+    })
+    if (session.finished_at) return done(session)
+
+    // The score is counted from what was recorded here, one answer at a time — never taken from
+    // the browser.
+    const { data: attempts, error: attErr } = await supabase.from('puzzle_attempts')
+      .select('correct').eq('session_id', session.id)
+    if (attErr) return res.status(500).json({ error: attErr.message })
+    if ((attempts || []).length < session.question_count) return res.status(400).json({ error: 'not every question is answered' })
+    const correct = attempts.filter(a => a.correct).length
+
+    // Claimed before anything is paid: of two finish calls racing, only the one whose update finds
+    // the row still open goes on to write the ledger.
+    const { data: claimed } = await supabase.from('puzzle_sessions')
+      .update({ finished_at: new Date().toISOString(), correct })
+      .eq('id', session.id).is('finished_at', null).select('id')
+    if (!claimed?.length) {
+      // The other call is paying right now; its figure lands a moment after its claim.
+      let again = null
+      for (let i = 0; i < 10; i++) {
+        ;({ data: again } = await supabase.from('puzzle_sessions')
+          .select('correct, gems_earned, capped').eq('id', session.id).maybeSingle())
+        if (again?.gems_earned != null) break
+        await new Promise(r => setTimeout(r, 200))
+      }
+      return done(again || { correct })
+    }
+
+    const tz = await tzForChild(child.id)
+    const doneToday = await rewardedToday(child.id, tz, 'puzzle')
+    let gems = 0
+    let capped = false
+    if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
+      capped = true
+    } else {
+      gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+    }
+    // Through recordGems like every other scored task, so a sitting past the limit is a line in
+    // the gem history too, not a gap.
+    const led = await recordGems(child.id, gems, 'puzzle', { capped, ref: session.id })
+    if (gems > 0 && !led.ok) gems = 0
+    await supabase.from('puzzle_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
+    queueDailyBonus(child.id)
+    puzzleSheets.delete(session.id)
+
+    const { data: prefsRow } = await supabase
+      .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    const language = parentLang(prefsRow?.prefs)
+    const total = session.question_count
+    if (gems > 0 && (perTask || doneToday === 0)) {
+      const msg = say(language,
+        `${child.name} did their puzzles — ${correct}/${total} correct. +${gems} gems 💎`,
+        `${child.name} bulmacalarını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`,
+        `${child.name} ha hecho sus acertijos — ${correct}/${total} correctos. +${gems} gems 💎`)
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `şekil ve örüntü bulmacaları, ${correct}/${total} doğru, +${gems} gem`,
+        en: `shape & pattern puzzles, ${correct}/${total} correct, +${gems} gems`,
+      } }).catch(() => {})
+    } else if (capped && settings.active && perTask) {
+      // The sitting past the day's limit is told too, and not as an offer — the maths rule.
+      const msg = say(language,
+        `${child.name} did another round of puzzles — ${correct}/${total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} bir tur bulmaca daha çözdü — ${correct}/${total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha hecho otra ronda de acertijos — ${correct}/${total} correctos. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
+      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
+        tr: `bulmaca, ${correct}/${total} doğru, günlük sınır dolduğu için gem yok`,
+        en: `puzzles, ${correct}/${total} correct, past the daily limit so no gems`,
+      } }).catch(() => {})
+    }
+
+    done({ correct, gems_earned: gems, capped })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── English sessions (verbal reasoning, spelling and grammar) ────────────────────────────────
+// The puzzle contract, word for word: the server deals the sheet from a seed it chooses, keeps the
+// answers, sends the browser the words to show and nothing that says which option is right, and
+// marks every answer itself. The engine is a byte-for-byte copy of src/lib (server/english, `npm
+// run puzzle:sync`); its lexicon is 3.8 MB and never goes near a phone.
+//
+// Two differences from puzzles. Some questions ask for TWO answers ("which TWO do not belong"), so
+// an answer is a set of indices and is right only as the whole set. And the English is British or
+// American per child (children.english_variety), because spelling and which words rhyme differ.
+const ENGLISH_DEFAULTS = { gems: 30, dailyCap: TASK_DEFAULT_CAPS.english }
+const ENGLISH_QUESTIONS = 10
+
+// A family in a US time zone gets American English unless the parent says otherwise; everyone
+// else British, which is what the Bond books and the 11+ are written in.
+const US_ZONES = /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Adak|Boise|Detroit|Juneau|Sitka|Yakutat|Nome|Metlakatla|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+)|Pacific\/Honolulu|US\/.+)$/
+function englishVarietyForZone(tz) {
+  return US_ZONES.test(tz || '') ? 'us' : 'uk'
+}
+async function englishVarietyFor(child) {
+  if (child?.english_variety === 'uk' || child?.english_variety === 'us') return child.english_variety
+  return englishVarietyForZone(await tzForChild(child.id))
+}
+
+// Question types as a parent would name the skill. The per-skill read follows the maths rules.
+const ENGLISH_SKILLS = {
+  synonym: 'word meanings (same and opposite)', antonym: 'word meanings (same and opposite)',
+  'odd-synonym': 'word meanings (same and opposite)', 'word-grid': 'word meanings (same and opposite)',
+  'pair-meaning': 'word meanings (same and opposite)', 'letter-pair': 'word meanings (same and opposite)',
+  'rhyme-synonym': 'word meanings (same and opposite)', 'prefix-antonym': 'word meanings (same and opposite)',
+  sense: 'what a word means', definition: 'what a word means',
+  'odd-two': 'word groups and analogies', analogy: 'word groups and analogies', 'compound-front': 'word groups and analogies',
+  'letter-code': 'letter and code puzzles', 'letter-analogy': 'letter and code puzzles', 'letter-sum': 'letter and code puzzles',
+  'alpha-order': 'letter and code puzzles', 'letters-in-order': 'letter and code puzzles', 'front-letter': 'letter and code puzzles',
+  'join-letter': 'letter and code puzzles', 'change-pattern': 'letter and code puzzles', 'word-ladder': 'letter and code puzzles',
+  'not-from-letters': 'letter and code puzzles', unscramble: 'letter and code puzzles', 'anagram-pair': 'letter and code puzzles',
+  'shared-letters': 'letter and code puzzles', 'hidden-word': 'letter and code puzzles',
+  'logic-grid': 'logic puzzles',
+  rhyme: 'sounds of words (rhymes, homophones, syllables)', homophone: 'sounds of words (rhymes, homophones, syllables)',
+  syllables: 'sounds of words (rhymes, homophones, syllables)', 'homophone-cloze': 'sounds of words (rhymes, homophones, syllables)',
+  plural: 'grammar and word forms', 'past-tense': 'grammar and word forms', suffix: 'grammar and word forms',
+  'root-word': 'grammar and word forms', singular: 'grammar and word forms', comparative: 'grammar and word forms',
+  'grammar-cloze': 'grammar and word forms', gender: 'grammar and word forms', collective: 'grammar and word forms',
+  'missing-vowel': 'spelling', misspelt: 'spelling', ending: 'spelling', 'ie-ei': 'spelling', 'silent-letter': 'spelling',
+  apostrophe: 'apostrophes and short forms', contraction: 'apostrophes and short forms',
+  proverb: 'sayings',
+}
+
+async function englishStanding(childId) {
+  const { data, error } = await supabase.from('english_attempts')
+    .select('type, correct, created_at').eq('child_id', childId)
+    .order('created_at', { ascending: false }).limit(400)
+  if (error) return null
+  const bySkill = new Map()
+  for (const row of data || []) {
+    const skill = ENGLISH_SKILLS[row.type] || row.type
+    const rows = bySkill.get(skill) || []
+    if (rows.length < MASTERY_WINDOW) rows.push(row)
+    bySkill.set(skill, rows)
+  }
+  return [...bySkill.entries()].map(([skill, rows]) => {
+    const correct = rows.filter(r => r.correct).length
+    const accuracy = Math.round((correct / rows.length) * 100)
+    return {
+      skill, attempts: rows.length, correct, accuracy,
+      standing: rows.length < MASTERY_MIN_ATTEMPTS ? 'not enough yet'
+        : accuracy < MASTERY_WEAK_BELOW ? 'weak'
+        : accuracy >= MASTERY_CLEARS_AT ? 'strong'
+        : 'getting there',
+    }
+  }).sort((a, b) => a.accuracy - b.accuracy)
+}
+
+// What the browser may know: the prompt and the option texts. `correct`, each option's `why` and
+// the `rule` are the key and stay here until the question is answered.
+function publicEnglishItem(item) {
+  return {
+    type: item.type, stem_key: item.stem_key, pick: item.pick, variety: item.variety,
+    prompt: item.prompt,
+    options: item.options.map(o => ({ text: o.text })),
+  }
+}
+// After the answer: which options were right, and for each wrong one the child chose, why not.
+function englishFeedback(item, chosen) {
+  return {
+    correct_indices: item.correct,
+    why: chosen.filter(i => !item.correct.includes(i)).map(i => ({ index: i, key: item.options[i]?.why || null })),
+  }
+}
+
+const englishSheets = new Map()
+const englishOpen = new Map()
+function keepEnglishOpen(session) {
+  englishOpen.set(session.id, session)
+  if (englishOpen.size > 500) englishOpen.delete(englishOpen.keys().next().value)
+}
+async function englishSheet(session) {
+  const hit = englishSheets.get(session.id)
+  if (hit) return hit
+  if (Array.isArray(session.sheet) && session.sheet.length) {
+    englishSheets.set(session.id, session.sheet)
+    if (englishSheets.size > 500) englishSheets.delete(englishSheets.keys().next().value)
+    return session.sheet
+  }
+  const { generateSession } = await import('./english/englishTemplates.js')
+  const sheet = generateSession(session.band, session.question_count, Number(session.seed), { variety: session.variety })
+  englishSheets.set(session.id, sheet)
+  return sheet
+}
+
+app.post('/api/children/:childId/english-session', async (req, res) => {
+  const { childId } = req.params
+  try {
+    // `*`, not a column list: english_variety arrives with a migration, and naming a column that
+    // does not exist yet fails the whole read.
+    const { data: child } = await supabase.from('children').select('*').eq('id', childId).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
+    if (!settings.active) return res.status(403).json({ error: 'English is switched off for this child' })
+
+    const { bandForAge, generateSession } = await import('./english/englishTemplates.js')
+    const band = bandForAge(child.age)
+    const variety = await englishVarietyFor(child)
+    const seed = crypto.randomInt(1, 2 ** 31)
+    const sheet = generateSession(band, ENGLISH_QUESTIONS, seed, { variety })
+    if (sheet.length < ENGLISH_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
+
+    const { data: session, error } = await supabase.from('english_sessions')
+      .insert({ child_id: childId, band, variety, seed, question_count: sheet.length, sheet })
+      .select('id').single()
+    if (error) return res.status(500).json({ error: error.message })
+    englishSheets.set(session.id, sheet)
+    keepEnglishOpen({ id: session.id, child_id: childId, band, variety, seed, question_count: sheet.length, finished_at: null, sheet })
+
+    const tz = await tzForChild(childId)
+    const doneToday = await rewardedToday(childId, tz, 'english')
+    res.json({
+      session_id: session.id, band, variety,
+      questions: sheet.map(publicEnglishItem),
+      gems: settings.gems, daily_cap: settings.dailyCap,
+      will_pay: doneToday !== null && doneToday < settings.dailyCap,
+    })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/english-sessions/:sessionId/answer', async (req, res) => {
+  const { sessionId } = req.params
+  const index = Number(req.body?.question_index)
+  const raw = Array.isArray(req.body?.chosen) ? req.body.chosen : [req.body?.chosen]
+  try {
+    let session = englishOpen.get(sessionId)
+    if (!session) {
+      ;({ data: session } = await supabase.from('english_sessions').select('*').eq('id', sessionId).maybeSingle())
+      if (!session) return res.status(404).json({ error: 'session not found' })
+      if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
+      keepEnglishOpen(session)
+    }
+    const sheet = await englishSheet(session)
+    const q = sheet[index]
+    if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
+    const chosen = [...new Set(raw.map(Number))].sort((a, b) => a - b)
+    if (chosen.length !== q.pick || chosen.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length)) {
+      return res.status(400).json({ error: `choose exactly ${q.pick}` })
+    }
+    const correct = chosen.length === q.correct.length && q.correct.every(i => chosen.includes(i))
+
+    const { error } = await supabase.from('english_attempts').insert({
+      session_id: session.id, child_id: session.child_id, question_index: index,
+      type: q.type, band: session.band, chosen, correct,
+    })
+    if (error?.code === '23505') {
+      const { data: first } = await supabase.from('english_attempts')
+        .select('chosen, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
+      const was = first?.chosen || chosen
+      return res.json({ correct: !!first?.correct, chosen: was, ...englishFeedback(q, was), repeated: true })
+    }
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ correct, chosen, ...englishFeedback(q, chosen) })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/english-sessions/:sessionId/finish', async (req, res) => {
+  const { sessionId } = req.params
+  englishOpen.delete(sessionId)
+  try {
+    const { data: session } = await supabase.from('english_sessions')
+      .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
+    if (!session) return res.status(404).json({ error: 'session not found' })
+    const { data: child } = await supabase
+      .from('children').select('id, name, parent_id, task_settings').eq('id', session.child_id).maybeSingle()
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
+    const done = (s) => res.json({
+      correct: s.correct, total: session.question_count, gems_earned: s.gems_earned ?? 0,
+      capped: !!s.capped, daily_cap: settings.dailyCap,
+    })
+    if (session.finished_at) return done(session)
+
+    const { data: attempts, error: attErr } = await supabase.from('english_attempts')
+      .select('correct').eq('session_id', session.id)
+    if (attErr) return res.status(500).json({ error: attErr.message })
+    if ((attempts || []).length < session.question_count) return res.status(400).json({ error: 'not every question is answered' })
+    const correct = attempts.filter(a => a.correct).length
+
+    // Claimed before anything is paid, as puzzles do: of two racing finish calls one pays.
+    const { data: claimed } = await supabase.from('english_sessions')
+      .update({ finished_at: new Date().toISOString(), correct })
+      .eq('id', session.id).is('finished_at', null).select('id')
+    if (!claimed?.length) {
+      let again = null
+      for (let i = 0; i < 10; i++) {
+        ;({ data: again } = await supabase.from('english_sessions')
+          .select('correct, gems_earned, capped').eq('id', session.id).maybeSingle())
+        if (again?.gems_earned != null) break
+        await new Promise(r => setTimeout(r, 200))
+      }
+      return done(again || { correct })
+    }
+
+    const tz = await tzForChild(child.id)
+    const doneToday = await rewardedToday(child.id, tz, 'english')
+    let gems = 0
+    let capped = false
+    if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) capped = true
+    else gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+    const led = await recordGems(child.id, gems, 'english', { capped, ref: session.id })
+    if (gems > 0 && !led.ok) gems = 0
+    await supabase.from('english_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
+    queueDailyBonus(child.id)
+    englishSheets.delete(session.id)
+
+    const { data: prefsRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+    const perTask = prefsRow?.prefs?.notify_per_task !== false
+    const language = parentLang(prefsRow?.prefs)
+    const total = session.question_count
+    if (gems > 0 && (perTask || doneToday === 0)) {
+      sendNotification(child.parent_id, say(language,
+        `${child.name} did their English — ${correct}/${total} correct. +${gems} gems 💎`,
+        `${child.name} İngilizce sorularını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`,
+        `${child.name} ha hecho su inglés — ${correct}/${total} correctas. +${gems} gems 💎`),
+      { kind: 'activity', child: child.name, detail: {
+        tr: `İngilizce, ${correct}/${total} doğru, +${gems} gem`,
+        en: `English, ${correct}/${total} correct, +${gems} gems`,
+      } }).catch(() => {})
+    } else if (capped && settings.active && perTask) {
+      sendNotification(child.parent_id, say(language,
+        `${child.name} did another round of English — ${correct}/${total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
+        `${child.name} bir tur İngilizce daha çözdü — ${correct}/${total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
+        `${child.name} ha hecho otra ronda de inglés — ${correct}/${total} correctas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`),
+      { kind: 'activity', child: child.name, detail: {
+        tr: `İngilizce, ${correct}/${total} doğru, günlük sınır dolduğu için gem yok`,
+        en: `English, ${correct}/${total} correct, past the daily limit so no gems`,
+      } }).catch(() => {})
+    }
+
+    done({ correct, gems_earned: gems, capped })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
     res.status(500).json({ error: err.message })
   }
 })
@@ -5199,7 +6486,7 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
     // there is nothing to clean up and nothing to leak.
     const { data: parentRow } = await supabase
       .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
-    const language = parentRow?.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parentRow?.prefs)
     const safety = await screenImageSafety({
       images: [{ buffer, mimeType: contentType }], kind: 'drawing', language,
     })
@@ -5228,13 +6515,14 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
 
       try {
         const canSee = heldPath
-          ? (language === 'en'
-              ? ' I have kept it for a week in case you want to see it — just ask.'
-              : ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.')
+          ? say(language, ' I have kept it for a week in case you want to see it — just ask.',
+                          ' Bir hafta boyunca sakladım, görmek istersen söylemen yeterli.',
+                          ' La he guardado una semana por si quieres verla: solo tienes que pedírmela.')
           : ''
-        deferNotify('DRAWING', () => sendNotification(child.parent_id, (language === 'en'
-          ? `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`
-          : `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`) + canSee,
+        deferNotify('DRAWING', () => sendNotification(child.parent_id, say(language,
+          `${child.name} tried to upload a drawing photo that isn't appropriate for a kids' app. I did not save it as a drawing or show it to anyone.`,
+          `${child.name} çizim olarak uygun olmayan bir görsel yüklemeye çalıştı. Çizim olarak kaydetmedim ve kimseyle paylaşmadım.`,
+          `${child.name} ha intentado subir como dibujo una foto que no es apropiada para una aplicación infantil. No la he guardado como dibujo ni se la he enseñado a nadie.`) + canSee,
           { kind: 'attention', child: child.name, detail: {
             tr: 'çizim olarak uygun olmayan bir görsel yüklemeye çalıştı, kaydetmedim',
             en: 'tried to upload a drawing photo that is not appropriate for a kids app — I did not save it',
@@ -5244,9 +6532,10 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
       }
       return res.status(400).json({
         error: 'photo_rejected',
-        message: language === 'en'
-          ? "I couldn't save that photo. Want to take another one?"
-          : 'Bu fotoğrafı kaydedemedim. Başka bir tane çeker misin?',
+        message: say(language,
+          "I couldn't save that photo. Want to take another one?",
+          'Bu fotoğrafı kaydedemedim. Başka bir tane çeker misin?',
+          'No he podido guardar esa foto. ¿Quieres hacer otra?'),
       })
     }
 
@@ -5290,6 +6579,7 @@ app.post('/api/children/:childId/paintings', async (req, res) => {
       .select('id, drawing_id, age_group, photo_path, status, reward_amount, created_at')
       .single()
     if (insErr) return res.status(500).json({ error: insErr.message })
+    queueDailyBonus(childId)
 
     // The photo still goes out either way. What the parent turned off is being asked, not being
     // shown their child's drawing — and the safety screen above ran before any of this, so an
@@ -5388,15 +6678,10 @@ async function approvePaintingById(paintingId, parentId) {
     .eq('status', 'pending')  // guard against a concurrent approval racing us
   if (updErr) return { success: false, error: updErr.message }
 
-  if (awarded > 0) {
-    const { error: ledErr } = await supabase
-      .from('bt_ledger')
-      .insert({ child_id: child.id, amount: awarded, reason: 'drawing' })
-    if (ledErr) {
-      console.error(`[DRAWING] ledger insert failed for ${painting.id}: ${ledErr.message}`)
-      await supabase.from('paintings').update({ reward_amount: 0 }).eq('id', painting.id)
-      return { success: false, error: 'reward could not be recorded' }
-    }
+  const led = await recordGems(child.id, awarded, 'drawing', { capped })
+  if (awarded > 0 && !led.ok) {
+    await supabase.from('paintings').update({ reward_amount: 0 }).eq('id', painting.id)
+    return { success: false, error: 'reward could not be recorded' }
   }
 
   return { success: true, id: painting.id, childName: child.name, gems: awarded, capped }
@@ -5447,7 +6732,30 @@ async function paintingActionRoute(req, res, action) {
 }
 
 app.post('/api/paintings/:id/approve', (req, res) => paintingActionRoute(req, res, approvePaintingById))
+
+// The dashboard's homework/reading approve and reject. They wrote the submission and the ledger
+// row from the browser, so nothing the server enforces — the configured amount, the ownership
+// check, homework's daily cap — applied to the one button parents use most. Same tool the chat
+// and auto-approval use now; the amount is the configured one, not whatever the page sent.
+app.post('/api/submissions/:id/approve', (req, res) => paintingActionRoute(req, res,
+  (id, parentId) => approveSubmissionTool(id, parentId)))
+app.post('/api/submissions/:id/reject', (req, res) => paintingActionRoute(req, res,
+  (id, parentId) => rejectSubmissionTool(id, parentId)))
 app.post('/api/paintings/:id/reject', (req, res) => paintingActionRoute(req, res, rejectPaintingById))
+
+// Homework approve/reject from the dashboard. Same route shape, same JWT and
+// ownership check, and — the reason these exist — the same server-side reward
+// decision the Telegram approval has always used. The dashboard used to write
+// submissions.gems_earned and the bt_ledger row straight from the browser with
+// a number it picked itself, so it paid the full amount past the daily limit
+// and would have paid whatever a tampered client asked for.
+// The amount is deliberately not taken from the request: the dashboard's approve
+// button means "yes", not "yes, for N gems", so the third argument is left off
+// and the configured reward (minus the cap) decides.
+app.post('/api/submissions/:id/approve', (req, res) =>
+  parentDecisionRoute(req, res, (id, parentId) => approveSubmissionTool(id, parentId)))
+app.post('/api/submissions/:id/reject', (req, res) =>
+  parentDecisionRoute(req, res, (id, parentId) => rejectSubmissionTool(id, parentId)))
 
 // Dashboard's "gift gems" button — same tool the Telegram agent calls, same
 // ownership check, just reached with a parent JWT instead of a chat-scoped id.
@@ -5524,6 +6832,34 @@ app.get('/api/children/:childId/paintings', async (req, res) => {
 
 // Parent-side view of a child's paintings. Unlike the child route this proves
 // WHO is asking — parent JWT plus ownership of that child.
+// What is waiting on the parent, per child, for the dashboard's child cards: one call instead of a
+// child page's worth of lists for every child. Counts only — the child page has the items.
+app.get('/api/parent/overview', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return res.status(401).json({ error: 'unauthorized' })
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token)
+    const userId = userData?.user?.id
+    if (authErr || !userId) return res.status(401).json({ error: 'unauthorized' })
+
+    const { data: kids } = await supabase.from('children').select('id').eq('parent_id', userId)
+    const ids = (kids || []).map(k => k.id)
+    if (!ids.length) return res.json({ children: [] })
+    const pending = (table, extra = (q) => q) => extra(supabase.from(table).select('child_id').in('child_id', ids).eq('status', 'pending'))
+      .then(({ data }) => data || [])
+    const [subs, paints, contribs, claims, asks] = await Promise.all([
+      pending('submissions'), pending('paintings'), pending('contribution_log'), pending('reward_claims'), pending('reward_suggestions'),
+    ])
+    const count = (rows, id) => rows.filter(r => r.child_id === id).length
+    res.json({ children: ids.map(id => {
+      const n = count(subs, id) + count(paints, id) + count(contribs, id) + count(claims, id) + count(asks, id)
+      return { id, pending: n }
+    }) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/parent/children/:childId/paintings', async (req, res) => {
   try {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
@@ -5579,11 +6915,12 @@ app.post('/api/send-welcome', async (req, res) => {
     ])
 
     const childName = children?.[0]?.name || 'your child'
-    const language = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parent?.prefs)
 
-    const message = language === 'en'
-      ? `👋 Hi! I'm Tuto, ${childName}'s learning companion!\n\nI'll keep you updated here as ${childName} completes tasks. 🎉\n\nFeel free to message me anytime — you can ask about ${childName}'s progress, earned Gems, and more! 💎`
-      : `👋 Merhaba! Ben Tuto, ${childName}'in öğrenme arkadaşı!\n\n${childName} görevlerini tamamladıkça sizi buradan haberdar edeceğim. 🎉\n\nBana istediğiniz zaman yazabilirsiniz — ${childName}'in gelişimini, kazandığı Gems'leri ve daha fazlasını sorabilirsiniz! 💎`
+    const message = say(language,
+      `👋 Hi! I'm Tuto, ${childName}'s learning companion!\n\nI'll keep you updated here as ${childName} completes tasks. 🎉\n\nFeel free to message me anytime — you can ask about ${childName}'s progress, earned Gems, and more! 💎`,
+      `👋 Merhaba! Ben Tuto, ${childName}'in öğrenme arkadaşı!\n\n${childName} görevlerini tamamladıkça sizi buradan haberdar edeceğim. 🎉\n\nBana istediğiniz zaman yazabilirsiniz — ${childName}'in gelişimini, kazandığı Gems'leri ve daha fazlasını sorabilirsiniz! 💎`,
+      `👋 ¡Hola! Soy Tuto, el compañero de aprendizaje de ${childName}.\n\nTe iré contando por aquí lo que ${childName} vaya completando. 🎉\n\nEscríbeme cuando quieras: puedes preguntarme por los avances de ${childName}, las gems que ha ganado y lo que necesites. 💎`)
 
     const channel = parent?.notification_channel
     if (channel === 'telegram' && parent?.telegram_chat_id) {
@@ -5732,7 +7069,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
     const { data: children } = await supabase.from('children').select('name').eq('parent_id', parent.id).order('created_at').limit(1)
     const childName = children?.[0]?.name || 'çocuğunuzun'
-    const language = parent?.prefs?.language === 'en' ? 'en' : 'tr'
+    const language = parentLang(parent?.prefs)
 
     await supabase
       .from('parents')
@@ -5752,15 +7089,41 @@ app.post('/webhook/whatsapp', async (req, res) => {
 
     // Says plainly that this moves the messages, since a parent who also had Telegram will
     // otherwise wonder why it went quiet.
-    const confirmMsg = language === 'en'
-      ? `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on — not on Telegram.`
-      : `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra Telegram yerine buradan haber vereceğim.`
+    const confirmMsg = say(language,
+      `Hi! You're now connected to ${childName}'s Tuto account 🎉 I'll message you here from now on — not on Telegram.`,
+      `Merhaba! ${childName} hesabına bağlandın 🎉 Bundan sonra Telegram yerine buradan haber vereceğim.`,
+      `¡Hola! Ya estás conectado a la cuenta de Tuto de ${childName} 🎉 A partir de ahora te escribiré por aquí, no por Telegram.`)
     await sendWhatsAppBusinessMessage(from, confirmMsg)
     console.log(`[WA] Connected parent ${parent.id} → ${from}`)
   } catch (err) {
     console.error('[WA] Webhook error:', err.message)
   }
 })
+
+// children.age kept in step with children.birth_date. The date is the truth; the age is what
+// forty-odd readers — the maths year, the puzzle band, the story length, the child's skin — have
+// always read, so it is written rather than every reader being taught the date. Counted in the
+// child's own timezone so the birthday lands on their morning, not UTC's. A child without a date
+// keeps the age their parent typed.
+function ageOn(isoDate, today) {
+  const b = DateTime.fromISO(isoDate)
+  if (!b.isValid) return null
+  let age = today.year - b.year
+  if (today.month < b.month || (today.month === b.month && today.day < b.day)) age--
+  return age
+}
+
+async function syncAgesFromBirthDates() {
+  const { data, error } = await supabase.from('children').select('id, age, birth_date').not('birth_date', 'is', null)
+  if (error) { console.error(`[AGE] read failed: ${error.message}`); return }
+  for (const c of data || []) {
+    const age = ageOn(c.birth_date, DateTime.now().setZone(await tzForChild(c.id)))
+    if (age == null || age === c.age) continue
+    const { error: upErr } = await supabase.from('children').update({ age }).eq('id', c.id)
+    if (upErr) console.error(`[AGE] ${c.id}: ${upErr.message}`)
+    else console.log(`[AGE] ${c.id}: ${c.age} → ${age}`)
+  }
+}
 
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')
@@ -5772,6 +7135,9 @@ app.listen(3000, async () => {
   }
   purgeAll()
   setInterval(purgeAll, 24 * 60 * 60 * 1000)
+  // Hourly, so a birthday is picked up within the hour of midnight wherever the child is.
+  syncAgesFromBirthDates()
+  setInterval(() => { syncAgesFromBirthDates().catch(err => console.error(`[AGE] ${err.message}`)) }, 60 * 60 * 1000)
   startTelegramBot()
   setupMessageListener()
 })

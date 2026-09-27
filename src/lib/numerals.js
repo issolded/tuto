@@ -30,11 +30,39 @@ const TR_TENS = {
 }
 const TR_SCALE = { yüz: 100, bin: 1000, milyon: 1000000 }
 
+// Spanish writes 16–29 as single words, so they belong with the units rather than being built
+// from a ten and a unit. The unaccented spellings are here too: a model asked for Spanish
+// returns "dieciseis" often enough, and a number word we do not recognise is left spelled out
+// in front of a child who has to answer it on a number pad.
+const ES_UNITS = {
+  cero: 0, uno: 1, un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7,
+  ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15,
+  dieciséis: 16, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19,
+  veintiuno: 21, veintiún: 21, veintiuna: 21, veintidós: 22, veintidos: 22,
+  veintitrés: 23, veintitres: 23, veinticuatro: 24, veinticinco: 25, veintiséis: 26,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+}
+// The hundreds are their own words rather than "N cien", so they add like tens do.
+const ES_TENS = {
+  veinte: 20, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70,
+  ochenta: 80, noventa: 90,
+  doscientos: 200, doscientas: 200, trescientos: 300, trescientas: 300,
+  cuatrocientos: 400, cuatrocientas: 400, quinientos: 500, quinientas: 500,
+  seiscientos: 600, seiscientas: 600, setecientos: 700, setecientas: 700,
+  ochocientos: 800, ochocientas: 800, novecientos: 900, novecientas: 900,
+}
+const ES_SCALE = { cien: 100, ciento: 100, mil: 1000, millón: 1000000, millon: 1000000, millones: 1000000 }
+
 // "and" belongs INSIDE an English number only after a scale word — "eight hundred and forty
 // five" is one number, "forty five and six" is two. Getting this wrong turns an addition into
 // its own answer: 45 and 6 became 51.
+//
+// Spanish has the same trap with "y", but it sits somewhere else in the number: "cuarenta y
+// cinco" joins a TEN to a unit, never a scale word to anything ("ciento y cinco" is not
+// Spanish). So the joining word and what it may follow are configured together rather than
+// the English shape being assumed for every language.
 const EN_GLUE = new Set(['and', 'hundred', 'thousand', 'million'])
-const JOINS_AFTER_SCALE = 'and'
+const ES_GLUE = new Set(['y', 'cien', 'ciento', 'mil', 'millón', 'millon', 'millones'])
 
 function isNumberWord(w, units, tens, scale, glue) {
   return w in units || w in tens || w in scale || (glue?.has(w) ?? false)
@@ -66,7 +94,9 @@ function wordsToNumber(words, units, tens, scale) {
   return seen ? total + group : null
 }
 
-function convert(text, units, tens, scale, glue) {
+// `join` is { word, after }: the word that glues one number together, and the map whose keys it
+// may follow. Anything else and it is separating two numbers, so the run ends there.
+function convert(text, { units, tens, scale, glue, join, locale }) {
   const tokens = String(text ?? '').split(/(\s+|[^\p{L}\p{N}]+)/u)
   const out = []
   let run = []
@@ -101,12 +131,15 @@ function convert(text, units, tens, scale, glue) {
   }
 
   for (const tok of tokens) {
-    const word = tok.toLocaleLowerCase('tr')
+    // Turkish lower-cases I to ı, which is right for Turkish and wrong for everything else —
+    // lower-casing Spanish through it would turn "DIECISÉIS" into "dıecıséıs" and lose it.
+    const word = tok.toLocaleLowerCase(locale)
     if (isNumberWord(word, units, tens, scale, glue)) {
-      // An "and" that does not follow a scale word separates two numbers rather than joining
-      // one, so the run ends here and a fresh one starts after it.
+      // An "and" that does not follow a scale word — or a Spanish "y" that does not follow a
+      // ten — separates two numbers rather than joining one, so the run ends here and a fresh
+      // one starts after it.
       const prev = [...run].reverse().find(t => t.word)
-      if (word === JOINS_AFTER_SCALE && !(prev && prev.word in scale)) {
+      if (join && word === join.word && !(prev && prev.word in join.after)) {
         flush()
         out.push(tok)
         continue
@@ -138,15 +171,23 @@ function convert(text, units, tens, scale, glue) {
 // are touched, so a decimal survives: English keeps "3.75", Turkish keeps "3,75".
 function stripGroupSeparators(text, lang) {
   const out = text.replace(/\b\d{1,3}(?:,\d{3})+\b/g, m => m.replace(/,/g, ''))
-  return lang === 'tr'
+  // Turkish and Spanish both group with the dot and put the decimal on the comma, so an
+  // English-style 482,735 reads as 482.735 in either.
+  return lang === 'tr' || lang === 'es'
     ? out.replace(/\b\d{1,3}(?:\.\d{3})+\b/g, m => m.replace(/\./g, ''))
     : out
 }
 
+const NUMBER_WORDS = {
+  en: { units: EN_UNITS, tens: EN_TENS, scale: EN_SCALE, glue: EN_GLUE,
+        join: { word: 'and', after: EN_SCALE }, locale: 'en' },
+  tr: { units: TR_UNITS, tens: TR_TENS, scale: TR_SCALE, glue: new Set(['yüz', 'bin', 'milyon']),
+        join: null, locale: 'tr' },
+  es: { units: ES_UNITS, tens: ES_TENS, scale: ES_SCALE, glue: ES_GLUE,
+        join: { word: 'y', after: ES_TENS }, locale: 'es' },
+}
+
 export function numeralise(text, lang = 'en') {
   if (typeof text !== 'string' || !text) return text
-  const converted = lang === 'tr'
-    ? convert(text, TR_UNITS, TR_TENS, TR_SCALE, new Set(['yüz', 'bin', 'milyon']))
-    : convert(text, EN_UNITS, EN_TENS, EN_SCALE, EN_GLUE)
-  return stripGroupSeparators(converted, lang)
+  return stripGroupSeparators(convert(text, NUMBER_WORDS[lang] ?? NUMBER_WORDS.en), lang)
 }

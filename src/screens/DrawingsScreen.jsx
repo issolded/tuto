@@ -3,9 +3,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { t, formatDay, localeFor, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { drawingStepUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
+import { drawingStepUrl, drawingThumbUrl, getDrawings, getPaintings, submitPainting, deleteChildPainting } from '../lib/supabase'
 import { drawingAlign } from '../lib/drawingAlign'
 import Shell, { useIsTabletLandscape } from '../components/Shell'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 
 // ── Age skins ────────────────────────────────────────────────────────────────
 // Same flow, three presentations (see SKINS in the design prototype). The
@@ -118,7 +119,7 @@ function DrawingThumb({ id, ageGroup, stepCount, category, radius = 14 }) {
       background: CATEGORY_TINT[category] || PANEL_BG,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <img src={drawingStepUrl(id, ageGroup, stepCount)} alt="" loading="lazy"
+      <img src={drawingThumbUrl(id, ageGroup, stepCount)} alt="" loading="lazy" decoding="async"
         style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
     </div>
   )
@@ -328,6 +329,16 @@ function Browse({ sk, drawings, ageGroup, paintings, onPick, onFree, onLibrary, 
 // ── Ready ────────────────────────────────────────────────────────────────────
 function Ready({ sk, target, ageGroup, onStart, onBack }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
+
+  // The child spends a moment reading this screen before tapping Start. Use that time to warm
+  // the first two guide panels, so the first drawing step does not begin with an empty frame.
+  useEffect(() => {
+    if (!target) return
+    ;[1, 2].forEach(n => {
+      if (n <= target.step_count) new Image().src = drawingStepUrl(target.id, ageGroup, n)
+    })
+  }, [target, ageGroup])
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
@@ -451,8 +462,9 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
   }, [step, baseStep])
 
   // Warm the neighbouring panels. Without this every tap on Next waits on a
-  // fresh download and the child watches an empty frame; the panels are only
-  // ~20-45 KB, so fetching one ahead is cheap and keeps the flow instant.
+  // fresh download and the child watches an empty frame. drawingStepUrl caps the
+  // transfer at a 1024 px WebP derivative, so fetching one ahead is bounded and
+  // keeps the flow instant even when the source panel is a multi-megabyte PNG.
   useEffect(() => {
     ;[step + 2, step].forEach(n => {
       if (n >= 1 && n <= total) new Image().src = drawingStepUrl(target.id, ageGroup, n)
@@ -610,6 +622,14 @@ function Steps({ sk, target, ageGroup, step, setStep, onFinish, onBack }) {
 function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, error, onBack }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const fileRef = useRef(null)
+  // The photo goes through the crop step before it becomes the preview, so what the child
+  // confirms here is what their grown-up sees — the drawing, not the table it was lying on.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, lang),
+    inputRef: fileRef,
+    accent: sk.accent,
+    onReady: blob => onPick(blob),
+  })
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0 14px' }}>
@@ -632,13 +652,24 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
       </div>
 
       {photo ? (
-        <div style={{ position: 'relative' }}>
-          <img src={photo.url} alt="" style={{ width: '100%', borderRadius: sk.radius, display: 'block' }} />
-          <button onClick={onClear} disabled={submitting} style={{
-            position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%',
-            border: 'none', background: 'rgba(30,30,25,.66)', color: '#fff', fontWeight: 800, fontSize: 15,
-            cursor: submitting ? 'default' : 'pointer',
-          }}>✕</button>
+        /* Sized from its HEIGHT, not the column's width. A photo taken on the iPad itself is
+           portrait 3:4, and at width:100% of a sideways iPad's 1148px column that came out
+           1148×1531 — the picture alone was two screenfuls and the button below it sat 1705px
+           down a 700px screen. The child is looking at a photo she has just taken and has no
+           reason to think there is anything under it. Half the screen is plenty to check a
+           photo by; the button stays in sight. */
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', maxWidth: '100%' }}>
+            <img src={photo.url} alt="" style={{
+              maxWidth: 'min(100%, 430px)', maxHeight: '55dvh', width: 'auto', height: 'auto',
+              borderRadius: sk.radius, display: 'block',
+            }} />
+            <button onClick={onClear} disabled={submitting} style={{
+              position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%',
+              border: 'none', background: 'rgba(30,30,25,.66)', color: '#fff', fontWeight: 800, fontSize: 15,
+              cursor: submitting ? 'default' : 'pointer',
+            }}>✕</button>
+          </div>
         </div>
       ) : (
         <button onClick={() => fileRef.current?.click()} style={{
@@ -648,7 +679,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
         }}>📷<br />{t('dr_add_photo', lang)}</button>
       )}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = '' }} />
+        onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }} />
 
       {error && (
         <div style={{
@@ -660,6 +691,7 @@ function Upload({ sk, target, photo, onPick, onClear, onSubmit, submitting, erro
       <button onClick={onSubmit} disabled={!photo || submitting} style={ctaStyle(sk, !photo || submitting)}>
         {submitting ? t('dr_saving', lang) : t('dr_add_to_library', lang)}
       </button>
+      {cropNode}
     </>
   )
 }
@@ -693,9 +725,12 @@ function Reward({ sk, result, onLibrary, onAgain }) {
         {tf('dr_waiting_then', lang, { reward: sk.gemIcon })}
       </div>
 
+      {/* Same as the preview above: height-capped, or the two buttons under it are off the
+          bottom of a sideways iPad. */}
       {result?.painting?.photo && (
         <img src={result.painting.photo} alt="" style={{
-          width: '100%', borderRadius: sk.radius, marginTop: 20, display: 'block',
+          maxWidth: '100%', maxHeight: '40dvh', width: 'auto', height: 'auto',
+          borderRadius: sk.radius, margin: '20px auto 0', display: 'block',
         }} />
       )}
 

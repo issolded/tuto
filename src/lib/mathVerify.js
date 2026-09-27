@@ -17,6 +17,7 @@
 // A question dropped here is replaced by a template one, so the child still gets ten.
 
 import { callGeminiJSON } from './gemini'
+import { langName } from './i18n'
 import { partitionsMentally } from './mathTemplates'
 
 // Trailing text after the numbers is common ("... = ?", "kaç eder?"), so the expression is
@@ -119,7 +120,7 @@ export function checkArithmetic(question, answer) {
 // has one coin worth 50 and one worth 10. She buys cherries for 45. How many coins does she get
 // back in change?" — 15 if you read it as the value, 2 if you read it as the number of coins.
 async function solveIndependently(questions, language) {
-  const lang = language === 'tr' ? 'Turkish' : 'English'
+  const lang = langName(language)
   const prompt = `These are ${lang} maths questions for a child. For each one, do two things.
 
 ${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}

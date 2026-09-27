@@ -6,6 +6,7 @@ import { readStory, checkTitleSpelling } from '../lib/gemini'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
 import BookOpenTransition from '../components/BookOpenTransition'
@@ -159,6 +160,16 @@ export default function StoriesScreen() {
   const [storyTitle, setStoryTitle] = useState('')
   const [photos, setPhotos] = useState([])
   const fileRef = useRef(null)
+
+  // These pages are transcribed by the model, word for word, and what it cannot read it
+  // guesses (uncertain_words) or marks as a spelling mistake the child never made. Framing the
+  // page is the cheapest thing we can do about that.
+  const pagePhoto = usePhotoCrop({
+    translate: k => t(k, language),
+    inputRef: fileRef,
+    accent: '#2EC486',
+    onReady: blob => setPhotos(prev => [...prev, blob]),
+  })
   const [evalResult, setEvalResult] = useState(null)
   const [spellingState, setSpellingState] = useState([])
   const [activeError, setActiveError] = useState(null)
@@ -188,6 +199,18 @@ export default function StoriesScreen() {
 
   // cover composition
   const coverFileRef = useRef(null)
+
+  // The cover photo goes into a fixed panel on the book: 180px across by roughly 250 down,
+  // inside the 200×300 card (the exact height moves with how many lines the title takes, so
+  // the frame is close rather than pinned). It was being fitted with object-fit: cover, which
+  // means the child drew a cover and the CSS decided which part of it was the cover.
+  const coverPhoto = usePhotoCrop({
+    translate: k => t(k, language),
+    inputRef: coverFileRef,
+    accent: '#2EC486',
+    ratio: 0.72,
+    onReady: blob => handleCoverPhoto(blob),
+  })
   const [coverColor, setCoverColor] = useState(COVER_COLORS[0])
   const [coverImageUrl, setCoverImageUrl] = useState(null)
   const [coverUploading, setCoverUploading] = useState(false)
@@ -501,7 +524,6 @@ export default function StoriesScreen() {
 
   // ── STEP: WRITE ────────────────────────────────────────────────────────────
   if (step === 'write') {
-    const addPhoto = (file) => setPhotos(prev => [...prev, file])
     const removePhoto = (i) => setPhotos(prev => prev.filter((_, idx) => idx !== i))
 
     return (
@@ -535,7 +557,7 @@ export default function StoriesScreen() {
             style={{ display: 'none' }}
             onChange={e => {
               const file = e.target.files?.[0]
-              if (file) addPhoto(file)
+              if (file) pagePhoto.offerPhoto(file)
               e.target.value = ''
             }}
           />
@@ -592,6 +614,7 @@ export default function StoriesScreen() {
             </button>
           )}
         </div>
+        {pagePhoto.cropNode}
       </div>
     )
   }
@@ -1077,8 +1100,9 @@ export default function StoriesScreen() {
             accept="image/*"
             capture="environment"
             style={{ display: 'none' }}
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverPhoto(f); e.target.value = '' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) coverPhoto.offerPhoto(f); e.target.value = '' }}
           />
+          {coverPhoto.cropNode}
 
           {/* Color swatches */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>

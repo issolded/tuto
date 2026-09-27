@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import MathGeometry from '../components/MathGeometry'
+import MathChart from '../components/MathChart'
+import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock } from '../components/ClockFace'
+import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
-import { generateProblem, SHAPES, isCountable } from '../lib/mathTemplates'
+import { generateProblem, SHAPES, isCountable, measureGridCells, dnum, num, FIGURE_KINDS } from '../lib/mathTemplates'
 import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
-import { t } from '../lib/i18n'
+import { t, say } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -20,10 +24,14 @@ const SESSION_KEY = 'tuto_math_session_v1'
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000
 const ANSWERING_STEPS = ['paper_questions', 'screen_questions']
 
-function readSavedSession(childId) {
+function readSavedSession(childId, age) {
   try {
     const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null')
     if (!s || s.childId !== (childId ?? null)) return null
+    // The parent can change a child's age while this tab is open. A session built for the old
+    // school year must not follow the same child into the new one merely because the id still
+    // matches. Old snapshots have no age and are deliberately discarded once.
+    if (Number(s.age) !== Number(age)) return null
     if (!s.savedAt || Date.now() - s.savedAt > SESSION_TTL_MS) return null
     if (!ANSWERING_STEPS.includes(s.step)) return null
     if (!Array.isArray(s.questions) || !s.questions.length) return null
@@ -36,6 +44,13 @@ function readSavedSession(childId) {
 
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
+
+// Out here rather than inline in buildSession: Math.random() inside a component body is
+// flagged as impure by the React rules even when, as here, it only ever runs inside an async
+// call. Same pick, named, and the lint stays quiet about a real rule for a real reason.
+function pickOne(list) {
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null
+}
 const MATH_DEEP = '#3d8fcf'
 const INK       = '#241f3a'
 const INK_SOFT  = '#8d83ad'
@@ -137,8 +152,23 @@ function refersToMissingVisual(q) {
 // walking the child off the last 10 with +3 toward 13, when the answer is 9. It was not
 // even completable: the −1 arrows expect a negative number and the keypad has no minus.
 // Such patterns fall through to step hints, which describe the real rule.
+// The numbers in a question, with thousands separators taken off first.
+//
+// Every read of a question's numbers goes through here. A plain /\d+/g on "4,200,000 + 1,000"
+// returns 4, 200, 000, 1, 000 — five numbers where there are two, and the first of them is 4.
+// That mattered as soon as questions started writing large numbers the way a book does.
+//
+// A separator is only stripped when exactly three digits follow it and nothing after those, so
+// the decimals survive: "8.4 - 3.2" and "0.75" are left alone, and Turkish "1.500" correctly
+// becomes 1500. Both styles are handled together rather than by language, because a question's
+// language is not always at hand where its numbers are read.
+function numbersIn(text) {
+  const bare = String(text ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1')
+  return (bare.match(/\d+/g) || []).map(Number)
+}
+
 function constantPatternStep(question) {
-  const nums = (question.match(/\d+/g) || []).map(Number)
+  const nums = numbersIn(question)
   if (nums.length < 3) return null // need two diffs before "constant" means anything
   const step = nums[1] - nums[0]
   if (step === 0) return null
@@ -180,6 +210,18 @@ function sameAnswer(given, expected) {
 // way it goes — a descending pattern was previously unanswerable for the same reason.
 const stepLabel = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)}`
 
+// The two numbers the counting picture should draw, or null when the text's numbers are not the
+// sum. A template's topic says "addition" for far more than "a + b = ?": a route map whose
+// distances are in the picture (no numbers in the text at all — the panel drew 0 + 0 and showed
+// an empty "Count them all!"), "5 + ? = 12" (whose operands are not 5 and 12), and "55 ? 18 = 73".
+function countableOperands(question, visual) {
+  if (visual) return null
+  const text = String(question ?? '')
+  if (text.includes('=') && !/=\s*\?\s*$/.test(text)) return null
+  const nums = numbersIn(text)
+  return nums.length === 2 && isCountable(nums[0], nums[1]) ? nums : null
+}
+
 function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   if (templateTopic) {
     // Addition and subtraction used to be unconditionally helpable because they were only ever
@@ -187,8 +229,7 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
     // dial now reaches four digits, and sixty-two circles on screen is not help — past what a
     // child would count, the template's written steps carry it instead.
     if (templateTopic === 'addition' || templateTopic === 'subtraction') {
-      const nums = (question.match(/\d+/g) || []).map(Number)
-      return isCountable(nums[0], nums[1]) || (hintSteps?.length ?? 0) > 0
+      return !!countableOperands(question, visual) || (hintSteps?.length ?? 0) > 0
     }
     return !!visual || (hintSteps?.length ?? 0) > 0
   }
@@ -205,7 +246,7 @@ function hasRealHelp(question, questionType, templateTopic, hintSteps, visual) {
   // their numbers may need transforming first — and "Sides of a pentagon + Corners of a
   // triangle = ?" has a "+" with no digits at all, which used to open an empty panel.
   return questionType === 'symbolic'
-    && (question.match(/\d+/g) || []).length >= 2
+    && numbersIn(question).length >= 2
     && (question.includes('+') || question.includes('-'))
 }
 
@@ -267,7 +308,9 @@ function getScoreMsg(pct, age, language) {
 // to be a positive whole number, so there was no key and a four-character limit; curriculum
 // topics like Decimals and Percentages need both. Showing the key on every question instead
 // would put a decimal point in front of a five-year-old counting apples.
-function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false }) {
+// The point key is labelled the way the question prints its decimals — a comma in Turkish and
+// Spanish — but what it types is always a point, so the answer is still read as a number.
+function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false, language = 'en' }) {
   const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], allowDecimal ? ['⌫','0','.','✓'] : ['⌫','0','✓']]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
@@ -305,7 +348,7 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
                   boxShadow: `0 5px 14px ${glow}`,
                   transition: 'transform 0.1s, opacity 0.15s',
                 }}
-              >{key}</button>
+              >{key === '.' ? dnum('0.0', language)[1] : key}</button>
             )
           })}
         </div>
@@ -457,16 +500,22 @@ export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
             fontSize: 13, color: INK,
           }}>{r.label}</span>
           <span style={{ display: 'flex', gap: 4 }}>
-            {Array.from({ length: r.count }).map((_, i) => (
-              <span key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: size, lineHeight: 1.1 }}>{unit}</span>
-                {lit.has(r.label) && (
-                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: GREEN }}>
-                    {each * (i + 1)}
-                  </span>
-                )}
-              </span>
-            ))}
+            {/* A half symbol is the left half of one, clipped — the way a printed pictogram
+                cuts its last face in two. Its running total is half a key more. */}
+            {Array.from({ length: Math.ceil(r.count) }).map((_, i) => {
+              const half = i + 1 > r.count
+              return (
+                <span key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: size, lineHeight: 1.1, display: 'inline-block', overflow: 'hidden',
+                    width: half ? `${size * 0.62}px` : 'auto', whiteSpace: 'nowrap' }}>{unit}</span>
+                  {lit.has(r.label) && (
+                    <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 11, color: GREEN }}>
+                      {half ? each * r.count : each * (i + 1)}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
           </span>
         </div>
       ))}
@@ -483,7 +532,11 @@ export function Pictogram({ unit, each, rows, highlight, tally, size = 26 }) {
 // whole lesson for "what is 3pm on a 24-hour clock" and for the two duration shapes — and it is
 // the answer, verbatim, for every shape that asks the child to READ the face, because the help
 // tells them to turn the hands until they match the question first.
-const READOUT_SAFE = new Set(['h24', 'span', 'later'])
+// 'span' is not one of them, although it was. It asks how many MINUTES are in n hours and the
+// readout prints a TIME — a child who turns the hands to four o'clock and reads the words
+// underneath writes 4, and the answer is 240. `later` belongs here because its answer really is
+// a time; the two were grouped as "the duration shapes" and only one of them is.
+const READOUT_SAFE = new Set(['h24', 'later'])
 
 function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, capacity }) {
   // `counts` is the child's own guess dealt out, which is the one case where the groups can
@@ -501,8 +554,10 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, c
   const perBox = Math.max(1, capacity || Math.ceil(total / groups))
   const cols = Math.min(perBox, 5)
   const boxRows = Math.ceil(perBox / cols)
-  const boxW = Math.max(52, cols * dot + (cols - 1) * GAP + PAD * 2)
-  const boxH = Math.max(52, boxRows * dot + (boxRows - 1) * GAP + PAD * 2)
+  // + 4 for the 2px border: the box is border-box, and without it a row of five came out four
+  // and one — a box of five eggs that did not look like five.
+  const boxW = Math.max(52, cols * dot + (cols - 1) * GAP + PAD * 2 + 4)
+  const boxH = Math.max(52, boxRows * dot + (boxRows - 1) * GAP + PAD * 2 + 4)
 
   const Dot = ({ faded }) => (
     <span style={{
@@ -585,12 +640,43 @@ const GUESS_ROUNDS = 3
 // the ordinary deal-it-out help takes the question.
 const GUESS_MAX_SLOTS = 48
 
-// Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
-// screen on demand — in a real session a given one turns up once in ten questions and only
-// after a wrong answer.
-export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
-  const tr = language === 'tr'
-  const t = tr ? {
+// What the draggable clock tells the child to do, per question shape and per language.
+const CLOCK_GUIDE = {
+  tr: {
+    hour:  'Aşağıdaki saati, yukarıdaki soruya benzeyene kadar çevir. Akrebin durduğu sayı saati söyler.',
+    halfPast: 'Önce soruya benzet. Sonra yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
+    past:  'Önce soruya benzet. Sonra yelkovanı 12\'ye geri getir ve beşer beşer sayarak kaç dakika döndüğünü bul.',
+    to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
+    span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
+    later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
+    h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
+  },
+  es: {
+    hour:  'Gira el reloj de abajo hasta que se parezca al de la pregunta. El número donde para la aguja corta es la hora.',
+    halfPast: 'Primero cópialo. Luego lleva la aguja larga al 12: la corta se queda justo encima de un número. Esa es la hora que has pasado.',
+    past:  'Primero cópialo. Luego lleva la aguja larga hacia atrás hasta el 12, contando de cinco en cinco los minutos que se mueve.',
+    to:    'Primero cópialo. Luego gira la aguja larga hacia adelante hasta el 12: ¿cuántos minutos han sido?',
+    span:  'Dale una vuelta entera a la aguja larga: la corta avanza una hora justa. Así que una hora son 60 minutos.',
+    later: 'Mueve la aguja corta de hora en hora y ve contando.',
+    h24:   'Primero cópialo. Después del mediodía seguimos contando en vez de empezar de nuevo: suma 12 a la hora que marca la aguja corta.',
+  },
+  en: {
+    hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
+    halfPast: 'Match the question first. Then take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
+    past:  'Match the question first. Then bring the long hand back to 12, counting round in fives to see how many minutes it moved.',
+    to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
+    span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
+    later: 'Move the short hand on one hour at a time, counting as you go.',
+    h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
+  },
+}
+
+// What the help panel says, in each language. It was two branches of a ternary; a third
+// language turns that shape into a silent English fallback, so it is a table now — the missing
+// key of a half-translated language shows up as `undefined` on screen rather than as English,
+// which is how a gap gets noticed.
+const HELP_WORDS = {
+  tr: {
     title:          'Haydi birlikte bakalım! 🧸',
     countTab:       'Sayalım',
     showTab:        'Göster',
@@ -607,13 +693,50 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     shapeDone:      'Hepsini saydın! Kaç tane ettiler?',
     timesTap:       'Her grubu tek tek getir 👆',
     timesDone:      'Bak, hepsi eşit! Toplam kaç eder?',
+    fillTap:        'Kutuları sırayla doldur — noktalara dokun! 📦',
+    jumpsTap:       'Yuvarlak sayılara zıplayarak gidelim! Bir oka dokun, zıplamayı yaz 🦘',
+    fillExact:      'Hepsi kutulara girdi! Kaç kutu oldu?',
+    fillRem:        'Bazıları dolu bir kutuya sığmadı — onlar kalan. Kaç tane?',
+    fillUp:         'Son kutu dolmadı — ama onlara da yer lazım! Onu da say.',
+    fillDown:       'Son kutu dolmadı — yalnız dolu kutuları say.',
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
     guessTitle:     n => `Sen ${n} dedin — herkese ${n} tane verelim mi?`,
     guessShort:     (n, short) => `Herkese ${n} tane yetmedi — ${short} tane eksik.`,
     guessOver:      (n, left) => `Herkes ${n} tane aldı ama elimizde hâlâ ${left} tane var.`,
     guessRetry:     'Başka bir sayı deneyeyim! 💪',
-  } : {
+  },
+  es: {
+    title:          '¡Vamos a verlo juntos! 🧸',
+    countTab:       'Contar',
+    showTab:        'Ver',
+    tapInstruction: '¿Cuántos vas a quitar?',
+    countInstruction: '¡Cuéntalos todos!',
+    ready:          '¡Ya lo veo, lo intento otra vez! 💪',
+    nowCount:       '¡Ahora cuenta los que quedan! 🔢',
+    whichNext:      '¿Qué número viene ahora?',
+    startLabel:     'inicio',
+    shareTap:       '¡Dale uno a cada uno! 👐',
+    shareDone:      '¡Todos tienen lo mismo! Ahora cuenta un grupo 🔢',
+    sharePick:      'Este es un grupo: ¿cuántos hay?',
+    shapeTap:       'Toca para contar: cada vez se enciende uno 👆',
+    shapeDone:      '¡Los has contado todos! ¿Cuántos eran?',
+    timesTap:       'Trae un grupo cada vez 👆',
+    timesDone:      '¡Mira, todos los grupos son iguales! ¿Cuántos hay en total?',
+    fillTap:        'Llena las cajas una a una: ¡toca los puntos! 📦',
+    jumpsTap:       '¡Vamos a saltos hasta números redondos! Toca una flecha y escribe el salto 🦘',
+    fillExact:      '¡Todos están en cajas! ¿Cuántas cajas hay?',
+    fillRem:        'Algunos no caben en una caja llena: son el resto. ¿Cuántos son?',
+    fillUp:         'La última caja no está llena, ¡pero esos también necesitan sitio! Cuéntala.',
+    fillDown:       'La última caja no está llena: cuenta solo las llenas.',
+    showHint:       'Ver la ayuda',
+    moreHint:       'Más ayuda',
+    guessTitle:     n => `Has dicho ${n} — ¿le damos ${n} a cada uno?`,
+    guessShort:     (n, short) => `No llega a ${n} para cada uno: faltan ${short}.`,
+    guessOver:      (n, left) => `Cada uno ha recibido ${n}, pero todavía quedan ${left}.`,
+    guessRetry:     '¡Voy a probar otro número! 💪',
+  },
+  en: {
     title:          'Let\'s look together! 🧸',
     countTab:       'Count',
     showTab:        'Show',
@@ -630,15 +753,57 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     shapeDone:      'You counted them all! How many was that?',
     timesTap:       'Bring in one group at a time 👆',
     timesDone:      'See — every group is the same! How many altogether?',
+    fillTap:        'Fill the boxes one by one — tap the dots! 📦',
+    jumpsTap:       'Let\'s jump to round numbers! Tap an arrow and type the jump 🦘',
+    fillExact:      'They all fit in boxes! How many boxes?',
+    fillRem:        'Some did not fit in a full box — they are the remainder. How many?',
+    fillUp:         'The last box is not full — but those still need a place! Count it too.',
+    fillDown:       'The last box is not full — only count the full ones.',
     showHint:       'Show help',
     moreHint:       'More help',
     guessTitle:     n => `You said ${n} — shall we give everyone ${n}?`,
     guessShort:     (n, short) => `Not enough for ${n} each — ${short} short.`,
     guessOver:      (n, left) => `Everyone got ${n}, but there are still ${left} left over.`,
     guessRetry:     'Let me try another number! 💪',
-  }
+  },
+}
 
-  const nums    = question.match(/\d+/g)?.map(Number) || []
+// The picture a question cannot be answered without, for the paper list. Paper mode printed the
+// sentence alone, so a chart, a clock or a grid question reached the child with nothing to
+// read — "How many books on Tue?" beside no chart. The help-only pictures (sharing, groups,
+// arrays) are not drawn: they are the method, not the question.
+function QuestionPicture({ visual, language, description }) {
+  if (!visual) return null
+  if (visual.kind === 'clock' && visual.ask !== 'span') {
+    return <div style={{ alignSelf: 'center' }}><ClockFace hour={visual.hour} minute={visual.minute} size={140} zoomable language={language} /></div>
+  }
+  if (visual.kind === 'pictogram') return <Pictogram unit={visual.unit} each={visual.each} rows={visual.rows} />
+  if (visual.kind === 'shapes') {
+    return <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+      {visual.shapes.map((s, i) => <ShapeSVG key={i} kind={s} size={76} />)}
+    </div>
+  }
+  if (visual.kind === 'count') {
+    return <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+      {Array.from({ length: visual.n }).map((_, i) => <span key={i} style={{ fontSize: 28, lineHeight: 1 }}>{visual.item}</span>)}
+    </div>
+  }
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <MathGeometry visual={visual} language={language} description={description} />
+      <MathChart visual={visual} language={language} description={description} />
+      <MathFigure visual={visual} language={language} description={description} />
+    </div>
+  )
+}
+
+// Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
+// screen on demand — in a real session a given one turns up once in ten questions and only
+// after a wrong answer.
+export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
+  const t = HELP_WORDS[language] ?? HELP_WORDS.en
+
+  const nums    = numbersIn(question)
   const n0 = nums[0] ?? 0
   const n1 = nums[1] ?? 0
 
@@ -657,8 +822,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Same gate as hasRealHelp: the emoji drawing only stands in for numbers a child would
   // actually count, otherwise the panel falls through to the written steps below.
   const drawable = isCountable(n0, n1)
-  const isPlus  = templateTopic ? (templateTopic === 'addition' && drawable)    : (canTrustText && question.includes('+') && drawable)
-  const isMinus = templateTopic ? (templateTopic === 'subtraction' && drawable) : (canTrustText && question.includes('-') && drawable)
+  const operands = !!countableOperands(question, visual)
+  const isPlus  = templateTopic ? (templateTopic === 'addition' && operands)    : (canTrustText && question.includes('+') && drawable)
+  const isMinus = templateTopic ? (templateTopic === 'subtraction' && operands) : (canTrustText && question.includes('-') && drawable)
   // Only a constant-step pattern can be walked arrow by arrow (see constantPatternStep);
   // an alternating one falls through to the steps like any other question.
   const patternStep = isBareSequence(question) ? constantPatternStep(question) : null
@@ -681,6 +847,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // the division help gets: three attempts of their own first.
   const shapeReveal = !!shapes && guessRound >= GUESS_ROUNDS
   const counting = visual?.kind === 'count' ? visual : null
+  // Grouping, the other half of division: boxes of a fixed size filled one after another —
+  // "how many 5s in 30", "? × 4 = 28", and the remainder questions, where what happens to the
+  // last, part-filled box IS the question (a car is still needed; a box of eggs is not full).
+  const fill = visual?.kind === 'fill' ? visual : null
+  // The gap between two numbers, walked in jumps to round numbers (198 → 200 → 600 → 604). The
+  // child types each jump and adds them — the method the 💡 hint names, done rather than read.
+  const jumps = visual?.kind === 'jumps' ? visual : null
+  const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
   // Both multiplication framings draw the same way — rows of a grid, or groups in a row —
@@ -688,11 +862,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -717,7 +891,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -732,6 +906,20 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   }
 
   // ── Sayalım content ──────────────────────────────────────────────────────
+  // A question that IS a picture — a chart, a scale, a shape, a grid — keeps its picture in the
+  // help, on whichever tab shows the steps. The panel replaces the question card, and "find the
+  // top of the red line" said beside no thermometer is not help. The figure's own hint marks
+  // (mirror lines, coordinate guides) wait for the same three tries the shapes' Show tab does:
+  // they are most of the answer.
+  const stepsWithPicture = hasStepHints && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: '100%' }}>
+      <MathGeometry visual={visual} language={language} hint description={question} />
+      <MathChart visual={visual} language={language} description={question} />
+      <MathFigure visual={visual} language={language} hint={guessRound >= GUESS_ROUNDS} description={question} />
+      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
+    </div>
+  )
+
   let sayalim
 
   if (clock) {
@@ -745,23 +933,16 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     // Every other shape asks the child to READ a face, so the draggable one starts at 12:00
     // and the question's face sits beside it as the thing to copy.
     const seedFromQuestion = clock.ask === 'span' || clock.ask === 'later'
-    const guide = (tr ? {
-      hour:  'Aşağıdaki saati, yukarıdaki soruya benzeyene kadar çevir. Akrebin durduğu sayı saati söyler.',
-      halfPast: 'Önce soruya benzet. Sonra yelkovanı 12\'ye götür: akrep tam bir sayının üstüne oturur. İşte geçtiğimiz saat o.',
-      past:  'Önce soruya benzet. Sonra yelkovanı 12\'ye geri getir ve beşer beşer sayarak kaç dakika döndüğünü bul.',
-      to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
-      span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
-      later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
-      h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
-    } : {
-      hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
-      halfPast: 'Match the question first. Then take the long hand back to 12: the short hand lands right on a number. That is the hour you have gone past.',
-      past:  'Match the question first. Then bring the long hand back to 12, counting round in fives to see how many minutes it moved.',
-      to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
-      span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
-      later: 'Move the short hand on one hour at a time, counting as you go.',
-      h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
-    })[clock.ask]
+    let guide = (CLOCK_GUIDE[language] ?? CLOCK_GUIDE.en)[clock.ask]
+    // The span guide demonstrated ONE turn and stopped, which grounds "an hour is 60 minutes"
+    // and then leaves the child to do the rest of the question with no help at all. It counts
+    // the turns now, which is the question.
+    if (clock.ask === 'span' && clock.hours > 1) {
+      guide = say(language,
+        `Turn the long hand all the way round once: the short hand moves on one hour, which is 60 minutes. Do that ${clock.hours} times, counting 60, 120, and on.`,
+        `Yelkovanı bir tam tur çevir: akrep bir saat ilerler, o da 60 dakikadır. Bunu ${clock.hours} kez yap ve 60, 120 diye sayarak git.`,
+        `Dale una vuelta entera a la aguja larga: la corta avanza una hora, que son 60 minutos. Hazlo ${clock.hours} veces, contando 60, 120 y así.`)
+    }
 
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
@@ -770,12 +951,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
           textAlign: 'center', maxWidth: 280,
         }}>
-          {guide || (tr ? 'Kolları parmağınla çevir — saat seninle değişir.' : 'Turn the hands with your finger — the time changes with you.')}
+          {guide || say(language, 'Turn the hands with your finger — the time changes with you.',
+                                  'Kolları parmağınla çevir — saat seninle değişir.',
+                                  'Gira las agujas con el dedo: la hora cambia contigo.')}
         </div>
         {!seedFromQuestion && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK_SOFT }}>
-              {tr ? 'Sorudaki saat' : 'The clock in the question'}
+              {say(language, 'The clock in the question', 'Sorudaki saat', 'El reloj de la pregunta')}
             </div>
             <ClockFace hour={clock.hour} minute={clock.minute} size={104} zoomable language={language} />
           </div>
@@ -811,9 +994,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           textAlign: 'center', maxWidth: 280,
         }}>
           {picto.each === 1
-            ? (tr ? 'Işıklı satırdaki sembolleri say.' : 'Count the symbols in the lit row.')
-            : (tr ? `Her sembol ${picto.each} demek — sayı sembolün altında yazıyor.`
-                  : `Each symbol is ${picto.each} — the running total is under each one.`)}
+            ? say(language, 'Count the symbols in the lit row.', 'Işıklı satırdaki sembolleri say.',
+                            'Cuenta los símbolos de la fila encendida.')
+            : say(language, `Each symbol is ${picto.each} — the running total is under each one.`,
+                            `Her sembol ${picto.each} demek — sayı sembolün altında yazıyor.`,
+                            `Cada símbolo vale ${picto.each}: la cuenta va debajo de cada uno.`)}
         </div>
         <Pictogram unit={picto.unit} each={picto.each} rows={picto.rows} highlight={picto.highlight} tally size={30} />
         {hintSteps?.length > 0 && (
@@ -931,6 +1116,132 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         </div>
       </div>
     )
+  } else if (jumps) {
+    const stops = jumps.stops
+    const count = stops.length - 1
+    const allSolved = Object.keys(solvedArrows).length === count
+    const N = (n) => num(n, language)
+    const ask = (i) => {
+      if (solvedArrows[i] !== undefined) return
+      setActiveArrow(i)
+      setArrowInput('')
+      setTutoBubble(say(language, `${N(stops[i])} to ${N(stops[i + 1])} — how big is the jump?`,
+        `${N(stops[i])} ile ${N(stops[i + 1])} arası kaç?`, `De ${N(stops[i])} a ${N(stops[i + 1])}: ¿cuánto mide el salto?`))
+    }
+    const confirm = (i, input) => {
+      const size = stops[i + 1] - stops[i]
+      if (Number(input) !== size) {
+        setTutoBubble(say(language, `Not quite — count on from ${N(stops[i])} to ${N(stops[i + 1])} 🔢`,
+          `Tam değil — ${N(stops[i])} sayısından ${N(stops[i + 1])} sayısına kadar say 🔢`,
+          `Casi — cuenta desde ${N(stops[i])} hasta ${N(stops[i + 1])} 🔢`))
+        setArrowInput('')
+        return
+      }
+      const solved = { ...solvedArrows, [i]: size }
+      setSolvedArrows(solved)
+      setActiveArrow(null)
+      setArrowInput('')
+      const next = [...Array(count).keys()].find(k => solved[k] === undefined)
+      if (next === undefined) {
+        const parts = stops.slice(1).map((x, k) => N(x - stops[k])).join(' + ')
+        setTutoBubble(say(language, `Now add the jumps: ${parts} = ? Type it in! 💪`,
+          `Şimdi zıplamaları topla: ${parts} = ? Sonra cevabını yaz! 💪`,
+          `Ahora suma los saltos: ${parts} = ? ¡Escríbelo! 💪`))
+      } else ask(next)
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 290,
+        }}>
+          {tutoBubble || t.jumpsTap}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
+          {stops.map((n, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{
+                minWidth: 44, height: 44, padding: '0 9px', borderRadius: 13,
+                background: i === 0 || i === count ? MATH : '#fff', color: i === 0 || i === count ? 'white' : MATH_DEEP,
+                border: i === 0 || i === count ? 'none' : `2px solid ${MATH}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FRED, fontWeight: 600, fontSize: 17, boxSizing: 'border-box',
+              }}>{N(n)}</div>
+              {i < count && (
+                <div onClick={() => ask(i)} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, padding: '4px 2px',
+                  cursor: solvedArrows[i] !== undefined ? 'default' : 'pointer', userSelect: 'none',
+                }}>
+                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1,
+                    color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE }}>
+                    {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}` : '?'}
+                  </span>
+                  <span style={{ fontSize: 24, lineHeight: 1,
+                    color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : INK_SOFT }}>⤻</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {activeArrow !== null && !allSolved && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
+            <div style={{
+              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
+              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
+            }}>{arrowInput || '?'}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
+              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
+                <button key={k} className="math-press"
+                  onClick={() => {
+                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
+                    if (k === '✓') { if (arrowInput) confirm(activeArrow, arrowInput); return }
+                    if (arrowInput.length < 5) setArrowInput(v => v + k)
+                  }}
+                  style={{
+                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
+                    color: k === '✓' || k === '⌫' ? 'white' : INK,
+                  }}>{k}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  } else if (fill) {
+    // One tap fills the next box; `dealt` counts boxes. The pool empties as the boxes fill, so
+    // the child watches the total being used up in equal lots — and the last box, when the
+    // division is not exact, is left part-full with its empty places showing.
+    const filled = Math.min(fillBoxes, dealt)
+    const counts = Array.from({ length: fillBoxes }, (_, i) => (i < filled ? Math.min(fill.size, fill.total - i * fill.size) : 0))
+    const done = filled >= fillBoxes
+    const exact = fill.total % fill.size === 0
+    const doneWord = !exact && fill.mode === 'up' ? t.fillUp
+      : !exact && fill.mode === 'down' ? t.fillDown
+        : !exact && fill.mode === 'remainder' ? t.fillRem
+          : t.fillExact
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 280,
+        }}>
+          {done ? doneWord : t.fillTap}
+        </div>
+        <ShareVisual
+          total={fill.total}
+          groups={fillBoxes}
+          highlight={0}
+          dealt={0}
+          counts={counts}
+          capacity={fill.size}
+          onDeal={() => setDealt(d => Math.min(fillBoxes, d + 1))}
+        />
+      </div>
+    )
   } else if (share) {
     const done = dealt >= share.total
     sayalim = (
@@ -966,9 +1277,10 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       // Turkish case suffixes on a number follow how the number is *said*, which digits do not
       // tell you: 3310'dan but 3315'ten, and no rule gets you there from the numeral. "X ile Y
       // arası" needs no suffix at all, so it is right for every number the dial can produce.
-      setTutoBubble(tr
-        ? `${from} ile ${toDisplay} arası kaç adım?`
-        : `${from} to ${toDisplay} — how many steps?`)
+      setTutoBubble(say(language,
+        `${from} to ${toDisplay} — how many steps?`,
+        `${from} ile ${toDisplay} arası kaç adım?`,
+        `De ${from} a ${toDisplay}: ¿cuántos pasos?`))
     }
 
     const confirmArrow = (i, input) => {
@@ -984,24 +1296,29 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         setActiveArrow(null)
         setArrowInput('')
         if (Object.keys(newSolved).length === arrowCount) {
-          setTutoBubble(tr
-            ? `Peki sırada hangi sayı var? Şimdi yaz! 💪`
-            : `So what comes after ${nums[nums.length - 1]}? Type it in! 💪`)
+          setTutoBubble(say(language,
+            `So what comes after ${nums[nums.length - 1]}? Type it in! 💪`,
+            `Peki sırada hangi sayı var? Şimdi yaz! 💪`,
+            `¿Y qué número viene después del ${nums[nums.length - 1]}? ¡Escríbelo! 💪`))
         } else {
           const nextTo = nums[i + 2]
-          setTutoBubble(tr
-            ? (nextTo !== undefined
-                ? `Evet! ${stepLabel(expected)}. Peki ${toNum} ile ${nextTo} arası?`
-                : `Evet! ${stepLabel(expected)}. O zaman sırada hangi sayı var?`)
-            : (nextTo !== undefined
-                ? `Yes! ${stepLabel(expected)}. Now ${toNum} to ${nextTo}?`
-                : `Yes! ${stepLabel(expected)}. So what comes after ${nums[nums.length - 1]}?`))
+          setTutoBubble(say(language,
+            nextTo !== undefined
+              ? `Yes! ${stepLabel(expected)}. Now ${toNum} to ${nextTo}?`
+              : `Yes! ${stepLabel(expected)}. So what comes after ${nums[nums.length - 1]}?`,
+            nextTo !== undefined
+              ? `Evet! ${stepLabel(expected)}. Peki ${toNum} ile ${nextTo} arası?`
+              : `Evet! ${stepLabel(expected)}. O zaman sırada hangi sayı var?`,
+            nextTo !== undefined
+              ? `¡Sí! ${stepLabel(expected)}. ¿Y de ${toNum} a ${nextTo}?`
+              : `¡Sí! ${stepLabel(expected)}. ¿Y qué número viene después?`))
         }
       } else {
         const toDisplay = toNum !== undefined ? toNum : '?'
-        setTutoBubble(tr
-          ? `Tekrar dene! ${from} ile ${toDisplay} arasını say 🔢`
-          : `Try again! Count from ${from} to ${toDisplay} 🔢`)
+        setTutoBubble(say(language,
+          `Try again! Count from ${from} to ${toDisplay} 🔢`,
+          `Tekrar dene! ${from} ile ${toDisplay} arasını say 🔢`,
+          `¡Inténtalo otra vez! Cuenta de ${from} a ${toDisplay} 🔢`))
         setArrowInput('')
       }
     }
@@ -1143,9 +1460,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       </div>
     )
   } else if (hasStepHints) {
-    sayalim = (
-      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
-    )
+    sayalim = stepsWithPicture
   } else {
     // Unreachable in practice — HelpPanel only mounts when hasRealHelp() (MathScreen)
     // is true, which is exactly isPlus || isMinus || pattern || hasStepHints. Kept as a
@@ -1218,7 +1533,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         // tidy notation for "one of these groups", so it describes the picture instead —
         // the highlighted group is the answer.
         label={share.highlight
-          ? (tr ? `${share.total} sayısı ${share.groups} eşit grupta` : `${share.total} in ${share.groups} equal groups`)
+          ? say(language, `${share.total} in ${share.groups} equal groups`,
+                          `${share.total} sayısı ${share.groups} eşit grupta`,
+                          `${share.total} en ${share.groups} grupos iguales`)
           : `${share.total} ÷ ${share.groups} = ?`}
       />
     )
@@ -1240,7 +1557,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 <path d={`M ${x1} ${lineY} Q ${mx} ${lineY - arcH} ${x2} ${lineY}`}
                   fill="none" stroke={ORANGE} strokeWidth={2} />
                 <text x={mx} y={lineY - arcH - 4} textAnchor="middle"
-                  fill={ORANGE} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{stepLabel(diff)}</text>
+                  fill={ORANGE} fontFamily={FRED} fontWeight="600" fontSize="12">{stepLabel(diff)}</text>
               </g>
             )
           })}
@@ -1252,13 +1569,13 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 <circle cx={cx} cy={lineY} r={dotR} fill={GREEN} opacity={0.18} />
                 <circle cx={cx} cy={lineY} r={dotR} fill="none" stroke={GREEN} strokeWidth={2} strokeDasharray="4 2" />
                 <text x={cx} y={lineY + 4} textAnchor="middle"
-                  fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="11">?</text>
+                  fill={GREEN} fontFamily={FRED} fontWeight="700" fontSize="11">?</text>
               </g>
             ) : (
               <g key={i}>
                 <circle cx={cx} cy={lineY} r={dotR} fill={MATH} />
                 <text x={cx} y={lineY + 19} textAnchor="middle"
-                  fill={MATH} fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="12">{val}</text>
+                  fill={MATH} fontFamily={FRED} fontWeight="600" fontSize="12">{val}</text>
               </g>
             )
           })}
@@ -1275,13 +1592,13 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill={`${GREEN}22`} />
           <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill="none" stroke={GREEN} strokeWidth={2.5} strokeDasharray="6 3" />
           <text x={_svgW / 2} y={_barH / 2 + 6} textAnchor="middle"
-            fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>
+            fill={GREEN} fontFamily={FRED} fontWeight="700" fontSize="20">?</text>
           <rect x={0} y={_barH + _gap} width={blueW - 1} height={_barH} rx={_br} fill={MATH} />
           {blueW > 28 && <text x={(blueW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>}
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n0}</text>}
           <rect x={blueW + 1} y={_barH + _gap} width={orangeW - 1} height={_barH} rx={_br} fill={ORANGE} />
           {orangeW > 28 && <text x={blueW + 1 + (orangeW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n1}</text>}
         </svg>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
           <span style={{ color: MATH }}>{n0}</span>{' + '}
@@ -1299,14 +1616,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         <svg width={_svgW} height={_barH * 2 + _gap}>
           <rect x={0} y={0} width={_svgW} height={_barH} rx={_br} fill={MATH} />
           <text x={_svgW / 2} y={_barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n0}</text>
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n0}</text>
           <rect x={0} y={_barH + _gap} width={orangeW - 1} height={_barH} rx={_br} fill={ORANGE} />
           {orangeW > 28 && <text x={(orangeW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill="white" fontFamily="Fredoka, sans-serif" fontWeight="600" fontSize="15">{n1}</text>}
+            fill="white" fontFamily={FRED} fontWeight="600" fontSize="15">{n1}</text>}
           {greenW > 4 && <rect x={orangeW + 1} y={_barH + _gap} width={greenW - 1} height={_barH} rx={_br} fill={`${GREEN}22`} />}
           {greenW > 4 && <rect x={orangeW + 1} y={_barH + _gap} width={greenW - 1} height={_barH} rx={_br} fill="none" stroke={GREEN} strokeWidth={2.5} strokeDasharray="6 3" />}
           {greenW > 28 && <text x={orangeW + 1 + (greenW - 1) / 2} y={_barH + _gap + _barH / 2 + 6} textAnchor="middle"
-            fill={GREEN} fontFamily="Fredoka, sans-serif" fontWeight="700" fontSize="20">?</text>}
+            fill={GREEN} fontFamily={FRED} fontWeight="700" fontSize="20">?</text>}
         </svg>
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: INK }}>
           <span style={{ color: MATH }}>{n0}</span>{' − '}
@@ -1316,9 +1633,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       </div>
     )
   } else if (hasStepHints) {
-    goster = (
-      <StepHints question={question} hintSteps={hintSteps} revealed={hintsRevealed} onReveal={() => { setHintsRevealed(r => Math.min(hintSteps.length, r + 1)); onHelpUsed?.() }} showMore={t.showHint} moreHint={t.moreHint} />
-    )
+    goster = stepsWithPicture
   } else {
     // Unreachable in practice — see the matching note on the `sayalim` fallback above.
     goster = null
@@ -1434,7 +1749,7 @@ export default function MathScreen() {
   const language = child?.language || 'en'
 
   // Read once, before any state is created: a reload lands here with the session it lost.
-  const saved = useMemo(() => readSavedSession(child?.id), [])
+  const saved = useMemo(() => readSavedSession(child?.id, age), [])
 
   const [step,          setStep]         = useState(saved?.step ?? 'welcome')
   const [mode,          setMode]         = useState(saved?.mode ?? null)        // 'paper' | 'screen'
@@ -1456,7 +1771,8 @@ export default function MathScreen() {
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
-  const [wrongGuess,    setWrongGuess]   = useState(null)  // the number the child actually typed, so help can answer THAT rather than the correct answer
+  const [wrongGuess,    setWrongGuess]   = useState(null)  // the answer the child tried; numeric sharing help can stage it and Skip can record it
+  const [choiceMistake, setChoiceMistake] = useState(null) // why the selected option was wrong; becomes the first teaching step
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
   const [buildFailed,   setBuildFailed] = useState(false)  // a session that could not be built, so the mode screen can say why
   const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
@@ -1467,7 +1783,7 @@ export default function MathScreen() {
 
   // Keyed on the question rather than cleared at each of the several places that advance one,
   // so a new route to the next question cannot forget to reset and carry a stale guess in.
-  useEffect(() => { setWrongGuess(null); setGuessRound(0) }, [qIdx])
+  useEffect(() => { setWrongGuess(null); setChoiceMistake(null); setGuessRound(0) }, [qIdx])
 
   // Closing help leaves the column scrolled where the child left it, but the column has grown
   // by then — "Skip this one" is now under the card — so the question's picture ends up above
@@ -1478,6 +1794,15 @@ export default function MathScreen() {
   }, [qIdx, helpVisible])
 
   const fileRef    = useRef(null)
+  // The photo of the worked page goes through the crop step first. Gemini tiles an image down
+  // to 768px before reading it, so the desk around the page is resolution taken away from the
+  // handwriting it has to mark.
+  const { offerPhoto, cropNode } = usePhotoCrop({
+    translate: k => t(k, language),
+    inputRef: fileRef,
+    accent: MATH,
+    onReady: blob => doPaperEval(blob),
+  })
   const flashTimer = useRef(null)
   const pendingAdvance = useRef(null)  // lets a tap skip the rest of a flash that is showing a sentence
   const prefetch   = useRef(null)   // a session being built ahead of the child choosing a mode
@@ -1510,17 +1835,31 @@ export default function MathScreen() {
     // enough; a Turkish division question came to 95 characters against a seven-year-old's 90.
     const cap = maxQuestionChars(age)
     const usedOperands = new Set(readSeen('keys', child?.id, lvl))
+    // The same sentence twice in one session reads as a stutter even when the numbers differ:
+    // a Year 1 session has six topics for ten slots, so "How many do you see?" came round
+    // twice over two different pictures. Operand keys cannot see that — they are about the
+    // numbers — so the wording is tracked alongside them.
+    const usedTexts = new Set()
     for (const slot of slots) {
       if (!slot.templateTopic) continue
-      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language, { maxChars: cap })
+      const p = generateProblem(slot.templateTopic, lvl, usedOperands, language, { maxChars: cap, avoidText: usedTexts })
       usedOperands.add(p.operandKey)
+      usedTexts.add(p.question_text)
       slot.problem = p
       slot.question = p.question_text
-      slot.answer = p.correct_answer
+      // For a grid question, the picture is the source of truth. Derive its answer from the
+      // exact cells sent to the renderer so an answer key can never drift from what the child
+      // counted on screen.
+      slot.answer = p.topic === 'area-grid'
+        ? measureGridCells(p.visual?.cells)[p.operandKey.startsWith('grid:a:') ? 'area' : 'perimeter']
+        : p.correct_answer
       // Every template used to be numeric, so the format was assumed here rather than read off
       // the problem. It says so itself now, because a question whose answer is 5/8 cannot be
       // typed on a number pad at all — it has to be offered as options.
-      slot.format = p.format === 'choice' ? 'choice' : 'integer'
+      // 'decimal' is the third: the keypad hides its point unless the question asks for one, so
+      // a template rounding to the nearest tenth had no way to accept 26.8 and had to fall back
+      // to multiple choice. Anything a template does not name stays 'integer'.
+      slot.format = p.format === 'choice' ? 'choice' : p.format === 'decimal' ? 'decimal' : 'integer'
     }
 
     const llmSlots = slots.filter(s => !s.templateTopic)
@@ -1637,10 +1976,11 @@ export default function MathScreen() {
       const spares = slots.filter(s => s.templateTopic && s.problem)
       for (const slot of bad) {
         console.warn(`[VERIFY] dropped a question — ${whyDropped(slot, failed)}: ${slot.question ?? `(${slot.curriculum?.name ?? 'unknown topic'})`}`)
-        const spare = spares.length ? spares[Math.floor(Math.random() * spares.length)] : null
-        const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap }) : null
+        const spare = pickOne(spares)
+        const p = spare ? generateProblem(spare.templateTopic, lvl, usedOperands, language, { maxChars: cap, avoidText: usedTexts }) : null
         if (p) {
           usedOperands.add(p.operandKey)
+          usedTexts.add(p.question_text)
           slot.curriculum = spare.curriculum
           slot.problem = p; slot.question = p.question_text; slot.answer = p.correct_answer
           slot.format = p.format === 'choice' ? 'choice' : 'integer'; slot.hints = null
@@ -1702,8 +2042,15 @@ export default function MathScreen() {
   // Begin preparing as soon as the level is known. `result` is what makes the loading screen
   // skippable: if it is already there when the mode is chosen, the questions go up on the same
   // tick and the child never sees a spinner at all.
-  const startPrefetch = (lvl, w) => {
-    if (prefetch.current) return
+  // `replace` rebuilds over a prefetch that is already there. Building is free — 0.04 ms for a
+  // whole session now that no question comes from the model — so the session is built
+  // immediately at the age's own footing and rebuilt if the plan turns out to say something
+  // different. Before this the build waited for /math-plan, which meant the one thing between
+  // tapping Maths and seeing a question was a network round trip, for data that changes the
+  // questions barely at all: a year owns two rungs, so the level can only be off by one, and
+  // the topics come from the year rather than the level.
+  const startPrefetch = (lvl, w, replace = false) => {
+    if (prefetch.current && !replace) return
     const entry = { result: null, promise: null }
     entry.promise = buildSession(lvl, w)
       .then(built => { entry.result = built; return built })
@@ -1719,12 +2066,12 @@ export default function MathScreen() {
     // A restored session already has its questions; building another would waste a model call
     // and hand the child a session they did not ask for.
     const resuming = !!saved
-    if (!child?.id) {
-      const lvl = startingLevelForAge(age)
-      setLevel(lvl)
-      if (!resuming) startPrefetch(lvl, { focusTopicId: null, weakTopicIds: [] })
-      return
-    }
+    const guess = startingLevelForAge(age)
+    setLevel(guess)
+    // Built before the fetch, not after it. The child is looking at the welcome screen either
+    // way; this way the questions are already waiting when they pick a mode.
+    if (!resuming) startPrefetch(guess, { focusTopicId: null, weakTopicIds: [] })
+    if (!child?.id) return
     ;(async () => {
       try {
         const res = await fetch(`${SERVER}/api/children/${child.id}/math-plan`)
@@ -1739,17 +2086,24 @@ export default function MathScreen() {
           focusTopicId: plan?.focus?.topic_id ?? null,
           weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
         }
+        // Only adopted while the built session is still sitting unclaimed. Once the child has
+        // started, `startLoading` has taken the entry and `prefetch.current` is null — and the
+        // questions on screen were built at one particular rung, which is the rung the server
+        // has to be told about when the session saves. Moving `level` underneath them would
+        // report a session that was never played.
+        if (!prefetch.current) return
         setLevel(lvl)
         setWeighting(w)
-        // Started here, not on the mode screen: the two model calls need longer than the
-        // child takes to choose, and the welcome screen is the only slack there is.
-        if (!resuming) startPrefetch(lvl, w)
+        // Replaced only if the plan says something the guess did not: another rung, a focus
+        // topic, or a weakness to lean towards. Usually it does not, and the session already
+        // waiting is the one that gets played.
+        const sameAsGuess = lvl === guess && !w.focusTopicId && w.weakTopicIds.length === 0
+        if (!resuming && !sameAsGuess) startPrefetch(lvl, w, true)
       } catch (e) {
         // A session with no weighting is still a good session; one that will not start is not.
+        // The optimistic build is already in hand and was made with exactly these values,
+        // so a failed plan now costs nothing at all.
         console.error('math-plan:', e)
-        const lvl = startingLevelForAge(age)
-        setLevel(lvl)
-        if (!resuming) startPrefetch(lvl, { focusTopicId: null, weakTopicIds: [] })
       }
     })()
     return () => clearTimeout(flashTimer.current)
@@ -1763,7 +2117,7 @@ export default function MathScreen() {
     if (!ANSWERING_STEPS.includes(step)) return
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        savedAt: Date.now(), childId: child?.id ?? null,
+        savedAt: Date.now(), childId: child?.id ?? null, age,
         step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
         answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
         skippable: [...skippable], helpUsedQs: [...helpUsedQs],
@@ -1819,15 +2173,32 @@ export default function MathScreen() {
   }
 
   // ── Screen mode: submit one multiple-choice answer ───────────────────────
-  // One tap, one attempt, no second try. A choice question already shows the answer somewhere
-  // on the screen, so letting the child guess again would just be four taps to a certain gem.
-  // What replaces the retry is the option's own `why`: the child sees the specific mistake they
-  // made — added the denominators, subtracted instead — rather than a generic "almost".
+  // Older children get one attempt, with the selected option's specific explanation. At eight
+  // and under a wrong option opens the same scaffolded help as a typed answer: the explanation
+  // becomes the first hint and the child gets another try. Help still reduces the reward, and
+  // Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
   const submitChoiceAnswer = (value) => {
     if (flash) return
     const isCorrect = sameAnswer(value, correctAns[qIdx])
     const newAnswers = [...userAnswers, value]
-    const why = templateProblems[qIdx]?.options?.find(o => o.value === value)?.why ?? null
+    const tProblem = templateProblems[qIdx]
+    const why = tProblem?.options?.find(o => o.value === value)?.why ?? null
+    const baseHints = tProblem?.hint_steps ?? llmHints[qIdx]
+    const canHelp = hasRealHelp(
+      questions[qIdx] || '', qTypes[qIdx], tProblem?.topic,
+      why ? [why, ...(baseHints ?? [])] : baseHints,
+      tProblem?.help ?? tProblem?.visual,
+    )
+
+    if (!isCorrect && Number(age) <= 8 && canHelp) {
+      setHelpVisible(true)
+      setHelpUsed(true)
+      setChoiceMistake(why)
+      setWrongGuess(value)
+      setGuessRound(r => r + 1)
+      setSkippable(prev => { const next = new Set(prev); next.add(qIdx); return next })
+      return
+    }
 
     setFlash({ correct: isCorrect, answer: correctAns[qIdx], why: isCorrect ? null : why })
     setInput('')
@@ -1845,7 +2216,7 @@ export default function MathScreen() {
     const newAnswers = [...userAnswers, Number(String(input).trim())]
 
     const tProblem = templateProblems[qIdx]
-    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.visual)
+    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.help ?? tProblem?.visual)
     if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
@@ -1992,6 +2363,9 @@ export default function MathScreen() {
               // Paper mode has no typed answer — the model read the page — so this is null
               // there rather than invented.
               child_answer: r?.child_answer == null ? null : String(r.child_answer),
+              // Kept so the sitting can be opened again from the gem history with the right
+              // answer beside a wrong one — it was on screen at the end and nowhere after.
+              correct_answer: r?.correct_answer == null ? null : String(r.correct_answer),
               correct: !!r?.correct,
               help_used: helpUsedQs.has(i),
             }
@@ -2259,6 +2633,7 @@ export default function MathScreen() {
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5 }}>
                   <MathText text={q} />
                 </div>
+                <QuestionPicture visual={templateProblems[i]?.visual} language={language} description={q} />
                 {/* Paper mode had no hints at all: the child on screen could ask for a nudge and
                     the child with a pencil could not, for the same question. Same first step,
                     same cost — it counts as help either way. */}
@@ -2305,7 +2680,7 @@ export default function MathScreen() {
           type="file"
           accept="image/*"
           style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) doPaperEval(f) }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) offerPhoto(f); e.target.value = '' }}
         />
         <button
           className="math-press"
@@ -2319,6 +2694,7 @@ export default function MathScreen() {
           {t('math_paper_ready', language)}
         </button>
       </div>
+      {cropNode}
     </div>
     </>
   )
@@ -2368,12 +2744,17 @@ export default function MathScreen() {
                 : flash.why
                   ? <>
                       <MathText text={flash.why} />
-                      <div style={{ marginTop: 14, fontSize: 19, opacity: .92 }}>{t('math_almost', language)} <MathText text={flash.answer} /></div>
+                      <div style={{ marginTop: 14, fontSize: 17, opacity: .92 }}>{t('math_answer_is', language)}</div>
+                      <div style={{ fontSize: 26 }}><MathText text={dnum(flash.answer, language)} /></div>
                       <div style={{ marginTop: 22, fontSize: 15, opacity: .78 }}>
-                        {language === 'tr' ? 'Devam etmek için dokun' : 'Tap to carry on'}
+                        {say(language, 'Tap to carry on', 'Devam etmek için dokun', 'Toca para seguir')}
                       </div>
                     </>
-                  : `${t('math_almost', language)} ${flash.answer} 💪`}
+                  : <>
+                      {t('math_not_this', language)}
+                      <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{t('math_answer_is', language)}</div>
+                      <div style={{ fontSize: 34 }}>{dnum(flash.answer, language)}</div>
+                    </>}
             </div>
           </div>
         )}
@@ -2405,9 +2786,14 @@ export default function MathScreen() {
               question={q}
               questionType={qTypes[qIdx]}
               templateTopic={templateProblems[qIdx]?.topic}
-              hintSteps={templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]}
-              visual={templateProblems[qIdx]?.visual}
-              onDone={() => { setHelpVisible(false); setInput('') }}
+              hintSteps={choiceMistake
+                ? [choiceMistake, ...(templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx] ?? [])]
+                : (templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx])}
+              // The help picture when the template gives one — the question's own picture
+              // (a price list, a chart) is for reading the question; the help picture is for
+              // working it out, and a story problem has only the second.
+              visual={templateProblems[qIdx]?.help ?? templateProblems[qIdx]?.visual}
+              onDone={() => { setHelpVisible(false); setChoiceMistake(null); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}
               guess={wrongGuess}
@@ -2426,6 +2812,9 @@ export default function MathScreen() {
                 minHeight: isWord ? 120 : 84, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: 14, flexShrink: 0,
               }}>
+                <MathGeometry visual={qVisual} language={language} hint={hintOpenFor === qIdx} description={q} />
+                <MathChart visual={qVisual} language={language} description={q} />
+                <MathFigure visual={qVisual} language={language} description={q} />
                 {questionShapes && (
                   <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
                     {questionShapes.map((s, i) => <ShapeSVG key={i} kind={s} size={96} />)}
@@ -2445,7 +2834,7 @@ export default function MathScreen() {
                 {questionPicto && (
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
                 )}
-                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto ? 20 : 32), color: INK, lineHeight: 1.55 }}>
+                <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto || qVisual?.kind === 'geometry' || qVisual?.kind === 'chart' || FIGURE_KINDS.has(qVisual?.kind) ? 20 : 32), color: INK, lineHeight: 1.55 }}>
                   <MathText text={q} />
                 </div>
               </div>
@@ -2461,7 +2850,10 @@ export default function MathScreen() {
               {(() => {
                 const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
                 if (!Array.isArray(all) || !all.length) return null
-                const names = s => new RegExp(`(?<!\\d)${String(correctAns[qIdx]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`).test(String(s))
+                // Both spellings of a decimal answer: hints print "0,25" in Turkish and Spanish.
+                const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
+                  .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
                 const steps = [all[0], ...all.slice(1).filter(s => !names(s))]
                 const open = hintOpenFor === qIdx
                 return (
@@ -2484,7 +2876,7 @@ export default function MathScreen() {
                         boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
                       }}
                     >
-                      💡 {language === 'tr' ? 'İpucu' : 'Hint'} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+                      💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
                     </button>
                     {open && (
                       <div style={{
@@ -2508,7 +2900,7 @@ export default function MathScreen() {
                     fontFamily: FRED, fontWeight: 600, fontSize: 15,
                     boxShadow: '0 3px 10px rgba(60,120,200,.08)',
                   }}
-                >{language === 'tr' ? 'Bunu geç →' : 'Skip this one →'}</button>
+                >{say(language, 'Skip this one →', 'Bunu geç →', 'Saltar esta →')}</button>
               )}
 
               {answerFormats[qIdx] === 'choice' ? (
@@ -2527,7 +2919,7 @@ export default function MathScreen() {
                         boxShadow: '0 6px 18px rgba(60,120,200,.12)', cursor: flash ? 'default' : 'pointer',
                         fontFamily: FRED, fontWeight: 600, fontSize: 27, color: MATH, lineHeight: 1.2,
                       }}
-                    ><MathText text={opt.value} /></button>
+                    ><MathText text={dnum(opt.value, language)} /></button>
                   ))}
                 </div>
               ) : (
@@ -2539,7 +2931,7 @@ export default function MathScreen() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 38, color: input ? MATH : '#c8c2e0', letterSpacing: 6 }}>
-                      {input || '?'}
+                      {input ? dnum(input, language) : '?'}
                     </span>
                   </div>
 
@@ -2550,6 +2942,7 @@ export default function MathScreen() {
                     onSubmit={submitScreenAnswer}
                     disabled={!!flash}
                     allowDecimal={answerFormats[qIdx] === 'decimal'}
+                    language={language}
                   />
                 </>
               )}
@@ -2668,6 +3061,13 @@ export default function MathScreen() {
                     <span style={{ fontSize: 19, flexShrink: 0, marginTop: 1 }}>{r.correct ? '✅' : '🔄'}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, lineHeight: 1.45 }}><MathText text={r.question} /></div>
+                      {/* The question as it was asked: "How many books on Tuesday?" means nothing
+                          at the end without its chart, and a wrong answer is looked at here. */}
+                      {templateProblems[i]?.visual && !['share', 'groups', 'array'].includes(templateProblems[i].visual.kind) && (
+                        <div style={{ margin: '6px 0 2px' }}>
+                          <QuestionPicture visual={templateProblems[i].visual} language={language} description={r.question} />
+                        </div>
+                      )}
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: r.correct ? GREEN : INK_SOFT, marginTop: 3 }}>
                         {/* A skipped question records no answer on purpose — giving up is not
                             answering, and the score has to say so. But the child DID type
@@ -2677,12 +3077,12 @@ export default function MathScreen() {
                             seven-year-old typed 960, saw "your answer: —", and the older child
                             who cannot skip at all was the only one shown their own mistake. */}
                         {t('math_your_answer', language)} {r.child_answer == null
-                          ? (r.attempted == null ? '—' : <MathText text={r.attempted} />)
-                          : <MathText text={r.child_answer} />}
+                          ? (r.attempted == null ? '—' : <MathText text={dnum(r.attempted, language)} />)
+                          : <MathText text={dnum(r.child_answer, language)} />}
                       </div>
                       {!r.correct && (
                         <div style={{ fontWeight: 700, fontSize: 12.5, color: ORANGE, marginTop: 2 }}>
-                          {t('math_answer_was', language)} <MathText text={r.correct_answer} /> 💡
+                          {t('math_answer_was', language)} <MathText text={dnum(r.correct_answer, language)} /> 💡
                         </div>
                       )}
                     </div>

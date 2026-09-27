@@ -1,5 +1,8 @@
 // Tuto Care — parent-side design kit (shared tokens + primitives)
 import TutoMascotComponent from '../components/TutoMascot'
+import { LANGS } from './i18n'
+import { useUiLang, setUiLang, useT } from './parentI18n'
+import { ageFromBirthDate, birthDateBounds } from './age'
 
 export const PC = {
   bg:       '#F4F6F7',
@@ -26,6 +29,8 @@ export const PC = {
   writing:  '#6cc28a', writingBg: '#E4F4EA',
   homework: '#e0a93b', homeworkBg: '#FBF1D6',
   drawing:  '#d97ab0', drawingBg: '#FBE6F1',
+  puzzle:   '#2BA59A', puzzleBg:  '#D9F3F1',
+  english:  '#D9577A', englishBg: '#FBDDE5',
 }
 
 export const FONT = "'Plus Jakarta Sans', sans-serif"
@@ -99,6 +104,10 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
     book:    <g {...p}><path d="M12 6c-2-1.4-5-1.4-7 0v11c2-1.4 5-1.4 7 0 2-1.4 5-1.4 7 0V6c-2-1.4-5-1.4-7 0z"/><path d="M12 6v11"/></g>,
     calc:    <g {...p}><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7"/><path d="M9 13h0M12 13h0M15 13h0M9 16.5h0M12 16.5h0M15 16.5h0"/></g>,
     pencil:  <g {...p}><path d="M14 4l6 6M4 20l1.2-4L16 5.2 18.8 8 8 18.8z"/></g>,
+    // The child tile's 2×2 grid with the last cell left open — src/assets/puzzle-tile-icon.svg.
+    puzzle:  <g {...p}><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M15 15.2a1.6 1.6 0 1 1 2.2 1.5c-.5.2-.7.6-.7 1.1M16.5 19.6h0"/></g>,
+    // The child tile's speech bubble saying "Hi!".
+    speech:  <g><path {...p} d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5z"/><text x="12" y="10.3" textAnchor="middle" dominantBaseline="middle" fontFamily={FONT} fontWeight="800" fontSize="7.5" fill={color}>Hi!</text></g>,
     house:   <g {...p}><path d="M4 11l8-6.5 8 6.5"/><path d="M6 10v9h12v-9"/></g>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24">{M[name] || null}</svg>
@@ -106,16 +115,17 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
 
 export function TaskIcon({ type, size = 24, color }) {
   const c = color || PC[type] || PC.teal
-  const map = { reading: 'book', math: 'calc', writing: 'pencil', homework: 'camera', drawing: 'pencil' }
+  const map = { reading: 'book', math: 'calc', writing: 'pencil', homework: 'camera', drawing: 'pencil', puzzle: 'puzzle', english: 'speech' }
   return <Icon name={map[type] || 'book'} size={size} color={c} sw={2.1} />
 }
 
 // ── TopBar ────────────────────────────────────────────────────────────────────
 export function TopBar({ title, onBack, right, sub }) {
+  const s = useT()
   return (
     <div style={{ flexShrink: 0, padding: '6px 18px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
       {onBack !== undefined ? (
-        <button className="tc-press tc-tap" onClick={onBack} aria-label="Back" style={{
+        <button className="tc-press tc-tap" onClick={onBack} aria-label={s('a_back')} style={{
           width: 42, height: 42, flexShrink: 0, borderRadius: 14,
           background: '#fff', border: `1.5px solid ${PC.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -175,6 +185,28 @@ export function Field({ label, children, hint }) {
       {children}
       {hint && <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkFaint, marginTop: 6 }}>{hint}</div>}
     </div>
+  )
+}
+
+// ── Birth date ────────────────────────────────────────────────────────────────
+// The date, and the age it makes today beside it, so a parent sees at once whether the year they
+// scrolled to is the right one. The phone's own date picker: localised, and nothing to maintain.
+// `s` is the caller's parent translator.
+export function BirthDateField({ value, onChange, s }) {
+  const { min, max } = birthDateBounds()
+  const age = ageFromBirthDate(value)
+  return (
+    <Field label={s('db_birth_date')} hint={s('db_birth_hint')}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <input className="tc-input" type="date" min={min} max={max} value={value || ''}
+          onChange={e => onChange(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+        {age != null && (
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: PC.tealDeep, whiteSpace: 'nowrap' }}>
+            {s('years_old', { n: age })}
+          </div>
+        )}
+      </div>
+    </Field>
   )
 }
 
@@ -324,6 +356,64 @@ export function SectionHead({ children, action }) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '2px 2px 11px' }}>
       <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16.5, color: PC.ink, whiteSpace: 'nowrap' }}>{children}</div>
       {action}
+    </div>
+  )
+}
+
+// ── Language picker ───────────────────────────────────────────────────────────
+// Two shapes of the same control, because it appears twice and the two places want different
+// weight. `chips` is the row of full-width buttons the dashboard's settings card uses, where
+// language is one setting among several. `bare` is the quiet flag row on the splash screen,
+// where it must be findable without competing with the two things a person came to tap.
+//
+// `onPick` is optional: without it the control only moves the device's language, which is all
+// the splash can do — there is no account yet. The dashboard passes one so the choice is also
+// written to the account.
+export function LangPicker({ variant = 'chips', onPick }) {
+  const lang = useUiLang()
+  const choose = (code) => { setUiLang(code); onPick?.(code) }
+
+  if (variant === 'bare') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {LANGS.map(l => {
+          const on = lang === l.code
+          return (
+            <button key={l.code} className="tc-tap" onClick={() => choose(l.code)}
+              aria-label={l.label} aria-pressed={on}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                background: on ? '#fff' : 'transparent',
+                border: `1.5px solid ${on ? PC.line : 'transparent'}`,
+                boxShadow: on ? SHADOW_SM : 'none',
+                borderRadius: 999, padding: '7px 12px',
+                fontFamily: FONT, fontWeight: 700, fontSize: 13,
+                color: on ? PC.ink : PC.inkFaint,
+                transition: 'background .18s, border-color .18s, color .18s',
+              }}>
+              <span style={{ fontSize: 15, lineHeight: 1 }}>{l.flag}</span>{l.label}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 9 }}>
+      {LANGS.map(l => {
+        const on = lang === l.code
+        return (
+          <button key={l.code} className="tc-press tc-tap" onClick={() => choose(l.code)} aria-pressed={on}
+            style={{
+              flex: 1, padding: '10px 6px', cursor: 'pointer',
+              background: on ? PC.tealBg : '#fff',
+              border: `1.5px solid ${on ? PC.teal : PC.line}`, borderRadius: 14,
+              fontFamily: FONT, fontWeight: 800, fontSize: 13, color: PC.ink,
+              transition: 'background .18s, border-color .18s',
+            }}>{l.flag} {l.label}</button>
+        )
+      })}
     </div>
   )
 }
