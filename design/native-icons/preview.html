@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuto · hareketli ikonlar</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 32px 16px; background: #fff6e5; font-family: 'Nunito', sans-serif; color: #2b1d3a; }
+  h1 { font-family: 'Baloo 2', sans-serif; font-size: 32px; margin: 0 0 20px; text-align: center; }
+  .row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+  .card { width: 300px; background: #fff; border-radius: 28px; overflow: hidden; box-shadow: 0 12px 28px rgba(43,29,58,.1); }
+  .ill { height: 225px; }
+  .body { padding: 14px 18px 18px; display: flex; align-items: center; gap: 10px; }
+  .name { font-family: 'Baloo 2', sans-serif; font-size: 24px; flex: 1; }
+  button { height: 44px; padding: 0 16px; border: 0; border-radius: 14px; background: #ffe3c2; font: 800 15px 'Nunito', sans-serif; color: #2b1d3a; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Hareketli ikonlar · bekler → bitti</h1>
+<div class="row" id="row"></div>
+<script src="https://cdn.jsdelivr.net/npm/lottie-web@5.13.0/build/player/lottie.min.js"></script>
+<script>
+  const icons = [['math', 'Matematik', '#4da3ff'], ['book', 'Kitabım', '#a77bff'], ['puzzle', 'Bulmaca', '#22c3a6']];
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (const [file, name, color] of icons) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="ill" style="background:${color}"></div><div class="body"><span class="name">${name}</span><button type="button">Bitti</button></div>`;
+    document.getElementById('row').appendChild(card);
+    const anim = lottie.loadAnimation({ container: card.querySelector('.ill'), renderer: 'svg', loop: false, autoplay: false, path: `lottie/${file}.json` });
+    let done = false;
+    const idle = () => { anim.loop = true; still ? anim.goToAndStop(0, true) : anim.playSegments([0, 90], true); };
+    const finish = () => { anim.loop = false; still ? anim.goToAndStop(120, true) : anim.playSegments([90, 120], true); };
+    anim.addEventListener('DOMLoaded', idle);
+    const btn = card.querySelector('button');
+    btn.onclick = () => { done = !done; btn.textContent = done ? 'Tekrar' : 'Bitti'; done ? finish() : idle(); };
+  }
+</script>
+</body>
+</html>
