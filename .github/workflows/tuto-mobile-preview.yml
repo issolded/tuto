@@ -42,6 +42,7 @@ jobs:
           npm ci --prefix mobile/engine --no-audit --no-fund
           node mobile/engine/build.mjs
           node mobile/engine/qjs-test.mjs
+          node mobile/engine/puzzle-test.mjs
       - run: node prepare-assets.mjs
       - run: gradle :shared:jvmTest :androidApp:assembleDebug :androidApp:lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
@@ -86,6 +87,7 @@ jobs:
           npm ci --prefix mobile/engine --no-audit --no-fund
           node mobile/engine/build.mjs
           node mobile/engine/qjs-test.mjs
+          node mobile/engine/puzzle-test.mjs
       - run: node mobile/prepare-assets.mjs
       - uses: reactivecircus/android-emulator-runner@v2
         with:

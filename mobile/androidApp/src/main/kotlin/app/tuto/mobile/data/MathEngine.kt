@@ -34,6 +34,22 @@ class MathEngine(private val context: Context) {
         return q
     }
 
+    private var puzzleLoaded = false
+
+    /** The puzzle drawings (assets/engine/puzzle.js), loaded into the same runtime on first use. */
+    suspend fun drawPuzzle(specs: List<JSONObject?>, px: Int): List<String?> = withContext(thread) {
+        lock.withLock {
+            val q = runtime()
+            if (!puzzleLoaded) {
+                q.evaluate<Any?>(context.assets.open("engine/puzzle.js").bufferedReader().use { it.readText() }, "puzzle.js")
+                puzzleLoaded = true
+            }
+            val arr = JSONArray(specs.map { it ?: JSONObject.NULL })
+            val out = JSONArray(q.evaluate<String>("TutoPuzzle.draw(${JSONObject.quote(arr.toString())}, $px)", "draw.js"))
+            (0 until out.length()).map { if (out.isNull(it)) null else out.optString(it) }
+        }
+    }
+
     suspend fun buildSession(age: Int, plan: MathPlan?, lang: String, seenTopics: List<String>, seenKeys: List<String>): MathSession =
         withContext(thread) {
             lock.withLock {

@@ -106,3 +106,45 @@ data class Suggestion(val id: String, val name: String, val icon: String, val ge
         )
     }
 }
+
+/** A puzzle sitting as the server sends it: the questions, never the answers. */
+data class PuzzleSession(val sessionId: String, val band: String, val questions: List<PuzzleQuestion>, val gems: Int, val willPay: Boolean) {
+    companion object {
+        fun from(j: JSONObject) = PuzzleSession(
+            sessionId = j.optString("session_id"),
+            band = j.optString("band"),
+            questions = j.optJSONArray("questions").objects().map(PuzzleQuestion::from),
+            gems = j.optInt("gems"),
+            willPay = j.optBoolean("will_pay"),
+        )
+    }
+}
+
+data class PuzzleOption(val code: String?, val spec: JSONObject?)
+
+data class PuzzleQuestion(
+    val type: String,
+    val layout: String,
+    val stemKey: String,
+    /** Figure specs; a null is the blank the child fills in. */
+    val prompt: List<JSONObject?>,
+    val promptLabels: List<String>,
+    val options: List<PuzzleOption>,
+) {
+    companion object {
+        fun from(j: JSONObject): PuzzleQuestion {
+            val p = j.optJSONArray("prompt")
+            return PuzzleQuestion(
+                type = j.optString("type"),
+                layout = j.optString("layout"),
+                stemKey = j.optString("stem_key"),
+                prompt = (0 until (p?.length() ?: 0)).map { p!!.optJSONObject(it) },
+                promptLabels = j.optJSONArray("promptLabels")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList(),
+                options = j.optJSONArray("options").objects().map { o -> PuzzleOption(o.optStringOrNull("code"), o.optJSONObject("spec")) },
+            )
+        }
+    }
+}
+
+data class PuzzleAnswer(val correct: Boolean, val correctIndex: Int, val why: String?)
+data class PuzzleResult(val correct: Int, val total: Int, val gemsEarned: Int, val capped: Boolean)

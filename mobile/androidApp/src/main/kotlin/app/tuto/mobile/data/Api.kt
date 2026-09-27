@@ -29,6 +29,9 @@ interface TutoApi {
     suspend fun claimReward(childId: String, rewardId: String): Claim = throw IOException("not supported")
     suspend fun rewardSuggestions(childId: String): List<Suggestion> = emptyList()
     suspend fun suggestReward(childId: String, name: String, icon: String, gems: Int): Suggestion = throw IOException("not supported")
+    suspend fun startPuzzle(childId: String): PuzzleSession = throw IOException("not supported")
+    suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String): PuzzleAnswer = throw IOException("not supported")
+    suspend fun finishPuzzle(sessionId: String): PuzzleResult = throw IOException("not supported")
 }
 
 class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
@@ -132,6 +135,27 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
         val (status, json) = request("POST", "/api/children/${enc(childId)}/reward-suggestions", body)
         if (status !in 200..299 || json.optJSONObject("suggestion") == null) throw ServerRefused(json.optString("error", "server $status"))
         return Suggestion.from(json.getJSONObject("suggestion"))
+    }
+
+    // Icons off: they are drawn with the web's icon font, which the tablet does not carry. The web
+    // asks for the same sheet whenever that font fails to load.
+    override suspend fun startPuzzle(childId: String): PuzzleSession {
+        val (status, json) = request("POST", "/api/children/${enc(childId)}/puzzle-session", JSONObject().put("icons", false))
+        if (status !in 200..299) throw ServerRefused(json.optString("error", "server $status"))
+        return PuzzleSession.from(json)
+    }
+
+    override suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String): PuzzleAnswer {
+        val body = JSONObject().put("question_index", index).put("chosen_index", chosen).put("lang", lang)
+        val (status, json) = request("POST", "/api/puzzle-sessions/${enc(sessionId)}/answer", body)
+        if (status !in 200..299) throw IOException("server $status")
+        return PuzzleAnswer(json.optBoolean("correct"), json.optInt("correct_index", -1), json.optStringOrNull("why"))
+    }
+
+    override suspend fun finishPuzzle(sessionId: String): PuzzleResult {
+        val (status, json) = request("POST", "/api/puzzle-sessions/${enc(sessionId)}/finish")
+        if (status !in 200..299) throw IOException("server $status")
+        return PuzzleResult(json.optInt("correct"), json.optInt("total"), json.optInt("gems_earned"), json.optBoolean("capped"))
     }
 }
 

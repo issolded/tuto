@@ -21,6 +21,7 @@ object Services {
     var api: TutoApi = HttpTutoApi()
     /** The sitting on screen, for the device test to read the expected answers from. */
     @Volatile var currentMath: MathRun? = null
+    @Volatile var currentPuzzle: PuzzleRun? = null
 }
 
 sealed interface Screen {
@@ -29,6 +30,7 @@ sealed interface Screen {
     data object Home : Screen
     data object Math : Screen
     data object Goals : Screen
+    data object Puzzle : Screen
     /** An activity the tablet does not do natively yet; says so rather than pretending. */
     data class Soon(val type: String) : Screen
 }
@@ -105,6 +107,9 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
         if (type == "math") {
             math = newMathRun()
             screen = Screen.Math
+        } else if (type == "puzzle") {
+            puzzle = newPuzzleRun()
+            screen = Screen.Puzzle
         } else if (type == "goals" || type == "gems") {
             screen = Screen.Goals
         } else {
@@ -113,6 +118,14 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openMathAgain() { math = newMathRun() }
+
+    /** The puzzle sitting in progress. */
+    var puzzle by mutableStateOf<PuzzleRun?>(null)
+        private set
+
+    fun openPuzzleAgain() { puzzle = newPuzzleRun() }
+
+    private fun newPuzzleRun() = child?.let { PuzzleRun(viewModelScope, api, engine, it) }?.also { Services.currentPuzzle = it }
 
     private fun newMathRun() = child?.let { MathRun(viewModelScope, api, engine, session, it) }?.also { Services.currentMath = it }
 

@@ -18,6 +18,9 @@ import app.tuto.mobile.data.ChildSummary
 import app.tuto.mobile.data.MathPlan
 import app.tuto.mobile.data.MathSaved
 import app.tuto.mobile.data.PinResult
+import app.tuto.mobile.data.PuzzleAnswer
+import app.tuto.mobile.data.PuzzleResult
+import app.tuto.mobile.data.PuzzleSession
 import app.tuto.mobile.data.Today
 import app.tuto.mobile.data.TutoApi
 import org.json.JSONObject
@@ -49,6 +52,24 @@ class TabletTest {
             saved = body
             return MathSaved(gemsEarned = 20, capped = false, levelChange = "same")
         }
+
+        // A real sheet from server/puzzle (age 7, icons off), with each right answer's index kept
+        // in a test-only field, as the server keeps it on its side.
+        private val sheet = JSONObject(
+            InstrumentationRegistry.getInstrumentation().context.assets.open("puzzle-sheet.json").bufferedReader().use { it.readText() },
+        )
+        private val key = sheet.getJSONArray("questions").let { a -> (0 until a.length()).map { a.getJSONObject(it).getInt("answer") } }
+        var right = 0
+        var answered = 0
+        override suspend fun startPuzzle(childId: String) = PuzzleSession.from(sheet)
+        override suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String): PuzzleAnswer {
+            answered++
+            val ok = chosen == key[index]
+            if (ok) right++
+            return PuzzleAnswer(ok, key[index], if (ok) null else "That one is different.")
+        }
+        override suspend fun finishPuzzle(sessionId: String) = PuzzleResult(right, key.size, 30, false)
+        fun answerFor(index: Int) = key[index]
     }
 
     private fun shot(name: String) {
@@ -75,11 +96,63 @@ class TabletTest {
     private fun exists(tag: String) = compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
     private fun textExists(text: String, substring: Boolean = false) = compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
 
+    private fun freshApi(): FakeApi {
+        InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("tuto", 0).edit().clear().commit()
+        return FakeApi().also { Services.api = it }
+    }
+
+    private fun signIn() {
+        compose.onNodeWithText("Family code").performTextInput("tuto42")
+        compose.onNodeWithText("Continue").performClick()
+        waitFor("pin screen") { textExists("Enter your PIN") }
+        listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
+        waitFor("home with gems") { textExists("Ada") && textExists("42") }
+    }
+
+    @Test fun aFullPuzzleSitting() {
+        val api = freshApi()
+        ActivityScenario.launch(MainActivity::class.java).use {
+            signIn()
+            compose.onNodeWithTag("quest_puzzle").performClick()
+            waitFor("puzzle welcome", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Welcome }
+            val run = Services.currentPuzzle!!
+            assertEquals(10, run.total)
+            // Every figure the server sent was drawn by the bundled engine.
+            run.session!!.questions.forEachIndexed { i, q ->
+                val d = run.drawings[i]
+                q.prompt.forEachIndexed { j, spec -> if (spec != null) assertTrue("q$i prompt $j undrawn", d.prompt[j]?.contains("<svg") == true) }
+                q.options.forEachIndexed { j, o -> if (o.spec != null) assertTrue("q$i option $j undrawn", d.options[j]?.contains("<svg") == true) }
+            }
+            shot("05-puzzle-welcome")
+            compose.onNodeWithText("Let's go", substring = true).performClick()
+            waitFor("puzzle asking") { run.phase == PuzzleRun.Phase.Asking }
+
+            // The first answer wrong on purpose, the rest right.
+            for (i in 0 until run.total) {
+                waitFor("puzzle $i shown") { run.index == i && run.answer == null && !run.sending }
+                if (i == 0) shot("06-puzzle-question")
+                val right = api.answerFor(i)
+                val pick = if (i == 0) (right + 1) % run.question!!.options.size else right
+                compose.onNodeWithTag("puzzle_option_$pick").performScrollTo().performClick()
+                compose.onNodeWithText("Send", substring = true).performClick()
+                waitFor("puzzle $i answered") { run.answer != null || run.index != i || run.phase != PuzzleRun.Phase.Asking }
+                if (i == 0) {
+                    assertTrue(run.answer?.correct == false)
+                    shot("07-puzzle-wrong")
+                    compose.onNodeWithText("Next").performClick()
+                }
+            }
+            waitFor("puzzle result", 20_000) { run.phase == PuzzleRun.Phase.Result }
+            assertEquals(10, api.answered)
+            assertEquals(9, run.result!!.correct)
+            shot("08-puzzle-result")
+            compose.onNodeWithText("Home").performClick()
+            waitFor("back home") { textExists("My Math") }
+        }
+    }
+
     @Test fun familyPinHomeAndAFullMathsSitting() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        context.getSharedPreferences("tuto", 0).edit().clear().commit()
-        val api = FakeApi()
-        Services.api = api
+        val api = freshApi()
 
         ActivityScenario.launch(MainActivity::class.java).use {
             // Family code.

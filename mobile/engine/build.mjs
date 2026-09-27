@@ -2,6 +2,7 @@
 // mobile/engine:   node mobile/engine/build.mjs
 //
 //   androidApp/src/main/assets/engine/math.js   the web maths engine + figures (entry.jsx), for QuickJS
+//   androidApp/src/main/assets/engine/puzzle.js the web puzzle drawings (puzzle.js)
 //   androidApp/src/main/assets/i18n.json        the child's dictionary, src/lib/i18n.js, all languages
 //   androidApp/src/main/assets/lottie/*.json    Tuto and the task icons (design/native-icons)
 //
@@ -53,6 +54,15 @@ await build({
   // The web modules are resolved from the web app's own node_modules.
   nodePaths: [join(root, 'node_modules')],
   outfile: join(assets, 'engine', 'math.js'),
+  logLevel: 'warning',
+})
+
+await build({
+  entryPoints: [join(here, 'puzzle.js')],
+  bundle: true, format: 'iife', platform: 'neutral', target: 'es2020', minify: true, legalComments: 'none',
+  banner: { js: prelude },
+  define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' },
+  outfile: join(assets, 'engine', 'puzzle.js'),
   logLevel: 'warning',
 })
 

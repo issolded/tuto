@@ -19,6 +19,7 @@ import app.tuto.mobile.ui.HomeScreen
 import app.tuto.mobile.ui.LocalPalette
 import app.tuto.mobile.ui.MathScreen
 import app.tuto.mobile.ui.PinScreen
+import app.tuto.mobile.ui.PuzzleScreen
 import app.tuto.mobile.ui.SetupScreen
 import app.tuto.mobile.ui.SoonScreen
 import app.tuto.mobile.ui.Sunlight
@@ -43,10 +44,11 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
                 Screen.Home -> HomeScreen(vm)
                 Screen.Math -> MathScreen(vm)
                 Screen.Goals -> GoalsScreen(vm)
+                Screen.Puzzle -> PuzzleScreen(vm)
                 is Screen.Soon -> SoonScreen(vm, s.type)
             }
         }
         // Back always leads home from an activity; from home it leaves the app as usual.
-        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals) { vm.home() }
+        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle) { vm.home() }
     }
 }

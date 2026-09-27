@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -197,7 +198,7 @@ private fun QuestCard(type: String, child: Child, today: Today, isNext: Boolean,
     val done = today.done(type)
     val gems = child.gemsFor(type)
     Column(
-        modifier.let { if (isNext) it.border(4.dp, pal.accent, Card) else it }.card().clickable(role = Role.Button, onClick = onClick),
+        modifier.let { if (isNext) it.border(4.dp, pal.accent, Card) else it }.card().clickable(role = Role.Button, onClick = onClick).testTag("quest_$type"),
     ) {
         Box(Modifier.fillMaxWidth().height(180.dp).background(colorFor(type)), contentAlignment = Alignment.Center) {
             val file = lottieFor(type)
