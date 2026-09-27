@@ -94,6 +94,12 @@ class TabletTest {
             throw AssertionError("Timed out at step '$step' — $state\n$tree", e)
         }
     }
+    /** Scrolls to the node first when it sits in a scrolling layout; taps it either way. */
+    private fun tap(tag: String) {
+        val node = compose.onNodeWithTag(tag)
+        runCatching { node.performScrollTo() }
+        node.performClick()
+    }
     private fun exists(tag: String) = compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
     private fun textExists(text: String, substring: Boolean = false) = compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
 
@@ -134,7 +140,7 @@ class TabletTest {
                 if (i == 0) shot("06-puzzle-question")
                 val right = api.answerFor(i)
                 val pick = if (i == 0) (right + 1) % run.question!!.options.size else right
-                compose.onNodeWithTag("puzzle_option_$pick").performScrollTo().performClick()
+                tap("puzzle_option_$pick")
                 compose.onNodeWithText("Send", substring = true).performClick()
                 waitFor("puzzle $i answered") { run.answer != null || run.index != i || run.phase != PuzzleRun.Phase.Asking }
                 if (i == 0) {
@@ -186,7 +192,7 @@ class TabletTest {
                 if (!shotFigure && (q.svg != null || q.nativeFigure != null)) { shot("03-question-with-figure"); shotFigure = true }
                 if (i == 0) shot("03-question-first")
                 if (q.format == "choice" && q.options.isNotEmpty()) {
-                    compose.onNodeWithTag("option_${q.answer}").performScrollTo().performClick()
+                    tap("option_${q.answer}")
                 } else {
                     q.answer.forEach { ch -> compose.onNodeWithTag("key_$ch").performClick() }
                     compose.onNodeWithText("Check").performClick()
