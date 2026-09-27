@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
@@ -103,7 +104,7 @@ class TabletTest {
 
     private fun signIn() {
         compose.onNodeWithText("Family code").performTextInput("tuto42")
-        compose.onNodeWithText("Continue").performClick()
+        compose.onNodeWithText("Family code").performImeAction()
         waitFor("pin screen") { textExists("Enter your PIN") }
         listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
         waitFor("home with gems") { textExists("Ada") && textExists("42") }
@@ -158,7 +159,7 @@ class TabletTest {
             // Family code.
             compose.onNodeWithText("Family code").performTextInput("tuto42")
             shot("01-setup")
-            compose.onNodeWithText("Continue").performClick()
+            compose.onNodeWithText("Family code").performImeAction()
 
             // PIN: a wrong one is refused, the right one signs Ada in.
             waitFor("pin screen") { textExists("Enter your PIN") }

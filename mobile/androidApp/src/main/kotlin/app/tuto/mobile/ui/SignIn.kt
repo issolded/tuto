@@ -3,7 +3,11 @@ package app.tuto.mobile.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,23 +77,26 @@ fun SetupScreen(vm: TutoViewModel) {
         }
     }
 
-    Row(Modifier.fillMaxSize().padding(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
-        Tuto(Modifier.size(width = 320.dp, height = 406.dp))
-        Column(Modifier.widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Text(s.say("Hi! I'm Tuto.", "Merhaba! Ben Tuto.", "¡Hola! Soy Tuto."), style = MaterialTheme.typography.headlineLarge)
-            Text(s.say("Ask your grown-up for the family code on their Tuto dashboard.", "Aile kodunu annenden ya da babandan iste. Tuto panellerinde yazıyor.", "Pide a tu madre o a tu padre el código de familia de su panel de Tuto."), style = MaterialTheme.typography.bodyLarge, color = Ink.soft)
-            OutlinedTextField(
-                value = code,
-                onValueChange = { v -> code = v.filter { it.isLetterOrDigit() }.uppercase().take(8) },
-                label = { Text(s.say("Family code", "Aile kodu", "Código de familia")) },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.headlineMedium.copy(letterSpacing = 4.sp),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { submit() }),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            error?.let { Text(it, color = Color(0xFFB3261E), style = MaterialTheme.typography.bodyMedium) }
-            BigButton(if (busy) "…" else s.say("Continue", "Devam", "Continuar"), Modifier.fillMaxWidth(), enabled = code.isNotBlank() && !busy) { submit() }
+    // With the keyboard up a landscape tablet has little height left: scroll rather than hide Continue.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        Row(Modifier.verticalScroll(rememberScrollState()).fillMaxWidth().heightIn(min = maxHeight).padding(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
+            Tuto(Modifier.size(width = 320.dp, height = 406.dp))
+            Column(Modifier.widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Text(s.say("Hi! I'm Tuto.", "Merhaba! Ben Tuto.", "¡Hola! Soy Tuto."), style = MaterialTheme.typography.headlineLarge)
+                Text(s.say("Ask your grown-up for the family code on their Tuto dashboard.", "Aile kodunu annenden ya da babandan iste. Tuto panellerinde yazıyor.", "Pide a tu madre o a tu padre el código de familia de su panel de Tuto."), style = MaterialTheme.typography.bodyLarge, color = Ink.soft)
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { v -> code = v.filter { it.isLetterOrDigit() }.uppercase().take(8) },
+                    label = { Text(s.say("Family code", "Aile kodu", "Código de familia")) },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.headlineMedium.copy(letterSpacing = 4.sp),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = { submit() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                error?.let { Text(it, color = Color(0xFFB3261E), style = MaterialTheme.typography.bodyMedium) }
+                BigButton(if (busy) "…" else s.say("Continue", "Devam", "Continuar"), Modifier.fillMaxWidth(), enabled = code.isNotBlank() && !busy) { submit() }
+            }
         }
     }
 }
