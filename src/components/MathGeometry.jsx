@@ -16,8 +16,21 @@ export default function MathGeometry({ visual: v, language = 'en', hint = false,
   let drawing
   if (['line', 'point', 'opposite'].includes(v.shape)) {
     const cx = 160, cy = v.shape === 'line' ? 150 : 105
-    // Fixed schematic sectors leave room for all labels, including very small givens.
-    const sectors = v.shape === 'line' ? [75, 105] : v.shape === 'opposite' ? [65, 115, 65, 115] : Array(v.angles.length + 1).fill(360 / (v.angles.length + 1))
+    // Sectors follow the real angles, so an acute one looks acute and an obtuse one obtuse —
+    // equal quarters for 76°, 101°, 114° and the unknown told the eye nothing, or the wrong
+    // thing. Each sector keeps at least MIN° so its label fits; the rest share what is left in
+    // proportion. Still "not to scale": a squeezed small angle is not a measurement.
+    const MIN = 35
+    const fit = (spans, total) => {
+      const small = spans.map(x => x < MIN)
+      const room = total - MIN * small.filter(Boolean).length
+      const big = spans.reduce((acc, x, i) => acc + (small[i] ? 0 : x), 0)
+      return spans.map((x, i) => small[i] ? MIN : (x / big) * room)
+    }
+    const given = v.angles.reduce((x, y) => x + y, 0)
+    const sectors = v.shape === 'line' ? fit([v.angles[0], 180 - v.angles[0]], 180)
+      : v.shape === 'opposite' ? fit([v.angles[0], 180 - v.angles[0], v.angles[0], 180 - v.angles[0]], 360)
+      : fit([...v.angles, Math.max(0, 360 - given)], 360)
     let cursor = 0
     drawing = sectors.map((span, i) => {
       const start = rad(cursor), end = rad(cursor + span)
