@@ -5,6 +5,8 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -59,7 +61,17 @@ class TabletTest {
         }
     }
 
-    private fun waitFor(timeoutMs: Long = 15_000, condition: () -> Boolean) = compose.waitUntil(timeoutMs) { condition() }
+    /** Waits, and on a timeout says which step it was and what the sitting looked like. */
+    private fun waitFor(step: String, timeoutMs: Long = 15_000, condition: () -> Boolean) {
+        try {
+            compose.waitUntil(timeoutMs) { condition() }
+        } catch (e: Throwable) {
+            val run = Services.currentMath
+            val state = run?.let { "phase=${it.phase} index=${it.index} input='${it.input}' feedback=${it.feedback} answer=${it.question?.answer} format=${it.question?.format} options=${it.question?.options?.map { o -> o.value }}" } ?: "no sitting"
+            val tree = runCatching { compose.onRoot(useUnmergedTree = false).printToString(maxDepth = 12) }.getOrDefault("?").take(3000)
+            throw AssertionError("Timed out at step '$step' — $state\n$tree", e)
+        }
+    }
     private fun exists(tag: String) = compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
     private fun textExists(text: String, substring: Boolean = false) = compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
 
@@ -76,26 +88,26 @@ class TabletTest {
             compose.onNodeWithText("Continue").performClick()
 
             // PIN: a wrong one is refused, the right one signs Ada in.
-            waitFor { textExists("Enter your PIN") }
+            waitFor("pin screen") { textExists("Enter your PIN") }
             listOf("9", "9", "9", "9").forEach { compose.onNodeWithTag("key_$it").performClick() }
-            waitFor { textExists("not the right PIN", substring = true) }
+            waitFor("wrong pin message") { textExists("not the right PIN", substring = true) }
             listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
 
             // Home, with the server's figures.
-            waitFor { textExists("Ada") && textExists("42") }
+            waitFor("home with gems") { textExists("Ada") && textExists("42") }
             compose.onNodeWithText("My Math").assertExists()
             compose.onNodeWithText("4 days").assertExists()
             shot("02-home")
 
             // A full sitting, every answer taken from the engine's own answer key.
             compose.onNodeWithText("Start").performClick()
-            waitFor(30_000) { Services.currentMath?.phase == MathRun.Phase.Asking }
+            waitFor("maths sitting ready", 30_000) { Services.currentMath?.phase == MathRun.Phase.Asking }
             val run = Services.currentMath!!
             val total = run.total
             assertEquals(10, total)
             var shotFigure = false
             for (i in 0 until total) {
-                waitFor { run.index == i && run.feedback == null }
+                waitFor("question $i shown") { run.index == i && run.feedback == null }
                 val q = run.question!!
                 if (!shotFigure && (q.svg != null || q.nativeFigure != null)) { shot("03-question-with-figure"); shotFigure = true }
                 if (i == 0) shot("03-question-first")
@@ -105,23 +117,23 @@ class TabletTest {
                     q.answer.forEach { ch -> compose.onNodeWithTag("key_$ch").performClick() }
                     compose.onNodeWithText("Check").performClick()
                 }
-                waitFor { run.feedback is MathRun.Feedback.Correct || run.phase != MathRun.Phase.Asking }
+                waitFor("question $i accepted") { run.feedback is MathRun.Feedback.Correct || run.phase != MathRun.Phase.Asking }
             }
 
             // The server is told what happened, question by question.
-            waitFor(20_000) { run.phase == MathRun.Phase.Result }
+            waitFor("result", 20_000) { run.phase == MathRun.Phase.Result }
             val body = requireNotNull(api.saved)
             assertEquals(10, body.getInt("questions_total"))
             assertEquals(10, body.getInt("questions_correct"))
             assertEquals(100, body.getInt("accuracy"))
             assertEquals(10, body.getJSONArray("attempts").length())
             assertTrue(body.getJSONArray("attempts").getJSONObject(0).getBoolean("correct"))
-            waitFor { textExists("10 out of 10 right") }
+            waitFor("result text") { textExists("10 out of 10 right") }
             compose.onNodeWithText("+20 Gems").assertExists()
             shot("04-result")
 
             compose.onNodeWithText("Home").performClick()
-            waitFor { textExists("My Math") }
+            waitFor("back home") { textExists("My Math") }
         }
     }
 }
