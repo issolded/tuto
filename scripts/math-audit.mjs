@@ -405,6 +405,16 @@ for (const age of AGES) {
             fail(where, 'ızgara görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${expected}`)
           }
         }
+        // A pie is read by counting its dashed equal parts, so every slice has to cover a whole
+        // number of them and together they have to fill the circle — otherwise "count the parts"
+        // is back to guessing an angle.
+        if (p.visual?.shape === 'pie') {
+          const parts = p.visual.parts
+          const covered = p.visual.slices.map(s => (s.n * parts) / s.d)
+          if (!parts || covered.some(c => !Number.isInteger(c) || c < 1) || covered.reduce((x, y) => x + y, 0) !== parts) {
+            fail(where, 'daire grafiği dilimleri eşit parçalara oturmuyor', `${p.question_text} → parts ${parts}, ${covered.join('+')}`)
+          }
+        }
         // A two-way table is answered from the cells the child sees: what is printed plus the
         // answer has to make the total the question states, or the "?" has no right answer.
         if (p.visual?.shape === 'table' && p.operandKey.startsWith('chart:t:')) {

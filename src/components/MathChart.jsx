@@ -36,9 +36,11 @@ export default function MathChart({ visual: v, language = 'en', description }) {
 
   // ── a pie chart ─────────────────────────────────────────────────────────────
   // Year 6's line is "interpret pie charts", and Bond's are read the way a child reads a clock:
-  // half, a quarter, an eighth. So slices come from fractions with small denominators, the
-  // quarter lines get a faint guide cross, and no slice carries its number — the label names
-  // the group, the size is what the child reads.
+  // half, a quarter, an eighth. So slices come from fractions with small denominators, faint
+  // dashed spokes cut the circle into the chart's equal parts (every slice edge is one of them,
+  // so a sixth is counted, not guessed), and no slice carries its fraction — the size is what
+  // the child reads. Each slice carries a number that matches its key, so the key does not rely
+  // on colour alone.
   if (v.shape === 'pie') {
     const cx = 110, cy = 104, r = 88
     const COLOURS = ['#7ecbd0', '#f3c98b', '#b9d98a', '#e6a6b4', '#b7b3e6', '#9fd0f0']
@@ -56,13 +58,22 @@ export default function MathChart({ visual: v, language = 'en', description }) {
       <Figure description={description} language={language} scale={false}>
         <g>
           {slices.map(({ i, d }) => <path key={i} d={d} fill={COLOURS[i % COLOURS.length]} stroke="white" strokeWidth="2" />)}
-          <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke="rgba(36,70,90,.18)" strokeDasharray="3 4" />
-          <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} stroke="rgba(36,70,90,.18)" strokeDasharray="3 4" />
+          {Array.from({ length: v.parts || 4 }, (_, k) => {
+            const a = -Math.PI / 2 + (k / (v.parts || 4)) * 2 * Math.PI
+            return <line key={`p${k}`} x1={cx} y1={cy} x2={cx + r * Math.cos(a)} y2={cy + r * Math.sin(a)} stroke="rgba(36,70,90,.35)" strokeWidth="1.2" strokeDasharray="3 3" />
+          })}
           <circle cx={cx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="2" />
+          {slices.map(({ i, mid }) => (
+            <g key={`n${i}`}>
+              <circle cx={cx + r * 0.66 * Math.cos(mid)} cy={cy + r * 0.66 * Math.sin(mid)} r={9} fill="white" stroke={INK} strokeWidth="1" />
+              <text x={cx + r * 0.66 * Math.cos(mid)} y={cy + r * 0.66 * Math.sin(mid) + 1} textAnchor="middle" dominantBaseline="middle" style={{ font: '800 11px Nunito, sans-serif', fill: INK }}>{i + 1}</text>
+            </g>
+          ))}
           {/* A key beside the pie rather than labels on it: an eighth is too narrow to write in. */}
           {slices.map(({ i, s }) => (
             <g key={`k${i}`}>
               <rect x={216} y={28 + i * 30} width={16} height={16} rx={3} fill={COLOURS[i % COLOURS.length]} stroke={INK} strokeWidth="1" />
+              <text x={224} y={37 + i * 30} textAnchor="middle" dominantBaseline="middle" style={{ font: '800 10px Nunito, sans-serif', fill: INK }}>{i + 1}</text>
               <text x={240} y={36 + i * 30} dominantBaseline="middle" style={{ font: '700 13px Nunito, sans-serif', fill: INK }}>{s.label}</text>
             </g>
           ))}

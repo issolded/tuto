@@ -6021,13 +6021,16 @@ function statsPie(level, lang) {
   const intro = say(lang, `The pie chart shows the ${w.what} of ${total} children.`,
                           `Daire grafiği ${total} çocuğun ${w.what} gösteriyor.`,
                           `El gráfico circular muestra la ${w.what} de ${total} niños.`)
-  const visual = { kind: 'chart', shape: 'pie', slices: slices.map(({ label, n, d }) => ({ label, n, d })) }
+  // `parts` is the chart's common denominator, drawn as faint equal spokes: every slice edge lands
+  // on one, so a third or a fifth is counted ("2 of the 6 equal parts") rather than guessed by
+  // eye. Without them a 120° and a 60° slice had to be read from the drawing's geometry.
+  const visual = { kind: 'chart', shape: 'pie', parts: lcm, slices: slices.map(({ label, n, d }) => ({ label, n, d })) }
   const ask = pick(['count', 'count', 'fraction', 'more'])
   const g = gcd(s.n, s.d)
   const frac = `${s.n / g}/${s.d / g}`
-  const readHint = say(lang, 'The whole circle is all the children. A half is a straight line through the middle; a quarter is a right angle.',
-                             'Bütün daire, çocukların hepsidir. Yarım, ortadan geçen düz çizgidir; çeyrek bir dik açıdır.',
-                             'El círculo entero son todos los niños. La mitad es una línea recta por el centro; un cuarto es un ángulo recto.')
+  const readHint = say(lang, `The whole circle is all the children. The dashed lines cut it into ${lcm} equal parts — count how many parts each slice covers.`,
+                             `Bütün daire, çocukların hepsidir. Kesik çizgiler onu ${lcm} eşit parçaya bölüyor — her dilimin kaç parça kapladığını say.`,
+                             `El círculo entero son todos los niños. Las líneas discontinuas lo dividen en ${lcm} partes iguales: cuenta cuántas partes ocupa cada porción.`)
   if (ask === 'fraction') {
     const right = opt(frac, say(lang, 'Right.', 'Doğru.', 'Correcto.'))
     const wrongs = [...slices.filter(o => o.n * s.d !== s.n * o.d).map(o => { const k = gcd(o.n, o.d); return opt(`${o.n / k}/${o.d / k}`, say(lang, `That is the ${o.label} slice.`, `Bu, "${o.label}" diliminin kesri.`, `Esa es la porción de «${o.label}».`)) }),
