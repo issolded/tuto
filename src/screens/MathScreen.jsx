@@ -99,6 +99,24 @@ const ANIM = `
    viewport instead of scrolling inside itself — and the wrapper's overflow:hidden then
    put the bottom of the panel somewhere no scroll could reach on desktop. */
 .math-scroll { overflow-y: auto; min-height: 0; }
+/* A short phone (390×664 with the browser's bars) could not hold picture + question + answer +
+   four rows of 70px keys, so the child scrolled between the question and the keypad on every
+   question. Below 740px of height the card, the picture and the keys give some back; keys stay
+   at 54px, above the 44px touch-target floor. Inline sizes win over a stylesheet, hence !important. */
+@media (max-height: 740px) {
+  .math-qscroll { padding: 10px 16px 14px !important; gap: 9px !important; }
+  .math-qcard { padding: 14px 16px !important; gap: 8px !important; min-height: 0 !important; }
+  .math-qcard svg[role="img"] { max-height: 140px !important; }
+  .math-answer { min-height: 46px !important; padding: 6px !important; }
+  .math-answer span { font-size: 30px !important; }
+  .math-keys { gap: 8px !important; }
+  .math-key { width: 54px !important; height: 54px !important; font-size: 23px !important; }
+  /* Even compact, a picture plus an open hint is taller than the screen. The answer and the keys
+     stay pinned to the bottom and the question scrolls above them, so the child never scrolls
+     away from the keypad to reread the question — or away from the question to reach ✓. */
+  .math-pad { position: sticky; bottom: -14px; gap: 9px !important; padding: 10px 16px 14px; margin: 0 -16px -14px;
+              background: linear-gradient(to bottom, rgba(210, 233, 251, 0), rgb(210, 233, 251) 10px); z-index: 2; }
+}
 .math-scroll::-webkit-scrollbar { display: none; }
 `
 
@@ -313,9 +331,9 @@ function getScoreMsg(pct, age, language) {
 function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false, language = 'en' }) {
   const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], allowDecimal ? ['⌫','0','.','✓'] : ['⌫','0','✓']]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+    <div className="math-keys" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
       {ROWS.map((row, ri) => (
-        <div key={ri} style={{ display: 'flex', gap: 10 }}>
+        <div key={ri} className="math-keys" style={{ display: 'flex', gap: 10 }}>
           {row.map(key => {
             const isSubmit = key === '✓'
             const isBack   = key === '⌫'
@@ -329,7 +347,7 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
               <button
                 key={key}
                 disabled={disabled}
-                className="math-press"
+                className="math-press math-key"
                 onClick={() => {
                   if (disabled) return
                   if (isSubmit) onSubmit()
@@ -3159,7 +3177,7 @@ export default function MathScreen() {
         </div>
 
         {/* Question + keyboard */}
-        <div className="math-scroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="math-scroll math-qscroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {helpVisible ? (
             <HelpPanel
               question={q}
@@ -3185,7 +3203,7 @@ export default function MathScreen() {
               {/* flexShrink: 0 is load-bearing — the column is a flex parent, so on a short
                   phone it crushed the card and its picture (a clock came out 26px across,
                   unreadable) rather than letting the column scroll. */}
-              <div key={qIdx} style={{
+              <div key={qIdx} className="math-qcard" style={{
                 background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
                 boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
                 minHeight: isWord ? 120 : 84, display: 'flex', flexDirection: 'column',
@@ -3242,6 +3260,12 @@ export default function MathScreen() {
                       onClick={() => {
                         if (open) { setHintOpenFor(null); return }
                         setHintOpenFor(qIdx)
+                        // On a short screen the keypad is pinned over the bottom of the column, so
+                        // a hint that opens there opens out of sight. Bring it up above the keys.
+                        requestAnimationFrame(() => {
+                          const el = document.querySelector('.math-qscroll')
+                          if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+                        })
                         // Same cost as being shown help after a wrong answer — the server docks
                         // a third for either, so asking early is never the cheaper trick.
                         setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
@@ -3302,9 +3326,9 @@ export default function MathScreen() {
                   ))}
                 </div>
               ) : (
-                <>
+                <div className="math-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {/* Answer display */}
-                  <div style={{
+                  <div className="math-answer" style={{
                     background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
                     boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3323,7 +3347,7 @@ export default function MathScreen() {
                     allowDecimal={answerFormats[qIdx] === 'decimal'}
                     language={language}
                   />
-                </>
+                </div>
               )}
             </>
           )}
