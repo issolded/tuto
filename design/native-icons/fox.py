@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fındık (the fox companion) as one Lottie file with two markers.
+"""Tuto (the fox companion) as one Lottie file with two markers.
 
   idle   frames 0-120   4 s seamless loop: breathing, blink, tail wag, head tilt
   cheer  frames 120-168 plays once on a correct answer: squash, jump, happy face, wave, sparkles;

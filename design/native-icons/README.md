@@ -18,7 +18,7 @@ python3 design/native-icons/build.py
 
 Önizleme: `preview.html`'i bir statik sunucuyla aç (`npx serve design/native-icons`); dosyayı çift tıklayarak açınca tarayıcı JSON'u yüklemez.
 
-## Fındık (yol arkadaşı) — `lottie/fox.json`
+## Tuto (yol arkadaşı) — `lottie/fox.json`
 
 260×330, 30 fps, saydam, ~21 KB. `python3 design/native-icons/fox.py` üretir.
 

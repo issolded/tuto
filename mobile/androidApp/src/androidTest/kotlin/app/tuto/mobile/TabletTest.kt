@@ -1,83 +1,127 @@
 package app.tuto.mobile
 
-import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.test.platform.app.InstrumentationRegistry
 import android.graphics.Bitmap
-import java.io.File
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
+import app.tuto.mobile.data.Child
+import app.tuto.mobile.data.ChildSummary
+import app.tuto.mobile.data.MathPlan
+import app.tuto.mobile.data.MathSaved
+import app.tuto.mobile.data.PinResult
+import app.tuto.mobile.data.Today
+import app.tuto.mobile.data.TutoApi
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.io.File
 
+/**
+ * The real screens and the real maths engine, in front of a fake server: family code, PIN, home,
+ * a full maths sitting answered correctly, and what the server is sent at the end.
+ */
 class TabletTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
-    private fun shot(name:String) {
-        compose.waitForIdle()
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val dir=File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
-        requireNotNull(instrumentation.uiAutomation.takeScreenshot()).let { bitmap->File(dir,"$name.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle() }
+    @get:Rule val compose = createEmptyComposeRule()
+
+    private class FakeApi : TutoApi {
+        var saved: JSONObject? = null
+        override suspend fun familyChildren(code: String) =
+            if (code == "TUTO42") listOf(ChildSummary("child-1", "Ada", 7)) else emptyList()
+        override suspend fun verifyPin(code: String, pin: String): PinResult =
+            if (pin == "1234") PinResult.Ok(Child.from(JSONObject("""{"id":"child-1","name":"Ada","age":7,"language":"en","task_settings":{"math":{"gems":20}}}""")))
+            else PinResult.Wrong(4)
+        override suspend fun todaySummary(childId: String) = Today.from(JSONObject(
+            """{"today":2,"activities":{"reading":0,"math":0,"puzzle":0},"streak":4,"gems":42,"nearestGoal":{"id":"g","name":"Roblox 15 min","icon":"🎮","bt_cost":60},"hasAnyGoals":true}""",
+        ))
+        override suspend fun mathPlan(childId: String) = MathPlan(null, null, emptyList())
+        override suspend fun saveMathSession(childId: String, body: JSONObject): MathSaved {
+            saved = body
+            return MathSaved(gemsEarned = 20, capped = false, levelChange = "same")
+        }
     }
-    @Test fun englishStudioNavigationAndSavedContent() {
-        compose.onNodeWithText("Home",useUnmergedTree=true).assertIsDisplayed()
-        compose.onNodeWithText("Make today",substring=true).assertExists()
-        shot("01-home")
-        compose.onNodeWithText("Read").performClick()
-        compose.onNodeWithText("+ Add my book").performClick()
-        compose.onNodeWithText("Book title").performTextInput("The Explorer")
-        compose.onNodeWithText("Total pages").performTextInput("120")
-        compose.onNodeWithText("Add to my library").performScrollTo().performClick()
-        compose.onNodeWithText("The Explorer").performScrollTo().assertIsDisplayed()
-        shot("02-library")
-        compose.onNodeWithText("My tree").performClick()
-        compose.onNodeWithText("+  Made my bed").performScrollTo().performClick()
-        compose.onNodeWithText("1 contributions today").performScrollTo().assertIsDisplayed()
-        shot("03-tree")
-        compose.onNodeWithText("Home").performClick()
-        compose.onNodeWithText("Science",useUnmergedTree=true).performScrollTo().performClick()
-        compose.onNodeWithText("Science explorer").assertIsDisplayed()
-        shot("04-science")
-        compose.onAllNodesWithText("Let's investigate →")[0].performScrollTo().performClick()
-        compose.onNodeWithText("○  Roots").performScrollTo().performClick()
-        compose.onNodeWithText("Check my thinking").performScrollTo().performClick()
-        compose.onNodeWithText("That's it!").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Finish investigation").performScrollTo().performClick()
-        compose.onNodeWithText("Explored on this device").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Create").performClick()
-        compose.onNodeWithText("Write a story").performScrollTo().performClick()
-        compose.onNodeWithText("Give your story a title").performScrollTo().performTextInput("My tree adventure")
-        compose.onNodeWithText("Once upon an idea…").performScrollTo().performTextInput("A dragon found a book.")
-        compose.onNodeWithText("Save my story").performScrollTo().performClick()
-        compose.onNodeWithText("My tree adventure").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Create").performClick()
-        compose.onNodeWithText("Draw something").performScrollTo().performClick()
-        compose.onNodeWithText("Find a drawing").performTextInput("cat")
-        compose.onNodeWithText("Cat").performScrollTo().performClick()
-        compose.onNodeWithText("Next step →").performScrollTo().performClick()
-        compose.onNodeWithText("Step 2 of",substring=true).performScrollTo().assertIsDisplayed()
-        shot("05-drawing")
-        compose.onNodeWithText("More").performClick()
-        compose.onNodeWithText("My style & language  →").performScrollTo().performClick()
-        compose.onNodeWithText("Classic",useUnmergedTree=true).performScrollTo().performClick()
-        compose.onNodeWithText("Home").performClick()
-        shot("06-classic")
-        compose.onNodeWithText("◆ 0").assertIsDisplayed()
-        // Recreation preserves the reading record and contribution.
-        compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("Read").performClick()
-        compose.onNodeWithText("The Explorer").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Home").performClick()
-        val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
-        fun shell(command:String) { android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() } }
-        try {
-            shell("wm size 1080x1920")
-            shell("wm density 420")
-            android.os.SystemClock.sleep(1500)
-            compose.waitForIdle()
-            compose.onNodeWithText("Read").assertIsDisplayed()
-            compose.onNodeWithText("More").assertIsDisplayed()
-            shot("07-phone-layout")
-        } finally {
-            shell("wm size reset")
-            shell("wm density reset")
+
+    private fun shot(name: String) {
+        compose.waitForIdle()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val dir = File(instrumentation.targetContext.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
+        requireNotNull(instrumentation.uiAutomation.takeScreenshot()).let { bitmap ->
+            File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+    }
+
+    private fun waitFor(timeoutMs: Long = 15_000, condition: () -> Boolean) = compose.waitUntil(timeoutMs) { condition() }
+    private fun exists(tag: String) = compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
+    private fun textExists(text: String, substring: Boolean = false) = compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
+
+    @Test fun familyPinHomeAndAFullMathsSitting() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.getSharedPreferences("tuto", 0).edit().clear().commit()
+        val api = FakeApi()
+        Services.api = api
+
+        ActivityScenario.launch(MainActivity::class.java).use {
+            // Family code.
+            compose.onNodeWithText("Family code").performTextInput("tuto42")
+            shot("01-setup")
+            compose.onNodeWithText("Continue").performClick()
+
+            // PIN: a wrong one is refused, the right one signs Ada in.
+            waitFor { textExists("Enter your PIN") }
+            listOf("9", "9", "9", "9").forEach { compose.onNodeWithTag("key_$it").performClick() }
+            waitFor { textExists("not the right PIN", substring = true) }
+            listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
+
+            // Home, with the server's figures.
+            waitFor { textExists("Ada") && textExists("42") }
+            compose.onNodeWithText("My Math").assertExists()
+            compose.onNodeWithText("4 days").assertExists()
+            shot("02-home")
+
+            // A full sitting, every answer taken from the engine's own answer key.
+            compose.onNodeWithText("Start").performClick()
+            waitFor(30_000) { Services.currentMath?.phase == MathRun.Phase.Asking }
+            val run = Services.currentMath!!
+            val total = run.total
+            assertEquals(10, total)
+            var shotFigure = false
+            for (i in 0 until total) {
+                waitFor { run.index == i && run.feedback == null }
+                val q = run.question!!
+                if (!shotFigure && (q.svg != null || q.nativeFigure != null)) { shot("03-question-with-figure"); shotFigure = true }
+                if (i == 0) shot("03-question-first")
+                if (q.format == "choice" && q.options.isNotEmpty()) {
+                    compose.onNodeWithTag("option_${q.answer}").performScrollTo().performClick()
+                } else {
+                    q.answer.forEach { ch -> compose.onNodeWithTag("key_$ch").performClick() }
+                    compose.onNodeWithText("Check").performClick()
+                }
+                waitFor { run.feedback is MathRun.Feedback.Correct || run.phase != MathRun.Phase.Asking }
+            }
+
+            // The server is told what happened, question by question.
+            waitFor(20_000) { run.phase == MathRun.Phase.Result }
+            val body = requireNotNull(api.saved)
+            assertEquals(10, body.getInt("questions_total"))
+            assertEquals(10, body.getInt("questions_correct"))
+            assertEquals(100, body.getInt("accuracy"))
+            assertEquals(10, body.getJSONArray("attempts").length())
+            assertTrue(body.getJSONArray("attempts").getJSONObject(0).getBoolean("correct"))
+            waitFor { textExists("10 out of 10 right") }
+            compose.onNodeWithText("+20 Gems").assertExists()
+            shot("04-result")
+
+            compose.onNodeWithText("Home").performClick()
+            waitFor { textExists("My Math") }
         }
     }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "tuto-native-engine",
+  "private": true,
+  "type": "module",
+  "description": "Bundles the web app's own maths engine and figures for the Android app (see build.mjs).",
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "quickjs-emscripten": "0.31.0"
+  }
+}

@@ -4,3 +4,5 @@ local.properties
 .idea/
 *.jks
 *.keystore
+androidApp/src/main/assets/
+engine/node_modules/
