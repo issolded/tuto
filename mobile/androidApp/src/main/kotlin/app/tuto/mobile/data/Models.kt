@@ -89,3 +89,20 @@ data class MathPlan(val level: Int?, val focusTopicId: String?, val weakTopicIds
         )
     }
 }
+
+data class Reward(val id: String, val name: String, val icon: String, val cost: Int) {
+    companion object { fun from(j: JSONObject) = Reward(j.optString("id"), j.optString("name"), j.optString("icon").ifEmpty { "🎁" }, j.optInt("bt_cost")) }
+}
+
+data class Claim(val id: String, val rewardId: String, val status: String) {
+    companion object { fun from(j: JSONObject) = Claim(j.optString("id"), j.optString("reward_id"), j.optString("status")) }
+}
+
+data class Suggestion(val id: String, val name: String, val icon: String, val gems: Int?, val status: String) {
+    companion object {
+        fun from(j: JSONObject) = Suggestion(
+            j.optString("id"), j.optString("name"), j.optString("icon").ifEmpty { "🎁" },
+            if (j.has("suggested_gems") && !j.isNull("suggested_gems")) j.optInt("suggested_gems") else null, j.optString("status"),
+        )
+    }
+}

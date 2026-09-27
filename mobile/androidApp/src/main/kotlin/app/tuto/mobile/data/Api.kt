@@ -23,6 +23,12 @@ interface TutoApi {
     suspend fun todaySummary(childId: String): Today
     suspend fun mathPlan(childId: String): MathPlan
     suspend fun saveMathSession(childId: String, body: JSONObject): MathSaved
+    suspend fun rewards(childId: String): List<Reward> = emptyList()
+    suspend fun gems(childId: String): Int = 0
+    suspend fun rewardClaims(childId: String): List<Claim> = emptyList()
+    suspend fun claimReward(childId: String, rewardId: String): Claim = throw IOException("not supported")
+    suspend fun rewardSuggestions(childId: String): List<Suggestion> = emptyList()
+    suspend fun suggestReward(childId: String, name: String, icon: String, gems: Int): Suggestion = throw IOException("not supported")
 }
 
 class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
@@ -90,7 +96,47 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
             levelChange = json.optString("level_change", "same"),
         )
     }
+
+    override suspend fun rewards(childId: String): List<Reward> {
+        val (status, json) = request("GET", "/api/children/${enc(childId)}/rewards")
+        if (status !in 200..299) throw IOException("server $status")
+        return json.optJSONArray("rewards").objects().map(Reward::from)
+    }
+
+    override suspend fun gems(childId: String): Int {
+        val (status, json) = request("GET", "/api/children/${enc(childId)}/gems")
+        if (status !in 200..299) throw IOException("server $status")
+        return json.optInt("gems")
+    }
+
+    override suspend fun rewardClaims(childId: String): List<Claim> {
+        val (status, json) = request("GET", "/api/children/${enc(childId)}/reward-claims")
+        if (status !in 200..299) throw IOException("server $status")
+        return json.optJSONArray("claims").objects().map(Claim::from)
+    }
+
+    override suspend fun claimReward(childId: String, rewardId: String): Claim {
+        val (status, json) = request("POST", "/api/children/${enc(childId)}/reward-claims", JSONObject().put("reward_id", rewardId))
+        if (status !in 200..299 || json.optJSONObject("claim") == null) throw ServerRefused(json.optString("error", "server $status"))
+        return Claim.from(json.getJSONObject("claim"))
+    }
+
+    override suspend fun rewardSuggestions(childId: String): List<Suggestion> {
+        val (status, json) = request("GET", "/api/children/${enc(childId)}/reward-suggestions")
+        if (status !in 200..299) throw IOException("server $status")
+        return json.optJSONArray("suggestions").objects().map(Suggestion::from)
+    }
+
+    override suspend fun suggestReward(childId: String, name: String, icon: String, gems: Int): Suggestion {
+        val body = JSONObject().put("name", name).put("icon", icon).put("gems", gems)
+        val (status, json) = request("POST", "/api/children/${enc(childId)}/reward-suggestions", body)
+        if (status !in 200..299 || json.optJSONObject("suggestion") == null) throw ServerRefused(json.optString("error", "server $status"))
+        return Suggestion.from(json.getJSONObject("suggestion"))
+    }
 }
+
+/** The server said no, and said why ("not enough gems", "too many pending requests"). */
+class ServerRefused(val reason: String) : IOException(reason)
 
 sealed interface PinResult {
     data class Ok(val child: Child) : PinResult

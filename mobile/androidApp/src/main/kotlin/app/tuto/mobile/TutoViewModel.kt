@@ -28,6 +28,7 @@ sealed interface Screen {
     data object Pin : Screen
     data object Home : Screen
     data object Math : Screen
+    data object Goals : Screen
     /** An activity the tablet does not do natively yet; says so rather than pretending. */
     data class Soon(val type: String) : Screen
 }
@@ -104,6 +105,8 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
         if (type == "math") {
             math = newMathRun()
             screen = Screen.Math
+        } else if (type == "goals" || type == "gems") {
+            screen = Screen.Goals
         } else {
             screen = Screen.Soon(type)
         }

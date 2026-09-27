@@ -14,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.tuto.mobile.data.LocalStrings
+import app.tuto.mobile.ui.GoalsScreen
 import app.tuto.mobile.ui.HomeScreen
 import app.tuto.mobile.ui.LocalPalette
 import app.tuto.mobile.ui.MathScreen
@@ -41,10 +42,11 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
                 Screen.Pin -> PinScreen(vm)
                 Screen.Home -> HomeScreen(vm)
                 Screen.Math -> MathScreen(vm)
+                Screen.Goals -> GoalsScreen(vm)
                 is Screen.Soon -> SoonScreen(vm, s.type)
             }
         }
         // Back always leads home from an activity; from home it leaves the app as usual.
-        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon) { vm.home() }
+        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals) { vm.home() }
     }
 }
