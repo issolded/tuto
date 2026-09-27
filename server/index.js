@@ -6337,11 +6337,15 @@ app.post('/api/english-sessions/:sessionId/answer', async (req, res) => {
     const sheet = await englishSheet(session)
     const q = sheet[index]
     if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
-    const chosen = [...new Set(raw.map(Number))].sort((a, b) => a - b)
-    if (chosen.length !== q.pick || chosen.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length)) {
+    // "I don't know" sends skip: recorded as a wrong answer with nothing chosen, and answered with
+    // the right words like any miss — an honest way out of a question the child cannot read,
+    // which is better than a guess dressed up as an answer.
+    const skip = req.body?.skip === true
+    const chosen = skip ? [] : [...new Set(raw.map(Number))].sort((a, b) => a - b)
+    if (!skip && (chosen.length !== q.pick || chosen.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length))) {
       return res.status(400).json({ error: `choose exactly ${q.pick}` })
     }
-    const correct = chosen.length === q.correct.length && q.correct.every(i => chosen.includes(i))
+    const correct = !skip && chosen.length === q.correct.length && q.correct.every(i => chosen.includes(i))
 
     const { error } = await supabase.from('english_attempts').insert({
       session_id: session.id, child_id: session.child_id, question_index: index,

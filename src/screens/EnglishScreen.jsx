@@ -130,6 +130,21 @@ export default function EnglishScreen() {
     setAnswerFailed(false)
   }
 
+  async function skip() {
+    if (pending || answers[qIdx]) return
+    setPending(true)
+    setAnswerFailed(false)
+    try {
+      const r = await post(`/api/english-sessions/${session.session_id}/answer`, { question_index: qIdx, skip: true })
+      setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
+      setFlash({ ...r, skipped: true })
+    } catch {
+      setAnswerFailed(true)
+    } finally {
+      setPending(false)
+    }
+  }
+
   async function send() {
     const need = session.questions[qIdx].pick || 1
     if (picked.length !== need || pending || answers[qIdx]) return
@@ -282,6 +297,7 @@ export default function EnglishScreen() {
   const answer = answers[qIdx]
   const need = q.pick || 1
   const pct = ((qIdx + (answer ? 1 : 0)) / total) * 100
+  // A skipped question has nothing chosen and so no "why not" lines — only the right words.
   const rightWords = flash ? (flash.correct_indices || []).map(i => q.options[i]?.text).filter(Boolean) : []
   const whys = flash && !flash.correct ? englishWhyLines(q, flash.why, language) : []
 
@@ -327,7 +343,7 @@ export default function EnglishScreen() {
             <div className="pz-feedback" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
               <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
-                {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
+                {flash.correct ? t('math_yes', language) : flash.skipped ? say(language, 'No problem!', 'Olsun!', '¡No pasa nada!') : t('math_not_this', language)}
               </div>
               {!flash.correct && rightWords.length > 0 && (
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>
@@ -393,6 +409,14 @@ export default function EnglishScreen() {
             opacity: picked.length !== need ? 0.4 : 1, cursor: picked.length !== need ? 'default' : 'pointer',
             boxShadow: picked.length !== need ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
           }}>{pending ? '…' : t('puzzle_send', language)}</button>
+
+          {/* An honest way out: the question counts as wrong and the right words are shown. */}
+          {!answer && (
+            <button className="pz-press" onClick={skip} disabled={pending} style={{
+              alignSelf: 'center', border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
+              borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontFamily: FRED, fontWeight: 600, fontSize: 15,
+            }}>{t('rd_skip', language)}</button>
+          )}
 
           {answerFailed && (
             <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>
