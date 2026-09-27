@@ -17,12 +17,25 @@
 </style>
 </head>
 <body>
+<h1>Fındık · idle → cheer</h1>
+<div class="row" style="margin-bottom: 36px">
+  <div class="card" style="width: 300px">
+    <div id="fox" style="height: 381px; background: #ffe3c2"></div>
+    <div class="body"><span class="name">Fındık</span><button type="button" id="cheer">Doğru cevap</button></div>
+  </div>
+</div>
 <h1>Hareketli ikonlar · bekler → bitti</h1>
 <div class="row" id="row"></div>
 <script src="https://cdn.jsdelivr.net/npm/lottie-web@5.13.0/build/player/lottie.min.js"></script>
 <script>
   const icons = [['math', 'Matematik', '#4da3ff'], ['book', 'Kitabım', '#a77bff'], ['puzzle', 'Bulmaca', '#22c3a6']];
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Fox: loop 'idle' (0-120); 'cheer' (120-168) plays once and hands back to idle.
+  const fox = lottie.loadAnimation({ container: document.getElementById('fox'), renderer: 'svg', loop: false, autoplay: false, path: 'lottie/fox.json' });
+  const foxIdle = () => { fox.loop = true; still ? fox.goToAndStop(0, true) : fox.playSegments([0, 120], true); };
+  fox.addEventListener('DOMLoaded', foxIdle);
+  fox.addEventListener('complete', foxIdle);
+  document.getElementById('cheer').onclick = () => { if (!still) { fox.loop = false; fox.playSegments([120, 168], true); } };
   for (const [file, name, color] of icons) {
     const card = document.createElement('div');
     card.className = 'card';

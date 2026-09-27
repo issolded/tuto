@@ -18,6 +18,17 @@ python3 design/native-icons/build.py
 
 Önizleme: `preview.html`'i bir statik sunucuyla aç (`npx serve design/native-icons`); dosyayı çift tıklayarak açınca tarayıcı JSON'u yüklemez.
 
+## Fındık (yol arkadaşı) — `lottie/fox.json`
+
+260×330, 30 fps, saydam, ~21 KB. `python3 design/native-icons/fox.py` üretir.
+
+| Marker | Kareler | Ne |
+|---|---|---|
+| `idle` | 0–120 | 4 sn döngü: nefes, göz kırpma, kuyruk sallama, hafif kafa eğme. |
+| `cheer` | 120–168 | Doğru cevapta bir kez: çömelir, zıplar, gözler kapanıp gülümser, el sallar, yıldızlar. Son karesi `idle`'ın ilk karesiyle aynı; bitince doğrudan `idle`'a dönülür. |
+
+Oynatma: `idle` döngüde; doğru cevapta `cheer`'i bir kez oynat, bitince tekrar `idle`. Hareketi Azalt açıksa 0. karede durur, `cheer` oynamaz.
+
 ## Kurallar
 
 - Ekranda aynı anda yalnız **sıradaki** görevin ikonu `idle` oynar; diğerleri 0. karede durur. Bitmiş görev `done`'ın son karesinde (120) durur.
