@@ -554,8 +554,10 @@ function ShareVisual({ total, groups, highlight, dealt, onDeal, label, counts, c
   const perBox = Math.max(1, capacity || Math.ceil(total / groups))
   const cols = Math.min(perBox, 5)
   const boxRows = Math.ceil(perBox / cols)
-  const boxW = Math.max(52, cols * dot + (cols - 1) * GAP + PAD * 2)
-  const boxH = Math.max(52, boxRows * dot + (boxRows - 1) * GAP + PAD * 2)
+  // + 4 for the 2px border: the box is border-box, and without it a row of five came out four
+  // and one — a box of five eggs that did not look like five.
+  const boxW = Math.max(52, cols * dot + (cols - 1) * GAP + PAD * 2 + 4)
+  const boxH = Math.max(52, boxRows * dot + (boxRows - 1) * GAP + PAD * 2 + 4)
 
   const Dot = ({ faded }) => (
     <span style={{
@@ -691,6 +693,11 @@ const HELP_WORDS = {
     shapeDone:      'Hepsini saydın! Kaç tane ettiler?',
     timesTap:       'Her grubu tek tek getir 👆',
     timesDone:      'Bak, hepsi eşit! Toplam kaç eder?',
+    fillTap:        'Kutuları sırayla doldur — noktalara dokun! 📦',
+    fillExact:      'Hepsi kutulara girdi! Kaç kutu oldu?',
+    fillRem:        'Bazıları dolu bir kutuya sığmadı — onlar kalan. Kaç tane?',
+    fillUp:         'Son kutu dolmadı — ama onlara da yer lazım! Onu da say.',
+    fillDown:       'Son kutu dolmadı — yalnız dolu kutuları say.',
     showHint:       'İpucu göster',
     moreHint:       'Daha fazla ipucu',
     guessTitle:     n => `Sen ${n} dedin — herkese ${n} tane verelim mi?`,
@@ -715,6 +722,11 @@ const HELP_WORDS = {
     shapeDone:      '¡Los has contado todos! ¿Cuántos eran?',
     timesTap:       'Trae un grupo cada vez 👆',
     timesDone:      '¡Mira, todos los grupos son iguales! ¿Cuántos hay en total?',
+    fillTap:        'Llena las cajas una a una: ¡toca los puntos! 📦',
+    fillExact:      '¡Todos están en cajas! ¿Cuántas cajas hay?',
+    fillRem:        'Algunos no caben en una caja llena: son el resto. ¿Cuántos son?',
+    fillUp:         'La última caja no está llena, ¡pero esos también necesitan sitio! Cuéntala.',
+    fillDown:       'La última caja no está llena: cuenta solo las llenas.',
     showHint:       'Ver la ayuda',
     moreHint:       'Más ayuda',
     guessTitle:     n => `Has dicho ${n} — ¿le damos ${n} a cada uno?`,
@@ -739,6 +751,11 @@ const HELP_WORDS = {
     shapeDone:      'You counted them all! How many was that?',
     timesTap:       'Bring in one group at a time 👆',
     timesDone:      'See — every group is the same! How many altogether?',
+    fillTap:        'Fill the boxes one by one — tap the dots! 📦',
+    fillExact:      'They all fit in boxes! How many boxes?',
+    fillRem:        'Some did not fit in a full box — they are the remainder. How many?',
+    fillUp:         'The last box is not full — but those still need a place! Count it too.',
+    fillDown:       'The last box is not full — only count the full ones.',
     showHint:       'Show help',
     moreHint:       'More help',
     guessTitle:     n => `You said ${n} — shall we give everyone ${n}?`,
@@ -827,6 +844,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // the division help gets: three attempts of their own first.
   const shapeReveal = !!shapes && guessRound >= GUESS_ROUNDS
   const counting = visual?.kind === 'count' ? visual : null
+  // Grouping, the other half of division: boxes of a fixed size filled one after another —
+  // "how many 5s in 30", "? × 4 = 28", and the remainder questions, where what happens to the
+  // last, part-filled box IS the question (a car is still needed; a box of eggs is not full).
+  const fill = visual?.kind === 'fill' ? visual : null
+  const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
   // Both multiplication framings draw the same way — rows of a grid, or groups in a row —
@@ -834,11 +856,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -863,7 +885,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -1086,6 +1108,38 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: done ? GREEN : MATH_DEEP }}>
           {dealt}
         </div>
+      </div>
+    )
+  } else if (fill) {
+    // One tap fills the next box; `dealt` counts boxes. The pool empties as the boxes fill, so
+    // the child watches the total being used up in equal lots — and the last box, when the
+    // division is not exact, is left part-full with its empty places showing.
+    const filled = Math.min(fillBoxes, dealt)
+    const counts = Array.from({ length: fillBoxes }, (_, i) => (i < filled ? Math.min(fill.size, fill.total - i * fill.size) : 0))
+    const done = filled >= fillBoxes
+    const exact = fill.total % fill.size === 0
+    const doneWord = !exact && fill.mode === 'up' ? t.fillUp
+      : !exact && fill.mode === 'down' ? t.fillDown
+        : !exact && fill.mode === 'remainder' ? t.fillRem
+          : t.fillExact
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 280,
+        }}>
+          {done ? doneWord : t.fillTap}
+        </div>
+        <ShareVisual
+          total={fill.total}
+          groups={fillBoxes}
+          highlight={0}
+          dealt={0}
+          counts={counts}
+          capacity={fill.size}
+          onDeal={() => setDealt(d => Math.min(fillBoxes, d + 1))}
+        />
       </div>
     )
   } else if (share) {
@@ -2033,7 +2087,7 @@ export default function MathScreen() {
     const canHelp = hasRealHelp(
       questions[qIdx] || '', qTypes[qIdx], tProblem?.topic,
       why ? [why, ...(baseHints ?? [])] : baseHints,
-      tProblem?.visual,
+      tProblem?.help ?? tProblem?.visual,
     )
 
     if (!isCorrect && Number(age) <= 8 && canHelp) {
@@ -2062,7 +2116,7 @@ export default function MathScreen() {
     const newAnswers = [...userAnswers, Number(String(input).trim())]
 
     const tProblem = templateProblems[qIdx]
-    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.visual)
+    const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.help ?? tProblem?.visual)
     if (!isCorrect && Number(age) <= 8 && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
@@ -2635,7 +2689,10 @@ export default function MathScreen() {
               hintSteps={choiceMistake
                 ? [choiceMistake, ...(templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx] ?? [])]
                 : (templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx])}
-              visual={templateProblems[qIdx]?.visual}
+              // The help picture when the template gives one — the question's own picture
+              // (a price list, a chart) is for reading the question; the help picture is for
+              // working it out, and a story problem has only the second.
+              visual={templateProblems[qIdx]?.help ?? templateProblems[qIdx]?.visual}
               onDone={() => { setHelpVisible(false); setChoiceMistake(null); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}

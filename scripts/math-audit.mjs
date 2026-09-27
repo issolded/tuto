@@ -316,6 +316,17 @@ for (const age of AGES) {
         catch (e) { fail(where, `üretim hatası: ${e.message}`); break }
 
         const all = textOf(p)
+        // The help picture has to lead to the same answer as the key: a box-filling picture whose
+        // boxes come out to 5 on a question marked 6 teaches the wrong thing with the right method.
+        if (p.help?.kind === 'fill') {
+          const h = p.help
+          const want = { exact: h.total / h.size, remainder: h.total % h.size, up: Math.ceil(h.total / h.size), down: Math.floor(h.total / h.size) }[h.mode]
+          if (want !== Number(p.correct_answer)) fail(where, `yardım resmi ${want} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          if (h.mode === 'exact' && h.total % h.size) fail(where, 'tam bölünmeyen "exact" kutu resmi', p.question_text)
+        }
+        if (p.help?.kind === 'groups' && p.help.groups * p.help.per !== Number(p.correct_answer)) {
+          fail(where, `yardım grupları ${p.help.groups}×${p.help.per}, cevap ${p.correct_answer}`, p.question_text)
+        }
         // 2. undefined / NaN anywhere a child can read
         if (/undefined|NaN|\[object/.test(all)) fail(where, 'metinde undefined/NaN', p.question_text)
         // 1. options well-formed
@@ -511,6 +522,35 @@ for (const [year, c] of Object.entries(coverage)) {
     (c.missing.length ? `   eksik: ${c.missing.join(', ')}` : ''))
 }
 console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / total * 100)})\n`)
+
+// ── 8. help that teaches, ages 5-8 ───────────────────────────────────────────
+// After a wrong answer a child of eight or under gets the help panel. A question with a picture
+// or tool of its own is taught; one without falls back to the 💡 hint's own sentences, which is
+// the same text twice. Reported rather than failed: the number is a direction, and each tool
+// added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
+{
+  const TAUGHT = new Set(['share', 'fill', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
+  const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
+  console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
+  for (const age of [5, 6, 7, 8]) {
+    const year = ageToSchoolYear(age)
+    const level = clampLevelToAge(startingLevelForAge(age), age)
+    const tts = BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)
+    let taught = 0, n = 0
+    for (let i = 0; i < 1500; i++) {
+      const p = generateProblem(tts[i % tts.length], level, null, 'en')
+      n++
+      const pic = p.help ?? p.visual
+      const nums = numsIn(p.question_text)
+      const small = (p.topic === 'addition' || p.topic === 'subtraction') && !p.visual && nums.length === 2
+        && nums[0] + nums[1] <= 30 && (!p.question_text.includes('=') || /=\s*\?\s*$/.test(p.question_text))
+      if ((pic && TAUGHT.has(pic.kind)) || small || bareSeq(p.question_text)) taught++
+    }
+    console.log(`  ${age} yaş  %${Math.round(taught / n * 100)} öğretici, %${100 - Math.round(taught / n * 100)} ipucu metninin tekrarı`)
+  }
+  console.log('')
+}
 
 // ── report ───────────────────────────────────────────────────────────────────
 if (!findings.length) {

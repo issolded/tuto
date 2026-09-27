@@ -158,7 +158,7 @@ export default function MathLab() {
             questionType="symbolic"
             templateTopic={problem.topic}
             hintSteps={problem.hint_steps}
-            visual={problem.visual}
+            visual={problem.help ?? problem.visual}
             onDone={() => { setHelp(null); setInput(''); setResult(null) }}
             onHelpUsed={() => {}}
             language={lang}

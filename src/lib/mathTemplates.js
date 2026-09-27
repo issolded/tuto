@@ -4880,6 +4880,12 @@ const YOUNG_MULT = [
                                    `Cada libro de una colección tiene ${per} páginas. ¿Cuántas páginas hay en ${n} libros?`) },
 ]
 
+// `help` is what the help panel draws after a wrong answer — separate from `visual` (the
+// question's own picture) and from `hint_steps` (the 💡 nudge), so a story problem can be
+// worked on a picture it never showed. Dots past this stop being countable on a phone, and the
+// panel falls back to the written steps.
+export const HELP_DOTS_MAX = 80
+
 function youngMultStory(level, lang) {
   const band = bandForLevel(level)
   const tables = tableFor(band)
@@ -4898,6 +4904,7 @@ function youngMultStory(level, lang) {
     topic: 'multiplication-word', level,
     question_text: c.q(lang, n, per), format: 'numeric', correct_answer: n * per,
     operandKey: `ymult:${c.id}:${n}:${per}`,
+    ...(n * per <= HELP_DOTS_MAX && n <= 12 && per <= 12 ? { help: { kind: 'groups', groups: n, per } } : {}),
     hint_steps: [
       say(lang, `That is ${n} groups of ${per}: ${n} × ${per}.`, `Bu, ${per} tanelik ${n} grup demek: ${n} × ${per}.`,
                 `Son ${n} grupos de ${per}: ${n} × ${per}.`),
@@ -4919,6 +4926,7 @@ function missingFactor(level, lang) {
   return {
     topic: 'multiplication-word', level, question_text: q, format: 'numeric', correct_answer: k,
     operandKey: `mfac:${t}:${k}`,
+    ...(p <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: p, size: t, mode: 'exact' } } : {}),
     hint_steps: [
       say(lang, `Which number in the ${t} times table makes ${p}?`, `${t} çarpım tablosunda hangi sayı ${p} eder?`,
                 `¿Qué número de la tabla del ${t} da ${p}?`),
@@ -5003,6 +5011,7 @@ function youngDivision(level, lang) {
       topic: 'division-word', level,
       question_text: say(lang, `How many ${d}s are there in ${d * k}?`, `${d * k} sayısında kaç tane ${d} vardır?`, `¿Cuántas veces cabe el ${d} en ${d * k}?`),
       format: 'numeric', correct_answer: k, operandKey: `ygroup:${d}:${k}`,
+      ...(d * k <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: d * k, size: d, mode: 'exact' } } : {}),
       hint_steps: [
         say(lang, `Count up in ${d}s until you reach ${d * k}.`, `${d * k} sayısına ulaşana kadar ${trDist(d)} ${trDist(d)} say.`, `Cuenta de ${d} en ${d} hasta llegar a ${d * k}.`),
         say(lang, `The number of jumps is the answer.`, `Kaç kez saydığın cevaptır.`, `El número de saltos es la respuesta.`),
@@ -5042,6 +5051,7 @@ function youngDivision(level, lang) {
       question_text: say(lang, `What is the remainder? ${n} ÷ ${d} = ${q} r ?`, `Kalan kaçtır? ${n} ÷ ${d} = ${q} kalan ?`,
                                `¿Cuál es el resto? ${n} ÷ ${d} = ${q} y resto ?`),
       format: 'numeric', correct_answer: rem, operandKey: `yrem:${n}:${d}`,
+      ...(n <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: n, size: d, mode: 'remainder' } } : {}),
       hint_steps: [
         say(lang, `${q} lots of ${d} is ${q} × ${d}.`, `${q} tane ${d}, ${q} × ${d} eder.`, `${q} veces ${d} es ${q} × ${d}.`),
         say(lang, `What is left of ${n} after that?`, `Bundan sonra ${n} sayısından geriye ne kalır?`, `¿Qué queda de ${n} después de eso?`),
@@ -5055,6 +5065,7 @@ function youngDivision(level, lang) {
     topic: 'division-word', level,
     question_text: c.q(lang, n, d), format: 'numeric', correct_answer: up ? q + 1 : q,
     operandKey: `yround:${up ? 'u' : 'd'}:${n}:${d}`,
+    ...(n <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: n, size: d, mode: up ? 'up' : 'down' } } : {}),
     // The hint shows the way, not the sum: "21 ÷ 4 = 5 remainder 1" was the answer itself for the
     // "fill completely" questions, and one step from it for the "how many are needed" ones.
     hint_steps: [
