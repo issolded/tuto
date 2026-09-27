@@ -699,6 +699,7 @@ const HELP_WORDS = {
     tallyTap:       'Turuncu satıra dokun: her dokunuş bir beşli ya da bir tek çizgi sayar 👆',
     fracCountAll:   'Önce bütün parçaları say — çubuğa dokun 👆',
     coinsTap:       'Paralara sırayla dokun, toplam büyüsün 🪙',
+    stepsIntro:     'Adım adım gidelim: her kutuya sonucu yaz 👇',
     sortTap:        'Her kutuya dokun: bu sayı o etikete uyuyor mu? ✓ ya da ✗',
     fracCompare:    'Hepsi aynı uzunlukta. Boyalı parçalardan hangisi en uzun? 👀',
     fillExact:      'Hepsi kutulara girdi! Kaç kutu oldu?',
@@ -735,6 +736,7 @@ const HELP_WORDS = {
     tallyTap:       'Toca la fila naranja: cada toque cuenta un grupo de cinco o una raya suelta 👆',
     fracCountAll:   'Primero cuenta todas las partes: toca la barra 👆',
     coinsTap:       'Toca las monedas una a una y mira cómo sube el total 🪙',
+    stepsIntro:     'Vamos paso a paso: escribe el resultado de cada uno 👇',
     sortTap:        'Toca cada casilla: ¿este número cumple esa etiqueta? ✓ o ✗',
     fracCompare:    'Todas miden lo mismo. ¿Cuál de las partes coloreadas es la más larga? 👀',
     fillExact:      '¡Todos están en cajas! ¿Cuántas cajas hay?',
@@ -771,6 +773,7 @@ const HELP_WORDS = {
     tallyTap:       'Tap the orange row: each tap counts a five or a single line 👆',
     fracCountAll:   'First count all the parts — tap the bar 👆',
     coinsTap:       'Tap the coins one by one and watch the total grow 🪙',
+    stepsIntro:     'Step by step: type the answer to each one 👇',
     sortTap:        'Tap each box: does this number fit that label? ✓ or ✗',
     fracCompare:    'They are all the same length. Which coloured piece is the longest? 👀',
     fillExact:      'They all fit in boxes! How many boxes?',
@@ -884,6 +887,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Venn and Carroll: each number tested against each label, one tap per cell, so "belongs in
   // the shaded part" becomes two yes/no questions the child answers for every option.
   const sortTest = visual?.kind === 'sorttest' ? visual : null
+  // A worked example the child does: a short chain of sums, each typed and checked before the
+  // next appears, with the question's picture (a scale, a rectangle) kept above it.
+  const stepsHelp = visual?.kind === 'steps' ? visual : null
   const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
@@ -892,11 +898,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !coins && !sortTest && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !coins && !sortTest && !stepsHelp && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || !!coins || !!sortTest || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || !!coins || !!sortTest || !!stepsHelp || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -921,7 +927,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || coins || sortTest || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || coins || sortTest || stepsHelp || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -1144,6 +1150,73 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: done ? GREEN : MATH_DEEP }}>
           {dealt}
         </div>
+      </div>
+    )
+  } else if (stepsHelp) {
+    const steps = stepsHelp.steps
+    const doneCount = steps.findIndex((_, i) => solvedArrows[i] === undefined)
+    const active = doneCount === -1 ? null : doneCount
+    const decimal = steps.some(st => !Number.isInteger(st.a))
+    const show = (x) => dnum(x, language)
+    const confirm = () => {
+      if (active === null || !arrowInput) return
+      if (Math.abs(Number(arrowInput) - steps[active].a) < 1e-9) {
+        setSolvedArrows({ ...solvedArrows, [active]: steps[active].a })
+        setTutoBubble(active === steps.length - 1
+          ? say(language, 'All done! Now type that in as your answer 💪', 'Bitti! Şimdi bunu cevap olarak yaz 💪', '¡Listo! Ahora escríbelo como respuesta 💪')
+          : say(language, 'Yes! Next one 👇', 'Evet! Sıradaki 👇', '¡Sí! La siguiente 👇'))
+      } else {
+        setTutoBubble(say(language, 'Not quite — try that one again 🔢', 'Tam değil — bunu bir daha dene 🔢', 'Casi — prueba esa otra vez 🔢'))
+      }
+      setArrowInput('')
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        {stepsHelp.picture && (
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <MathGeometry visual={stepsHelp.picture} language={language} description={question} />
+            <MathFigure visual={stepsHelp.picture} language={language} description={question} />
+          </div>
+        )}
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 300,
+        }}>{tutoBubble || t.stepsIntro}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 320 }}>
+          {steps.slice(0, active === null ? steps.length : active + 1).map((st, i) => {
+            const solved = solvedArrows[i] !== undefined
+            return (
+              <div key={i} style={{
+                background: solved ? `${GREEN}12` : '#fff7ef', border: `2px ${solved ? 'solid' : 'dashed'} ${solved ? GREEN : ORANGE}`,
+                borderRadius: 14, padding: '9px 12px', animation: 'pop .25s ease both',
+              }}>
+                {st.say && <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.35, marginBottom: 4 }}>{st.say}</div>}
+                <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 21, color: INK, textAlign: 'center' }}>
+                  {st.q ? `${st.q} = ` : ''}<span style={{ color: solved ? GREEN : ORANGE }}>{solved ? show(st.a) : (i === active && arrowInput ? arrowInput.replace('.', language === 'en' ? '.' : ',') : '?')}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        {active !== null && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
+            {['1','2','3','4','5','6','7','8','9','0', ...(decimal ? ['.'] : []), '⌫','✓'].map(k => (
+              <button key={k} className="math-press"
+                onClick={() => {
+                  if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
+                  if (k === '✓') { confirm(); return }
+                  if (k === '.' && arrowInput.includes('.')) return
+                  if (arrowInput.length < 7) setArrowInput(v => v + k)
+                }}
+                style={{
+                  width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                  background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
+                  color: k === '✓' || k === '⌫' ? 'white' : INK,
+                }}>{k === '.' && language !== 'en' ? ',' : k}</button>
+            ))}
+          </div>
+        )}
       </div>
     )
   } else if (sortTest) {

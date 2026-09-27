@@ -1147,6 +1147,28 @@ function multSplitHint(a, b, lang) {
                    `Separa ${num(big, lang)} en ${num(p, lang)} y ${num(q, lang)}: calcula ${small} × ${num(p, lang)} y ${small} × ${num(q, lang)}, y suma los dos.`)
 }
 
+// A worked example the child does: each step a small sum with a blank, checked as it is typed,
+// the last one the question's own answer. For the questions whose method is a short chain of
+// easy sums — split a big multiplication, convert a unit, read a scale — where a picture would
+// not teach and the hint only names the chain.
+function stepsHelp(steps, picture) {
+  return { help: { kind: 'steps', steps, ...(picture ? { picture } : {}) } }
+}
+
+// 17 × 8 as 10 × 8 and 7 × 8, then the two added — the same split multSplitHint describes.
+function multSplitSteps(a, b, lang) {
+  const [big, small] = a >= b ? [a, b] : [b, a]
+  const parts = placeParts(big)
+  if (parts.length < 2 || big > 999) return {}
+  const [p, q] = [parts[0], big - parts[0]]
+  const N = x => num(x, lang)
+  return stepsHelp([
+    { q: `${N(small)} × ${N(p)}`, a: small * p },
+    { q: `${N(small)} × ${N(q)}`, a: small * q },
+    { q: `${N(small * p)} + ${N(small * q)}`, a: small * big },
+  ])
+}
+
 // Each context: `size` is the amount in one group, `count` the number of groups, both per
 // year; `text` writes the question and `group` the first hint (what one group is).
 const MULT_CONTEXTS = [
@@ -3995,6 +4017,11 @@ function measureConvert(level, lang) {
     format: 'numeric',
     correct_answer: toSmall ? small : big,
     operandKey: `meas:conv:${kind}:${big}:${toSmall ? 'd' : 'u'}`,
+    ...stepsHelp(toSmall
+      ? [{ q: `${big} × ${num(u.per, lang)}`, a: small, say: say(lang, `Each ${u.big.replace(/s$/, '')} is ${num(u.per, lang)} ${u.small}, and there are ${big} of them:`,
+            `Her ${u.big} ${num(u.per, lang)} ${u.small}, ve ${big} tane var:`, `Cada ${u.big.replace(/s$/, '')} son ${num(u.per, lang)} ${u.small}, y hay ${big}:`) }]
+      : [{ q: `${num(small, lang)} ÷ ${num(u.per, lang)}`, a: big, say: say(lang, `How many lots of ${num(u.per, lang)} ${u.small} are there?`,
+            `İçinde kaç tane ${num(u.per, lang)} ${u.small} var?`, `¿Cuántas veces ${num(u.per, lang)} ${u.small} hay?`) }]),
     hint_steps: [
       say(lang, `1 ${u.big} is ${num(u.per, lang)} ${u.small}.`,
                 `1 ${u.big} = ${num(u.per, lang)} ${u.small}.`,
@@ -4089,6 +4116,10 @@ function measurePerimeter(level, lang) {
     format: 'numeric',
     correct_answer: 2 * (w + h),
     operandKey: `meas:per:${w}:${h}`,
+    ...stepsHelp([
+      { q: `${w} + ${h}`, a: w + h, say: say(lang, 'One long side and one short side:', 'Bir uzun kenar, bir kısa kenar:', 'Un lado largo y uno corto:') },
+      { q: `${w + h} + ${w + h}`, a: 2 * (w + h), say: say(lang, 'The other two sides are the same again:', 'Öbür iki kenar da aynısı:', 'Los otros dos lados son iguales:') },
+    ], { kind: 'geometry', shape: 'rect', base: w, height: h, ask: 'perimeter' }),
     hint_steps: [
       say(lang, `Perimeter is the whole way round the outside.`,
                 `Çevre, dışından bir tam turdur.`,
@@ -4936,7 +4967,7 @@ function youngMultStory(level, lang) {
     topic: 'multiplication-word', level,
     question_text: c.q(lang, n, per), format: 'numeric', correct_answer: n * per,
     operandKey: `ymult:${c.id}:${n}:${per}`,
-    ...(n * per <= HELP_DOTS_MAX && n <= 12 && per <= 12 ? { help: { kind: 'groups', groups: n, per } } : {}),
+    ...(n * per <= HELP_DOTS_MAX && n <= 12 && per <= 12 ? { help: { kind: 'groups', groups: n, per } } : multSplitSteps(n, per, lang)),
     hint_steps: [
       say(lang, `That is ${n} groups of ${per}: ${n} × ${per}.`, `Bu, ${per} tanelik ${n} grup demek: ${n} × ${per}.`,
                 `Son ${n} grupos de ${per}: ${n} × ${per}.`),
@@ -5248,12 +5279,36 @@ function scaleReading(level, lang, types) {
                      `Luego cuenta los pasos desde ${label0(spec.min, lang)} hasta la flecha.`)
   }
   const answer = v.value
+  // The scale read in three moves: what one small step is worth (from the two labels either side
+  // of the reading), how many steps past the lower label the reading is, and the two together.
+  // Not the ruler: a pencil from 0 is read straight off, there is no step to work out.
+  let scaleSteps = {}
+  if (type !== 'ruler') {
+    const lo = type === 'line' ? v.min : Math.floor((answer - (v.min || 0)) / v.major) * v.major + (v.min || 0)
+    const hi = type === 'line' ? v.max : lo + v.major
+    const per = v.minor
+    const n = Math.round((hi - lo) / per), m = Math.round((answer - lo) / per)
+    const L = x => label0(x, lang)
+    if (m >= 1 && n >= 2) scaleSteps = stepsHelp([
+      { q: `${L(hi - lo)} ÷ ${n}`, a: Math.round((hi - lo) / n * 1000) / 1000,
+        say: say(lang, `From ${L(lo)} to ${L(hi)} is ${L(hi - lo)}, in ${n} small steps. One step is:`,
+                       `${L(lo)} ile ${L(hi)} arası ${L(hi - lo)}, ${n} küçük adımda. Bir adım:`,
+                       `De ${L(lo)} a ${L(hi)} hay ${L(hi - lo)}, en ${n} pasos pequeños. Un paso es:`) },
+      { q: '', a: m,
+        say: say(lang, `On the picture, count the small steps from ${L(lo)} up to the reading. How many?`,
+                       `Resimde ${L(lo)} sayısından gösterilen yere kadar küçük adımları say. Kaç tane?`,
+                       `En el dibujo, cuenta los pasos pequeños desde ${L(lo)} hasta la marca. ¿Cuántos?`) },
+      { q: `${L(lo)} + ${m} × ${L(per)}`, a: answer,
+        say: say(lang, `So the reading is:`, `Yani gösterilen değer:`, `Así que la marca es:`) },
+    ], v)
+  }
   return {
     topic: type === 'line' ? 'place-value' : 'measurement', level,
     question_text: q,
     format: Number.isInteger(answer) ? 'numeric' : 'decimal',
     correct_answer: answer,
     operandKey: `scale:${type}:${v.max}:${v.minor}:${answer}`,
+    ...scaleSteps,
     hint_steps: [hint, ...(unit ? [unit] : [])],
     visual: v,
   }

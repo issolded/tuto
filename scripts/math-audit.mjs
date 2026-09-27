@@ -341,6 +341,11 @@ for (const age of AGES) {
             : h.mode === 'add' ? `${h.a + h.b}/${h.parts}` : `1/${Math.min(...h.denoms)}`
           if (got !== String(p.correct_answer)) fail(where, `kesir yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
         }
+        if (p.help?.kind === 'steps') {
+          const last = p.help.steps[p.help.steps.length - 1]
+          if (Math.abs(last.a - Number(p.correct_answer)) > 1e-9) fail(where, `adım yardımı ${last.a} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          for (const st of p.help.steps) if (!Number.isFinite(st.a) || /undefined|NaN/.test(`${st.q} ${st.say ?? ''}`)) fail(where, 'bozuk yardım adımı', JSON.stringify(st))
+        }
         if (p.help?.kind === 'sorttest') {
           const hit = p.help.rows.filter(r => r.fits[0] === p.help.want[0] && r.fits[1] === p.help.want[1])
           if (hit.length !== 1 || String(hit[0].n) !== String(p.correct_answer)) fail(where, `Venn yardımında ${hit.length} sayı uyuyor`, p.question_text)
@@ -555,7 +560,7 @@ console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / to
 // the same text twice. Reported rather than failed: the number is a direction, and each tool
 // added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
 {
-  const TAUGHT = new Set(['share', 'fill', 'jumps', 'tally', 'fracbar', 'coins', 'sorttest', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const TAUGHT = new Set(['share', 'fill', 'jumps', 'tally', 'fracbar', 'coins', 'sorttest', 'steps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
   const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
   const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
   console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
