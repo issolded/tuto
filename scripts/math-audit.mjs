@@ -39,6 +39,9 @@ import { generateProblem, TOPICS, num, measureGridCells } from '../src/lib/mathT
 import { templateTopicFor, startingLevelForAge, clampLevelToAge } from '../src/lib/mathCurriculum.js'
 import { BRITISH_CURRICULUM, ageToSchoolYear, maxQuestionChars } from '../src/lib/gemini.js'
 
+// Numbers a child reads in a question, thousands separators (1,000 / 1.000) removed.
+const numsInText = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
+
 // "−0.05", "0,4", "40%", "4/10" → a number; the choices print numbers the way the reader reads them.
 function asNumber(v) {
   const t = String(v).replace('−', '-').replace(',', '.').trim()
@@ -355,6 +358,39 @@ for (const age of AGES) {
           const got = h.mode === 'sum' ? h.coins.reduce((x, y) => x + y, 0) : h.target / h.coin
           if (got !== Number(p.correct_answer)) fail(where, `para yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
         }
+        // Place-value chart: the answer is recomputed from what the chart holds, by a different
+        // road than the template took — digit arrangements by trying every permutation — and the
+        // chart's numbers have to be the ones the question prints.
+        if (p.help?.kind === 'pv') {
+          const h = p.help, ans = Number(p.correct_answer)
+          const qNums = numsInText(p.question_text)
+          const cols = h.places.join(',')
+          if (cols !== '10,1' && cols !== '100,10,1') fail(where, `basamak tablosu sütunları ${cols}`, p.question_text)
+          let got = null
+          if (h.mode === 'build') {
+            got = h.parts.reduce((x, q) => x + q.place * q.count, 0)
+            if (h.parts.some(q => q.count < 1 || q.count > 9 || !h.places.includes(q.place))) fail(where, 'basamak parçası sütuna sığmıyor', p.question_text)
+          } else if (h.mode === 'missing') {
+            got = h.n - h.given.reduce((x, y) => x + y, 0)
+            if (!qNums.includes(h.n) || h.given.some(g => !qNums.includes(g))) fail(where, 'eksik parça yardımı sorudaki sayılarla uyuşmuyor', p.question_text)
+          } else if (h.mode === 'shift') {
+            got = h.up ? h.start + h.amount : h.start - h.amount
+            if (!qNums.includes(h.start) || !qNums.includes(h.amount)) fail(where, 'kaydırma yardımı sorudaki sayılarla uyuşmuyor', p.question_text)
+          } else if (h.mode === 'compare') {
+            got = h.want === 'max' ? Math.max(...h.numbers) : Math.min(...h.numbers)
+            const opts = (p.options || []).map(o => Number(o.value)).sort((x, y) => x - y).join(',')
+            if (opts !== [...h.numbers].sort((x, y) => x - y).join(',')) fail(where, 'karşılaştırma yardımı şıklarla uyuşmuyor', p.question_text)
+          } else if (h.mode === 'arrange') {
+            const perms = xs => xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map(r => [x, ...r]))
+            const made = perms(h.digits).filter(r => r[0] !== 0).map(r => Number(r.join('')))
+            got = h.want === 'max' ? Math.max(...made) : Math.min(...made)
+            if ([...h.digits].sort().join('') !== (p.question_text.match(/\d(?:, \d)+/)?.[0] ?? '').split(', ').sort().join('')) fail(where, 'dizme yardımının rakamları soruda yok', `${p.question_text} ${h.digits}`)
+          } else if (h.mode === 'digit') {
+            got = (Math.floor(h.n / h.place) % 10) * h.place
+            if (!qNums.includes(h.n)) fail(where, 'rakam değeri yardımı sorudaki sayıyla uyuşmuyor', p.question_text)
+          }
+          if (got !== ans) fail(where, `basamak yardımı (${h.mode}) ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
         if (p.help?.kind === 'groups' && p.help.groups * p.help.per !== Number(p.correct_answer)) {
           fail(where, `yardım grupları ${p.help.groups}×${p.help.per}, cevap ${p.correct_answer}`, p.question_text)
         }
@@ -582,9 +618,29 @@ console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / to
 // the same text twice. Reported rather than failed: the number is a direction, and each tool
 // added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
 {
-  const TAUGHT = new Set(['share', 'fill', 'jumps', 'tally', 'fracbar', 'coins', 'sorttest', 'steps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const TAUGHT = new Set(['pv', 'share', 'fill', 'jumps', 'tally', 'fracbar', 'coins', 'sorttest', 'steps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
   const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
   const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
+  // Under 9 a wrong option's "why" is shown and the child tries again, so it must not name the
+  // answer ("compare it with 696", "1/2 cuts it into only 2"). Numbers and fractions only — a
+  // label such as "multiple of 5" or a compass word is part of the question, not a give-away —
+  // and not when the question or its picture already prints the answer.
+  for (const age of [5, 6, 7, 8]) {
+    const year = ageToSchoolYear(age)
+    const level = clampLevelToAge(startingLevelForAge(age), age)
+    for (const tt of BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)) {
+      for (let i = 0; i < 300; i++) {
+        const p = generateProblem(tt, level, null, 'en')
+        if (p.format !== 'choice' || !/^[\d/.]+$/.test(String(p.correct_answer))) continue
+        const ans = String(p.correct_answer)
+        if (p.question_text.includes(ans) || JSON.stringify(p.visual ?? {}).includes(ans)) continue
+        const esc = ans.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+        const re = new RegExp(`(^|[^\\w/.])${esc}($|[^\\w/])`)
+        const leak = (p.options || []).find(o => String(o.value) !== ans && o.why && re.test(o.why))
+        if (leak) { fail(`${age} yaş/${tt}`, 'yanlış şık açıklaması cevabı söylüyor', `${p.question_text} → ${leak.why}`); break }
+      }
+    }
+  }
   console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
   for (const age of [5, 6, 7, 8]) {
     const year = ageToSchoolYear(age)

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MathGeometry from '../components/MathGeometry'
 import MathChart from '../components/MathChart'
+import PlaceValueHelp from '../components/PlaceValueHelp'
 import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock } from '../components/ClockFace'
@@ -839,7 +840,7 @@ function QuestionPicture({ visual, language, description }) {
 // Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
 // screen on demand — in a real session a given one turns up once in ten questions and only
 // after a wrong answer.
-export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
+export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound, mistake = null }) {
   const t = HELP_WORDS[language] ?? HELP_WORDS.en
 
   const nums    = numbersIn(question)
@@ -908,6 +909,8 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // A worked example the child does: a short chain of sums, each typed and checked before the
   // next appears, with the question's picture (a scale, a rectangle) kept above it.
   const stepsHelp = visual?.kind === 'steps' ? visual : null
+  // Place value on a hundreds / tens / ones chart the child fills with blocks (PlaceValueHelp).
+  const pvHelp = visual?.kind === 'pv' ? visual : null
   const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
@@ -916,11 +919,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !coins && !sortTest && !stepsHelp && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !coins && !sortTest && !stepsHelp && !pvHelp && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || !!coins || !!sortTest || !!stepsHelp || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || !!coins || !!sortTest || !!stepsHelp || !!pvHelp || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -945,7 +948,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || coins || sortTest || stepsHelp || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || coins || sortTest || stepsHelp || pvHelp || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -1270,6 +1273,8 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         </div>
       </div>
     )
+  } else if (pvHelp) {
+    sayalim = <PlaceValueHelp key={JSON.stringify(pvHelp)} help={pvHelp} language={language} />
   } else if (coins) {
     const coin = (v, lit, key) => (
       <div key={key} style={{
@@ -2109,6 +2114,12 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         </div>
       )}
 
+      {/* Why the chosen option was wrong. Written steps already open with it (it is their first
+          step); a hands-on help has no steps, so without this the child lost the one sentence
+          about their own answer the moment the picture appeared. */}
+      {mistake && !hasStepHints && !guessMode && (
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14, color: '#b85b10', background: '#fff3e6', borderRadius: 14, padding: '8px 14px', textAlign: 'center' }}>{mistake}</div>
+      )}
       <div style={{ minHeight: 140 }}>
         {guessMode ? guessPanel : onePanel ? sayalim : (
           <>
@@ -3190,6 +3201,7 @@ export default function MathScreen() {
               // (a price list, a chart) is for reading the question; the help picture is for
               // working it out, and a story problem has only the second.
               visual={templateProblems[qIdx]?.help ?? templateProblems[qIdx]?.visual}
+              mistake={choiceMistake}
               onDone={() => { setHelpVisible(false); setChoiceMistake(null); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}

@@ -227,6 +227,15 @@ function placeParts(n) {
   return digits.split('').map((d, i) => Number(d) * 10 ** (digits.length - 1 - i)).filter(Boolean)
 }
 
+// The columns a place-value chart needs for these numbers: tens and ones up to 99, hundreds up
+// to 999. Nothing past hundreds — the chart is help for ages 8 and under, and a thousands block
+// is a cube a phone cannot draw legibly. Null when a number needs more, so no help is offered.
+function pvPlaces(...ns) {
+  const top = Math.max(...ns.map(Math.abs))
+  if (top >= 1000) return null
+  return top >= 100 ? [100, 10, 1] : [10, 1]
+}
+
 // The same rule, applied to a number the templates did not choose. The model writes the topics
 // that have no template — decimals, rounding, angles — and a rule left to a model drifts back
 // to whatever its prose allows, so the prompt asks and this decides. Takes the operand as
@@ -989,9 +998,11 @@ function fractionCompare(level, lang) {
         `Doğru — sadece ${d} parçaya bölünmüş, o yüzden her parça en büyüğü.`,
         `Correcto: solo está partida en ${d}, así que cada trozo es el más grande.`) }
     : { value: `1/${d}`, why: say(lang,
-        `1/${d} cuts the whole into ${d} pieces; 1/${smallest} cuts it into only ${smallest}, so those pieces are bigger.`,
-        `1/${d} bütünü ${d} parçaya böler; 1/${smallest} ise sadece ${smallest} parçaya böler, o parçalar daha büyük.`,
-        `1/${d} parte la unidad en ${d} trozos; 1/${smallest} la parte solo en ${smallest}, así que esos trozos son más grandes.`) })
+        // The rule, not the winner: under 9 the child reads this and tries again, and naming
+        // the smallest denominator here was the answer.
+        `1/${d} cuts the whole into ${d} pieces. Fewer pieces means bigger pieces — is one of them cut into fewer?`,
+        `1/${d} bütünü ${d} parçaya böler. Parça sayısı azaldıkça parçalar büyür — daha az parçaya bölünen var mı?`,
+        `1/${d} parte la unidad en ${d} trozos. Menos trozos significa trozos más grandes: ¿hay alguna partida en menos?`) })
 
   return {
     topic: 'fraction-of-number', level,
@@ -2253,10 +2264,11 @@ function numberLineTemplate(level, lang) {
     format: 'numeric',
     correct_answer: up ? n + amount : n - amount,
     operandKey: `${up ? 'more' : 'less'}:${amount}:${n}`,
+    ...(pvPlaces(n, up ? n + amount : n - amount) ? { help: { kind: 'pv', mode: 'shift', start: n, amount, up, places: pvPlaces(n, up ? n + amount : n - amount) } } : {}),
     hint_steps: [
       amount === 10
-        ? say(lang, 'Ten more changes the tens digit, not the ones.', 'On fazlası onlar basamağını değiştirir, birler aynı kalır.',
-                    'Diez más cambia la cifra de las decenas, no la de las unidades.')
+        ? say(lang, `Ten ${up ? 'more' : 'less'} changes the tens digit, not the ones.`, `On ${up ? 'fazlası' : 'eksiği'} onlar basamağını değiştirir, birler aynı kalır.`,
+                    `Diez ${up ? 'más' : 'menos'} cambia la cifra de las decenas, no la de las unidades.`)
         : say(lang, `Start at ${n}.`, `${n} sayısından başla.`, `Empieza en ${n}.`),
       up ? say(lang, `Count ${amount} forwards from ${n}.`, `${n} sayısından ${amount} ileri say.`,
                      `Cuenta ${amount} hacia adelante desde ${n}.`)
@@ -2576,6 +2588,7 @@ function placeDigitValue(level, lang) {
     options,
     correct_answer: String(answer),
     operandKey: `pv:digit:${n}:${at}`,
+    ...(pvPlaces(n) ? { help: { kind: 'pv', mode: 'digit', n, place: 10 ** power, places: pvPlaces(n) } } : {}),
     hint_steps: [
       say(lang, `Name the places from the right: ones, tens, hundreds, thousands…`,
                 `Basamakları sağdan adlandır: birler, onlar, yüzler, binler…`,
@@ -2716,9 +2729,11 @@ function placeCompare(level, lang) {
     const a = String(x), c = String(answer)
     const i = [...a].findIndex((d, k) => d !== c[k])
     const [dx, dc] = [a[i], c[i]]
-    return say(lang, `Compare it with ${c}: in the ${PLACE[i]} place ${dx} is ${askBiggest ? 'smaller' : 'bigger'} than ${dc}.`,
-                     `${c} ile karşılaştır: ${PLACE[i]} basamağında ${dx}, ${dc}'${askBiggest ? 'den küçük' : 'den büyük'}.`.replace(/'den/, trEk(dc, 'abl')),
-                     `Compáralo con ${c}: en las ${PLACE[i]}, ${dx} es ${askBiggest ? 'menor' : 'mayor'} que ${dc}.`)
+    // The place that decides it, never the winning number: a child under 9 gets this line and
+    // then another try, and "compare it with 696" was the answer with a sentence around it.
+    return say(lang, `Look at the ${PLACE[i]}: another number has a ${askBiggest ? 'bigger' : 'smaller'} digit there than ${dx}.`,
+                     `${cap(PLACE[i])} basamağına bak: başka bir sayının oradaki rakamı ${dx}${trEk(dx, 'abl')} ${askBiggest ? 'büyük' : 'küçük'}.`,
+                     `Mira las ${PLACE[i]}: otro número tiene ahí una cifra ${askBiggest ? 'mayor' : 'menor'} que ${dx}.`)
   }
   return {
     topic: 'place-value', level,
@@ -2729,6 +2744,7 @@ function placeCompare(level, lang) {
     options: choiceOf(opt(answer, say(lang, 'Right.', 'Doğru.', 'Correcto.')), xs.filter(x => x !== answer).map(x => opt(x, why(x)))),
     correct_answer: String(answer),
     operandKey: `pv:cmp:${xs.slice().sort((a, b) => a - b).join('-')}`,
+    help: { kind: 'pv', mode: 'compare', numbers: xs, want: askBiggest ? 'max' : 'min', places: [100, 10, 1] },
     hint_steps: [
       say(lang, `Compare the hundreds first, then the tens, then the ones.`,
                 `Önce yüzleri, sonra onları, sonra birleri karşılaştır.`,
@@ -5716,6 +5732,10 @@ function pvWords(level, lang) {
     topic: band <= 2 ? 'counting' : 'place-value', level,
     question_text: say(lang, `Write "${numberWords(tricky, 'en')}" in figures.`, `"${numberWords(tricky, 'tr')}" sayısını rakamla yaz.`, `Escribe "${numberWords(tricky, 'es')}" con cifras.`),
     format: 'numeric', correct_answer: tricky, operandKey: `pvw:${tricky}`,
+    // The words name the parts biggest first; the child builds each one and reads the columns —
+    // and a column the words skipped ("one hundred and nine") shows up empty, which is the 0.
+    ...(pvPlaces(tricky) ? { help: { kind: 'pv', mode: 'build', places: pvPlaces(tricky),
+      parts: placeParts(tricky).map(v => { const place = 10 ** (String(v).length - 1); return { place, count: v / place } }) } } : {}),
     hint_steps: [
       say(lang, `Write each part in its place: thousands, hundreds, tens, ones.`, `Her parçayı kendi basamağına yaz: binler, yüzler, onlar, birler.`, `Escribe cada parte en su lugar: millares, centenas, decenas, unidades.`),
       say(lang, `If a place has nothing in it, it still needs a 0.`, `Bir basamakta hiçbir şey yoksa oraya 0 yazılır.`, `Si una posición está vacía, lleva un 0.`),
@@ -5744,6 +5764,7 @@ function pvDigits(level, lang) {
                              `Her rakamı bir kez kullan. ${digits.join(', ')} ile yazabileceğin en ${biggest ? 'büyük' : 'küçük'} ${digits.length} basamaklı sayı kaçtır?`,
                              `Usa cada cifra una vez. ¿Cuál es el número de ${digits.length} cifras más ${biggest ? 'grande' : 'pequeño'} que puedes formar con ${digits.join(', ')}?`),
     format: 'numeric', correct_answer: answer, operandKey: `pvd:${biggest}:${digits.join('')}`,
+    ...(k === 3 ? { help: { kind: 'pv', mode: 'arrange', digits, want: biggest ? 'max' : 'min', places: [100, 10, 1] } } : {}),
     hint_steps: [
       say(lang, `The first digit is worth the most, so put the ${biggest ? 'biggest' : 'smallest'} digit there.`,
                 `İlk rakam en değerli olandır, oraya en ${biggest ? 'büyük' : 'küçük'} rakamı koy.`,
@@ -5790,6 +5811,9 @@ function pvPartition(level, lang) {
         ? say(lang, `What number is ${o} ones and ${t} tens?`, `${o} birlik ve ${t} onluk hangi sayıyı yapar?`, `¿Qué número forman ${o} unidades y ${t} decenas?`)
         : say(lang, `What number is ${t} tens and ${o} ones?`, `${t} onluk ve ${o} birlik hangi sayıyı yapar?`, `¿Qué número forman ${t} decenas y ${o} unidades?`),
       format: 'numeric', correct_answer: t * 10 + o, operandKey: `pvp:${t}:${o}:${swapped}`,
+      // In the question's own order, so "4 ones and 9 tens" is built ones first and still
+      // lands in the right columns — which is the whole point of that wording.
+      help: { kind: 'pv', mode: 'build', places: [10, 1], parts: swapped ? [{ place: 1, count: o }, { place: 10, count: t }] : [{ place: 10, count: t }, { place: 1, count: o }] },
       hint_steps: [say(lang, `${t} tens is ${t * 10}.`, `${t} onluk ${t * 10} eder.`, `${t} decenas son ${t * 10}.`),
                    say(lang, `Then add the ones.`, `Sonra birlikleri ekle.`, `Luego suma las unidades.`)],
     }
@@ -5803,6 +5827,7 @@ function pvPartition(level, lang) {
     topic: 'place-value', level,
     question_text: say(lang, `What is the missing number? ${num(n, lang)} = ${shown}`, `Eksik sayı kaçtır? ${num(n, lang)} = ${shown}`, `¿Qué número falta? ${num(n, lang)} = ${shown}`),
     format: 'numeric', correct_answer: parts[hide], operandKey: `pvp:${n}:${hide}`,
+    ...(pvPlaces(n) ? { help: { kind: 'pv', mode: 'missing', n, places: pvPlaces(n), given: parts.filter((_, i) => i !== hide) } } : {}),
     hint_steps: [say(lang, `Each part is one digit of ${num(n, lang)} in its place.`, `Her parça, ${num(n, lang)} sayısının bir basamağıdır.`, `Cada parte es una cifra de ${num(n, lang)} en su posición.`),
                  say(lang, `Find the digit that is missing and what its place makes it worth.`, `Eksik rakamı ve bulunduğu basamağın ona kattığı değeri bul.`, `Busca la cifra que falta y cuánto vale en su posición.`)],
   }
@@ -5842,6 +5867,7 @@ function pvMoreLess(level, lang) {
                              `${num(n, lang)} sayısının ${num(amount, lang)} ${up ? 'fazlası' : 'eksiği'} kaçtır?`,
                              `¿Cuánto es ${num(amount, lang)} ${up ? 'más' : 'menos'} que ${num(n, lang)}?`),
     format: 'numeric', correct_answer: up ? n + amount : n - amount, operandKey: `pvml:${amount}:${n}:${up}`,
+    ...(amount <= 100 && pvPlaces(n, up ? n + amount : n - amount) ? { help: { kind: 'pv', mode: 'shift', start: n, amount, up, places: pvPlaces(n, up ? n + amount : n - amount) } } : {}),
     hint_steps: [
       say(lang, `Only one digit is being ${up ? 'added to' : 'taken from'}: the ${amount === 1000 ? 'thousands' : amount === 100 ? 'hundreds' : amount === 10 ? 'tens' : 'ones'}.`,
                 `Yalnız bir basamak ${up ? 'artıyor' : 'azalıyor'}: ${amount === 1000 ? 'binler' : amount === 100 ? 'yüzler' : amount === 10 ? 'onlar' : 'birler'} basamağı.`,
