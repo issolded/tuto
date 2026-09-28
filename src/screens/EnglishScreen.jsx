@@ -410,8 +410,12 @@ export default function EnglishScreen() {
             boxShadow: picked.length !== need ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
           }}>{pending ? '…' : t('puzzle_send', language)}</button>
 
-          {/* An honest way out: the question counts as wrong and the right words are shown. */}
-          {!answer && (
+          {/* An honest way out: the question counts as wrong and the right words are shown.
+              Only while nothing is chosen. It sat right under Send, and a child who had picked
+              "far" for the opposite of "near" and reached for Send landed here — the right
+              answer thrown away as "I don't know". Once something is picked they have an answer;
+              Send is the button. */}
+          {!answer && picked.length === 0 && (
             <button className="pz-press" onClick={skip} disabled={pending} style={{
               alignSelf: 'center', border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
               borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontFamily: FRED, fontWeight: 600, fontSize: 15,
