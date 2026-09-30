@@ -346,7 +346,7 @@ for (const age of AGES) {
         }
         if (p.help?.kind === 'steps') {
           const last = p.help.steps[p.help.steps.length - 1]
-          if (Math.abs(last.a - Number(p.correct_answer)) > 1e-9) fail(where, `adım yardımı ${last.a} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          if (!p.help.pick && Math.abs(last.a - Number(p.correct_answer)) > 1e-9) fail(where, `adım yardımı ${last.a} veriyor, cevap ${p.correct_answer}`, p.question_text)
           for (const st of p.help.steps) if (!Number.isFinite(st.a) || /undefined|NaN/.test(`${st.q} ${st.say ?? ''}`)) fail(where, 'bozuk yardım adımı', JSON.stringify(st))
           // Every line that is plain arithmetic ("17 × 8", "360 − 204 + 5") has to come to the
           // number the child is asked to type. The last step is checked against the answer key
@@ -650,8 +650,8 @@ console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / to
       }
     }
   }
-  console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
-  for (const age of [5, 6, 7, 8]) {
+  console.log('Öğretici yardım (yanlıştan sonra; 9+ için yardım henüz ekrana bağlı değil, içerik payı):')
+  for (const age of [5, 6, 7, 8, 9, 10, 11, 12, 13]) {
     const year = ageToSchoolYear(age)
     const level = clampLevelToAge(startingLevelForAge(age), age)
     const tts = BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)

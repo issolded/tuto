@@ -1184,7 +1184,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       if (Math.abs(Number(arrowInput) - steps[active].a) < 1e-9) {
         setSolvedArrows({ ...solvedArrows, [active]: steps[active].a })
         setTutoBubble(active === steps.length - 1
-          ? say(language, 'All done! Now type that in as your answer 💪', 'Bitti! Şimdi bunu cevap olarak yaz 💪', '¡Listo! Ahora escríbelo como respuesta 💪')
+          ? (stepsHelp.pick
+            ? say(language, 'All done! Now pick your answer 💪', 'Bitti! Şimdi cevabını seç 💪', '¡Listo! Ahora elige tu respuesta 💪')
+            : say(language, 'All done! Now type that in as your answer 💪', 'Bitti! Şimdi bunu cevap olarak yaz 💪', '¡Listo! Ahora escríbelo como respuesta 💪'))
           : say(language, 'Yes! Next one 👇', 'Evet! Sıradaki 👇', '¡Sí! La siguiente 👇'))
       } else {
         setTutoBubble(say(language, 'Not quite — try that one again 🔢', 'Tam değil — bunu bir daha dene 🔢', 'Casi — prueba esa otra vez 🔢'))
@@ -1197,6 +1199,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             <MathGeometry visual={stepsHelp.picture} language={language} description={question} />
             <MathFigure visual={stepsHelp.picture} language={language} description={question} />
+            <MathChart visual={stepsHelp.picture} language={language} description={question} />
           </div>
         )}
         <div style={{

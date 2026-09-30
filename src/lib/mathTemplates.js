@@ -306,6 +306,35 @@ function partitionSteps(a, b, add, lang) {
   ]
 }
 
+// The partition hint as sums the child does: 4,205 + 3,200 becomes 4,205 + 3,000, then + 200.
+// Only past what the counting panel draws (a sum of 30), and only where there are two pieces or
+// more; a single round number has no intermediate to type.
+// The first help that exists: a picture tool when the numbers fit it, else the written chain.
+const firstHelp = (...options) => options.find(o => o && o.help) ?? {}
+
+function partitionChain(a, b, add, lang) {
+  const parts = placeParts(b)
+  if (parts.length < 2 || a + b <= 30 || b >= 10000) return {}
+  const N = x => num(x, lang)
+  const sign = add ? '+' : '−'
+  let cur = a
+  return stepsHelp(parts.map((part, i) => {
+    const next = add ? cur + part : cur - part
+    const st = stp(lang, `${N(cur)} ${sign} ${N(part)}`, next,
+      i === 0
+        ? `Break ${N(b)} into ${parts.map(N).join(' + ')} and ${add ? 'add' : 'take away'} one piece at a time. First the ${N(part)}:`
+        : 'Now the next piece:',
+      i === 0
+        ? `${N(b)} sayısını ${parts.map(N).join(' + ')} diye parçala ve her parçayı sırayla ${add ? 'ekle' : 'çıkar'}. Önce ${N(part)}:`
+        : 'Şimdi sıradaki parça:',
+      i === 0
+        ? `Separa ${N(b)} en ${parts.map(N).join(' + ')} y ${add ? 'suma' : 'resta'} una pieza cada vez. Primero ${N(part)}:`
+        : 'Ahora la siguiente pieza:')
+    cur = next
+    return st
+  }))
+}
+
 // ─── Addition ───────────────────────────────────────────────────────────────
 
 // `columnar` is paper mode asking for the numbers back at full width. On screen the second
@@ -331,6 +360,7 @@ function additionTemplate(level, lang, columnar = false, plain = false) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
+    ...(columnar ? {} : partitionChain(a, b, true, lang)),
     hint_steps: countingOnSteps(a, b, lang),
   }
 }
@@ -401,6 +431,7 @@ function subtractionTemplate(level, lang, columnar = false, plain = false) {
     format: 'numeric',
     correct_answer,
     operandKey: pairKey(a, b),
+    ...(columnar ? {} : partitionChain(a, b, false, lang)),
     hint_steps: countingBackSteps(a, b, lang),
   }
 }
@@ -464,6 +495,23 @@ export function addJumpsHelp(from, add) {
   const stops = [from]
   for (const p of parts) stops.push(stops[stops.length - 1] + p)
   return { help: { kind: 'jumps', mode: 'add', from, to: from + add, stops } }
+}
+
+// The gap between two numbers as the jumps between round numbers, each one typed, then added.
+// The picture tool takes up to seven stops; this covers the ones it does not.
+function gapChain(from, to, lang) {
+  if (!(to > from)) return {}
+  const stops = gapLandmarks(from, to)
+  if (stops.length < 2 || stops.length > 9) return {}
+  const N = x => num(x, lang)
+  const jumps = stops.slice(1).map((x, i) => x - stops[i])
+  const steps = jumps.map((j, i) => stp(lang, `${N(stops[i + 1])} − ${N(stops[i])}`, j,
+    i === 0 ? `Jump from ${N(from)} up towards ${N(to)} in easy steps. How big is the first jump?` : 'And the next jump:',
+    i === 0 ? `${N(from)} sayısından ${N(to)} sayısına kolay adımlarla zıpla. İlk zıplama kaç?` : 'Sıradaki zıplama:',
+    i === 0 ? `Salta desde ${N(from)} hacia ${N(to)} con pasos fáciles. ¿Cuánto mide el primer salto?` : 'Y el siguiente salto:'))
+  steps.push(stp(lang, jumps.map(N).join(' + '), to - from,
+    'Add the jumps together:', 'Zıplamaları topla:', 'Suma los saltos:'))
+  return stepsHelp(steps)
 }
 
 function gapSteps(from, to, lang) {
@@ -958,6 +1006,16 @@ function fractionDecimal(level, lang) {
     options,
     correct_answer: e.dec,
     operandKey: `frac:dec:${n}/${d}`,
+    ...stepsHelp([
+      stp(lang, `100 ÷ ${d}`, 100 / d,
+        `Think of money. $1 is 100 cents. Cut it into ${d} equal parts: how many cents is one part?`,
+        `Parayı düşün. 1 lira 100 kuruş. ${d} eşit parçaya böl: bir parça kaç kuruş?`,
+        `Piensa en el dinero. 1 € son 100 céntimos. Pártelo en ${d} partes iguales: ¿cuántos céntimos es una parte?`),
+      stp(lang, `${n} × ${100 / d}`, n * 100 / d,
+        `${n}/${d} is ${n} of those parts. How many cents? Then write those cents as part of a dollar:`,
+        `${n}/${d}, o parçalardan ${n} tanesi. Kaç kuruş? Sonra bu kuruşu bir liranın parçası olarak yaz:`,
+        `${n}/${d} son ${n} de esas partes. ¿Cuántos céntimos? Luego escribe esos céntimos como parte de un euro:`),
+    ], null, true),
     hint_steps: [
       say(lang, 'A decimal is another way of writing part of one whole.',
                 'Ondalık sayı, bir bütünün parçasını yazmanın başka bir yoludur.',
@@ -1219,8 +1277,10 @@ function multSplitHint(a, b, lang) {
 // the last one the question's own answer. For the questions whose method is a short chain of
 // easy sums — split a big multiplication, convert a unit, read a scale — where a picture would
 // not teach and the hint only names the chain.
-function stepsHelp(steps, picture) {
-  return { help: { kind: 'steps', steps, ...(picture ? { picture } : {}) } }
+// `pick` is for a multiple-choice question: the chain works something out and the child then
+// chooses, so its last line is not the answer and the closing words say "pick", not "type".
+function stepsHelp(steps, picture, pick = false) {
+  return { help: { kind: 'steps', steps, ...(picture ? { picture } : {}), ...(pick ? { pick: true } : {}) } }
 }
 
 // One step of a worked chain, with its sentence in all three languages: `q` is the sum on the
@@ -1655,7 +1715,7 @@ function addSubShort(level, lang, columnar) {
       `Para un concierto se preparan ${made} comidas, pero llegan ${came} personas. ¿Cuántas se quedan sin comida?`),
     answer: came - made,
     key: `asw:short:${made}:${came}`,
-    ...jumpsHelp(made, came),
+    ...firstHelp(jumpsHelp(made, came), gapChain(made, came, lang)),
     hints: [
       say(lang, `The people without a meal are the gap between the people and the meals.`,
                 `Yemeksiz kalanlar, gelen kişi sayısı ile yemek sayısı arasındaki farktır.`,
@@ -4430,7 +4490,7 @@ function moneyChange(level, lang) {
     format: 'numeric',
     correct_answer: paid - cost,
     operandKey: `money:chg:${paid}:${cost}`,
-    ...jumpsHelp(cost, paid),
+    ...firstHelp(jumpsHelp(cost, paid), gapChain(cost, paid, lang)),
     hint_steps: [
       say(lang, `Change is what is left of what you handed over.`,
                 `Para üstü, verdiğin paradan geriye kalandır.`,
@@ -4589,7 +4649,7 @@ function measureDifference(level, lang) {
     format: 'numeric',
     correct_answer: large - small,
     operandKey: `meas:diff:${set.unit}:${small}:${large}`,
-    ...jumpsHelp(small, large),
+    ...firstHelp(jumpsHelp(small, large), gapChain(small, large, lang)),
     hint_steps: [
       say(lang, `"How much more" asks for the gap between the two, not for either one.`,
                 `"Kaç fazla" sorusu ikisinin arasındaki farkı ister, sayılardan birini değil.`,
@@ -4699,7 +4759,7 @@ function rectilinearShape() {
   }
   // Perimeter is counted as the number of cell edges with nothing on the other side, which is
   // true of any rectilinear figure and needs no special case for the notch.
-  return { w, h, cells, ...measureGridCells(cells) }
+  return { w, h, bw, bh, cells, ...measureGridCells(cells) }
 }
 
 function areaGridTemplate(level, lang) {
@@ -4734,6 +4794,26 @@ function areaGridTemplate(level, lang) {
     format: 'numeric',
     correct_answer: askArea ? shape.area : shape.perimeter,
     operandKey: `grid:${askArea ? 'a' : 'p'}:${shape.cells.map(c => c.join('')).join('-')}`,
+    ...stepsHelp(askArea
+      ? [stp(lang, `${shape.w} × ${shape.h}`, shape.w * shape.h,
+           `Count the whole rectangle first, as if the corner were not missing: ${shape.w} squares across and ${shape.h} down.`,
+           `Önce bütün dikdörtgeni say, köşe eksik değilmiş gibi: ${shape.w} kare yatay, ${shape.h} kare dikey.`,
+           `Cuenta primero el rectángulo entero, como si no faltara la esquina: ${shape.w} cuadrados de ancho y ${shape.h} de alto.`),
+         stp(lang, `${shape.bw} × ${shape.bh}`, shape.bw * shape.bh,
+           `Now the corner that is missing: ${shape.bw} across and ${shape.bh} down.`,
+           `Şimdi eksik köşe: ${shape.bw} yatay, ${shape.bh} dikey.`,
+           `Ahora la esquina que falta: ${shape.bw} de ancho y ${shape.bh} de alto.`),
+         stp(lang, `${shape.w * shape.h} − ${shape.bw * shape.bh}`, shape.area,
+           `Take the missing corner away from the whole rectangle:`,
+           `Eksik köşeyi bütün dikdörtgenden çıkar:`,
+           `Réstale la esquina que falta al rectángulo entero:`)]
+      : [stp(lang, `${shape.w} + ${shape.h}`, shape.w + shape.h,
+           `Cutting a corner out does not change the way round. It is the same as the rectangle it was cut from: one long side and one short side.`,
+           `Bir köşeyi kesmek çevreyi değiştirmez. Kesildiği dikdörtgenle aynı: bir uzun kenar, bir kısa kenar.`,
+           `Quitar una esquina no cambia el contorno. Es igual que el del rectángulo del que salió: un lado largo y uno corto.`),
+         stp(lang, `${shape.w + shape.h} + ${shape.w + shape.h}`, shape.perimeter,
+           `Two of each, so double it:`, `Her birinden iki tane var, ikiye katla:`, `Hay dos de cada uno, así que dóblalo:`)],
+      { kind: 'chart', shape: 'grid', cols: shape.w, rows: shape.h, cells: shape.cells }),
     hint_steps: askArea
       ? [say(lang, `Area is how many squares the shape covers.`,
                    `Alan, şeklin kapladığı kare sayısıdır.`,
@@ -5197,7 +5277,7 @@ function missingNumber(level, lang, add) {
     return {
       topic: 'addition', level, question_text: q, format: 'numeric', correct_answer: total - known,
       operandKey: `miss:add:${known}:${total}`,
-      ...jumpsHelp(known, total),
+      ...firstHelp(jumpsHelp(known, total), gapChain(known, total, lang)),
       hint_steps: [
         say(lang, `The missing number and ${num(known, lang)} make ${num(total, lang)} together.`,
                   `Eksik sayı ile ${num(known, lang)} birlikte ${num(total, lang)} eder.`,
@@ -5217,7 +5297,7 @@ function missingNumber(level, lang, add) {
       topic: 'subtraction', level,
       question_text: `? − ${num(takeAway, lang)} = ${num(left, lang)}`, format: 'numeric', correct_answer: start,
       operandKey: `miss:subA:${takeAway}:${left}`,
-      ...addJumpsHelp(left, takeAway),
+      ...firstHelp(addJumpsHelp(left, takeAway), partitionChain(left, takeAway, true, lang)),
       hint_steps: [
         say(lang, `Something had ${num(takeAway, lang)} taken away and ${num(left, lang)} was left.`,
                   `Bir sayıdan ${num(takeAway, lang)} çıkarılmış, geriye ${num(left, lang)} kalmış.`,
@@ -5232,7 +5312,7 @@ function missingNumber(level, lang, add) {
     topic: 'subtraction', level,
     question_text: `${num(start, lang)} − ? = ${num(left, lang)}`, format: 'numeric', correct_answer: takeAway,
     operandKey: `miss:subB:${start}:${left}`,
-    ...jumpsHelp(left, start),
+    ...firstHelp(jumpsHelp(left, start), gapChain(left, start, lang)),
     hint_steps: [
       say(lang, `How much do you take from ${num(start, lang)} to get down to ${num(left, lang)}?`,
                 `${num(start, lang)} sayısından ne kadar çıkarırsan ${num(left, lang)} kalır?`,
@@ -5285,6 +5365,11 @@ function missingSign(level, lang, lean) {
     options: ops.map(p => (p === o ? right : opt(p, why[p]))),
     correct_answer: o,
     operandKey: `sign:${a}:${b}:${r}`,
+    // Try each sign and see which one lands on the answer — the way the hint says to, done.
+    ...stepsHelp(ops.filter(p => !Number.isNaN(calc(a, p, b)) && calc(a, p, b) > 0).map(p => stp(lang, `${a} ${p} ${b}`, calc(a, p, b),
+      p === ops[0] ? `Try each sign and see which one gives ${r}. First ${p}:` : `And ${p}:`,
+      p === ops[0] ? `Her işareti dene, hangisi ${r} veriyor bak. Önce ${p}:` : `Ya ${p}:`,
+      p === ops[0] ? `Prueba cada signo y mira cuál da ${r}. Primero ${p}:` : `Y ${p}:`)), null, true),
     hint_steps: [
       say(lang, `Is ${r} bigger or smaller than ${a}?`, `${r}, ${a} sayısından büyük mü küçük mü?`, `¿${r} es mayor o menor que ${a}?`),
       say(lang, `Bigger means you added or multiplied; smaller means you took away or divided. Try each one.`,
@@ -5397,7 +5482,9 @@ function youngStory(level, lang, add) {
     topic: add ? 'addition' : 'subtraction', level,
     question_text: s.q, format: 'numeric', correct_answer: ans,
     operandKey: `story:${s.key}:${s.a}:${s.b}`,
-    ...(add ? addJumpsHelp(Math.max(s.a, s.b), Math.min(s.a, s.b)) : jumpsHelp(s.b, s.a)),
+    ...(add
+      ? firstHelp(addJumpsHelp(Math.max(s.a, s.b), Math.min(s.a, s.b)), partitionChain(Math.max(s.a, s.b), Math.min(s.a, s.b), true, lang))
+      : firstHelp(jumpsHelp(s.b, s.a), gapChain(s.b, s.a, lang), partitionChain(s.a, s.b, false, lang))),
     hint_steps: add
       ? [say(lang, `Both amounts go together, so this is an adding question.`, `İki miktar bir araya geliyor, yani bu bir toplama sorusu.`, `Las dos cantidades se juntan: es una suma.`),
          say(lang, `Add ${N(s.a)} and ${N(s.b)} — split the smaller one into its parts if it helps.`,
@@ -5529,6 +5616,11 @@ function factorPair(level, lang) {
     question_text: say(lang, `Which of these multiplies to make ${p}?`, `Bunlardan hangisinin sonucu ${p} eder?`, `¿Cuál de estas multiplicaciones da ${p}?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
     operandKey: `fpair:${p}:${Math.min(a, b)}`,
+    ...stepsHelp([right, ...wrongs].map(o => o.value).sort().map((v, i) => { const [x, y] = v.split(' × ').map(Number)
+      return stp(lang, v, x * y,
+        i === 0 ? `Work out each one and see which gives ${p}. First ${v}:` : `And ${v}:`,
+        i === 0 ? `Her birini hesapla, hangisi ${p} veriyor bak. Önce ${v}:` : `Ya ${v}:`,
+        i === 0 ? `Calcula cada una y mira cuál da ${p}. Primero ${v}:` : `Y ${v}:`) }), null, true),
     hint_steps: [
       say(lang, `Work out each one in turn.`, `Her birini sırayla hesapla.`, `Calcula cada una por turnos.`),
       say(lang, `Only one of them lands exactly on ${p}.`, `Yalnız biri tam olarak ${p} eder.`, `Solo una da exactamente ${p}.`),
@@ -5614,6 +5706,7 @@ function youngDivision(level, lang) {
     return {
       topic: 'division-word', level, question_text: say(lang, c.en, c.tr, c.es), format: 'numeric', correct_answer: q,
       operandKey: `ybig:${n}:${d}`,
+      ...divisionSteps({ n, d, tens: Math.floor(q / 10) * 10 * d, q, r: 0, mode: 'exact', lang }),
       hint_steps: [
         say(lang, `Split ${n} into a part that divides easily by ${d} and the rest: ${d * 10} is 10 lots of ${d}.`,
                   `${n} sayısını ${d} ile kolay bölünen bir parça ve kalanı diye ayır: ${d * 10}, ${d} sayısının 10 katıdır.`,
@@ -5717,7 +5810,22 @@ function fractionShaded(level, lang) {
     operandKey: `fshade:${n}/${d}:${askWhite ? 'w' : 's'}:${shape}`,
     // Counting the parts, then the coloured ones, on the picture itself. Not for Year 4's "which
     // is equal", where the count is the start of the question, not the answer.
-    ...(equalMode ? {} : { help: { kind: 'fracbar', mode: 'shade', parts: d, shaded, white: askWhite } }),
+    ...(equalMode
+      ? stepsHelp([
+          stp(lang, say(lang, 'all the equal parts', 'bütün eş parçalar', 'todas las partes iguales'), d,
+            'Count all the equal parts of the shape — that is the bottom number:', 'Şeklin bütün eş parçalarını say — bu alttaki sayı:', 'Cuenta todas las partes iguales de la figura: ese es el número de abajo:'),
+          stp(lang, say(lang, 'the shaded parts', 'boyalı parçalar', 'las partes coloreadas'), k,
+            `Now count the shaded ones — the top number. So the shaded part is ${k}/${d}:`,
+            `Şimdi boyalı olanları say — üstteki sayı. Yani boyalı kısım ${k}/${d}:`,
+            `Ahora cuenta las coloreadas: el número de arriba. Así que la parte coloreada es ${k}/${d}:`),
+          ...(g > 1 ? [
+            stp(lang, `${k} ÷ ${g}`, k / g,
+              `The answer is the same amount in bigger pieces. Divide the top and the bottom by ${g}. Top first:`,
+              `Cevap aynı miktarın daha büyük parçalarla yazılışı. Üst ve alt sayıyı ${g} ile böl. Önce üst:`,
+              `La respuesta es la misma cantidad en trozos más grandes. Divide arriba y abajo entre ${g}. Primero arriba:`),
+            stp(lang, `${d} ÷ ${g}`, d / g, 'Now the bottom:', 'Şimdi alt:', 'Ahora abajo:')] : []),
+        ], { kind: 'fraction', shape, parts: d, cols, shaded }, true)
+      : { help: { kind: 'fracbar', mode: 'shade', parts: d, shaded, white: askWhite } }),
     hint_steps: [
       say(lang, `Count all the equal parts — that is the bottom number.`, `Bütün eş parçaları say — bu alttaki sayıdır.`,
                 `Cuenta todas las partes iguales: ese es el número de abajo.`),
