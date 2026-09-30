@@ -672,6 +672,32 @@ function multiplicationWordTemplate(level, lang) {
 // curriculum names it in Year 5, Year 6 and Year 7 — it is the shape that keeps coming back.
 // The percentages are the ones a child can reach by halving and tenths rather than by
 // multiplying a decimal, which is how it is taught before a calculator appears.
+// Percentages of a whole number as a chain of easy sums, always through 10% or a simple
+// fraction: 25% is a quarter, 15% is 10% and half of it again. The last step is the amount.
+function percentOfSteps(pct, amount, lang) {
+  const N = x => num(x, lang)
+  const ten = amount / 10
+  const tenStep = stp(lang, `${N(amount)} ÷ 10`, ten,
+    'Find 10% first: divide by 10.', 'Önce %10\'u bul: 10\'a böl.', 'Halla primero el 10%: divide entre 10.')
+  if (pct === 50) return [stp(lang, `${N(amount)} ÷ 2`, amount / 2, '50% is half:', '%50, yarısı:', 'El 50% es la mitad:')]
+  if (pct === 25 || pct === 75) {
+    const quarter = amount / 4
+    const steps = [stp(lang, `${N(amount)} ÷ 4`, quarter,
+      '25% is a quarter. Divide by 4:', '%25, dörtte bir. 4\'e böl:', 'El 25% es un cuarto. Divide entre 4:')]
+    if (pct === 75) steps.push(stp(lang, `${N(quarter)} × 3`, quarter * 3,
+      '75% is three quarters:', '%75, dörtte üç:', 'El 75% son tres cuartos:'))
+    return steps
+  }
+  if (pct === 5) return [tenStep, stp(lang, `${N(ten)} ÷ 2`, ten / 2,
+    '5% is half of 10%:', '%5, %10\'un yarısı:', 'El 5% es la mitad del 10%:')]
+  if (pct === 15) return [tenStep,
+    stp(lang, `${N(ten)} ÷ 2`, ten / 2, '5% is half of 10%:', '%5, %10\'un yarısı:', 'El 5% es la mitad del 10%:'),
+    stp(lang, `${N(ten)} + ${N(ten / 2)}`, ten + ten / 2, '15% is 10% and 5% together:', '%15, %10 ile %5\'in toplamı:', 'El 15% es el 10% más el 5%:')]
+  if (pct === 10) return [tenStep]
+  return [tenStep, stp(lang, `${N(ten)} × ${pct / 10}`, ten * (pct / 10),
+    `${pct}% is ${pct / 10} lots of 10%:`, `%${pct}, ${pct / 10} tane %10:`, `El ${pct}% son ${pct / 10} veces el 10%:`)]
+}
+
 function fractionPercentOf(level, lang) {
   const band = bandForLevel(level)
   const pct = pick(band >= 7 ? [5, 10, 15, 20, 25, 30, 40, 60, 75, 80] : [10, 20, 25, 50, 75])
@@ -689,6 +715,7 @@ function fractionPercentOf(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `frac:pct:${pct}:${amount}`,
+    ...stepsHelp(percentOfSteps(pct, amount, lang)),
     hint_steps: [
       say(lang, `Per cent means "out of a hundred" — ${pct}% is ${pct} parts of every 100.`,
                 `Yüzde demek "her yüzde" demek — %${pct}, her 100'ün ${pct} parçası.`,
@@ -728,6 +755,13 @@ function fractionPercentChange(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `frac:pctch:${up ? 'up' : 'dn'}:${pct}:${base}`,
+    ...stepsHelp([
+      ...percentOfSteps(pct, base, lang),
+      stp(lang, `${base} ${up ? '+' : '−'} ${change}`, answer,
+        up ? 'That much is ADDED on to the original. This is the new amount:' : 'That much comes OFF the original. This is the new price:',
+        up ? 'O kadarı aslın ÜSTÜNE eklenir. Yeni miktar bu:' : 'O kadarı asıldan DÜŞÜLÜR. Yeni fiyat bu:',
+        up ? 'Esa cantidad se SUMA al original. Esta es la cantidad nueva:' : 'Esa cantidad se RESTA del original. Este es el precio nuevo:'),
+    ]),
     hint_steps: [
       say(lang, `Work out the ${pct}% on its own first.`,
                 `Önce %${pct}'in kendisini hesapla.`,
@@ -1070,6 +1104,14 @@ function fractionOfNumber(level, lang) {
     // Same picture as division — split into equal groups — with one group singled out,
     // which is exactly what "1/d of N" asks for.
     visual: shareVisual(N, d, 1),
+    // Under Year 5 the panel already deals the groups out, and a `help` field would replace that
+    // picture; the worked step is for the years that have outgrown the picture.
+    ...(band >= 5 ? stepsHelp([
+      stp(lang, `${N} ÷ ${d}`, N / d,
+        `1/${d} means splitting into ${d} equal groups. How many in one group?`,
+        `1/${d}, ${d} eşit gruba ayırmak demek. Bir grupta kaç tane var?`,
+        `1/${d} significa repartir en ${d} grupos iguales. ¿Cuántos hay en un grupo?`),
+    ]) : {}),
     // Stops at method, never states the final share — the child does that last step.
     hint_steps: [
       say(lang, `1/${d} means splitting into ${d} equal groups.`, `1/${d}, ${d} eşit gruba ayırmak demek.`,
@@ -3391,6 +3433,20 @@ function ratioShare(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `ratio:share:${total}:${p}:${q}`,
+    ...stepsHelp([
+      stp(lang, `${p} + ${q}`, p + q,
+        `A ratio of ${p}:${q} cuts everything into equal parts. How many parts altogether?`,
+        `${p}:${q} oranı her şeyi eşit paylara böler. Toplam kaç pay var?`,
+        `Una razón ${p}:${q} divide todo en partes iguales. ¿Cuántas partes hay en total?`),
+      stp(lang, `${total} ÷ ${p + q}`, part,
+        'Share everything out into those parts. How much is ONE part?',
+        'Hepsini bu paylara böl. BİR pay ne kadar?',
+        'Reparte todo entre esas partes. ¿Cuánto vale UNA parte?'),
+      stp(lang, `${part} × ${bigger ? p : q}`, answer,
+        `${who} gets ${bigger ? p : q} of those parts:`,
+        `${who}'ın payı ${bigger ? p : q} tane:`,
+        `A ${who} le tocan ${bigger ? p : q} de esas partes:`),
+    ]),
     hint_steps: [
       say(lang, `${p}:${q} means ${p + q} equal parts altogether.`,
                 `${p}:${q} demek toplam ${p + q} eşit pay demek.`,
@@ -3453,6 +3509,17 @@ function ratioProportion(level, lang) {
       format: 'numeric',
       correct_answer: answer,
       operandKey: `ratio:conv:${conv.per}:${n}`,
+      ...stepsHelp(conv.per === 8
+        ? [stp(lang, `${n} ÷ 5`, n / 5,
+             'The rule is 5 miles to 8 kilometres. How many lots of 5 miles is that?',
+             'Kural: 5 mil = 8 kilometre. Bunun içinde kaç tane 5 mil var?',
+             'La regla es 5 millas = 8 kilómetros. ¿Cuántos grupos de 5 millas hay?'),
+           stp(lang, `${n / 5} × 8`, answer,
+             'Each lot of 5 miles is 8 kilometres:', 'Her 5 mil, 8 kilometre eder:', 'Cada grupo de 5 millas son 8 kilómetros:')]
+        : [stp(lang, `${n} × ${dnum(conv.per, lang)}`, answer,
+             `One ${fromOne} is about ${conv.per} ${toMany}, and there are ${n}:`,
+             `1 ${fromOne} yaklaşık ${dnum(conv.per, lang)} ${toMany}, ve ${n} tane var:`,
+             `1 ${fromOne} son ${dnum(conv.per, lang)} ${toMany}, y hay ${n}:`)]),
       hint_steps: [
         say(lang, `Find what one unit is worth first, then multiply.`,
                   `Önce bir birimin karşılığını bul, sonra çarp.`,
@@ -3481,6 +3548,12 @@ function ratioProportion(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `ratio:prop:${have}:${want}:${unit}`,
+    ...stepsHelp([
+      stp(lang, `${cost} ÷ ${have}`, unit,
+        `First find the price of ONE:`, `Önce BİR tanesinin fiyatını bul:`, `Primero halla el precio de UNO:`),
+      stp(lang, `${unit} × ${want}`, answer,
+        `Now ${want} of them:`, `Şimdi ${want} tanesi:`, `Ahora ${want}:`),
+    ]),
     hint_steps: [
       say(lang, `Work out what one costs before you work out what ${want} cost.`,
                 `${want} tanesini hesaplamadan önce bir tanesinin kaç ettiğini bul.`,
@@ -3521,6 +3594,22 @@ function ratioRate(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `ratio:rate:${ask}:${speed}:${hours}`,
+    ...stepsHelp([
+      ask === 'distance'
+        ? stp(lang, `${speed} × ${hours}`, distance,
+            `Every hour it covers ${speed} km, and it goes for ${hours} hours:`,
+            `Her saat ${speed} km gidiyor ve ${hours} saat boyunca gidiyor:`,
+            `Cada hora recorre ${speed} km y va durante ${hours} horas:`)
+        : ask === 'time'
+          ? stp(lang, `${distance} ÷ ${speed}`, hours,
+              `Each hour covers ${speed} km. How many lots of ${speed} fit in ${distance}?`,
+              `Her saat ${speed} km. ${distance} içinde kaç tane ${speed} var?`,
+              `Cada hora son ${speed} km. ¿Cuántos grupos de ${speed} caben en ${distance}?`)
+          : stp(lang, `${distance} ÷ ${hours}`, speed,
+              `Share the distance out equally between the ${hours} hours:`,
+              `Yolu ${hours} saate eşit paylaştır:`,
+              `Reparte la distancia por igual entre las ${hours} horas:`),
+    ]),
     hint_steps: [
       say(lang, `Speed, distance and time make one triangle: distance sits on top.`,
                 `Hız, yol ve zaman tek bir üçgen kurar: yol en üstte durur.`,
@@ -3715,9 +3804,12 @@ function avgOther(level, lang) {
   // The list is built to have exactly one mode and a median that is not also the mode, so
   // that no question has two defensible answers.
   for (let tries = 0; tries < 200; tries++) {
-    xs = Array.from({ length: n - 2 }, () => randInt(2, 20))
+    // n − 1 rolls plus one repeat of any of them: the mode appears twice. It used to add the
+    // repeat TWICE, so it appeared three times — and in a list of five a block of three always
+    // covers the middle, so the median was the mode and the guard below never once passed.
+    xs = Array.from({ length: n - 1 }, () => randInt(2, 20))
     const rep = pick(xs)
-    xs = shuffle([...xs, rep, rep])
+    xs = shuffle([...xs, rep])
     sorted = [...xs].sort((a, b) => a - b)
     const counts = {}
     for (const v of xs) counts[v] = (counts[v] || 0) + 1
