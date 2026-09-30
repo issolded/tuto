@@ -863,6 +863,14 @@ function fractionSimplify(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `frac:simp:${N}:${D}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `biggest number that goes into both ${N} and ${D}`, `${N} ve ${D} sayısını birden bölen en büyük sayı`, `mayor número que divide a ${N} y a ${D}`), f,
+        `Find the biggest number that divides exactly into the top AND the bottom. Try 2, 3, 5…`,
+        `Hem payı hem paydayı tam bölen EN BÜYÜK sayıyı bul. 2, 3, 5'i dene…`,
+        `Busca el mayor número que divide exactamente al de arriba Y al de abajo. Prueba 2, 3, 5…`),
+      stp(lang, `${N} ÷ ${f}`, n, 'Divide the top by it:', 'Payı ona böl:', 'Divide el de arriba entre él:'),
+      stp(lang, `${D} ÷ ${f}`, d, 'And the bottom:', 'Ve paydayı:', 'Y el de abajo:'),
+    ], null, true),
     hint_steps: [
       say(lang, `Find a number that goes into both the top and the bottom.`,
                 `Hem payı hem paydayı bölen bir sayı bul.`,
@@ -916,6 +924,20 @@ function fractionAddDifferent(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `frac:addiff:${n1}:${d1}:${n2}:${d2}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `a bottom number that works for both`, `ikisi için de uygun payda`, `un denominador que sirva para los dos`), d2,
+        `The pieces must be the same size before they can be added. Which bottom number works for both ${d1} and ${d2}?`,
+        `Toplamadan önce parçalar aynı büyüklükte olmalı. ${d1} ve ${d2} için hangi payda uygun?`,
+        `Los trozos deben ser del mismo tamaño antes de sumarse. ¿Qué denominador sirve para ${d1} y ${d2}?`),
+      stp(lang, `${n1} × ${mult}`, n1 * mult,
+        `${d1} × ${mult} = ${d2}, so multiply the top of ${n1}/${d1} by ${mult} as well:`,
+        `${d1} × ${mult} = ${d2}, yani ${n1}/${d1} kesrinin payını da ${mult} ile çarp:`,
+        `${d1} × ${mult} = ${d2}, así que multiplica también por ${mult} el de arriba de ${n1}/${d1}:`),
+      stp(lang, `${n1 * mult} + ${n2}`, sum,
+        `Now both are in ${fracName(d2, true)}. Add the tops:`,
+        `Şimdi ikisi de ${d2}'de bir cinsinden. Payları topla:`,
+        `Ahora los dos están en ${d2}avos. Suma los de arriba:`),
+    ], null, true),
     hint_steps: [
       say(lang, `The pieces are different sizes, so they cannot be added yet.`,
                 `Parçalar farklı büyüklükte, bu hâliyle toplanamaz.`,
@@ -3542,6 +3564,14 @@ function ratioSimplify(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `ratio:simp:${a}:${b}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `biggest number that goes into both ${a} and ${b}`, `${a} ve ${b} sayısını birden bölen en büyük sayı`, `mayor número que divide a ${a} y a ${b}`), f,
+        `Find the biggest number that divides exactly into BOTH sides. Try 2, 3, 5…`,
+        `İki tarafı da tam bölen EN BÜYÜK sayıyı bul. 2, 3, 5'i dene…`,
+        `Busca el mayor número que divide exactamente a LOS DOS lados. Prueba 2, 3, 5…`),
+      stp(lang, `${a} ÷ ${f}`, p, 'Divide the first side by it:', 'Birinci tarafı ona böl:', 'Divide el primer lado entre él:'),
+      stp(lang, `${b} ÷ ${f}`, q, 'And the second side:', 'İkinci taraf:', 'Y el segundo lado:'),
+    ], null, true),
     hint_steps: [
       say(lang, `Look for a number that divides into both sides exactly.`,
                 `İki tarafı da tam bölen bir sayı ara.`,
@@ -6163,6 +6193,38 @@ const SOLIDS = {
   sphere: { name: { en: 'sphere', tr: 'küre', es: 'esfera' } },
 }
 
+// Counting a solid the way you would with your finger: the top, the sides, the bottom. Each part
+// is a small count the child can see on the drawing; the last line adds them.
+const SOLID_LABEL = {
+  facesTop: ['faces on the top', 'üstteki yüz', 'caras de arriba'], facesSides: ['faces round the sides', 'yanlardaki yüzler', 'caras de los lados'],
+  facesBottom: ['faces on the bottom', 'alttaki yüz', 'caras de abajo'], triEnds: ['triangle ends', 'üçgen uçlar', 'triángulos de los extremos'],
+  rectSides: ['rectangles round the sides', 'yanlardaki dikdörtgenler', 'rectángulos de los lados'], base: ['base', 'taban', 'base'],
+  triSides: ['triangle sides', 'üçgen yanlar', 'triángulos laterales'],
+  edgesTop: ['edges round the top', 'üstteki ayrıtlar', 'aristas de arriba'], edgesUp: ['edges going up and down', 'dikey ayrıtlar', 'aristas verticales'],
+  edgesBottom: ['edges round the bottom', 'alttaki ayrıtlar', 'aristas de abajo'], edgesBase: ['edges round the base', 'tabandaki ayrıtlar', 'aristas de la base'],
+  edgesPoint: ['edges up to the point', 'tepeye giden ayrıtlar', 'aristas hacia la punta'],
+  cornersTop: ['corners on the top', 'üstteki köşeler', 'vértices de arriba'], cornersBottom: ['corners on the bottom', 'alttaki köşeler', 'vértices de abajo'],
+  cornersBase: ['corners on the base', 'tabandaki köşeler', 'vértices de la base'], point: ['the point at the top', 'tepe noktası', 'la punta'],
+}
+const SOLID_PARTS = {
+  cube:   { faces: [['facesTop', 1], ['facesSides', 4], ['facesBottom', 1]], edges: [['edgesTop', 4], ['edgesUp', 4], ['edgesBottom', 4]], vertices: [['cornersTop', 4], ['cornersBottom', 4]] },
+  cuboid: { faces: [['facesTop', 1], ['facesSides', 4], ['facesBottom', 1]], edges: [['edgesTop', 4], ['edgesUp', 4], ['edgesBottom', 4]], vertices: [['cornersTop', 4], ['cornersBottom', 4]] },
+  prism:  { faces: [['triEnds', 2], ['rectSides', 3]], edges: [['edgesTop', 3], ['edgesUp', 3], ['edgesBottom', 3]], vertices: [['cornersTop', 3], ['cornersBottom', 3]] },
+  pyramid: { faces: [['base', 1], ['triSides', 4]], edges: [['edgesBase', 4], ['edgesPoint', 4]], vertices: [['cornersBase', 4], ['point', 1]] },
+}
+function solidCountSteps(name, ask, lang) {
+  const parts = SOLID_PARTS[name]?.[ask]
+  if (!parts) return {}
+  const total = parts.reduce((x, [, c]) => x + c, 0)
+  const steps = parts.map(([key, c], i) => stp(lang, say(lang, ...SOLID_LABEL[key]), c,
+    i === 0 ? 'Count it in parts, the way you would with your finger. First:' : 'And the next part:',
+    i === 0 ? 'Parmağınla sayar gibi parça parça say. Önce:' : 'Sıradaki parça:',
+    i === 0 ? 'Cuéntalo por partes, como con el dedo. Primero:' : 'Y la siguiente parte:'))
+  steps.push(stp(lang, parts.map(([, c]) => c).join(' + '), total,
+    'Add the parts together:', 'Parçaları topla:', 'Suma las partes:'))
+  return stepsHelp(steps, { kind: 'solid', name })
+}
+
 function geoSolid(level, lang) {
   const name = pick(Object.keys(SOLIDS))
   const s = SOLIDS[name]
@@ -6176,6 +6238,7 @@ function geoSolid(level, lang) {
       question_text: say(lang, `How many ${word} does this ${s.name.en} have?`, `Bu ${s.name.tr} şeklinin kaç ${word} var?`, `¿${esMany} ${word} tiene este ${s.name.es}?`)
         .replace('este pirámide', 'esta pirámide'),
       format: 'numeric', correct_answer: s[ask], operandKey: `solid:${name}:${ask}`,
+      ...solidCountSteps(name, ask, lang),
       hint_steps: [
         { faces: say(lang, 'A face is a flat side. Count the front ones, then the ones you cannot see.', 'Yüz, düz bir kenardır. Önce öndekileri, sonra görünmeyenleri say.', 'Una cara es un lado plano. Cuenta las de delante y luego las que no se ven.'),
           edges: say(lang, 'An edge is where two faces meet. The dashed lines are edges at the back.', 'Ayrıt, iki yüzün birleştiği çizgidir. Kesikli çizgiler arkadaki ayrıtlardır.', 'Una arista es donde se juntan dos caras. Las líneas discontinuas son aristas de detrás.'),
@@ -6194,6 +6257,19 @@ function geoSolid(level, lang) {
     topic: 'geometry', level,
     question_text: say(lang, 'What is this 3D shape called?', 'Bu cismin adı nedir?', '¿Cómo se llama este cuerpo geométrico?'),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `solid:${name}:name`,
+    ...(s.faces != null
+      ? stepsHelp([
+          stp(lang, say(lang, 'flat faces', 'düz yüzler', 'caras planas'), s.faces,
+            'Count the flat faces, the front ones and the ones you cannot see:', 'Düz yüzleri say, öndekileri ve görünmeyenleri:', 'Cuenta las caras planas, las de delante y las que no se ven:'),
+          stp(lang, say(lang, 'corners', 'köşeler', 'vértices'), s.vertices,
+            'Now count the corners, the hidden ones too:', 'Şimdi köşeleri say, gizlileri de:', 'Ahora cuenta los vértices, también los ocultos:'),
+        ], { kind: 'solid', name }, true)
+      : stepsHelp([
+          stp(lang, say(lang, 'flat faces', 'düz yüzler', 'caras planas'), name === 'cylinder' ? 2 : name === 'cone' ? 1 : 0,
+            `Count the flat faces. This shape also has a curved surface: ${name === 'cylinder' ? 'two flat circles, one curved side' : name === 'cone' ? 'one flat circle, one curved side to a point' : 'no flat faces at all — it is completely curved'}.`,
+            `Düz yüzleri say. Bu cismin eğri bir yüzü de var: ${name === 'cylinder' ? 'iki düz daire, bir eğri yan yüz' : name === 'cone' ? 'bir düz daire, tepeye giden bir eğri yüz' : 'hiç düz yüz yok — tamamen eğri'}.`,
+            `Cuenta las caras planas. Esta figura también tiene superficie curva: ${name === 'cylinder' ? 'dos círculos planos y un lado curvo' : name === 'cone' ? 'un círculo plano y un lado curvo hasta la punta' : 'ninguna cara plana: es toda curva'}.`),
+        ], { kind: 'solid', name }, true)),
     hint_steps: [
       say(lang, 'Are its faces flat, or is some of it curved?', 'Yüzleri düz mü, yoksa eğri bir yüzü var mı?', '¿Sus caras son planas o tiene alguna curva?'),
       say(lang, 'Look at the shape of its faces: squares, rectangles, triangles or circles?', 'Yüzlerinin şekline bak: kare mi, dikdörtgen mi, üçgen mi, daire mi?', 'Mira la forma de sus caras: ¿cuadrados, rectángulos, triángulos o círculos?'),
@@ -6852,6 +6928,20 @@ function statsPie(level, lang) {
       topic: 'averages', level,
       question_text: say(lang, `${intro} How many more chose ${hi.label} than ${lo.label}?`, `${intro} "${hi.label}" diyenler, "${lo.label}" diyenlerden kaç kişi fazla?`, `${intro} ¿Cuántos más eligieron «${hi.label}» que «${lo.label}»?`),
       format: 'numeric', correct_answer: hi.count - lo.count, operandKey: `pie:m:${total}:${split.join('|')}:${hi.label}:${lo.label}`,
+      ...stepsHelp([
+        stp(lang, say(lang, `parts the ${hi.label} slice covers`, `"${hi.label}" diliminin kapladığı parçalar`, `partes que ocupa «${hi.label}»`), (hi.n * lcm) / hi.d,
+          `The dashed lines cut the circle into ${lcm} equal parts. How many parts does the ${hi.label} slice cover?`,
+          `Kesik çizgiler daireyi ${lcm} eşit parçaya bölüyor. "${hi.label}" dilimi kaç parça kaplıyor?`,
+          `Las líneas discontinuas dividen el círculo en ${lcm} partes iguales. ¿Cuántas partes ocupa «${hi.label}»?`),
+        stp(lang, say(lang, `parts the ${lo.label} slice covers`, `"${lo.label}" diliminin kapladığı parçalar`, `partes que ocupa «${lo.label}»`), (lo.n * lcm) / lo.d,
+          'And the other slice:', 'Ve öbür dilim:', 'Y la otra porción:'),
+        stp(lang, `${(hi.n * lcm) / hi.d} − ${(lo.n * lcm) / lo.d}`, (hi.n * lcm) / hi.d - (lo.n * lcm) / lo.d,
+          'How many more parts is that?', 'Kaç parça fazla?', '¿Cuántas partes más son?'),
+        stp(lang, `${total} ÷ ${lcm}`, total / lcm,
+          `One part is ${total} children shared into ${lcm} parts:`, `Bir parça, ${total} çocuğun ${lcm} parçaya bölünmesi:`, `Una parte son ${total} niños repartidos en ${lcm} partes:`),
+        stp(lang, `${(hi.n * lcm) / hi.d - (lo.n * lcm) / lo.d} × ${total / lcm}`, hi.count - lo.count,
+          'The difference in children:', 'Çocuk sayısındaki fark:', 'La diferencia en niños:'),
+      ], visual),
       hint_steps: [readHint, say(lang, `Work out each slice as a fraction of ${total}, then find the difference.`, `Her dilimi ${total} sayısının bir kesri olarak hesapla, sonra farkı bul.`, `Calcula cada porción como fracción de ${total} y luego la diferencia.`)],
       visual,
     }
@@ -6860,6 +6950,18 @@ function statsPie(level, lang) {
     topic: 'averages', level,
     question_text: say(lang, `${intro} How many children chose ${s.label}?`, `${intro} Kaç çocuk "${s.label}" dedi?`, `${intro} ¿Cuántos niños eligieron «${s.label}»?`),
     format: 'numeric', correct_answer: s.count, operandKey: `pie:c:${total}:${split.join('|')}:${i}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `parts the ${s.label} slice covers`, `"${s.label}" diliminin kapladığı parçalar`, `partes que ocupa «${s.label}»`), (s.n * lcm) / s.d,
+        `The dashed lines cut the circle into ${lcm} equal parts. How many parts does the ${s.label} slice cover?`,
+        `Kesik çizgiler daireyi ${lcm} eşit parçaya bölüyor. "${s.label}" dilimi kaç parça kaplıyor?`,
+        `Las líneas discontinuas dividen el círculo en ${lcm} partes iguales. ¿Cuántas partes ocupa «${s.label}»?`),
+      stp(lang, `${total} ÷ ${lcm}`, total / lcm,
+        `The whole circle is all ${total} children. How many children is one part?`,
+        `Bütün daire ${total} çocuğun hepsi. Bir parça kaç çocuk?`,
+        `El círculo entero son los ${total} niños. ¿Cuántos niños es una parte?`),
+      stp(lang, `${(s.n * lcm) / s.d} × ${total / lcm}`, s.count,
+        `Now all the parts of that slice:`, `Şimdi o dilimin bütün parçaları:`, `Ahora todas las partes de esa porción:`),
+    ], visual),
     hint_steps: [readHint, say(lang, `Find what fraction of the circle the slice is, then take that fraction of ${total}.`, `Dilimin dairenin ne kadarı olduğunu bul, sonra ${total} sayısının o kadarını al.`, `Averigua qué fracción del círculo es la porción y calcula esa fracción de ${total}.`)],
     visual,
   }
@@ -6887,6 +6989,18 @@ function geoNet(level, lang) {
     topic: 'geometry', level,
     question_text: say(lang, 'This is a net. Which 3D shape does it fold up into?', 'Bu bir açınım. Katlanınca hangi cisim olur?', 'Esto es un desarrollo plano. ¿Qué cuerpo se forma al doblarlo?'),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `net:${name}`,
+    ...(() => {
+      const spec = { cube: [6, 'squares', 'kare', 'cuadrados', 6], cuboid: [6, 'rectangles', 'dikdörtgen', 'rectángulos', 6], prism: [5, 'triangles', 'üçgen', 'triángulos', 2],
+                     pyramid: [5, 'triangles', 'üçgen', 'triángulos', 4], cylinder: [3, 'circles', 'daire', 'círculos', 2], cone: [2, 'circles', 'daire', 'círculos', 1] }[name]
+      return stepsHelp([
+        stp(lang, say(lang, 'pieces in the net', 'açınımdaki parçalar', 'piezas del desarrollo'), spec[0],
+          'Count all the pieces in the net:', 'Açınımdaki bütün parçaları say:', 'Cuenta todas las piezas del desarrollo:'),
+        stp(lang, say(lang, `${spec[1]} among them`, `içlerinde ${spec[2]} olanlar`, `${spec[3]} entre ellas`), spec[4],
+          `How many of them are ${spec[1]}? The number of pieces and their shapes tell you which solid it folds into:`,
+          `Kaçı ${spec[2]}? Parça sayısı ve şekilleri hangi cisme katlandığını söyler:`,
+          `¿Cuántas son ${spec[3]}? El número de piezas y sus formas dicen qué cuerpo se forma:`),
+      ], { kind: 'net', name }, true)
+    })(),
     hint_steps: [
       say(lang, 'Count the faces and look at their shapes.', 'Yüzleri say ve şekillerine bak.', 'Cuenta las caras y mira qué forma tienen.'),
       say(lang, 'Imagine folding the outside pieces up to meet each other.', 'Dıştaki parçaları yukarı katlayıp birbirine değdirdiğini düşün.', 'Imagina que doblas las piezas de fuera hasta que se juntan.'),
