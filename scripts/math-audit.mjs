@@ -348,6 +348,15 @@ for (const age of AGES) {
           const last = p.help.steps[p.help.steps.length - 1]
           if (Math.abs(last.a - Number(p.correct_answer)) > 1e-9) fail(where, `adım yardımı ${last.a} veriyor, cevap ${p.correct_answer}`, p.question_text)
           for (const st of p.help.steps) if (!Number.isFinite(st.a) || /undefined|NaN/.test(`${st.q} ${st.say ?? ''}`)) fail(where, 'bozuk yardım adımı', JSON.stringify(st))
+          // Every line that is plain arithmetic ("17 × 8", "360 − 204 + 5") has to come to the
+          // number the child is asked to type. The last step is checked against the answer key
+          // above; this catches a wrong figure in the middle of a chain, which the key never sees.
+          for (const st of p.help.steps) {
+            const expr = String(st.q ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\s+/g, ' ')
+            if (!/^[\d\s+\-*/().]+$/.test(expr)) continue
+            let v; try { v = Function(`"use strict"; return (${expr})`)() } catch { continue }
+            if (Math.abs(Math.abs(v) - Math.abs(st.a)) > 1e-9) fail(where, `adım "${st.q}" = ${v}, çocuktan ${st.a} isteniyor`, p.question_text)
+          }
         }
         if (p.help?.kind === 'sorttest') {
           const hit = p.help.rows.filter(r => r.fits[0] === p.help.want[0] && r.fits[1] === p.help.want[1])

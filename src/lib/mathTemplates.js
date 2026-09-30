@@ -1181,17 +1181,41 @@ function stepsHelp(steps, picture) {
   return { help: { kind: 'steps', steps, ...(picture ? { picture } : {}) } }
 }
 
+// One step of a worked chain, with its sentence in all three languages: `q` is the sum on the
+// line, `a` what the child types, and the words say WHY this is the next thing to do.
+const stp = (lang, q, a, en, tr, es) => ({ q, a, say: say(lang, en, tr, es) })
+// A number as it is written on a line of working: a real minus sign, not a hyphen.
+const sgn = n => (n < 0 ? `−${-n}` : `${n}`)
+
 // 17 × 8 as 10 × 8 and 7 × 8, then the two added — the same split multSplitHint describes.
 function multSplitSteps(a, b, lang) {
   const [big, small] = a >= b ? [a, b] : [b, a]
   const parts = placeParts(big)
-  if (parts.length < 2 || big > 999) return {}
-  const [p, q] = [parts[0], big - parts[0]]
+  if (big > 9999 || big < 10) return {}
   const N = x => num(x, lang)
+  if (parts.length < 2) {
+    // 30 × 4: the zeros wait while the times table does the work, then come back on.
+    const zeros = 10 ** (String(big).length - 1)
+    const k = big / zeros
+    return stepsHelp([
+      stp(lang, `${small} × ${k}`, small * k,
+        `${N(big)} is ${k} with zeros after it. Do the times table first:`,
+        `${N(big)}, ${k} sayısının yanına sıfır eklenmiş hâli. Önce çarpım tablosunu yap:`,
+        `${N(big)} es ${k} con ceros detrás. Haz primero la tabla de multiplicar:`),
+      stp(lang, `${N(small * k)} × ${N(zeros)}`, small * big,
+        `Now put the zeros back on:`, `Şimdi sıfırları geri ekle:`, `Ahora devuelve los ceros:`),
+    ])
+  }
+  const [p, q] = [parts[0], big - parts[0]]
   return stepsHelp([
-    { q: `${N(small)} × ${N(p)}`, a: small * p },
-    { q: `${N(small)} × ${N(q)}`, a: small * q },
-    { q: `${N(small * p)} + ${N(small * q)}`, a: small * big },
+    stp(lang, `${N(small)} × ${N(p)}`, small * p,
+      `Split ${N(big)} into ${N(p)} and ${N(q)}. First the big part:`,
+      `${N(big)} sayısını ${N(p)} ve ${N(q)} diye ayır. Önce büyük parça:`,
+      `Separa ${N(big)} en ${N(p)} y ${N(q)}. Primero la parte grande:`),
+    stp(lang, `${N(small)} × ${N(q)}`, small * q,
+      `Now the small part:`, `Şimdi küçük parça:`, `Ahora la parte pequeña:`),
+    stp(lang, `${N(small * p)} + ${N(small * q)}`, small * big,
+      `Add the two parts together:`, `İki parçayı topla:`, `Suma las dos partes:`),
   ])
 }
 
@@ -1269,6 +1293,7 @@ function contextMultiplication(level, lang) {
     format: 'numeric',
     correct_answer: g * s,
     operandKey: pairKey(g, s),
+    ...multSplitSteps(g, s, lang),
     hint_steps: [ctx.group(lang, g, s), multSplitHint(g, s, lang)],
   }
 }
@@ -1354,6 +1379,44 @@ const DIV_CONTEXTS = {
   ],
 }
 
+// Division split at a round multiple of the divisor, done as sums: the big part, the small
+// part, add them — and then what the question is really asking about the leftovers.
+function divisionSteps({ n, d, tens, q, r, mode, lang }) {
+  const N = x => num(x, lang)
+  const rest = n - tens
+  const g2 = q - tens / d
+  const steps = [
+    stp(lang, `${N(tens)} ÷ ${d}`, tens / d,
+      `Split ${N(n)} into ${N(tens)} and ${N(rest)}. The first part divides exactly:`,
+      `${N(n)} sayısını ${N(tens)} ve ${N(rest)} diye ayır. İlk parça tam bölünür:`,
+      `Separa ${N(n)} en ${N(tens)} y ${N(rest)}. La primera parte se divide exacto:`),
+    stp(lang, rest % d === 0 ? `${N(rest)} ÷ ${d}`
+        : say(lang, `full groups of ${d} in ${N(rest)}`, `${N(rest)} içindeki tam ${d}'lik gruplar`, `grupos completos de ${d} en ${N(rest)}`), g2,
+      mode === 'exact' ? 'And the second part:' : `And the second part. How many FULL groups of ${d} fit in ${N(rest)}?`,
+      mode === 'exact' ? 'Ve ikinci parça:' : `İkinci parça. ${N(rest)} içine kaç TAM ${d}'lik grup sığar?`,
+      mode === 'exact' ? 'Y la segunda parte:' : `Y la segunda parte. ¿Cuántos grupos COMPLETOS de ${d} caben en ${N(rest)}?`),
+  ]
+  if (mode === 'left') {
+    steps.push(
+      stp(lang, `${g2} × ${d}`, g2 * d,
+        `Those full groups use up this many:`, `Bu tam gruplar şu kadarını kullanır:`, `Esos grupos completos gastan:`),
+      stp(lang, `${N(rest)} − ${g2 * d}`, r,
+        `What is left over is the answer:`, `Artan, cevaptır:`, `Lo que sobra es la respuesta:`))
+    return stepsHelp(steps)
+  }
+  steps.push(stp(lang, `${tens / d} + ${g2}`, q,
+    mode === 'exact' ? 'Add the two answers:' : 'Add up the full groups:',
+    mode === 'exact' ? 'İki sonucu topla:' : 'Tam grupları topla:',
+    mode === 'exact' ? 'Suma los dos resultados:' : 'Suma los grupos completos:'))
+  if (mode === 'up') {
+    steps.push(stp(lang, `${q} + 1`, q + 1,
+      `${r} are left over and they still need one, so add one more:`,
+      `${r} tane artıyor ve onlar için de bir tane gerekiyor, bir tane daha ekle:`,
+      `Sobran ${r} y también necesitan uno, así que suma uno más:`))
+  }
+  return stepsHelp(steps)
+}
+
 function contextDivision(level, lang) {
   const band = Math.min(bandForLevel(level), 6)
   const mode = pick(['exact', 'up', 'up', 'down', 'down', 'left'])
@@ -1398,6 +1461,7 @@ function contextDivision(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `div:${mode}:${n}:${d}`,
+    ...(tens > 0 && tens < n ? divisionSteps({ n, d, tens, q, r, mode, lang }) : {}),
     hint_steps: [split, last],
   }
 }
@@ -1449,6 +1513,14 @@ function addSubSurvey(level, lang, columnar) {
       `${total} alumnos eligieron su ${w[0]}. ${p1} eligieron ${w[1]}, ${p2} ${w[2]} y el resto ${w[3]}. ¿Cuántos eligieron ${w[3]}?`),
     answer: rest,
     key: `asw:survey:${total}:${p1}:${p2}`,
+    ...stepsHelp([
+      stp(lang, `${p1} + ${p2}`, p1 + p2,
+        'First add up the ones you know:', 'Önce bildiklerini topla:', 'Primero suma los que conoces:'),
+      stp(lang, `${total} − ${p1 + p2}`, rest,
+        'Everyone else chose the last one. Take that total away from everyone:',
+        'Geri kalan herkes sonuncuyu seçti. Bu toplamı tüm sayıdan çıkar:',
+        'Todos los demás eligieron el último. Resta ese total de todos:'),
+    ]),
     hints: [
       say(lang, `First add up the ones you know: ${p1} + ${p2}.`, `Önce bildiklerini topla: ${p1} + ${p2}.`, `Primero suma los que conoces: ${p1} + ${p2}.`),
       say(lang, `Everyone else chose the last one, so take that total away from ${total}.`,
@@ -1471,6 +1543,18 @@ function addSubBus(level, lang) {
       `En un autobús van ${s} personas. En la primera parada suben ${on1} y bajan ${off1}. En la segunda suben ${on2} y bajan ${off2}. ¿Cuántas van ahora?`),
     answer: now,
     key: `asw:bus:${s}:${on1}:${off1}:${on2}:${off2}`,
+    ...stepsHelp([
+      stp(lang, `${s} + ${on1}`, s + on1,
+        'First stop: the people who get on are added:', 'İlk durak: binenler eklenir:', 'Primera parada: los que suben se suman:'),
+      stp(lang, `${s + on1} − ${off1}`, s + on1 - off1,
+        'Now the people who get off are taken away:', 'Şimdi inenler çıkarılır:', 'Ahora los que bajan se restan:'),
+      stp(lang, `${s + on1 - off1} + ${on2}`, s + on1 - off1 + on2,
+        'Second stop: some more get on:', 'İkinci durak: yine bazıları biniyor:', 'Segunda parada: suben otros:'),
+      stp(lang, `${s + on1 - off1 + on2} − ${off2}`, now,
+        'And some get off. That is how many are on the bus now:',
+        'Ve bazıları iniyor. Otobüste şimdi kalanlar:',
+        'Y otros bajan. Esos son los que van ahora:'),
+    ]),
     hints: [
       say(lang, `Go one stop at a time: people getting on are added, people getting off are taken away.`,
                 `Durak durak ilerle: binenleri ekle, inenleri çıkar.`,
@@ -1497,6 +1581,14 @@ function addSubSpace(level, lang, columnar) {
       `Una tableta tiene ${num(cap, lang)} MB libres. ${name} guarda un juego de ${f1} MB y un vídeo de ${f2} MB. ¿Cuántos MB quedan libres?`),
     answer: left,
     key: `asw:space:${cap}:${f1}:${f2}`,
+    ...stepsHelp([
+      stp(lang, `${f1} + ${f2}`, f1 + f2,
+        'How much do the two files take together?', 'İki dosya birlikte ne kadar yer tutuyor?', '¿Cuánto ocupan los dos archivos juntos?'),
+      stp(lang, `${num(cap, lang)} − ${f1 + f2}`, left,
+        'What is free is what is left once that is taken away:',
+        'Boş kalan, bu çıkınca geriye kalandır:',
+        'Lo libre es lo que queda al restar eso:'),
+    ]),
     hints: [
       say(lang, `Work out how much the two files take together: ${f1} + ${f2}.`,
                 `Önce iki dosyanın birlikte ne kadar yer tuttuğunu bul: ${f1} + ${f2}.`,
@@ -1548,6 +1640,17 @@ function addSubYears(level, lang) {
                   `Un puente se abrió en ${from} y se sustituyó en ${to}. ¿Cuántos años se usó?`),
     answer: to - from,
     key: `asw:years:${from}:${to}`,
+    ...stepsHelp(next < to
+      ? [stp(lang, `${next} − ${from}`, next - from,
+           `Jump to the next round year first: ${from} to ${next}.`,
+           `Önce yuvarlak yıla sıçra: ${from} yılından ${next} yılına.`,
+           `Salta primero al año redondo: de ${from} a ${next}.`),
+         stp(lang, `${to} − ${next}`, to - next,
+           `Then from ${next} on to ${to}:`, `Sonra ${next} yılından ${to} yılına:`, `Luego de ${next} a ${to}:`),
+         stp(lang, `${next - from} + ${to - next}`, to - from,
+           'Add the two jumps:', 'İki sıçramayı topla:', 'Suma los dos saltos:')]
+      : [stp(lang, `${to} − ${from}`, to - from,
+           'The answer is the gap between the two years:', 'Cevap iki yıl arasındaki fark:', 'La respuesta es la distancia entre los dos años:')]),
     hints: [
       say(lang, `The answer is the gap between the two years.`, `Cevap, iki yıl arasındaki farktır.`, `La respuesta es la distancia entre los dos años.`),
       next < to
@@ -1574,6 +1677,12 @@ function addSubMoney(level, lang, columnar) {
       `${name} ha ahorrado ${had} euros. Compra un casco de bici de ${c1} euros y un libro de ${c2} euros. ¿Cuántos euros le quedan?`),
     answer: left,
     key: `asw:money:${had}:${c1}:${c2}`,
+    ...stepsHelp([
+      stp(lang, `${c1} + ${c2}`, c1 + c2,
+        'What was spent altogether?', 'Toplam ne kadar harcandı?', '¿Cuánto se gastó en total?'),
+      stp(lang, `${had} − ${c1 + c2}`, left,
+        'Take that away from what was saved:', 'Bunu biriktirilenden çıkar:', 'Réstalo de lo que se ahorró:'),
+    ]),
     hints: [
       say(lang, `Find what was spent altogether: ${c1} + ${c2}.`, `Önce toplam ne kadar harcandığını bul: ${c1} + ${c2}.`, `Primero calcula cuánto se gastó en total: ${c1} + ${c2}.`),
       say(lang, `Then take that away from the ${had} saved.`, `Sonra bunu biriktirilen ${had} liradan çıkar.`, `Luego réstalo de los ${had} euros ahorrados.`),
@@ -1855,6 +1964,27 @@ const POLY = {
   8: { en: 'octagon', tr: 'sekizgen', es: 'octágono' },
 }
 
+// The three "add up to" questions as a chain: add the angles you were given one at a time, then
+// take the total from what the shape adds up to. The fact opens the first line so the child
+// reads WHY 180 or 360 before doing anything with it.
+function angleSumSteps(total, given, fact, lang) {
+  const steps = []
+  let run = given[0]
+  for (let i = 1; i < given.length; i++) {
+    steps.push(stp(lang, `${run} + ${given[i]}`, run + given[i],
+      i === 1 ? `${fact} First add up the angles you know:` : 'And the next one:',
+      i === 1 ? `${fact} Önce bildiğin açıları topla:` : 'Sıradaki açıyı da ekle:',
+      i === 1 ? `${fact} Primero suma los ángulos que conoces:` : 'Y el siguiente:'))
+    run += given[i]
+  }
+  const solo = given.length === 1
+  steps.push(stp(lang, `${total} − ${run}`, total - run,
+    solo ? `${fact} Take the angle you know away from ${total}:` : `Now take that away from ${total}. What is left is the missing angle:`,
+    solo ? `${fact} Bildiğin açıyı ${total}'den çıkar:` : `Şimdi bunu ${total}'den çıkar. Kalan, eksik açıdır:`,
+    solo ? `${fact} Réstale a ${total} el ángulo que conoces:` : `Ahora réstalo de ${total}. Lo que queda es el ángulo que falta:`))
+  return steps
+}
+
 function geometryAngle(level, lang) {
   const band = bandForLevel(level)
   const kinds = band >= 7
@@ -1877,6 +2007,16 @@ function geometryAngle(level, lang) {
       correct_answer: answer,
       operandKey: `geo:reg:${n}`,
       visual: { kind: 'geometry', shape: 'regular', sides: n },
+      ...stepsHelp([
+        stp(lang, `360 ÷ ${n}`, 360 / n,
+          `Walking round the outside turns you 360° in all. Share that between the ${n} corners:`,
+          `Şeklin dışından dönmek toplam 360° eder. Bunu ${n} köşeye eşit paylaştır:`,
+          `Dar la vuelta por fuera son 360°. Repártelos entre las ${n} esquinas:`),
+        stp(lang, `180 − ${360 / n}`, answer,
+          `That is the turn at one corner. The angle inside is what is left of a straight line (180°):`,
+          `Bu, bir köşedeki dönüş. İçerideki açı, doğru açıdan (180°) geriye kalan:`,
+          `Ese es el giro en una esquina. El ángulo de dentro es lo que queda de un ángulo llano (180°):`),
+      ]),
       hint_steps: [
         say(lang, `Walking all the way round the outside turns you through 360° altogether.`,
                   `Şeklin dışından bir tam tur atmak seni toplam 360° döndürür.`,
@@ -1979,6 +2119,7 @@ function geometryAngle(level, lang) {
     correct_answer: answer,
     operandKey: `geo:ang:${kind}:${given.join('-')}`,
     visual: { kind: 'geometry', shape: kind, angles: given },
+    ...stepsHelp(angleSumSteps(spec.total, given, fact, lang)),
     hint_steps: [
       fact,
       say(lang, `Add up the ones you were given, then take that away from ${spec.total}.`,
@@ -2010,6 +2151,16 @@ function geometryArea(level, lang) {
         `Un triángulo tiene una base de ${b} cm y una altura de ${h} cm. ¿Cuál es su área en cm²?`),
       format: 'numeric', correct_answer: answer, operandKey: `geo:tri:${b}:${h}`,
       visual: { kind: 'geometry', shape: 'triangle', base: b, height: h, ask: 'area' },
+      ...stepsHelp([
+        stp(lang, `${b} × ${h}`, b * h,
+          'A rectangle round the triangle has this area (base × height):',
+          'Üçgenin etrafındaki dikdörtgenin alanı (taban × yükseklik):',
+          'El rectángulo que rodea al triángulo tiene este área (base × altura):'),
+        stp(lang, `${b * h} ÷ 2`, answer,
+          'The triangle is exactly half of that rectangle:',
+          'Üçgen, o dikdörtgenin tam yarısı:',
+          'El triángulo es justo la mitad de ese rectángulo:'),
+      ], { kind: 'geometry', shape: 'triangle', base: b, height: h, ask: 'area' }),
       hint_steps: [
         say(lang, `A triangle is exactly half of the rectangle that would fit around it.`,
                   `Bir üçgen, etrafına oturacak dikdörtgenin tam yarısıdır.`,
@@ -2052,6 +2203,12 @@ function geometryArea(level, lang) {
         `Un rectángulo tiene un área de ${area} cm². Un lado mide ${w} cm. ¿Cuánto mide el otro?`),
       format: 'numeric', correct_answer: h, operandKey: `geo:rev:${w}:${h}`,
       visual: { kind: 'geometry', shape: 'rect', base: w, area, ask: 'side' },
+      ...stepsHelp([
+        stp(lang, `${area} ÷ ${w}`, h,
+          `Area = side × side, so the missing side is the area shared out by the side you know (${w}):`,
+          `Alan = kenar × kenar, yani eksik kenar alanın bildiğin kenara (${w}) bölümü:`,
+          `Área = lado × lado, así que el lado que falta es el área entre el lado que conoces (${w}):`),
+      ]),
       hint_steps: [
         say(lang, `Area is the two sides multiplied together.`,
                   `Alan, iki kenarın çarpımıdır.`,
@@ -2077,6 +2234,12 @@ function geometryArea(level, lang) {
     correct_answer: askArea ? w * h : 2 * (w + h),
     operandKey: `geo:rect:${askArea ? 'a' : 'p'}:${w}:${h}`,
     visual: { kind: 'geometry', shape: 'rect', base: w, height: h, ask: askArea ? 'area' : 'perimeter' },
+    ...(askArea
+      ? multSplitSteps(w, h, lang)
+      : stepsHelp([
+          stp(lang, `${w} + ${h}`, w + h, 'One long side and one short side:', 'Bir uzun kenar, bir kısa kenar:', 'Un lado largo y uno corto:'),
+          stp(lang, `${w + h} + ${w + h}`, 2 * (w + h), 'The other two sides are the same again:', 'Öbür iki kenar da aynısı:', 'Los otros dos lados son iguales:'),
+        ], { kind: 'geometry', shape: 'rect', base: w, height: h, ask: 'perimeter' })),
     hint_steps: askArea
       ? [say(lang, `Area is how much surface is covered, counted in squares.`,
                    `Alan, kaplanan yüzeydir; kareyle sayılır.`,
@@ -2830,6 +2993,21 @@ function algThinkOfNumber(level, lang) {
     format: 'numeric',
     correct_answer: x,
     operandKey: `alg:think:${mult}:${add}:${x}`,
+    ...stepsHelp([
+      plus
+        ? stp(lang, `${sgn(total)} − ${add}`, x * mult,
+            `Work backwards. The last thing done was adding ${add}, so undo it first:`,
+            `Geriye doğru git. En son ${add} eklendi, önce onu geri al:`,
+            `Ve hacia atrás. Lo último fue sumar ${add}, así que deshazlo primero:`)
+        : stp(lang, `${sgn(total)} + ${add}`, x * mult,
+            `Work backwards. The last thing done was taking away ${add}, so undo it first:`,
+            `Geriye doğru git. En son ${add} çıkarıldı, önce onu geri al:`,
+            `Ve hacia atrás. Lo último fue restar ${add}, así que deshazlo primero:`),
+      stp(lang, `${x * mult} ÷ ${mult}`, x,
+          `Now undo the × ${mult}. That is the number ${name} thought of:`,
+          `Şimdi × ${mult} işlemini geri al. ${name}'in tuttuğu sayı bu:`,
+          `Ahora deshaz el × ${mult}. Ese es el número que pensó ${name}:`),
+    ]),
     hint_steps: [
       say(lang, `Work backwards from ${total}, undoing each step in reverse order.`,
                 `${total} sayısından geriye doğru git, adımları ters sırayla geri al.`,
@@ -2869,6 +3047,23 @@ function algSubstitute(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `alg:sub:${ca}:${a}:${cb}:${b}:${extra}`,
+    ...stepsHelp([
+      stp(lang, `${ca} × ${a}`, ca * a,
+        `${ca}a means ${ca} × a. Put a = ${a} in:`,
+        `${ca}a demek ${ca} × a. a = ${a} koy:`,
+        `${ca}a significa ${ca} × a. Pon a = ${a}:`),
+      stp(lang, `${cb} × ${bWritten}`, cb * Math.abs(b),
+        negatives ? `Now ${cb}b with b = ${bWritten}. The size is ${cb} × ${Math.abs(b)}; the minus sign comes back in the next line:`
+                  : `Now ${cb}b, with b = ${b}:`,
+        negatives ? `Şimdi ${cb}b, b = ${bWritten}. Büyüklüğü ${cb} × ${Math.abs(b)}; eksi işareti bir sonraki satırda geri geliyor:`
+                  : `Şimdi ${cb}b, b = ${b}:`,
+        negatives ? `Ahora ${cb}b con b = ${bWritten}. El tamaño es ${cb} × ${Math.abs(b)}; el signo menos vuelve en la línea siguiente:`
+                  : `Ahora ${cb}b, con b = ${b}:`),
+      stp(lang, negatives ? `${ca * a} − ${cb * Math.abs(b)} + ${extra}` : `${ca * a} + ${cb * b} + ${extra}`, answer,
+        negatives ? 'Adding a negative takes away. Put it all together:' : 'Now add everything up:',
+        negatives ? 'Negatif eklemek eksiltir. Hepsini birleştir:' : 'Şimdi hepsini topla:',
+        negatives ? 'Sumar un negativo resta. Júntalo todo:' : 'Ahora suma todo:'),
+    ]),
     hint_steps: [
       say(lang, `${ca}a means ${ca} × a. Put the numbers in place of the letters first.`,
                 `${ca}a demek ${ca} × a demek. Önce harflerin yerine sayıları koy.`,
@@ -2903,6 +3098,16 @@ function algSolve(level, lang) {
       format: 'numeric',
       correct_answer: x,
       operandKey: `alg:solve1:${m}:${c}:${x}`,
+      ...stepsHelp([
+        stp(lang, `${total} − ${c}`, m * x,
+          `Keep it balanced. Take ${c} off the ${total} (and off the left side too):`,
+          `Dengeyi koru. ${total} sayısından ${c} çıkar (sol taraftan da çıkmış olur):`,
+          `Mantén el equilibrio. Quita ${c} a ${total} (y también al lado izquierdo):`),
+        stp(lang, `${m * x} ÷ ${m}`, x,
+          `Now ${m}x = ${m * x}. Share it into ${m} equal lots to find one x:`,
+          `Şimdi ${m}x = ${m * x}. Bir x'i bulmak için ${m} eşit parçaya böl:`,
+          `Ahora ${m}x = ${m * x}. Repártelo en ${m} partes iguales para hallar una x:`),
+      ]),
       hint_steps: [
         say(lang, `Whatever you do to one side, do to the other — that keeps it balanced.`,
                   `Bir tarafa ne yaparsan diğerine de yap — denge böyle korunur.`,
@@ -2928,6 +3133,20 @@ function algSolve(level, lang) {
     format: 'numeric',
     correct_answer: x,
     operandKey: `alg:solve2:${a2}:${b}:${c2}:${d}`,
+    ...stepsHelp([
+      stp(lang, `${a2} − ${c2}`, a2 - c2,
+        `Take ${c2}x off both sides. How many x are left on the left?`,
+        `İki taraftan da ${c2}x çıkar. Solda kaç tane x kaldı?`,
+        `Quita ${c2}x a los dos lados. ¿Cuántas x quedan a la izquierda?`),
+      stp(lang, `${d} − ${b}`, (a2 - c2) * x,
+        `Now the plain numbers: take ${b} off both sides. What is ${a2 - c2}x equal to?`,
+        `Şimdi düz sayılar: iki taraftan ${b} çıkar. ${a2 - c2}x neye eşit?`,
+        `Ahora los números sueltos: quita ${b} a los dos lados. ¿A qué es igual ${a2 - c2}x?`),
+      stp(lang, `${(a2 - c2) * x} ÷ ${a2 - c2}`, x,
+        `Share it into ${a2 - c2} equal lots to find one x:`,
+        `Bir x'i bulmak için ${a2 - c2} eşit parçaya böl:`,
+        `Repártelo en ${a2 - c2} partes iguales para hallar una x:`),
+    ]),
     hint_steps: [
       say(lang, `Get all the x terms on one side and all the plain numbers on the other.`,
                 `Bütün x'li terimleri bir tarafa, düz sayıları diğer tarafa topla.`,
@@ -3412,6 +3631,16 @@ function avgMean(level, lang) {
     format: 'numeric',
     correct_answer: total / n,
     operandKey: `avg:mean:${xs.join('-')}`,
+    ...stepsHelp([
+      stp(lang, xs.join(' + '), total,
+        `The mean shares the total out evenly. So first find the total of all ${n}:`,
+        `Ortalama toplamı eşit paylaştırır. O yüzden önce ${n} sayının toplamını bul:`,
+        `La media reparte el total por igual. Así que primero halla el total de los ${n}:`),
+      stp(lang, `${total} ÷ ${n}`, total / n,
+        `Now share it out between the ${n} ${pers}:`,
+        `Şimdi bunu ${n} ${per} arasında eşit paylaştır:`,
+        `Ahora repártelo entre los ${n} ${pers}:`),
+    ]),
     hint_steps: [
       say(lang, `The mean shares the total out evenly, as if every ${per} were the same.`,
                 `Ortalama, toplamı eşit paylaştırır — her ${per} aynıymış gibi.`,
@@ -3451,6 +3680,20 @@ function avgReverseMean(level, lang) {
     format: 'numeric',
     correct_answer: missing,
     operandKey: `avg:rev:${mean}:${xs.join('-')}`,
+    ...stepsHelp([
+      stp(lang, `${mean} × ${n}`, total,
+        `A mean of ${mean} over ${n} ${pers} means the total must be ${n} lots of ${mean}:`,
+        `${n} ${per} için ortalama ${mean} demek, toplam ${n} tane ${mean} olmalı:`,
+        `Una media de ${mean} en ${n} ${pers} significa que el total son ${n} veces ${mean}:`),
+      stp(lang, xs.join(' + '), total - missing,
+        'Now add up the ones you already know:',
+        'Şimdi bildiklerini topla:',
+        'Ahora suma los que ya conoces:'),
+      stp(lang, `${total} − ${total - missing}`, missing,
+        'What is still needed to reach the total is the last one:',
+        'Toplama ulaşmak için eksik kalan, sonuncusu:',
+        'Lo que falta para llegar al total es el último:'),
+    ]),
     hint_steps: [
       say(lang, `A mean of ${mean} over ${n} ${pers} means the total was shared into ${n} equal lots of ${mean}.`,
                 `${n} ${per} için ortalama ${mean} demek, toplamın ${n} eşit ${mean}'e bölündüğü demek.`,
@@ -3531,6 +3774,36 @@ function avgOther(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `avg:${ask}:${sorted.join('-')}`,
+    ...(ask === 'median'
+      ? stepsHelp([
+          stp(lang, `(${n} + 1) ÷ 2`, (n + 1) / 2,
+            `There are ${n} numbers. The median is the one in the middle once they are in order. Which place is the middle one?`,
+            `${n} sayı var. Ortanca, sıralanınca ortada kalan. Ortadaki kaçıncı sırada?`,
+            `Hay ${n} números. La mediana es la del medio una vez ordenados. ¿Qué lugar es el del medio?`),
+          stp(lang, say(lang, `number ${(n + 1) / 2} in the list`, `listede ${(n + 1) / 2}. sayı`, `el número ${(n + 1) / 2} de la lista`), median,
+            say(lang, `In order: ${sorted.join(', ')}. Count in to that place:`,
+                      `Sıralı hâli: ${sorted.join(', ')}. O sıraya kadar say:`,
+                      `Ordenados: ${sorted.join(', ')}. Cuenta hasta ese lugar:`)),
+        ])
+      : ask === 'range'
+        ? stepsHelp([
+            stp(lang, say(lang, 'the biggest number', 'en büyük sayı', 'el número mayor'), sorted[n - 1],
+              'The range is the gap between the two ends of the list. Which is the biggest?',
+              'Açıklık, listenin iki ucu arasındaki farktır. En büyüğü hangisi?',
+              'El rango es la distancia entre los dos extremos. ¿Cuál es el mayor?'),
+            stp(lang, say(lang, 'the smallest number', 'en küçük sayı', 'el número menor'), sorted[0],
+              'And the smallest?', 'Ya en küçüğü?', '¿Y el menor?'),
+            stp(lang, `${sorted[n - 1]} − ${sorted[0]}`, range,
+              'The range is the biggest take away the smallest:',
+              'Açıklık = en büyük − en küçük:',
+              'El rango es el mayor menos el menor:'),
+          ])
+        : stepsHelp([
+            stp(lang, say(lang, 'the number that appears twice', 'iki kez geçen sayı', 'el número que sale dos veces'), mode,
+              say(lang, `Put them in order and the repeats sit side by side: ${sorted.join(', ')}. The mode is the one that appears most:`,
+                        `Sıralayınca tekrar edenler yan yana durur: ${sorted.join(', ')}. Mod, en çok geçendir:`,
+                        `Ordénalos y los repetidos quedan juntos: ${sorted.join(', ')}. La moda es el que más sale:`)),
+          ])),
     hint_steps: hints,
   }
 }
