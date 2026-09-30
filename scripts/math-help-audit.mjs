@@ -96,7 +96,7 @@ for (const age of AGES) {
           // and numbers the question or its picture already print are not a give-away.
           // "Split 92 into 80 and 12" and "5% is half of 10%" carry numbers as parts and labels; one of
           // them landing on an answer is a coincidence of the numbers, not the sentence giving it away.
-          const sentence = String(st.say ?? '').replace(/\d+\s?%|%\s?\d+/g, '').replace(/[^.:]*\b(split|separa|ayır|parçala|break)\b[^.:]*[.:]/gi, '').replace(/(sobran|left over)\s+\d+/gi, '').replace(/\d+ (tane|are|son|sobran)[^.:]*(artıyor|left over|sobran)[^.:]*[.:]?/gi, '')
+          const sentence = String(st.say ?? '').replace(/\d+\s?%|%\s?\d+/g, '').replace(/[^:]*\b(split|separa|ayır|parçala|break)\b[^:]*:/gi, '').replace(/(sobran|left over)\s+\d+/gi, '').replace(/\d+ (tane|are|son|sobran)[^.:]*(artıyor|left over|sobran)[^.:]*[.:]?/gi, '')
           const big = Math.abs(a) >= 10 || !Number.isInteger(a)
           const inQuestion = standalone(textOf, a, lang)
           const inQ = standalone(String(st.q), a, lang)

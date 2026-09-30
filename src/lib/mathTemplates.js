@@ -2171,6 +2171,16 @@ function geometryAngle(level, lang) {
       format: 'numeric',
       correct_answer: a,
       operandKey: `geo:opp:${a}`,
+      ...stepsHelp([
+        stp(lang, `180 − ${a}`, 180 - a,
+          'The angle next to it is on a straight line with it, and angles on a straight line add up to 180°:',
+          'Yanındaki açı onunla aynı doğru üzerinde; bir doğru üzerindeki açılar toplamı 180°:',
+          'El ángulo de al lado está con él en una recta, y los ángulos sobre una recta suman 180°:'),
+        stp(lang, `180 − ${180 - a}`, a,
+          'The opposite angle is next to THAT one on the other line, so it is what is left of 180°:',
+          'Karşısındaki açı, o açının diğer doğru üzerindeki komşusu; yani 180°\'den geriye kalan:',
+          'El ángulo opuesto es el vecino de ESE en la otra recta, así que es lo que queda de 180°:'),
+      ], { kind: 'geometry', shape: 'opposite', angles: [a] }),
       visual: { kind: 'geometry', shape: 'opposite', angles: [a] },
       hint_steps: [
         say(lang, `Where two lines cross, the angles facing each other are equal.`,
@@ -2314,6 +2324,12 @@ function geometryArea(level, lang) {
         `Un paralelogramo tiene una base de ${w} cm y una altura de ${h} cm. ¿Cuál es su área en cm²?`),
       format: 'numeric', correct_answer: answer, operandKey: `geo:para:${w}:${h}`,
       visual: { kind: 'geometry', shape: 'para', base: w, height: h, ask: 'area' },
+      ...stepsHelp([
+        stp(lang, `${w} × ${h}`, answer,
+          'Cut the slanted end off and slide it to the other side and it becomes a rectangle. Its area is the base times the height (the straight-up height, not the slanted side):',
+          'Eğik ucu kesip diğer tarafa kaydırırsan dikdörtgen olur. Alanı taban çarpı yükseklik (dik yükseklik, eğik kenar değil):',
+          'Corta el extremo inclinado y deslízalo al otro lado y se convierte en un rectángulo. Su área es la base por la altura (la altura vertical, no el lado inclinado):'),
+      ], { kind: 'geometry', shape: 'para', base: w, height: h, ask: 'area' }),
       hint_steps: [
         say(lang, `Cut the slanted end off and slide it to the other side — it becomes a rectangle.`,
                   `Eğik ucu kesip diğer tarafa kaydır — dikdörtgen olur.`,
@@ -3442,6 +3458,14 @@ function algSimplify(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `alg:simp:${a1}:${a2}:${b1}:${b2}`,
+    ...stepsHelp([
+      stp(lang, `${a1} + ${a2}`, xs,
+        'Only terms with the same letter go together. First the x terms — how many x altogether?',
+        'Yalnız aynı harfli terimler birlikte toplanır. Önce x\'liler — toplam kaç x?',
+        'Solo se juntan los términos con la misma letra. Primero los de x: ¿cuántas x hay en total?'),
+      stp(lang, `${b1} + ${b2}`, ys,
+        'Now the y terms — how many y altogether?', 'Şimdi y\'liler — toplam kaç y?', 'Ahora los de y: ¿cuántas y hay en total?'),
+    ], null, true),
     hint_steps: [
       say(lang, `Like terms are ones with exactly the same letter.`,
                 `Benzer terimler, harfi birebir aynı olanlardır.`,
@@ -3499,6 +3523,19 @@ function algExpression(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `alg:expr:${useTimes ? 't' + times : 'p' + plus}`,
+    ...stepsHelp(useTimes
+      ? [stp(lang, `2 + 2 × ${times}`, 2 + 2 * times,
+          `Two widths of x, and two lengths of ${times}x each. How many x altogether, going all the way round?`,
+          `İki genişlik x, iki uzunluk ${times}x. Çevre boyunca toplam kaç x?`,
+          `Dos anchos de x y dos largos de ${times}x cada uno. ¿Cuántas x hay en total dando toda la vuelta?`)]
+      : [stp(lang, `2 + 2`, 4,
+           'Two widths of x and two lengths that each have one x in them. How many x altogether?',
+           'İki genişlik x ve her birinde bir x olan iki uzunluk. Toplam kaç x?',
+           'Dos anchos de x y dos largos que llevan cada uno una x. ¿Cuántas x en total?'),
+         stp(lang, `2 × ${plus}`, 2 * plus,
+           `Each length is ${plus} more than x, and there are two lengths. How many extra cm altogether?`,
+           `Her uzunluk x'ten ${plus} fazla ve iki uzunluk var. Toplam kaç cm fazla?`,
+           `Cada largo es ${plus} más que x y hay dos largos. ¿Cuántos cm de más en total?`)], null, true),
     hint_steps: [
       say(lang, `Write down what each of the four sides is, in terms of x.`,
                 `Dört kenarın her birini x cinsinden yaz.`,
@@ -4125,6 +4162,16 @@ function avgProbability(level, lang) {
     options,
     correct_answer: correct,
     operandKey: `avg:prob:${want}:${total}`,
+    ...stepsHelp([
+      stp(lang, `${want} + ${other}`, total,
+        `A probability is the ones you want over ALL of them. How many marbles are in the bag altogether?`,
+        `Olasılık, istediklerinin HEPSİNE oranıdır. Torbada toplam kaç misket var?`,
+        `Una probabilidad es los que quieres sobre TODOS. ¿Cuántas canicas hay en la bolsa en total?`),
+      stp(lang, say(lang, `${colour} marbles`, `${colour} misketler`, `canicas ${colour}`), want,
+        `How many of them are ${colour}? That is the top number. Put it over ${total}, then simplify if you can:`,
+        `Kaçı ${colour}? Bu üstteki sayı. ${total} üzerine yaz, sadeleştirebiliyorsan sadeleştir:`,
+        `¿Cuántas son ${colour}? Ese es el número de arriba. Ponlo sobre ${total} y simplifica si puedes:`),
+    ], null, true),
     hint_steps: [
       say(lang, `A probability is the ones you want over ALL of them.`,
                 `Olasılık, istediklerinin HEPSİNE oranıdır.`,
@@ -4331,6 +4378,17 @@ function npSquareRoot(level, lang) {
       question_text: say(lang, `What is the square root of ${sq}?`, `${sq} sayısının karekökü kaçtır?`,
                                `¿Cuál es la raíz cuadrada de ${sq}?`),
       format: 'numeric', correct_answer: n, operandKey: `np:root:${sq}`,
+      ...stepsHelp([
+        ...Array.from({ length: Math.min(4, n - 1) }, (_, i) => { const c = n - Math.min(4, n - 1) + 1 + i
+          return stp(lang, `${c} × ${c}`, c * c,
+            i === 0 ? `A square root asks: which number times itself makes ${sq}? Try numbers in turn and watch the answer climb towards ${sq}. First ${c} × ${c}:` : `Next, ${c} × ${c}:`,
+            i === 0 ? `Karekök şunu sorar: hangi sayı kendisiyle çarpılınca ${sq} eder? Sayıları sırayla dene, sonucun ${sq} sayısına yaklaştığını izle. Önce ${c} × ${c}:` : `Sıradaki, ${c} × ${c}:`,
+            i === 0 ? `Una raíz cuadrada pregunta: ¿qué número por sí mismo da ${sq}? Prueba números en orden y mira cómo el resultado se acerca a ${sq}. Primero ${c} × ${c}:` : `Después, ${c} × ${c}:`) }),
+        stp(lang, say(lang, `the number that makes ${sq}`, `${sq} yapan sayı`, `el número que da ${sq}`), n,
+          `Which of those times itself gave exactly ${sq}? That number is the square root:`,
+          `Bunlardan hangisi kendisiyle çarpılınca tam ${sq} verdi? O sayı karekök:`,
+          `¿Cuál de ellos por sí mismo dio exactamente ${sq}? Ese número es la raíz cuadrada:`),
+      ]),
       hint_steps: [
         say(lang, `A square root asks: which number times itself makes ${sq}?`,
                   `Karekök şunu sorar: hangi sayı kendisiyle çarpılınca ${sq} eder?`,
@@ -5120,6 +5178,37 @@ function chartTemplate(level, lang) {
     format: 'numeric',
     correct_answer: spec.a,
     operandKey: `chart:${line ? 'l' : 'b'}:${ask}:${values.join('-')}`,
+    ...(() => {
+      const L = set.labels
+      const read = (i, first) => stp(lang, L[i], values[i],
+        first ? `Follow the bar (or the line) up from ${L[i]} to the gridlines and read its height. The gridlines go up in ${step}s:`
+              : `And ${L[i]}:`,
+        first ? `${L[i]} çubuğunu (ya da çizgisini) yukarı takip et ve yüksekliğini oku. Izgara çizgileri ${step}'şer artıyor:`
+              : `Ya ${L[i]}:`,
+        first ? `Sube desde ${L[i]} hasta las líneas y lee la altura. Las líneas van de ${step} en ${step}:`
+              : `Y ${L[i]}:`)
+      const visual = { kind: 'chart', shape: line ? 'line' : 'bar', labels: L, values, step, unit: set.unit, highlight: spec.highlight }
+      let steps
+      if (ask === 'read') {
+        steps = [
+          stp(lang, say(lang, `gridlines up to ${L[i1]}`, `${L[i1]} için ızgara çizgisi sayısı`, `líneas hasta ${L[i1]}`), values[i1] / step,
+            `The gridlines go up in ${step}s. Follow ${L[i1]} up: how many gridlines does it reach?`,
+            `Izgara çizgileri ${step}'şer artıyor. ${L[i1]} çubuğunu yukarı takip et: kaç çizgiye ulaşıyor?`,
+            `Las líneas van de ${step} en ${step}. Sube desde ${L[i1]}: ¿a cuántas líneas llega?`),
+          stp(lang, `${values[i1] / step} × ${step}`, values[i1], 'Each gridline is worth that much:', 'Her çizgi o kadar eder:', 'Cada línea vale esa cantidad:'),
+        ]
+      } else if (ask === 'difference') {
+        steps = [read(hi, true), read(lo, false),
+          stp(lang, `${values[hi]} − ${values[lo]}`, values[hi] - values[lo], '"How many more" is the gap between them:', '"Kaç fazla" aradaki farktır:', '"Cuántos más" es la diferencia entre ellos:')]
+      } else if (ask === 'total') {
+        steps = [...values.map((_, i) => read(i, i === 0)),
+          stp(lang, values.join(' + '), values.reduce((x, y) => x + y, 0), 'Add them all up:', 'Hepsini topla:', 'Súmalos todos:')]
+      } else {
+        steps = [...values.map((_, i) => read(i, i === 0)),
+          stp(lang, say(lang, 'the biggest of them', 'içlerinden en büyüğü', 'el mayor de todos'), values[iMax], 'Which of these is the biggest?', 'Bunların en büyüğü hangisi?', '¿Cuál de ellos es el mayor?')]
+      }
+      return stepsHelp(steps, visual)
+    })(),
     hint_steps: spec.h,
     visual: { kind: 'chart', shape: line ? 'line' : 'bar', labels: set.labels, values, step, unit: set.unit, highlight: spec.highlight },
   }
@@ -6264,13 +6353,20 @@ const SOLID_LABEL = {
   edgesBottom: ['edges round the bottom', 'alttaki ayrıtlar', 'aristas de abajo'], edgesBase: ['edges round the base', 'tabandaki ayrıtlar', 'aristas de la base'],
   edgesPoint: ['edges up to the point', 'tepeye giden ayrıtlar', 'aristas hacia la punta'],
   cornersTop: ['corners on the top', 'üstteki köşeler', 'vértices de arriba'], cornersBottom: ['corners on the bottom', 'alttaki köşeler', 'vértices de abajo'],
-  cornersBase: ['corners on the base', 'tabandaki köşeler', 'vértices de la base'], point: ['the point at the top', 'tepe noktası', 'la punta'],
+  cornersBase: ['corners on the base', 'tabandaki köşeler', 'vértices de la base'], point: ['the point at the top or bottom', 'tepe ya da alt nokta', 'la punta de arriba o de abajo'],
+  apex: ['the point at the top', 'tepe noktası', 'la punta'],
+  edgesMiddle: ['edges round the middle', 'ortadaki ayrıtlar', 'aristas del medio'], cornersMiddle: ['corners round the middle', 'ortadaki köşeler', 'vértices del medio'],
+  pentEnds: ['pentagon ends', 'beşgen uçlar', 'pentágonos de los extremos'], hexEnds: ['hexagon ends', 'altıgen uçlar', 'hexágonos de los extremos'],
 }
 const SOLID_PARTS = {
   cube:   { faces: [['facesTop', 1], ['facesSides', 4], ['facesBottom', 1]], edges: [['edgesTop', 4], ['edgesUp', 4], ['edgesBottom', 4]], vertices: [['cornersTop', 4], ['cornersBottom', 4]] },
   cuboid: { faces: [['facesTop', 1], ['facesSides', 4], ['facesBottom', 1]], edges: [['edgesTop', 4], ['edgesUp', 4], ['edgesBottom', 4]], vertices: [['cornersTop', 4], ['cornersBottom', 4]] },
   prism:  { faces: [['triEnds', 2], ['rectSides', 3]], edges: [['edgesTop', 3], ['edgesUp', 3], ['edgesBottom', 3]], vertices: [['cornersTop', 3], ['cornersBottom', 3]] },
-  pyramid: { faces: [['base', 1], ['triSides', 4]], edges: [['edgesBase', 4], ['edgesPoint', 4]], vertices: [['cornersBase', 4], ['point', 1]] },
+  pyramid: { faces: [['base', 1], ['triSides', 4]], edges: [['edgesBase', 4], ['edgesPoint', 4]], vertices: [['cornersBase', 4], ['apex', 1]] },
+  tetra: { faces: [['base', 1], ['triSides', 3]], edges: [['edgesBase', 3], ['edgesPoint', 3]], vertices: [['cornersBase', 3], ['apex', 1]] },
+  octa: { faces: [['facesTop', 4], ['facesBottom', 4]], edges: [['edgesTop', 4], ['edgesMiddle', 4], ['edgesBottom', 4]], vertices: [['point', 1], ['cornersMiddle', 4], ['point', 1]] },
+  pentprism: { faces: [['pentEnds', 2], ['rectSides', 5]], edges: [['edgesTop', 5], ['edgesUp', 5], ['edgesBottom', 5]], vertices: [['cornersTop', 5], ['cornersBottom', 5]] },
+  hexprism: { faces: [['hexEnds', 2], ['rectSides', 6]], edges: [['edgesTop', 6], ['edgesUp', 6], ['edgesBottom', 6]], vertices: [['cornersTop', 6], ['cornersBottom', 6]] },
 }
 function solidCountSteps(name, ask, lang) {
   const parts = SOLID_PARTS[name]?.[ask]
@@ -6427,6 +6523,16 @@ function geoTurn(level, lang) {
                              `${name} ${names[dirs[from]]} yönüne bakıyor ve ${dirWord} ${turnWord} dönüyor. ${name} şimdi hangi yöne bakıyor?`,
                              `${name} mira al ${names[dirs[from]]} y da ${turnWord} ${dirWord}. ¿Hacia dónde mira ahora?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `turn:${from}:${turns}:${cw}`,
+    ...stepsHelp([
+      stp(lang, say(lang, 'quarter turns', 'çeyrek tur', 'cuartos de vuelta'), turns,
+        `A quarter turn is one step round the compass. How many quarter turns does ${name} make?`,
+        `Bir çeyrek tur, pusulada bir adım. ${name} toplam kaç çeyrek tur dönüyor?`,
+        `Un cuarto de vuelta es un paso por la brújula. ¿Cuántos cuartos de vuelta da ${name}?`),
+      stp(lang, say(lang, 'where you end up (1 N, 2 E, 3 S, 4 W)', 'vardığın yer (1 K, 2 D, 3 G, 4 B)', 'dónde acabas (1 N, 2 E, 3 S, 4 O)'), ((from + (cw ? turns : 4 - turns)) % 4) + 1,
+        `Number the directions clockwise: 1 North, 2 East, 3 South, 4 West. You start at ${from + 1}. Go ${turns} step${turns === 1 ? '' : 's'} ${cw ? 'forward' : 'back'} round the circle and start again after 4. Which number do you land on?`,
+        `Yönleri saat yönünde numarala: 1 Kuzey, 2 Doğu, 3 Güney, 4 Batı. ${from + 1}${trEk(from + 1, 'abl')} başlıyorsun. Daire boyunca ${turns} adım ${cw ? 'ileri' : 'geri'} git, 4'ten sonra başa dön. Hangi sayıya varıyorsun?`,
+        `Numera las direcciones en el sentido de las agujas: 1 Norte, 2 Este, 3 Sur, 4 Oeste. Empiezas en el ${from + 1}. Da ${turns} paso${turns === 1 ? '' : 's'} ${cw ? 'hacia delante' : 'hacia atrás'} y vuelve a empezar tras el 4. ¿En qué número caes?`),
+    ], { kind: 'turn', from: dirs[from], cw, names: dirs.map(d => names[d]) }, true),
     // The compass, where the child is facing, and which way round the turn goes — not how far,
     // which is the question.
     visual: { kind: 'turn', from: dirs[from], cw, names: dirs.map(d => names[d]) },
@@ -6486,6 +6592,16 @@ function geoCoords(level, lang) {
     question_text: say(lang, `Which point is at ${pair(target.x, target.y)}?`, `Hangi nokta ${pair(target.x, target.y)} konumunda?`, `¿Qué punto está en ${pair(target.x, target.y)}?`),
     format: 'choice', options: choiceOf(right, wrongs, { sort: (a, b) => a.value.localeCompare(b.value) }), correct_answer: right.value,
     operandKey: `coord:w:${pts.map(p => `${p.x}${p.y}`).join('')}:${target.label}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `points standing ${target.x} along`, `yatayda ${target.x} birimde duran noktalar`, `puntos a ${target.x} de ancho`), pts.filter(p => p.x === target.x).length,
+        `The first number is how far along. Find ${target.x} along the bottom and go straight up. How many points stand on that line?`,
+        `İlk sayı ne kadar yatay gidileceği. Altta ${target.x} birime bak ve dümdüz yukarı çık. O çizgi üzerinde kaç nokta var?`,
+        `El primer número es cuánto avanzar. Busca ${target.x} abajo y sube en línea recta. ¿Cuántos puntos hay en esa línea?`),
+      stp(lang, say(lang, `points standing ${target.y} up`, `dikeyde ${target.y} birimde duran noktalar`, `puntos a ${target.y} de alto`), pts.filter(p => p.y === target.y).length,
+        `The second number is how far up. Now look along the line that is ${target.y} up. How many points stand on it? The one you want is on BOTH lines:`,
+        `İkinci sayı ne kadar yukarı çıkılacağı. Şimdi ${target.y} birim yukarıdaki çizgiye bak. Üzerinde kaç nokta var? İstediğin nokta İKİ çizgide de:`,
+        `El segundo número es cuánto subir. Mira ahora la línea que está ${target.y} arriba. ¿Cuántos puntos hay en ella? El que buscas está en LAS DOS líneas:`),
+    ], { kind: 'coords', size, points: pts }, true),
     hint_steps: [
       say(lang, `The first number is how far along, the second how far up.`, `İlk sayı ne kadar sağa, ikincisi ne kadar yukarı gidileceğidir.`, `El primer número es cuánto avanzar y el segundo cuánto subir.`),
       say(lang, `Go ${target.x} along, then ${target.y} up.`, `${target.x} sağa, sonra ${target.y} yukarı git.`, `Avanza ${target.x} y luego sube ${target.y}.`),
@@ -6702,6 +6818,15 @@ function pvPartition(level, lang) {
     topic: 'place-value', level,
     question_text: say(lang, `What is the missing number? ${num(n, lang)} = ${shown}`, `Eksik sayı kaçtır? ${num(n, lang)} = ${shown}`, `¿Qué número falta? ${num(n, lang)} = ${shown}`),
     format: 'numeric', correct_answer: parts[hide], operandKey: `pvp:${n}:${hide}`,
+    ...(pvPlaces(n) ? {} : (() => {
+      const given = parts.filter((_, i) => i !== hide)
+      return stepsHelp([
+        stp(lang, given.map(x => num(x, lang)).join(' + '), given.reduce((x, y) => x + y, 0),
+          `Add up the parts you can see:`, `Gördüğün parçaları topla:`, `Suma las partes que ves:`),
+        stp(lang, `${num(n, lang)} − ${num(given.reduce((x, y) => x + y, 0), lang)}`, parts[hide],
+          `What is missing is what takes it up to ${num(n, lang)}:`, `Eksik olan, toplamı ${num(n, lang)} yapan parça:`, `Lo que falta es lo que lo lleva hasta ${num(n, lang)}:`),
+      ])
+    })()),
     ...(pvPlaces(n) ? { help: { kind: 'pv', mode: 'missing', n, places: pvPlaces(n), given: parts.filter((_, i) => i !== hide) } } : {}),
     hint_steps: [say(lang, `Each part is one digit of ${num(n, lang)} in its place.`, `Her parça, ${num(n, lang)} sayısının bir basamağıdır.`, `Cada parte es una cifra de ${num(n, lang)} en su posición.`),
                  say(lang, `Find the digit that is missing and what its place makes it worth.`, `Eksik rakamı ve bulunduğu basamağın ona kattığı değeri bul.`, `Busca la cifra que falta y cuánto vale en su posición.`)],
@@ -6717,6 +6842,22 @@ function pvRoman(level, lang) {
     topic: 'place-value', level,
     question_text: say(lang, `What number is ${r} in Roman numerals?`, `Roma rakamıyla ${r} hangi sayıdır?`, `¿Qué número es ${r} en números romanos?`),
     format: 'numeric', correct_answer: n, operandKey: `roman:${n}`,
+    ...(() => {
+      const V = { I: 1, V: 5, X: 10, L: 50, C: 100 }
+      const tokens = []
+      for (let i = 0; i < r.length;) {
+        if (i + 1 < r.length && V[r[i]] < V[r[i + 1]]) { tokens.push(r.slice(i, i + 2)); i += 2; continue }
+        let j = i; while (j < r.length && r[j] === r[i]) j++
+        tokens.push(r.slice(i, j)); i = j
+      }
+      const val = t => (t.length === 2 && V[t[0]] < V[t[1]] ? V[t[1]] - V[t[0]] : V[t[0]] * t.length)
+      const steps = tokens.map((t, i) => stp(lang, t, val(t),
+        i === 0 ? 'Split the numeral into chunks. A smaller letter BEFORE a bigger one is taken away (IV, IX, XL, XC). First chunk:' : 'Next chunk:',
+        i === 0 ? 'Sayıyı parçalara böl. Büyük harfin ÖNÜNDEKİ küçük harf çıkarılır (IV, IX, XL, XC). İlk parça:' : 'Sıradaki parça:',
+        i === 0 ? 'Separa el número en trozos. Una letra menor DELANTE de una mayor se resta (IV, IX, XL, XC). Primer trozo:' : 'Siguiente trozo:'))
+      if (tokens.length > 1) steps.push(stp(lang, tokens.map(val).join(' + '), n, 'Add the chunks:', 'Parçaları topla:', 'Suma los trozos:'))
+      return stepsHelp(steps)
+    })(),
     hint_steps: [
       say(lang, 'I = 1, V = 5, X = 10, L = 50, C = 100.', 'I = 1, V = 5, X = 10, L = 50, C = 100.', 'I = 1, V = 5, X = 10, L = 50, C = 100.'),
       (() => {
@@ -6975,6 +7116,16 @@ function statsPie(level, lang) {
       topic: 'averages', level,
       question_text: say(lang, `${intro} What fraction of the children chose ${s.label}?`, `${intro} Çocukların ne kadarı "${s.label}" dedi?`, `${intro} ¿Qué fracción de los niños eligió «${s.label}»?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: frac, operandKey: `pie:f:${split.join('|')}:${i}`,
+      ...stepsHelp([
+        stp(lang, say(lang, `parts the ${s.label} slice covers`, `"${s.label}" diliminin kapladığı parçalar`, `partes que ocupa «${s.label}»`), (s.n * lcm) / s.d,
+          `The dashed lines cut the circle into ${lcm} equal parts. How many parts does the ${s.label} slice cover? That is the top number:`,
+          `Kesik çizgiler daireyi ${lcm} eşit parçaya bölüyor. "${s.label}" dilimi kaç parça kaplıyor? Bu üstteki sayı:`,
+          `Las líneas discontinuas dividen el círculo en ${lcm} partes iguales. ¿Cuántas partes ocupa «${s.label}»? Ese es el número de arriba:`),
+        stp(lang, say(lang, 'all the equal parts', 'bütün eş parçalar', 'todas las partes iguales'), lcm,
+          'And how many equal parts in the whole circle? That is the bottom number. Put one over the other, then simplify if you can:',
+          'Bütün dairede kaç eş parça var? Bu alttaki sayı. Birini diğerinin üstüne yaz, sadeleştirebiliyorsan sadeleştir:',
+          'Y ¿cuántas partes iguales tiene el círculo entero? Ese es el número de abajo. Ponlos uno sobre otro y simplifica si puedes:'),
+      ], visual, true),
       hint_steps: [readHint, say(lang, 'How many slices that size would fill the whole circle?', 'O büyüklükte kaç dilim bütün daireyi doldurur?', '¿Cuántas porciones de ese tamaño llenarían el círculo?')],
       visual,
     }
@@ -7286,6 +7437,14 @@ function avgSpinner(level, lang) {
     topic: 'averages', level,
     question_text: say(lang, `The spinner is spun once. What is the probability that it lands on ${w}?`, `Çark bir kez çevriliyor. ${cap(w)} gelme olasılığı nedir?`, `Se gira la ruleta una vez. ¿Cuál es la probabilidad de que caiga en ${w}?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: correct, operandKey: `spin:${sectors.join('')}:${want}`,
+    ...stepsHelp([
+      stp(lang, say(lang, 'all the equal parts', 'bütün eş parçalar', 'todas las partes iguales'), n,
+        'Count all the equal parts of the spinner — that is the bottom number:', 'Çarkın bütün eş parçalarını say — bu alttaki sayı:', 'Cuenta todas las partes iguales de la ruleta: ese es el número de abajo:'),
+      stp(lang, say(lang, `the ${w} parts`, `${w} parçalar`, `las partes de ${w}`), k,
+        `Now count the ${w} parts — the top number. Put it over ${n}, then simplify if you can:`,
+        `Şimdi ${w} parçaları say — üstteki sayı. ${n} üzerine yaz, sadeleştirebiliyorsan sadeleştir:`,
+        `Ahora cuenta las partes de ${w}: el número de arriba. Ponlo sobre ${n} y simplifica si puedes:`),
+    ], { kind: 'spinner', sectors: sectors.map(c => ({ colour: c, label: SPIN[c][lang] ?? SPIN[c].en })) }, true),
     hint_steps: [say(lang, 'Count all the equal parts of the spinner — that is the bottom number.', 'Çarkın bütün eşit parçalarını say — bu alttaki sayıdır.', 'Cuenta todas las partes iguales de la ruleta: ese es el número de abajo.'),
                  say(lang, `Count the ${w} parts — that is the top number. Simplify if you can.`, `${cap(w)} parçaları say — bu üstteki sayıdır. Sadeleştirebiliyorsan sadeleştir.`, `Cuenta las partes de ${w}: ese es el número de arriba. Simplifica si puedes.`)],
     visual: { kind: 'spinner', sectors: sectors.map(c => ({ colour: c, label: SPIN[c][lang] ?? SPIN[c].en })) },
@@ -7301,6 +7460,12 @@ function ratioMapScale(level, lang) {
     topic: 'ratio', level,
     question_text: say(lang, `Use the scale. How far apart are ${from} and ${to} in real life, in km?`, `Ölçeği kullan. ${from} ile ${to} arasındaki gerçek uzaklık kaç km?`, `Usa la escala. ¿A cuántos km están ${from} y ${to} en la realidad?`),
     format: 'numeric', correct_answer: cm * per, operandKey: `mapscale:${cm}:${per}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `cm from ${from} to ${to} on the map`, `haritada ${from} ile ${to} arası cm`, `cm de ${from} a ${to} en el mapa`), cm,
+        'Count the centimetres between the two places on the map:', 'Haritada iki yer arasındaki santimetreleri say:', 'Cuenta los centímetros entre los dos lugares del mapa:'),
+      stp(lang, `${cm} × ${per}`, cm * per,
+        `Every centimetre on the map is ${per} km in real life:`, `Haritadaki her santimetre gerçekte ${per} km:`, `Cada centímetro del mapa son ${per} km en la realidad:`),
+    ], { kind: 'mapscale', cm, per, from, to }),
     hint_steps: [say(lang, 'Count the centimetres between the two places on the map.', 'Haritada iki yer arasındaki santimetreleri say.', 'Cuenta los centímetros entre los dos lugares del mapa.'),
                  say(lang, `Every centimetre on the map is ${per} km in real life.`, `Haritadaki her santimetre gerçekte ${per} km.`, `Cada centímetro del mapa son ${per} km en la realidad.`)],
     visual: { kind: 'mapscale', cm, per, from, to },
@@ -7327,6 +7492,16 @@ function geoTranslate(level, lang) {
     topic: 'geometry', level,
     question_text: say(lang, `Point A moves ${moveX} and ${moveY}. What are its new coordinates?`, `A noktası ${moveX} ve ${moveY} gidiyor. Yeni koordinatları nedir?`, `El punto A se mueve ${moveX} y ${moveY}. ¿Cuáles son sus nuevas coordenadas?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `translate:${x}:${y}:${dx}:${dy}`,
+    ...stepsHelp([
+      stp(lang, `${x} ${dx > 0 ? '+' : '−'} ${Math.abs(dx)}`, x + dx,
+        `A starts at (${x}, ${y}). Moving right or left changes only the first number: ${dx > 0 ? 'right adds' : 'left takes away'}. The new first number:`,
+        `A noktası (${x}, ${y}) konumunda. Sağa/sola gitmek yalnız ilk sayıyı değiştirir: ${dx > 0 ? 'sağa gitmek ekler' : 'sola gitmek çıkarır'}. Yeni ilk sayı:`,
+        `A empieza en (${x}, ${y}). Moverse a la derecha o a la izquierda cambia solo el primer número: ${dx > 0 ? 'derecha suma' : 'izquierda resta'}. El primer número nuevo:`),
+      stp(lang, `${y} ${dy > 0 ? '+' : '−'} ${Math.abs(dy)}`, y + dy,
+        `Up or down changes only the second number: ${dy > 0 ? 'up adds' : 'down takes away'}. The new second number:`,
+        `Yukarı/aşağı yalnız ikinci sayıyı değiştirir: ${dy > 0 ? 'yukarı ekler' : 'aşağı çıkarır'}. Yeni ikinci sayı:`,
+        `Arriba o abajo cambia solo el segundo número: ${dy > 0 ? 'arriba suma' : 'abajo resta'}. El segundo número nuevo:`),
+    ], { kind: 'coords', size, points: [{ label: 'A', x, y }] }, true),
     hint_steps: [say(lang, `Read where A is now: along first, then up.`, `A'nın şimdi nerede olduğunu oku: önce yatay, sonra dikey.`, `Lee dónde está A ahora: primero horizontal y luego vertical.`),
                  say(lang, 'Moving right or left changes only the first number; up or down changes only the second.', 'Sağa/sola gitmek yalnız ilk sayıyı, yukarı/aşağı gitmek yalnız ikinciyi değiştirir.', 'Moverse a derecha o izquierda cambia solo el primer número; arriba o abajo, solo el segundo.')],
     visual: { kind: 'coords', size, points: [{ label: 'A', x, y }] },
@@ -7417,6 +7592,20 @@ function planeVertex(level, lang) {
       `A, B y C son tres vértices del ${name} ABCD. ¿Cuáles son las coordenadas de D?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
     operandKey: `plane:v:${kind}:${P.flat().join(',')}:${miss}`,
+    ...stepsHelp(['x', 'y'].map((axis, ai) => {
+      const t = v => `(${sgn(v)})`
+      const d = A[ai] + C[ai] - B[ai]
+      return stp(lang, `${t(A[ai])} + ${t(C[ai])} − ${t(B[ai])}`, Math.abs(d),
+        ai === 0
+          ? `Going from B to C is a move. Make the same move starting from A and you land on D. ${axis === 'x' ? 'The across number' : ''}: A + C − B${d < 0 ? ' — below zero, so type it without the minus' : ''}:`
+          : `And the up-or-down number${d < 0 ? ' — below zero, so type it without the minus' : ''}:`,
+        ai === 0
+          ? `B'den C'ye gitmek bir harekettir. Aynı hareketi A'dan başlayarak yaparsan D'ye varırsın. Yatay sayı: A + C − B${d < 0 ? ' — sıfırın altında, eksi olmadan yaz' : ''}:`
+          : `Ve dikey sayı${d < 0 ? ' — sıfırın altında, eksi olmadan yaz' : ''}:`,
+        ai === 0
+          ? `Ir de B a C es un movimiento. Haz el mismo movimiento desde A y llegas a D. El número horizontal: A + C − B${d < 0 ? ': por debajo de cero, escríbelo sin el menos' : ''}:`
+          : `Y el número vertical${d < 0 ? ': por debajo de cero, escríbelo sin el menos' : ''}:`)
+    }), { kind: 'plane', min: -5, max: 5, points: [['A', A], ['B', B], ['C', C]].map(([label, [x, y]]) => ({ label, x, y })), path: [A, B, C] }, true),
     hint_steps: [
       say(lang, 'Go from B to C and count: how many across, how many up or down?', 'B\'den C\'ye git ve say: kaç kare yatay, kaç kare yukarı ya da aşağı?', 'Ve de B a C y cuenta: ¿cuántas casillas en horizontal y cuántas arriba o abajo?'),
       say(lang, 'Make the same move starting from A — that is where D is.', 'Aynı hareketi A\'dan başlayarak yap — D orada.', 'Haz el mismo movimiento empezando en A: ahí está D.'),
@@ -7471,6 +7660,26 @@ function planeShape(level, lang) {
       `Se unen los puntos ${list} en ese orden. ¿Cuál es el nombre más exacto de la figura que forman?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
     operandKey: `plane:s:${kind}:${pts.flat().join(',')}`,
+    ...(() => {
+      // Read off the four points alone, never off `kind`: the chain counts what is on the grid.
+      const side = i => [pts[(i + 1) % 4][0] - pts[i][0], pts[(i + 1) % 4][1] - pts[i][1]]
+      const S = [0, 1, 2, 3].map(side)
+      const parallel = [[0, 2], [1, 3]].filter(([i, j]) => S[i][0] * S[j][1] - S[i][1] * S[j][0] === 0).length
+      const right = [0, 1, 2, 3].filter(i => { const a = S[(i + 3) % 4], b = S[i]; return a[0] * b[0] + a[1] * b[1] === 0 }).length
+      const distinct = new Set(S.map(([x, y]) => x * x + y * y)).size
+      return stepsHelp([
+        stp(lang, say(lang, 'pairs of parallel sides', 'paralel kenar çiftleri', 'pares de lados paralelos'), parallel,
+          'Join the points in order, then back to the first. How many pairs of sides are parallel (they never meet, like rails)?',
+          'Noktaları sırayla birleştir, sonra ilkine dön. Kaç çift kenar paralel (ray gibi, hiç kesişmez)?',
+          'Une los puntos en orden y vuelve al primero. ¿Cuántos pares de lados son paralelos (no se cruzan nunca, como los raíles)?'),
+        stp(lang, say(lang, 'right angles', 'dik açılar', 'ángulos rectos'), right,
+          'How many corners are square corners?', 'Kaç köşe dik açı?', '¿Cuántas esquinas son rectas?'),
+        stp(lang, say(lang, 'different side lengths', 'farklı kenar uzunlukları', 'longitudes de lado distintas'), distinct,
+          'How many different side lengths are there? All equal is 1; two lengths is 2. Put the three counts together to find the name:',
+          'Kaç farklı kenar uzunluğu var? Hepsi eşitse 1; iki uzunluk varsa 2. Üç sayıyı birleştirip adı bul:',
+          '¿Cuántas longitudes de lado distintas hay? Todos iguales es 1; dos longitudes es 2. Junta los tres números para hallar el nombre:'),
+      ], { kind: 'plane', min: -5, max: 5, points: pts.map(([x, y], i) => ({ label: 'ABCD'[i], x, y })) }, true)
+    })(),
     hint_steps: [
       say(lang, 'Join the points on the grid in order, then back to the first.', 'Noktaları ızgarada sırayla birleştir, sonra ilkine dön.', 'Une los puntos en orden en la cuadrícula y vuelve al primero.'),
       say(lang, 'Now look for sides that are parallel, sides that are equal and right angles.', 'Şimdi paralel kenarlara, eşit kenarlara ve dik açılara bak.', 'Ahora busca lados paralelos, lados iguales y ángulos rectos.'),
@@ -7515,6 +7724,16 @@ function planeTranslate(level, lang) {
       `El triángulo se desplaza ${moveX} y ${moveY}. ¿Cuáles son las nuevas coordenadas del vértice ${corner}?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
     operandKey: `plane:t:${T.flat().join(',')}:${dx}:${dy}:${k}`,
+    ...stepsHelp([
+      stp(lang, `${sgn(x)} ${dx > 0 ? '+' : '−'} ${Math.abs(dx)}`, Math.abs(x + dx),
+        `${corner} is at (${sgn(x)}, ${sgn(y)}). Right or left changes only the first number. New first number${x + dx < 0 ? ' — it is below zero, so type it without the minus; the minus goes back in when you choose' : ''}:`,
+        `${corner} köşesi (${sgn(x)}, ${sgn(y)}) konumunda. Sağ/sol yalnız ilk sayıyı değiştirir. Yeni ilk sayı${x + dx < 0 ? ' — sıfırın altında, eksi işareti olmadan yaz; seçerken eksiyi geri koyarsın' : ''}:`,
+        `${corner} está en (${sgn(x)}, ${sgn(y)}). Derecha o izquierda cambia solo el primer número. El primer número nuevo${x + dx < 0 ? ': está por debajo de cero, escríbelo sin el menos; el menos vuelve al elegir' : ''}:`),
+      stp(lang, `${sgn(y)} ${dy > 0 ? '+' : '−'} ${Math.abs(dy)}`, Math.abs(y + dy),
+        `Up or down changes only the second number. New second number${y + dy < 0 ? ' — below zero, so type it without the minus' : ''}:`,
+        `Yukarı/aşağı yalnız ikinci sayıyı değiştirir. Yeni ikinci sayı${y + dy < 0 ? ' — sıfırın altında, eksi olmadan yaz' : ''}:`,
+        `Arriba o abajo cambia solo el segundo número. El segundo número nuevo${y + dy < 0 ? ': por debajo de cero, escríbelo sin el menos' : ''}:`),
+    ], { kind: 'plane', min: -5, max: 5, points: T.map(([a, b], i) => ({ label: 'ABC'[i], x: a, y: b })), path: [...T, T[0]] }, true),
     hint_steps: [
       say(lang, `Read where ${corner} is now: across first, then up or down.`, `${corner} köşesinin şimdi nerede olduğunu oku: önce yatay, sonra dikey.`, `Lee dónde está ${corner} ahora: primero horizontal y luego vertical.`),
       say(lang, 'Right or left changes only the first number; up or down only the second. Below zero the numbers carry a minus.', 'Sağ/sol yalnız ilk sayıyı, yukarı/aşağı yalnız ikinciyi değiştirir. Sıfırın altında sayılar eksi olur.', 'Derecha o izquierda cambia solo el primer número; arriba o abajo, solo el segundo. Por debajo de cero llevan un menos.'),
@@ -7747,6 +7966,12 @@ function solidOlder(level, lang) {
       topic: 'geometry', level,
       question_text: say(lang, 'What is the name of this 3D shape?', 'Bu cismin adı nedir?', '¿Cómo se llama este cuerpo geométrico?'),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `solid3:name:${name}`,
+      ...stepsHelp([
+        stp(lang, say(lang, 'flat faces', 'düz yüzler', 'caras planas'), s.faces,
+          'Count the flat faces, the front ones and the ones you cannot see:', 'Düz yüzleri say, öndekileri ve görünmeyenleri:', 'Cuenta las caras planas, las de delante y las que no se ven:'),
+        stp(lang, say(lang, 'corners', 'köşeler', 'vértices'), s.vertices,
+          'Now count the corners, the hidden ones too. The number of faces and corners tells you which solid it is:', 'Şimdi köşeleri say, gizlileri de. Yüz ve köşe sayısı hangi cisim olduğunu söyler:', 'Ahora cuenta los vértices, también los ocultos. El número de caras y vértices dice de qué cuerpo se trata:'),
+      ], { kind: 'solid', name }, true),
       hint_steps: [say(lang, 'Look at the faces: what shapes are they, and how many are there?', 'Yüzlere bak: hangi şekiller ve kaç tane?', 'Mira las caras: ¿qué formas tienen y cuántas hay?'),
                    say(lang, 'A prism is the same all the way through; a pyramid comes to a point.', 'Prizma baştan sona aynıdır; piramit bir noktada birleşir.', 'Un prisma es igual de principio a fin; una pirámide acaba en punta.')],
       visual: { kind: 'solid', name },
@@ -7759,6 +7984,7 @@ function solidOlder(level, lang) {
     topic: 'geometry', level,
     question_text: say(lang, `How many ${word} does this shape have?`, `Bu cismin kaç ${word} var?`, `¿${many} ${word} tiene este cuerpo?`),
     format: 'numeric', correct_answer: s[what], operandKey: `solid3:${what}:${name}`,
+    ...solidCountSteps(name, what, lang),
     hint_steps: [say(lang, 'The dashed lines are the edges at the back that you cannot see.', 'Kesik çizgiler arkada kalan, göremediğin ayrıtlar.', 'Las líneas discontinuas son las aristas de atrás que no se ven.'),
                  what === 'faces'
                    ? say(lang, 'Count the top and bottom, then the faces around the side.', 'Önce alt ve üst, sonra yan yüzleri say.', 'Cuenta la de arriba y la de abajo, y luego las de alrededor.')
@@ -7814,6 +8040,36 @@ function machineMissing(level, lang) {
       question_text: say(lang, 'Both numbers go through the same machine. What goes in the empty box?', 'İki sayı da aynı makineden geçiyor. Boş kutuya ne gelir?', 'Los dos números pasan por la misma máquina. ¿Qué va en la caja vacía?'),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
       operandKey: `mach:miss:${opText(first)}:${opText(second)}:${i1}:${i2}:${askFirst ? 1 : 2}`,
+      ...(() => {
+        const mid2 = applyOp(first, i2)
+        const inv = { add: '−', sub: '+', mul: '÷' }
+        const gap = (x, y) => [`${Math.max(x, y)} − ${Math.min(x, y)}`, Math.abs(x - y)]
+        const pair = askFirst
+          ? [[i1, mid1, outs[0]], [i2, mid2, outs[1]]]
+          : [[i1, mid1, outs[0]], [i2, mid2, outs[1]]]
+        const steps = askFirst
+          ? [stp(lang, `${outs[0]} ${inv[second[0]]} ${second[1]}`, mid1,
+               `The second box is known: ${opText(second)}. Work backwards from the first output, undoing it, to find what came out of the empty box:`,
+               `İkinci kutu belli: ${opText(second)}. İlk çıkıştan geriye doğru git, onu geri al ve boş kutudan ne çıktığını bul:`,
+               `La segunda caja se conoce: ${opText(second)}. Ve hacia atrás desde la primera salida, deshaciéndola, para hallar lo que salió de la caja vacía:`),
+             stp(lang, `${outs[1]} ${inv[second[0]]} ${second[1]}`, mid2, 'And the same for the second output:', 'İkinci çıkış için de aynısı:', 'Y lo mismo con la segunda salida:')]
+          : [stp(lang, `${i1} ${opSym[first[0]]} ${first[1]}`, mid1,
+               `The first box is known: ${opText(first)}. Put the first number through it to see what goes into the empty box:`,
+               `İlk kutu belli: ${opText(first)}. İlk sayıyı ondan geçir ve boş kutuya ne girdiğini gör:`,
+               `La primera caja se conoce: ${opText(first)}. Pasa el primer número por ella para ver qué entra en la caja vacía:`),
+             stp(lang, `${i2} ${opSym[first[0]]} ${first[1]}`, mid2, 'And the same for the second number:', 'İkinci sayı için de aynısı:', 'Y lo mismo con el segundo número:')]
+        const [in1, out1] = askFirst ? [i1, mid1] : [mid1, outs[0]]
+        const [in2, out2] = askFirst ? [i2, mid2] : [mid2, outs[1]]
+        const [q1, a1] = gap(in1, out1), [q2, a2] = gap(in2, out2)
+        steps.push(
+          stp(lang, q1, a1, `Now compare what goes into the empty box with what comes out: ${in1} → ${out1}. How far apart are they?`,
+            `Şimdi boş kutuya girenle çıkanı karşılaştır: ${in1} → ${out1}. Aralarında ne kadar fark var?`,
+            `Ahora compara lo que entra en la caja vacía con lo que sale: ${in1} → ${out1}. ¿Cuánta diferencia hay?`),
+          stp(lang, q2, a2, `And for the other number: ${in2} → ${out2}. If the gaps are the same the box adds or takes away; if they are different it multiplies:`,
+            `Diğer sayı için: ${in2} → ${out2}. Farklar aynıysa kutu ekler ya da çıkarır; farklıysa çarpar:`,
+            `Y para el otro número: ${in2} → ${out2}. Si las diferencias son iguales, la caja suma o resta; si son distintas, multiplica:`))
+        return stepsHelp(steps, { kind: 'machine', inputs: [i1, i2], ops, outputs: outs }, true)
+      })(),
       hint_steps: [
         askFirst
           ? say(lang, 'Undo the second box first: work backwards from each output.', 'Önce ikinci kutuyu geri al: her çıkıştan geriye doğru git.', 'Deshaz primero la segunda caja: ve hacia atrás desde cada salida.')
@@ -7935,6 +8191,15 @@ function dotNumbers(level, lang) {
       ? say(lang, `These are the first four triangular numbers. What is the ${ask === 5 ? 'fifth' : 'sixth'} one?`, `Bunlar ilk dört üçgensel sayı. ${ask === 5 ? 'Beşincisi' : 'Altıncısı'} kaçtır?`, `Estos son los cuatro primeros números triangulares. ¿Cuál es el ${ask === 5 ? 'quinto' : 'sexto'}?`)
       : say(lang, `These are the first four square numbers. What is the ${ask === 5 ? 'fifth' : 'sixth'} one?`, `Bunlar ilk dört kare sayı. ${ask === 5 ? 'Beşincisi' : 'Altıncısı'} kaçtır?`, `Estos son los cuatro primeros números cuadrados. ¿Cuál es el ${ask === 5 ? 'quinto' : 'sexto'}?`),
     format: 'numeric', correct_answer: term(ask), operandKey: `dots:${tri ? 't' : 's'}:${ask}`,
+    ...stepsHelp(tri
+      ? Array.from({ length: ask - 4 }, (_, i) => stp(lang, `${term(4 + i)} + ${5 + i}`, term(5 + i),
+          i === 0 ? 'Each pattern adds a new row along the bottom, one dot longer than the last. The fifth adds 5 to the fourth:' : 'And the next one adds one more dot than that:',
+          i === 0 ? 'Her desen alta yeni bir sıra ekler, öncekinden bir nokta uzun. Beşinci desen dördüncüye 5 ekler:' : 'Sıradaki, bir öncekinden bir nokta fazla ekler:',
+          i === 0 ? 'Cada figura añade una fila abajo, un punto más larga que la anterior. La quinta añade 5 a la cuarta:' : 'Y la siguiente añade un punto más que esa:'))
+      : [stp(lang, `${ask} × ${ask}`, term(ask),
+          `Each pattern is a square: the same number of rows as columns. The ${ask === 5 ? 'fifth' : 'sixth'} has ${ask} rows of ${ask}:`,
+          `Her desen bir kare: satır sayısı sütun sayısına eşit. ${ask === 5 ? 'Beşinci' : 'Altıncı'} desen ${ask} sıra, her sırada ${ask} nokta:`,
+          `Cada figura es un cuadrado: tantas filas como columnas. La ${ask === 5 ? 'quinta' : 'sexta'} tiene ${ask} filas de ${ask}:`)], { kind: 'dots', tri, terms: [1, 2, 3, 4].map(term) }),
     hint_steps: tri
       ? [say(lang, 'Each pattern adds a new row along the bottom, one dot longer than the last.', 'Her desen alta bir sıra ekliyor, öncekinden bir nokta uzun.', 'Cada figura añade una fila abajo, con un punto más que la anterior.'),
          say(lang, 'So the jumps between the numbers go 2, 3, 4, … — keep them going.', 'Yani sayılar arasındaki farklar 2, 3, 4, … diye gidiyor — devam ettir.', 'Así que los saltos entre los números van 2, 3, 4…: sigue la serie.')]
@@ -7993,6 +8258,14 @@ function numberLineOlder(level, lang) {
       topic: 'place-value', level,
       question_text: say(lang, 'Which of these is equal to the number the arrow points to?', 'Okun gösterdiği sayıya hangisi eşittir?', '¿Cuál de estos es igual al número que señala la flecha?'),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `nl:forms:${k}:${rf}`,
+      ...stepsHelp([
+        stp(lang, say(lang, 'small steps from 0 to 1', '0 ile 1 arasındaki küçük adımlar', 'pasos pequeños de 0 a 1'), 10,
+          'Count the small steps between 0 and 1. So each step is one tenth:', '0 ile 1 arasındaki küçük adımları say. Yani her adım onda bir:', 'Cuenta los pasos pequeños entre 0 y 1. Así que cada paso es una décima:'),
+        stp(lang, say(lang, 'steps from 0 to the arrow', '0 ile ok arasındaki adımlar', 'pasos de 0 a la flecha'), k,
+          `Now count the steps from 0 to the arrow. That many tenths. The same amount can be written as a fraction, a decimal or a percentage, so find the matching one among the choices:`,
+          `Şimdi 0'dan oka kadar adımları say. O kadar onda bir. Aynı miktar kesir, ondalık ya da yüzde olarak yazılabilir, seçenekler arasında eşleşeni bul:`,
+          `Ahora cuenta los pasos de 0 a la flecha. Esas décimas. La misma cantidad se puede escribir como fracción, decimal o porcentaje: busca la que coincida entre las opciones:`),
+      ], { kind: 'scale', type: 'line', min: 0, max: 1, minor: 0.1, value: k / 10, labels: [0, 1] }, true),
       hint_steps: [say(lang, 'The line from 0 to 1 is cut into ten equal steps.', '0\'dan 1\'e kadar olan doğru on eşit adıma bölünmüş.', 'La recta de 0 a 1 está dividida en diez pasos iguales.'),
                    say(lang, 'A tenth is the same as 10 hundredths, or 10%.', 'Onda bir, yüzde on ile aynıdır (%10).', 'Una décima es lo mismo que 10 centésimas, o el 10 %.')],
       visual: { kind: 'scale', type: 'line', min: 0, max: 1, minor: 0.1, value: k / 10, labels: [0, 1] },

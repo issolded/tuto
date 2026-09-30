@@ -84,8 +84,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - [ ] Matematik yardımı 9-12 yaş, içerik hazır, ekrana bağlı değil (2026-09-30, Claude; `claude/math-hint-quality`).
       Yeni araç yok: ekranda hazır olan `stepsHelp` (çocuğun her satırdaki küçük işlemi yazdığı, üstünde
       "neden bu adım" cümlesi olan zincir) 9-12 yaşın sayısal ve seçmeli soru tiplerine yazıldı, EN/TR/ES.
-      Audit "öğretici yardım" payı (`npm run math:check`): 9 yaş %38 → 84, 10 %67 → 90, 11 %57 → 86,
-      12 %48 → 82; 13 yaş %2, **son öncelik, dokunulmadı**. 7 ve 8 yaş da yükseldi (%78/70 → 89/83).
+      Audit "öğretici yardım" payı (`npm run math:check`): 9 yaş %38 → 97, 10 %67 → 99, 11 %57 → 99,
+      12 %48 → 99 (grafik okuma, koordinat/öteleme, fonksiyon makinesi, karekök, olasılık, cebir şıkları,
+      katı cisimler, Roma rakamı, dört nokta adı dahil); 13 yaş %3, **son öncelik, dokunulmadı**. 7 ve 8 yaş da
+      yükseldi (%78/70 → 89/84). Kalite kapısı: `scripts/math-help-audit.mjs` (sızıntı, yazılamayan cevap,
+      dil karışması, tür uyuşmazlığı; math:check içinde) ve `scripts/tests/math-help-oracles.test.mjs`
+      (etiketli adımlar soru metninden/görselden bağımsız yeniden türetiliyor). Gerçek MathScreen'de 9/10/11/12 yaş
+      × TR/ES/EN × telefon/yatay oturumları sahte ağla uçtan uca oynandı.
       **Seçmeli sorular:** `stepsHelp(steps, picture, true)` ("pick"): zincir bir şey hesaplatır, son satır cevap
       değil, kapanış "cevabını seç". Panelde `MathChart` de çiziliyor (ızgara/grafik/pasta resmi).
       **Audit:** her adımın aritmetik satırı kendi cevabına eşit mi kontrol ediliyor (dile göre sayı yazımı:
@@ -93,8 +98,8 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       **Yolda düzeltilenler:** ortanca sorularında %46 ortanca = mod (üreteç tekrarı üç kopya yapıyordu);
       pre-answer 💡 ipucu, cevabı söyleyen adımı atlayınca ortadan adım düşüp yetim cümle kalıyordu (17 + ? = 34).
       **Açık:** yardım 9+ için ekrana bağlı değil (panel yalnız ≤8 yaş, yanlıştan sonra); ölçülmedi: bu zincirlerin
-      gerçekten öğrettiği, Ada/Batu'yla denenmedi. Zincirsiz kalanlar: karekök, sözel/şık-yorumlama soruları,
-      grafik okuma (panelde resim var, zincir yok), olasılık şıkları.
+      gerçekten öğrettiği, Ada/Batu'yla denenmedi. Zincirsiz kalan: yer değeri/karşılaştırma gibi birkaç
+      küçük şekil ve 13 yaşın tamamı.
       **Bağlandı (aynı gün):** 9+ yaş artık "bir deneme, sonra yardım": ilk yanlışta soruya dönülür, 💡 titrer,
       seçmelide yanlış kart soluklaşır, sebep gösterilmez; ipucuna bakıp yanlış ya da ikinci yanlış → yardım
       (`helpOpensNow`, `MathScreen.jsx`). ≤8 yaş aynı (hemen yardım). Yeniden deneme de ipucu gibi yarım pay

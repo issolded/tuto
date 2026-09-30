@@ -117,3 +117,92 @@ test('missing-sign tries: each line is the sign applied to the two numbers and t
     assert.ok(tries.filter(([, v]) => v === r).length === 1, 'exactly one sign reaches the result')
   }
 })
+
+// ── the picture-reading chains: every number is re-read from the visual or the question text ──
+
+const drawAny = (topic, level, re, tries = 8000) => {
+  const out = []
+  for (let i = 0; i < tries && out.length < 120; i++) {
+    const p = generateProblem(topic, level, null, 'en')
+    const m = re.exec(p.question_text)
+    if (m && p.help?.kind === 'steps') out.push({ p, m })
+  }
+  assert.ok(out.length >= 15, `only ${out.length} samples for ${re}`)
+  return out
+}
+
+test('chart reading: each typed value is the bar the picture draws', () => {
+  for (const { p, m } of drawAny('chart', 9, /(How many (goals|books|people) .*\?|largest number|altogether|How many more)/)) {
+    const v = p.visual
+    if (v?.kind !== 'chart' || !v.values) continue
+    const a = p.help.steps.map(s => s.a)
+    if (/largest number/.test(p.question_text)) assert.deepEqual(a, [...v.values, Math.max(...v.values)])
+    else if (/altogether/.test(p.question_text)) assert.deepEqual(a, [...v.values, v.values.reduce((x, y) => x + y, 0)])
+    else if (/How many more/.test(p.question_text)) assert.equal(a.at(-1), p.correct_answer)
+    else { assert.equal(a.length, 2); assert.ok(v.values.includes(a[1]), 'the value read is one of the bars'); assert.equal(a[0] * v.step, a[1]) }
+  }
+})
+
+test('translate: the new numbers follow from the start point and the words', () => {
+  for (const { p, m } of drawAny('geometry', 10, /^Point A moves (\d+) to the (right|left) and (\d+) (up|down)\./)) {
+    const { x, y } = p.visual.points[0]
+    const dx = (m[2] === 'right' ? 1 : -1) * Number(m[1]), dy = (m[4] === 'up' ? 1 : -1) * Number(m[3])
+    assert.deepEqual(p.help.steps.map(s => s.a), [x + dx, y + dy])
+    assert.equal(p.correct_answer, `(${x + dx}, ${y + dy})`)
+  }
+})
+
+test('square roots: the trial squares climb to the target and the last line is the root', () => {
+  for (const { p, m } of drawAny('number-properties', 14, /^What is the square root of (\d+)\?$/)) {
+    const sq = Number(m[1]), root = Math.sqrt(sq)
+    const a = p.help.steps.map(s => s.a)
+    assert.equal(a.at(-1), root)
+    assert.ok(a.slice(0, -1).includes(sq), 'one trial lands exactly on the number')
+    assert.ok(a.slice(0, -2).every((x, i) => x < a[i + 1]), 'trial squares increase')
+  }
+})
+
+test('dot patterns: triangular and square terms from their own formula', () => {
+  for (const { p, m } of drawAny('number-properties', 14, /^These are the first four (triangular|square) numbers\./)) {
+    const tri = m[1] === 'triangular'
+    const term = n => (tri ? n * (n + 1) / 2 : n * n)
+    const ask = /sixth/.test(p.question_text) ? 6 : 5
+    assert.equal(p.help.steps.at(-1).a, term(ask))
+    if (tri) assert.deepEqual(p.help.steps.map(s => s.a), Array.from({ length: ask - 4 }, (_, i) => term(5 + i)))
+  }
+})
+
+test('roman numerals: the chunks add up and are read the way a numeral is read', () => {
+  const V = { I: 1, V: 5, X: 10, L: 50, C: 100 }
+  const parse = r => { let t = 0; for (let i = 0; i < r.length; i++) t += V[r[i]] < (V[r[i + 1]] || 0) ? -V[r[i]] : V[r[i]]; return t }
+  for (const { p, m } of drawAny('place-value', 8, /^What number is ([IVXLC]+) in Roman numerals\?$/, 30000)) {
+    assert.equal(parse(m[1]), p.correct_answer)
+    const steps = p.help.steps
+    assert.equal(steps.at(-1).a, p.correct_answer)
+    if (steps.length > 1) assert.equal(steps.slice(0, -1).map(s => parse(s.q)).reduce((x, y) => x + y, 0), p.correct_answer)
+    for (const s of steps.slice(0, -1)) assert.equal(parse(s.q), s.a, s.q)
+  }
+})
+
+test('name of four joined points: parallel pairs, right angles and side lengths pick exactly the named shape', () => {
+  const table = { rectangle: [2, 4, 2], rhombus: [2, 0, 1], kite: [0, 0, 2], parallelogram: [2, 0, 2] }
+  for (const { p } of drawAny('geometry', 11, /are joined in that order/)) {
+    const [par, rt, dist] = p.help.steps.map(s => s.a)
+    const name = p.correct_answer
+    // A kite can have a right angle where its equal sides meet (a = t), so only its parallel pairs
+    // and side lengths are fixed; the other shapes are fixed on all three counts.
+    if (name === 'kite') { assert.equal(par, 0); assert.equal(dist, 2) }
+    else if (table[name]) assert.deepEqual([par, rt, dist], table[name], name)
+    // A trapezium may be a right trapezium (two right angles); one pair of parallel sides is what names it.
+    else { assert.equal(name, 'trapezium'); assert.equal(par, 1) }
+  }
+})
+
+test('pie fractions: parts covered come from the slice the picture draws', () => {
+  for (const { p, m } of drawAny('averages', 11, /^The pie chart shows .* How many children chose (.+)\?$/)) {
+    const slice = p.visual.slices.find(s => s.label === m[1])
+    const lcm = p.visual.parts
+    assert.equal(p.help.steps[0].a, (slice.n * lcm) / slice.d)
+    assert.equal(p.help.steps.at(-1).a, p.correct_answer)
+  }
+})
