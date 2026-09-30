@@ -2707,6 +2707,33 @@ const ROUND_PLACE = {
 // Rounding to a named place. The wrong options are the two neighbouring places and the same
 // number rounded the wrong way — a child who rounds 4,600 down to 4,000 has made a rule
 // mistake, not an arithmetic one, and the option says which.
+// Rounding as three things the child does with the number: read the digit that decides,
+// cut the number back to the place asked for, and only if the deciding digit is 5 or more, go up.
+function roundingSteps(n, place, unit, col, lang) {
+  const N = x => num(x, lang)
+  const decider = Math.floor((n % place) / (place / 10))
+  const down = n - (n % place)
+  const steps = [
+    stp(lang, say(lang, `the digit just after the ${unit} place`, `${col} basamağından sonraki rakam`, `la cifra justo después de ${col}`), decider,
+      `${N(n)}: which digit decides? It is the one just to the right of the ${unit} place.`,
+      `${N(n)}: kararı hangi rakam verir? ${col} basamağının hemen sağındaki.`,
+      `${N(n)}: ¿qué cifra decide? La que está justo a la derecha de ${col}.`),
+    stp(lang, `${N(n)} − ${n % place}`, down,
+      decider >= 5
+        ? `${decider} is 5 or more, so we go UP. First cut the number back to the ${unit} place, by taking off everything after it:`
+        : `${decider} is less than 5, so it STAYS. Cut the number back to the ${unit} place by taking off everything after it. That is the answer:`,
+      decider >= 5
+        ? `${decider}, 5 ve üstü, yani YUKARI çıkıyoruz. Önce sayıyı ${col} basamağına kadar kes; ondan sonrasını çıkar:`
+        : `${decider}, 5'ten küçük, yani sayı OLDUĞU YERDE kalır. Sayıyı ${col} basamağına kadar kes; ondan sonrasını çıkar. Cevap bu:`,
+      decider >= 5
+        ? `${decider} es 5 o más, así que SUBE. Primero recorta el número hasta ${col}, quitando todo lo que hay después:`
+        : `${decider} es menos de 5, así que SE QUEDA. Recorta el número hasta ${col}, quitando todo lo que hay después. Esa es la respuesta:`),
+  ]
+  if (decider >= 5) steps.push(stp(lang, `${N(down)} + ${N(place)}`, down + place,
+    `Go up by one ${unit}:`, `${col} basamağında bir yukarı çık:`, `Sube una unidad de ${col}:`))
+  return steps
+}
+
 function placeRound(level, lang) {
   const band = bandForLevel(level)
   // Each year rounds to the places its own curriculum line names, and no further. Year 4 says
@@ -2732,6 +2759,7 @@ function placeRound(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `pv:round:${n}:${place}`,
+    ...stepsHelp(roundingSteps(n, place, unit, col, lang)),
     hint_steps: [
       say(lang,
         `Look at the digit just to the right of the ${unit} place — that one digit decides it.`,
@@ -2839,6 +2867,16 @@ function placeNegative(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `pv:neg:${below}:${above}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `from −${below} up to 0`, `−${below}'den 0'a`, `de −${below} hasta 0`), below,
+        `Climb in two parts, through zero. First from −${below}°C up to 0°C. How many degrees is that?`,
+        `İki parçada çık, sıfırdan geçerek. Önce −${below}°C'den 0°C'ye. Kaç derece?`,
+        `Sube en dos partes, pasando por cero. Primero de −${below}°C a 0°C. ¿Cuántos grados son?`),
+      stp(lang, say(lang, `from 0 up to ${above}`, `0'dan ${above}'e`, `de 0 hasta ${above}`), above,
+        `Then from 0°C up to ${above}°C:`, `Sonra 0°C'den ${above}°C'ye:`, `Luego de 0°C a ${above}°C:`),
+      stp(lang, `${below} + ${above}`, answer,
+        `Add the two climbs:`, `İki çıkışı topla:`, `Suma las dos subidas:`),
+    ]),
     hint_steps: [
       say(lang, `Count up to 0 first — that is ${below} degrees on its own.`,
                 `Önce 0'a kadar çık — bu tek başına ${below} derece.`,
@@ -2848,6 +2886,34 @@ function placeNegative(level, lang) {
                 `Luego sigue desde 0 hasta ${above} y suma las dos subidas.`),
     ],
   }
+}
+
+function roundDecimalSteps(value, dp, answer, placeName, lang) {
+  const D = v => dnum(String(v), lang)
+  // 42.49 is 42.4900: the digit that decides may be a trailing zero the number no longer writes.
+  const frac = value.toFixed(4).split('.')[1]
+  const decider = Number(frac[dp])
+  const down = Number(String(value).slice(0, String(value).indexOf('.') + 1 + dp))
+  const unitStep = dp === 1 ? 0.1 : 0.01
+  const steps = [
+    stp(lang, say(lang, `the digit after the ${placeName} place`, `${placeName} basamağından sonraki rakam`, `la cifra después de la ${placeName}`), decider,
+      `${D(value)}: keep ${dp} digit${dp === 1 ? '' : 's'} after the point. Which digit decides? The next one along:`,
+      `${D(value)}: virgülden sonra ${dp} rakam tut. Kararı hangi rakam verir? Bir sonraki:`,
+      `${D(value)}: quédate con ${dp} cifra${dp === 1 ? '' : 's'} tras la coma. ¿Cuál decide? La siguiente:`),
+    stp(lang, say(lang, `${D(value)} cut after ${dp} decimal place${dp === 1 ? '' : 's'}`, `${D(value)} virgülden sonra ${dp} basamakta kesilmiş`, `${D(value)} cortado tras ${dp} decimal${dp === 1 ? '' : 'es'}`), down,
+      decider >= 5
+        ? `${decider} is 5 or more, so we go UP. First cut the number off after ${dp} digit${dp === 1 ? '' : 's'}:`
+        : `${decider} is less than 5, so it STAYS. Cut the number off after ${dp} digit${dp === 1 ? '' : 's'}. That is the answer:`,
+      decider >= 5
+        ? `${decider}, 5 ve üstü, yani YUKARI çıkıyoruz. Önce sayıyı virgülden sonra ${dp} rakamda kes:`
+        : `${decider}, 5'ten küçük, yani rakam OLDUĞU YERDE kalır. Sayıyı virgülden sonra ${dp} rakamda kes. Cevap bu:`,
+      decider >= 5
+        ? `${decider} es 5 o más, así que SUBE. Primero corta el número tras ${dp} cifra${dp === 1 ? '' : 's'}:`
+        : `${decider} es menos de 5, así que SE QUEDA. Corta el número tras ${dp} cifra${dp === 1 ? '' : 's'}. Esa es la respuesta:`),
+  ]
+  if (decider >= 5) steps.push(stp(lang, `${D(down)} + ${D(unitStep)}`, answer,
+    `Add one ${placeName}:`, `Bir ${placeName} ekle:`, `Suma una ${placeName}:`))
+  return steps
 }
 
 // Year 7: round to a given number of decimal places. This is the shape the keypad's decimal
@@ -2889,6 +2955,7 @@ function placeRoundDecimal(level, lang) {
     format: 'decimal',
     correct_answer: answer,
     operandKey: `pv:dp:${value}:${dp}`,
+    ...stepsHelp(roundDecimalSteps(value, dp, answer, placeName, lang)),
     hint_steps: [
       say(lang, `Keep ${dp} digit${dp === 1 ? '' : 's'} after the point and look at the next one along.`,
                 `Virgülden sonra ${dp} rakam tut ve bir sonrakine bak.`,
@@ -4152,6 +4219,14 @@ function seqContinue(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `seq:cont:${terms.join('-')}`,
+    ...stepsHelp([
+      stp(lang, up ? `${terms[1]} − ${terms[0]}` : `${terms[0]} − ${terms[1]}`, step,
+        'How big is the gap from one term to the next?', 'Bir terimden sonrakine fark ne kadar?', '¿Cuánto es el salto de un término al siguiente?'),
+      stp(lang, `${terms[3]} ${up ? '+' : '−'} ${step}`, answer,
+        up ? 'The sequence is going up. Add the same gap once more:' : 'The sequence is going down. Take the same gap off once more:',
+        up ? 'Dizi yükseliyor. Aynı farkı bir kez daha ekle:' : 'Dizi azalıyor. Aynı farkı bir kez daha çıkar:',
+        up ? 'La sucesión sube. Suma el mismo salto una vez más:' : 'La sucesión baja. Resta el mismo salto una vez más:'),
+    ]),
     hint_steps: [
       say(lang, `Find the gap between one term and the next, and check it is the same gap every time.`,
                 `Bir terimle sonraki arasındaki farkı bul, her seferinde aynı mı diye kontrol et.`,
@@ -4187,6 +4262,14 @@ function seqRule(level, lang) {
     format: 'numeric',
     correct_answer: answer,
     operandKey: `seq:rule:${table}:${off}:${which}`,
+    ...stepsHelp([
+      stp(lang, `${table} × ${which}`, table * which,
+        `The ${which}th number in the ${table} times table:`, `${table} çarpım tablosunun ${which}. sayısı:`, `El número ${which} de la tabla del ${table}:`),
+      stp(lang, `${table * which} ${less ? '−' : '+'} ${off}`, answer,
+        less ? `The rule takes ${off} off every term:` : `The rule adds ${off} to every term:`,
+        less ? `Kural her terimden ${off} çıkarır:` : `Kural her terime ${off} ekler:`,
+        less ? `La regla resta ${off} a cada término:` : `La regla suma ${off} a cada término:`),
+    ]),
     hint_steps: [
       say(lang, `Find the ${ordinal(which)} number in the ${table} times table first.`,
                 `Önce ${table} çarpım tablosunun ${which}. sayısını bul.`,
@@ -4222,6 +4305,17 @@ function seqMachine(level, lang) {
     format: 'numeric',
     correct_answer: backwards ? input : output,
     operandKey: `seq:mach:${backwards ? 'b' : 'f'}:${m}:${add}:${input}`,
+    ...stepsHelp(backwards
+      ? [stp(lang, `${output} − ${add}`, output - add,
+           `Go backwards through the machine. The last step was + ${add}, so undo it first:`,
+           `Makinede geriye git. Son adım + ${add} idi, önce onu geri al:`,
+           `Ve hacia atrás por la máquina. El último paso fue + ${add}, deshazlo primero:`),
+         stp(lang, `${output - add} ÷ ${m}`, input,
+           `Now undo the × ${m}. That is what went in:`, `Şimdi × ${m} işlemini geri al. İçeri giren sayı bu:`, `Ahora deshaz el × ${m}. Eso es lo que entró:`)]
+      : [stp(lang, `${input} × ${m}`, input * m,
+           `Follow the machine in order. First × ${m}:`, `Makineyi sırayla izle. Önce × ${m}:`, `Sigue la máquina en orden. Primero × ${m}:`),
+         stp(lang, `${input * m} + ${add}`, output,
+           `Then + ${add}. That is what comes out:`, `Sonra + ${add}. Çıkan sayı bu:`, `Luego + ${add}. Eso es lo que sale:`)]),
     visual: { kind: 'machine', inputs: [backwards ? '?' : input], ops: [`× ${m}`, `+ ${add}`], outputs: [backwards ? output : '?'] },
     hint_steps: [
       backwards
@@ -4742,6 +4836,16 @@ function chartTable(level, lang) {
     format: 'numeric',
     correct_answer: missing,
     operandKey: `chart:t:${total}:${cells.map(c => c ?? '?').join('-')}`,
+    ...stepsHelp([
+      stp(lang, cells.filter(c => c !== null).join(' + '), total - missing,
+        `Every one of the ${total} children is in the table. Add up the numbers you can see:`,
+        `${total} çocuğun hepsi tabloda. Gördüğün sayıları topla:`,
+        `Los ${total} niños están todos en la tabla. Suma los números que ves:`),
+      stp(lang, `${total} − ${total - missing}`, missing,
+        `What is missing is what takes the total up to ${total}:`,
+        `Eksik olan, toplamı ${total}'e tamamlayan sayı:`,
+        `Lo que falta es lo que lleva el total hasta ${total}:`),
+    ]),
     hint_steps: [
       say(lang, `Add up all the numbers you can see in the table.`,
                 `Tabloda gördüğün bütün sayıları topla.`,
