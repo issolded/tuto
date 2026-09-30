@@ -7505,17 +7505,35 @@ function angleDiagram(level, lang) {
   const straight = say(lang, 'Angles on a straight line add up to 180°.', 'Bir doğru üzerindeki açılar toplamı 180°\'dir.', 'Los ángulos sobre una recta suman 180°.')
   const inside = say(lang, 'The angles inside a triangle add up to 180°.', 'Üçgenin iç açıları toplamı 180°\'dir.', 'Los ángulos de un triángulo suman 180°.')
   const q = say(lang, 'What is the size of the angle marked ?', '? ile gösterilen açı kaç derecedir?', '¿Cuánto mide el ángulo marcado con ?')
-  let v, answer, hints
+  let v, answer, hints, steps
   if (type === 'exterior' || type === 'exteriorBack') {
     let a, b, c
     do { a = randInt(30, 75); b = randInt(35, 95); c = 180 - a - b } while (c < 30 || c > 80)
     if (type === 'exterior') {
       v = { kind: 'angles', type: 'triangle', a, c, labels: { a: `${a}°`, b: `${b}°`, ext: '?' } }
       answer = a + b
+      steps = [
+        stp(lang, `180 − ${a} − ${b}`, c,
+          'The angles inside a triangle add up to 180°. First find the angle inside at that corner:',
+          'Üçgenin iç açıları toplamı 180°. Önce o köşedeki iç açıyı bul:',
+          'Los ángulos de un triángulo suman 180°. Primero halla el ángulo de dentro en esa esquina:'),
+        stp(lang, `180 − ${c}`, answer,
+          'It and the marked angle sit on a straight line (180°):', 'O açı ile işaretli açı bir doğru üzerinde (180°):', 'Ese y el ángulo marcado están en una recta (180°):'),
+      ]
       hints = [inside, say(lang, 'Find the angle inside at that corner first; it and ? make a straight line.', 'Önce o köşedeki iç açıyı bul; o açı ile ? bir doğru oluşturur.', 'Primero halla el ángulo interior de esa esquina; con ? forma una recta.')]
     } else {
       v = { kind: 'angles', type: 'triangle', a, c, labels: { a: `${a}°`, b: '?', ext: `${180 - c}°` } }
       answer = b
+      steps = [
+        stp(lang, `180 − ${180 - c}`, c,
+          'Angles on a straight line add up to 180°. The outside angle gives the inside angle next to it:',
+          'Bir doğru üzerindeki açılar toplamı 180°. Dış açı, yanındaki iç açıyı verir:',
+          'Los ángulos sobre una recta suman 180°. El exterior da el interior de al lado:'),
+        stp(lang, `180 − ${a} − ${c}`, b,
+          'The angles inside the triangle add up to 180°. What is left is the marked angle:',
+          'Üçgenin iç açıları toplamı 180°. Geriye kalan işaretli açı:',
+          'Los ángulos del triángulo suman 180°. Lo que queda es el ángulo marcado:'),
+      ]
       hints = [straight, say(lang, 'The outside angle tells you the inside angle next to it. Then use the triangle.', 'Dış açı, yanındaki iç açıyı verir. Sonra üçgeni kullan.', 'El ángulo exterior te da el interior de al lado. Luego usa el triángulo.')]
     }
   } else if (type === 'isosceles') {
@@ -7524,16 +7542,37 @@ function angleDiagram(level, lang) {
     const askBase = Math.random() < 0.6
     v = { kind: 'angles', type: 'triangle', a: base, c: base, ticks: true, labels: askBase ? { b: `${apex}°`, c: '?' } : { a: `${base}°`, b: '?' } }
     answer = askBase ? base : apex
+    steps = askBase
+      ? [stp(lang, `180 − ${apex}`, 180 - apex,
+           'The angles in a triangle add up to 180°. Take the top angle away:', 'Üçgenin açıları toplamı 180°. Üstteki açıyı çıkar:', 'Los ángulos de un triángulo suman 180°. Quita el de arriba:'),
+         stp(lang, `${180 - apex} ÷ 2`, base,
+           'The two sides with a mark are equal, so the two bottom angles are equal. Share what is left:',
+           'İşaretli iki kenar eşit, yani alttaki iki açı eşit. Kalanı paylaştır:',
+           'Los dos lados marcados son iguales, así que los dos ángulos de abajo también. Reparte lo que queda:')]
+      : [stp(lang, `${base} + ${base}`, 2 * base,
+           'The two sides with a mark are equal, so the two bottom angles are equal. Add them:',
+           'İşaretli iki kenar eşit, yani alttaki iki açı eşit. İkisini topla:',
+           'Los dos lados marcados son iguales, así que los dos ángulos de abajo también. Súmalos:'),
+         stp(lang, `180 − ${2 * base}`, apex,
+           'The angles in a triangle add up to 180°. What is left is the top angle:', 'Üçgenin açıları toplamı 180°. Geriye kalan üstteki açı:', 'Los ángulos de un triángulo suman 180°. Lo que queda es el de arriba:')]
     hints = [say(lang, 'The two sides with a mark are equal, so the two angles at the bottom are equal too.', 'İşaretli iki kenar eşit, bu yüzden alttaki iki açı da eşit.', 'Los dos lados marcados son iguales, así que los dos ángulos de abajo también lo son.'), inside]
   } else if (type === 'opposite') {
     const a = randInt(28, 76) * 2 + (Math.random() < 0.5 ? 1 : 0)
     v = { kind: 'angles', type: 'cross', a, labels: { top: `${a}°`, bottom: `${a}°`, left: '?' } }
     answer = 180 - a
+    steps = [stp(lang, `180 − ${a}`, answer,
+      'Angles on a straight line add up to 180°. The ? and the angle above it sit side by side on one straight line:',
+      'Bir doğru üzerindeki açılar toplamı 180°. ? ile üstündeki açı aynı doğru üzerinde yan yana:',
+      'Los ángulos sobre una recta suman 180°. El ? y el de arriba están uno al lado del otro en una recta:')]
     hints = [straight, say(lang, 'The ? and the angle above it sit side by side on one straight line.', '? ile üstündeki açı aynı doğru üzerinde yan yana.', 'El ? y el ángulo de arriba están uno al lado del otro sobre una recta.')]
   } else {
     const m = randInt(20, 70) * 2
     v = { kind: 'angles', type: 'line', m, labels: { m: `${m}°`, left: '?', right: '?' } }
     answer = (180 - m) / 2
+    steps = [stp(lang, `180 − ${m}`, 180 - m,
+        'Angles on a straight line add up to 180°. Take the known angle away:', 'Bir doğru üzerindeki açılar toplamı 180°. Bilinen açıyı çıkar:', 'Los ángulos sobre una recta suman 180°. Quita el conocido:'),
+      stp(lang, `${180 - m} ÷ 2`, answer,
+        'The two ? angles are equal. Share what is left between them:', 'İki ? açısı eşit. Kalanı aralarında paylaştır:', 'Los dos ángulos ? son iguales. Reparte lo que queda entre ellos:')]
     hints = [straight, say(lang, 'Take the known angle away from 180°, then share what is left between the two equal angles.', 'Bilinen açıyı 180°\'den çıkar, kalanı iki eşit açıya paylaştır.', 'Resta el ángulo conocido de 180° y reparte lo que queda entre los dos ángulos iguales.')]
   }
   return {
@@ -7543,6 +7582,7 @@ function angleDiagram(level, lang) {
       : q,
     format: 'numeric', correct_answer: answer,
     operandKey: `angd:${type}:${JSON.stringify(v.labels)}:${v.a ?? v.m}:${v.c ?? ''}`,
+    ...stepsHelp(steps, v),
     hint_steps: hints, visual: v,
   }
 }
@@ -7574,6 +7614,21 @@ function compoundArea(level, lang) {
         : say(lang, `Each side of this shape meets the next at a right angle. What is its area, in ${unit}²?`, `Bu şeklin yan yana kenarları birbirine dik. Alanı kaç ${unit}²?`, `Cada lado de esta figura es perpendicular al siguiente. ¿Cuál es su área, en ${unit}²?`),
     format: 'numeric', correct_answer: answer,
     operandKey: `cmp:${style}:${perimeter ? 'p' : 'a'}:${W}:${H}:${cw}:${ch}`,
+    ...stepsHelp(perimeter
+      ? [stp(lang, `${W} + ${H}`, W + H,
+           `Cutting a corner out of a rectangle does not change the way round. It is the same as the whole rectangle, ${W} across and ${H} down:`,
+           `Bir dikdörtgenin köşesini kesmek çevreyi değiştirmez. Bütün dikdörtgenle aynı, ${W} yatay ve ${H} dikey:`,
+           `Quitar una esquina de un rectángulo no cambia el contorno. Es igual que el del rectángulo entero, ${W} de ancho y ${H} de alto:`),
+         stp(lang, `${W + H} + ${W + H}`, 2 * (W + H), 'Two of each:', 'Her birinden iki tane:', 'Dos de cada uno:')]
+      : [stp(lang, `${W} × ${H}`, W * H,
+           'First the whole rectangle, as if the corner were not missing:', 'Önce bütün dikdörtgen, köşe eksik değilmiş gibi:', 'Primero el rectángulo entero, como si no faltara la esquina:'),
+         stp(lang, `${cw} × ${ch}`, cw * ch,
+           `The missing corner is ${cw} by ${ch} (the whole side minus the part that is drawn):`,
+           `Eksik köşe ${cw} × ${ch} (bütün kenardan çizilen parça çıkarılınca):`,
+           `La esquina que falta mide ${cw} por ${ch} (el lado entero menos la parte dibujada):`),
+         stp(lang, `${W * H} − ${cw * ch}`, W * H - cw * ch,
+           'Take the missing corner away from the whole:', 'Eksik köşeyi bütünden çıkar:', 'Réstale la esquina que falta al total:')],
+      { kind: 'compound', style, W, H, cw, ch, unit }),
     hint_steps: perimeter
       ? [say(lang, 'Two sides have no number. Each is the whole side opposite minus the part you know.', 'İki kenarın sayısı yok. Her biri, karşısındaki bütün kenardan bildiğin parça çıkarılarak bulunur.', 'Dos lados no tienen número. Cada uno es el lado entero de enfrente menos la parte que conoces.'),
          say(lang, 'Then add all six sides.', 'Sonra altı kenarın hepsini topla.', 'Después suma los seis lados.')]
@@ -7710,6 +7765,22 @@ function numberCross(level, lang) {
       `La fila suma ${T} y la columna también. ¿Cuánto vale ${askA ? 'a' : 'b'}?`),
     format: 'numeric', correct_answer: askA ? row[1] : row[3],
     operandKey: `cross:${row.join(',')}:${col.join(',')}:${askA ? 'a' : 'b'}`,
+    ...stepsHelp([
+      stp(lang, `${col[1]} + ${col[2]}`, col[1] + col[2],
+        `Start with the column: it has only one letter, b. Add up the numbers you can see in it:`,
+        `Sütundan başla: içinde tek harf var, b. Sütunda gördüğün sayıları topla:`,
+        `Empieza por la columna: solo tiene una letra, b. Suma los números que ves en ella:`),
+      stp(lang, `${T} − ${col[1] + col[2]}`, row[3],
+        `The column adds up to ${T}, so b is what is left:`, `Sütunun toplamı ${T}, yani b geriye kalan:`, `La columna suma ${T}, así que b es lo que queda:`),
+      ...(askA ? [
+        stp(lang, `${row[0]} + ${row[2]} + ${row[3]} + ${row[4]}`, row[0] + row[2] + row[3] + row[4],
+          'Now the row. Add up the numbers you know, now that you know b:',
+          'Şimdi satır. b\'yi bildiğine göre satırda bildiğin sayıları topla:',
+          'Ahora la fila. Suma los números que conoces, ya que sabes b:'),
+        stp(lang, `${T} − ${row[0] + row[2] + row[3] + row[4]}`, row[1],
+          `The row adds up to ${T} too, so a is what is left:`, `Satırın toplamı da ${T}, yani a geriye kalan:`, `La fila también suma ${T}, así que a es lo que queda:`),
+      ] : []),
+    ], { kind: 'numcross', row: row.map((n, i) => (i === 1 ? 'a' : i === 3 ? 'b' : n)), col: ['b', ...col.slice(1)], at: 3 }),
     hint_steps: askA
       ? [say(lang, 'Start with the column: it has only one letter in it, b.', 'Sütundan başla: içinde tek harf var, b.', 'Empieza por la columna: solo tiene una letra, b.'),
          say(lang, 'Once you know b, the row has only one unknown left.', 'b\'yi bulunca satırda tek bilinmeyen kalır.', 'Cuando sepas b, en la fila solo queda una incógnita.')]
@@ -7742,6 +7813,23 @@ function diceTable(level, lang) {
         `${name} lanzó un dado ${N} veces y apuntó los resultados. Falta uno. ¿Cuántas veces salió el ${miss + 1}?`),
     format: 'numeric', correct_answer: even ? f[1] + f[3] + f[5] : f[miss],
     operandKey: `dice:${even ? 'even' : miss}:${f.join(',')}`,
+    ...(even
+      ? stepsHelp([
+          stp(lang, `${f[1]} + ${f[3]}`, f[1] + f[3],
+            'The even numbers on a dice are 2, 4 and 6. Read how often 2 and 4 came up and add them:',
+            'Zardaki çift sayılar 2, 4 ve 6. 2 ile 4\'ün kaç kez geldiğini oku ve topla:',
+            'Los pares de un dado son 2, 4 y 6. Lee cuántas veces salieron el 2 y el 4 y súmalos:'),
+          stp(lang, `${f[1] + f[3]} + ${f[5]}`, f[1] + f[3] + f[5],
+            'Now add how often 6 came up:', 'Şimdi 6\'nın kaç kez geldiğini ekle:', 'Ahora suma cuántas veces salió el 6:'),
+        ], { kind: 'chart', shape: 'table', cols: ['1', '2', '3', '4', '5', '6'], rows: [{ label: say(lang, 'Times', 'Kaç kez', 'Veces'), cells: f }] })
+      : stepsHelp([
+          stp(lang, f.filter((_, i) => i !== miss).join(' + '), N - f[miss],
+            `All six results together make ${N}. Add up the five you can see:`,
+            `Altı sonucun toplamı ${N}. Gördüğün beşini topla:`,
+            `Los seis resultados suman ${N}. Suma los cinco que ves:`),
+          stp(lang, `${N} − ${N - f[miss]}`, f[miss],
+            `What is missing takes the total up to ${N}:`, `Eksik olan, toplamı ${N} yapan sayı:`, `Lo que falta lleva el total hasta ${N}:`),
+        ], { kind: 'chart', shape: 'table', cols: ['1', '2', '3', '4', '5', '6'], rows: [{ label: say(lang, 'Times', 'Kaç kez', 'Veces'), cells }] })),
     hint_steps: even
       ? [say(lang, 'The even numbers on a dice are 2, 4 and 6.', 'Zardaki çift sayılar 2, 4 ve 6.', 'Los números pares de un dado son 2, 4 y 6.'),
          say(lang, 'Add up how often each of those came up.', 'Her birinin kaç kez geldiğini topla.', 'Suma cuántas veces salió cada uno.')]
