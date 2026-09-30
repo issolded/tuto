@@ -81,6 +81,20 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] Matematik yardımı 9-12 yaş, içerik hazır, ekrana bağlı değil (2026-09-30, Claude; `claude/math-hint-quality`).
+      Yeni araç yok: ekranda hazır olan `stepsHelp` (çocuğun her satırdaki küçük işlemi yazdığı, üstünde
+      "neden bu adım" cümlesi olan zincir) 9-12 yaşın sayısal ve seçmeli soru tiplerine yazıldı, EN/TR/ES.
+      Audit "öğretici yardım" payı (`npm run math:check`): 9 yaş %38 → 84, 10 %67 → 90, 11 %57 → 86,
+      12 %48 → 82; 13 yaş %2, **son öncelik, dokunulmadı**. 7 ve 8 yaş da yükseldi (%78/70 → 89/83).
+      **Seçmeli sorular:** `stepsHelp(steps, picture, true)` ("pick"): zincir bir şey hesaplatır, son satır cevap
+      değil, kapanış "cevabını seç". Panelde `MathChart` de çiziliyor (ızgara/grafik/pasta resmi).
+      **Audit:** her adımın aritmetik satırı kendi cevabına eşit mi kontrol ediliyor (dile göre sayı yazımı:
+      "2,144" İspanyolcada iki tam bir kaçtır). Bir belirsizlik yakaladı: kalanlı bölmede "292 ÷ 30 =" 9 istiyordu.
+      **Yolda düzeltilenler:** ortanca sorularında %46 ortanca = mod (üreteç tekrarı üç kopya yapıyordu);
+      pre-answer 💡 ipucu, cevabı söyleyen adımı atlayınca ortadan adım düşüp yetim cümle kalıyordu (17 + ? = 34).
+      **Açık:** yardım 9+ için ekrana bağlı değil (panel yalnız ≤8 yaş, yanlıştan sonra); ölçülmedi: bu zincirlerin
+      gerçekten öğrettiği, Ada/Batu'yla denenmedi. Zincirsiz kalanlar: karekök, sözel/şık-yorumlama soruları,
+      grafik okuma (panelde resim var, zincir yok), olasılık şıkları.
 - [ ] İngilizce çocuk ekranı ve bütün bağlantıları (2026-09-26, Claude). **Migration önce:**
       `server/migrations/2026-09-26_english_sessions.sql` (`english_sessions`, `english_attempts`,
       `children.english_variety`) çalışmadan deploy edilirse kart herkese görünür ama oturum açılmaz,
