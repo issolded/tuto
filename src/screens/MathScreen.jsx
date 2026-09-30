@@ -86,6 +86,14 @@ const ANIM = `
   0%   { transform: translateY(-14px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(640px) rotate(560deg); opacity: 0; }
 }
+@keyframes hintNudge {
+  0%, 100% { transform: translateX(0) rotate(0); box-shadow: 0 3px 10px rgba(60,120,200,.08); }
+  15% { transform: translateX(-5px) rotate(-3deg); box-shadow: 0 0 0 4px rgba(247,148,51,.35); }
+  30% { transform: translateX(5px) rotate(3deg); box-shadow: 0 0 0 6px rgba(247,148,51,.25); }
+  45% { transform: translateX(-4px) rotate(-2deg); box-shadow: 0 0 0 4px rgba(247,148,51,.35); }
+  60% { transform: translateX(4px) rotate(2deg); box-shadow: 0 0 0 6px rgba(247,148,51,.25); }
+  75% { transform: translateX(-2px) rotate(-1deg); }
+}
 @keyframes scaleIn {
   from { transform: scale(0.85); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
@@ -2182,6 +2190,14 @@ export default function MathScreen() {
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
+  // Nine and over get one try before help. `hintSeenQs` is the questions whose 💡 was opened, so a
+  // wrong answer after looking at it goes straight to help; `firstWrongQs` the ones already given
+  // their free retry. `struckOpts` are the choice cards a wrong tap has greyed out, and
+  // `nudge` counts up to restart the hint button's shake — the same question can need it twice.
+  const [hintSeenQs,    setHintSeenQs]   = useState(() => new Set(saved?.hintSeenQs ?? []))
+  const [firstWrongQs,  setFirstWrongQs] = useState(() => new Set(saved?.firstWrongQs ?? []))
+  const [struckOpts,    setStruckOpts]   = useState(() => saved?.struckOpts ?? {})
+  const [nudge,         setNudge]        = useState(0)
   const [wrongGuess,    setWrongGuess]   = useState(null)  // the answer the child tried; numeric sharing help can stage it and Skip can record it
   const [choiceMistake, setChoiceMistake] = useState(null) // why the selected option was wrong; becomes the first teaching step
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
@@ -2532,10 +2548,12 @@ export default function MathScreen() {
         step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
         answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
         skippable: [...skippable], helpUsedQs: [...helpUsedQs],
+        hintSeenQs: [...hintSeenQs], firstWrongQs: [...firstWrongQs], struckOpts,
       }))
     } catch { /* private mode or quota — the session simply will not survive a reload */ }
   }, [step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
-      answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs])
+      answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs,
+      hintSeenQs, firstWrongQs, struckOpts])
 
   // Reaching any of these means the session is over or was never started, and a snapshot left
   // behind would resume a session the child has already finished.
@@ -2584,10 +2602,26 @@ export default function MathScreen() {
   }
 
   // ── Screen mode: submit one multiple-choice answer ───────────────────────
-  // Older children get one attempt, with the selected option's specific explanation. At eight
-  // and under a wrong option opens the same scaffolded help as a typed answer: the explanation
-  // becomes the first hint and the child gets another try. Help still reduces the reward, and
-  // Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
+  // A wrong option opens the same scaffolded help as a typed answer: the explanation becomes the
+  // first hint and the child gets another try. Eight and under get it at once; nine and over get
+  // the card greyed out and the 💡 shaking first (see helpOpensNow). Help still reduces the reward,
+  // and Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
+  // Where a wrong answer leads. Eight and under go straight to help, as they always have. Nine
+  // and over get the question back once, with the 💡 shaking and nothing revealed; help opens
+  // when the hint had already been looked at, when the retry was also wrong, or when there is no
+  // hint to point at. Either way the question stays in `helpUsedQs`, so the retry costs the same
+  // half a question that the hint does: asking early, or being wrong on purpose to reach help, is
+  // never the cheaper way in.
+  const hasHintFor = (i) => { const all = templateProblems[i]?.hint_steps ?? llmHints[i]; return Array.isArray(all) && all.length > 0 }
+  const helpOpensNow = (i) => Number(age) <= 8 || !hasHintFor(i) || hintSeenQs.has(i) || firstWrongQs.has(i)
+  const nudgeToHint = (i, struck = null) => {
+    setFirstWrongQs(prev => { const next = new Set(prev); next.add(i); return next })
+    setHelpUsedQs(prev => { const next = new Set(prev); next.add(i); return next })
+    if (struck != null) setStruckOpts(prev => ({ ...prev, [i]: [...(prev[i] ?? []), struck] }))
+    setInput('')
+    setNudge(n => n + 1)
+  }
+
   const submitChoiceAnswer = (value) => {
     if (flash) return
     const isCorrect = sameAnswer(value, correctAns[qIdx])
@@ -2601,7 +2635,8 @@ export default function MathScreen() {
       tProblem?.help ?? tProblem?.visual,
     )
 
-    if (!isCorrect && Number(age) <= 8 && canHelp) {
+    if (!isCorrect && canHelp && !helpOpensNow(qIdx)) { nudgeToHint(qIdx, value); return }
+    if (!isCorrect && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
       setChoiceMistake(why)
@@ -2628,7 +2663,8 @@ export default function MathScreen() {
 
     const tProblem = templateProblems[qIdx]
     const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.help ?? tProblem?.visual)
-    if (!isCorrect && Number(age) <= 8 && canHelp) {
+    if (!isCorrect && canHelp && !helpOpensNow(qIdx)) { nudgeToHint(qIdx); return }
+    if (!isCorrect && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
       // The number the child typed is the most useful thing on the screen and it used to be
@@ -3252,8 +3288,8 @@ export default function MathScreen() {
               </div>
 
               {/* Optional hint — the child can ask BEFORE answering, which is the only way an
-                  older child could get one at all: the help panel opens on a wrong answer and
-                  only under nine.
+                  older child could get one before their first try: the help panel comes on a wrong
+                  answer, for nine and over only once the hint has been looked at or the retry failed.
                   This used to show the first step and nothing else, because a counting step ends
                   "…, 19, 20" with the answer sitting at the end of it. The partition steps stop
                   deliberately short — "5966 - 3000 = 2966. Now take away the 100." — and holding
@@ -3288,9 +3324,12 @@ export default function MathScreen() {
                         // Same cost as being shown help after a wrong answer — the server docks
                         // a third for either, so asking early is never the cheaper trick.
                         setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
+                        setHintSeenQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
                         setHelpUsed(true)
                       }}
+                      key={firstWrongQs.has(qIdx) && !open ? `nudge-${nudge}` : 'hint'}
                       style={{
+                        animation: firstWrongQs.has(qIdx) && !open && !hintSeenQs.has(qIdx) ? 'hintNudge .9s ease 2' : undefined,
                         display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
                         background: open ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
                         color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
@@ -3335,8 +3374,9 @@ export default function MathScreen() {
                       key={opt.value}
                       className="math-press"
                       onClick={() => submitChoiceAnswer(opt.value)}
-                      disabled={!!flash}
+                      disabled={!!flash || (struckOpts[qIdx] ?? []).includes(opt.value)}
                       style={{
+                        opacity: (struckOpts[qIdx] ?? []).includes(opt.value) ? 0.3 : 1,
                         border: 'none', background: 'white', borderRadius: 18, padding: '20px 12px',
                         boxShadow: '0 6px 18px rgba(60,120,200,.12)', cursor: flash ? 'default' : 'pointer',
                         fontFamily: FRED, fontWeight: 600, fontSize: 27, color: MATH, lineHeight: 1.2,

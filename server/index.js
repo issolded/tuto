@@ -1,4 +1,5 @@
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
+import { questionShareMean } from './mathGems.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -5534,7 +5535,11 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
       capped = true
     } else {
-      gems = Math.round(settings.gems * scale * (Number(help_used) > 0 ? 0.67 : 1))
+      // Per question when the record covers them all; the old session-level scale otherwise.
+      const share = questionShareMean(attempts, questions_total)
+      gems = share !== null
+        ? Math.round(settings.gems * share)
+        : Math.round(settings.gems * scale * (Number(help_used) > 0 ? 0.67 : 1))
     }
 
     // Advancing used to take a single good session, so a child who breezed through five

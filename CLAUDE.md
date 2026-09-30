@@ -95,6 +95,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       **Açık:** yardım 9+ için ekrana bağlı değil (panel yalnız ≤8 yaş, yanlıştan sonra); ölçülmedi: bu zincirlerin
       gerçekten öğrettiği, Ada/Batu'yla denenmedi. Zincirsiz kalanlar: karekök, sözel/şık-yorumlama soruları,
       grafik okuma (panelde resim var, zincir yok), olasılık şıkları.
+      **Bağlandı (aynı gün):** 9+ yaş artık "bir deneme, sonra yardım": ilk yanlışta soruya dönülür, 💡 titrer,
+      seçmelide yanlış kart soluklaşır, sebep gösterilmez; ipucuna bakıp yanlış ya da ikinci yanlış → yardım
+      (`helpOpensNow`, `MathScreen.jsx`). ≤8 yaş aynı (hemen yardım). Yeniden deneme de ipucu gibi yarım pay
+      (`helpUsedQs`). **Gem artık soru başı** (tam / yarım / yok; `server/mathGems.js`, test
+      `scripts/tests/math-gem-share.test.mjs`): eski `0,33 + 0,67 × doğruluk` tabanı ve oturum düzeyi ×0,67 yalnız
+      soru kaydı eksikse yedek. Kağıt modu da aynı formülden geçiyor (etkisi ölçülmedi). Sahte ağla gerçek
+      MathScreen'de 9 yaş oturumu uçtan uca oynandı; Ada'nın iPad'inde teyit edilmedi. **Yardım kapatma ayarı
+      bilerek yok** (kullanıcı kararı): ebeveyn "iyi mi kötü mü" sorusunun cevabı yardımsız/yardımlı/yanlış dökümü.
 - [ ] İngilizce çocuk ekranı ve bütün bağlantıları (2026-09-26, Claude). **Migration önce:**
       `server/migrations/2026-09-26_english_sessions.sql` (`english_sessions`, `english_attempts`,
       `children.english_variety`) çalışmadan deploy edilirse kart herkese görünür ama oturum açılmaz,
