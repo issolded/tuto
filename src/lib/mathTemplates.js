@@ -2893,7 +2893,17 @@ function placeDigitValue(level, lang) {
     options,
     correct_answer: String(answer),
     operandKey: `pv:digit:${n}:${at}`,
-    ...(pvPlaces(n) ? { help: { kind: 'pv', mode: 'digit', n, place: 10 ** power, places: pvPlaces(n) } } : {}),
+    ...(pvPlaces(n) ? { help: { kind: 'pv', mode: 'digit', n, place: 10 ** power, places: pvPlaces(n) } }
+      : stepsHelp([
+          stp(lang, say(lang, `digits after the ${digit}`, `${digit} rakamından sonraki rakamlar`, `cifras después del ${digit}`), power,
+            `In ${num(n, lang)}, how many digits come after the ${digit}? That is how many places up from the ones it sits:`,
+            `${num(n, lang)} sayısında ${digit} rakamından sonra kaç rakam var? ${digit}, birler basamağından o kadar yukarıda:`,
+            `En ${num(n, lang)}, ¿cuántas cifras hay después del ${digit}? Esas son las posiciones que sube desde las unidades:`),
+          stp(lang, `${digit} × ${num(10 ** power, lang)}`, answer,
+            `Each place up is worth ten times more. So the ${digit} is worth:`,
+            `Her basamak yukarı çıkışta değer on katına çıkar. Yani ${digit} şu değerde:`,
+            `Cada posición hacia arriba vale diez veces más. Así que el ${digit} vale:`),
+        ], null, true)),
     hint_steps: [
       say(lang, `Name the places from the right: ones, tens, hundreds, thousands…`,
                 `Basamakları sağdan adlandır: birler, onlar, yüzler, binler…`,
@@ -6137,6 +6147,37 @@ const POLY_FACTS = {
 }
 export { POLY_FACTS }
 
+const POLY_SIDES = { square: 4, rectangle: 4, equilateral: 3, isosceles: 3, rightTriangle: 3, scalene: 3, pentagon: 5,
+  hexagon: 6, octagon: 8, parallelogram: 4, rhombus: 4, kite: 4, trapezium: 4, rightTrapezium: 4, lShape: 6 }
+
+// What a child would say out loud when checking this shape, one sentence per shape and per
+// question. It follows the same facts as POLY_FACTS, so the sentence and the key cannot disagree.
+const POLY_SAY = {
+  lines: {
+    square: ['Fold it down the middle, across the middle, and along both corner-to-corner lines.', 'Ortadan dikey, ortadan yatay ve iki köşegen boyunca katla.', 'Dóblalo por la mitad, de lado a lado y por las dos diagonales.'],
+    rectangle: ['Fold it down the middle and across the middle. The corner-to-corner folds do not match.', 'Ortadan dikey ve ortadan yatay katla. Köşegenler boyunca katlarsan üst üste gelmez.', 'Dóblalo por la mitad y de lado a lado. Por las diagonales no coincide.'],
+    equilateral: ['All sides are equal: one fold from each corner to the middle of the opposite side.', 'Bütün kenarlar eşit: her köşeden karşı kenarın ortasına birer katlama.', 'Todos los lados son iguales: un pliegue desde cada esquina al centro del lado opuesto.'],
+    isosceles: ['Only one fold works: from the top corner straight down the middle.', 'Tek bir katlama tutar: üst köşeden dümdüz aşağı, ortadan.', 'Solo un pliegue coincide: desde la esquina de arriba recto por el centro.'],
+    pentagon: ['A regular shape folds once through each corner.', 'Düzgün bir şekil her köşesinden geçen bir katlamayla kapanır.', 'Una figura regular se dobla una vez por cada esquina.'],
+    hexagon: ['A regular shape folds once through each corner.', 'Düzgün bir şekil her köşesinden geçen bir katlamayla kapanır.', 'Una figura regular se dobla una vez por cada esquina.'],
+    octagon: ['A regular shape folds once through each corner.', 'Düzgün bir şekil her köşesinden geçen bir katlamayla kapanır.', 'Una figura regular se dobla una vez por cada esquina.'],
+    rhombus: ['Fold it along each corner-to-corner line. Down the middle does not match.', 'Her köşegen boyunca katla. Ortadan katlarsan üst üste gelmez.', 'Dóblalo por cada diagonal. Por la mitad no coincide.'],
+    kite: ['Only the fold along the long corner-to-corner line matches.', 'Yalnız uzun köşegen boyunca katlama tutar.', 'Solo coincide el pliegue por la diagonal larga.'],
+    trapezium: ['This one has two equal slanted sides: only the fold down the middle matches.', 'İki eğik kenarı eşit: yalnız ortadan katlama tutar.', 'Tiene los dos lados inclinados iguales: solo coincide el pliegue por el centro.'],
+    parallelogram: ['Try every fold: down, across and corner to corner. None of them matches.', 'Bütün katlamaları dene: dikey, yatay, köşegen. Hiçbiri tutmaz.', 'Prueba todos los pliegues: ninguno coincide.'],
+    scalene: ['All the sides are different lengths, so no fold matches.', 'Bütün kenarlar farklı uzunlukta, hiçbir katlama tutmaz.', 'Todos los lados miden distinto, así que ningún pliegue coincide.'],
+  },
+  right: {
+    square: ['Every corner of a square is a square corner.', 'Karenin her köşesi dik açıdır.', 'Todas las esquinas de un cuadrado son rectas.'],
+    rectangle: ['Every corner of a rectangle is a square corner.', 'Dikdörtgenin her köşesi dik açıdır.', 'Todas las esquinas de un rectángulo son rectas.'],
+    rightTriangle: ['Only one corner is square; the other two are narrower.', 'Yalnız bir köşe dik açı; diğer ikisi daha dar.', 'Solo una esquina es recta; las otras dos son más estrechas.'],
+    rightTrapezium: ['Two corners are square corners; the other two slope.', 'İki köşe dik açı; diğer ikisi eğik.', 'Dos esquinas son rectas; las otras dos son inclinadas.'],
+    lShape: ['Check each corner. Five are square corners; the one that bends inward is wider, so it does not count.', 'Her köşeyi kontrol et. Beşi dik açı; içe kıvrılan köşe daha geniş, sayılmaz.', 'Mira cada esquina. Cinco son rectas; la que se dobla hacia dentro es más ancha y no cuenta.'],
+    equilateral: ['Every corner is narrower than a square corner.', 'Her köşe dik açıdan daha dar.', 'Todas las esquinas son más estrechas que una recta.'],
+    parallelogram: ['Two corners are narrower and two are wider than a square corner. None is square.', 'İki köşe dik açıdan dar, ikisi geniş. Hiçbiri dik değil.', 'Dos esquinas son más estrechas y dos más anchas que una recta. Ninguna es recta.'],
+  },
+}
+
 // Lines of symmetry (Year 4's line) and right angles (Year 3's). Both drawn; the hint draws the
 // mirror lines or marks the right angles on the same shape.
 function geoPolygon(level, lang, ask) {
@@ -6151,6 +6192,12 @@ function geoPolygon(level, lang, ask) {
       ? say(lang, 'How many right angles are there inside this shape?', 'Bu şeklin içinde kaç dik açı var?', '¿Cuántos ángulos rectos hay dentro de esta figura?')
       : say(lang, 'How many lines of symmetry does this shape have?', 'Bu şeklin kaç simetri ekseni var?', '¿Cuántos ejes de simetría tiene esta figura?'),
     format: 'numeric', correct_answer: answer, operandKey: `poly:${name}:${ask}`,
+    ...(POLY_SAY[ask === 'right' ? 'right' : 'lines'][name] ? stepsHelp([
+      stp(lang, say(lang, 'corners of the shape', 'şeklin köşeleri', 'esquinas de la figura'), POLY_SIDES[name],
+        'First count the corners of the shape:', 'Önce şeklin köşelerini say:', 'Primero cuenta las esquinas de la figura:'),
+      stp(lang, ask === 'right' ? say(lang, 'right angles', 'dik açılar', 'ángulos rectos') : say(lang, 'lines of symmetry', 'simetri eksenleri', 'ejes de simetría'), answer,
+        ...POLY_SAY[ask === 'right' ? 'right' : 'lines'][name]),
+    ], { kind: 'polygon', name, ask }) : {}),
     hint_steps: ask === 'right'
       ? [say(lang, 'A right angle is a square corner, like the corner of a book.', 'Dik açı, bir kitabın köşesi gibi kare bir köşedir.', 'Un ángulo recto es una esquina cuadrada, como la de un libro.'),
          say(lang, 'Check every corner inside the shape, one at a time. A corner can be too wide or too narrow to count.', 'Şeklin içindeki her köşeye tek tek bak. Bazı köşeler fazla geniş ya da dar olabilir.', 'Revisa cada esquina de dentro, una por una. Algunas son demasiado abiertas o cerradas.')]
@@ -6215,6 +6262,14 @@ function geoCoords(level, lang) {
       topic: 'geometry', level,
       question_text: say(lang, `What are the coordinates of point ${target.label}?`, `${target.label} noktasının koordinatları nedir?`, `¿Cuáles son las coordenadas del punto ${target.label}?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `coord:r:${pts.map(p => `${p.x}${p.y}`).join('')}:${target.label}`,
+      ...stepsHelp([
+        stp(lang, say(lang, `along to ${target.label}`, `${target.label} noktasına yatay`, `en horizontal hasta ${target.label}`), target.x,
+          `Go along the bottom first until you are right under ${target.label}. How many along?`,
+          `Önce altta, ${target.label} noktasının tam altına gelene kadar ilerle. Kaç birim yatay?`,
+          `Ve primero por abajo hasta quedar justo debajo de ${target.label}. ¿Cuántos a lo largo?`),
+        stp(lang, say(lang, `up to ${target.label}`, `${target.label} noktasına dikey`, `en vertical hasta ${target.label}`), target.y,
+          'Now go up to it. How many up?', 'Şimdi yukarı çık. Kaç birim dikey?', 'Ahora sube hasta él. ¿Cuántos hacia arriba?'),
+      ], { kind: 'coords', size, points: pts.map(p => ({ ...p, ask: p.label === target.label })) }, true),
       hint_steps: [
         say(lang, `Go along the bottom first until you are under ${target.label}.`, `Önce altta, ${target.label} noktasının altına gelene kadar ilerle.`, `Ve primero por abajo hasta quedar debajo de ${target.label}.`),
         say(lang, `Then go up to it. Write (along, up).`, `Sonra yukarı çık. (yatay, dikey) diye yaz.`, `Luego sube hasta él. Escribe (horizontal, vertical).`),
@@ -6353,7 +6408,24 @@ function pvDigits(level, lang) {
                              `Her rakamı bir kez kullan. ${digits.join(', ')} ile yazabileceğin en ${biggest ? 'büyük' : 'küçük'} ${digits.length} basamaklı sayı kaçtır?`,
                              `Usa cada cifra una vez. ¿Cuál es el número de ${digits.length} cifras más ${biggest ? 'grande' : 'pequeño'} que puedes formar con ${digits.join(', ')}?`),
     format: 'numeric', correct_answer: answer, operandKey: `pvd:${biggest}:${digits.join('')}`,
-    ...(k === 3 ? { help: { kind: 'pv', mode: 'arrange', digits, want: biggest ? 'max' : 'min', places: [100, 10, 1] } } : {}),
+    ...(k === 3 ? { help: { kind: 'pv', mode: 'arrange', digits, want: biggest ? 'max' : 'min', places: [100, 10, 1] } }
+      : stepsHelp([
+          ...sorted.map((d, i) => stp(lang, say(lang, `digit ${i + 1} of your number`, `sayının ${i + 1}. rakamı`, `cifra ${i + 1} de tu número`), d,
+            i === 0
+              ? (biggest ? `The first digit is worth the most, so it is the biggest digit: ${digits.join(', ')}. Which is it?`
+                         : `The first digit is worth the most, so it is the smallest one that is not 0 (a number cannot start with 0). Digits: ${digits.join(', ')}. Which is it?`)
+              : (biggest ? 'Next biggest of the digits that are left:' : 'Next smallest of the digits that are left:'),
+            i === 0
+              ? (biggest ? `İlk rakam en değerli olandır, yani en büyük rakam: ${digits.join(', ')}. Hangisi?`
+                         : `İlk rakam en değerli olandır, yani 0 olmayan en küçük rakam (sayı 0 ile başlayamaz). Rakamlar: ${digits.join(', ')}. Hangisi?`)
+              : (biggest ? 'Kalan rakamların en büyüğü:' : 'Kalan rakamların en küçüğü:'),
+            i === 0
+              ? (biggest ? `La primera cifra es la que más vale, así que es la mayor: ${digits.join(', ')}. ¿Cuál es?`
+                         : `La primera cifra es la que más vale, así que es la menor que no sea 0 (un número no empieza por 0). Cifras: ${digits.join(', ')}. ¿Cuál es?`)
+              : (biggest ? 'La mayor de las cifras que quedan:' : 'La menor de las cifras que quedan:'))),
+          stp(lang, sorted.join(' '), answer,
+            'Now write the digits in that order as one number:', 'Şimdi rakamları bu sırayla tek sayı olarak yaz:', 'Ahora escribe las cifras en ese orden como un solo número:'),
+        ])),
     hint_steps: [
       say(lang, `The first digit is worth the most, so put the ${biggest ? 'biggest' : 'smallest'} digit there.`,
                 `İlk rakam en değerli olandır, oraya en ${biggest ? 'büyük' : 'küçük'} rakamı koy.`,
@@ -6382,6 +6454,21 @@ function pvSequence(level, lang) {
     topic: band <= 2 ? 'counting' : 'place-value', level,
     question_text: say(lang, `What is the missing number? ${shown.join(', ')}`, `Eksik sayı kaçtır? ${shown.join(', ')}`, `¿Qué número falta? ${shown.join(', ')}`),
     format: 'numeric', correct_answer: terms[gap], operandKey: `pvs:${step}:${terms[0]}:${down}:${gap}`,
+    ...(() => {
+      // Two neighbours that are both on the page give the gap; the one before the blank is the start.
+      const [x, y] = gap + 2 <= len - 1 ? [terms[gap + 1], terms[gap + 2]] : [terms[gap - 2], terms[gap - 1]]
+      const [hi, lo] = x > y ? [x, y] : [y, x]
+      return stepsHelp([
+        stp(lang, `${num(hi, lang)} − ${num(lo, lang)}`, step,
+          `Find two numbers next to each other on the page. How big is the gap between them?`,
+          `Sayfada yan yana iki sayı bul. Aralarındaki fark kaç?`,
+          `Busca dos números seguidos en la página. ¿Cuánto es la diferencia entre ellos?`),
+        stp(lang, `${num(terms[gap - 1], lang)} ${down ? '−' : '+'} ${num(step, lang)}`, terms[gap],
+          `The sequence goes ${down ? 'down' : 'up'} by that much every time. Start from the number before the blank:`,
+          `Dizi her seferinde o kadar ${down ? 'azalıyor' : 'artıyor'}. Boşluktan önceki sayıdan başla:`,
+          `La serie ${down ? 'baja' : 'sube'} esa cantidad cada vez. Empieza por el número anterior al hueco:`),
+      ])
+    })(),
     hint_steps: [
       say(lang, `Find two numbers next to each other and work out the gap.`, `Yan yana iki sayı bul ve aradaki farkı hesapla.`, `Busca dos números seguidos y calcula la diferencia.`),
       say(lang, `The sequence goes ${down ? 'down' : 'up'} by the same amount every time.`, `Dizi her seferinde aynı miktarda ${down ? 'azalıyor' : 'artıyor'}.`, `La serie ${down ? 'baja' : 'sube'} siempre lo mismo.`),
@@ -6456,7 +6543,29 @@ function pvMoreLess(level, lang) {
                              `${num(n, lang)} sayısının ${num(amount, lang)} ${up ? 'fazlası' : 'eksiği'} kaçtır?`,
                              `¿Cuánto es ${num(amount, lang)} ${up ? 'más' : 'menos'} que ${num(n, lang)}?`),
     format: 'numeric', correct_answer: up ? n + amount : n - amount, operandKey: `pvml:${amount}:${n}:${up}`,
-    ...(amount <= 100 && pvPlaces(n, up ? n + amount : n - amount) ? { help: { kind: 'pv', mode: 'shift', start: n, amount, up, places: pvPlaces(n, up ? n + amount : n - amount) } } : {}),
+    ...(amount <= 100 && pvPlaces(n, up ? n + amount : n - amount) ? { help: { kind: 'pv', mode: 'shift', start: n, amount, up, places: pvPlaces(n, up ? n + amount : n - amount) } } : (() => {
+      // Only the one digit moves — unless it would pass 9 or 0, which is a different question.
+      const idx = String(amount).length - 1
+      const d = Math.floor(n / amount) % 10
+      if (up ? d === 9 : d === 0) return {}
+      const placeName = say(lang, amount === 1000 ? 'thousands' : amount === 100 ? 'hundreds' : amount === 10 ? 'tens' : 'ones',
+                                  amount === 1000 ? 'binler' : amount === 100 ? 'yüzler' : amount === 10 ? 'onlar' : 'birler',
+                                  amount === 1000 ? 'millares' : amount === 100 ? 'centenas' : amount === 10 ? 'decenas' : 'unidades')
+      return stepsHelp([
+        stp(lang, say(lang, `the ${placeName} digit of ${num(n, lang)}`, `${num(n, lang)} sayısının ${placeName} rakamı`, `la cifra de ${placeName} de ${num(n, lang)}`), d,
+          `Only one digit changes: the ${placeName} digit. Which digit is it?`,
+          `Yalnız bir rakam değişir: ${placeName} rakamı. Hangi rakam?`,
+          `Solo cambia una cifra: la de ${placeName}. ¿Cuál es?`),
+        stp(lang, `${d} ${up ? '+' : '−'} 1`, up ? d + 1 : d - 1,
+          `${up ? 'It goes up by one' : 'It goes down by one'}. What is it now?`,
+          `Bir ${up ? 'artar' : 'azalır'}. Şimdi kaç oldu?`,
+          `${up ? 'Sube una' : 'Baja una'}. ¿Cuánto es ahora?`),
+        stp(lang, say(lang, 'the new number', 'yeni sayı', 'el número nuevo'), up ? n + amount : n - amount,
+          `Put that digit back in its place and keep all the others as they were:`,
+          `Bu rakamı yerine koy, diğerlerini olduğu gibi bırak:`,
+          `Pon esa cifra en su sitio y deja las demás como estaban:`),
+      ])
+    })()),
     hint_steps: [
       say(lang, `Only one digit is being ${up ? 'added to' : 'taken from'}: the ${amount === 1000 ? 'thousands' : amount === 100 ? 'hundreds' : amount === 10 ? 'tens' : 'ones'}.`,
                 `Yalnız bir basamak ${up ? 'artıyor' : 'azalıyor'}: ${amount === 1000 ? 'binler' : amount === 100 ? 'yüzler' : amount === 10 ? 'onlar' : 'birler'} basamağı.`,
