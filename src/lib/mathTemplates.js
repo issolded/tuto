@@ -2711,26 +2711,28 @@ const ROUND_PLACE = {
 // cut the number back to the place asked for, and only if the deciding digit is 5 or more, go up.
 function roundingSteps(n, place, unit, col, lang) {
   const N = x => num(x, lang)
+  // Mid-sentence in Turkish the place name is not capitalised; `col` is written for the start of one.
+  const c = lang === 'tr' ? col.toLocaleLowerCase('tr-TR') : col
   const decider = Math.floor((n % place) / (place / 10))
   const down = n - (n % place)
   const steps = [
     stp(lang, say(lang, `the digit just after the ${unit} place`, `${col} basamağından sonraki rakam`, `la cifra justo después de ${col}`), decider,
       `${N(n)}: which digit decides? It is the one just to the right of the ${unit} place.`,
-      `${N(n)}: kararı hangi rakam verir? ${col} basamağının hemen sağındaki.`,
+      `${N(n)}: kararı hangi rakam verir? ${c} basamağının hemen sağındaki.`,
       `${N(n)}: ¿qué cifra decide? La que está justo a la derecha de ${col}.`),
-    stp(lang, `${N(n)} − ${n % place}`, down,
+    stp(lang, `${N(n)} − ${N(n % place)}`, down,
       decider >= 5
         ? `${decider} is 5 or more, so we go UP. First cut the number back to the ${unit} place, by taking off everything after it:`
         : `${decider} is less than 5, so it STAYS. Cut the number back to the ${unit} place by taking off everything after it. That is the answer:`,
       decider >= 5
-        ? `${decider}, 5 ve üstü, yani YUKARI çıkıyoruz. Önce sayıyı ${col} basamağına kadar kes; ondan sonrasını çıkar:`
-        : `${decider}, 5'ten küçük, yani sayı OLDUĞU YERDE kalır. Sayıyı ${col} basamağına kadar kes; ondan sonrasını çıkar. Cevap bu:`,
+        ? `${decider}, 5 ve üstü, yani YUKARI çıkıyoruz. Önce sayıyı ${c} basamağına kadar kes; ondan sonrasını çıkar:`
+        : `${decider}, 5'ten küçük, yani sayı OLDUĞU YERDE kalır. Sayıyı ${c} basamağına kadar kes; ondan sonrasını çıkar. Cevap bu:`,
       decider >= 5
         ? `${decider} es 5 o más, así que SUBE. Primero recorta el número hasta ${col}, quitando todo lo que hay después:`
         : `${decider} es menos de 5, así que SE QUEDA. Recorta el número hasta ${col}, quitando todo lo que hay después. Esa es la respuesta:`),
   ]
   if (decider >= 5) steps.push(stp(lang, `${N(down)} + ${N(place)}`, down + place,
-    `Go up by one ${unit}:`, `${col} basamağında bir yukarı çık:`, `Sube una unidad de ${col}:`))
+    `Go up by one ${unit}:`, `${c} basamağında bir yukarı çık:`, `Sube una unidad de ${col}:`))
   return steps
 }
 
