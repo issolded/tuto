@@ -312,7 +312,7 @@ function partitionSteps(a, b, add, lang) {
 // The first help that exists: a picture tool when the numbers fit it, else the written chain.
 const firstHelp = (...options) => options.find(o => o && o.help) ?? {}
 
-function partitionChain(a, b, add, lang) {
+function partitionChain(a, b, add, lang, putBack = false) {
   const parts = placeParts(b)
   if (parts.length < 2 || a + b <= 30 || b >= 10000) return {}
   const N = x => num(x, lang)
@@ -322,13 +322,13 @@ function partitionChain(a, b, add, lang) {
     const next = add ? cur + part : cur - part
     const st = stp(lang, `${N(cur)} ${sign} ${N(part)}`, next,
       i === 0
-        ? `Break ${N(b)} into ${parts.map(N).join(' + ')} and ${add ? 'add' : 'take away'} one piece at a time. First the ${N(part)}:`
+        ? `${putBack ? `${N(b)} was taken away, so put it back. ` : ''}Break ${N(b)} into ${parts.map(N).join(' + ')} and ${add ? 'add' : 'take away'} one piece at a time. First the ${N(part)}:`
         : 'Now the next piece:',
       i === 0
-        ? `${N(b)} sayısını ${parts.map(N).join(' + ')} diye parçala ve her parçayı sırayla ${add ? 'ekle' : 'çıkar'}. Önce ${N(part)}:`
+        ? `${putBack ? `${N(b)} çıkarılmıştı, geri koy. ` : ''}${N(b)} sayısını ${parts.map(N).join(' + ')} diye parçala ve her parçayı sırayla ${add ? 'ekle' : 'çıkar'}. Önce ${N(part)}:`
         : 'Şimdi sıradaki parça:',
       i === 0
-        ? `Separa ${N(b)} en ${parts.map(N).join(' + ')} y ${add ? 'suma' : 'resta'} una pieza cada vez. Primero ${N(part)}:`
+        ? `${putBack ? `Se quitaron ${N(b)}, así que devuélvelos. ` : ''}Separa ${N(b)} en ${parts.map(N).join(' + ')} y ${add ? 'suma' : 'resta'} una pieza cada vez. Primero ${N(part)}:`
         : 'Ahora la siguiente pieza:')
     cur = next
     return st
@@ -935,7 +935,7 @@ function fractionAddDifferent(level, lang) {
         `${d1} × ${mult} = ${d2}, así que multiplica también por ${mult} el de arriba de ${n1}/${d1}:`),
       stp(lang, `${n1 * mult} + ${n2}`, sum,
         `Now both are in ${fracName(d2, true)}. Add the tops:`,
-        `Şimdi ikisi de ${d2}'de bir cinsinden. Payları topla:`,
+        `Şimdi ikisinin de paydası ${d2}. Payları topla:`,
         `Ahora los dos están en ${d2}avos. Suma los de arriba:`),
     ], null, true),
     hint_steps: [
@@ -1321,6 +1321,14 @@ function multSplitSteps(a, b, lang) {
     // 30 × 4: the zeros wait while the times table does the work, then come back on.
     const zeros = 10 ** (String(big).length - 1)
     const k = big / zeros
+    if (k === 1) {
+      // × 10, × 100: nothing to work out on the side, only the digits moving over.
+      const n = String(zeros).length - 1
+      return stepsHelp([stp(lang, `${N(small)} × ${N(big)}`, small * big,
+        `Multiplying by ${N(big)} moves every digit ${n} place${n === 1 ? '' : 's'} to the left, and zeros fill the gap:`,
+        `${N(big)} ile çarpmak her rakamı ${n} basamak sola kaydırır, boşluklara sıfır gelir:`,
+        `Multiplicar por ${N(big)} mueve cada cifra ${n} posición${n === 1 ? '' : 'es'} a la izquierda y los ceros rellenan el hueco:`)])
+    }
     return stepsHelp([
       stp(lang, `${small} × ${k}`, small * k,
         `${N(big)} is ${k} with zeros after it. Do the times table first:`,
@@ -2104,7 +2112,7 @@ function angleSumSteps(total, given, fact, lang) {
   const solo = given.length === 1
   steps.push(stp(lang, `${total} − ${run}`, total - run,
     solo ? `${fact} Take the angle you know away from ${total}:` : `Now take that away from ${total}. What is left is the missing angle:`,
-    solo ? `${fact} Bildiğin açıyı ${total}'den çıkar:` : `Şimdi bunu ${total}'den çıkar. Kalan, eksik açıdır:`,
+    solo ? `${fact} Bildiğin açıyı ${total}${trEk(total, 'abl')} çıkar:` : `Şimdi bunu ${total}${trEk(total, 'abl')} çıkar. Kalan, eksik açıdır:`,
     solo ? `${fact} Réstale a ${total} el ángulo que conoces:` : `Ahora réstalo de ${total}. Lo que queda es el ángulo que falta:`))
   return steps
 }
@@ -2814,7 +2822,7 @@ function roundingSteps(n, place, unit, col, lang) {
         : `${decider} es menos de 5, así que SE QUEDA. Recorta el número hasta ${col}, quitando todo lo que hay después. Esa es la respuesta:`),
   ]
   if (decider >= 5) steps.push(stp(lang, `${N(down)} + ${N(place)}`, down + place,
-    `Go up by one ${unit}:`, `${c} basamağında bir yukarı çık:`, `Sube una unidad de ${col}:`))
+    `Go up by one ${unit}:`, `${col} basamağında bir yukarı çık:`, `Sube una unidad de ${col}:`))
   return steps
 }
 
@@ -2962,11 +2970,11 @@ function placeNegative(level, lang) {
     correct_answer: answer,
     operandKey: `pv:neg:${below}:${above}`,
     ...stepsHelp([
-      stp(lang, say(lang, `from −${below} up to 0`, `−${below}'den 0'a`, `de −${below} hasta 0`), below,
+      stp(lang, say(lang, `from −${below} up to 0`, `−${below}${trEk(below, 'abl')} 0'a`, `de −${below} hasta 0`), below,
         `Climb in two parts, through zero. First from −${below}°C up to 0°C. How many degrees is that?`,
         `İki parçada çık, sıfırdan geçerek. Önce −${below}°C'den 0°C'ye. Kaç derece?`,
         `Sube en dos partes, pasando por cero. Primero de −${below}°C a 0°C. ¿Cuántos grados son?`),
-      stp(lang, say(lang, `from 0 up to ${above}`, `0'dan ${above}'e`, `de 0 hasta ${above}`), above,
+      stp(lang, say(lang, `from 0 up to ${above}`, `0'dan ${above}${trEk(above, 'dat')}`, `de 0 hasta ${above}`), above,
         `Then from 0°C up to ${above}°C:`, `Sonra 0°C'den ${above}°C'ye:`, `Luego de 0°C a ${above}°C:`),
       stp(lang, `${below} + ${above}`, answer,
         `Add the two climbs:`, `İki çıkışı topla:`, `Suma las dos subidas:`),
@@ -3214,7 +3222,7 @@ function algThinkOfNumber(level, lang) {
             `Ve hacia atrás. Lo último fue restar ${add}, así que deshazlo primero:`),
       stp(lang, `${x * mult} ÷ ${mult}`, x,
           `Now undo the × ${mult}. That is the number ${name} thought of:`,
-          `Şimdi × ${mult} işlemini geri al. ${name}'in tuttuğu sayı bu:`,
+          `Şimdi × ${mult} işlemini geri al. Tutulan sayı bu:`,
           `Ahora deshaz el × ${mult}. Ese es el número que pensó ${name}:`),
     ]),
     hint_steps: [
@@ -3348,13 +3356,14 @@ function algSolve(level, lang) {
         `İki taraftan da ${c2}x çıkar. Solda kaç tane x kaldı?`,
         `Quita ${c2}x a los dos lados. ¿Cuántas x quedan a la izquierda?`),
       stp(lang, `${d} − ${b}`, (a2 - c2) * x,
-        `Now the plain numbers: take ${b} off both sides. What is ${a2 - c2}x equal to?`,
-        `Şimdi düz sayılar: iki taraftan ${b} çıkar. ${a2 - c2}x neye eşit?`,
-        `Ahora los números sueltos: quita ${b} a los dos lados. ¿A qué es igual ${a2 - c2}x?`),
-      stp(lang, `${(a2 - c2) * x} ÷ ${a2 - c2}`, x,
+        `Now the plain numbers: take ${b} off both sides. What is ${a2 - c2 === 1 ? 'x' : `${a2 - c2}x`} equal to?`,
+        `Şimdi düz sayılar: iki taraftan ${b} çıkar. ${a2 - c2 === 1 ? 'x' : `${a2 - c2}x`} neye eşit?`,
+        `Ahora los números sueltos: quita ${b} a los dos lados. ¿A qué es igual ${a2 - c2 === 1 ? 'x' : `${a2 - c2}x`}?`),
+      // With one x left, the line before already IS x: there is nothing to share out.
+      ...(a2 - c2 > 1 ? [stp(lang, `${(a2 - c2) * x} ÷ ${a2 - c2}`, x,
         `Share it into ${a2 - c2} equal lots to find one x:`,
         `Bir x'i bulmak için ${a2 - c2} eşit parçaya böl:`,
-        `Repártelo en ${a2 - c2} partes iguales para hallar una x:`),
+        `Repártelo en ${a2 - c2} partes iguales para hallar una x:`)] : []),
     ]),
     hint_steps: [
       say(lang, `Get all the x terms on one side and all the plain numbers on the other.`,
@@ -3619,7 +3628,7 @@ function ratioShare(level, lang) {
         'Reparte todo entre esas partes. ¿Cuánto vale UNA parte?'),
       stp(lang, `${part} × ${bigger ? p : q}`, answer,
         `${who} gets ${bigger ? p : q} of those parts:`,
-        `${who}'ın payı ${bigger ? p : q} tane:`,
+        `${who} ${bigger ? p : q} pay alır:`,
         `A ${who} le tocan ${bigger ? p : q} de esas partes:`),
     ]),
     hint_steps: [
@@ -3627,7 +3636,7 @@ function ratioShare(level, lang) {
                 `${p}:${q} demek toplam ${p + q} eşit pay demek.`,
                 `${p}:${q} significa ${p + q} partes iguales en total.`),
       say(lang, `Divide ${total} by ${p + q} to find one part, then take as many parts as ${who} is owed.`,
-                `Bir payı bulmak için ${total} sayısını ${p + q}'e böl, sonra ${who}'a düşen kadar pay al.`,
+                `Bir payı bulmak için ${total} sayısını ${p + q}${trEk(p + q, 'dat')} böl, sonra ${who} için gereken pay sayısıyla çarp.`,
                 `Divide ${total} entre ${p + q} para hallar una parte y toma tantas partes como le corresponden a ${who}.`),
     ],
   }
@@ -5022,7 +5031,7 @@ function chartTable(level, lang) {
         `Los ${total} niños están todos en la tabla. Suma los números que ves:`),
       stp(lang, `${total} − ${total - missing}`, missing,
         `What is missing is what takes the total up to ${total}:`,
-        `Eksik olan, toplamı ${total}'e tamamlayan sayı:`,
+        `Eksik olan, toplamı ${total} yapan sayı:`,
         `Lo que falta es lo que lleva el total hasta ${total}:`),
     ]),
     hint_steps: [
@@ -5233,7 +5242,7 @@ function decimalsPercentagesTemplate(level, lang) {
   } else if (kind === 'fraction-decimal') {
     help = stepsHelp([stp(lang, `${a} ÷ ${scale}`, answer,
       `${scale} is ${places === 1 ? 'tenths' : places === 2 ? 'hundredths' : 'thousandths'}: divide the top by ${scale}, which moves the point ${places} place${places === 1 ? '' : 's'} left:`,
-      `${scale}, ${places === 1 ? 'onda bir' : places === 2 ? 'yüzde bir' : 'binde bir' } demek: üstteki sayıyı ${scale}'e böl, virgül ${places} basamak sola kayar:`,
+      `${scale}, ${places === 1 ? 'onda bir' : places === 2 ? 'yüzde bir' : 'binde bir' } demek: üstteki sayıyı ${scale}${trEk(scale, 'dat')} böl, virgül ${places} basamak sola kayar:`,
       `${scale} son ${places === 1 ? 'décimas' : places === 2 ? 'centésimas' : 'milésimas'}: divide el de arriba entre ${scale}, la coma se mueve ${places} lugar${places === 1 ? '' : 'es'} a la izquierda:`)])
   } else if (kind === 'decimal-fraction') {
     help = stepsHelp([stp(lang, `${dec(a)} × ${scale}`, answer,
@@ -5271,7 +5280,7 @@ function decimalsPercentagesTemplate(level, lang) {
         `Olvida un momento la coma y usa números enteros de ${unitEs}: ${D2(x / scale)} es ${x} y ${D2(y / scale)} es ${y}. Haz la operación:`),
       stp(lang, `${add ? x + y : x - y} ÷ ${scale}`, answer,
         `Now put the point back: divide by ${scale}, so ${places} digit${places === 1 ? '' : 's'} after the point:`,
-        `Şimdi virgülü geri koy: ${scale}'e böl, yani virgülden sonra ${places} rakam:`,
+        `Şimdi virgülü geri koy: ${scale}${trEk(scale, 'dat')} böl, yani virgülden sonra ${places} rakam:`,
         `Ahora devuelve la coma: divide entre ${scale}, o sea ${places} cifra${places === 1 ? '' : 's'} tras la coma:`),
     ])
   }
@@ -5451,7 +5460,7 @@ function missingNumber(level, lang, add) {
       topic: 'subtraction', level,
       question_text: `? − ${num(takeAway, lang)} = ${num(left, lang)}`, format: 'numeric', correct_answer: start,
       operandKey: `miss:subA:${takeAway}:${left}`,
-      ...firstHelp(addJumpsHelp(left, takeAway), partitionChain(left, takeAway, true, lang)),
+      ...firstHelp(addJumpsHelp(left, takeAway), partitionChain(left, takeAway, true, lang, true)),
       hint_steps: [
         say(lang, `Something had ${num(takeAway, lang)} taken away and ${num(left, lang)} was left.`,
                   `Bir sayıdan ${num(takeAway, lang)} çıkarılmış, geriye ${num(left, lang)} kalmış.`,
@@ -5521,9 +5530,9 @@ function missingSign(level, lang, lean) {
     operandKey: `sign:${a}:${b}:${r}`,
     // Try each sign and see which one lands on the answer — the way the hint says to, done.
     ...stepsHelp(ops.filter(p => !Number.isNaN(calc(a, p, b)) && calc(a, p, b) > 0).map(p => stp(lang, `${a} ${p} ${b}`, calc(a, p, b),
-      p === ops[0] ? `Try each sign and see which one gives ${r}. First ${p}:` : `And ${p}:`,
-      p === ops[0] ? `Her işareti dene, hangisi ${r} veriyor bak. Önce ${p}:` : `Ya ${p}:`,
-      p === ops[0] ? `Prueba cada signo y mira cuál da ${r}. Primero ${p}:` : `Y ${p}:`)), null, true),
+      p === ops[0] ? `Try each sign and see which one gives ${r}. First ${p}:` : `Now try ${p}:`,
+      p === ops[0] ? `Her işareti dene, hangisi ${r} veriyor bak. Önce ${p}:` : `Şimdi ${p} dene:`,
+      p === ops[0] ? `Prueba cada signo y mira cuál da ${r}. Primero ${p}:` : `Ahora prueba ${p}:`)), null, true),
     hint_steps: [
       say(lang, `Is ${r} bigger or smaller than ${a}?`, `${r}, ${a} sayısından büyük mü küçük mü?`, `¿${r} es mayor o menor que ${a}?`),
       say(lang, `Bigger means you added or multiplied; smaller means you took away or divided. Try each one.`,
@@ -5772,9 +5781,9 @@ function factorPair(level, lang) {
     operandKey: `fpair:${p}:${Math.min(a, b)}`,
     ...stepsHelp([right, ...wrongs].map(o => o.value).sort().map((v, i) => { const [x, y] = v.split(' × ').map(Number)
       return stp(lang, v, x * y,
-        i === 0 ? `Work out each one and see which gives ${p}. First ${v}:` : `And ${v}:`,
-        i === 0 ? `Her birini hesapla, hangisi ${p} veriyor bak. Önce ${v}:` : `Ya ${v}:`,
-        i === 0 ? `Calcula cada una y mira cuál da ${p}. Primero ${v}:` : `Y ${v}:`) }), null, true),
+        i === 0 ? `Work out each one and see which gives ${p}. First ${v}:` : `Next, ${v}:`,
+        i === 0 ? `Her birini hesapla, hangisi ${p} veriyor bak. Önce ${v}:` : `Sıradaki, ${v}:`,
+        i === 0 ? `Calcula cada una y mira cuál da ${p}. Primero ${v}:` : `Después, ${v}:`) }), null, true),
     hint_steps: [
       say(lang, `Work out each one in turn.`, `Her birini sırayla hesapla.`, `Calcula cada una por turnos.`),
       say(lang, `Only one of them lands exactly on ${p}.`, `Yalnız biri tam olarak ${p} eder.`, `Solo una da exactamente ${p}.`),
@@ -7540,18 +7549,18 @@ function planeRule(level, lang) {
     format: 'choice', options: choiceOf(right, shuffle(wrongs).slice(0, 3)), correct_answer: right.value,
     operandKey: `plane:r:${m}:${c}`,
     ...(pts.length >= 2 ? stepsHelp([
-      stp(lang, `${pts[1].y} − ${pts[0].y}`, m * (pts[1].x - pts[0].x),
+      stp(lang, `y: ${pts[1].y} − ${pts[0].y}`, m * (pts[1].x - pts[0].x),
         `Look at two points: (${pts[0].x}, ${pts[0].y}) and (${pts[1].x}, ${pts[1].y}). By how much does y change between them?`,
         `İki noktaya bak: (${pts[0].x}, ${pts[0].y}) ve (${pts[1].x}, ${pts[1].y}). Aralarında y ne kadar değişiyor?`,
         `Mira dos puntos: (${pts[0].x}, ${pts[0].y}) y (${pts[1].x}, ${pts[1].y}). ¿Cuánto cambia y entre ellos?`),
-      stp(lang, `${pts[1].x} − ${pts[0].x}`, pts[1].x - pts[0].x,
+      stp(lang, `x: ${pts[1].x} − ${pts[0].x}`, pts[1].x - pts[0].x,
         'And by how much does x change?', 'Ya x ne kadar değişiyor?', '¿Y cuánto cambia x?'),
       stp(lang, `${m * (pts[1].x - pts[0].x)} ÷ ${pts[1].x - pts[0].x}`, m,
         'y changes this many times per one step of x. That is the number in front of x:',
         'x\'in her adımında y bu kadar değişir. Bu, x\'in önündeki sayı:',
         'y cambia esta cantidad por cada paso de x. Ese es el número delante de x:'),
       stp(lang, `${m} × ${pts[0].x}`, m * pts[0].x,
-        `Now check the first point. ${m} times its x is:`, `Şimdi ilk noktayı kontrol et. x\'i ile ${m} çarpımı:`, `Ahora comprueba el primer punto. ${m} por su x es:`),
+        `Now check the first point. ${m} times its x is:`, `Şimdi ilk noktayı kontrol et. x değerinin ${m} katı:`, `Ahora comprueba el primer punto. ${m} por su x es:`),
       stp(lang, `${pts[0].y} − ${m * pts[0].x}`, Math.abs(pts[0].y - m * pts[0].x),
         pts[0].y - m * pts[0].x > 0 ? 'y is BIGGER than that by this much, so the rule adds it on:'
         : pts[0].y - m * pts[0].x < 0 ? 'y is SMALLER than that by this much, so the rule takes it away:'
@@ -7959,7 +7968,7 @@ function scaleReadSteps(spec, value, origin, lang, signed) {
       'Reparte la diferencia entre las etiquetas entre esos pasos. ¿Cuánto vale UN paso?'),
     stp(lang, say(lang, `steps from ${D(origin)} to the arrow`, `${D(origin)} ile ok arasındaki adımlar`, `pasos de ${D(origin)} a la flecha`), away,
       `Now count the steps from ${D(origin)} to the arrow:`, `Şimdi ${D(origin)} noktasından oka kadar adımları say:`, `Ahora cuenta los pasos de ${D(origin)} a la flecha:`),
-    stp(lang, `${away} × ${D(spec.minor)}`, Math.abs(value - origin),
+    stp(lang, `${away} × ${D(spec.minor)}`, Math.round(Math.abs(value - origin) * 1000) / 1000,
       signed ? 'Steps times what one step is worth. The arrow is LEFT of 0, so the number is below zero:'
              : 'Steps times what one step is worth. Add it to the label you started from:',
       signed ? 'Adım sayısı çarpı bir adımın değeri. Ok 0\'ın SOLUNDA, yani sayı sıfırın altında:'

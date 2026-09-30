@@ -18,7 +18,8 @@
     "font:check": "node scripts/font-check.mjs",
     "english:lexicon": "python3 scripts/english/build_lexicon.py",
     "english:check": "node scripts/sync-puzzle-engine.mjs --check && node scripts/english-audit.mjs",
-    "math:check": "node --test scripts/tests/*.test.mjs && node scripts/math-audit.mjs",
+    "math:check": "node --test scripts/tests/*.test.mjs && node scripts/math-audit.mjs && node scripts/math-help-audit.mjs",
+    "math:help": "node scripts/math-help-audit.mjs",
     "test": "node --test scripts/tests/*.test.mjs"
   },
   "dependencies": {

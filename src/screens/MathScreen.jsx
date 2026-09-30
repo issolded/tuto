@@ -1203,6 +1203,14 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     }
     sayalim = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        {/* The question stays on screen: a chain that says "divide by 10" is only a chain of sums
+            until the child can see what it is dividing. */}
+        {question && (
+          <div style={{
+            fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, textAlign: 'center', lineHeight: 1.4,
+            background: 'rgba(90,169,230,.08)', borderRadius: 14, padding: '8px 14px', width: '100%', maxWidth: 340,
+          }}><MathText text={question} /></div>
+        )}
         {stepsHelp.picture && (
           <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             <MathGeometry visual={stepsHelp.picture} language={language} description={question} />
