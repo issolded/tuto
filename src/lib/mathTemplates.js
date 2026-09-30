@@ -297,9 +297,9 @@ function partitionSteps(a, b, add, lang) {
   const rest = parts.slice(1).map(x => num(x, lang)).join(` ${sign} `)
   const afterFirst = add ? a + first : a - first
   return [
-    say(lang, `You do not need to write this down. Break ${num(b, lang)} up: ${parts.map(x => num(x, lang)).join(' + ')}.`,
-              `Bunu yazmana gerek yok. ${num(b, lang)} sayısını parçala: ${parts.map(x => num(x, lang)).join(' + ')}.`,
-              `No hace falta que lo escribas. Separa ${num(b, lang)} así: ${parts.map(x => num(x, lang)).join(' + ')}.`),
+    say(lang, `Break ${num(b, lang)} up: ${parts.map(x => num(x, lang)).join(' + ')}. ${add ? 'Add' : 'Take away'} the ${num(first, lang)} first.`,
+              `${num(b, lang)} sayısını parçala: ${parts.map(x => num(x, lang)).join(' + ')}. Önce ${num(first, lang)} ${add ? 'ekle' : 'çıkar'}.`,
+              `Separa ${num(b, lang)} así: ${parts.map(x => num(x, lang)).join(' + ')}. Primero ${add ? 'suma' : 'resta'} ${num(first, lang)}.`),
     say(lang, `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
               `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`,
               `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Ahora ${add ? 'suma' : 'resta'} ${rest}.`),
@@ -509,6 +509,16 @@ function countingBackSteps(a, b, lang) {
       say(lang, `Count back ${b} from ${a}: ${countRun(a, b, -1)}`,
                 `${a} sayısından ${b} geri say: ${countRun(a, b, -1)}`,
                 `Cuenta ${b} hacia atrás desde ${a}: ${countRun(a, b, -1)}`),
+    ]
+  }
+  // 56 − 53: the two numbers are neighbours, so the answer is the gap between them. Splitting 53
+  // into 50 + 3 turns a three-step count into two subtractions.
+  if (b >= 10 && a <= 100 && a - b <= 10) {
+    return [
+      say(lang, `${num(a, lang)} and ${num(b, lang)} are close together. How far is it from ${num(b, lang)} up to ${num(a, lang)}?`,
+                `${num(a, lang)} ile ${num(b, lang)} birbirine çok yakın. ${num(b, lang)} sayısından ${num(a, lang)} sayısına kaç var?`,
+                `${num(a, lang)} y ${num(b, lang)} están muy cerca. ¿Cuánto hay de ${num(b, lang)} a ${num(a, lang)}?`),
+      ...gapSteps(b, a, lang),
     ]
   }
   if (placeParts(b).length <= MENTAL_PARTS) return partitionSteps(a, b, false, lang)

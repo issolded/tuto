@@ -3263,7 +3263,11 @@ export default function MathScreen() {
                 const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
                 const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
                   .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
-                const steps = [all[0], ...all.slice(1).filter(s => !names(s))]
+                // Stop at the first step that names the answer rather than skipping it: steps build on
+                // each other, and dropping a middle one left "You took away 3 too many" with no
+                // mention of what was taken away.
+                const cut = all.findIndex((s, i) => i > 0 && names(s))
+                const steps = cut === -1 ? all : all.slice(0, cut)
                 const open = hintOpenFor === qIdx
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
