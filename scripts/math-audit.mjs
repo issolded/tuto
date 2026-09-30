@@ -352,7 +352,12 @@ for (const age of AGES) {
           // number the child is asked to type. The last step is checked against the answer key
           // above; this catches a wrong figure in the middle of a chain, which the key never sees.
           for (const st of p.help.steps) {
-            const expr = String(st.q ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\s+/g, ' ')
+            // Numbers are written the language's own way: English groups with commas and marks decimals
+            // with a point, Turkish and Spanish the other way round. A single rule for all three read
+            // "2,144" as two thousand in Spanish, where it is two and a bit.
+            const raw = String(st.q ?? '')
+            const plain = lang === 'en' ? raw.replace(/,/g, '') : raw.replace(/\./g, '').replace(/,/g, '.')
+            const expr = plain.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\s+/g, ' ')
             if (!/^[\d\s+\-*/().]+$/.test(expr)) continue
             let v; try { v = Function(`"use strict"; return (${expr})`)() } catch { continue }
             if (Math.abs(Math.abs(v) - Math.abs(st.a)) > 1e-9) fail(where, `adım "${st.q}" = ${v}, çocuktan ${st.a} isteniyor`, p.question_text)

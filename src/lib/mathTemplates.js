@@ -2966,22 +2966,28 @@ function roundDecimalSteps(value, dp, answer, placeName, lang) {
   const frac = value.toFixed(4).split('.')[1]
   const decider = Number(frac[dp])
   const down = Number(String(value).slice(0, String(value).indexOf('.') + 1 + dp))
-  const unitStep = dp === 1 ? 0.1 : 0.01
+  const unitStep = 10 ** -dp
+  const keep = dp === 0
+    ? say(lang, 'keep the whole number', 'tam sayı kısmını tut', 'quédate con el número entero')
+    : say(lang, `keep ${dp} digit${dp === 1 ? '' : 's'} after the point`, `virgülden sonra ${dp} rakam tut`, `quédate con ${dp} cifra${dp === 1 ? '' : 's'} tras la coma`)
+  const cutEn = dp === 0 ? 'the whole number part' : `${dp} digit${dp === 1 ? '' : 's'} after the point`
+  const cutTr = dp === 0 ? 'tam sayı kısmında' : `virgülden sonra ${dp} rakamda`
+  const cutEs = dp === 0 ? 'la parte entera' : `${dp} cifra${dp === 1 ? '' : 's'} tras la coma`
   const steps = [
     stp(lang, say(lang, `the digit after the ${placeName} place`, `${placeName} basamağından sonraki rakam`, `la cifra después de la ${placeName}`), decider,
-      `${D(value)}: keep ${dp} digit${dp === 1 ? '' : 's'} after the point. Which digit decides? The next one along:`,
-      `${D(value)}: virgülden sonra ${dp} rakam tut. Kararı hangi rakam verir? Bir sonraki:`,
-      `${D(value)}: quédate con ${dp} cifra${dp === 1 ? '' : 's'} tras la coma. ¿Cuál decide? La siguiente:`),
-    stp(lang, say(lang, `${D(value)} cut after ${dp} decimal place${dp === 1 ? '' : 's'}`, `${D(value)} virgülden sonra ${dp} basamakta kesilmiş`, `${D(value)} cortado tras ${dp} decimal${dp === 1 ? '' : 'es'}`), down,
+      `${D(value)}: ${keep}. Which digit decides? The next one along:`,
+      `${D(value)}: ${keep}. Kararı hangi rakam verir? Bir sonraki:`,
+      `${D(value)}: ${keep}. ¿Cuál decide? La siguiente:`),
+    stp(lang, say(lang, `${D(value)} cut after ${cutEn}`, `${D(value)} ${cutTr} kesilmiş`, `${D(value)} cortado en ${cutEs}`), down,
       decider >= 5
-        ? `${decider} is 5 or more, so we go UP. First cut the number off after ${dp} digit${dp === 1 ? '' : 's'}:`
-        : `${decider} is less than 5, so it STAYS. Cut the number off after ${dp} digit${dp === 1 ? '' : 's'}. That is the answer:`,
+        ? `${decider} is 5 or more, so we go UP. First cut the number off at ${cutEn}:`
+        : `${decider} is less than 5, so it STAYS. Cut the number off at ${cutEn}. That is the answer:`,
       decider >= 5
-        ? `${decider}, 5 ve üstü, yani YUKARI çıkıyoruz. Önce sayıyı virgülden sonra ${dp} rakamda kes:`
-        : `${decider}, 5'ten küçük, yani rakam OLDUĞU YERDE kalır. Sayıyı virgülden sonra ${dp} rakamda kes. Cevap bu:`,
+        ? `${decider}, 5 ve üstü, yani YUKARI çıkıyoruz. Önce sayıyı ${cutTr} kes:`
+        : `${decider}, 5'ten küçük, yani rakam OLDUĞU YERDE kalır. Sayıyı ${cutTr} kes. Cevap bu:`,
       decider >= 5
-        ? `${decider} es 5 o más, así que SUBE. Primero corta el número tras ${dp} cifra${dp === 1 ? '' : 's'}:`
-        : `${decider} es menos de 5, así que SE QUEDA. Corta el número tras ${dp} cifra${dp === 1 ? '' : 's'}. Esa es la respuesta:`),
+        ? `${decider} es 5 o más, así que SUBE. Primero corta el número en ${cutEs}:`
+        : `${decider} es menos de 5, así que SE QUEDA. Corta el número en ${cutEs}. Esa es la respuesta:`),
   ]
   if (decider >= 5) steps.push(stp(lang, `${D(down)} + ${D(unitStep)}`, answer,
     `Add one ${placeName}:`, `Bir ${placeName} ekle:`, `Suma una ${placeName}:`))
@@ -5131,7 +5137,64 @@ function decimalsPercentagesTemplate(level, lang) {
   // with 69 and "= ?/1000" with 2042, and declaring those 'decimal' puts a point on the keypad
   // that the child has no use for and could mistype into.
   const format = Number.isInteger(answer) ? 'numeric' : 'decimal'
-  return { topic: 'decimals-percentages', level, question_text: question, format, correct_answer: answer, operandKey: `dec:${key}`, hint_steps: hints }
+  const D2 = v => dnum(v, lang)
+  let help = {}
+  if (kind === 'percent-decimal') {
+    help = stepsHelp([stp(lang, `${key.split(':')[1]} ÷ 100`, answer,
+      'Per cent means out of one hundred, so divide the number by 100:',
+      'Yüzde, yüzde kaç demektir; sayıyı 100\'e böl:',
+      'Por ciento significa de cada cien, así que divide el número entre 100:')])
+  } else if (kind === 'decimal-percent') {
+    help = stepsHelp([stp(lang, `${D2(answer / 100)} × 100`, answer,
+      'One whole is 100%, so multiply by 100 to count the hundredths:',
+      'Bir bütün %100\'dür, yüzde birleri saymak için 100 ile çarp:',
+      'Un entero es el 100%, así que multiplica por 100 para contar las centésimas:')])
+  } else if (kind === 'fraction-decimal') {
+    help = stepsHelp([stp(lang, `${a} ÷ ${scale}`, answer,
+      `${scale} is ${places === 1 ? 'tenths' : places === 2 ? 'hundredths' : 'thousandths'}: divide the top by ${scale}, which moves the point ${places} place${places === 1 ? '' : 's'} left:`,
+      `${scale}, ${places === 1 ? 'onda bir' : places === 2 ? 'yüzde bir' : 'binde bir' } demek: üstteki sayıyı ${scale}'e böl, virgül ${places} basamak sola kayar:`,
+      `${scale} son ${places === 1 ? 'décimas' : places === 2 ? 'centésimas' : 'milésimas'}: divide el de arriba entre ${scale}, la coma se mueve ${places} lugar${places === 1 ? '' : 'es'} a la izquierda:`)])
+  } else if (kind === 'decimal-fraction') {
+    help = stepsHelp([stp(lang, `${dec(a)} × ${scale}`, answer,
+      `Count how many pieces of 1/${scale} make this number: multiply by ${scale}, which moves the point ${places} place${places === 1 ? '' : 's'} right:`,
+      `Bu sayıda kaç tane 1/${scale} olduğunu bul: ${scale} ile çarp, virgül ${places} basamak sağa kayar:`,
+      `Cuenta cuántas partes de 1/${scale} forman este número: multiplica por ${scale}, la coma se mueve ${places} lugar${places === 1 ? '' : 'es'} a la derecha:`)])
+  } else if (kind === 'round') {
+    const [, un, dg] = key.split(':').map(Number)
+    const value = un / 1000
+    const placeName = dg === 0 ? say(lang, 'ones', 'birler', 'unidades') : dg === 1 ? say(lang, 'tenths', 'onda birler', 'décimas') : say(lang, 'hundredths', 'yüzde birler', 'centésimas')
+    help = stepsHelp(roundDecimalSteps(value, dg, answer, placeName, lang))
+  } else if (kind === 'compare') {
+    const [, sh, lg] = key.split(':').map(Number)
+    help = stepsHelp([
+      stp(lang, `${D2(sh / 1000)} = ?/1000`, sh,
+        'Write both numbers with three digits after the point, so the pieces are the same size. First one, in thousandths:',
+        'İki sayıyı da virgülden sonra üç rakamla yaz, parçalar aynı büyüklükte olsun. Birincisi, binde bir cinsinden:',
+        'Escribe los dos con tres cifras tras la coma, para que los trozos sean iguales. El primero, en milésimas:'),
+      stp(lang, `${D2(lg / 1000)} = ?/1000`, lg,
+        'The second one, in thousandths:', 'İkincisi, binde bir cinsinden:', 'El segundo, en milésimas:'),
+      stp(lang, say(lang, 'the greater number', 'büyük olan sayı', 'el número mayor'), answer,
+        `Now compare ${sh} and ${lg}. Which of the two original numbers is greater?`,
+        `Şimdi ${sh} ile ${lg} sayılarını karşılaştır. İki sayıdan hangisi büyük?`,
+        `Ahora compara ${sh} y ${lg}. ¿Cuál de los dos números originales es mayor?`),
+    ])
+  } else if (kind === 'add' || kind === 'subtract') {
+    const x = Math.max(a, b), y = Math.min(a, b), add = kind === 'add'
+    const unitWord = places === 1 ? 'tenths' : places === 2 ? 'hundredths' : 'thousandths'
+    const unitTr = places === 1 ? 'onda bir' : places === 2 ? 'yüzde bir' : 'binde bir'
+    const unitEs = places === 1 ? 'décimas' : places === 2 ? 'centésimas' : 'milésimas'
+    help = stepsHelp([
+      stp(lang, `${x} ${add ? '+' : '−'} ${y}`, add ? x + y : x - y,
+        `Ignore the points for a moment and use whole numbers of ${unitWord}: ${D2(x / scale)} is ${x}, and ${D2(y / scale)} is ${y}. Do the sum:`,
+        `Virgülleri bir an yok say ve ${unitTr} cinsinden tam sayılarla çalış: ${D2(x / scale)} = ${x}, ${D2(y / scale)} = ${y}. İşlemi yap:`,
+        `Olvida un momento la coma y usa números enteros de ${unitEs}: ${D2(x / scale)} es ${x} y ${D2(y / scale)} es ${y}. Haz la operación:`),
+      stp(lang, `${add ? x + y : x - y} ÷ ${scale}`, answer,
+        `Now put the point back: divide by ${scale}, so ${places} digit${places === 1 ? '' : 's'} after the point:`,
+        `Şimdi virgülü geri koy: ${scale}'e böl, yani virgülden sonra ${places} rakam:`,
+        `Ahora devuelve la coma: divide entre ${scale}, o sea ${places} cifra${places === 1 ? '' : 's'} tras la coma:`),
+    ])
+  }
+  return { topic: 'decimals-percentages', level, question_text: question, format, correct_answer: answer, operandKey: `dec:${key}`, ...help, hint_steps: hints }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
