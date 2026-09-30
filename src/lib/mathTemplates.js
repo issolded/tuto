@@ -4183,6 +4183,23 @@ function npHowManyFactors(level, lang) {
     format: 'numeric',
     correct_answer: fs.length,
     operandKey: `np:fac:${n}`,
+    ...(() => {
+      const pairs = fs.filter(f => f * f <= n).length
+      const square = fs.includes(Math.sqrt(n)) && Number.isInteger(Math.sqrt(n))
+      return stepsHelp([
+        stp(lang, say(lang, `factor pairs of ${n}`, `${n} sayısının çarpan çiftleri`, `parejas de divisores de ${n}`), pairs,
+          `Factors come in pairs that multiply to make ${n}: 1 × ${n}, then try 2, 3, 4… and stop when the numbers meet in the middle. How many pairs?`,
+          `Çarpanlar, çarpımı ${n} olan çiftler halinde gelir: 1 × ${n}, sonra 2, 3, 4… dene ve sayılar ortada buluşunca dur. Kaç çift?`,
+          `Los divisores vienen en parejas que multiplicadas dan ${n}: 1 × ${n}, luego prueba 2, 3, 4… y para cuando se encuentren en el medio. ¿Cuántas parejas?`),
+        stp(lang, square ? `${pairs} × 2 − 1` : `${pairs} × 2`, fs.length,
+          square ? 'Each pair has two factors — but the middle pair is the same number twice, so it counts once:'
+                 : 'Each pair has two factors:',
+          square ? 'Her çiftte iki çarpan var — ama ortadaki çift aynı sayı iki kez, bir kez sayılır:'
+                 : 'Her çiftte iki çarpan var:',
+          square ? 'Cada pareja tiene dos divisores, pero la del medio es el mismo número dos veces y cuenta una:'
+                 : 'Cada pareja tiene dos divisores:'),
+      ])
+    })(),
     hint_steps: [
       say(lang, `A factor divides into ${n} exactly, with nothing left over.`,
                 `Çarpan, ${n} sayısını kalansız bölen sayıdır.`,
@@ -4209,6 +4226,20 @@ function npPrimeSum(level, lang) {
     format: 'numeric',
     correct_answer: primes.reduce((a, b) => a + b, 0),
     operandKey: `np:primesum:${lo}`,
+    ...stepsHelp([
+      ...primes.map((pr, i) => stp(lang, say(lang, i === 0 ? `the first prime after ${lo}` : 'the next prime', i === 0 ? `${lo} sayısından sonraki ilk asal` : 'sıradaki asal', i === 0 ? `el primer primo después de ${lo}` : 'el siguiente primo'), pr,
+        i === 0
+          ? `A prime has only two factors: 1 and itself. Try the numbers after ${lo} one at a time, and cross out anything in the 2, 3, 5 or 7 times table. The first prime is:`
+          : 'The next prime:',
+        i === 0
+          ? `Asalın yalnız iki çarpanı vardır: 1 ve kendisi. ${lo} sayısından sonraki sayıları tek tek dene, 2, 3, 5 ya da 7'nin katı olanları ele. İlk asal:`
+          : 'Sıradaki asal:',
+        i === 0
+          ? `Un primo solo tiene dos divisores: 1 y él mismo. Prueba los números después de ${lo} uno a uno y tacha lo que esté en las tablas del 2, 3, 5 o 7. El primer primo es:`
+          : 'El siguiente primo:')),
+      stp(lang, primes.join(' + '), primes.reduce((x, y) => x + y, 0),
+        'Add the primes together:', 'Asal sayıları topla:', 'Suma los primos:'),
+    ]),
     hint_steps: [
       say(lang, `A prime has exactly two factors: 1 and itself.`,
                 `Asal sayının tam olarak iki çarpanı vardır: 1 ve kendisi.`,
@@ -4235,6 +4266,20 @@ function npLcm(level, lang) {
     format: 'numeric',
     correct_answer: lcm(a, b),
     operandKey: `np:lcm:${a}:${b}`,
+    ...(() => {
+      const big = Math.max(a, b), small = Math.min(a, b), L = lcm(a, b), K = L / big
+      if (K > 8) return {}
+      return stepsHelp(Array.from({ length: K }, (_, i) => stp(lang, `${big} × ${i + 1}`, big * (i + 1),
+        i === 0
+          ? `Count up in ${big}s and stop at the first one that is also in the ${small} times table. Start with:`
+          : `Is the last one in the ${small} times table? If not, the next one:`,
+        i === 0
+          ? `${big}'şer say ve ${small} çarpım tablosunda da olan ilk sayıda dur. Başla:`
+          : `Bir öncekiyle ${small} çarpım tablosunda mı? Değilse, sıradaki:`,
+        i === 0
+          ? `Cuenta de ${big} en ${big} y para en el primero que también esté en la tabla del ${small}. Empieza con:`
+          : `¿El anterior está en la tabla del ${small}? Si no, el siguiente:`)))
+    })(),
     hint_steps: [
       say(lang, `Count up in ${a}s and in ${b}s and watch for the first number that appears in both lists.`,
                 `${a}'şer ve ${b}'şer sayarak ilerle, iki listede de görünen ilk sayıyı yakala.`,
@@ -4254,6 +4299,11 @@ function npSquareRoot(level, lang) {
       topic: 'number-properties', level,
       question_text: say(lang, `What is ${n} cubed?`, `${n} sayısının küpü kaçtır?`, `¿Cuánto es ${n} al cubo?`),
       format: 'numeric', correct_answer: n * n * n, operandKey: `np:cube:${n}`,
+      ...stepsHelp([
+        stp(lang, `${n} × ${n}`, n * n, `Cubed means times itself three times. First square it:`, `Küpü, üç kez çarpmak demek. Önce karesini al:`, `Al cubo es multiplicar tres veces. Primero elévalo al cuadrado:`),
+        ...(() => { const sp = multSplitSteps(n * n, n, lang).help?.steps
+          return sp ?? [stp(lang, `${n * n} × ${n}`, n * n * n, `Now multiply by ${n} once more:`, `Şimdi bir kez daha ${n} ile çarp:`, `Ahora multiplica una vez más por ${n}:`)] })(),
+      ]),
       hint_steps: [
         say(lang, `Cubed means the number multiplied by itself three times over.`,
                   `Küpü demek, sayının kendisiyle üç kez çarpılması demek.`,
@@ -4285,6 +4335,7 @@ function npSquareRoot(level, lang) {
       topic: 'number-properties', level,
       question_text: say(lang, `What is ${n} squared?`, `${n} sayısının karesi kaçtır?`, `¿Cuánto es ${n} al cuadrado?`),
       format: 'numeric', correct_answer: sq, operandKey: `np:sq:${n}`,
+      ...(n >= 10 ? multSplitSteps(n, n, lang) : {}),
       hint_steps: [
         say(lang, `Squared means the number multiplied by itself.`,
                   `Karesi demek, sayının kendisiyle çarpılması demek.`,
@@ -7488,6 +7539,30 @@ function planeRule(level, lang) {
     question_text: say(lang, 'The points lie on a straight line. Which rule do they follow?', 'Noktalar bir doğru üzerinde. Hangi kurala uyuyorlar?', 'Los puntos están en una recta. ¿Qué regla siguen?'),
     format: 'choice', options: choiceOf(right, shuffle(wrongs).slice(0, 3)), correct_answer: right.value,
     operandKey: `plane:r:${m}:${c}`,
+    ...(pts.length >= 2 ? stepsHelp([
+      stp(lang, `${pts[1].y} − ${pts[0].y}`, m * (pts[1].x - pts[0].x),
+        `Look at two points: (${pts[0].x}, ${pts[0].y}) and (${pts[1].x}, ${pts[1].y}). By how much does y change between them?`,
+        `İki noktaya bak: (${pts[0].x}, ${pts[0].y}) ve (${pts[1].x}, ${pts[1].y}). Aralarında y ne kadar değişiyor?`,
+        `Mira dos puntos: (${pts[0].x}, ${pts[0].y}) y (${pts[1].x}, ${pts[1].y}). ¿Cuánto cambia y entre ellos?`),
+      stp(lang, `${pts[1].x} − ${pts[0].x}`, pts[1].x - pts[0].x,
+        'And by how much does x change?', 'Ya x ne kadar değişiyor?', '¿Y cuánto cambia x?'),
+      stp(lang, `${m * (pts[1].x - pts[0].x)} ÷ ${pts[1].x - pts[0].x}`, m,
+        'y changes this many times per one step of x. That is the number in front of x:',
+        'x\'in her adımında y bu kadar değişir. Bu, x\'in önündeki sayı:',
+        'y cambia esta cantidad por cada paso de x. Ese es el número delante de x:'),
+      stp(lang, `${m} × ${pts[0].x}`, m * pts[0].x,
+        `Now check the first point. ${m} times its x is:`, `Şimdi ilk noktayı kontrol et. x\'i ile ${m} çarpımı:`, `Ahora comprueba el primer punto. ${m} por su x es:`),
+      stp(lang, `${pts[0].y} − ${m * pts[0].x}`, Math.abs(pts[0].y - m * pts[0].x),
+        pts[0].y - m * pts[0].x > 0 ? 'y is BIGGER than that by this much, so the rule adds it on:'
+        : pts[0].y - m * pts[0].x < 0 ? 'y is SMALLER than that by this much, so the rule takes it away:'
+        : 'y is exactly that, so nothing is added or taken away:',
+        pts[0].y - m * pts[0].x > 0 ? 'y bundan bu kadar BÜYÜK, yani kural bunu ekler:'
+        : pts[0].y - m * pts[0].x < 0 ? 'y bundan bu kadar KÜÇÜK, yani kural bunu çıkarır:'
+        : 'y tam olarak bu, yani bir şey eklenmez ya da çıkarılmaz:',
+        pts[0].y - m * pts[0].x > 0 ? 'y es MAYOR que eso en esta cantidad, así que la regla la suma:'
+        : pts[0].y - m * pts[0].x < 0 ? 'y es MENOR que eso en esta cantidad, así que la regla la resta:'
+        : 'y es exactamente eso, así que no se suma ni se resta nada:'),
+    ], { kind: 'plane', min: 0, max: 8, points: pts.map(p => ({ ...p, label: '' })) }, true) : {}),
     hint_steps: [
       say(lang, 'Write the points as pairs: (x, y).', 'Noktaları çift olarak yaz: (x, y).', 'Escribe los puntos como pares: (x, y).'),
       say(lang, 'What do you do to x to get y? It has to work for every point, not just one.', 'x\'e ne yapınca y çıkıyor? Tek bir noktada değil, hepsinde işe yaramalı.', '¿Qué le haces a x para obtener y? Tiene que funcionar con todos los puntos, no solo con uno.'),
@@ -7864,6 +7939,36 @@ function dotNumbers(level, lang) {
 // Bond labels these at two points only, often not the ends — "0" and "0.1" with the arrow to
 // the left of the zero. Negative answers are offered as choices (the keypad has no minus), and
 // the wrong ones are the real slips: the sign dropped, the step read ten times too big.
+// Reading a scale in four things the child does on the picture: how many small steps lie between
+// two labels, what one step is worth, how many steps the arrow is from the nearest label, and
+// what that comes to. `origin` is the label the count starts from.
+function scaleReadSteps(spec, value, origin, lang, signed) {
+  const D = v => dnum(Math.round(v * 1000) / 1000, lang)
+  const [l0, l1] = spec.labels.length > 1 ? [spec.labels[0], spec.labels[1]] : [spec.min, spec.labels[0]]
+  const gap = Math.round((l1 - l0) * 1000) / 1000
+  const nStep = Math.round(gap / spec.minor)
+  const away = Math.round(Math.abs(value - origin) / spec.minor)
+  return [
+    stp(lang, say(lang, `small steps from ${D(l0)} to ${D(l1)}`, `${D(l0)} ile ${D(l1)} arasındaki küçük adımlar`, `pasos pequeños de ${D(l0)} a ${D(l1)}`), nStep,
+      `Count the small steps between two labels, ${D(l0)} and ${D(l1)}:`,
+      `İki etiket, ${D(l0)} ile ${D(l1)}, arasındaki küçük adımları say:`,
+      `Cuenta los pasos pequeños entre dos etiquetas, ${D(l0)} y ${D(l1)}:`),
+    stp(lang, `${D(gap)} ÷ ${nStep}`, spec.minor,
+      'Share the gap between the labels out over those steps. What is ONE step worth?',
+      'Etiketler arasındaki farkı bu adımlara paylaştır. BİR adım kaç eder?',
+      'Reparte la diferencia entre las etiquetas entre esos pasos. ¿Cuánto vale UN paso?'),
+    stp(lang, say(lang, `steps from ${D(origin)} to the arrow`, `${D(origin)} ile ok arasındaki adımlar`, `pasos de ${D(origin)} a la flecha`), away,
+      `Now count the steps from ${D(origin)} to the arrow:`, `Şimdi ${D(origin)} noktasından oka kadar adımları say:`, `Ahora cuenta los pasos de ${D(origin)} a la flecha:`),
+    stp(lang, `${away} × ${D(spec.minor)}`, Math.abs(value - origin),
+      signed ? 'Steps times what one step is worth. The arrow is LEFT of 0, so the number is below zero:'
+             : 'Steps times what one step is worth. Add it to the label you started from:',
+      signed ? 'Adım sayısı çarpı bir adımın değeri. Ok 0\'ın SOLUNDA, yani sayı sıfırın altında:'
+             : 'Adım sayısı çarpı bir adımın değeri. Başladığın etikete ekle:',
+      signed ? 'Pasos por lo que vale un paso. La flecha está a la IZQUIERDA del 0, así que el número es negativo:'
+             : 'Pasos por lo que vale un paso. Súmalo a la etiqueta de la que partiste:'),
+  ]
+}
+
 function numberLineOlder(level, lang) {
   const shape = pick(['neg', 'neg', 'dec', 'forms'])
   if (shape === 'forms') {
@@ -7893,6 +7998,15 @@ function numberLineOlder(level, lang) {
       topic: 'place-value', level,
       question_text: say(lang, 'What number is the arrow pointing to?', 'Ok hangi sayıyı gösteriyor?', '¿A qué número apunta la flecha?'),
       format: 'decimal', correct_answer: value, operandKey: `nl:dec:${spec.min}:${spec.max}:${value}`,
+      ...(() => {
+        // Count from the label at or just below the arrow, so the last line adds and the sum is the answer.
+        const origin = [...spec.labels, spec.min].filter(l => l <= value).sort((x, y) => y - x)[0]
+        const st = scaleReadSteps(spec, value, origin, lang, false)
+        // The final line shows the distance from the label; the answer is that plus the label.
+        if (Math.abs(origin) > 1e-9) st.push(stp(lang, `${dnum(origin, lang)} + ${dnum(Math.round((value - origin) * 1000) / 1000, lang)}`, value,
+          'Add it to the label:', 'Etikete ekle:', 'Súmalo a la etiqueta:'))
+        return stepsHelp(st, { kind: 'scale', type: 'line', ...spec, value })
+      })(),
       hint_steps: [say(lang, 'First find what one small step is worth: the gap between two labels, shared by the steps between them.', 'Önce bir küçük adımın değerini bul: iki etiket arasındaki farkı aradaki adım sayısına böl.', 'Primero averigua cuánto vale un paso pequeño: la distancia entre dos etiquetas entre los pasos que hay.'),
                    say(lang, 'Then count the steps from the nearest label.', 'Sonra en yakın etiketten adımları say.', 'Luego cuenta los pasos desde la etiqueta más cercana.')],
       visual: { kind: 'scale', type: 'line', ...spec, value },
@@ -7914,6 +8028,7 @@ function numberLineOlder(level, lang) {
     topic: 'place-value', level,
     question_text: say(lang, 'What number is the arrow pointing to?', 'Ok hangi sayıyı gösteriyor?', '¿A qué número apunta la flecha?'),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `nl:neg:${spec.max}:${value}`,
+    ...stepsHelp(scaleReadSteps(spec, value, 0, lang, true), { kind: 'scale', type: 'line', ...spec, value }, true),
     hint_steps: [say(lang, 'Work out one small step from the two labels.', 'İki etiketten bir küçük adımın değerini bul.', 'Calcula un paso pequeño a partir de las dos etiquetas.'),
                  say(lang, 'Left of 0 the numbers are negative: count the steps back from 0.', '0\'ın solunda sayılar negatif: 0\'dan geriye adımları say.', 'A la izquierda del 0 los números son negativos: cuenta los pasos hacia atrás desde el 0.')],
     visual: { kind: 'scale', type: 'line', ...spec, value },
