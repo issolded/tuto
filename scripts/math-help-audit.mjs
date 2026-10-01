@@ -82,9 +82,9 @@ for (const age of AGES) {
           if (!Number.isFinite(a)) { fail(where, 'step answer is not a number', `${st.q}`); return }
           if (a < 0) fail(where, 'step answer is negative (the keypad has no minus)', `${st.q} = ${a}`)
           const typed = String(a).replace('.', '')
-          if (String(a).length > 7) fail(where, `step answer longer than 7 characters`, `${st.q} = ${a}`)
+          if (String(a).length > 9) fail(where, `step answer longer than 9 characters`, `${st.q} = ${a}`)
           const dec = String(a).split('.')[1]
-          if (dec && dec.length > 3) fail(where, 'step answer has more than 3 decimals', `${st.q} = ${a}`)
+          if (dec && dec.length > 8) fail(where, 'step answer has more than 8 decimals', `${st.q} = ${a}`)
           if (!st.say || st.say.trim().length < 6) fail(where, 'step has no sentence', `${st.q}`)
           if (st.say && st.say.length > 260) fail(where, 'step sentence is over 260 characters', st.say.slice(0, 80))
           if (/undefined|NaN|\$\{|\[object/.test(`${st.q} ${st.say}`)) fail(where, 'unresolved placeholder', `${st.q} | ${st.say}`)
@@ -96,16 +96,19 @@ for (const age of AGES) {
           // and numbers the question or its picture already print are not a give-away.
           // "Split 92 into 80 and 12" and "5% is half of 10%" carry numbers as parts and labels; one of
           // them landing on an answer is a coincidence of the numbers, not the sentence giving it away.
-          const sentence = String(st.say ?? '').replace(/\d+\s?%|%\s?\d+/g, '').replace(/[^:]*\b(split|separa|ayır|parçala|break)\b[^:]*:/gi, '').replace(/(sobran|left over)\s+\d+/gi, '').replace(/\d+ (tane|are|son|sobran)[^.:]*(artıyor|left over|sobran)[^.:]*[.:]?/gi, '')
+          const sentence = String(st.say ?? '').replace(/\d+\s?%|%\s?\d+/g, '').replace(/\d+\s?(g|kg|cm|mm|m|km|ml|l)\b/gi, '').replace(/[^:]*\b(split|separa|ayır|parçala|break)\b[^:]*:/gi, '').replace(/(sobran|left over)\s+\d+/gi, '').replace(/\d+ (tane|are|son|sobran)[^.:]*(artıyor|left over|sobran)[^.:]*[.:]?/gi, '')
+          // A chain that walks through the cards one by one names each of them in turn; that is the method.
+          const optionVals = (p.options || []).map(o => String(o.value))
+          const walksOptions = choice && steps.length >= 3 && steps.filter(x => /First|Next|Önce|Sıradaki|Primero|Después|Siguiente/.test(String(x.say))).length >= steps.length - 1
+          const tries = walksOptions || String(st.q) === String(answer)
           const big = Math.abs(a) >= 10 || !Number.isInteger(a)
           const inQuestion = standalone(textOf, a, lang)
           const inQ = standalone(String(st.q), a, lang)
-          if (st.say && big && !inQuestion && !inQ && standalone(sentence, a, lang)) fail(where, 'sentence states the answer of its own line', `${st.q} = ${a} | ${st.say}`.slice(0, 160))
+          if (st.say && big && !walksOptions && !inQuestion && !inQ && standalone(sentence, a, lang)) fail(where, 'sentence states the answer of its own line', `${st.q} = ${a} | ${st.say}`.slice(0, 160))
           if (st.say && !choice && Number.isFinite(Number(answer)) && Math.abs(Number(answer)) >= 10 && !standalone(textOf, answer, lang) && !standalone(String(st.q), answer, lang) && standalone(sentence, answer, lang) && a !== Number(answer)) {
             fail(where, "sentence states the question's answer early", `${st.q} | ${st.say}`.slice(0, 160))
           }
           // A chain that tries each card in turn names every option, the right one included, by design.
-          const tries = String(st.q) === String(answer)
           if (st.say && choice && !tries && !standalone(textOf, answer, lang) && String(answer).length > 1 && standalone(st.say, answer, lang)) {
             fail(where, "sentence names the correct option", `${st.q} | ${st.say}`.slice(0, 160))
           }

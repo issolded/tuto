@@ -8368,6 +8368,53 @@ const pctS = p => (Number.isInteger(p) ? `${p}` : `${Math.floor(p)}½`)
 const round2 = x => Math.round(x * 100) / 100
 
 // ── 1. indices, primes, powers ────────────────────────────────────────────────────
+// ── Year 8 chains ─────────────────────────────────────────────────────────────────────────
+// The keypad has no minus key, so a step that comes out below zero is typed as its size, and the
+// sentence says so. Returns the three-language tail to add to a sentence.
+const belowZero = v => (v < 0
+  ? [' — it comes out below zero: type its size without the minus.', ' — sıfırın altında çıkıyor: eksi olmadan büyüklüğünü yaz.', ' — sale por debajo de cero: escribe su tamaño sin el menos.']
+  : ['', '', ''])
+const stpS = (lang, q, a, en, tr, es) => { const t = belowZero(a); return stp(lang, q, Math.abs(a), en + t[0], tr + t[1], es + t[2]) }
+
+// Keep dividing by the smallest prime that goes in; the quotients are what the child types, and the
+// primes used (counted) make the product written with indices.
+function primeDivisionSteps(n, lang) {
+  const steps = []
+  let cur = n, first = true
+  for (let d = 2; cur > 1; d++) {
+    while (cur % d === 0) {
+      steps.push(stp(lang, `${cur} ÷ ${d}`, cur / d,
+        first ? 'Divide by the smallest prime that goes in, again and again, until you reach 1. First:' : (steps.length && steps.at(-1).q.endsWith(`÷ ${d}`) ? `Again by ${d}:` : `Now by ${d}:`),
+        first ? 'İçine giren en küçük asalla, 1\'e gelene kadar tekrar tekrar böl. Önce:' : (steps.length && steps.at(-1).q.endsWith(`÷ ${d}`) ? `Yine ${d} ile:` : `Şimdi ${d} ile:`),
+        first ? 'Divide por el primo más pequeño que entre, una y otra vez, hasta llegar a 1. Primero:' : (steps.length && steps.at(-1).q.endsWith(`÷ ${d}`) ? `Otra vez entre ${d}:` : `Ahora entre ${d}:`)))
+      cur /= d; first = false
+    }
+  }
+  return steps.length <= 9 ? stepsHelp(steps, null, true) : {}
+}
+
+// Highest common factor by Euclid: divide the bigger by the smaller, keep the remainder, repeat.
+function euclidSteps(a, b, lang) {
+  let [x, y] = a > b ? [a, b] : [b, a]
+  const steps = []
+  while (y > 0) {
+    const k = Math.floor(x / y), r = x - y * k
+    if (r === 0) break
+    steps.push(stp(lang, `${x} − ${y} × ${k}`, r,
+      steps.length === 0 ? `Divide the bigger number by the smaller: ${y} goes into ${x} ${k} times. What is left over?` : `Now ${y} goes into ${x} ${k} times. What is left over?`,
+      steps.length === 0 ? `Büyük sayıyı küçüğe böl: ${x} içinde ${y}, ${k} kez var. Artan kaç?` : `Şimdi ${x} içinde ${y}, ${k} kez var. Artan kaç?`,
+      steps.length === 0 ? `Divide el mayor entre el menor: ${y} cabe ${k} veces en ${x}. ¿Cuánto sobra?` : `Ahora ${y} cabe ${k} veces en ${x}. ¿Cuánto sobra?`))
+    ;[x, y] = [y, r]
+  }
+  // y is the last non-zero remainder: the highest common factor.
+  if (!steps.length || steps.length > 7) return {}
+  steps.push(stp(lang, say(lang, 'the last number before nothing is left', 'geriye hiçbir şey kalmadan önceki son sayı', 'el último número antes de que no sobre nada'), y,
+    'When nothing is left over, the number you were dividing by is the highest common factor. Which is it?',
+    'Artık hiçbir şey kalmadığında, bölen sayı en büyük ortak bölendir. Hangisi?',
+    'Cuando ya no sobra nada, el número por el que dividías es el máximo común divisor. ¿Cuál es?'))
+  return stepsHelp(steps)
+}
+
 function y8Powers(level, lang) {
   const shape = pick(['factors', 'factors', 'hcf', 'lcm', 'power', 'power', 'brackets', 'sumprod', 'pickset'])
   const T = 'powers-primes'
@@ -8391,6 +8438,7 @@ function y8Powers(level, lang) {
       topic: T, level,
       question_text: say(lang, `Write ${n} as a product of prime factors, using indices.`, `${n} sayısını asal çarpanlarının çarpımı olarak, üslü biçimde yaz.`, `Escribe ${n} como producto de factores primos, usando potencias.`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `pp:f:${n}`,
+      ...primeDivisionSteps(n, lang),
       hint_steps: [say(lang, `Keep dividing by the smallest prime that goes in: 2, then 3, then 5…`, `En küçük asalla bölmeye devam et: önce 2, sonra 3, sonra 5…`, `Sigue dividiendo por el primo más pequeño que quepa: 2, luego 3, luego 5…`),
                    say(lang, 'A prime used more than once is written once with a small power: 2 × 2 × 2 = 2³.', 'Birden çok kez kullanılan asal bir kez, küçük bir üsle yazılır: 2 × 2 × 2 = 2³.', 'Un primo que se repite se escribe una vez con un exponente: 2 × 2 × 2 = 2³.')],
     }
@@ -8402,6 +8450,7 @@ function y8Powers(level, lang) {
       topic: T, level,
       question_text: say(lang, `What is the highest common factor (HCF) of ${a} and ${b}?`, `${a} ve ${b} sayılarının en büyük ortak böleni (EBOB) kaçtır?`, `¿Cuál es el máximo común divisor (m.c.d.) de ${a} y ${b}?`),
       format: 'numeric', correct_answer: g, operandKey: `pp:h:${a}:${b}`,
+      ...euclidSteps(a, b, lang),
       hint_steps: [say(lang, 'Write each number as a product of primes.', 'Her sayıyı asal çarpanlarına ayır.', 'Descompón cada número en factores primos.'),
                    say(lang, 'Multiply together the primes the two lists share.', 'İki listede ortak olan asalları çarp.', 'Multiplica los primos que tienen en común.')],
     }
@@ -8417,40 +8466,86 @@ function y8Powers(level, lang) {
       topic: T, level,
       question_text: say(lang, `What is the lowest common multiple (LCM) of ${txt}?`, `${txt} sayılarının en küçük ortak katı (EKOK) kaçtır?`, `¿Cuál es el mínimo común múltiplo (m.c.m.) de ${txt}?`),
       format: 'numeric', correct_answer: l, operandKey: `pp:l:${list.join(',')}`,
+      ...(() => {
+        const big = list[list.length - 1], K = l / big
+        if (K > 9) return {}
+        return stepsHelp(Array.from({ length: K }, (_, i) => stp(lang, `${big} × ${i + 1}`, big * (i + 1),
+          i === 0 ? `Count up in the multiples of ${big}. Stop at the first one that every one of ${txt} divides into. Start with:` : 'Does every number divide into the last one? If not, the next:',
+          i === 0 ? `${big} sayısının katlarını say. ${txt} sayılarının hepsinin tam böldüğü ilk katta dur. Başla:` : 'Hepsi bir öncekini tam bölüyor mu? Bölmüyorsa, sıradaki:',
+          i === 0 ? `Cuenta los múltiplos de ${big}. Para en el primero que dividan todos: ${txt}. Empieza con:` : '¿Lo dividen todos? Si no, el siguiente:')))
+      })(),
       hint_steps: [say(lang, 'Start with the multiples of the biggest number.', 'En büyük sayının katlarından başla.', 'Empieza por los múltiplos del número más grande.'),
                    say(lang, 'Stop at the first one that every number divides into.', 'Hepsinin tam böldüğü ilk katta dur.', 'Para en el primero que todos dividen exactamente.')],
     }
   }
   if (shape === 'power') {
     const form = pick(['sq', 'root', 'cube', 'prod', 'diff'])
-    let q, ans
-    if (form === 'sq') { const n = randInt(11, 25); q = `${pw(n, 2)} = ?`; ans = n * n }
-    else if (form === 'root') { const n = randInt(9, 30); q = `√${n * n} = ?`; ans = n }
-    else if (form === 'cube') { const n = randInt(3, 10); q = `${pw(n, 3)} = ?`; ans = n ** 3 }
-    else if (form === 'prod') { const a = pick([2, 3]), b = pick([3, 5]), i = randInt(2, 3), j = randInt(2, 3); if (a === b) return y8Powers(level, lang); q = `${pw(a, i)} × ${pw(b, j)} = ?`; ans = a ** i * b ** j }
-    else { const a = randInt(6, 12), b = randInt(2, 4); if (a * a <= b ** 3) return y8Powers(level, lang); q = `${pw(a, 2)} − ${pw(b, 3)} = ?`; ans = a * a - b ** 3 }
+    let q, ans, help = {}
+    if (form === 'sq') { const n = randInt(11, 25); q = `${pw(n, 2)} = ?`; ans = n * n; help = multSplitSteps(n, n, lang) }
+    else if (form === 'root') { const n = randInt(9, 30); q = `√${n * n} = ?`; ans = n
+      const m = Math.min(4, n - 1)
+      help = stepsHelp([
+        ...Array.from({ length: m }, (_, i) => { const c = n - m + 1 + i
+          return stp(lang, `${c} × ${c}`, c * c,
+            i === 0 ? `A square root asks: which number times itself makes ${n * n}? Try numbers in turn and watch the answer climb towards ${n * n}. First ${c} × ${c}:` : `Next, ${c} × ${c}:`,
+            i === 0 ? `Karekök şunu sorar: hangi sayı kendisiyle çarpılınca ${n * n} eder? Sayıları sırayla dene, sonucun ${n * n} sayısına yaklaştığını izle. Önce ${c} × ${c}:` : `Sıradaki, ${c} × ${c}:`,
+            i === 0 ? `Una raíz cuadrada pregunta: ¿qué número por sí mismo da ${n * n}? Prueba números en orden y mira cómo el resultado se acerca a ${n * n}. Primero ${c} × ${c}:` : `Después, ${c} × ${c}:`) }),
+        stp(lang, say(lang, `the number that makes ${n * n}`, `${n * n} yapan sayı`, `el número que da ${n * n}`), n,
+          `Which of those times itself gave exactly ${n * n}? That number is the square root:`,
+          `Bunlardan hangisi kendisiyle çarpılınca tam ${n * n} verdi? O sayı karekök:`,
+          `¿Cuál de ellos por sí mismo dio exactamente ${n * n}? Ese número es la raíz cuadrada:`)]) }
+    else if (form === 'cube') { const n = randInt(3, 10); q = `${pw(n, 3)} = ?`; ans = n ** 3
+      help = stepsHelp([
+        stp(lang, `${n} × ${n}`, n * n, 'Cubed means times itself three times. First square it:', 'Küpü, üç kez çarpmak demek. Önce karesini al:', 'Al cubo es multiplicar tres veces. Primero elévalo al cuadrado:'),
+        stp(lang, `${n * n} × ${n}`, n ** 3, `Now multiply by ${n} once more:`, `Şimdi bir kez daha ${n} ile çarp:`, `Ahora multiplica una vez más por ${n}:`)]) }
+    else if (form === 'prod') { const a = pick([2, 3]), b = pick([3, 5]), i = randInt(2, 3), j = randInt(2, 3); if (a === b) return y8Powers(level, lang); q = `${pw(a, i)} × ${pw(b, j)} = ?`; ans = a ** i * b ** j
+      help = stepsHelp([
+        stp(lang, Array(i).fill(a).join(' × '), a ** i, `${pw(a, i)} means ${a} multiplied by itself ${i} times:`, `${pw(a, i)}, ${a} sayısının kendisiyle ${i} kez çarpımı:`, `${pw(a, i)} es ${a} multiplicado por sí mismo ${i} veces:`),
+        stp(lang, Array(j).fill(b).join(' × '), b ** j, `Now ${pw(b, j)}:`, `Şimdi ${pw(b, j)}:`, `Ahora ${pw(b, j)}:`),
+        stp(lang, `${a ** i} × ${b ** j}`, ans, 'Now multiply the two answers:', 'Şimdi iki sonucu çarp:', 'Ahora multiplica los dos resultados:')]) }
+    else { const a = randInt(6, 12), b = randInt(2, 4); if (a * a <= b ** 3) return y8Powers(level, lang); q = `${pw(a, 2)} − ${pw(b, 3)} = ?`; ans = a * a - b ** 3
+      help = stepsHelp([
+        stp(lang, `${a} × ${a}`, a * a, `${pw(a, 2)} is ${a} times itself:`, `${pw(a, 2)}, ${a} sayısının kendisiyle çarpımı:`, `${pw(a, 2)} es ${a} por sí mismo:`),
+        stp(lang, `${b} × ${b} × ${b}`, b ** 3, `${pw(b, 3)} is ${b} times itself three times:`, `${pw(b, 3)}, ${b} sayısının üç kez çarpımı:`, `${pw(b, 3)} es ${b} multiplicado tres veces:`),
+        stp(lang, `${a * a} − ${b ** 3}`, a * a - b ** 3, 'Now take one away from the other:', 'Şimdi birini diğerinden çıkar:', 'Ahora resta uno del otro:')]) }
     return {
       topic: T, level, question_text: q, format: 'numeric', correct_answer: ans, operandKey: `pp:p:${q}`,
+      ...help,
       hint_steps: [say(lang, 'The small number says how many times the number is multiplied by itself: 4³ = 4 × 4 × 4.', 'Küçük sayı, sayının kendisiyle kaç kez çarpılacağını söyler: 4³ = 4 × 4 × 4.', 'El número pequeño dice cuántas veces se multiplica por sí mismo: 4³ = 4 × 4 × 4.'),
                    form === 'root' ? say(lang, 'Which number times itself makes this?', 'Hangi sayı kendisiyle çarpılınca bunu verir?', '¿Qué número multiplicado por sí mismo da esto?') : say(lang, 'Work out each power first, then do the ×, − or +.', 'Önce her üssü hesapla, sonra ×, − ya da + yap.', 'Calcula primero cada potencia y luego haz el ×, − o +.')],
     }
   }
   if (shape === 'brackets') {
     const form = randInt(0, 2)
-    let q, ans
+    let q, ans, help = {}
     if (form === 0) {
       const mid = randInt(2, 9), quo = randInt(2, 9), inner = randInt(1, 6), d = randInt(1, 5), e = randInt(1, 9)
       q = `${mid * quo} ÷ (${mid + inner} − (${inner + d} − ${d})) + ${e} = ?`; ans = quo + e
+      help = stepsHelp([
+        stp(lang, `${inner + d} − ${d}`, inner, 'Start with the innermost brackets:', 'En içteki parantezle başla:', 'Empieza por el paréntesis más interior:'),
+        stp(lang, `${mid + inner} − ${inner}`, mid, 'Now the bracket round it:', 'Şimdi onu saran parantez:', 'Ahora el paréntesis que lo rodea:'),
+        stp(lang, `${mid * quo} ÷ ${mid}`, quo, 'Division before addition:', 'Toplamadan önce bölme:', 'La división antes que la suma:'),
+        stp(lang, `${quo} + ${e}`, ans, 'And finally the addition:', 'Ve son olarak toplama:', 'Y por último la suma:')])
     } else if (form === 1) {
       const a = randInt(3, 9), b = randInt(3, 9), c = randInt(2, 6), d = randInt(2, 6), f = randInt(2, 6), e = f * randInt(2, 8)
       if (a * b - c * d <= 0) return y8Powers(level, lang)
       q = `(${a} × ${b}) − (${c} × ${d}) + (${e} ÷ ${f}) = ?`; ans = a * b - c * d + e / f
+      help = stepsHelp([
+        stp(lang, `${a} × ${b}`, a * b, 'Work out each bracket first. The first:', 'Önce her parantezi hesapla. Birincisi:', 'Calcula primero cada paréntesis. El primero:'),
+        stp(lang, `${c} × ${d}`, c * d, 'The second:', 'İkincisi:', 'El segundo:'),
+        stp(lang, `${e} ÷ ${f}`, e / f, 'The third:', 'Üçüncüsü:', 'El tercero:'),
+        stp(lang, `${a * b} − ${c * d} + ${e / f}`, ans, 'Now put them together, left to right:', 'Şimdi soldan sağa birleştir:', 'Ahora júntalos, de izquierda a derecha:')])
     } else {
       const a = randInt(6, 15), b = randInt(1, a - 2), c = randInt(6, 15), d = randInt(1, c - 2)
       q = `(${a} − ${b})(${c} − ${d}) = ?`; ans = (a - b) * (c - d)
+      help = stepsHelp([
+        stp(lang, `${a} − ${b}`, a - b, 'Two brackets side by side are multiplied. First work out each one:', 'Yan yana iki parantez çarpılır. Önce her birini hesapla:', 'Dos paréntesis juntos se multiplican. Calcula primero cada uno:'),
+        stp(lang, `${c} − ${d}`, c - d, 'And the second:', 'Ve ikincisi:', 'Y el segundo:'),
+        ...(multSplitSteps(a - b, c - d, lang).help?.steps ?? [stp(lang, `${a - b} × ${c - d}`, ans, 'Now multiply the two results:', 'Şimdi iki sonucu çarp:', 'Ahora multiplica los dos resultados:')])])
     }
     return {
       topic: T, level, question_text: q, format: 'numeric', correct_answer: ans, operandKey: `pp:b:${q}`,
+      ...help,
       hint_steps: [say(lang, 'Work from the innermost brackets outwards.', 'En içteki parantezden dışarı doğru çalış.', 'Trabaja desde el paréntesis de más adentro hacia fuera.'),
                    say(lang, 'Then × and ÷ before + and −. Two brackets side by side are multiplied.', 'Sonra + ve −\'den önce × ve ÷. Yan yana iki parantez çarpılır.', 'Luego × y ÷ antes que + y −. Dos paréntesis juntos se multiplican.')],
     }
@@ -8466,6 +8561,9 @@ function y8Powers(level, lang) {
         ? say(lang, `Two numbers add up to ${(hi + lo) * 3} and their difference is ${(hi - lo) * 3}. What is the larger number?`, `İki sayının toplamı ${(hi + lo) * 3}, farkı ${(hi - lo) * 3}. Büyük sayı kaçtır?`, `Dos números suman ${(hi + lo) * 3} y su diferencia es ${(hi - lo) * 3}. ¿Cuál es el mayor?`)
         : say(lang, `Two numbers add up to ${hi + lo} and multiply to make ${hi * lo}. What is the larger number?`, `İki sayının toplamı ${hi + lo}, çarpımı ${hi * lo}. Büyük sayı kaçtır?`, `Dos números suman ${hi + lo} y su producto es ${hi * lo}. ¿Cuál es el mayor?`),
       format: 'numeric', correct_answer: diff ? hi * 3 : hi, operandKey: `pp:s:${diff ? 'd' : 'p'}:${lo}:${hi}`,
+      ...(diff ? stepsHelp([
+        stp(lang, `${(hi + lo) * 3} + ${(hi - lo) * 3}`, hi * 6, 'Add the total and the difference together: that is two lots of the larger number:', 'Toplam ile farkı topla: bu, büyük sayının iki katıdır:', 'Suma el total y la diferencia: eso es el doble del número mayor:'),
+        stp(lang, `${hi * 6} ÷ 2`, hi * 3, 'Then halve it:', 'Sonra yarıya böl:', 'Luego divídelo entre 2:')]) : {}),
       hint_steps: diff
         ? [say(lang, 'Add the total and the difference together: that is two lots of the larger number.', 'Toplam ile farkı topla: bu, büyük sayının iki katıdır.', 'Suma el total y la diferencia: eso es el doble del número mayor.'), say(lang, 'Then halve it.', 'Sonra yarıya böl.', 'Luego divídelo entre 2.')]
         : [say(lang, 'List pairs of numbers that multiply to make the product.', 'Çarpımı veren sayı çiftlerini listele.', 'Haz una lista de parejas que multiplicadas den el producto.'), say(lang, 'Pick the pair that also adds up to the total.', 'Toplamı da tutan çifti seç.', 'Elige la pareja que además sume el total.')],
@@ -8500,6 +8598,28 @@ function y8Powers(level, lang) {
     topic: T, level,
     question_text: say(lang, `Which of these is ${name}?`, `Bunlardan hangisi ${name}?`, `¿Cuál de estos es ${name}?`),
     format: 'choice', options: choiceOf(right, decoys.map(n => opt(String(n), why(n))), { sort: (a, b) => a.value - b.value }), correct_answer: right.value, operandKey: `pp:k:${kind}:${ans}:${decoys.join(',')}`,
+    ...stepsHelp([ans, ...decoys].sort((x, y) => x - y).map((n, i) => {
+      const first = i === 0
+      if (kind === 'prime') {
+        const spf = (() => { for (let d = 2; d * d <= n; d++) if (n % d === 0) return d; return n })()
+        return stp(lang, say(lang, `smallest factor of ${n} (not 1)`, `${n} sayısının en küçük çarpanı (1 hariç)`, `divisor más pequeño de ${n} (no el 1)`), spf,
+          first ? 'A prime has no factor except 1 and itself. For each number, find the smallest factor that is not 1. For a prime it is the number itself. First:' : 'Next number:',
+          first ? 'Asal sayının 1 ve kendisinden başka böleni yoktur. Her sayı için 1 dışındaki en küçük çarpanı bul. Asalda bu sayının kendisidir. Önce:' : 'Sıradaki sayı:',
+          first ? 'Un primo no tiene más divisores que el 1 y él mismo. En cada número, halla el divisor más pequeño que no sea 1. En un primo es el propio número. Primero:' : 'Siguiente número:')
+      }
+      if (kind === 'mult') {
+        return stp(lang, `${n} − ${k} × ${Math.floor(n / k)}`, n % k,
+          first ? `A multiple of ${k} leaves nothing over when you divide by ${k}. Check each number. First:` : 'Next number:',
+          first ? `${k} sayısının katı, ${k} ile bölünce hiçbir şey artmaz. Her sayıyı kontrol et. Önce:` : 'Sıradaki sayı:',
+          first ? `Un múltiplo de ${k} no deja resto al dividir entre ${k}. Comprueba cada número. Primero:` : 'Siguiente número:')
+      }
+      const r = kind === 'square' ? Math.round(Math.sqrt(n)) : Math.round(Math.cbrt(n))
+      const times = kind === 'square' ? [r, r] : [r, r, r]
+      return stp(lang, times.join(' × '), r ** times.length,
+        first ? `A ${kind === 'square' ? 'square' : 'cube'} number is a whole number ${kind === 'square' ? 'times itself' : 'times itself three times'}. For each number, try the nearest whole number and see if you land on it. First ${n}:` : `Next, ${n}:`,
+        first ? `${kind === 'square' ? 'Kare' : 'Küp'} sayı, bir tam sayının ${kind === 'square' ? 'kendisiyle çarpımı' : 'üç kez çarpımı'}. Her sayı için en yakın tam sayıyı dene, ona ulaşıyor musun bak. Önce ${n}:` : `Sıradaki, ${n}:`,
+        first ? `Un número ${kind === 'square' ? 'cuadrado' : 'cúbico'} es un entero ${kind === 'square' ? 'por sí mismo' : 'multiplicado tres veces'}. Para cada número, prueba el entero más cercano y mira si das con él. Primero ${n}:` : `Después, ${n}:`)
+    }), null, true),
     hint_steps: [kind === 'prime' ? say(lang, 'A prime has only two factors: 1 and itself. Try dividing by 2, 3, 5, 7, 11.', 'Asal sayının yalnız iki böleni var: 1 ve kendisi. 2, 3, 5, 7, 11 ile bölmeyi dene.', 'Un primo solo tiene dos divisores: 1 y él mismo. Prueba a dividir entre 2, 3, 5, 7, 11.')
       : say(lang, 'Test each number in turn.', 'Sayıları tek tek dene.', 'Prueba los números uno por uno.'),
     say(lang, 'Only one of them fits.', 'Yalnız biri uyuyor.', 'Solo uno cumple.')],
@@ -8527,13 +8647,32 @@ function y8Negatives(level, lang) {
       [`${a * b} ÷ ${s(-b)}`, -a, a, say(lang, 'Positive divided by negative is negative.', 'Pozitifin negatife bölümü negatiftir.', 'Positivo entre negativo da negativo.')],
       [`${s(-a)}²`, a * a, -a * a, say(lang, 'Squaring multiplies the number by itself: negative × negative.', 'Kare almak sayıyı kendisiyle çarpar: negatif × negatif.', 'Elevar al cuadrado es multiplicar por sí mismo: negativo × negativo.')],
     )
-    const [q, ans, flip, rule] = pick(forms)
+    const chosen = pick(forms)
+    const [q, ans, flip, rule] = chosen
+    // The size of the answer as plain arithmetic, one entry per form above, in the same order.
+    const D = x => dnum(Math.round(x * 100) / 100, lang)
+    const mags = [
+      [`${D(a)} + ${D(b)}`, a + b], [`${D(a)} + ${D(b)}`, a + b], [`${D(a)} + ${D(b)}`, a + b],
+      [`${D(Math.max(a, b))} − ${D(Math.min(a, b))}`, Math.abs(b - a)],
+      [`${a} × ${b}`, a * b], [`${a} × ${b}`, a * b], [`${a * b} ÷ ${b}`, a], [`${a * b} ÷ ${b}`, a], [`${a} × ${a}`, a * a],
+    ]
+    const mag = mags[forms.indexOf(chosen)]
     const r = x => Math.round(x * 100) / 100
     const right = opt(minus(r(ans)), ok8(lang))
     const wrongs = [opt(minus(r(-ans)), rule), opt(minus(r(flip)), rule), opt(minus(r(ans + (dec ? 0.5 : 1))), say(lang, 'Check the counting.', 'Saymayı kontrol et.', 'Revisa la cuenta.')), opt(minus(r(ans - (dec ? 0.5 : 1))), say(lang, 'Check the counting.', 'Saymayı kontrol et.', 'Revisa la cuenta.'))]
     return {
       topic: T, level, question_text: `${dnum(q, lang)} = ?`, format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
       operandKey: `nd:n:${q}`,
+      ...stepsHelp([
+        stp(lang, mag[0], Math.round(mag[1] * 100) / 100,
+          `${rule} Work out the SIZE of the answer first, ignoring the signs:`,
+          `${rule} Önce cevabın BÜYÜKLÜĞÜNÜ hesapla, işaretleri bir yana bırakarak:`,
+          `${rule} Primero halla el TAMAÑO de la respuesta, sin mirar los signos:`),
+        ...(ans === 0 ? [] : [stp(lang, say(lang, 'above zero = 1, below zero = 2', 'sıfırın üstü = 1, altı = 2', 'sobre cero = 1, bajo cero = 2'), ans > 0 ? 1 : 2,
+          'Now the sign. Is the answer above zero or below zero? Type 1 for above, 2 for below; the minus goes back in when you choose:',
+          'Şimdi işaret. Cevap sıfırın üstünde mi altında mı? Üstü için 1, altı için 2 yaz; seçerken eksiyi geri koyarsın:',
+          'Ahora el signo. ¿La respuesta está sobre cero o bajo cero? Escribe 1 si está sobre y 2 si está bajo; el menos vuelve al elegir:')]),
+      ], null, true),
       hint_steps: [rule, say(lang, 'Picture a number line: which way do you move, and how far?', 'Bir sayı doğrusu düşün: hangi yöne ve ne kadar gidiyorsun?', 'Imagina una recta numérica: ¿hacia dónde te mueves y cuánto?')],
     }
   }
@@ -8550,6 +8689,25 @@ function y8Negatives(level, lang) {
       topic: T, level,
       question_text: say(lang, `Work out ${q}. Give your answer to ${dp} decimal place${dp > 1 ? 's' : ''}.`, `${dnum(q, lang)} işlemini yap. Cevabı ${dp} ondalık basamağa yuvarla.`, `Calcula ${dnum(q, lang)}. Da la respuesta con ${dp} decimal${dp > 1 ? 'es' : ''}.`),
       format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `nd:r:${q}:${dp}`,
+      ...(() => {
+        const one = Math.floor(exact * 10 ** (dp + 1) + 1e-9) / 10 ** (dp + 1)
+        const dig = Math.floor(exact * 10 ** (dp + 1) + 1e-9) % 10
+        const DD = x => dnum(String(Math.round(x * 10 ** (dp + 1)) / 10 ** (dp + 1)), lang)
+        return stepsHelp([
+          stp(lang, say(lang, `${(A / 100).toFixed(2)} ${op} ${b} to ${dp + 1} decimal places`, `${(A / 100).toFixed(2).replace('.', ',')} ${op} ${b} ${dp + 1} ondalık basamağa kadar`, `${(A / 100).toFixed(2).replace('.', ',')} ${op} ${b} con ${dp + 1} decimales`), Math.round(one * 10 ** (dp + 1)) / 10 ** (dp + 1),
+            `Work it out to one more decimal place than you need (${dp + 1} places), cutting it off there without rounding:`,
+            `Gerekenden bir basamak fazla hesapla (${dp + 1} basamak), yuvarlamadan orada kes:`,
+            `Calcúlalo con un decimal más de los que necesitas (${dp + 1}), cortando ahí sin redondear:`),
+          stp(lang, say(lang, 'the extra last digit', 'fazladan son rakam', 'la última cifra de más'), dig,
+            `The extra digit decides: ${dig >= 5 ? '5 or more rounds up' : 'less than 5 stays'}. What is it?`,
+            `Fazladan rakam karar verir: ${dig >= 5 ? '5 ve üstü yukarı yuvarlar' : '5\'ten küçük olduğu yerde kalır'}. Nedir?`,
+            `La cifra de más decide: ${dig >= 5 ? '5 o más sube' : 'menos de 5 se queda'}. ¿Cuál es?`),
+          stp(lang, say(lang, `the answer to ${dp} decimal place${dp > 1 ? 's' : ''}`, `${dp} ondalık basamakla cevap`, `la respuesta con ${dp} decimal${dp > 1 ? 'es' : ''}`), ans,
+            `Cut it back to ${dp} place${dp > 1 ? 's' : ''}${dig >= 5 ? ' and add one to the last digit' : ''}:`,
+            `${dp} basamağa geri kes${dig >= 5 ? ' ve son rakamı bir artır' : ''}:`,
+            `Córtalo a ${dp} decimal${dp > 1 ? 'es' : ''}${dig >= 5 ? ' y suma uno a la última cifra' : ''}:`),
+        ])
+      })(),
       hint_steps: [say(lang, 'Work it out to one more decimal place than you need.', 'Gerekenden bir basamak fazla hesapla.', 'Calcula con un decimal más de los que necesitas.'),
                    say(lang, 'That extra digit decides: 5 or more rounds up.', 'O fazladan basamak karar verir: 5 ve üstü yukarı yuvarlanır.', 'Esa cifra de más decide: de 5 en adelante se redondea hacia arriba.')],
     }
@@ -8565,6 +8723,12 @@ function y8Negatives(level, lang) {
     const q = `${dnum(x, lang)} ${mul ? '×' : '÷'} ${num(f, lang)}`
     return {
       topic: T, level, question_text: `${q} = ?`, format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `nd:p:${x} ${mul ? '×' : '÷'} ${f}`,
+      ...stepsHelp([
+        stp(lang, q, ans,
+          `${mul ? 'Multiplying' : 'Dividing'} by ${num(f, lang)} moves every digit ${String(f).length - 1} place${f > 10 ? 's' : ''} to the ${mul ? 'left' : 'right'}, and zeros fill any gap:`,
+          `${num(f, lang)} ile ${mul ? 'çarpmak' : 'bölmek'} her rakamı ${String(f).length - 1} basamak ${mul ? 'sola' : 'sağa'} kaydırır, boşluklara sıfır gelir:`,
+          `${mul ? 'Multiplicar' : 'Dividir'} por ${num(f, lang)} mueve cada cifra ${String(f).length - 1} lugar${f > 10 ? 'es' : ''} a la ${mul ? 'izquierda' : 'derecha'} y los ceros rellenan el hueco:`),
+      ]),
       hint_steps: [say(lang, `${mul ? 'Multiplying' : 'Dividing'} by ${num(f, lang)} moves every digit ${String(f).length - 1} place${f > 10 ? 's' : ''} to the ${mul ? 'left' : 'right'}.`,
         `${num(f, lang)} ile ${mul ? 'çarpmak' : 'bölmek'} her rakamı ${String(f).length - 1} basamak ${mul ? 'sola' : 'sağa'} kaydırır.`,
         `${mul ? 'Multiplicar' : 'Dividir'} por ${num(f, lang)} mueve cada cifra ${String(f).length - 1} lugar${f > 10 ? 'es' : ''} a la ${mul ? 'izquierda' : 'derecha'}.`),
@@ -8590,6 +8754,10 @@ function y8Negatives(level, lang) {
     question_text: say(lang, `Which sign goes in the gap?  ${L[0]} __ ${R[0]}`, `Boşluğa hangi işaret gelir?  ${L[0]} __ ${R[0]}`, `¿Qué signo va en el hueco?  ${L[0]} __ ${R[0]}`),
     format: 'choice', options: choiceOf(right, ['<', '>', '='].filter(x => x !== ansSign).map(x => opt(x, why))), correct_answer: right.value,
     operandKey: `nd:c:${L[0]}:${R[0]}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `left side: ${L[0]}`, `sol taraf: ${L[0]}`, `lado izquierdo: ${L[0]}`), L[1], 'Work out the left side:', 'Sol tarafı hesapla:', 'Calcula el lado izquierdo:'),
+      stp(lang, say(lang, `right side: ${R[0]}`, `sağ taraf: ${R[0]}`, `lado derecho: ${R[0]}`), R[1], 'And the right side. Then the wide end of < or > faces the bigger number:', 'Ve sağ tarafı. Sonra < ya da > işaretinin açık ucu büyük sayıya bakar:', 'Y el lado derecho. Luego la parte abierta de < o > mira al número mayor:'),
+    ], null, true),
     hint_steps: [say(lang, 'Work out each side on its own.', 'Her tarafı ayrı ayrı hesapla.', 'Calcula cada lado por separado.'),
                  say(lang, 'The wide end of < or > faces the bigger number.', '< ya da > işaretinin açık ucu büyük sayıya bakar.', 'La parte abierta de < o > mira al número mayor.')],
   }
@@ -8632,6 +8800,31 @@ function y8Fractions(level, lang) {
       topic: T, level,
       question_text: say(lang, `${show(a)} ${op} ${show(b)} = ?  (lowest terms)`, `${show(a)} ${op} ${show(b)} = ?  (en sade biçimde)`, `${show(a)} ${op} ${show(b)} = ?  (fracción irreducible)`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `fdp:o:${show(a)}${op}${show(b)}`,
+      ...(() => {
+        const steps = []
+        const improper = (f, which) => {
+          const w = Math.floor(f[0] / f[1]), r = f[0] % f[1]
+          if (!w) return
+          steps.push(stp(lang, `${w} × ${f[1]} + ${r}`, f[0],
+            `${which === 0 ? 'The first' : 'The second'} is a mixed number. Turn it into a top-heavy fraction: whole number × bottom + top. The new top is:`,
+            `${which === 0 ? 'Birinci' : 'İkinci'} tam sayılı kesir. Bileşik kesre çevir: tam sayı × payda + pay. Yeni pay:`,
+            `${which === 0 ? 'La primera' : 'La segunda'} es un número mixto. Pásala a fracción impropia: entero × denominador + numerador. El numerador nuevo es:`))
+        }
+        improper(a, 0); improper(b, 1)
+        if (op === '+' || op === '−') {
+          steps.push(stp(lang, `${a[0]} × ${b[1]}`, a[0] * b[1], `Make the bottoms the same: ${a[1]} × ${b[1]} for both. The first top times ${b[1]}:`, `Paydaları eşitle: ikisi için de ${a[1]} × ${b[1]}. Birinci pay çarpı ${b[1]}:`, `Iguala los denominadores: ${a[1]} × ${b[1]} en los dos. El primer numerador por ${b[1]}:`))
+          steps.push(stp(lang, `${b[0]} × ${a[1]}`, b[0] * a[1], `The second top times ${a[1]}:`, `İkinci pay çarpı ${a[1]}:`, `El segundo numerador por ${a[1]}:`))
+          steps.push(stp(lang, `${a[0] * b[1]} ${op} ${b[0] * a[1]}`, res[0], `Now ${op === '+' ? 'add' : 'take away'} the tops:`, `Şimdi payları ${op === '+' ? 'topla' : 'çıkar'}:`, `Ahora ${op === '+' ? 'suma' : 'resta'} los numeradores:`))
+          steps.push(stp(lang, `${a[1]} × ${b[1]}`, res[1], 'The bottom is the common bottom. Then simplify if you can, and pick:', 'Payda ortak payda. Sonra sadeleştirebiliyorsan sadeleştir ve seç:', 'El denominador es el común. Luego simplifica si puedes y elige:'))
+        } else if (op === '×') {
+          steps.push(stp(lang, `${a[0]} × ${b[0]}`, res[0], 'Multiply the tops:', 'Payları çarp:', 'Multiplica los numeradores:'))
+          steps.push(stp(lang, `${a[1]} × ${b[1]}`, res[1], 'And the bottoms. Then simplify if you can, and pick:', 'Ve paydaları. Sonra sadeleştirebiliyorsan sadeleştir ve seç:', 'Y los denominadores. Luego simplifica si puedes y elige:'))
+        } else {
+          steps.push(stp(lang, `${a[0]} × ${b[1]}`, res[0], 'Flip the second fraction and multiply. The new top is the first top times the second bottom:', 'İkinci kesri ters çevir ve çarp. Yeni pay: birinci pay çarpı ikinci payda:', 'Da la vuelta a la segunda y multiplica. El numerador nuevo es el primero por el segundo denominador:'))
+          steps.push(stp(lang, `${a[1]} × ${b[0]}`, res[1], 'The new bottom is the first bottom times the second top. Then simplify if you can, and pick:', 'Yeni payda: birinci payda çarpı ikinci pay. Sonra sadeleştirebiliyorsan sadeleştir ve seç:', 'El denominador nuevo es el primero por el segundo numerador. Luego simplifica si puedes y elige:'))
+        }
+        return stepsHelp(steps, null, true)
+      })(),
       hint_steps: [
         say(lang, 'Turn any mixed numbers into top-heavy fractions first.', 'Önce tam sayılı kesirleri bileşik kesre çevir.', 'Primero pasa los números mixtos a fracciones impropias.'),
         op === '+' || op === '−' ? say(lang, 'Make the bottoms the same, then add or take away the tops.', 'Paydaları eşitle, sonra payları topla ya da çıkar.', 'Iguala los denominadores y suma o resta los numeradores.')
@@ -8647,6 +8840,13 @@ function y8Fractions(level, lang) {
       topic: T, level,
       question_text: say(lang, `What is ${pctS(p)}% of ${money8(amt, lang)}?`, `${money8(amt, lang)}'nin %${pctS(p)}${trEk(pctS(p), 'poss')} ne kadar?`, `¿Cuánto es el ${pctS(p)} % de ${money8(amt, lang)}?`),
       format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `fdp:p:${p}:${amt}`,
+      ...(() => {
+        const D = x => dnum(String(Math.round(x * 10000) / 10000), lang)
+        return stepsHelp([
+          stp(lang, `${amt} ÷ 100`, amt / 100, 'Find 1% first: divide by 100:', 'Önce %1\'i bul: 100\'e böl:', 'Halla primero el 1 %: divide entre 100:'),
+          stp(lang, `${D(amt / 100)} × ${D(p)}`, ans, 'Then multiply by the percentage:', 'Sonra yüzdeyle çarp:', 'Luego multiplica por el porcentaje:'),
+        ])
+      })(),
       hint_steps: [say(lang, 'Find 1% first: divide by 100.', 'Önce %1\'i bul: 100\'e böl.', 'Halla primero el 1 %: divide entre 100.'),
                    say(lang, Number.isInteger(p) ? 'Then multiply by the percentage.' : 'Then multiply by the percentage — ½ is 0.5.', Number.isInteger(p) ? 'Sonra yüzdeyle çarp.' : 'Sonra yüzdeyle çarp — ½, 0,5 demek.', Number.isInteger(p) ? 'Luego multiplica por el porcentaje.' : 'Luego multiplica por el porcentaje: ½ es 0,5.')],
     }
@@ -8658,6 +8858,14 @@ function y8Fractions(level, lang) {
       topic: T, level,
       question_text: say(lang, `A game priced at ${money8(P, lang)} is sold for ${money8(S, lang)}. What percentage discount is given?`, `Fiyatı ${money8(P, lang)} olan bir oyun ${money8(S, lang)}'ye satılıyor. Yüzde kaç indirim yapılmış?`, `Un juego que cuesta ${money8(P, lang)} se vende por ${money8(S, lang)}. ¿Qué porcentaje de descuento tiene?`),
       format: Number.isInteger(d) ? 'numeric' : 'decimal', correct_answer: d, operandKey: `fdp:d:${P}:${S}`,
+      ...(() => {
+        const D = x => dnum(String(Math.round(x * 10000) / 10000), lang)
+        return stepsHelp([
+          stp(lang, `${D(P)} − ${D(S)}`, Math.round((P - S) * 100) / 100, 'How much money came off?', 'Ne kadar para düştü?', '¿Cuánto dinero se descontó?'),
+          stp(lang, `${D(P - S)} ÷ ${D(P)}`, Math.round(((P - S) / P) * 1e6) / 1e6, 'Write that as a fraction of the ORIGINAL price, as a decimal:', 'Bunu İLK fiyatın kesri olarak, ondalık yaz:', 'Escríbelo como fracción del precio ORIGINAL, en decimal:'),
+          stp(lang, `${D((P - S) / P)} × 100`, d, 'Times 100 turns it into a percentage:', '100 ile çarpmak yüzdeye çevirir:', 'Por 100 se convierte en porcentaje:'),
+        ])
+      })(),
       hint_steps: [say(lang, 'Work out how much money comes off.', 'Önce ne kadar para düştüğünü bul.', 'Calcula cuánto dinero se descuenta.'),
                    say(lang, 'Write that as a fraction of the ORIGINAL price, then × 100.', 'Bunu İLK fiyatın kesri olarak yaz, sonra 100 ile çarp.', 'Escríbelo como fracción del precio ORIGINAL y multiplica por 100.')],
     }
@@ -8670,6 +8878,14 @@ function y8Fractions(level, lang) {
       topic: T, level,
       question_text: say(lang, `After spending ${p}% of the pocket money, ${name} has ${money8(left, lang)} left. How much was the pocket money?`, `${name} harçlığının %${p}${trEk(p, 'possAcc')} harcayınca ${money8(left, lang)} kalıyor. Harçlık ne kadardı?`, `Después de gastar el ${p} % de la paga, a ${name} le quedan ${money8(left, lang)}. ¿Cuánto era la paga?`),
       format: Number.isInteger(start) ? 'numeric' : 'decimal', correct_answer: start, operandKey: `fdp:r:${p}:${start}`,
+      ...(() => {
+        const D = x => dnum(String(Math.round(x * 10000) / 10000), lang)
+        return stepsHelp([
+          stp(lang, `100 − ${p}`, 100 - p, 'You spent that percentage, so what is left is the rest of 100%:', 'O yüzdeyi harcadın, kalan 100\'ün geri kalanı:', 'Gastó ese porcentaje, así que lo que queda es el resto del 100 %:'),
+          stp(lang, `${D(left)} ÷ ${100 - p}`, Math.round(start * 1e4) / 1e6, `That ${100 - p}% is ${D(left)}. So 1% is:`, `O %${100 - p} ${D(left)} ediyor. Yani %1:`, `Ese ${100 - p} % es ${D(left)}. Así que el 1 % es:`),
+          stp(lang, `${D(start / 100)} × 100`, start, 'And the whole amount is 100 of those:', 'Bütün miktar bunlardan 100 tane:', 'Y la cantidad entera son 100 de esos:'),
+        ])
+      })(),
       hint_steps: [say(lang, `What is left is ${100 - p}% of the starting amount.`, `Kalan para, başlangıçtakinin %${100 - p}${trEk(100 - p, 'poss')}.`, `Lo que queda es el ${100 - p} % de lo que tenía.`),
                    say(lang, `So find 1% by dividing by ${100 - p}, then × 100.`, `Yani %1'i bulmak için ${100 - p}${trEk(100 - p, 'dat')} böl, sonra 100 ile çarp.`, `Así que halla el 1 % dividiendo entre ${100 - p} y multiplica por 100.`)],
     }
@@ -8694,6 +8910,10 @@ function y8Fractions(level, lang) {
       topic: T, level,
       question_text: say(lang, `Which is the ${small ? 'smallest' : 'largest'}?`, `Hangisi en ${small ? 'küçük' : 'büyük'}?`, `¿Cuál es el ${small ? 'menor' : 'mayor'}?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `fdp:ord:${reps.join('|')}:${small}`,
+      ...stepsHelp(reps.map((r0, i) => stp(lang, say(lang, `${r0} as a decimal`, `${r0} ondalık olarak`, `${r0} en decimal`), Math.round(vals[i] * 1000) / 1000,
+        i === 0 ? 'Turn each into a decimal to 3 places: a percentage ÷ 100, a fraction top ÷ bottom. First:' : 'Next one:',
+        i === 0 ? 'Her birini 3 basamaklı ondalığa çevir: yüzde ÷ 100, kesir pay ÷ payda. Önce:' : 'Sıradaki:',
+        i === 0 ? 'Pasa cada uno a decimal con 3 cifras: porcentaje ÷ 100, fracción numerador ÷ denominador. Primero:' : 'Siguiente:')), null, true),
       hint_steps: [say(lang, 'Turn them all into decimals.', 'Hepsini ondalık sayıya çevir.', 'Pásalos todos a decimales.'),
                    say(lang, 'A percentage ÷ 100 is a decimal; a fraction is its top ÷ its bottom.', 'Yüzde ÷ 100 ondalık olur; kesir, pay ÷ paydadır.', 'Un porcentaje entre 100 es un decimal; una fracción es numerador entre denominador.')],
     }
@@ -8712,6 +8932,16 @@ function y8Fractions(level, lang) {
     topic: T, level,
     question_text: say(lang, `Write ${dnum(String(dec), lang)} as a fraction in its lowest terms.`, `${dnum(String(dec), lang)} sayısını en sade kesir olarak yaz.`, `Escribe ${dnum(String(dec), lang)} como fracción irreducible.`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `fdp:df:${n}/${d}`,
+    ...(() => {
+      const g = gcd(digits, 10 ** places)
+      return stepsHelp([
+        stp(lang, say(lang, 'the digits after the point', 'virgülden sonraki rakamlar', 'las cifras tras la coma'), digits, `Write the digits after the point over 10, 100 or 1000 — one zero for each decimal place. The top is:`, `Virgülden sonraki rakamları 10, 100 ya da 1000'in üstüne yaz — her ondalık basamak için bir sıfır. Pay:`, `Escribe las cifras tras la coma sobre 10, 100 o 1000: un cero por cada decimal. El numerador es:`),
+        stp(lang, `10 ${places > 1 ? `× ${10 ** (places - 1)}` : '× 1'}`, 10 ** places, `One zero for each decimal place. The bottom is:`, `Her ondalık basamak için bir sıfır. Payda:`, `Un cero por cada decimal. El denominador es:`),
+        stp(lang, say(lang, 'biggest number that goes into both', 'ikisini de bölen en büyük sayı', 'mayor número que divide a los dos'), g, 'Now simplify: the biggest number that divides exactly into the top and the bottom:', 'Şimdi sadeleştir: payı ve paydayı tam bölen en büyük sayı:', 'Ahora simplifica: el mayor número que divide exactamente al de arriba y al de abajo:'),
+        stp(lang, `${digits} ÷ ${g}`, digits / g, 'The new top:', 'Yeni pay:', 'El numerador nuevo:'),
+        stp(lang, `${10 ** places} ÷ ${g}`, (10 ** places) / g, 'And the new bottom:', 'Ve yeni payda:', 'Y el denominador nuevo:'),
+      ], null, true)
+    })(),
     hint_steps: [say(lang, 'Write the digits over 10, 100 or 1000 — one zero for each decimal place.', 'Rakamları 10, 100 ya da 1000\'in üstüne yaz — her ondalık basamak için bir sıfır.', 'Escribe las cifras sobre 10, 100 o 1000: un cero por cada decimal.'),
                  say(lang, 'Then divide top and bottom by the same number until you cannot any more.', 'Sonra pay ve paydayı, bölünemeyene kadar aynı sayıya böl.', 'Luego divide arriba y abajo por el mismo número hasta que no se pueda más.')],
   }
@@ -8737,6 +8967,14 @@ function y8Algebra(level, lang) {
     return {
       topic: T, level, question_text: say(lang, `Simplify: ${q}`, `Sadeleştir: ${q}`, `Simplifica: ${q}`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `a8:s:${q}`,
+      ...stepsHelp([
+        stp(lang, `${k1} × ${u1}`, k1 * u1, `Multiply out the first bracket. The a part:`, `Birinci parantezi aç. a'lı kısım:`, `Quita el primer paréntesis. La parte con a:`),
+        stp(lang, `${k2} × ${u2}`, k2 * u2, `Now the second bracket's a part (it has a minus in front, so it will be taken away):`, `Şimdi ikinci parantezin a'lı kısmı (önünde eksi var, çıkarılacak):`, `Ahora la parte con a del segundo (lleva un menos delante, así que se resta):`),
+        stpS(lang, `${k1 * u1} − ${k2 * u2}`, A, 'Collect the a terms:', 'a\'lı terimleri topla:', 'Junta los términos con a:'),
+        stp(lang, `${k1} × ${Math.abs(v1)}`, k1 * Math.abs(v1), `The b part of the first bracket (its sign is ${v1 < 0 ? 'minus' : 'plus'}):`, `Birinci parantezin b'li kısmı (işareti ${v1 < 0 ? 'eksi' : 'artı'}):`, `La parte con b del primero (su signo es ${v1 < 0 ? 'menos' : 'más'}):`),
+        stp(lang, `${k2} × ${Math.abs(v2)}`, k2 * Math.abs(v2), `The b part of the second bracket (its sign is ${v2 < 0 ? 'minus' : 'plus'}, then flipped by the minus in front):`, `İkinci parantezin b'li kısmı (işareti ${v2 < 0 ? 'eksi' : 'artı'}, öndeki eksiyle tersine döner):`, `La parte con b del segundo (su signo es ${v2 < 0 ? 'menos' : 'más'}, y el menos de delante lo cambia):`),
+        stpS(lang, `(${sgn(k1 * v1)}) − (${sgn(k2 * v2)})`, B, 'Collect the b terms, then pick the matching answer:', 'b\'li terimleri topla, sonra eşleşen cevabı seç:', 'Junta los términos con b y elige la respuesta que coincide:'),
+      ], null, true),
       hint_steps: [say(lang, 'Multiply out each bracket first. A minus in front changes every sign inside.', 'Önce parantezleri aç. Önündeki eksi, içindeki her işareti değiştirir.', 'Primero quita los paréntesis. Un menos delante cambia todos los signos de dentro.'),
                    say(lang, 'Then collect the a terms and the b terms.', 'Sonra a\'lı ve b\'li terimleri ayrı ayrı topla.', 'Después junta los términos con a y los términos con b.')],
     }
@@ -8759,6 +8997,16 @@ function y8Algebra(level, lang) {
     return {
       topic: T, level, question_text: say(lang, `Factorise fully: ${expr}`, `Tamamen çarpanlarına ayır: ${expr}`, `Factoriza del todo: ${expr}`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `a8:f:${expr}`,
+      ...stepsHelp([
+        stp(lang, say(lang, 'biggest number that divides every term', 'her terimi bölen en büyük sayı', 'mayor número que divide a todos los términos'), k,
+          `Find the biggest number that divides exactly into both numbers (${k * p}${quad ? '' : ''} and ${Math.abs(k * q)}). It goes outside the bracket:`,
+          `İki sayıyı (${k * p} ve ${Math.abs(k * q)}) tam bölen en büyük sayıyı bul. Parantezin dışına yazılır:`,
+          `Busca el mayor número que divide exactamente a los dos números (${k * p} y ${Math.abs(k * q)}). Va fuera del paréntesis:`),
+        ...(quad ? [stp(lang, say(lang, 'is x in every term? yes = 1', 'x her terimde var mı? evet = 1', '¿está x en todos los términos? sí = 1'), 1,
+          'Both terms have an x in them, so x goes outside too. Type 1 to say yes:', 'İki terimde de x var, yani x de dışarı çıkar. Evet için 1 yaz:', 'Los dos términos llevan x, así que x también sale. Escribe 1 para decir que sí:')] : []),
+        stp(lang, `${k * p} ÷ ${k}`, p, 'What is left of the first term inside the bracket:', 'Parantezin içine birinci terimden kalan:', 'Lo que queda del primer término dentro del paréntesis:'),
+        stpS(lang, `${sgn(k * q)} ÷ ${k}`, q, 'And what is left of the second term, then pick the matching answer:', 'İkinci terimden kalan, sonra eşleşen cevabı seç:', 'Y lo que queda del segundo término; luego elige la respuesta que coincide:'),
+      ], null, true),
       hint_steps: [say(lang, 'Find the biggest thing that divides every term — a number, and a letter if every term has one.', 'Her terimi bölen en büyük şeyi bul — bir sayı, ve her terimde varsa bir harf.', 'Busca lo más grande que divida a todos los términos: un número y, si todos la tienen, una letra.'),
                    say(lang, 'Put it outside the bracket; inside goes what is left of each term.', 'Onu parantezin dışına yaz; içine her terimden kalanlar gelir.', 'Ponlo fuera del paréntesis; dentro va lo que queda de cada término.')],
     }
@@ -8778,6 +9026,12 @@ function y8Algebra(level, lang) {
     return {
       topic: T, level, question_text: say(lang, `Multiply out: ${q}`, `Parantezleri aç: ${q}`, `Desarrolla: ${q}`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `a8:e:${q}`,
+      ...stepsHelp([
+        stpS(lang, `(${sgn(p * b)}) + (${sgn(a)})`, p * b + a, `Four products: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x and ${minus(a)} × ${minus(b)}. The two x terms (outside and inside) are ${p * b}x and ${minus(a)}x. Together:`,
+          `Dört çarpım: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x ve ${minus(a)} × ${minus(b)}. İki x'li terim (dış ve iç) ${p * b}x ile ${minus(a)}x. Birlikte:`,
+          `Cuatro productos: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x y ${minus(a)} × ${minus(b)}. Los dos términos con x (exterior e interior) son ${p * b}x y ${minus(a)}x. Juntos:`),
+        stpS(lang, `(${sgn(a)}) × (${sgn(b)})`, a * b, 'The number on its own is the two last terms multiplied. Then pick the matching answer:', 'Tek başına kalan sayı, iki son terimin çarpımı. Sonra eşleşen cevabı seç:', 'El número suelto es el producto de los dos últimos términos. Luego elige la respuesta que coincide:'),
+      ], null, true),
       hint_steps: [say(lang, 'Multiply each term in the first bracket by each term in the second: four products.', 'Birinci parantezdeki her terimi ikincidekilerle çarp: dört çarpım.', 'Multiplica cada término del primer paréntesis por cada uno del segundo: cuatro productos.'),
                    say(lang, 'Then collect the two x terms.', 'Sonra iki x\'li terimi topla.', 'Luego junta los dos términos con x.')],
     }
@@ -8785,7 +9039,7 @@ function y8Algebra(level, lang) {
   if (shape === 'solve') {
     for (;;) {
       const x = randInt(1, 12), form = randInt(0, 2)
-      let q
+      let q, coef, side, sideQ, sideSay
       if (form === 0) {
         const a = randInt(3, 9), c = randInt(2, a - 1), b = randInt(1, 6)
         const num = a * (x - b)
@@ -8793,18 +9047,31 @@ function y8Algebra(level, lang) {
         const d = num / c - x
         if (!d) continue
         q = `${a}(${lin([[1, 'x'], [-b, '']])}) = ${c}(${lin([[1, 'x'], [d, '']])})`
+        coef = [`${a} − ${c}`, a - c]; side = a * b + c * d; sideQ = `${a} × ${b} + ${c} × (${sgn(d)})`
+        sideSay = ['Multiply out both brackets and gather the x terms on the left and the plain numbers on the right. The plain numbers on the right come to:', 'İki parantezi aç, x\'lileri sola, düz sayıları sağa topla. Sağdaki düz sayılar:', 'Quita los dos paréntesis y pon los términos con x a la izquierda y los números sueltos a la derecha. Los números sueltos de la derecha suman:']
       } else if (form === 1) {
         const a = randInt(4, 12), c = randInt(2, a - 1), b = randInt(1, 6), d = randInt(1, 6)
-        q = `${a}(x + ${b}) − ${c}(${lin([[1, 'x'], [-d, '']])}) = ${a * (x + b) - c * (x - d)}`
+        const R = a * (x + b) - c * (x - d)
+        q = `${a}(x + ${b}) − ${c}(${lin([[1, 'x'], [-d, '']])}) = ${R}`
+        coef = [`${a} − ${c}`, a - c]; side = R - a * b - c * d; sideQ = `${R} − ${a * b} − ${c * d}`
+        sideSay = ['Multiply out both brackets. The plain numbers from the brackets are taken to the other side. What is the right-hand side now?', 'İki parantezi aç. Parantezlerden gelen düz sayıları öbür tarafa al. Sağ taraf şimdi kaç?', 'Quita los paréntesis. Los números sueltos que salen de ellos pasan al otro lado. ¿Cuánto vale ahora el lado derecho?']
       } else {
         const a = randInt(2, 6), c = a + randInt(1, 5), p = randInt(1, 12)
         const r = (c - a) * x - p
         if (r <= 0) continue
         q = `${a}x + ${p} = ${c}x − ${r}`
+        coef = [`${c} − ${a}`, c - a]; side = p + r; sideQ = `${p} + ${r}`
+        sideSay = ['Now the plain numbers: move them to the same side. What is the number side now?', 'Şimdi düz sayılar: onları aynı tarafa al. Sayı tarafı şimdi kaç?', 'Ahora los números sueltos: pásalos al mismo lado. ¿Cuánto vale ahora el lado de los números?']
       }
+      const solveHelp = stepsHelp([
+        stp(lang, coef[0], coef[1], 'Gather the x terms on one side. How many x are left?', 'x\'li terimleri bir tarafa topla. Kaç x kaldı?', 'Junta los términos con x en un lado. ¿Cuántas x quedan?'),
+        stp(lang, sideQ, side, ...sideSay),
+        ...(coef[1] > 1 ? [stp(lang, `${side} ÷ ${coef[1]}`, x, `Share it out between the ${coef[1]} x to find one x:`, `Bir x'i bulmak için ${coef[1]} x'e paylaştır:`, `Repártelo entre las ${coef[1]} x para hallar una x:`)] : []),
+      ])
       return {
         topic: T, level, question_text: say(lang, `Solve: ${q}`, `Denklemi çöz: ${q}`, `Resuelve: ${q}`),
         format: 'numeric', correct_answer: x, operandKey: `a8:q:${q}`,
+        ...solveHelp,
         hint_steps: [say(lang, 'Multiply out any brackets first.', 'Önce parantezleri aç.', 'Primero quita los paréntesis.'),
                      say(lang, 'Get the x terms on one side and the numbers on the other — do the same to both sides.', 'x\'li terimleri bir tarafa, sayıları diğer tarafa topla — iki tarafa da aynısını yap.', 'Pon los términos con x a un lado y los números al otro, haciendo lo mismo en los dos lados.')],
       }
@@ -8834,6 +9101,19 @@ function y8Algebra(level, lang) {
       topic: T, level,
       question_text: say(lang, `If a = ${a} and b = ${b}, what is ${expr}?`, `a = ${a} ve b = ${b} ise ${expr} kaçtır?`, `Si a = ${a} y b = ${b}, ¿cuánto vale ${expr}?`),
       format: 'numeric', correct_answer: ans, operandKey: `a8:u:${expr}:${a}:${b}`,
+      ...(() => {
+        const S = (q0, a0, en, tr, es) => stp(lang, q0, a0, en, tr, es)
+        const pl = ['Powers first.', 'Önce üsler.', 'Primero las potencias.']
+        const steps = {
+          'ba²': [S(`${a} × ${a}`, a * a, `${pl[0]} a² is a × a:`, `${pl[1]} a², a × a:`, `${pl[2]} a² es a × a:`), S(`${b} × ${a * a}`, b * a * a, 'Then b times that (letters side by side are multiplied):', 'Sonra b ile çarp (yan yana harfler çarpılır):', 'Luego b por eso (las letras juntas se multiplican):')],
+          '2a + 3b': [S(`2 × ${a}`, 2 * a, '2a means 2 × a:', '2a, 2 × a demek:', '2a significa 2 × a:'), S(`3 × ${b}`, 3 * b, 'Now 3b:', 'Şimdi 3b:', 'Ahora 3b:'), S(`${2 * a} + ${3 * b}`, ans, 'Add them:', 'Topla:', 'Súmalos:')],
+          'a² + b²': [S(`${a} × ${a}`, a * a, `${pl[0]} First a²:`, `${pl[1]} Önce a²:`, `${pl[2]} Primero a²:`), S(`${b} × ${b}`, b * b, 'Then b²:', 'Sonra b²:', 'Luego b²:'), S(`${a * a} + ${b * b}`, ans, 'Add them:', 'Topla:', 'Súmalos:')],
+          [`${c}ab − a`]: [S(`${c} × ${a} × ${b}`, c * a * b, `${c}ab means ${c} × a × b:`, `${c}ab, ${c} × a × b demek:`, `${c}ab significa ${c} × a × b:`), S(`${c * a * b} − ${a}`, ans, 'Then take a away:', 'Sonra a\'yı çıkar:', 'Luego resta a:')],
+          '(a + b)²': [S(`${a} + ${b}`, a + b, 'Brackets first:', 'Önce parantez:', 'Primero el paréntesis:'), S(`${a + b} × ${a + b}`, ans, 'Then square it:', 'Sonra karesini al:', 'Luego elévalo al cuadrado:')],
+          'b³ − a²': [S(`${b} × ${b} × ${b}`, b ** 3, `${pl[0]} b³ is b × b × b:`, `${pl[1]} b³, b × b × b:`, `${pl[2]} b³ es b × b × b:`), S(`${a} × ${a}`, a * a, 'Then a²:', 'Sonra a²:', 'Luego a²:'), S(`${b ** 3} − ${a * a}`, ans, 'Then take one away from the other:', 'Sonra birini diğerinden çıkar:', 'Luego resta uno del otro:')],
+        }[expr]
+        return steps ? stepsHelp(steps) : {}
+      })(),
       hint_steps: [say(lang, 'Letters written side by side are multiplied: ab means a × b.', 'Yan yana yazılan harfler çarpılır: ab, a × b demek.', 'Las letras juntas se multiplican: ab es a × b.'),
                    say(lang, 'Powers first, then ×, then + and −.', 'Önce üsler, sonra ×, en son + ve −.', 'Primero potencias, luego ×, y al final + y −.')],
     }
@@ -8850,6 +9130,21 @@ function y8Algebra(level, lang) {
         ? say(lang, 'Rectangles A and B have the same area. What is x?', 'A ve B dikdörtgenlerinin alanları eşit. x kaçtır?', 'Los rectángulos A y B tienen la misma área. ¿Cuánto vale x?')
         : say(lang, 'Rectangles A and B have the same area. What is that area, in cm²?', 'A ve B dikdörtgenlerinin alanları eşit. Bu alan kaç cm²?', 'Los rectángulos A y B tienen la misma área. ¿Cuál es esa área, en cm²?'),
       format: 'numeric', correct_answer: askX ? x : h * (a * x + b), operandKey: `a8:r:${x}:${a}:${b}:${h}:${c}:${askX}`,
+      ...(() => {
+        const wA = lin([[a, 'x'], [b, '']])
+        const diff = c * k - a * h
+        const steps = [
+          stp(lang, `${c} × ${k}`, c * k, `Rectangle B's area is ${c === 1 ? 'x' : `${c}x`} × ${k}. How many x is that?`, `B dikdörtgeninin alanı ${c === 1 ? 'x' : `${c}x`} × ${k}. Kaç x eder?`, `El área de B es ${c === 1 ? 'x' : `${c}x`} × ${k}. ¿Cuántas x son?`),
+          stp(lang, `${h} × ${a}`, h * a, `Rectangle A's area is ${h} × (${wA}). The x part is ${h} lots of ${a === 1 ? 'x' : `${a}x`}:`, `A dikdörtgeninin alanı ${h} × (${wA}). x'li kısım, ${h} tane ${a === 1 ? 'x' : `${a}x`}:`, `El área de A es ${h} × (${wA}). La parte con x son ${h} veces ${a === 1 ? 'x' : `${a}x`}:`),
+          stp(lang, `${c * k} − ${h * a}`, diff, 'The areas are equal: take A\'s x terms away from B\'s. How many x are left?', 'Alanlar eşit: A\'nın x\'lerini B\'ninkilerden çıkar. Kaç x kaldı?', 'Las áreas son iguales: resta las x de A a las de B. ¿Cuántas x quedan?'),
+          stp(lang, `${h} × ${b}`, h * b, 'And A\'s plain number part, which is the other side of the equation:', 'Ve A\'nın düz sayı kısmı, denklemin öbür tarafı:', 'Y la parte de números sueltos de A, que es el otro lado de la ecuación:'),
+          ...(diff > 1 ? [stp(lang, `${h * b} ÷ ${diff}`, x, `${diff} lots of x make ${h * b}. So x is:`, `${diff} tane x, ${h * b} ediyor. Yani x:`, `${diff} veces x son ${h * b}. Así que x vale:`)] : []),
+        ]
+        if (!askX) steps.push(
+          stp(lang, `${a} × ${x} + ${b}`, a * x + b, `Now that x = ${x}, A's width is ${wA}:`, `x = ${x} olduğuna göre A'nın genişliği ${wA}:`, `Ahora que x = ${x}, el ancho de A es ${wA}:`),
+          stp(lang, `${h} × ${a * x + b}`, h * (a * x + b), 'Area = length × width:', 'Alan = uzunluk × genişlik:', 'Área = largo × ancho:'))
+        return stepsHelp(steps, { kind: 'algrects', A: { w: wA, h: String(h) }, B: { w: c === 1 ? 'x' : `${c}x`, h: String(k) } })
+      })(),
       hint_steps: [say(lang, 'Write each area as length × width, in x.', 'Her alanı x cinsinden uzunluk × genişlik olarak yaz.', 'Escribe cada área como largo × ancho, con x.'),
                    say(lang, 'The two areas are equal: that is an equation. Solve it for x.', 'İki alan eşit: bu bir denklem. x için çöz.', 'Las dos áreas son iguales: eso es una ecuación. Resuélvela.')],
       visual: { kind: 'algrects', A: { w: lin([[a, 'x'], [b, '']]), h: String(h) }, B: { w: c === 1 ? 'x' : `${c}x`, h: String(k) } },
@@ -8876,6 +9171,12 @@ function y8Sequences(level, lang) {
         topic: T, level,
         question_text: say(lang, `${terms.join(', ')}, … What is the ${ordinal(n)} term?`, `${terms.join(', ')}, … ${n}. terim kaçtır?`, `${terms.join(', ')}, … ¿Cuál es el término ${n}?`),
         format: 'numeric', correct_answer: d * n + e, operandKey: `sg:h:${d}:${e}:${n}`,
+        ...stepsHelp([
+          stp(lang, `${terms[1]} − ${terms[0]}`, d, 'How much does it go up each time? That number goes in front of n:', 'Her seferinde ne kadar artıyor? O sayı n\'nin önüne gelir:', '¿Cuánto sube cada vez? Ese número va delante de n:'),
+          stpS(lang, `${terms[0]} − ${d}`, e, `Test n = 1: the rule ${d}n gives ${d}, but the first term is ${terms[0]}. What has to be added on the end (a minus if it is below zero)?`, `n = 1 dene: ${d}n kuralı ${d} verir ama ilk terim ${terms[0]}. Sona ne eklenmeli (sıfırın altındaysa eksi)?`, `Prueba n = 1: la regla ${d}n da ${d}, pero el primer término es ${terms[0]}. ¿Qué hay que añadir al final (un menos si es negativo)?`),
+          stp(lang, `${d} × ${n}`, d * n, `So the rule is ${rule}. For the ${n}th term, first ${d} × ${n}:`, `Yani kural ${rule}. ${n}. terim için önce ${d} × ${n}:`, `Así que la regla es ${rule}. Para el término ${n}, primero ${d} × ${n}:`),
+          stp(lang, `${d * n} ${e < 0 ? '−' : '+'} ${Math.abs(e)}`, d * n + e, 'Then fix the number on the end:', 'Sonra sondaki sayıyı düzelt:', 'Luego corrige el número del final:'),
+        ]),
         hint_steps: [say(lang, `The terms go up by ${d} each time, so the rule starts ${d}n.`, `Terimler her seferinde ${d} artıyor, yani kural ${d}n ile başlar.`, `Los términos suben de ${d} en ${d}, así que la regla empieza por ${d}n.`),
                      say(lang, `Check it on the first term (n = 1), fix the number on the end, then put in n = ${n}.`, `İlk terimde (n = 1) dene, sondaki sayıyı düzelt, sonra n = ${n} koy.`, `Compruébalo con el primer término (n = 1), ajusta el número del final y pon n = ${n}.`)],
       }
@@ -8892,6 +9193,10 @@ function y8Sequences(level, lang) {
       topic: T, level,
       question_text: say(lang, `What is the nth term of ${terms.join(', ')}, …?`, `${terms.join(', ')}, … dizisinin n. terimi nedir?`, `¿Cuál es el término n-ésimo de ${terms.join(', ')}, …?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `sg:n:${d}:${e}`,
+      ...stepsHelp([
+        stp(lang, `${terms[1]} − ${terms[0]}`, d, 'How much does it go up each time? That number goes in front of n:', 'Her seferinde ne kadar artıyor? O sayı n\'nin önüne gelir:', '¿Cuánto sube cada vez? Ese número va delante de n:'),
+        stpS(lang, `${terms[0]} − ${d}`, e, `Test n = 1: the part with n gives ${d}, but the first term is ${terms[0]}. What has to be added on the end, as a number? (If it is below zero it is taken away.) Then pick the rule that matches:`, `n = 1 dene: n'li kısım ${d} verir ama ilk terim ${terms[0]}. Sona ne eklenmeli? (Sıfırın altındaysa çıkarılır.) Sonra eşleşen kuralı seç:`, `Prueba n = 1: la parte con n da ${d}, pero el primer término es ${terms[0]}. ¿Qué hay que añadir al final? (Si es negativo se resta.) Luego elige la regla que coincide:`),
+      ], null, true),
       hint_steps: [say(lang, 'How much does it go up each time? That number goes in front of n.', 'Her seferinde ne kadar artıyor? O sayı n\'nin önüne gelir.', '¿Cuánto sube cada vez? Ese número va delante de n.'),
                    say(lang, 'Then check with n = 1 and add or take away to reach the first term.', 'Sonra n = 1 ile dene ve ilk terime ulaşmak için ekle ya da çıkar.', 'Luego prueba con n = 1 y suma o resta hasta llegar al primer término.')],
     }
@@ -8905,8 +9210,18 @@ function y8Sequences(level, lang) {
     else if (form === 3) { const a = randInt(-2, 5), g = randInt(1, 4); t = [a]; for (let i = 0; i < 4; i++) t.push(t[i] + g + 2 * i); why = say(lang, `The gaps go ${g}, ${g + 2}, ${g + 4}, … — up by 2 each time.`, `Aralar ${g}, ${g + 2}, ${g + 4}, … — her seferinde 2 artıyor.`, `Las diferencias son ${g}, ${g + 2}, ${g + 4}…: suben de 2 en 2.`) }
     else { const a = randInt(20, 40), g = randInt(3, 8); t = [0, 1, 2, 3, 4].map(i => a - g * i); why = say(lang, `Each term is ${g} less.`, `Her terim ${g} eksik.`, `Cada término es ${g} menos.`) }
     const shown = t.slice(0, 4), ans = t[4]
+    const nextHelp = (() => {
+      const g = i => t[i + 1] - t[i]
+      let steps
+      if (form === 0) steps = [stp(lang, `${t[1]} ÷ ${t[0]}`, t[1] / t[0], 'Each term is the one before times the same number. What is it?', 'Her terim, bir öncekinin aynı sayıyla çarpımı. O sayı kaç?', 'Cada término es el anterior por el mismo número. ¿Cuál es?'), stp(lang, `${t[3]} × ${t[1] / t[0]}`, ans, 'Multiply the last term by it:', 'Son terimi onunla çarp:', 'Multiplica el último término por él:')]
+      else if (form === 1) steps = [stp(lang, `${t[0]} × 2 + 1`, t[1], 'Test a rule on the first pair: double and add 1. Does it make the second term?', 'İlk çiftte bir kural dene: iki katı artı 1. İkinci terimi veriyor mu?', 'Prueba una regla en el primer par: el doble más 1. ¿Da el segundo término?'), stp(lang, `${t[3]} × 2 + 1`, ans, 'It works, so do the same to the last term:', 'İşe yarıyor, son terime de aynısını yap:', 'Funciona, así que haz lo mismo con el último término:')]
+      else if (form === 4) steps = [stp(lang, `${t[0]} − ${t[1]}`, t[0] - t[1], 'How much less is each term?', 'Her terim ne kadar eksik?', '¿Cuánto menos es cada término?'), stpS(lang, `${t[3]} − ${t[0] - t[1]}`, ans, 'Take it off the last term:', 'Son terimden çıkar:', 'Réstaselo al último término:')]
+      else steps = [stp(lang, `${t[1]} − ${t[0]}`, g(0), 'Look at the gaps between the terms. The first gap:', 'Terimler arasındaki farklara bak. İlk fark:', 'Mira las diferencias entre los términos. La primera:'), stp(lang, `${t[2]} − ${t[1]}`, g(1), 'The second:', 'İkinci:', 'La segunda:'), stp(lang, `${t[3]} − ${t[2]}`, g(2), 'The third:', 'Üçüncü:', 'La tercera:'), stp(lang, `${g(2)} + 2`, g(2) + 2, 'The gaps go up by 2 each time, so the next gap is:', 'Farklar her seferinde 2 artıyor, yani sıradaki fark:', 'Las diferencias suben de 2 en 2, así que la siguiente es:'), stp(lang, `${t[3]} + ${g(2) + 2}`, ans, 'Add it to the last term:', 'Son terime ekle:', 'Súmaselo al último término:')]
+      return stepsHelp(steps, null, ans < 0)
+    })()
     return {
       topic: T, level, question_text: `${shown.map(minus).join(', ')}, ?`, format: ans < 0 ? 'choice' : 'numeric', correct_answer: ans < 0 ? minus(ans) : ans,
+      ...nextHelp,
       ...(ans < 0 ? { options: choiceOf(opt(minus(ans), ok8(lang)), [opt(minus(-ans), why), opt(minus(ans + 1), why), opt(minus(ans - 1), why)]) } : {}),
       operandKey: `sg:x:${t.join(',')}`,
       hint_steps: [say(lang, 'Look at how each term is made from the one before.', 'Her terimin bir öncekinden nasıl elde edildiğine bak.', 'Mira cómo se forma cada término a partir del anterior.'),
@@ -8925,6 +9240,19 @@ function y8Sequences(level, lang) {
       topic: T, level,
       question_text: say(lang, `This is a table of values for ${r.t}. What number is missing?`, `Bu tablo ${r.t} için değerler tablosu. Eksik sayı kaçtır?`, `Esta es una tabla de valores de ${r.t}. ¿Qué número falta?`),
       format: 'numeric', correct_answer: r.f(xs[miss]), operandKey: `sg:t:${r.t}:${xs[miss]}`,
+      ...(() => {
+        const x = xs[miss]
+        const parts = {
+          'y = 2x + 3': [[`2 × ${x}`, 2 * x], [`${2 * x} + 3`, 2 * x + 3]], 'y = 37 − 5x': [[`5 × ${x}`, 5 * x], [`37 − ${5 * x}`, 37 - 5 * x]],
+          'y = x² + 2x': [[`${x} × ${x}`, x * x], [`2 × ${x}`, 2 * x], [`${x * x} + ${2 * x}`, x * x + 2 * x]], 'y = 10 − x': [[`10 − ${x}`, 10 - x]],
+          'y = 3x − 2': [[`3 × ${x}`, 3 * x], [`${3 * x} − 2`, 3 * x - 2]], 'y = x² − 1': [[`${x} × ${x}`, x * x], [`${x * x} − 1`, x * x - 1]],
+        }[r.t]
+        return stepsHelp(parts.map(([q0, a0], i) => stp(lang, q0, a0,
+          i === 0 ? `Put x = ${x} into the rule ${r.t}. Work out the part with x first:` : (i === parts.length - 1 ? 'Then the rest of the rule:' : 'And the next part:'),
+          i === 0 ? `x = ${x} değerini ${r.t} kuralına koy. Önce x'li kısmı hesapla:` : (i === parts.length - 1 ? 'Sonra kuralın geri kalanı:' : 'Sıradaki kısım:'),
+          i === 0 ? `Pon x = ${x} en la regla ${r.t}. Calcula primero la parte con x:` : (i === parts.length - 1 ? 'Luego el resto de la regla:' : 'Y la siguiente parte:'))),
+          { kind: 'chart', shape: 'table', cols: xs.map(x0 => `x = ${x0}`), rows: [{ label: 'y', cells: xs.map((x0, i) => (i === miss ? null : r.f(x0))) }] })
+      })(),
       hint_steps: [say(lang, 'Put the x value from the top row into the rule.', 'Üst satırdaki x değerini kurala koy.', 'Pon el valor de x de la fila de arriba en la regla.'),
                    say(lang, 'Check your working on a column you can already see.', 'İşlemini zaten görebildiğin bir sütunda kontrol et.', 'Comprueba el cálculo con una columna que ya ves.')],
       visual: { kind: 'chart', shape: 'table', cols: xs.map(x => `x = ${x}`), rows: [{ label: 'y', cells: xs.map((x, i) => (i === miss ? null : r.f(x))) }] },
@@ -8944,6 +9272,11 @@ function y8Sequences(level, lang) {
       topic: T, level,
       question_text: say(lang, `The lines ${p.t} and ${q.t} are drawn. Where do they cross?`, `${p.t} ve ${q.t} doğruları çizili. Nerede kesişiyorlar?`, `Están dibujadas las rectas ${p.t} y ${q.t}. ¿Dónde se cortan?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `sg:m:${p.t}:${q.t}`,
+      ...stepsHelp([
+        stp(lang, say(lang, 'x where the lines cross', 'doğruların kesiştiği x', 'x donde se cortan las rectas'), x, 'Find where the two lines meet on the picture. How far across?', 'Resimde iki doğrunun buluştuğu yeri bul. Kaç birim yatay?', 'Busca en el dibujo dónde se cortan las dos rectas. ¿Cuánto en horizontal?'),
+        stp(lang, say(lang, 'y where the lines cross', 'doğruların kesiştiği y', 'y donde se cortan las rectas'), y, 'And how far up?', 'Ve kaç birim yukarıda?', '¿Y cuánto en vertical?'),
+        stp(lang, say(lang, `check: put x = ${x} into ${p.t}`, `kontrol: x = ${x} değerini ${p.t} kuralına koy`, `comprueba: pon x = ${x} en ${p.t}`), y, `Check it: the point has to fit BOTH rules. Put x = ${x} into ${p.t}. Do you get ${y}? Then pick the point:`, `Kontrol et: nokta İKİ kurala da uymalı. x = ${x} değerini ${p.t} kuralına koy. ${y} çıkıyor mu? Sonra noktayı seç:`, `Compruébalo: el punto debe cumplir LAS DOS reglas. Pon x = ${x} en ${p.t}. ¿Da ${y}? Luego elige el punto:`),
+      ], { kind: 'plane', min: 0, max: 10, points: [], lines: draw.map((l, i) => ({ m: l.m, c: l.c, label: 'ab'[i] })) }, true),
       hint_steps: [say(lang, 'Read the point where the two lines meet: across first, then up.', 'İki doğrunun buluştuğu noktayı oku: önce yatay, sonra dikey.', 'Lee el punto donde se cruzan: primero horizontal, luego vertical.'),
                    say(lang, 'Check it: the point has to fit BOTH rules.', 'Kontrol et: nokta İKİ kurala da uymalı.', 'Compruébalo: el punto tiene que cumplir LAS DOS reglas.')],
       visual: { kind: 'plane', min: 0, max: 10, points: [], lines: draw.map((l, i) => ({ m: l.m, c: l.c, label: 'ab'[i] })) },
@@ -8960,6 +9293,12 @@ function y8Sequences(level, lang) {
     topic: T, level,
     question_text: say(lang, `Which line is ${draw[k].t}?`, `Hangi doğru ${draw[k].t}?`, `¿Qué recta es ${draw[k].t}?`),
     format: 'choice', options: choiceOf(right, wrongs, { sort: (a, b) => a.value.localeCompare(b.value) }), correct_answer: right.value, operandKey: `sg:l:${draw.map(l => l.t).join('|')}:${k}`,
+    ...stepsHelp([
+      stp(lang, say(lang, `y when x = 0, in ${draw[k].t}`, `${draw[k].t} kuralında x = 0 iken y`, `y cuando x = 0, en ${draw[k].t}`), round2(draw[k].c),
+        `Put x = 0 into the rule ${draw[k].t}: that is where the line crosses the y-axis. y is:`, `${draw[k].t} kuralına x = 0 koy: doğru y eksenini orada keser. y:`, `Pon x = 0 en la regla ${draw[k].t}: ahí corta la recta el eje y. y vale:`),
+      stp(lang, say(lang, 'goes up = 1, goes down = 2', 'yukarı gider = 1, aşağı gider = 2', 'sube = 1, baja = 2'), draw[k].m > 0 ? 1 : 2,
+        'Now the direction: does the line in the rule go up (the number in front of x is positive) or down? Type 1 for up, 2 for down. Then pick the line that crosses at that height and goes that way:', 'Şimdi yön: kuraldaki doğru yukarı mı (x\'in önündeki sayı pozitif) aşağı mı gidiyor? Yukarı için 1, aşağı için 2 yaz. Sonra o yükseklikten kesen ve o yöne giden doğruyu seç:', 'Ahora la dirección: ¿la recta de la regla sube (el número delante de x es positivo) o baja? Escribe 1 si sube y 2 si baja. Luego elige la recta que corta a esa altura y va en esa dirección:'),
+    ], { kind: 'plane', min: 0, max: 10, points: [], lines: draw.map((l, i) => ({ m: l.m, c: l.c, label: letters[i] })) }, true),
     hint_steps: [say(lang, 'Put x = 0 into the rule: that is where the line crosses the y-axis.', 'Kurala x = 0 koy: doğrunun y eksenini kestiği yer orası.', 'Pon x = 0 en la regla: ahí corta la recta el eje y.'),
                  say(lang, 'Then check one more point, and whether the line goes up or down.', 'Sonra bir nokta daha dene, doğrunun yukarı mı aşağı mı gittiğine bak.', 'Luego prueba otro punto y mira si la recta sube o baja.')],
     visual: { kind: 'plane', min: 0, max: 10, points: [], lines: draw.map((l, i) => ({ m: l.m, c: l.c, label: letters[i] })) },
@@ -8982,6 +9321,11 @@ function y8Ratio(level, lang) {
         `${sum * k} şekerlik bir pakette ${listed} şekerler ${parts.join(':')} oranında. Kaç tanesi ${cols[i]}?`,
         `Una bolsa de ${sum * k} caramelos tiene caramelos ${listed} en la razón ${parts.join(':')}. ¿Cuántos son ${cols[i]}?`),
       format: 'numeric', correct_answer: parts[i] * k, operandKey: `r8:s:${parts.join(':')}:${k}:${i}`,
+      ...stepsHelp([
+        stp(lang, parts.join(' + '), sum, 'Add the parts of the ratio: that is how many equal shares there are:', 'Oranın parçalarını topla: kaç eşit pay olduğunu verir:', 'Suma las partes de la razón: así sabes cuántas partes iguales hay:'),
+        stp(lang, `${sum * k} ÷ ${sum}`, k, 'Share everything out into those shares. How much is ONE share?', 'Hepsini bu paylara böl. BİR pay ne kadar?', 'Reparte todo entre esas partes. ¿Cuánto vale UNA parte?'),
+        stp(lang, `${k} × ${parts[i]}`, parts[i] * k, `The ${cols[i]} ones are ${parts[i]} of those shares:`, `${cols[i]} olanlar bu paylardan ${parts[i]} tane:`, `Los ${cols[i]} son ${parts[i]} de esas partes:`),
+      ]),
       hint_steps: [say(lang, 'Add the parts of the ratio: that is how many equal shares there are.', 'Oranın parçalarını topla: kaç eşit pay olduğunu verir.', 'Suma las partes de la razón: así sabes cuántas partes iguales hay.'),
                    say(lang, 'Find one share, then multiply by that colour\'s part.', 'Bir payı bul, sonra o rengin parçasıyla çarp.', 'Halla una parte y multiplícala por la de ese color.')],
     }
@@ -8993,6 +9337,10 @@ function y8Ratio(level, lang) {
     return {
       topic: T, level, question_text: say(lang, `The ratio x : ${q * k} is equivalent to ${p} : ${q}. What is x?`, `x : ${q * k} oranı ${p} : ${q} oranına denk. x kaçtır?`, `La razón x : ${q * k} es equivalente a ${p} : ${q}. ¿Cuánto vale x?`),
       format: 'numeric', correct_answer: p * k, operandKey: `r8:e:${p}:${q}:${k}`,
+      ...stepsHelp([
+        stp(lang, `${q * k} ÷ ${q}`, k, `What was ${q} multiplied by to make ${q * k}?`, `${q}, neyle çarpılınca ${q * k} oldu?`, `¿Por cuánto se multiplicó ${q} para dar ${q * k}?`),
+        stp(lang, `${p} × ${k}`, p * k, 'Do the same to the other side:', 'Aynısını diğer tarafa da yap:', 'Haz lo mismo con el otro lado:'),
+      ]),
       hint_steps: [say(lang, `What was ${q} multiplied by to make ${q * k}?`, `${q}, neyle çarpılınca ${q * k} oldu?`, `¿Por cuánto se multiplicó ${q} para dar ${q * k}?`),
                    say(lang, 'Do the same to the other side.', 'Aynısını diğer tarafa da yap.', 'Haz lo mismo con el otro lado.')],
     }
@@ -9004,15 +9352,23 @@ function y8Ratio(level, lang) {
       topic: T, level,
       question_text: say(lang, `A job takes ${D} days working ${H} hours a day. How many days would it take working ${H2} hours a day?`, `Bir iş günde ${H} saat çalışınca ${D} gün sürüyor. Günde ${H2} saat çalışılırsa kaç gün sürer?`, `Un trabajo dura ${D} días trabajando ${H} horas al día. ¿Cuántos días duraría trabajando ${H2} horas al día?`),
       format: 'numeric', correct_answer: (D * H) / H2, operandKey: `r8:i:${D}:${H}:${H2}`,
+      ...stepsHelp([
+        stp(lang, `${D} × ${H}`, D * H, 'How many hours of work does the whole job need?', 'İşin tamamı kaç saatlik çalışma ister?', '¿Cuántas horas de trabajo necesita el trabajo entero?'),
+        stp(lang, `${D * H} ÷ ${H2}`, (D * H) / H2, `More hours a day means fewer days: share the hours out at ${H2} a day:`, `Günde daha çok saat, daha az gün: saatleri günde ${H2} saatle paylaştır:`, `Más horas al día son menos días: reparte las horas a ${H2} por día:`),
+      ]),
       hint_steps: [say(lang, 'Work out the total number of hours the job needs.', 'İşin toplam kaç saat sürdüğünü bul.', 'Calcula cuántas horas necesita el trabajo en total.'),
                    say(lang, `More hours a day means fewer days: share the total by ${H2}.`, `Günde daha çok saat, daha az gün demek: toplamı ${H2}${trEk(H2, 'dat')} böl.`, `Más horas al día son menos días: reparte el total entre ${H2}.`)],
     }
   }
   if (shape === 'convert') {
     const form = randInt(0, 3)
-    let q, ans, hints
+    let q, ans, hints, help = {}
     if (form === 0) {
       const toKm = Math.random() < 0.5, k = randInt(2, 30)
+      help = stepsHelp([
+        stp(lang, `${toKm ? 5 * k : 8 * k} ÷ ${toKm ? 5 : 8}`, k, `How many lots of ${toKm ? 5 : 8} are there?`, `Kaç tane ${toKm ? 5 : 8} var?`, `¿Cuántas veces cabe ${toKm ? 5 : 8}?`),
+        stp(lang, `${k} × ${toKm ? 8 : 5}`, toKm ? 8 * k : 5 * k, `Each lot is worth ${toKm ? 8 : 5}:`, `Her biri ${toKm ? 8 : 5} eder:`, `Cada una vale ${toKm ? 8 : 5}:`),
+      ])
       q = toKm ? say(lang, `Using 5 miles ≈ 8 km, about how many km is ${5 * k} miles?`, `5 mil ≈ 8 km ise ${5 * k} mil yaklaşık kaç km?`, `Si 5 millas ≈ 8 km, ¿cuántos km son unas ${5 * k} millas?`)
         : say(lang, `Using 5 miles ≈ 8 km, about how many miles is ${8 * k} km?`, `5 mil ≈ 8 km ise ${8 * k} km yaklaşık kaç mil?`, `Si 5 millas ≈ 8 km, ¿cuántas millas son unos ${8 * k} km?`)
       ans = toKm ? 8 * k : 5 * k
@@ -9021,19 +9377,29 @@ function y8Ratio(level, lang) {
       const cm2 = randInt(1000, 90000) * 10
       q = say(lang, `How many m² is ${num(cm2, lang)} cm²?`, `${num(cm2, lang)} cm² kaç m²?`, `¿Cuántos m² son ${num(cm2, lang)} cm²?`)
       ans = cm2 / 10000
+      help = stepsHelp([
+        stp(lang, '100 × 100', 10000, '1 m is 100 cm, so 1 m² is 100 × 100 cm²:', '1 m 100 cm, yani 1 m² = 100 × 100 cm²:', '1 m son 100 cm, así que 1 m² son 100 × 100 cm²:'),
+        stp(lang, `${num(cm2, lang)} ÷ 10000`, cm2 / 10000, 'Now divide the cm² by that:', 'Şimdi cm²\'yi buna böl:', 'Ahora divide los cm² entre eso:'),
+      ])
       hints = [say(lang, '1 m is 100 cm, so 1 m² is 100 × 100 cm².', '1 m 100 cm, yani 1 m² = 100 × 100 cm².', '1 m son 100 cm, así que 1 m² son 100 × 100 cm².'), say(lang, 'Divide by 10,000.', '10.000\'e böl.', 'Divide entre 10.000.')]
     } else if (form === 2) {
       const w = randInt(1, 4), d = randInt(1, 6), h = randInt(1, 23)
       q = say(lang, `How many minutes are there in ${w} week${w > 1 ? 's' : ''}, ${d} day${d > 1 ? 's' : ''} and ${h} hour${h > 1 ? 's' : ''}?`, `${w} hafta, ${d} gün ve ${h} saatte kaç dakika vardır?`, `¿Cuántos minutos hay en ${w} semana${w > 1 ? 's' : ''}, ${d} día${d > 1 ? 's' : ''} y ${h} hora${h > 1 ? 's' : ''}?`)
       ans = ((w * 7 + d) * 24 + h) * 60
+      help = stepsHelp([
+        stp(lang, `${w} × 7 + ${d}`, w * 7 + d, 'A week is 7 days. How many days altogether?', 'Bir hafta 7 gün. Toplam kaç gün?', 'Una semana son 7 días. ¿Cuántos días en total?'),
+        stp(lang, `${w * 7 + d} × 24 + ${h}`, (w * 7 + d) * 24 + h, 'A day is 24 hours. How many hours altogether?', 'Bir gün 24 saat. Toplam kaç saat?', 'Un día son 24 horas. ¿Cuántas horas en total?'),
+        stp(lang, `${(w * 7 + d) * 24 + h} × 60`, ans, 'An hour is 60 minutes:', 'Bir saat 60 dakika:', 'Una hora son 60 minutos:'),
+      ])
       hints = [say(lang, 'Turn everything into hours first: a week is 7 days, a day is 24 hours.', 'Önce her şeyi saate çevir: bir hafta 7 gün, bir gün 24 saat.', 'Pásalo todo primero a horas: una semana son 7 días y un día 24 horas.'), say(lang, 'Then × 60.', 'Sonra × 60.', 'Luego × 60.')]
     } else {
       const km = randInt(1, 40) + pick([0.25, 0.5, 0.75, 0.125, 0.05])
       q = say(lang, `How many metres are there in ${dnum(String(km), lang)} km?`, `${dnum(String(km), lang)} km kaç metredir?`, `¿Cuántos metros hay en ${dnum(String(km), lang)} km?`)
       ans = Math.round(km * 1000)
+      help = stepsHelp([stp(lang, `${dnum(String(km), lang)} × 1000`, ans, '1 km is 1000 m. Multiplying by 1000 moves every digit three places to the left:', '1 km 1000 m. 1000 ile çarpmak her rakamı üç basamak sola kaydırır:', '1 km son 1000 m. Multiplicar por 1000 mueve cada cifra tres lugares a la izquierda:')])
       hints = [say(lang, '1 km is 1000 m.', '1 km, 1000 m.', '1 km son 1000 m.'), say(lang, 'Multiplying by 1000 moves the digits three places.', '1000 ile çarpmak rakamları üç basamak kaydırır.', 'Multiplicar por 1000 mueve las cifras tres lugares.')]
     }
-    return { topic: T, level, question_text: q, format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `r8:c:${q}`, hint_steps: hints }
+    return { topic: T, level, question_text: q, format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `r8:c:${q}`, ...help, hint_steps: hints }
   }
   if (shape === 'speed') {
     const t = pick([1.5, 2, 2.5, 3, 4, 0.5]), v = randInt(20, 80) + pick([0, 0, 0.4, 0.8, 0.6])
@@ -9044,6 +9410,9 @@ function y8Ratio(level, lang) {
       topic: T, level,
       question_text: say(lang, `A car travels ${dnum(String(d), lang)} km in ${tS}. What is its average speed in km/h?`, `Bir araba ${tS} ${dnum(String(d), lang)} km gidiyor. Ortalama hızı kaç km/sa?`, `Un coche recorre ${dnum(String(d), lang)} km en ${tS}. ¿Cuál es su velocidad media en km/h?`),
       format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `r8:v:${d}:${t}`,
+      ...stepsHelp([
+        stp(lang, `${dnum(String(d), lang)} ÷ ${dnum(String(t), lang)}`, ans, `Speed is distance ÷ time. The time ${t % 1 ? 'is written as a decimal of an hour (half an hour is 0.5)' : 'is in hours'}:`, `Hız = yol ÷ zaman. Zaman ${t % 1 ? 'saatin ondalığı olarak yazılır (yarım saat 0,5 olur)' : 'saat cinsinden'}:`, `Velocidad = distancia ÷ tiempo. El tiempo ${t % 1 ? 'se escribe como decimal de hora (media hora es 0,5)' : 'está en horas'}:`),
+      ]),
       hint_steps: [say(lang, 'Speed is distance ÷ time.', 'Hız = yol ÷ zaman.', 'Velocidad = distancia ÷ tiempo.'), t % 1 ? say(lang, 'Half an hour is 0.5 of an hour — minutes are not decimals.', 'Yarım saat 0,5 saattir — dakikalar ondalık değildir.', 'Media hora es 0,5 horas: los minutos no son decimales.') : say(lang, 'Share the distance equally between the hours.', 'Yolu saatlere eşit paylaştır.', 'Reparte la distancia entre las horas.')],
     }
   }
@@ -9055,6 +9424,15 @@ function y8Ratio(level, lang) {
       topic: T, level,
       question_text: say(lang, `${q1} g of sweets costs ${p1} cents. How many cents would ${q2} g cost?`, `${q1} g şeker ${p1} kuruş. ${q2} g kaç kuruş tutar?`, `${q1} g de caramelos cuestan ${p1} céntimos. ¿Cuántos céntimos costarían ${q2} g?`),
       format: 'numeric', correct_answer: (p1 * q2) / q1, operandKey: `r8:u:${q1}:${p1}:${q2}`,
+      ...(() => {
+        const g = gcd(q1, q2)
+        return stepsHelp([
+          stp(lang, `${q1} ÷ ${g}`, q1 / g, `Find a small amount that goes into both ${q1} g and ${q2} g: ${g} g. How many lots of ${g} g are in ${q1} g?`, `Hem ${q1} g hem ${q2} g içine sığan küçük bir miktar bul: ${g} g. ${q1} g içinde kaç tane ${g} g var?`, `Busca una cantidad pequeña que quepa en ${q1} g y en ${q2} g: ${g} g. ¿Cuántas veces ${g} g hay en ${q1} g?`),
+          stp(lang, `${p1} ÷ ${q1 / g}`, p1 / (q1 / g), `So what does ${g} g cost?`, `Yani ${g} g kaç eder?`, `¿Cuánto cuestan entonces ${g} g?`),
+          stp(lang, `${q2} ÷ ${g}`, q2 / g, `How many lots of ${g} g are in ${q2} g?`, `${q2} g içinde kaç tane ${g} g var?`, `¿Cuántas veces ${g} g hay en ${q2} g?`),
+          stp(lang, `${p1 / (q1 / g)} × ${q2 / g}`, (p1 * q2) / q1, 'Then multiply up:', 'Sonra çarparak büyüt:', 'Luego multiplica:'),
+        ])
+      })(),
       hint_steps: [say(lang, `Find the cost of a smaller amount that goes into both ${q1} g and ${q2} g.`, `Hem ${q1} g'a hem ${q2} g'a sığan daha küçük bir miktarın fiyatını bul.`, `Halla el precio de una cantidad más pequeña que quepa en ${q1} g y en ${q2} g.`),
                    say(lang, 'Then multiply up.', 'Sonra çarparak büyüt.', 'Luego multiplica.')],
     }
@@ -9066,6 +9444,10 @@ function y8Ratio(level, lang) {
       topic: T, level,
       question_text: say(lang, `Gear A has ${tA} teeth and gear B has ${tB}. They turn together. If A makes ${n} whole turns, how many turns does B make?`, `A dişlisinin ${tA}, B'nin ${tB} dişi var. Birlikte dönüyorlar. A ${n} tam tur atarsa B kaç tur atar?`, `El engranaje A tiene ${tA} dientes y el B tiene ${tB}. Giran juntos. Si A da ${n} vueltas, ¿cuántas da B?`),
       format: 'numeric', correct_answer: (n * tA) / tB, operandKey: `r8:g:${tA}:${tB}:${n}`,
+      ...stepsHelp([
+        stp(lang, `${n} × ${tA}`, n * tA, `Count the teeth that pass: ${n} turns of A pushes ${n} × ${tA} teeth past:`, `Geçen dişleri say: A'nın ${n} turu ${n} × ${tA} diş geçirir:`, `Cuenta los dientes que pasan: ${n} vueltas de A hacen pasar ${n} × ${tA} dientes:`),
+        stp(lang, `${n * tA} ÷ ${tB}`, (n * tA) / tB, `B turns once for every ${tB} teeth:`, `B her ${tB} dişte bir tur döner:`, `B da una vuelta cada ${tB} dientes:`),
+      ], { kind: 'gears', teeth: [tA, tB] }),
       hint_steps: [say(lang, `Count the teeth that pass: ${n} turns of A pushes ${n} × ${tA} teeth past.`, `Geçen dişleri say: A'nın ${n} turu ${n} × ${tA} diş geçirir.`, `Cuenta los dientes que pasan: ${n} vueltas de A hacen pasar ${n} × ${tA} dientes.`),
                    say(lang, `B turns once for every ${tB} teeth.`, `B her ${tB} dişte bir tur döner.`, `B da una vuelta cada ${tB} dientes.`)],
       visual: { kind: 'gears', teeth: [tA, tB] },
@@ -9080,6 +9462,11 @@ function y8Ratio(level, lang) {
       ? say(lang, `A shape is enlarged by a scale factor of ${dnum(String(k), lang)}. How many times bigger is its area?`, `Bir şekil ${dnum(String(k), lang)} ölçek çarpanıyla büyütülüyor. Alanı kaç kat büyür?`, `Una figura se amplía con factor de escala ${dnum(String(k), lang)}. ¿Cuántas veces mayor es su área?`)
       : say(lang, `A rectangle ${w} cm by ${h} cm is enlarged by a scale factor of ${dnum(String(k), lang)}. What is the new area, in cm²?`, `${w} cm'ye ${h} cm'lik bir dikdörtgen ${dnum(String(k), lang)} ölçek çarpanıyla büyütülüyor. Yeni alan kaç cm²?`, `Un rectángulo de ${w} cm por ${h} cm se amplía con factor ${dnum(String(k), lang)}. ¿Cuál es la nueva área, en cm²?`),
     format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `r8:x:${w}:${h}:${k}:${askTimes}`,
+    ...stepsHelp(askTimes
+      ? [stp(lang, `${dnum(String(k), lang)} × ${dnum(String(k), lang)}`, k * k, 'Both the length AND the width get multiplied by the scale factor, so the area is multiplied by it twice:', 'Hem uzunluk HEM genişlik ölçek çarpanıyla çarpılır, yani alan onunla iki kez çarpılır:', 'Se multiplican por el factor tanto el largo COMO el ancho, así que el área se multiplica dos veces por él:')]
+      : [stp(lang, `${w} × ${h}`, w * h, 'First the original area:', 'Önce ilk alan:', 'Primero el área original:'),
+         stp(lang, `${dnum(String(k), lang)} × ${dnum(String(k), lang)}`, k * k, 'Both the length AND the width get multiplied by the scale factor, so the area is multiplied by it twice:', 'Hem uzunluk HEM genişlik ölçek çarpanıyla çarpılır, yani alan onunla iki kez çarpılır:', 'Se multiplican por el factor tanto el largo COMO el ancho, así que el área se multiplica dos veces por él:'),
+         stp(lang, `${w * h} × ${dnum(String(k * k), lang)}`, ans, 'Now the new area:', 'Şimdi yeni alan:', 'Ahora el área nueva:')]),
     hint_steps: [say(lang, 'Both the length AND the width get multiplied by the scale factor.', 'Hem uzunluk HEM genişlik ölçek çarpanıyla çarpılır.', 'Se multiplican por el factor tanto el largo COMO el ancho.'),
                  say(lang, 'So the area is multiplied by the scale factor twice.', 'Yani alan, ölçek çarpanıyla iki kez çarpılır.', 'Así que el área se multiplica dos veces por el factor.')],
   }
@@ -9103,6 +9490,23 @@ function y8Geometry(level, lang) {
           : say(lang, `This cuboid holds ${dnum(String(V), lang)} cm³. How tall is it, in cm?`, `Bu dikdörtgenler prizmasının hacmi ${dnum(String(V), lang)} cm³. Yüksekliği kaç cm?`, `Este ortoedro tiene ${dnum(String(V), lang)} cm³. ¿Cuánto mide de alto, en cm?`),
       format: [V, SA, h][['v', 'sa', 'h'].indexOf(form)] % 1 ? 'decimal' : 'numeric', correct_answer: form === 'v' ? V : form === 'sa' ? SA : h,
       operandKey: `g8:c:${form}:${l}:${w}:${h}`,
+      ...(() => {
+        const Dn = x => dnum(String(x), lang)
+        const base = l * w
+        const picture = { kind: 'cuboid', l, w, h: form === 'h' ? '?' : h, unit: 'cm' }
+        if (form === 'v') return stepsHelp([
+          stp(lang, `${Dn(l)} × ${Dn(w)}`, base, 'Volume = length × width × height. First the area of the base (length × width):', 'Hacim = uzunluk × genişlik × yükseklik. Önce taban alanı (uzunluk × genişlik):', 'Volumen = largo × ancho × alto. Primero el área de la base (largo × ancho):'),
+          stp(lang, `${Dn(base)} × ${Dn(h)}`, V, 'Then times the height:', 'Sonra yükseklikle çarp:', 'Luego por la altura:')], picture)
+        if (form === 'h') return stepsHelp([
+          stp(lang, `${Dn(l)} × ${Dn(w)}`, base, 'Going backwards. First the area of the base (length × width):', 'Geriye gitmek. Önce taban alanı (uzunluk × genişlik):', 'Hacia atrás. Primero el área de la base (largo × ancho):'),
+          stp(lang, `${Dn(V)} ÷ ${Dn(base)}`, h, 'Volume ÷ base area gives the height:', 'Hacim ÷ taban alanı yüksekliği verir:', 'Volumen ÷ área de la base da la altura:')], picture)
+        return stepsHelp([
+          stp(lang, `${Dn(l)} × ${Dn(w)}`, base, 'Six faces in three matching pairs. Top (and bottom) is length × width:', 'Altı yüz, üç eş çift. Üst (ve alt) uzunluk × genişlik:', 'Seis caras en tres parejas iguales. La de arriba (y abajo) es largo × ancho:'),
+          stp(lang, `${Dn(l)} × ${Dn(h)}`, l * h, 'Front (and back) is length × height:', 'Ön (ve arka) uzunluk × yükseklik:', 'La de delante (y detrás) es largo × alto:'),
+          stp(lang, `${Dn(w)} × ${Dn(h)}`, w * h, 'An end (and the other end) is width × height:', 'Yan (ve diğer yan) genişlik × yükseklik:', 'Un extremo (y el otro) es ancho × alto:'),
+          stp(lang, `${Dn(base)} + ${Dn(l * h)} + ${Dn(w * h)}`, base + l * h + w * h, 'Add one of each pair:', 'Her çiftten birini topla:', 'Suma una de cada pareja:'),
+          stp(lang, `${Dn(base + l * h + w * h)} × 2`, SA, 'Then double it, for the matching faces:', 'Sonra eş yüzler için iki katını al:', 'Luego dóblalo, por las caras iguales:')], picture)
+      })(),
       hint_steps: form === 'sa'
         ? [say(lang, 'There are six faces, in three matching pairs: front and back, top and bottom, the two ends.', 'Altı yüz var, üç eş çift hâlinde: ön-arka, alt-üst, iki yan.', 'Tiene seis caras, en tres parejas iguales: delante y detrás, arriba y abajo, los dos lados.'),
            say(lang, 'Find the area of one of each pair, add them, then double.', 'Her çiftin birinin alanını bul, topla, sonra iki katını al.', 'Halla el área de una cara de cada pareja, súmalas y multiplica por 2.')]
@@ -9120,6 +9524,13 @@ function y8Geometry(level, lang) {
       topic: T, level,
       question_text: say(lang, 'The two lines marked with arrows are parallel. What is the angle marked ?', 'Okla işaretli iki doğru paralel. ? ile gösterilen açı kaç derecedir?', 'Las dos rectas marcadas con flechas son paralelas. ¿Cuánto mide el ángulo marcado con ?'),
       format: 'numeric', correct_answer: ans, operandKey: `g8:p:${type}:${t}`,
+      ...stepsHelp(type === 'co'
+        ? [stp(lang, `180 − ${180 - t}`, t, 'The two angles are between the parallel lines on the same side: they add up to 180°. Take the one you can see away from 180:', 'İki açı paralel doğruların arasında aynı tarafta: toplamları 180°. Görünen açıyı 180\'den çıkar:', 'Los dos ángulos están entre las paralelas del mismo lado: suman 180°. Réstale a 180 el que ves:')]
+        : [stp(lang, say(lang, 'the angle that matches', 'eş olan açı', 'el ángulo equivalente'), t,
+            type === 'alt' ? 'The two angles make a Z shape: alternate angles are equal. Find the matching angle at the other crossing and type its size:' : 'The two angles sit in the same position at each crossing: corresponding angles are equal. Find the matching angle at the other crossing and type its size:',
+            type === 'alt' ? 'İki açı Z şekli yapıyor: iç ters açılar eşittir. Diğer kesişimdeki eş açıyı bul ve büyüklüğünü yaz:' : 'İki açı her kesişimde aynı yerde: yöndeş açılar eşittir. Diğer kesişimdeki eş açıyı bul ve büyüklüğünü yaz:',
+            type === 'alt' ? 'Los dos ángulos forman una Z: los alternos son iguales. Busca el ángulo equivalente en el otro cruce y escribe su tamaño:' : 'Los dos ángulos están en la misma posición en cada cruce: los correspondientes son iguales. Busca el ángulo equivalente en el otro cruce y escribe su tamaño:')],
+        { kind: 'angles', type: 'parallel', t, ask: type }),
       hint_steps: [type === 'alt' ? say(lang, 'The two angles make a Z shape: alternate angles are equal.', 'İki açı Z şekli yapıyor: iç ters açılar eşittir.', 'Los dos ángulos forman una Z: los alternos son iguales.')
         : type === 'corr' ? say(lang, 'The two angles sit in the same position at each crossing: corresponding angles are equal.', 'İki açı her kesişimde aynı yerde: yöndeş açılar eşittir.', 'Los dos ángulos están en la misma posición en cada cruce: los correspondientes son iguales.')
           : say(lang, 'The two angles are between the parallel lines on the same side: they add up to 180°.', 'İki açı paralel doğruların arasında, aynı tarafta: toplamları 180°.', 'Los dos ángulos están entre las paralelas del mismo lado: suman 180°.'),
@@ -9139,6 +9550,18 @@ function y8Geometry(level, lang) {
     const ans = form === 'circ' ? C : form === 'area' ? A : r
     return {
       topic: T, level, question_text: q, format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `g8:o:${form}:${r}:${byD}`,
+      ...(() => {
+        const Dn = x => dnum(String(x), lang)
+        const steps = []
+        const picture = { kind: 'circle', r, show: form === 'circ' || form === 'area' ? (byD ? 'd' : 'r') : null }
+        if ((form === 'circ' || form === 'area') && byD) steps.push(stp(lang, `${2 * r} ÷ 2`, r, 'The picture gives the diameter. Halve it for the radius:', 'Resimde çap verilmiş. Yarıçap için yarıya böl:', 'El dibujo da el diámetro. Divídelo entre 2 para el radio:'))
+        if (form === 'circ') steps.push(stp(lang, `2 × ${r}`, 2 * r, 'The diameter is twice the radius:', 'Çap, yarıçapın iki katı:', 'El diámetro es el doble del radio:'), stp(lang, `${Dn(3.14)} × ${2 * r}`, C, 'Circumference = π × diameter:', 'Çevre = π × çap:', 'Longitud = π × diámetro:'))
+        else if (form === 'area') steps.push(stp(lang, `${r} × ${r}`, r * r, 'Area = π × radius × radius. First radius × radius:', 'Alan = π × yarıçap × yarıçap. Önce yarıçap × yarıçap:', 'Área = π × radio × radio. Primero radio × radio:'), stp(lang, `${Dn(3.14)} × ${r * r}`, A, 'Then times π:', 'Sonra π ile çarp:', 'Luego por π:'))
+        else if (form === 'rFromC') steps.push(stp(lang, `${Dn(C)} ÷ ${Dn(3.14)}`, 2 * r, 'Circumference = π × diameter, so divide by π to get the diameter:', 'Çevre = π × çap, yani çapı bulmak için π\'ye böl:', 'Longitud = π × diámetro, así que divide entre π para el diámetro:'), stp(lang, `${2 * r} ÷ 2`, r, 'The radius is half the diameter:', 'Yarıçap, çapın yarısı:', 'El radio es la mitad del diámetro:'))
+        else steps.push(stp(lang, `${Dn(A)} ÷ ${Dn(3.14)}`, r * r, 'Area = π × radius × radius, so divide by π to get radius × radius:', 'Alan = π × yarıçap × yarıçap, yani yarıçap × yarıçap\'ı bulmak için π\'ye böl:', 'Área = π × radio × radio, así que divide entre π para radio × radio:'),
+          stp(lang, say(lang, 'the number that times itself makes that', 'kendisiyle çarpılınca bunu veren sayı', 'el número que por sí mismo da eso'), r, 'Which number times itself gives that? That is the radius:', 'Hangi sayı kendisiyle çarpılınca bunu verir? O, yarıçap:', '¿Qué número por sí mismo da eso? Ese es el radio:'))
+        return stepsHelp(steps, picture)
+      })(),
       hint_steps: [form === 'circ' || form === 'rFromC' ? say(lang, 'Circumference = π × diameter, and the diameter is twice the radius.', 'Çevre = π × çap; çap, yarıçapın iki katı.', 'Longitud = π × diámetro, y el diámetro es el doble del radio.')
         : say(lang, 'Area = π × radius × radius.', 'Alan = π × yarıçap × yarıçap.', 'Área = π × radio × radio.'),
       form === 'rFromA' ? say(lang, 'Divide by 3.14, then find the number that times itself gives that.', '3,14\'e böl, sonra kendisiyle çarpılınca bunu veren sayıyı bul.', 'Divide entre 3,14 y busca el número que multiplicado por sí mismo da eso.')
@@ -9156,6 +9579,16 @@ function y8Geometry(level, lang) {
       question_text: askHyp ? say(lang, 'This triangle has a right angle. How long is the longest side, in cm?', 'Bu üçgende bir dik açı var. En uzun kenar kaç cm?', 'Este triángulo tiene un ángulo recto. ¿Cuánto mide el lado más largo, en cm?')
         : say(lang, 'This triangle has a right angle. How long is the side marked ?, in cm?', 'Bu üçgende bir dik açı var. ? ile gösterilen kenar kaç cm?', 'Este triángulo tiene un ángulo recto. ¿Cuánto mide el lado marcado con ?, en cm?'),
       format: 'numeric', correct_answer: askHyp ? C : B, operandKey: `g8:y:${A}:${B}:${askHyp}`,
+      ...stepsHelp(askHyp
+        ? [stp(lang, `${A} × ${A}`, A * A, 'Pythagoras: the longest side squared = the other two sides squared, added. First one short side squared:', 'Pisagor: en uzun kenarın karesi = diğer iki kenarın karelerinin toplamı. Önce bir kısa kenarın karesi:', 'Pitágoras: el lado más largo al cuadrado = los otros dos al cuadrado, sumados. Primero un lado corto al cuadrado:'),
+           stp(lang, `${B} × ${B}`, B * B, 'The other short side squared:', 'Öbür kısa kenarın karesi:', 'El otro lado corto al cuadrado:'),
+           stp(lang, `${A * A} + ${B * B}`, A * A + B * B, 'Add them: that is the longest side squared:', 'Topla: bu, en uzun kenarın karesi:', 'Súmalos: eso es el lado más largo al cuadrado:'),
+           stp(lang, say(lang, 'the number that times itself makes that', 'kendisiyle çarpılınca bunu veren sayı', 'el número que por sí mismo da eso'), C, 'Which number times itself gives that? That is the longest side:', 'Hangi sayı kendisiyle çarpılınca bunu verir? O, en uzun kenar:', '¿Qué número por sí mismo da eso? Ese es el lado más largo:')]
+        : [stp(lang, `${C} × ${C}`, C * C, 'Pythagoras: the longest side squared = the other two sides squared, added. The longest side squared:', 'Pisagor: en uzun kenarın karesi = diğer iki kenarın karelerinin toplamı. En uzun kenarın karesi:', 'Pitágoras: el lado más largo al cuadrado = los otros dos al cuadrado, sumados. El lado más largo al cuadrado:'),
+           stp(lang, `${A} × ${A}`, A * A, 'The other known side squared:', 'Bilinen öbür kenarın karesi:', 'El otro lado conocido al cuadrado:'),
+           stp(lang, `${C * C} − ${A * A}`, B * B, 'Take one from the other: that is the missing side squared:', 'Birini diğerinden çıkar: bu, eksik kenarın karesi:', 'Resta uno del otro: eso es el lado que falta al cuadrado:'),
+           stp(lang, say(lang, 'the number that times itself makes that', 'kendisiyle çarpılınca bunu veren sayı', 'el número que por sí mismo da eso'), B, 'Which number times itself gives that? That is the missing side:', 'Hangi sayı kendisiyle çarpılınca bunu verir? O, eksik kenar:', '¿Qué número por sí mismo da eso? Ese es el lado que falta:')],
+        { kind: 'righttri', a: A, b: askHyp ? B : '?', c: askHyp ? '?' : C, unit: 'cm' }),
       hint_steps: [say(lang, 'Pythagoras: the longest side squared = the other two sides squared, added.', 'Pisagor: en uzun kenarın karesi = diğer iki kenarın karelerinin toplamı.', 'Pitágoras: el lado más largo al cuadrado = la suma de los cuadrados de los otros dos.'),
                    askHyp ? say(lang, 'Square the two short sides, add, then find the square root.', 'İki kısa kenarın karesini al, topla, sonra karekökünü bul.', 'Eleva al cuadrado los dos lados cortos, súmalos y halla la raíz.')
                      : say(lang, 'Square the longest side, take away the square of the other, then find the square root.', 'En uzun kenarın karesinden diğerinin karesini çıkar, sonra karekökünü bul.', 'Al cuadrado del lado largo réstale el cuadrado del otro y halla la raíz.')],
@@ -9174,6 +9607,10 @@ function y8Geometry(level, lang) {
         : form === 'ext' ? say(lang, `What is the size of each exterior angle of a regular ${name}?`, `Düzgün bir ${name}in her dış açısı kaç derecedir?`, `¿Cuánto mide cada ángulo exterior de un ${name} regular?`)
           : say(lang, `What is the size of each interior angle of a regular ${name}?`, `Düzgün bir ${name}in her iç açısı kaç derecedir?`, `¿Cuánto mide cada ángulo interior de un ${name} regular?`),
       format: 'numeric', correct_answer: form === 'sides' ? n : form === 'ext' ? ext : 180 - ext, operandKey: `g8:g:${form}:${n}`,
+      ...stepsHelp(form === 'sides'
+        ? [stp(lang, `360 ÷ ${ext}`, n, 'The exterior angles of any polygon add up to 360°, and a regular polygon\'s are all equal. How many of them fit?', 'Her çokgenin dış açıları toplamı 360°, düzgün çokgende hepsi eşit. Kaç tane sığar?', 'Los ángulos exteriores de cualquier polígono suman 360°, y en uno regular son todos iguales. ¿Cuántos caben?')]
+        : [stp(lang, `360 ÷ ${n}`, ext, 'The exterior angles of any polygon add up to 360°, and a regular polygon\'s are all equal. Share it between the corners:', 'Her çokgenin dış açıları toplamı 360°, düzgün çokgende hepsi eşit. Köşelere paylaştır:', 'Los ángulos exteriores de cualquier polígono suman 360°, y en uno regular son todos iguales. Repártelo entre los vértices:'),
+           ...(form === 'int' ? [stp(lang, `180 − ${ext}`, 180 - ext, 'At each corner the interior and exterior angles make a straight line (180°):', 'Her köşede iç ve dış açı bir doğru oluşturur (180°):', 'En cada vértice el ángulo interior y el exterior forman una recta (180°):')] : [])]),
       hint_steps: [say(lang, 'The exterior angles of any polygon add up to 360°.', 'Her çokgenin dış açıları toplamı 360°.', 'Los ángulos exteriores de cualquier polígono suman 360°.'),
                    say(lang, 'At each corner, the interior and exterior angles make a straight line: 180°.', 'Her köşede iç ve dış açı bir doğru oluşturur: 180°.', 'En cada vértice, el ángulo interior y el exterior forman una recta: 180°.')],
     }
@@ -9190,6 +9627,17 @@ function y8Geometry(level, lang) {
           ? say(lang, `The garden is ${Wd} m by ${Hd} m. All the paths are ${p} m wide and the flower beds are the same size. What is the area of the paths, in m²?`, `Bahçe ${Wd} m'ye ${Hd} m. Bütün yollar ${p} m genişliğinde, çiçek tarhları eş. Yolların alanı kaç m²?`, `El jardín mide ${Wd} m por ${Hd} m. Todos los caminos miden ${p} m de ancho y los parterres son iguales. ¿Cuál es el área de los caminos, en m²?`)
           : say(lang, `The garden is ${Wd} m by ${Hd} m. All the paths are ${p} m wide and the flower beds are the same size. What is the total area of the beds, in m²?`, `Bahçe ${Wd} m'ye ${Hd} m. Bütün yollar ${p} m genişliğinde, çiçek tarhları eş. Tarhların toplam alanı kaç m²?`, `El jardín mide ${Wd} m por ${Hd} m. Todos los caminos miden ${p} m de ancho y los parterres son iguales. ¿Cuál es el área total de los parterres, en m²?`),
         format: 'numeric', correct_answer: askPath ? Wd * Hd - beds : beds, operandKey: `g8:d:${Wd}:${Hd}:${p}:${n}:${askPath}`,
+        ...(() => {
+          const steps = [
+            stp(lang, `${Wd} − ${(n + 1) * p}`, n * bw, `Across there are ${n + 1} paths of ${p} m. Take them off the width to leave room for the beds:`, `Yatayda ${p} m'lik ${n + 1} yol var. Tarhlara kalan yeri bulmak için genişlikten çıkar:`, `A lo ancho hay ${n + 1} caminos de ${p} m. Réstalos al ancho para ver lo que queda para los parterres:`),
+            ...(n > 1 ? [stp(lang, `${n * bw} ÷ ${n}`, bw, `${n} beds share that. One bed is this wide:`, `${n} tarh bunu paylaşıyor. Bir tarhın genişliği:`, `${n} parterres se lo reparten. Uno mide de ancho:`)] : []),
+            stp(lang, `${Hd} − ${2 * p}`, bh, 'Up the garden there is a path at the top and at the bottom. A bed is this tall:', 'Bahçede üstte ve altta birer yol var. Bir tarhın yüksekliği:', 'En el jardín hay un camino arriba y otro abajo. Un parterre mide de alto:'),
+            stp(lang, `${bw} × ${bh}`, bw * bh, 'The area of one bed:', 'Bir tarhın alanı:', 'El área de un parterre:'),
+            ...(n > 1 ? [stp(lang, `${bw * bh} × ${n}`, beds, 'All the beds:', 'Bütün tarhlar:', 'Todos los parterres:')] : []),
+          ]
+          if (askPath) steps.push(stp(lang, `${Wd} × ${Hd}`, Wd * Hd, 'The whole garden:', 'Bütün bahçe:', 'El jardín entero:'), stp(lang, `${Wd * Hd} − ${beds}`, Wd * Hd - beds, 'Paths = the whole garden minus the beds:', 'Yollar = bütün bahçe eksi tarhlar:', 'Caminos = el jardín entero menos los parterres:'))
+          return stepsHelp(steps, { kind: 'garden', W: Wd, H: Hd, p, n })
+        })(),
         hint_steps: [say(lang, `A bed is the garden's height minus two paths, and the width is what is left after ${n + 1} paths, shared by ${n}.`, `Bir tarhın yüksekliği, bahçeninkinden iki yol eksiktir; genişliği ${n + 1} yol çıkınca kalanın ${n}${trEk(n, 'loc')} biridir.`, `Un parterre mide de alto lo del jardín menos dos caminos, y de ancho lo que queda tras ${n + 1} caminos, repartido entre ${n}.`),
                      askPath ? say(lang, 'Paths = the whole garden minus the beds.', 'Yollar = bütün bahçe eksi tarhlar.', 'Caminos = el jardín entero menos los parterres.') : say(lang, 'Multiply out one bed, then count the beds.', 'Bir tarhın alanını bul, sonra tarh sayısıyla çarp.', 'Calcula un parterre y multiplícalo por el número de parterres.')],
         visual: { kind: 'garden', W: Wd, H: Hd, p, n },
@@ -9216,6 +9664,10 @@ function y8Geometry(level, lang) {
     topic: T, level,
     question_text: say(lang, `The triangle is enlarged by a scale factor of ${k}, with the centre at (0, 0). Where does corner ${'ABC'[i]} go?`, `Üçgen, merkezi (0, 0) olan ${k} ölçek çarpanıyla büyütülüyor. ${'ABC'[i]} köşesi nereye gider?`, `El triángulo se amplía con factor ${k} y centro en (0, 0). ¿Adónde va el vértice ${'ABC'[i]}?`),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `g8:e:${Tri.flat().join(',')}:${k}:${i}`,
+    ...stepsHelp([
+      stp(lang, `${x} × ${k}`, x * k, `Read the corner's coordinates (across, then up). From (0, 0) every point moves out ${k} times as far, so multiply both coordinates by ${k}. The first:`, `Köşenin koordinatlarını oku (önce yatay, sonra dikey). (0, 0)'dan her nokta ${k} kat uzağa gider, yani iki koordinatı da ${k} ile çarp. Birincisi:`, `Lee las coordenadas del vértice (primero horizontal, luego vertical). Desde (0, 0) cada punto se aleja ${k} veces más, así que multiplica las dos por ${k}. La primera:`),
+      stp(lang, `${y} × ${k}`, y * k, 'And the second. Then pick the point:', 'Ve ikincisi. Sonra noktayı seç:', 'Y la segunda. Luego elige el punto:'),
+    ], { kind: 'plane', min: 0, max: 10, points: Tri.map(([a, b], j) => ({ label: 'ABC'[j], x: a, y: b })), path: [...Tri, Tri[0]] }, true),
     hint_steps: [say(lang, 'From (0, 0), every point moves out to k times as far.', '(0, 0)\'dan her nokta k kat uzağa gider.', 'Desde (0, 0), cada punto se aleja k veces más.'),
                  say(lang, 'So multiply both coordinates of the corner by the scale factor.', 'Yani köşenin iki koordinatını da ölçek çarpanıyla çarp.', 'Así que multiplica las dos coordenadas del vértice por el factor.')],
     visual: { kind: 'plane', min: 0, max: 10, points: Tri.map(([a, b], j) => ({ label: 'ABC'[j], x: a, y: b })), path: [...Tri, Tri[0]] },

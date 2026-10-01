@@ -1246,7 +1246,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                   if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
                   if (k === '✓') { confirm(); return }
                   if (k === '.' && arrowInput.includes('.')) return
-                  if (arrowInput.length < 7) setArrowInput(v => v + k)
+                  if (arrowInput.length < 9) setArrowInput(v => v + k)
                 }}
                 style={{
                   width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
