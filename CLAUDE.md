@@ -86,7 +86,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       "neden bu adım" cümlesi olan zincir) 9-12 yaşın sayısal ve seçmeli soru tiplerine yazıldı, EN/TR/ES.
       Audit "öğretici yardım" payı (`npm run math:check`): 9 yaş %38 → 97, 10 %67 → 99, 11 %57 → 99,
       12 %48 → 99 (grafik okuma, koordinat/öteleme, fonksiyon makinesi, karekök, olasılık, cebir şıkları,
-      katı cisimler, Roma rakamı, dört nokta adı dahil); 13 yaş %3, **son öncelik, dokunulmadı**. 7 ve 8 yaş da
+      katı cisimler, Roma rakamı, dört nokta adı dahil); **13 yaş (Year 8) %3 → 97** (asal çarpanlar, EBOB/EKOK,
+      negatiflerle işlem, kesir dört işlem, yüzde, denklem, açılım/çarpanlara ayırma, dizi/nth terim, doğrular,
+      oran, Pisagor, daire, hacim/yüzey, istatistik/olasılık; negatif ara sonuçlar eksi tuşu olmadığı için
+      büyüklük + işaret kodu olarak yazdırılıyor; panelde cevap sınırı 7 → 9 karakter). 7 ve 8 yaş da
       yükseldi (%78/70 → 89/84). Kalite kapısı: `scripts/math-help-audit.mjs` (sızıntı, yazılamayan cevap,
       dil karışması, tür uyuşmazlığı; math:check içinde) ve `scripts/tests/math-help-oracles.test.mjs`
       (etiketli adımlar soru metninden/görselden bağımsız yeniden türetiliyor). Gerçek MathScreen'de 9/10/11/12 yaş

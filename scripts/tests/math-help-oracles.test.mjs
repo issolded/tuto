@@ -206,3 +206,111 @@ test('pie fractions: parts covered come from the slice the picture draws', () =>
     assert.equal(p.help.steps.at(-1).a, p.correct_answer)
   }
 })
+
+// ── Year 8 ────────────────────────────────────────────────────────────────────────────────────
+const gcd2 = (a, b) => (b ? gcd2(b, a % b) : a)
+const Y8 = 14 // the level the curriculum puts Year 8 on
+
+test('negative numbers: the size and the sign of the answer, from the expression in the question', () => {
+  for (const { p, m } of drawAny('negatives-decimals', Y8, /^(.+) = \?$/, 6000)) {
+    if (p.format !== 'choice') continue
+    const expr = m[1].replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/').replace(/(\(-?[\d.]+\))²/g, '($1**2)').replace(/\s+/g, ' ')
+    if (!/^[\d\s+\-*/().]+$/.test(expr.replace(/\*\*2/g, ''))) continue
+    let v; try { v = Function(`"use strict"; return (${expr})`)() } catch { continue }
+    const [size, sign] = p.help.steps
+    assert.ok(Math.abs(Math.abs(v) - size.a) < 1e-9, `${m[1]} → size ${size.a}, expected ${Math.abs(v)}`)
+    if (sign) assert.equal(sign.a, v > 0 ? 1 : 2, m[1])
+    else assert.equal(v, 0)
+  }
+})
+
+test('highest common factor: Euclid remainders in order, ending on the factor that divides both', () => {
+  for (const { p, m } of drawAny('powers-primes', Y8, /^What is the highest common factor \(HCF\) of (\d+) and (\d+)\?$/)) {
+    const [a, b] = [Number(m[1]), Number(m[2])]
+    const a2 = p.help.steps.map(s => s.a)
+    assert.equal(a2.at(-1), gcd2(a, b))
+    assert.equal(a2.at(-1), p.correct_answer)
+    let [x, y] = a > b ? [a, b] : [b, a]; const want = []
+    while (y) { const r = x % y; if (!r) break; want.push(r); ;[x, y] = [y, r] }
+    assert.deepEqual(a2.slice(0, -1), want)
+  }
+})
+
+test('prime factors by repeated division: every quotient is the last one over a prime, and the primes make the number', () => {
+  for (const { p, m } of drawAny('powers-primes', Y8, /^Write (\d+) as a product of prime factors, using indices\.$/)) {
+    let cur = Number(m[1]); const quotients = p.help.steps.map(s => s.a)
+    for (const q of quotients) { const d = cur / q; assert.ok(Number.isInteger(d) && d > 1 && [2, 3, 5, 7, 11, 13].includes(d), `${cur} → ${q}`); cur = q }
+    assert.equal(cur, 1)
+  }
+})
+
+test('summary statistics: mean, median and range recomputed from the list in the question', () => {
+  for (const { p, m } of drawAny('stats-8', Y8, /^What is the (mean|median|range) of these numbers\? (.+)$/, 8000)) {
+    const xs = m[2].split(',').map(Number), n = xs.length, sorted = [...xs].sort((a, b) => a - b)
+    const mean = xs.reduce((a, b) => a + b, 0) / n
+    const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+    const want = { mean, median, range: sorted[n - 1] - sorted[0] }[m[1]]
+    assert.ok(Math.abs(p.help.steps.at(-1).a - want) < 1e-9, `${m[1]} of ${m[2]}`)
+    if (m[1] === 'median' && n % 2 === 0) assert.deepEqual(p.help.steps.slice(0, 3).map(s => s.a), [n / 2, sorted[n / 2 - 1], sorted[n / 2]])
+  }
+})
+
+test('mean from a frequency table: value × frequency per column, their sum, and the number of observations', () => {
+  for (const { p } of drawAny('stats-8', Y8, /The table shows/, 8000)) {
+    const cells = p.visual.rows[0].cells, vals = p.visual.cols.map(Number)
+    const steps = p.help.steps.map(s => s.a)
+    assert.deepEqual(steps.slice(0, 4), vals.map((v, i) => v * cells[i]))
+    const total = vals.reduce((s, v, i) => s + v * cells[i], 0)
+    assert.equal(steps[4], total)
+    assert.ok(Math.abs(steps[5] - total / cells.reduce((a, b) => a + b, 0)) < 1e-9)
+  }
+})
+
+test('two dice: the number of pairs that give the total is counted by brute force', () => {
+  for (const { p, m } of drawAny('stats-8', Y8, /^Two fair dice are rolled and the scores added\. What is the probability of a total of (\d+)( or less)?\?$/, 8000)) {
+    const T = Number(m[1]); let n = 0
+    for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) if (m[2] ? a + b <= T : a + b === T) n++
+    assert.deepEqual(p.help.steps.map(s => s.a), [n, 36])
+  }
+})
+
+test('bag of balls: what is left of the colour and in the bag, read from the numbers in the question', () => {
+  for (const { p, m } of drawAny('stats-8', Y8, /^A bag has (\d+) grey, (\d+) white and (\d+) black balls\. (\d+) grey, (\d+) white and (\d+) black are taken out\. What is the probability now of picking a (\w+) ball\?$/, 8000)) {
+    const c = [m[1], m[2], m[3]].map(Number), r = [m[4], m[5], m[6]].map(Number), i = ['grey', 'white', 'black'].indexOf(m[7])
+    assert.deepEqual(p.help.steps.map(s => s.a), [c[i] - r[i], c.reduce((a, b) => a + b, 0) - r.reduce((a, b) => a + b, 0)])
+  }
+})
+
+test('nth term: the gap, and what has to be added at the end, from the first terms in the question', () => {
+  for (const { p, m } of drawAny('sequences-graphs', Y8, /^What is the nth term of ([\d, ]+), …\?$/)) {
+    const t = m[1].split(',').map(Number)
+    assert.equal(p.help.steps[0].a, t[1] - t[0])
+    assert.equal(p.help.steps[1].a, Math.abs(t[0] - (t[1] - t[0])))
+  }
+})
+
+test('substitution: each line is the expression evaluated with the given letters', () => {
+  for (const { p, m } of drawAny('algebra-8', Y8, /^If a = (\d+) and b = (\d+), what is (.+)\?$/, 8000)) {
+    const [a, b] = [Number(m[1]), Number(m[2])]
+    const js = m[3].replace(/²/g, '**2').replace(/³/g, '**3').replace(/−/g, '-').replace(/(\d)([ab])/g, '$1*$2').replace(/([ab])([ab])/g, '$1*$2').replace(/\)\*\*/g, ')**').replace(/ba/g, 'b*a')
+    let v; try { v = Function('a', 'b', `"use strict"; return (${js})`)(a, b) } catch { continue }
+    assert.equal(p.help.steps.at(-1).a, v, m[3])
+    assert.equal(p.correct_answer, v)
+  }
+})
+
+test('regular polygons: exterior angles share 360 between the sides', () => {
+  for (const { p, m } of drawAny('geometry-8', Y8, /^Each exterior angle of a regular polygon is (\d+)°\. How many sides does it have\?$/)) {
+    assert.equal(p.help.steps[0].a, 360 / Number(m[1]))
+  }
+})
+
+test('Pythagoras: the squares come from the sides the picture draws', () => {
+  for (const { p } of drawAny('geometry-8', Y8, /^This triangle has a right angle\./)) {
+    const v = p.help.picture ?? p.visual
+    const a = Number(v.a), b = v.b === '?' ? null : Number(v.b), c = v.c === '?' ? null : Number(v.c)
+    const sq = p.help.steps.map(s => s.a)
+    if (b !== null) { assert.deepEqual(sq.slice(0, 3), [a * a, b * b, a * a + b * b]); assert.equal(sq[3] ** 2, a * a + b * b) }
+    else { assert.deepEqual(sq.slice(0, 3), [c * c, a * a, c * c - a * a]); assert.equal(sq[3] ** 2, c * c - a * a) }
+  }
+})

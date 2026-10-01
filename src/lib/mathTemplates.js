@@ -8372,9 +8372,14 @@ const round2 = x => Math.round(x * 100) / 100
 // The keypad has no minus key, so a step that comes out below zero is typed as its size, and the
 // sentence says so. Returns the three-language tail to add to a sentence.
 const belowZero = v => (v < 0
-  ? [' — it comes out below zero: type its size without the minus.', ' — sıfırın altında çıkıyor: eksi olmadan büyüklüğünü yaz.', ' — sale por debajo de cero: escribe su tamaño sin el menos.']
-  : ['', '', ''])
-const stpS = (lang, q, a, en, tr, es) => { const t = belowZero(a); return stp(lang, q, Math.abs(a), en + t[0], tr + t[1], es + t[2]) }
+  ? [' (it comes out below zero: type its size without the minus):', ' (sıfırın altında çıkıyor: eksi olmadan büyüklüğünü yaz):', ' (sale por debajo de cero: escribe su tamaño sin el menos):']
+  : [null, null, null])
+const stpS = (lang, q, a, en, tr, es) => {
+  const t = belowZero(a)
+  // The sentence already ends in a colon; the note goes before it, not after.
+  const cut = x => x.replace(/:\s*$/, '')
+  return stp(lang, q, Math.abs(a), t[0] ? cut(en) + t[0] : en, t[1] ? cut(tr) + t[1] : tr, t[2] ? cut(es) + t[2] : es)
+}
 
 // Keep dividing by the smallest prime that goes in; the quotients are what the child types, and the
 // primes used (counted) make the product written with indices.
@@ -9027,8 +9032,8 @@ function y8Algebra(level, lang) {
       topic: T, level, question_text: say(lang, `Multiply out: ${q}`, `Parantezleri aç: ${q}`, `Desarrolla: ${q}`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `a8:e:${q}`,
       ...stepsHelp([
-        stpS(lang, `(${sgn(p * b)}) + (${sgn(a)})`, p * b + a, `Four products: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x and ${minus(a)} × ${minus(b)}. The two x terms (outside and inside) are ${p * b}x and ${minus(a)}x. Together:`,
-          `Dört çarpım: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x ve ${minus(a)} × ${minus(b)}. İki x'li terim (dış ve iç) ${p * b}x ile ${minus(a)}x. Birlikte:`,
+        stpS(lang, `(${sgn(p * b)}) + (${sgn(a)})`, p * b + a, `Four products: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x and ${minus(a)} × ${minus(b)}. The two x terms (outside and inside) are ${minus(p * b)}x and ${minus(a)}x. Together:`,
+          `Dört çarpım: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x ve ${minus(a)} × ${minus(b)}. İki x'li terim (dış ve iç) ${minus(p * b)}x ile ${minus(a)}x. Birlikte:`,
           `Cuatro productos: ${p === 1 ? '' : p}x × x, ${p === 1 ? '' : p}x × ${minus(b)}, ${minus(a)} × x y ${minus(a)} × ${minus(b)}. Los dos términos con x (exterior e interior) son ${p * b}x y ${minus(a)}x. Juntos:`),
         stpS(lang, `(${sgn(a)}) × (${sgn(b)})`, a * b, 'The number on its own is the two last terms multiplied. Then pick the matching answer:', 'Tek başına kalan sayı, iki son terimin çarpımı. Sonra eşleşen cevabı seç:', 'El número suelto es el producto de los dos últimos términos. Luego elige la respuesta que coincide:'),
       ], null, true),
@@ -9698,6 +9703,30 @@ function y8Statistics(level, lang) {
       topic: T, level,
       question_text: say(lang, `What is the ${w} of these numbers? ${list}`, `Bu sayıların ${w} kaçtır? ${list}`, `¿Cuál es ${w} de estos números? ${list}`),
       format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `s8:m:${ask}:${vals.join(',')}`,
+      ...(() => {
+        const Dn = x => dnum(String(Math.round(x * 1000) / 1000), lang)
+        const R3 = x => Math.round(x * 1000) / 1000
+        const inOrder = sorted.map(Dn).join(', ')
+        if (ask === 'mean') {
+          const tot = R3(vals.reduce((a, b) => a + b, 0))
+          return stepsHelp([
+            stp(lang, vals.map(Dn).join(' + '), tot, 'The mean shares the total out evenly. First add them all up:', 'Ortalama toplamı eşit paylaştırır. Önce hepsini topla:', 'La media reparte el total por igual. Primero súmalos todos:'),
+            stp(lang, `${Dn(tot)} ÷ ${N}`, ans, `Then divide by how many numbers there are (${N}):`, `Sonra sayı adedine (${N}) böl:`, `Luego divide entre cuántos números hay (${N}):`),
+          ])
+        }
+        if (ask === 'range') return stepsHelp([
+          stp(lang, say(lang, 'the biggest number', 'en büyük sayı', 'el número mayor'), sorted[N - 1], 'The range is the gap between the two ends. Which is the biggest?', 'Açıklık, iki uç arasındaki fark. En büyüğü hangisi?', 'El rango es la distancia entre los extremos. ¿Cuál es el mayor?'),
+          stp(lang, say(lang, 'the smallest number', 'en küçük sayı', 'el número menor'), sorted[0], 'And the smallest?', 'Ya en küçüğü?', '¿Y el menor?'),
+          stp(lang, `${Dn(sorted[N - 1])} − ${Dn(sorted[0])}`, ans, 'Range = biggest − smallest:', 'Açıklık = en büyük − en küçük:', 'Rango = mayor − menor:')])
+        if (N % 2) return stepsHelp([
+          stp(lang, `(${N} + 1) ÷ 2`, (N + 1) / 2, `There are ${N} numbers. The median is the middle one once they are in order. Which place is it?`, `${N} sayı var. Ortanca, sıralanınca ortada kalan. Kaçıncı sırada?`, `Hay ${N} números. La mediana es la del medio una vez ordenados. ¿Qué lugar es?`),
+          stp(lang, say(lang, `number ${(N + 1) / 2} in the list`, `listede ${(N + 1) / 2}. sayı`, `el número ${(N + 1) / 2} de la lista`), ans, say(lang, `In order: ${inOrder}. Count in to that place:`, `Sıralı hâli: ${inOrder}. O sıraya kadar say:`, `Ordenados: ${inOrder}. Cuenta hasta ese lugar:`))])
+        return stepsHelp([
+          stp(lang, `${N} ÷ 2`, N / 2, `There are ${N} numbers, so there are two in the middle. The first of them is in this place:`, `${N} sayı var, yani ortada iki sayı var. Bunlardan ilki şu sırada:`, `Hay ${N} números, así que hay dos en el medio. El primero está en este lugar:`),
+          stp(lang, say(lang, `number ${N / 2} in the list`, `listede ${N / 2}. sayı`, `el número ${N / 2} de la lista`), sorted[N / 2 - 1], say(lang, `In order: ${inOrder}. The first middle number:`, `Sıralı hâli: ${inOrder}. İlk orta sayı:`, `Ordenados: ${inOrder}. El primer número del medio:`)),
+          stp(lang, say(lang, `number ${N / 2 + 1} in the list`, `listede ${N / 2 + 1}. sayı`, `el número ${N / 2 + 1} de la lista`), sorted[N / 2], 'And the second middle number:', 'Ve ikinci orta sayı:', 'Y el segundo número del medio:'),
+          stp(lang, `(${Dn(sorted[N / 2 - 1])} + ${Dn(sorted[N / 2])}) ÷ 2`, ans, 'The median is halfway between them:', 'Ortanca, ikisinin tam ortası:', 'La mediana está justo a medio camino entre ellos:')])
+      })(),
       hint_steps: [ask === 'mean' ? say(lang, 'Add them all up.', 'Hepsini topla.', 'Súmalos todos.') : say(lang, 'Put them in order first.', 'Önce sıraya diz.', 'Primero ordénalos.'),
                    ask === 'mean' ? say(lang, `Then divide by how many numbers there are (${N}).`, `Sonra sayı adedine (${N}) böl.`, `Luego divide entre cuántos números hay (${N}).`)
                      : ask === 'median' ? say(lang, 'The median is in the middle; with two middle numbers, it is halfway between them.', 'Ortanca tam ortadaki; iki orta sayı varsa, tam ortalarıdır.', 'La mediana está en el centro; si hay dos en medio, es el punto medio entre ellos.')
@@ -9716,6 +9745,11 @@ function y8Statistics(level, lang) {
       topic: T, level,
       question_text: say(lang, `The table shows ${what}. What is the mean?`, `Tablo ${what} gösteriyor. Aritmetik ortalama kaçtır?`, `La tabla muestra ${what}. ¿Cuál es la media?`),
       format: Number.isInteger(ans) ? 'numeric' : 'decimal', correct_answer: ans, operandKey: `s8:f:${vals.join(',')}:${f.join(',')}`,
+      ...stepsHelp([
+        ...vals.map((v, i) => stp(lang, `${v} × ${f[i]}`, v * f[i], i === 0 ? 'Multiply each value by how often it happened. First:' : 'Next one:', i === 0 ? 'Her değeri kaç kez görüldüğüyle çarp. Önce:' : 'Sıradaki:', i === 0 ? 'Multiplica cada valor por cuántas veces aparece. Primero:' : 'Siguiente:')),
+        stp(lang, vals.map((v, i) => v * f[i]).join(' + '), total, 'Add those up: the total of everything:', 'Bunları topla: her şeyin toplamı:', 'Súmalos: el total de todo:'),
+        stp(lang, `${total} ÷ ${N}`, ans, `Divide by the total of the frequencies (${N}) — not by 4:`, `Sıklıkların toplamına (${N}) böl — 4'e değil:`, `Divide entre la suma de las frecuencias (${N}), no entre 4:`),
+      ], { kind: 'chart', shape: 'table', cols: vals.map(String), rows: [{ label: say(lang, 'Frequency', 'Sıklık', 'Frecuencia'), cells: f }] }),
       hint_steps: [say(lang, 'Multiply each value by how often it happened, and add those up.', 'Her değeri kaç kez görüldüğüyle çarp ve bunları topla.', 'Multiplica cada valor por cuántas veces aparece y súmalo todo.'),
                    say(lang, 'Divide by the total of the frequencies — not by 4.', 'Sıklıkların toplamına böl — 4\'e değil.', 'Divide entre la suma de las frecuencias, no entre 4.')],
       visual: { kind: 'chart', shape: 'table', cols: vals.map(String), rows: [{ label: say(lang, 'Frequency', 'Sıklık', 'Frecuencia'), cells: f }] },
@@ -9730,6 +9764,13 @@ function y8Statistics(level, lang) {
         topic: T, level,
         question_text: say(lang, `${n1} girls have a mean height of ${m1} cm and ${n2} boys have a mean height of ${m2} cm. What is the mean height of all ${n1 + n2}?`, `${n1} kızın boy ortalaması ${m1} cm, ${n2} erkeğinki ${m2} cm. ${n1 + n2} kişinin boy ortalaması kaç cm?`, `${n1} chicas miden de media ${m1} cm y ${n2} chicos ${m2} cm. ¿Cuál es la altura media de los ${n1 + n2}?`),
         format: 'numeric', correct_answer: tot / (n1 + n2), operandKey: `s8:c:${n1}:${m1}:${n2}:${m2}`,
+        ...stepsHelp([
+          stp(lang, `${n1} × ${m1}`, n1 * m1, 'The mean of two groups is NOT halfway between the two means: the bigger group counts more. Start with the first group\'s total height (number × mean):', 'İki grubun ortalaması iki ortalamanın tam ortası DEĞİL: kalabalık grup daha çok sayılır. Birinci grubun toplam boyuyla başla (kişi × ortalama):', 'La media de dos grupos NO está justo en medio de las dos medias: el grupo mayor cuenta más. Empieza por la altura total del primer grupo (número × media):'),
+          stp(lang, `${n2} × ${m2}`, n2 * m2, 'And the second group\'s total height:', 'Ve ikinci grubun toplam boyu:', 'Y la altura total del segundo grupo:'),
+          stp(lang, `${n1 * m1} + ${n2 * m2}`, tot, 'Everyone\'s total height:', 'Herkesin toplam boyu:', 'La altura total de todos:'),
+          stp(lang, `${n1} + ${n2}`, n1 + n2, 'How many people altogether?', 'Toplam kaç kişi?', '¿Cuántas personas en total?'),
+          stp(lang, `${tot} ÷ ${n1 + n2}`, tot / (n1 + n2), 'Share the total height out between everyone:', 'Toplam boyu herkese paylaştır:', 'Reparte la altura total entre todos:'),
+        ]),
         hint_steps: [say(lang, 'The mean of two groups is NOT halfway between the two means — the bigger group counts more.', 'İki grubun ortalaması iki ortalamanın tam ortası DEĞİL — kalabalık grup daha çok sayılır.', 'La media de dos grupos NO es el punto medio de las dos medias: el grupo mayor cuenta más.'),
                      say(lang, 'Find each group\'s total height (number × mean), add, then divide by everyone.', 'Her grubun toplam boyunu bul (kişi × ortalama), topla, sonra herkese böl.', 'Halla la altura total de cada grupo (número × media), súmalas y divide entre todos.')],
       }
@@ -9749,6 +9790,10 @@ function y8Statistics(level, lang) {
       topic: T, level,
       question_text: say(lang, `Two fair dice are rolled and the scores added. What is the probability of a total of ${T2}${orLess ? ' or less' : ''}?`, `Hilesiz iki zar atılıp sonuçlar toplanıyor. Toplamın ${T2}${orLess ? ' ya da daha az' : ''} olma olasılığı nedir?`, `Se lanzan dos dados y se suman. ¿Cuál es la probabilidad de un total de ${T2}${orLess ? ' o menos' : ''}?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `s8:d:${T2}:${orLess}`,
+      ...stepsHelp([
+        stp(lang, say(lang, `ways to score ${T2}${orLess ? ' or less' : ''}`, `${T2}${orLess ? ' ya da daha az' : ''} yapan yollar`, `formas de sumar ${T2}${orLess ? ' o menos' : ''}`), count, `List the pairs of dice that give ${T2}${orLess ? ' or less' : ''}: (2, 5) and (5, 2) count as different pairs. How many pairs are there?`, `${T2}${orLess ? ' ya da daha azını' : ''} veren zar çiftlerini listele: (2, 5) ile (5, 2) farklı çiftler sayılır. Kaç çift var?`, `Haz la lista de parejas de dados que dan ${T2}${orLess ? ' o menos' : ''}: (2, 5) y (5, 2) cuentan como parejas distintas. ¿Cuántas hay?`),
+        stp(lang, '6 × 6', 36, 'And how many ways can two dice land altogether? Put the first over this, then simplify:', 'İki zar toplam kaç şekilde düşebilir? Birincisini bunun üstüne yaz, sonra sadeleştir:', '¿Y de cuántas formas pueden caer dos dados? Pon el primero sobre este y simplifica:'),
+      ], null, true),
       hint_steps: [say(lang, 'There are 6 × 6 = 36 equally likely ways for two dice to land.', 'İki zarın düşebileceği 6 × 6 = 36 eşit olasılıklı yol var.', 'Hay 6 × 6 = 36 formas igual de probables de caer.'),
                    say(lang, 'Count the pairs that give the total, then write it over 36 in lowest terms.', 'O toplamı veren çiftleri say, 36\'nın üstüne yaz ve sadeleştir.', 'Cuenta las parejas que dan ese total, ponlo sobre 36 y simplifica.')],
     }
@@ -9765,6 +9810,10 @@ function y8Statistics(level, lang) {
       topic: T, level,
       question_text: say(lang, `A card is picked at random from a pack of 52. What is the probability that it is ${e}?`, `52'lik bir desteden rastgele bir kart çekiliyor. Bunun ${e} olma olasılığı nedir?`, `Se saca al azar una carta de una baraja de 52. ¿Cuál es la probabilidad de que sea ${e}?`),
       format: 'choice', options: choiceOf(right, shuffle(wrongs)), correct_answer: right.value, operandKey: `s8:k:${i}`,
+      ...stepsHelp([
+        stp(lang, say(lang, `cards that are ${e}`, `${e} olan kartlar`, `cartas que son ${e}`), c, 'The pack has 4 equal suits: hearts and diamonds are red, clubs and spades black. How many cards fit?', 'Destede eşit büyüklükte 4 renk var: kupa ve karo kırmızı, sinek ve maça siyah. Kaç kart uyuyor?', 'La baraja tiene 4 palos iguales: corazones y diamantes son rojos, tréboles y picas negros. ¿Cuántas cartas cumplen?'),
+        stp(lang, '4 × 13', 52, 'And how many cards in the pack? Put the first over this, then simplify:', 'Destede kaç kart var? Birincisini bunun üstüne yaz, sonra sadeleştir:', '¿Y cuántas cartas tiene la baraja? Pon la primera sobre esta y simplifica:'),
+      ], null, true),
       hint_steps: [say(lang, 'There are 4 suits of 13: hearts and diamonds are red, clubs and spades black.', '13\'er kartlık 4 renk var: kupa ve karo kırmızı, sinek ve maça siyah.', 'Hay 4 palos de 13: corazones y diamantes son rojos; tréboles y picas, negros.'),
                    say(lang, 'Count how many cards fit, put it over 52, and simplify.', 'Kaç kartın uyduğunu say, 52\'nin üstüne yaz ve sadeleştir.', 'Cuenta cuántas cartas cumplen, ponlo sobre 52 y simplifica.')],
     }
@@ -9790,6 +9839,10 @@ function y8Statistics(level, lang) {
         `Bir torbada ${c[0]} gri, ${c[1]} beyaz ve ${c[2]} siyah top var. ${rm[0]} gri, ${rm[1]} beyaz ve ${rm[2]} siyah çıkarılıyor. Şimdi ${col1} top çekme olasılığı nedir?`,
         `Una bolsa tiene ${c[0]} bolas grises, ${c[1]} blancas y ${c[2]} negras. Se sacan ${rm[0]} grises, ${rm[1]} blancas y ${rm[2]} negras. ¿Qué probabilidad hay ahora de sacar una ${col1}?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `s8:b:${c.join(',')}:${rm.join(',')}:${i}`,
+      ...stepsHelp([
+        stp(lang, `${c[i]} − ${rm[i]}`, left[i], `How many ${cols[i]} are left in the bag?`, `Torbada kaç ${cols[i]} kaldı?`, `¿Cuántas ${cols[i]} quedan en la bolsa?`),
+        stp(lang, `${C} − ${rm.reduce((a, b) => a + b, 0)}`, L, 'And how many balls are left altogether? Put the first over this, then simplify:', 'Torbada toplam kaç top kaldı? Birincisini bunun üstüne yaz, sonra sadeleştir:', '¿Y cuántas bolas quedan en total? Pon la primera sobre esta y simplifica:'),
+      ], null, true),
       hint_steps: [say(lang, 'Work out how many of each colour are left, and how many balls altogether.', 'Her renkten kaç top kaldığını ve toplam kaç top olduğunu bul.', 'Calcula cuántas quedan de cada color y cuántas en total.'),
                    say(lang, 'Probability = how many fit ÷ how many there are. Simplify.', 'Olasılık = uyanlar ÷ hepsi. Sadeleştir.', 'Probabilidad = las que cumplen ÷ el total. Simplifica.')],
     }
@@ -9803,6 +9856,12 @@ function y8Statistics(level, lang) {
       topic: T, level,
       question_text: say(lang, `Some students each thought of a number: ${vals.join(', ')}. How many go in the group ${lo}–${hi}?`, `Öğrenciler birer sayı tuttu: ${vals.join(', ')}. ${lo}–${hi} grubuna kaç sayı girer?`, `Unos alumnos pensaron un número cada uno: ${vals.join(', ')}. ¿Cuántos van en el grupo ${lo}–${hi}?`),
       format: 'numeric', correct_answer: ans, operandKey: `s8:g:${vals.join(',')}:${g}`,
+      ...stepsHelp([
+        stp(lang, say(lang, `in the group ${lo}–${hi}, first nine numbers`, `${lo}–${hi} grubunda, ilk dokuz sayı`, `en el grupo ${lo}–${hi}, los nueve primeros`), vals.slice(0, 9).filter(v => v >= lo && v <= hi).length,
+          `Go along the first nine numbers and tick every one from ${lo} to ${hi}, both included. How many ticks?`, `İlk dokuz sayıda ilerle ve ${lo} ile ${hi} arasındaki (ikisi dahil) her sayıyı işaretle. Kaç işaret?`, `Recorre los nueve primeros números y marca cada uno de ${lo} a ${hi}, incluidos los dos. ¿Cuántas marcas?`),
+        stp(lang, say(lang, `in the group ${lo}–${hi}, last nine numbers`, `${lo}–${hi} grubunda, son dokuz sayı`, `en el grupo ${lo}–${hi}, los nueve últimos`), vals.slice(9).filter(v => v >= lo && v <= hi).length, 'And the last nine:', 'Ve son dokuz:', 'Y los nueve últimos:'),
+        stp(lang, `${vals.slice(0, 9).filter(v => v >= lo && v <= hi).length} + ${vals.slice(9).filter(v => v >= lo && v <= hi).length}`, ans, 'Add the two counts:', 'İki sayıyı topla:', 'Suma las dos cuentas:'),
+      ]),
       hint_steps: [say(lang, `Go along the list once and tick every number from ${lo} to ${hi}, both included.`, `Listede bir kez ilerle ve ${lo}${trEk(lo, 'abl')} ${hi}${trEk(hi, 'dat')} kadar (ikisi dahil) her sayıyı işaretle.`, `Recorre la lista una vez y marca cada número de ${lo} a ${hi}, ambos incluidos.`),
                    say(lang, 'Count the ticks.', 'İşaretleri say.', 'Cuenta las marcas.')],
     }
@@ -9824,6 +9883,12 @@ function y8Statistics(level, lang) {
     topic: T, level,
     question_text: say(lang, 'Which of these could this scatter graph show?', 'Bu serpilme grafiği hangisini gösteriyor olabilir?', '¿Qué podría mostrar este diagrama de dispersión?'),
     format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `s8:x:${type}:${right.value}`,
+    ...stepsHelp([
+      stp(lang, say(lang, 'climbs = 1, falls = 2, neither = 3', 'yükselir = 1, düşer = 2, ikisi de değil = 3', 'sube = 1, baja = 2, ninguna = 3'), type === 'pos' ? 1 : type === 'neg' ? 2 : 3,
+        'Look at the dots from left to right. Do they climb (type 1), fall (type 2), or are they all over the place (type 3)? Then pick the pair of things that behaves the same way:',
+        'Noktalara soldan sağa bak. Yukarı mı çıkıyor (1 yaz), aşağı mı iniyor (2 yaz), yoksa her yere mi dağılmış (3 yaz)? Sonra aynı şekilde davranan ikiliyi seç:',
+        'Mira los puntos de izquierda a derecha. ¿Suben (escribe 1), bajan (escribe 2) o están por todas partes (escribe 3)? Luego elige la pareja de cosas que se comporta igual:'),
+    ], { kind: 'scatter', pts }, true),
     hint_steps: [say(lang, 'Do the dots go up from left to right, down, or neither?', 'Noktalar soldan sağa yukarı mı çıkıyor, aşağı mı iniyor, yoksa hiçbiri mi?', '¿Los puntos suben de izquierda a derecha, bajan, o ninguna de las dos?'),
                  say(lang, 'Pick the pair of things that behaves the same way.', 'Aynı şekilde davranan ikiliyi seç.', 'Elige la pareja de cosas que se comporta igual.')],
     visual: { kind: 'scatter', pts },
