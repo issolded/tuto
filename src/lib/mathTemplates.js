@@ -812,7 +812,7 @@ function fractionPercentChange(level, lang) {
     ]),
     hint_steps: [
       say(lang, `Work out the ${pct}% on its own first.`,
-                `Önce %${pct}'in kendisini hesapla.`,
+                `Önce %${pct}${trEk(pct, 'gen')} kendisini hesapla.`,
                 `Calcula primero el ${pct}% por separado.`),
       up
         ? say(lang, `That much is ADDED to the original — the question asks for the new time, not the extra.`,
@@ -837,7 +837,7 @@ function fractionSimplify(level, lang) {
   const options = shuffle([
     { value: correct, why: say(lang,
         `Right — top and bottom both divide by ${f}.`,
-        `Doğru — pay da payda da ${f}'e bölünür.`,
+        `Doğru — pay da payda da ${f}${trEk(f, 'dat')} bölünür.`,
         `Correcto: arriba y abajo se dividen los dos entre ${f}.`) },
     { value: `${n * 2}/${d * 2}`, why: say(lang,
         `Not all the way — ${n * 2} and ${d * 2} still share a factor.`,
@@ -906,11 +906,11 @@ function fractionAddDifferent(level, lang) {
         `Se han sumado los de arriba con los de arriba y los de abajo con los de abajo. El de abajo dice el tamaño del trozo.`) },
     { value: `${n1 + n2}/${d2}`, why: say(lang,
         `${n1}/${d1} was used as if it were ${n1}/${d2}. A ${fracName(d1)} is bigger than a ${fracName(d2)}, so it has to be rewritten first.`,
-        `${n1}/${d1}, sanki ${n1}/${d2} imiş gibi kullanılmış. ${d1}'te bir, ${d2}'de birden büyüktür; önce yeniden yazılmalı.`,
+        `${n1}/${d1}, sanki ${n1}/${d2} imiş gibi kullanılmış. ${d1}${trEk(d1, 'loc')} bir, ${d2}${trEk(d2, 'loc')} birden büyüktür; önce yeniden yazılmalı.`,
         `Se ha usado ${n1}/${d1} como si fuera ${n1}/${d2}. Un ${d1}avo es mayor que un ${d2}avo, hay que reescribirlo antes.`) },
     { value: `${sum}/${d1}`, why: say(lang,
         `The right top number over the wrong bottom — the pieces were made ${fracName(d2, true)}, so the answer is in ${fracName(d2, true)}.`,
-        `Pay doğru ama payda yanlış — parçalar ${d2}'de bire çevrildi, cevap da ${d2}'de bir cinsinden olur.`,
+        `Pay doğru ama payda yanlış — parçalar ${d2}${trEk(d2, 'loc')} bire çevrildi, cevap da ${d2}${trEk(d2, 'loc')} bir cinsinden olur.`,
         `El numerador correcto sobre el denominador equivocado: los trozos se pasaron a ${d2}avos.`) },
   ])
 
@@ -943,7 +943,7 @@ function fractionAddDifferent(level, lang) {
                 `Parçalar farklı büyüklükte, bu hâliyle toplanamaz.`,
                 `Los trozos son de tamaños distintos, así que todavía no se pueden sumar.`),
       say(lang, `${d2} divides by ${d1}, so rewrite ${n1}/${d1} in ${fracName(d2, true)} and then add the tops.`,
-                `${d2}, ${d1}'e bölünüyor; ${n1}/${d1} kesrini ${d2}'de bir cinsinden yaz, sonra payları topla.`,
+                `${d2}, ${d1}${trEk(d1, 'dat')} bölünüyor; ${n1}/${d1} kesrini ${d2}${trEk(d2, 'loc')} bir cinsinden yaz, sonra payları topla.`,
                 `${d2} se divide entre ${d1}: reescribe ${n1}/${d1} en ${d2}avos y luego suma los de arriba.`),
     ],
   }
@@ -2265,7 +2265,7 @@ function geometryAngle(level, lang) {
     hint_steps: [
       fact,
       say(lang, `Add up the ones you were given, then take that away from ${spec.total}.`,
-                `Verilenleri topla, sonra ${spec.total}'den çıkar.`,
+                `Verilenleri topla, sonra ${spec.total}${trEk(spec.total, 'abl')} çıkar.`,
                 `Suma los que te han dado y réstalo de ${spec.total}.`),
     ],
   }
@@ -3346,7 +3346,7 @@ function algSolve(level, lang) {
                   `Bir tarafa ne yaparsan diğerine de yap — denge böyle korunur.`,
                   `Lo que hagas a un lado, hazlo al otro: así sigue equilibrada.`),
         say(lang, `Take ${c} off both sides first, then divide both sides by ${m}.`,
-                  `Önce iki taraftan da ${c} çıkar, sonra iki tarafı da ${m}'e böl.`,
+                  `Önce iki taraftan da ${c} çıkar, sonra iki tarafı da ${m}${trEk(m, 'dat')} böl.`,
                   `Primero quita ${c} a los dos lados y luego divide los dos lados entre ${m}.`),
       ],
     }
@@ -3584,7 +3584,7 @@ function ratioSimplify(level, lang) {
   const options = shuffle([
     { value: correct, why: say(lang,
         `Right — both sides divide by ${f}.`,
-        `Doğru — iki taraf da ${f}'e bölünür.`,
+        `Doğru — iki taraf da ${f}${trEk(f, 'dat')} bölünür.`,
         `Correcto: los dos lados se dividen entre ${f}.`) },
     { value: `${q}:${p}`, why: say(lang,
         `The right numbers, the wrong way round. ${a} comes first in the question, so its share comes first in the answer.`,
@@ -3780,7 +3780,7 @@ function ratioProportion(level, lang) {
                 `${want} tanesini hesaplamadan önce bir tanesinin kaç ettiğini bul.`,
                 `Averigua cuánto cuesta uno antes de calcular cuánto cuestan ${want}.`),
       say(lang, `Divide by ${have} to get one, then multiply by ${want}.`,
-                `Bir tanesi için ${have}'e böl, sonra ${want} ile çarp.`,
+                `Bir tanesi için ${have}${trEk(have, 'dat')} böl, sonra ${want} ile çarp.`,
                 `Divide entre ${have} para tener uno y luego multiplica por ${want}.`),
     ],
   }
@@ -3956,7 +3956,7 @@ function avgMean(level, lang) {
                 `Ortalama, toplamı eşit paylaştırır — her ${per} aynıymış gibi.`,
                 `La media reparte el total por igual, como si cada ${per} fuera igual.`),
       say(lang, `Add all ${n} numbers together, then divide by ${n}.`,
-                `${n} sayıyı topla, sonra ${n}'e böl.`,
+                `${n} sayıyı topla, sonra ${n}${trEk(n, 'dat')} böl.`,
                 `Suma los ${n} números y divide entre ${n}.`),
     ],
   }
@@ -4006,7 +4006,7 @@ function avgReverseMean(level, lang) {
     ]),
     hint_steps: [
       say(lang, `A mean of ${mean} over ${n} ${pers} means the total was shared into ${n} equal lots of ${mean}.`,
-                `${n} ${per} için ortalama ${mean} demek, toplamın ${n} eşit ${mean}'e bölündüğü demek.`,
+                `${n} ${per} için ortalama ${mean} demek, toplamın ${n} eşit ${mean}${trEk(mean, 'dat')} bölündüğü demek.`,
                 `Una media de ${mean} en ${n} ${pers} significa que el total se repartió en ${n} partes iguales de ${mean}.`),
       say(lang, `Find the total first, then take away the ones you already know.`,
                 `Önce toplamı bul, sonra bildiklerini çıkar.`,
@@ -4553,7 +4553,7 @@ function seqMachine(level, lang) {
                     `Sigue los pasos en orden: multiplica antes de sumar.`),
       backwards
         ? say(lang, `So take ${add} off first, and only then divide by ${m}.`,
-                    `Yani önce ${add} çıkar, ancak ondan sonra ${m}'e böl.`,
+                    `Yani önce ${add} çıkar, ancak ondan sonra ${m}${trEk(m, 'dat')} böl.`,
                     `Así que quita ${add} primero y solo después divide entre ${m}.`)
         : say(lang, `Multiplying after adding would give a different answer, so the order matters.`,
                     `Toplayıp sonra çarpmak başka bir sonuç verir, sıra önemli.`,
@@ -7234,9 +7234,9 @@ function sortProps(band) {
     ...multiples.map(k => ({ id: `m${k}`, test: n => n % k === 0, en: `Multiples of ${k}`, tr: `${TR_GEN[k]} katları`, es: `Múltiplos de ${k}`, k,
       neg: { en: `Not multiples of ${k}`, tr: `${TR_GEN[k]} katı olmayanlar`, es: `No múltiplos de ${k}` },
       not: { en: `is not a multiple of ${k}`, tr: `${TR_GEN[k]} katı değil`, es: `no es múltiplo de ${k}` }, is: { en: `is a multiple of ${k}`, tr: `${TR_GEN[k]} katı`, es: `es múltiplo de ${k}` } })),
-    { id: `gt${big}`, test: n => n > big, en: `More than ${big}`, tr: `${big}'den büyük`.replace("50'den", "50'den").replace("100'den", "100'den").replace("30'den", "30'dan"), es: `Mayores que ${big}`,
-      neg: { en: `Not more than ${big}`, tr: `${big}'den büyük olmayanlar`.replace("30'den", "30'dan"), es: `No mayores que ${big}` },
-      not: { en: `is not more than ${big}`, tr: `${big}'den büyük değil`.replace("30'den", "30'dan"), es: `no es mayor que ${big}` }, is: { en: `is more than ${big}`, tr: `${big}'den büyük`.replace("30'den", "30'dan"), es: `es mayor que ${big}` } },
+    { id: `gt${big}`, test: n => n > big, en: `More than ${big}`, tr: `${big}${trEk(big, 'abl')} büyük`.replace("50'den", "50'den").replace("100'den", "100'den").replace("30'den", "30'dan"), es: `Mayores que ${big}`,
+      neg: { en: `Not more than ${big}`, tr: `${big}${trEk(big, 'abl')} büyük olmayanlar`.replace("30'den", "30'dan"), es: `No mayores que ${big}` },
+      not: { en: `is not more than ${big}`, tr: `${big}${trEk(big, 'abl')} büyük değil`.replace("30'den", "30'dan"), es: `no es mayor que ${big}` }, is: { en: `is more than ${big}`, tr: `${big}${trEk(big, 'abl')} büyük`.replace("30'den", "30'dan"), es: `es mayor que ${big}` } },
   ]
   return { props, max: band <= 2 ? 60 : band === 3 ? 100 : 150 }
 }
