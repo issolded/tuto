@@ -109,7 +109,7 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Pekiştirmede ipucu da kullanılmışsa beceri taşınmaya devam eder (bağımsız ilk geçiş sayılır).
       Biçim = anahtarın rakamsız bölümleri + anahtardaki işlem işaretleri + EKRANDAKİ işlem işaretleri (`operationSigns`):
       kesirlerde çarpma yerine bölme gelmesi ve (−6) − (−16) yerine (−2)² gelmesi (Astra bulgusu) kapandı. Kalıcı çözüm
-      üreticinin açık bir `skillKey` vermesi (şu an biçim anahtar+metinden tahmin ediliyor). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir. Matematikte soruyu tarayıcı
+      üreticinin açık bir `skillKey` vermesi (şu an biçim anahtar+metinden tahmin ediliyor). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
       üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
       Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
       pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
@@ -122,7 +122,7 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       Doğrulama: sahte API ile gerçek MathScreen'de 9 yaş TR: kabul + 3/3 + gem payı, "Şimdi değil", hepsi
       doğru (teklif yok), yenileyince pekiştirmenin sürmesi, telefon ve geniş ekran. **Açık:** gerçek
       Supabase/Railway ile uçtan uca denenmedi (migration bekliyor); kağıt modunda yok; sonuç ekranı
-      yenilenirse teklif kaybolur (mesaj 30 dk sonra yine gider); konu adları ebeveyn mesajında İngilizce
+      yenilenirse teklif 25 dk içinde geri gelir (`tuto_math_result_v1`; pekiştirme sonucu sunucuya ulaşmadıysa "Tekrar kaydet" de saklanır, sunucu pekiştirmeyi bir kez öder); konu adları ebeveyn mesajında İngilizce
       müfredat adı.
 - [ ] Matematik yardımı 9-12 yaş, içerik hazır, ekrana bağlı değil (2026-09-30, Claude; `claude/math-hint-quality`).
       Yeni araç yok: ekranda hazır olan `stepsHelp` (çocuğun her satırdaki küçük işlemi yazdığı, üstünde

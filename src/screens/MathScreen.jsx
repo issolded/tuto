@@ -44,6 +44,21 @@ function readSavedSession(childId, age) {
   } catch { return null }
 }
 
+// The result screen with a review offer waiting (or a review result that did not reach the server) is
+// kept too: it is the one screen a reload used to lose, and with it the offer. The server holds the
+// parent's message for 30 minutes, so the offer is only brought back inside that window.
+const RESULT_KEY = 'tuto_math_result_v1'
+const RESULT_TTL_MS = 25 * 60 * 1000
+function readSavedResult(childId, age) {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(RESULT_KEY) || 'null')
+    if (!s || s.childId !== (childId ?? null) || Number(s.age) !== Number(age)) return null
+    if (!s.savedAt || Date.now() - s.savedAt > RESULT_TTL_MS) return null
+    if (!s.evalResult || !Array.isArray(s.questions)) return null
+    return s
+  } catch { return null }
+}
+
 // ── Design tokens (6–8 skin) ────────────────────────────────────────────────
 const MATH      = '#5aa9e6'
 
@@ -2209,11 +2224,13 @@ export default function MathScreen() {
 
   // Read once, before any state is created: a reload lands here with the session it lost.
   const saved = useMemo(() => readSavedSession(child?.id, age), [])
+  const savedResult = useMemo(() => (saved ? null : readSavedResult(child?.id, age)), [])
+  const resultSavedAt = useRef(savedResult?.savedAt ?? Date.now())
 
-  const [step,          setStep]         = useState(saved?.step ?? 'welcome')
+  const [step,          setStep]         = useState(saved?.step ?? (savedResult ? 'result' : 'welcome'))
   const [mode,          setMode]         = useState(saved?.mode ?? null)        // 'paper' | 'screen'
   const [level,         setLevel]        = useState(saved?.level ?? null)
-  const [questions,     setQuestions]    = useState(saved?.questions ?? [])
+  const [questions,     setQuestions]    = useState(saved?.questions ?? savedResult?.questions ?? [])
   const [correctAns,    setCorrectAns]   = useState(saved?.correctAns ?? [])
   const [qTypes,        setQTypes]       = useState(saved?.qTypes ?? [])
   const [topic,         setTopic]        = useState(saved?.topic ?? '')
@@ -2221,7 +2238,8 @@ export default function MathScreen() {
   const [userAnswers,   setUserAnswers]  = useState(saved?.userAnswers ?? [])
   const [input,         setInput]        = useState('')
   const [flash,         setFlash]        = useState(null)        // { correct, answer }
-  const [evalResult,    setEvalResult]   = useState(null)
+  const [evalResult,    setEvalResult]   = useState(savedResult?.evalResult ?? null)
+  const [retrying,      setRetrying]     = useState(false)
   const [leveledUp,     setLeveledUp]    = useState(false)
   const [helpUsed,      setHelpUsed]     = useState(saved?.helpUsed ?? false)
   const [helpVisible,   setHelpVisible]  = useState(false)
@@ -2252,10 +2270,10 @@ export default function MathScreen() {
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
   const [buildFailed,   setBuildFailed] = useState(false)  // a session that could not be built, so the mode screen can say why
   const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
-  const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
+  const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? savedResult?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState(saved?.llmHints ?? [])         // per-question hint_steps for the LLM path, where there is no template to read them from
   const [answerFormats, setAnswerFormats] = useState(saved?.answerFormats ?? [])       // 'integer' | 'decimal' per question — decides whether the keypad offers a point
-  const [curriculumTopics, setCurriculumTopics] = useState(saved?.curriculumTopics ?? []) // the curriculum entry each question came from
+  const [curriculumTopics, setCurriculumTopics] = useState(saved?.curriculumTopics ?? savedResult?.curriculumTopics ?? []) // the curriculum entry each question came from
 
   // Keyed on the question rather than cleared at each of the several places that advance one,
   // so a new route to the next question cannot forget to reset and carry a stale guess in.
@@ -2617,6 +2635,19 @@ export default function MathScreen() {
     }
   }, [step])
 
+  // Keep the result screen while an offer or an unsaved review result is waiting on it; drop it the moment
+  // there is nothing left to come back for.
+  useEffect(() => {
+    const pending = step === 'result' && evalResult && ((evalResult.review && !evalResult.isReview) || evalResult.retry)
+    try {
+      if (pending) {
+        sessionStorage.setItem(RESULT_KEY, JSON.stringify({
+          savedAt: resultSavedAt.current, childId: child?.id ?? null, age, questions, templateProblems, curriculumTopics, evalResult,
+        }))
+      } else if (step !== 'welcome') sessionStorage.removeItem(RESULT_KEY)
+    } catch { /* private mode or quota — the offer simply will not survive a reload */ }
+  }, [step, evalResult, questions, templateProblems, curriculumTopics]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // What this session can actually pay. The two mode cards promised "+30 Gems" and
   // "+20 Gems", which stopped being true when the amount moved to the server: it pays the
   // parent's configured figure scaled by how the child did, and the mode no longer changes
@@ -2847,11 +2878,31 @@ export default function MathScreen() {
   const declineReview = async () => {
     const offer = evalResult?.review
     setReviewBusy(true)
+    try { sessionStorage.removeItem(RESULT_KEY) } catch { /* nothing to clean up */ }
     if (offer && child?.id) {
       try { await fetch(`${SERVER}/api/children/${child.id}/math-review/${offer.id}/decline`, { method: 'POST' }) }
       catch (e) { console.error('math-review decline:', e) }
     }
     nav('/child/home')
+  }
+
+  const postReviewFinish = async (id, body) => {
+    try {
+      const res = await fetch(`${SERVER}/api/children/${child.id}/math-review/${id}/finish`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      return res.ok ? await res.json() : null
+    } catch (e) { console.error('math-review finish:', e); return null }
+  }
+
+  // "Save again" after a review result did not reach the server.
+  const retrySave = async () => {
+    const r = evalResult?.retry
+    if (!r || retrying) return
+    setRetrying(true)
+    const data = await postReviewFinish(r.id, r.body)
+    setRetrying(false)
+    if (data) setEvalResult(prev => ({ ...prev, gems_earned: data.already ? 0 : data.gems_earned, savedAlready: !!data.already, retry: null }))
   }
 
   const finishReview = async (finalAnswers) => {
@@ -2862,29 +2913,26 @@ export default function MathScreen() {
       correct: sameAnswer(finalAnswers[i], correctAns[i]),
     }))
     const numCorrect = results.filter(r => r.correct).length
-    let data = null
-    try {
-      const res = await fetch(`${SERVER}/api/children/${child.id}/math-review/${review.id}/finish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // The questions go with the marks: they are made on this screen and exist nowhere else, and
-          // the gem history opens the practice from what is stored here.
-          results: results.map((r, i) => ({
-            idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i), help_shown: helpShownQs.has(i),
-            question: r.question, child_answer: r.child_answer, correct_answer: r.correct_answer,
-            topic_name: curriculumTopics[i]?.name ?? null,
-          })),
-        }),
-      })
-      if (res.ok) data = await res.json()
-    } catch (e) { console.error('math-review finish:', e) }
+    // The marks and questions are kept with the result: if the request does not get through, the screen can
+    // send exactly the same thing again (the server pays a review once, whatever happens to the answer).
+    const finishBody = {
+      // The questions go with the marks: they are made on this screen and exist nowhere else, and
+      // the gem history opens the practice from what is stored here.
+      results: results.map((r, i) => ({
+        idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i), help_shown: helpShownQs.has(i),
+        question: r.question, child_answer: r.child_answer, correct_answer: r.correct_answer,
+        topic_name: curriculumTopics[i]?.name ?? null,
+      })),
+    }
+    const data = await postReviewFinish(review.id, finishBody)
     setReview(null)
     setEvalResult({
       results, isReview: true, topic,
       accuracy: Math.round((numCorrect / questions.length) * 100),
       encouragement: t(numCorrect === questions.length ? 'math_review_win' : 'math_review_some', language),
-      gems_earned: data ? data.gems_earned : null, capped: false,
+      gems_earned: data ? (data.already ? 0 : data.gems_earned) : null, capped: false,
+      savedAlready: !!data?.already,
+      retry: data ? null : { id: review.id, body: finishBody },
     })
     setStep('result')
   }
@@ -3652,15 +3700,28 @@ export default function MathScreen() {
                 {evalResult.capped ? t('math_capped', language) : t('math_earned', language)}
               </div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>
-                {evalResult.gems_earned == null ? '—' : evalResult.capped ? '🌙' : `+${evalResult.gems_earned}`}
+                {evalResult.gems_earned == null ? '—' : evalResult.savedAlready ? '✓' : evalResult.capped ? '🌙' : `+${evalResult.gems_earned}`}
               </div>
               <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>
                 {evalResult.gems_earned == null ? t('math_save_failed', language)
+                  : evalResult.savedAlready ? t('math_saved', language)
                   : evalResult.capped ? t('math_come_back', language)
                   : `${t('math_gems_word', language)} ⭐`}
               </div>
             </div>
           </div>
+
+          {evalResult.retry && (
+            <button
+              className="math-press"
+              disabled={retrying}
+              onClick={retrySave}
+              style={{
+                background: '#fff', color: MATH, border: `2px solid ${MATH}`, borderRadius: 16, padding: '12px 18px',
+                fontFamily: FRED, fontSize: 16, fontWeight: 600, cursor: 'pointer', opacity: retrying ? .6 : 1,
+              }}
+            >↻ {t('math_retry_save', language)}</button>
+          )}
 
           {/* Level up banner */}
           {leveledUp && (

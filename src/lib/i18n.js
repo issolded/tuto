@@ -637,6 +637,8 @@ const STRINGS = {
   math_adventure:     { en: 'Math Adventure', tr: 'Matematik Macerası', es: 'Aventura de Mates' },
   math_preparing:     { en: 'Preparing your puzzles…', tr: 'Sorularını hazırlıyorum…', es: 'Preparando tus retos…' },
   math_checking:      { en: 'Checking your work…',     tr: 'Yaptıklarına bakıyorum…', es: 'Revisando lo que has hecho…' },
+  math_retry_save:    { en: 'Save again', tr: 'Tekrar kaydet', es: 'Guardar otra vez' },
+  math_saved:         { en: 'Saved', tr: 'Kaydedildi', es: 'Guardado' },
   math_save_failed:   { en: "Couldn't save — try again later", tr: 'Kaydedemedim — birazdan tekrar dene',
                         es: 'No he podido guardarlo — inténtalo más tarde' },
   math_build_failed:  { en: "I couldn't get your questions ready. Try again in a moment!",
