@@ -106,7 +106,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       yardım ekranı açılırsa beceri taşınmaya devam eder. Yeni soru aynı BİÇİMDEN üretilir (`src/lib/reviewQuestions.js`: operandKey'in rakamsız
       bölümleri; başka biçime asla düşmez, çekilemezse o soru pekiştirmeden çıkar; soru metni yasağı yok, çünkü metni hiç
       değişmeyen biçimler yalnız resimle ayrışır; şablon konusu `templateTopicFor`'dan, `problem.topic`'ten değil).
-      Pekiştirmede ipucu da kullanılmışsa beceri taşınmaya devam eder (bağımsız ilk geçiş sayılır). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir. Matematikte soruyu tarayıcı
+      Pekiştirmede ipucu da kullanılmışsa beceri taşınmaya devam eder (bağımsız ilk geçiş sayılır).
+      Biçim = anahtarın rakamsız bölümleri + anahtardaki işlem işaretleri + EKRANDAKİ işlem işaretleri (`operationSigns`):
+      kesirlerde çarpma yerine bölme gelmesi ve (−6) − (−16) yerine (−2)² gelmesi (Astra bulgusu) kapandı. Kalıcı çözüm
+      üreticinin açık bir `skillKey` vermesi (şu an biçim anahtar+metinden tahmin ediliyor). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir. Matematikte soruyu tarayıcı
       üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
       Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
       pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
