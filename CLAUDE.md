@@ -99,7 +99,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       önce hatalı/geçilenler, beceri başına bir soru, sonra kalanlar; yalnız şablon soruları (LLM sorusu
       yeniden üretilemez); soruları sunucu seçer, **metni istemci aynı şablondan üretir** (`startReview`).
       Sonuç ekranında Done yerine "Pekiştirelim (n)" + "Şimdi değil"; hepsi doğruysa Done aynen kalır.
-      **Gem:** ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
+      **Gem (Astra incelemesi sonrası, 2026-10-02):** yalnız ilk turda HİÇ gem almamış (yanlış/geçilen) sorular
+      0,5 soru payı kazandırır (pekiştirmede yardımla bulunursa 0,25) — tek yanlışla doğru bulanın aldığını geçmez;
+      yardım ekranıyla bulunan sorular pekiştirmeye girer ama gem vermez (aksi hâlde iki yanlış, bir yanlıştan çok
+      kazandırıyordu). Havuz: yanlış/geçilen + yardım ekranı gösterilmiş sorular (`help_shown`); pekiştirmede yeniden
+      yardım ekranı açılırsa beceri taşınmaya devam eder. Yeni soru aynı BİÇİMDEN üretilir (operandKey'in ilk bölümleri,
+      `startReview`). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir. Matematikte soruyu tarayıcı
+      üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
+      Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
       pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
       sebebi `math_review` (günlük matematik sayacına girmez). Seviyeyi/ilk skoru etkilemez, pekiştirme
       cevapları `math_attempts`'e değil `math_reviews.result`'a yazılır (merdiven son oturumu yanlış okumasın).

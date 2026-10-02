@@ -4,15 +4,16 @@ import { reviewCandidates, reviewShare, reviewOutcome, carryTopics, REVIEW_MAX }
 
 const a = (idx, topic_id, o = {}) => ({ idx, topic_id, topic_name: topic_id, source: 'template', correct: true, help_used: false, wrong_tries: 0, ...o })
 
-test('wrong, skipped and two-wrong-tries questions qualify; clean, hinted and one-slip ones do not', () => {
+test('wrong, skipped and help-shown questions qualify; clean, hint-only and nudge-only ones do not', () => {
   const picks = reviewCandidates([
-    a(0, 't0'),                                             // clean
-    a(1, 't1', { correct: false, help_used: true }),        // wrong / skipped
-    a(2, 't2', { help_used: true, wrong_tries: 1 }),        // one slip, then right: already paid half, found it
-    a(3, 't3', { help_used: true, wrong_tries: 2 }),        // two wrong options, then right
-    a(4, 't4', { help_used: true }),                        // opened the hint only
+    a(0, 't0'),                                                          // clean
+    a(1, 't1', { correct: false, help_used: true }),                     // wrong / skipped
+    a(2, 't2', { help_used: true, wrong_tries: 1 }),                     // one slip, back to the question, right: no help shown
+    a(3, 't3', { help_used: true, wrong_tries: 2, help_shown: true }),   // two wrong options, help shown, then right
+    a(4, 't4', { help_used: true }),                                     // opened the hint only
+    a(5, 't5', { help_used: true, wrong_tries: 1, help_shown: true }),   // hint, one wrong, help shown, then right
   ])
-  assert.deepEqual(picks.map(p => p.idx), [1, 3])
+  assert.deepEqual(picks.map(p => p.idx), [1, 3, 5])
   assert.equal(picks[0].earned, 0)
   assert.equal(picks[1].earned, 0.5)
 })
@@ -39,29 +40,29 @@ test('nothing to review in a clean session', () => {
   assert.deepEqual(reviewCandidates(null), [])
 })
 
-test('a review wins back half of what the first round did not pay, never more', () => {
+test('the review pays only for questions the first round paid nothing for, and never more than one wrong try would', () => {
   const miss = { idx: 1, earned: 0 }
-  const slow = { idx: 2, earned: 0.5 }
+  const helped = { idx: 2, earned: 0.5 }
   assert.equal(reviewShare(miss, { correct: true }), 0.5)
-  assert.equal(reviewShare(slow, { correct: true }), 0.25)
   assert.equal(reviewShare(miss, { correct: true, help_used: true }), 0.25)
   assert.equal(reviewShare(miss, { correct: false }), 0)
   assert.equal(reviewShare(miss, undefined), 0)
-  // First round plus review never exceeds one question's worth, whichever way it went.
-  for (const p of [miss, slow]) {
-    assert.ok(p.earned + reviewShare(p, { correct: true }) <= 0.75 + 1e-9)
-  }
+  // Found with help in the first round: practised, not paid. Otherwise two wrong tries would earn more than one.
+  assert.equal(reviewShare(helped, { correct: true }), 0)
+  // A miss that is skipped and then fixed ends level with a child who was wrong once and then right (0.5), no higher.
+  assert.ok(reviewShare(miss, { correct: true }) <= 0.5)
 })
 
-test('outcome counts only picked questions, once each, and names what is still missed', () => {
-  const picks = [{ idx: 1, earned: 0, topic_id: 'a' }, { idx: 3, earned: 0.5, topic_id: 'b' }]
+test('outcome counts only picked questions, once each, and keeps skills that were still found only with help', () => {
+  const picks = [{ idx: 1, earned: 0, topic_id: 'a' }, { idx: 3, earned: 0.5, topic_id: 'b' }, { idx: 4, earned: 0, topic_id: 'c' }]
   const out = reviewOutcome(picks, [
-    { idx: 1, correct: true }, { idx: 1, correct: true },   // repeated: counted once
-    { idx: 3, correct: false }, { idx: 9, correct: true },  // not picked: ignored
+    { idx: 1, correct: true }, { idx: 1, correct: true },                 // repeated: counted once
+    { idx: 3, correct: false }, { idx: 9, correct: true },                // not picked: ignored
+    { idx: 4, correct: true, help_used: true, help_shown: true },         // right, but with the help panel open again
   ], 10)
-  assert.equal(out.share, 0.05)
-  assert.equal(out.correct, 1)
-  assert.deepEqual(out.missed.map(p => p.topic_id), ['b'])
+  assert.equal(out.share, 0.075)
+  assert.equal(out.correct, 2)
+  assert.deepEqual(out.missed.map(p => p.topic_id), ['b', 'c'])
 })
 
 test('carried skills are named once', () => {

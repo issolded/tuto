@@ -8,9 +8,10 @@ export const REVIEW_MAX = 5
 // A review that is offered and never answered is closed after this long and reported as it is.
 export const REVIEW_WINDOW_MS = 30 * 60 * 1000
 
-// The questions a review draws from, ranked: wrong or skipped first, then the ones the child
-// needed two wrong tries to get right. A question answered right after one slip is left alone —
-// it already paid half and the child did find it. Only questions a template made can be asked
+// The questions a review draws from, ranked: wrong or skipped first, then the ones the child got
+// right only with the help panel in front of them (found with a worked solution is not found
+// alone, and the review is the first unaided check). A question answered right after a nudge back
+// to the question, with no help shown, is left alone. Only questions a template made can be asked
 // again (a fresh one of the same kind), so the model's questions never qualify. One question per
 // skill first, so five misses on fractions do not crowd out the others; leftovers fill the rest.
 export function reviewCandidates(attempts, max = REVIEW_MAX) {
@@ -20,7 +21,9 @@ export function reviewCandidates(attempts, max = REVIEW_MAX) {
     if (!a || a.source !== 'template' || typeof a.topic_id !== 'string' || !a.topic_id) return
     const tries = Math.max(0, Math.min(9, Math.trunc(Number(a.wrong_tries) || 0)))
     const missed = a.correct !== true
-    if (!missed && tries < 2) return
+    // Two wrong tries always show the help panel; `help_shown` is the direct record of it.
+    const helped = a.help_shown === true || tries >= 2
+    if (!missed && !helped) return
     // `idx` is the question's place in the session as the screen counts it; `pos` only the place
     // in this list, which differs when the screen dropped a question it could not attribute.
     const idx = Number.isInteger(a.idx) && a.idx >= 0 ? a.idx : pos
@@ -46,14 +49,15 @@ export function reviewCandidates(attempts, max = REVIEW_MAX) {
   return picked.sort((x, y) => x.idx - y.idx).map(({ rank: _r, ...p }) => p)
 }
 
-// What the review can give back. Each question wins back half of what the first round did not
-// pay for it — a miss is worth 0.5, a question that took two wrong tries 0.25 — and finding it
-// with help in the review halves that again. Never more than a question was worth in the first
-// place, so being wrong first is never the cheaper way to the same gems.
+// What the review can give back, and only for questions the first round paid NOTHING for (wrong or
+// skipped): half a question, or a quarter when it is found with help again. That is exactly what
+// one wrong try and then a right answer pays in the first round, so it is never more than that.
+// Questions found with help in the first round are practised but pay nothing here: giving them a
+// share made two wrong tries worth more than one, and a child who was wrong twice earned more.
 export function reviewShare(pick, result) {
-  const gap = 1 - (Number(pick?.earned) || 0)
   if (!result || result.correct !== true) return 0
-  return gap * 0.5 * (result.help_used ? 0.5 : 1)
+  if ((Number(pick?.earned) || 0) !== 0) return 0
+  return 0.5 * (result.help_used ? 0.5 : 1)
 }
 
 // results: [{ idx, correct, help_used }] from the child; only questions that were picked count,
@@ -71,7 +75,8 @@ export function reviewOutcome(picks, results, total) {
     const r = byIdx.get(p.idx)
     share += reviewShare(p, r)
     if (r?.correct === true) correct++
-    else missed.push(p)
+    // Found only with the help panel open again is not found alone: the skill stays on the list for the next session.
+    if (r?.correct !== true || r?.help_shown === true) missed.push(p)
   }
   return { share: share / n, correct, asked: picks.length, missed }
 }
@@ -118,9 +123,9 @@ export function mathSessionNotice(name, s, language, review) {
     if (review.state === 'done') {
       const g = review.gems > 0
       tail = say(language,
-        `They then went back over ${review.asked} they'd missed — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${review.correct < review.asked ? owed.en : ''}`,
-        `Sonra kaçırdığı ${review.asked} soruyu tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${review.correct < review.asked ? owed.tr : ''}`,
-        `Después repasó ${review.asked} que había fallado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${review.correct < review.asked ? owed.es : ''}`)
+        `They then went back over ${review.asked} they'd missed — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${owed.en}`,
+        `Sonra kaçırdığı ${review.asked} soruyu tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${owed.tr}`,
+        `Después repasó ${review.asked} que había fallado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${owed.es}`)
       en = `, then reviewed ${review.correct}/${review.asked}`; tr = `, sonra pekiştirdi ${review.correct}/${review.asked}`
     } else if (review.state === 'declined') {
       tail = say(language,

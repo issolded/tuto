@@ -941,6 +941,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const [arrowInput,   setArrowInput]   = useState('')
   const [solvedArrows, setSolvedArrows] = useState({})
   const [tutoBubble,   setTutoBubble]   = useState(null)
+  const [stepMiss,     setStepMiss]     = useState({})   // wrong tries per step of a worked chain, so a stuck child is shown the step
   const [hintsRevealed, setHintsRevealed] = useState(0) // gradual reveal: nudge → half → full
   const [dealt,         setDealt]         = useState(0) // items handed out in the sharing visual
 
@@ -1199,7 +1200,22 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
             : say(language, 'All done! Now type that in as your answer 💪', 'Bitti! Şimdi bunu cevap olarak yaz 💪', '¡Listo! Ahora escríbelo como respuesta 💪'))
           : say(language, 'Yes! Next one 👇', 'Evet! Sıradaki 👇', '¡Sí! La siguiente 👇'))
       } else {
-        setTutoBubble(say(language, 'Not quite — try that one again 🔢', 'Tam değil — bunu bir daha dene 🔢', 'Casi — prueba esa otra vez 🔢'))
+        // A child who is stuck on a step of the HELP has nowhere further to go: the same line, again. After
+        // two wrong tries the step is shown, worked, and the next one is theirs.
+        const misses = (stepMiss[active] || 0) + 1
+        setStepMiss(m => ({ ...m, [active]: misses }))
+        if (misses >= 2) {
+          const st = steps[active]
+          const line = `${st.q ? `${st.q} = ` : ''}${show(st.a)}`
+          const last = active === steps.length - 1
+          setSolvedArrows({ ...solvedArrows, [active]: st.a })
+          setTutoBubble(say(language,
+            `Let's do this one together: ${line}. ${last ? (stepsHelp.pick ? 'Now pick your answer 💪' : 'Now type that in as your answer 💪') : 'Now the next one 👇'}`,
+            `Bunu birlikte yapalım: ${line}. ${last ? (stepsHelp.pick ? 'Şimdi cevabını seç 💪' : 'Şimdi bunu cevap olarak yaz 💪') : 'Şimdi sıradaki sende 👇'}`,
+            `Hagamos esta juntos: ${line}. ${last ? (stepsHelp.pick ? 'Ahora elige tu respuesta 💪' : 'Ahora escríbelo como respuesta 💪') : 'Ahora la siguiente es tuya 👇'}`))
+        } else {
+          setTutoBubble(say(language, 'Not quite — try that one again 🔢', 'Tam değil — bunu bir daha dene 🔢', 'Casi — prueba esa otra vez 🔢'))
+        }
       }
       setArrowInput('')
     }
@@ -2225,6 +2241,9 @@ export default function MathScreen() {
   // from "one slip, then right". `review` is set while a review round is on screen —
   // { id, picks } — and `reviewBusy` while it is being set up or turned down.
   const [wrongCounts,   setWrongCounts]  = useState(() => saved?.wrongCounts ?? {})
+  // Questions whose help panel was actually shown (a nudge back to the question does not count): the
+  // review round takes these, because the answer was found with a worked solution in front of the child.
+  const [helpShownQs,   setHelpShownQs]   = useState(() => new Set(saved?.helpShownQs ?? []))
   const [review,        setReview]       = useState(() => saved?.review ?? null)
   const [reviewBusy,    setReviewBusy]   = useState(false)
   const [wrongGuess,    setWrongGuess]   = useState(null)  // the answer the child tried; numeric sharing help can stage it and Skip can record it
@@ -2582,12 +2601,12 @@ export default function MathScreen() {
         step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
         answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
         skippable: [...skippable], helpUsedQs: [...helpUsedQs],
-        hintSeenQs: [...hintSeenQs], firstWrongQs: [...firstWrongQs], struckOpts, wrongCounts, review,
+        hintSeenQs: [...hintSeenQs], firstWrongQs: [...firstWrongQs], struckOpts, wrongCounts, helpShownQs: [...helpShownQs], review,
       }))
     } catch { /* private mode or quota — the session simply will not survive a reload */ }
   }, [step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
       answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs,
-      hintSeenQs, firstWrongQs, struckOpts, wrongCounts, review])
+      hintSeenQs, firstWrongQs, struckOpts, wrongCounts, helpShownQs, review])
 
   // Reaching any of these means the session is over or was never started, and a snapshot left
   // behind would resume a session the child has already finished.
@@ -2675,6 +2694,7 @@ export default function MathScreen() {
     if (!isCorrect && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
+      setHelpShownQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
       setChoiceMistake(why)
       setWrongGuess(value)
       setGuessRound(r => r + 1)
@@ -2704,6 +2724,7 @@ export default function MathScreen() {
     if (!isCorrect && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
+      setHelpShownQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
       // The number the child typed is the most useful thing on the screen and it used to be
       // thrown away here. Help that deals out the correct answer teaches counting, not
       // dividing: the child can reach it by tapping without ever holding the question in
@@ -2789,7 +2810,24 @@ export default function MathScreen() {
       const src = templateProblems[pk.idx]
       if (!src?.topic) continue
       try {
-        const p = generateProblem(src.topic, src.level, usedOperands, language, { maxChars: cap, avoidText: usedTexts })
+        // The same kind of question, not just the same topic: "time" holds reading a clock, 24-hour time and
+        // how long a lesson lasted, and passing one proves nothing about another. The kind is the front of
+        // the operand key ('tbetween', 'time:h24', 'yrem'); numbers change, the kind does not. Generation
+        // costs microseconds, so it is simply drawn again until it matches (and falls back to any question
+        // of the topic if the kind cannot be reproduced).
+        // Shapes are the one place where the key's second part is a detail, not the kind: "poly:square:right"
+        // and "poly:rhombus:right" ask the same thing (how many right angles), so only the last part counts.
+        const kind = (k) => {
+          const parts = String(k).split(':').filter(x => !/\d/.test(x))
+          return parts[0] === 'poly' ? `poly:${parts.at(-1)}` : parts.slice(0, 3).join(':')
+        }
+        const want = kind(src.operandKey)
+        let p = null
+        for (let tries = 0; tries < 80; tries++) {
+          const cand = generateProblem(src.topic, src.level, usedOperands, language, { maxChars: cap, avoidText: usedTexts })
+          if (!p) p = cand
+          if (kind(cand.operandKey) === want) { p = cand; break }
+        }
         usedOperands.add(p.operandKey); usedTexts.add(p.question_text)
         built.push({ pk, p, curriculum: curriculumTopics[pk.idx] ?? null })
       } catch (e) { console.error('review question:', e) }
@@ -2810,7 +2848,7 @@ export default function MathScreen() {
     setQIdx(0); setUserAnswers([]); setInput(''); setFlash(null)
     setHelpVisible(false); setHintOpenFor(null); setHelpUsed(false)
     setHelpUsedQs(new Set()); setSkippable(new Set()); setHintSeenQs(new Set()); setFirstWrongQs(new Set())
-    setStruckOpts({}); setWrongCounts({}); setWrongGuess(null); setChoiceMistake(null); setGuessRound(0)
+    setStruckOpts({}); setWrongCounts({}); setHelpShownQs(new Set()); setWrongGuess(null); setChoiceMistake(null); setGuessRound(0)
     attempted.current = []
     setLeveledUp(false)
     setReview({ id: offer.id, picks: built.map(b => b.pk) })
@@ -2847,7 +2885,7 @@ export default function MathScreen() {
           // The questions go with the marks: they are made on this screen and exist nowhere else, and
           // the gem history opens the practice from what is stored here.
           results: results.map((r, i) => ({
-            idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i),
+            idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i), help_shown: helpShownQs.has(i),
             question: r.question, child_answer: r.child_answer, correct_answer: r.correct_answer,
             topic_name: curriculumTopics[i]?.name ?? null,
           })),
@@ -2940,6 +2978,7 @@ export default function MathScreen() {
               // server picks the review round from these.
               idx: i,
               wrong_tries: wrongCounts[i] ?? 0,
+              help_shown: helpShownQs.has(i),
               topic_id: topic.id,
               topic_name: topic.name ?? null,
               source: templateProblems[i] ? 'template' : 'llm',

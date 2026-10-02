@@ -5644,7 +5644,7 @@ app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
 
     const results = (Array.isArray(req.body?.results) ? req.body.results : []).slice(0, 10)
       .map(r => ({
-        idx: Number(r?.idx), correct: r?.correct === true, help_used: !!r?.help_used,
+        idx: Number(r?.idx), correct: r?.correct === true, help_used: !!r?.help_used, help_shown: r?.help_shown === true,
         // Kept only so the practice can be opened again from the gem history; nothing is marked from these.
         question: typeof r?.question === 'string' ? r.question.slice(0, 500) : null,
         child_answer: r?.child_answer == null ? null : String(r.child_answer).slice(0, 120),
@@ -5881,7 +5881,9 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
           if (!/math_reviews/i.test(revErr?.message || '')) console.error(`[MATH] review offer not stored for ${childId}: ${revErr?.message}`)
           else console.warn('[MATH] math_reviews table missing — RUN THE MIGRATION (server/migrations/2026-10-02_math_reviews.sql)')
         } else {
-          review = { id: row.id, picks, gems_possible: !capped && settings.active && settings.gems > 0 }
+          // Gems are only on offer for questions the first round paid nothing for (see reviewShare), so a review
+          // made only of questions found with help is practice, and the screen says so.
+          review = { id: row.id, picks, gems_possible: !capped && settings.active && settings.gems > 0 && picks.some(p => p.earned === 0) }
         }
       }
     }
