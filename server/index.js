@@ -290,6 +290,10 @@ async function getParentContext(parentId) {
       englishStanding(child.id).catch(() => null),
     ])
 
+    // The questions of the latest English sitting and how each went: without them "what did she get wrong?"
+    // had only per-skill percentages to answer from, and the model produced a confident guess.
+    const lastEnglish = await recentEnglishQuestions(child.id).catch(() => null)
+
     const sub = submissions || []
     const math = mathProgress || []
     const led = ledger || []
@@ -381,6 +385,9 @@ async function getParentContext(parentId) {
                 standing: `only ${k.attempts} answered so far — too few to judge, do NOT state a score or call it strong or weak` }
             : k)
         : `not enough English answered yet to say anything per skill for ${child.name}`,
+      recentEnglishQuestions: lastEnglish
+        ? lastEnglish
+        : `no English questions recorded for ${child.name} yet`,
       englishVariety: child.english_variety
         ? `${child.english_variety === 'us' ? 'American' : 'British'} English — chosen by the parent`
         : `${englishVarietyForZone(tz) === 'us' ? 'American' : 'British'} English — from the family's time zone (the parent has not chosen)`,
@@ -6523,6 +6530,40 @@ const ENGLISH_SKILLS = {
   'missing-vowel': 'spelling', misspelt: 'spelling', ending: 'spelling', 'ie-ei': 'spelling', 'silent-letter': 'spelling',
   apostrophe: 'apostrophes and short forms', contraction: 'apostrophes and short forms',
   proverb: 'sayings',
+}
+
+// The latest finished English sitting, question by question: the ones that went wrong or were skipped in
+// full (what was asked, what the child chose, what was right), and a count of the rest. Only what the
+// sitting itself recorded; the model is told to say nothing beyond it.
+async function recentEnglishQuestions(childId) {
+  const { data: s } = await supabase.from('english_sessions')
+    .select('id, band, variety, seed, question_count, sheet, created_at')
+    .eq('child_id', childId).not('finished_at', 'is', null)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (!s) return null
+  const sheet = await englishSheet(s)
+  const { data: att } = await supabase.from('english_attempts').select('question_index, chosen, correct').eq('session_id', s.id)
+  const byIndex = new Map((att || []).map(a => [a.question_index, a]))
+  const text = (q, idxs) => (Array.isArray(idxs) ? idxs : []).map(i => q.options[i]?.text).filter(Boolean)
+  const missed = []
+  let right = 0
+  sheet.forEach((q, i) => {
+    const a = byIndex.get(i)
+    if (!a) return
+    if (a.correct) { right++; return }
+    const chose = text(q, a.chosen)
+    missed.push({
+      skill: ENGLISH_SKILLS[q.type] || q.type, question_type: q.type, asked: q.prompt,
+      options: q.options.map(o => o.text),
+      child_chose: chose.length ? chose : 'skipped (said "I don\'t know")',
+      right_answer: text(q, q.correct),
+    })
+  })
+  return {
+    date: s.created_at, answered: byIndex.size, right, wrong_or_skipped: missed.length,
+    questions_missed: missed,
+    note: 'This is the real record of the latest English sitting. When asked what the child got wrong, list THESE questions in plain words (what was asked, what they chose, what was right). Do not guess beyond them and do not state per-skill percentages from this list.',
+  }
 }
 
 async function englishStanding(childId) {

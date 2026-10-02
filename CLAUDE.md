@@ -83,6 +83,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Sohbet bağlamına son İngilizce oturumun soruları (2026-10-02, Claude). Ebeveyn "neyi yanlış yapmış?" diye sorunca model yalnızca
+      beceri yüzdelerini görüyordu, "birebir detayları göremiyorum" deyip tahmin yürütüyordu. `recentEnglishQuestions`: son bitmiş
+      oturumun yanlış/geçilen soruları (ne soruldu, çocuk ne seçti, doğru neydi) bağlamda; not: bunun ötesinde tahmin yok, bu
+      listeden yüzde söyleme. Matematikte `recentMathQuestions` zaten vardı. Gerçek `handleMessage` ile (chat-probe) tekrar
+      oynatıldı: iki koşuda da dört yanlış soru doğru listelendi.
 - [x] Karalama defteri (2026-10-02, Claude). `src/components/Scratchpad.jsx`: soru ekranının sağ altında ✏️, açılınca parmakla/kalemle/fareyle
       sorunun ve şıkların üstüne yazılır; mürekkep 3 renk, silgi, hepsini sil. Tuval ekranın kendi kaydırma sütununun İÇİNDE
       (`selector` ile bulunur) ve içerik kadar uzun, yani not şıkla birlikte kayar. Kapalıyken dokunuşları geçirir (ekran aynen
