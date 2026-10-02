@@ -3245,7 +3245,13 @@ export default function MathScreen() {
           marginTop: 8, background: MATH, color: '#fff', border: 'none', borderRadius: 16,
           padding: '15px', fontFamily: FRED, fontSize: 17, fontWeight: 600, cursor: 'pointer',
         }}>{t('math_leave_stay', language)}</button>
-        <button className="math-press" onClick={() => nav('/child/home')} style={{
+        {/* The sheet says the answers so far will not be saved, so leaving throws the session away. The saved
+            copy is only for a reload or an accidental exit (pull-to-refresh, the back gesture): left behind by
+            "Leave" it brought the same half-finished question back every time maths was opened. */}
+        <button className="math-press" onClick={() => {
+          try { sessionStorage.removeItem(SESSION_KEY) } catch { /* nothing to clean up */ }
+          nav('/child/home')
+        }} style={{
           background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
           padding: '11px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
         }}>{t('math_leave_go', language)}</button>

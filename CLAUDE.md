@@ -122,7 +122,8 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       195 ÷ 15) onluk+birlik parçalarına açılır (`expandHardDivision`, `stepsHelp` içinde; tam bölünen, bölüm ≥ 10, bölen ≥ 11);
       "N'in 1/d'si" ipucu 12'ye kadar çarpım tablosuna bağlanır; Türkçe olasılık sorusu cümle başında küçük harfle ve
       bozuk ("mavi birini çekme") çıkıyordu; katı cisim "üstteki yüz = 4" çoğul; "7'nin çarpım tablosu" eki. 11-13 yaşta tek
-      satırda karışık işlem (a + b × c) bilinçli bırakıldı. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
+      satırda karışık işlem (a + b × c) bilinçli bırakıldı.
+      "Çık" (yarım oturumdan çıkma) artık yarım oturum kaydını siler: sayfa açıklaması "cevapların kaydedilmeyecek" diyordu ama kayıt kalıyor ve matematiğe her girişte aynı soru geri geliyordu. Yenileme/kazara çıkış için kayıt hâlâ 2 saat saklanır. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
       üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
       Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
       pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
