@@ -1631,6 +1631,35 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'submit_feedback',
+      description:
+        'Records what the parent said about the app so the people who build it read it: something they are ' +
+        'unhappy with, something confusing, something broken, or something they wish were different ' +
+        '("o yıldızlar seviye gibi görünüyor", "bildirimler çok fazla", "bu ekran anlaşılmıyor", "şöyle olsa ' +
+        'güzel olur"). It is the ONLY way feedback leaves this chat — there is no team inbox you can message, ' +
+        'so without this call nothing you say about passing it on is true.\n' +
+        'Call it once per thing, with their own words in parent_words (copied as written, any language) and ' +
+        'one English sentence in summary. Do NOT call it for something another tool does (a gem amount, a ' +
+        'setting, a focus topic), for a plain question, or for small talk; and do not call it just because ' +
+        'they were polite.\n' +
+        'After it returns success:true say it was RECORDED and that it will be read — nothing more. Never ' +
+        'promise a change, a fix, a date, or "in a future update"; you do not know. If it returns ' +
+        'success:false, say it could not be saved right now, do not claim it was passed on, and do not say you ' +
+        'will try again later (you cannot) — they can tell you again. If the ' +
+        'reason is daily_limit, say you already have plenty from them today.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          kind: { type: 'STRING', description: '"complaint" (unhappy/confusing), "suggestion" (a wish), "bug" (something broken or wrong), or "praise".' },
+          area: { type: 'STRING', description: 'A short English label for the part of the app, e.g. "home screen daily quota", "math hints", "parent notifications", "chat replies".' },
+          parent_words: { type: 'STRING', description: 'What the parent said, copied as they wrote it. Not a paraphrase.' },
+          summary: { type: 'STRING', description: 'One English sentence saying what they want or what is wrong.' },
+          child_id: { type: 'STRING', description: 'Only when it is about one child\'s screen or numbers: the exact id from the children list in context. Omit otherwise.' },
+        },
+        required: ['kind', 'area', 'parent_words', 'summary'],
+      },
+    },
+    {
       name: 'update_preferences',
       description:
         'Changes how much you write to this parent and what you stop to ask them about. Call it when they say ' +
@@ -1751,6 +1780,56 @@ async function addRewardTool(childId, name, gems, recurring, icon, parentId) {
 // decided here — that the child belongs to this parent, that the topic is one they actually
 // study, and that a topic already mastered is refused rather than quietly set and instantly
 // cleared on the next session.
+const FEEDBACK_KINDS = ['complaint', 'suggestion', 'bug', 'praise']
+const FEEDBACK_PER_DAY = 5
+
+// Writes what the parent said about the app. The result is what the model is allowed to report:
+// it may say "recorded" only when success is true, which is the whole point of this being a tool.
+async function submitFeedbackTool(parentId, args) {
+  const kind = String(args?.kind || '').toLowerCase()
+  const area = String(args?.area || '').trim().slice(0, 80)
+  const words = String(args?.parent_words || '').trim().slice(0, 1500)
+  const summary = String(args?.summary || '').trim().slice(0, 300)
+  if (!FEEDBACK_KINDS.includes(kind)) return { success: false, error: `kind must be one of ${FEEDBACK_KINDS.join(', ')}` }
+  if (!area || words.length < 4 || !summary) return { success: false, error: 'area, parent_words and summary are all required' }
+
+  let childId = null
+  if (args?.child_id) {
+    const { data: child } = await supabase.from('children').select('id, parent_id').eq('id', args.child_id).maybeSingle()
+    if (child && child.parent_id === parentId) childId = child.id
+  }
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: recent, error: readErr } = await supabase.from('parent_feedback')
+    .select('id, kind, area, parent_words, repeats').eq('parent_id', parentId).gte('created_at', since)
+  if (readErr) {
+    if (/parent_feedback/i.test(readErr.message || '')) console.warn('[FEEDBACK] table missing — RUN server/migrations/2026-10-02_parent_feedback.sql')
+    return { success: false, error: 'could not be saved right now' }
+  }
+
+  // The same thing said again is the same feedback, said again: it adds to the row.
+  const same = (recent || []).find(r => r.kind === kind && r.area.toLowerCase() === area.toLowerCase())
+  if (same) {
+    const { error } = await supabase.from('parent_feedback').update({
+      parent_words: `${same.parent_words}\n—\n${words}`.slice(0, 3000), repeats: (same.repeats || 1) + 1,
+      updated_at: new Date().toISOString(), status: 'new',
+    }).eq('id', same.id)
+    if (error) return { success: false, error: 'could not be saved right now' }
+    return { success: true, recorded: true, merged_with_earlier: true }
+  }
+  if ((recent || []).length >= FEEDBACK_PER_DAY) return { success: false, reason: 'daily_limit', error: 'already recorded plenty from this parent today' }
+
+  const { error } = await supabase.from('parent_feedback').insert({
+    parent_id: parentId, child_id: childId, kind, area, parent_words: words, summary,
+  })
+  if (error) {
+    console.error(`[FEEDBACK] insert failed for ${parentId}: ${error.message}`)
+    return { success: false, error: 'could not be saved right now' }
+  }
+  console.log(`[FEEDBACK] ${kind} / ${area} from parent ${parentId}: ${summary}`)
+  return { success: true, recorded: true }
+}
+
 async function setMathFocusTool(childId, topicId, parentId) {
   const { data: child } = await supabase
     .from('children').select('id, name, parent_id, age').eq('id', childId).maybeSingle()
@@ -2748,6 +2827,13 @@ async function handleMessage(parentId, replyCb, text) {
         `Çalışma konusunu, odağını veya zorluğunu ebeveynin ayarlayabileceği bir yer HENÜZ YOK. Akışı ` +
         `bozmamak ya da kibar görünmek için sahte bir başarı mesajı vermek — para/gem/ayar etkilenmese bile — ` +
         `ebeveynin sana güvenini kalıcı olarak kırar; hiçbir zaman kabul edilebilir bir kısayol değildir.\n\n` +
+        `- GERİ BİLDİRİM: ebeveyn uygulamadan, bir ekrandan, bildirimlerden ya da senin cevaplarından ` +
+        `memnuniyetsizliğini, kafa karışıklığını, bir hatayı ya da bir isteğini söylerse submit_feedback'i ` +
+        `çağır (kendi sözünü olduğu gibi parent_words'e koy). "Ekibe iletiyorum", "not aldım", "geliştiricilere ` +
+        `bildirdim" demek için TEK yol bu tool'dur: çağırmadan ya da success:false dönmüşken bunu söylemek ` +
+        `uydurmadır. success:true dönünce sadece "kaydettim, okunacak" de. "Gelecek güncellemelerde", ` +
+        `"düzeltilecek", "yakında" gibi söz VERME — ne zaman ya da olup olmayacağını bilmiyorsun. Uygulamanın ` +
+        `tasarımını sohbetten değiştiremeyeceğini de açıkça söyle.\n\n` +
         `- Parent'ın bir mesajı ("ne dedin", "anlamadım", "what?") ne anlama geldiğini genel olarak sorarsa, ` +
         `konuşma geçmişindeki SENİN bir önceki mesajını bul ve İÇERİĞİNİ açıkla/tekrarla — kendi geçmişindeki ` +
         `başka bir "kafa karıştırdım, düzelttim, hediye gönderdim" tarzı eski cevabını ASLA taklit etme veya ` +
@@ -2959,6 +3045,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectSuggestionById(args.request_id, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
+      } else if (name === 'submit_feedback') {
+        toolResult = await submitFeedbackTool(parentId, args)
       } else if (name === 'update_preferences') {
         toolResult = await updatePreferencesTool(parentId, args)
       } else if (name === 'set_autopilot') {
