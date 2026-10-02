@@ -115,7 +115,12 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       gidiyor (telafi yöntemi yalnız 100'ün üstünde); çetelede satır önce bulunur sonra sayılır; 5-8 yaş sayı doğrusu ipucu yalın.
       8 yaş (TR) oynama: "bitirme/başlama saati" soruları (tafter/tbefore) artık adım adım dakika zincirli yardıma sahip (saat
       sınırını geçerse tam saate kadar, sonra kalan; cevap tam saatse zincir yok); bölme hikâyesi ipucu "hangi sayı × b = a" der
-      (÷'yı yinelemek yöntem değildi); dizi ipucundaki "ikisinin arasındaki fark" belirsizliği düzeltildi. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
+      (÷'yı yinelemek yöntem değildi); dizi ipucundaki "ikisinin arasındaki fark" belirsizliği düzeltildi.
+      9-13 yaş oynama (2026-10-02; 9 EN, 10 TR, 11 EN, 12 TR, 13 EN, 50 soru): tek satırlık uzun bölme zinciri (216 ÷ 12,
+      195 ÷ 15) onluk+birlik parçalarına açılır (`expandHardDivision`, `stepsHelp` içinde; tam bölünen, bölüm ≥ 10, bölen ≥ 11);
+      "N'in 1/d'si" ipucu 12'ye kadar çarpım tablosuna bağlanır; Türkçe olasılık sorusu cümle başında küçük harfle ve
+      bozuk ("mavi birini çekme") çıkıyordu; katı cisim "üstteki yüz = 4" çoğul; "7'nin çarpım tablosu" eki. 11-13 yaşta tek
+      satırda karışık işlem (a + b × c) bilinçli bırakıldı. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
       üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
       Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
       pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger

@@ -301,7 +301,8 @@ test('substitution: each line is the expression evaluated with the given letters
 
 test('regular polygons: exterior angles share 360 between the sides', () => {
   for (const { p, m } of drawAny('geometry-8', Y8, /^Each exterior angle of a regular polygon is (\d+)°\. How many sides does it have\?$/)) {
-    assert.equal(p.help.steps[0].a, 360 / Number(m[1]))
+    // 360 ÷ n may be cut into tens and ones (a long division is no help as one line): the LAST line is the sides.
+    assert.equal(p.help.steps.at(-1).a, 360 / Number(m[1]))
   }
 })
 

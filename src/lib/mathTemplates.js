@@ -1198,8 +1198,11 @@ function fractionOfNumber(level, lang) {
     hint_steps: [
       say(lang, `1/${d} means splitting into ${d} equal groups.`, `1/${d}, ${d} eşit gruba ayırmak demek.`,
                 `1/${d} significa repartir en ${d} grupos iguales.`),
-      say(lang, `Split ${N} into ${d} equal groups: ${N} ÷ ${d}.`, `${N} sayısını ${d} eşit gruba ayır: ${N} ÷ ${d}.`,
-                `Reparte ${N} en ${d} grupos iguales: ${N} ÷ ${d}.`),
+      // Inside the times tables the sum is "which number times d makes N"; "N ÷ d" said again is not a way in.
+      correct_answer <= 12
+        ? say(lang, `Which number times ${d} makes ${N}?`, `${d} ile çarpınca ${N} eden sayı kaç?`, `¿Qué número por ${d} da ${N}?`)
+        : say(lang, `Split ${N} into ${d} equal groups: ${N} ÷ ${d}.`, `${N} sayısını ${d} eşit gruba ayır: ${N} ÷ ${d}.`,
+                    `Reparte ${N} en ${d} grupos iguales: ${N} ÷ ${d}.`),
     ],
   }
 }
@@ -1305,12 +1308,49 @@ function multSplitHint(a, b, lang) {
 // `pick` is for a multiple-choice question: the chain works something out and the child then
 // chooses, so its last line is not the answer and the closing words say "pick", not "type".
 function stepsHelp(steps, picture, pick = false) {
-  return { help: { kind: 'steps', steps, ...(picture ? { picture } : {}), ...(pick ? { pick: true } : {}) } }
+  return { help: { kind: 'steps', steps: expandHardDivision(steps), ...(picture ? { picture } : {}), ...(pick ? { pick: true } : {}) } }
+}
+
+// A chain that is ONE long division ("195 ÷ 15", "216 ÷ 12") hands the child the whole problem again, with
+// a sentence on top: the help is no easier than the question. Cut into the tens part and the ones part, one
+// operation a line: 15 × 10, what is left, what fits in it, then the two parts added. Only exact divisions
+// of whole numbers with a quotient of ten or more; anything else is left as the template wrote it.
+function expandHardDivision(steps) {
+  if (steps.length !== 1) return steps
+  const st = steps[0]
+  const lang = st.lang
+  if (!lang || typeof st.q !== 'string') return steps
+  const m = st.q.replace(lang === 'en' ? /,/g : /\./g, '').match(/^(\d+) ÷ (\d+)$/)
+  if (!m) return steps
+  const A = Number(m[1]), B = Number(m[2]), Q = A / B
+  if (!(A >= 100 && B >= 11 && Number.isInteger(Q) && Q >= 10 && Q === st.a)) return steps
+  const tens = Math.floor(Q / 10) * 10, ones = Q - tens
+  if (!ones) return steps
+  const N = x => num(x, lang)
+  const base = st.say.replace(/[:：]\s*$/, '.')
+  const left = A - B * tens
+  return [
+    stp(lang, `${N(B)} × ${N(tens)}`, B * tens,
+      `${base} Do it in two parts. First the tens: what is ${B} × ${tens}?`,
+      `${base} İki parçada yapalım. Önce onluklar: ${B} × ${tens} kaç eder?`,
+      `${base} Hagámoslo en dos partes. Primero las decenas: ¿cuánto es ${B} × ${tens}?`),
+    stp(lang, `${N(A)} − ${N(B * tens)}`, left,
+      `How much of ${N(A)} is still left?`, `${N(A)} sayısından geriye ne kadar kaldı?`, `¿Cuánto queda de ${N(A)}?`),
+    stp(lang, `${N(left)} ÷ ${N(B)}`, ones,
+      `How many ${B}s fit in what is left?`, `Kalanın içine kaç tane ${B} sığar?`, `¿Cuántos ${B} caben en lo que queda?`),
+    stp(lang, `${N(tens)} + ${N(ones)}`, Q,
+      'Add the two parts:', 'İki parçayı topla:', 'Suma las dos partes:'),
+  ]
 }
 
 // One step of a worked chain, with its sentence in all three languages: `q` is the sum on the
 // line, `a` what the child types, and the words say WHY this is the next thing to do.
-const stp = (lang, q, a, en, tr, es) => ({ q, a, say: say(lang, en, tr, es) })
+const stp = (lang, q, a, en, tr, es) => {
+  const step = { q, a, say: say(lang, en, tr, es) }
+  // Remembered but not part of the step the screen sees: expandHardDivision needs the language to write more lines.
+  Object.defineProperty(step, 'lang', { value: lang, enumerable: false })
+  return step
+}
 // A number as it is written on a line of working: a real minus sign, not a hyphen.
 const sgn = n => (n < 0 ? `−${-n}` : `${n}`)
 
@@ -4175,7 +4215,7 @@ function avgProbability(level, lang) {
     topic: 'averages', level,
     question_text: say(lang,
       `A bag has ${want} ${colour} marbles and ${other} others. What is the probability of picking a ${colour} one?`,
-      `Bir torbada ${want} ${colour} misket ve ${other} başka misket var. ${colour} birini çekme olasılığı nedir?`,
+      `Bir torbada ${want} ${colour} misket ve ${other} başka misket var. Rastgele bir misket çekilirse ${colour} olma olasılığı nedir?`,
       `Una bolsa tiene ${want} canicas ${colour} y ${other} más. ¿Cuál es la probabilidad de sacar una ${colour}?`),
     format: 'choice',
     options,
@@ -4509,7 +4549,7 @@ function seqRule(level, lang) {
     operandKey: `seq:rule:${table}:${off}:${which}`,
     ...stepsHelp([
       stp(lang, `${table} × ${which}`, table * which,
-        `The ${which}th number in the ${table} times table:`, `${table} çarpım tablosunun ${which}. sayısı:`, `El número ${which} de la tabla del ${table}:`),
+        `The ${which}th number in the ${table} times table:`, `${table}${trEk(table, 'gen')} çarpım tablosunun ${which}. sayısı:`, `El número ${which} de la tabla del ${table}:`),
       stp(lang, `${table * which} ${less ? '−' : '+'} ${off}`, answer,
         less ? `The rule takes ${off} off every term:` : `The rule adds ${off} to every term:`,
         less ? `Kural her terimden ${off} çıkarır:` : `Kural her terime ${off} ekler:`,
@@ -4517,7 +4557,7 @@ function seqRule(level, lang) {
     ]),
     hint_steps: [
       say(lang, `Find the ${ordinal(which)} number in the ${table} times table first.`,
-                `Önce ${table} çarpım tablosunun ${which}. sayısını bul.`,
+                `Önce ${table}${trEk(table, 'gen')} çarpım tablosunun ${which}. sayısını bul.`,
                 `Halla primero el número ${which} de la tabla del ${table}.`),
       less
         ? say(lang, `Then take ${off} off it — the rule applies to every term, not just the first.`,
@@ -6425,8 +6465,8 @@ const SOLIDS = {
 // Counting a solid the way you would with your finger: the top, the sides, the bottom. Each part
 // is a small count the child can see on the drawing; the last line adds them.
 const SOLID_LABEL = {
-  facesTop: ['faces on the top', 'üstteki yüz', 'caras de arriba'], facesSides: ['faces round the sides', 'yanlardaki yüzler', 'caras de los lados'],
-  facesBottom: ['faces on the bottom', 'alttaki yüz', 'caras de abajo'], triEnds: ['triangle ends', 'üçgen uçlar', 'triángulos de los extremos'],
+  facesTop: ['faces on the top', 'üstteki yüzler', 'caras de arriba'], facesSides: ['faces round the sides', 'yanlardaki yüzler', 'caras de los lados'],
+  facesBottom: ['faces on the bottom', 'alttaki yüzler', 'caras de abajo'], triEnds: ['triangle ends', 'üçgen uçlar', 'triángulos de los extremos'],
   rectSides: ['rectangles round the sides', 'yanlardaki dikdörtgenler', 'rectángulos de los lados'], base: ['base', 'taban', 'base'],
   triSides: ['triangle sides', 'üçgen yanlar', 'triángulos laterales'],
   edgesTop: ['edges round the top', 'üstteki ayrıtlar', 'aristas de arriba'], edgesUp: ['edges going up and down', 'dikey ayrıtlar', 'aristas verticales'],

@@ -80,3 +80,20 @@ test('time-after/before help: the last typed line is the minutes of the correct 
   assert.ok(seen >= 100, `only ${seen} samples`)
   assert.ok(crossing > 10, 'the chains that cross an o\'clock never appeared')
 })
+
+// A chain that is one long division is cut into tens and ones, one operation a line, and still ends on the answer.
+test('a lone long division in a help chain is cut into parts that add back to the answer', () => {
+  let cut = 0
+  for (const lang of ['en', 'tr', 'es']) {
+    for (let i = 0; i < 3000 && cut < 40; i++) {
+      const p = generateProblem('geometry', 14, null, lang)
+      const steps = p.help?.steps
+      if (!steps || steps.length !== 4 || !/÷/.test(steps[2].q) || !/^\d[\d.,]* × \d/.test(steps[0].q)) continue
+      cut++
+      assert.equal(steps[0].a + steps[1].a, Number(String(steps[1].q).replace(/[.,]/g, '').split(' − ')[0]))
+      assert.equal(steps[3].a, Number(p.correct_answer))
+      for (const st of steps) assert.ok(Number.isInteger(st.a) && String(st.a).length <= 9)
+    }
+  }
+  assert.ok(cut >= 5, `only ${cut} cut chains seen`)
+})
