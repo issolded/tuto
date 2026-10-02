@@ -323,10 +323,10 @@ const HELP = {
         `"${bad}": ${up(bad[at - 1])} y luego ${up(bad[at])}. ${up(bad[at])} va ANTES que ${up(bad[at - 1])} en el alfabeto, está desordenada.`)
       : L('Check each word letter by letter.', 'Her kelimeyi harf harf kontrol et.', 'Revisa cada palabra letra a letra.')
     return {
-      tip: L('In the right word, every letter comes later in the alphabet than the one before it.', 'Doğru kelimede her harf, kendinden öncekinden alfabede daha sonra gelir.', 'En la palabra correcta, cada letra va más adelante en el alfabeto que la anterior.'),
+      tip: L('In the right word, no letter comes before the one in front of it in the alphabet (a letter may repeat).', 'Doğru kelimede hiçbir harf, alfabede kendinden öncekinden önce gelmez (harf tekrar edebilir).', 'En la palabra correcta, ninguna letra va antes de la anterior en el alfabeto (una letra puede repetirse).'),
       steps: [
         show,
-        L(`${ans(it)[0]} goes ${spaced(up(ans(it)[0]))}, every letter later than the last. So that is the one.`, `${ans(it)[0]}: ${spaced(up(ans(it)[0]))}, her harf bir öncekinden sonra geliyor. Cevap o.`, `${ans(it)[0]}: ${spaced(up(ans(it)[0]))}, cada letra va después de la anterior. Esa es.`),
+        L(`${ans(it)[0]} goes ${spaced(up(ans(it)[0]))}: no letter comes before the one in front of it. So that is the one.`, `${ans(it)[0]}: ${spaced(up(ans(it)[0]))}; hiçbir harf kendinden öncekinden önce gelmiyor. Cevap o.`, `${ans(it)[0]}: ${spaced(up(ans(it)[0]))}; ninguna letra va antes de la que tiene delante. Esa es.`),
       ],
     }
   },
