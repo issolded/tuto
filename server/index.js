@@ -1,5 +1,6 @@
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean } from './mathGems.js'
+import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -5402,11 +5403,18 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
     // waiting for the other two first bought nothing and cost a whole round trip — and this
     // call is the only thing standing between tapping Maths and seeing a question, now that
     // the questions themselves take 0.04 ms to build.
-    const [{ data: child }, { data: prevRows }, standing] = await Promise.all([
+    const [{ data: child }, { data: prevRows }, standing, owed] = await Promise.all([
       supabase.from('children').select('id, age, math_focus').eq('id', childId).maybeSingle(),
       supabase.from('math_progress').select('level').eq('child_id', childId)
         .order('created_at', { ascending: false }).limit(1),
       topicStanding(childId),
+      // Skills a review left for next time (declined, left alone, or missed again), for a week.
+      // A missing table is just no carry-over.
+      supabase.from('math_reviews').select('carry_topics').eq('child_id', childId)
+        .is('carry_used_at', null).not('carry_topics', 'is', null)
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false }).limit(3)
+        .then(r => (r.error ? [] : (r.data || [])), () => []),
     ])
     if (!child) return res.status(404).json({ error: 'child not found' })
     res.json({
@@ -5416,6 +5424,9 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
       // Named so the client never has to know the thresholds, and so there is one place to
       // change what "weak" means.
       weak_topic_ids: (standing ?? []).filter(t => t.standing === 'weak').map(t => t.topic_id),
+      // What the child owes from a review they did not take or did not finish; the screen puts these
+      // ahead of the weak ones, since the child was just shown they went wrong.
+      review_topic_ids: [...new Set(owed.flatMap(r => (r.carry_topics || []).map(t => t.topic_id)))],
     })
   } catch (err) {
     console.error('[MATH-PLAN]', err.message)
@@ -5483,9 +5494,113 @@ function mathLevelBand(age) {
   return [base - 1, base]
 }
 
+// Sends the message a review was holding. Quiet when the session would not have been announced
+// in the first place (kind null).
+async function sendMathReviewMessage(row, review) {
+  if (!row.summary?.kind) return
+  const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', row.child_id).maybeSingle()
+  if (!child) return
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const m = mathSessionNotice(child.name, row.summary, parentLang(parentRow?.prefs), review)
+  await sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+}
+
+// One guarded update per way out of "offered": it only matches a row still offered, so a double
+// tap, a retry or the sweep arriving at the same moment cannot settle it twice.
+async function settleMathReview(id, childId, patch) {
+  const { data, error } = await supabase.from('math_reviews')
+    .update({ ...patch, resolved_at: new Date().toISOString() })
+    .eq('id', id).eq('child_id', childId).eq('state', 'offered')
+    .select('id, child_id, session_id, picks, summary, started_at').maybeSingle()
+  if (error) { console.error(`[MATH-REVIEW] settle failed: ${error.message}`); return null }
+  return data
+}
+
+const topicNames = (list) => carryTopics(list || []).map(t => t.topic_name).filter(Boolean)
+
+// The child opened the review: the 30 minutes run from here.
+app.post('/api/children/:childId/math-review/:id/start', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    await supabase.from('math_reviews').update({ started_at: new Date().toISOString() })
+      .eq('id', id).eq('child_id', childId).eq('state', 'offered')
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// "Not now": the held message goes out, and the skills are weighted into the next session.
+app.post('/api/children/:childId/math-review/:id/decline', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: cur } = await supabase.from('math_reviews').select('picks').eq('id', id).eq('child_id', childId).eq('state', 'offered').maybeSingle()
+    if (!cur) return res.json({ ok: true, already: true })
+    const row = await settleMathReview(id, childId, { state: 'declined', carry_topics: carryTopics(cur.picks) })
+    if (row) await sendMathReviewMessage(row, { state: 'declined', asked: row.picks.length, topics: topicNames(row.picks) })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[MATH-REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// The review was played. Marks come from the child's answers to the questions that were picked,
+// and nothing else: the picks, what the first round paid and the day's limit are all the server's.
+app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: cur } = await supabase.from('math_reviews')
+      .select('picks, summary').eq('id', id).eq('child_id', childId).eq('state', 'offered').maybeSingle()
+    // Already settled (the 30 minutes ran out, or this is a repeat): nothing more to pay.
+    if (!cur) return res.json({ gems_earned: 0, already: true })
+
+    const results = (Array.isArray(req.body?.results) ? req.body.results : []).slice(0, 10)
+      .map(r => ({ idx: Number(r?.idx), correct: r?.correct === true, help_used: !!r?.help_used }))
+    const out = reviewOutcome(cur.picks, results, cur.summary?.total)
+
+    const { data: child } = await supabase.from('children').select('task_settings').eq('id', childId).maybeSingle()
+    const settings = taskSettingsFor(child?.task_settings, 'math', MATH_DEFAULTS)
+    // Nothing is paid where the session itself paid nothing for the limit, or the parent switched
+    // maths gems off. Its own ledger reason, so the day's session count is not touched.
+    const bonus = cur.summary?.capped || !settings.active ? 0 : Math.round(settings.gems * out.share)
+
+    const row = await settleMathReview(id, childId, {
+      state: 'done', result: results, gems: bonus,
+      carry_topics: out.missed.length ? carryTopics(out.missed) : null,
+    })
+    if (!row) return res.json({ gems_earned: 0, already: true })
+
+    let gems = bonus
+    if (gems > 0) {
+      const led = await recordGems(childId, gems, 'math_review')
+      if (!led.ok) gems = 0
+    }
+    await sendMathReviewMessage(row, { state: 'done', asked: out.asked, correct: out.correct, gems, topics: topicNames(out.missed) })
+    res.json({ gems_earned: gems, correct: out.correct, asked: out.asked })
+  } catch (err) {
+    console.error('[MATH-REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// A review nobody answered is closed after the window and told as it is — otherwise a child who
+// sees the offer and puts the tablet down leaves a parent who never hears about the session.
+// Timed from when it was opened, if it was.
+async function expireMathReviews() {
+  const cutoff = new Date(Date.now() - REVIEW_WINDOW_MS).toISOString()
+  const { data, error } = await supabase.from('math_reviews')
+    .select('id, child_id, started_at, picks').eq('state', 'offered').lt('created_at', cutoff).limit(50)
+  if (error) { if (!/math_reviews/i.test(error.message || '')) console.error(`[MATH-REVIEW] sweep: ${error.message}`); return }
+  for (const r of data || []) {
+    if (r.started_at && r.started_at > cutoff) continue
+    const row = await settleMathReview(r.id, r.child_id, { state: 'expired', carry_topics: carryTopics(r.picks) })
+    if (row) await sendMathReviewMessage(row, { state: 'expired', asked: row.picks.length, started: !!row.started_at, topics: topicNames(row.picks) })
+  }
+}
+setInterval(() => { expireMathReviews().catch(err => console.error(`[MATH-REVIEW] sweep: ${err.message}`)) }, 2 * 60 * 1000).unref()
+
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session } = req.body
+  const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session, review_ok } = req.body
   try {
     // Finishing a session used to cost eleven database round trips in a row, and four of them
     // re-read a row the request already had in hand: the child row three times (here, inside
@@ -5637,44 +5752,53 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // prefs.notify_per_task has existed all along for exactly this decision with nothing
     // reading it. Default true: a parent who has never chosen hears about each session, which
     // is the behaviour they expect before they know there is a choice.
+    //
+    // Two kinds of message. A rewarded session is announced with its gems. One that hit the day's
+    // limit is told too — a child who sat down for a fourth round did something, and a parent who
+    // hears nothing about it is being told, by silence, that it never happened. It goes out as an
+    // activity, so the same gate decides it: a parent on notify_level quiet/required never sees
+    // it, and one who asked for only the day's first session doesn't either (a capped session is
+    // never the day's first). Deliberately NOT an offer: Tuto does not propose gems or a higher
+    // limit here — the parent set that limit, and offering to break it every evening would empty
+    // it of meaning. If the parent asks, the agent knows what to do with it (see the prompt).
     const perTask = parentRow?.prefs?.notify_per_task !== false
-    if (gems > 0 && (perTask || doneToday === 0)) {
-      const language = parentLang(parentRow?.prefs)
-      // Paper mode asks the model how the work actually went, and that read used to be
-      // written to a column nothing has ever selected. "Strong at addition, word problems
-      // need practice" is the sort of thing this product exists to tell a parent, so when
-      // there is one it goes in the message rather than sitting in the table unread.
-      const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
-      const head = say(language,
-        `${child.name} did their maths — ${questions_correct}/${questions_total} correct. +${gems} gems 💎`,
-        `${child.name} matematiğini yaptı — ${questions_correct}/${questions_total} doğru. +${gems} gem 💎`,
-        `${child.name} ha hecho sus mates — ${questions_correct}/${questions_total} correctas. +${gems} gems 💎`)
-      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
-        { kind: 'activity', child: child.name, detail: {
-          tr: `matematik, ${questions_correct}/${questions_total} doğru, +${gems} gem`,
-          en: `maths, ${questions_correct}/${questions_total} correct, +${gems} gems`,
-        } }).catch(() => {})
-    } else if (capped && settings.active && perTask) {
-      // The session that hit the day's limit is told too — a child who sat down for a fourth
-      // round did something, and a parent who hears nothing about it is being told, by silence,
-      // that it never happened. It goes out as an activity, so the same gate decides it: a
-      // parent on notify_level quiet/required never sees it, and one who asked for only the
-      // day's first session doesn't either (a capped session is never the day's first).
-      //
-      // Deliberately NOT an offer. Tuto does not propose gems or a higher limit here — the
-      // parent set that limit, and offering to break it every evening would empty it of
-      // meaning. If the parent asks, the agent knows what to do with it (see the prompt).
-      const language = parentLang(parentRow?.prefs)
-      const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
-      const head = say(language,
-        `${child.name} did another maths session — ${questions_correct}/${questions_total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
-        `${child.name} bir matematik daha yaptı — ${questions_correct}/${questions_total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
-        `${child.name} ha hecho otra sesión de mates — ${questions_correct}/${questions_total} correctas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
-      sendNotification(child.parent_id, note ? `${head}\n\n${note}` : head,
-        { kind: 'activity', child: child.name, detail: {
-          tr: `matematik, ${questions_correct}/${questions_total} doğru, günlük sınır dolduğu için gem yok`,
-          en: `maths, ${questions_correct}/${questions_total} correct, past the daily limit so no gems`,
-        } }).catch(() => {})
+    const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
+    const summary = {
+      correct: Number(questions_correct) || 0, total: Number(questions_total) || 0,
+      gems, capped, daily_cap: settings.dailyCap, note,
+      kind: gems > 0 && (perTask || doneToday === 0) ? 'rewarded'
+        : capped && settings.active && perTask ? 'capped' : null,
+    }
+
+    // A session with something to practise offers a review, and the message about the session
+    // waits for how that goes — one message at the end rather than one now and another later.
+    // The offer is stored first; if it cannot be (the table is not there yet, a write failed) the
+    // parent is simply told now, as before.
+    let review = null
+    if (review_ok === true && rows.length === (Number(questions_total) || -1)) {
+      const picks = reviewCandidates(attempts)
+      if (picks.length) {
+        const { data: row, error: revErr } = await supabase.from('math_reviews')
+          .insert({ child_id: childId, session_id: sessionId, picks, summary }).select('id').maybeSingle()
+        if (revErr || !row) {
+          if (!/math_reviews/i.test(revErr?.message || '')) console.error(`[MATH] review offer not stored for ${childId}: ${revErr?.message}`)
+          else console.warn('[MATH] math_reviews table missing — RUN THE MIGRATION (server/migrations/2026-10-02_math_reviews.sql)')
+        } else {
+          review = { id: row.id, picks, gems_possible: !capped && settings.active && settings.gems > 0 }
+        }
+      }
+    }
+
+    if (!review && summary.kind) {
+      const m = mathSessionNotice(child.name, summary, parentLang(parentRow?.prefs), null)
+      sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+    }
+
+    // Whatever the child owed from the last review is in this session's plan now; it is used once.
+    if (rows.length) {
+      supabase.from('math_reviews').update({ carry_used_at: new Date().toISOString() })
+        .eq('child_id', childId).is('carry_used_at', null).not('carry_topics', 'is', null)
+        .then(() => {}, () => {})
     }
 
     // A cleared focus is announced whatever else happened today. It is not routine progress —
@@ -5692,7 +5816,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       } }).catch(() => {})
     }
 
-    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange, focus_cleared: focusCleared })
+    res.json({ gems_earned: gems, capped, daily_cap: settings.dailyCap, level: newLevel, level_change: levelChange, focus_cleared: focusCleared, review })
   } catch (err) {
     console.error('[MATH]', err.message)
     res.status(500).json({ error: err.message })

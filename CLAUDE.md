@@ -81,6 +81,27 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] Pekiştirme turu (2026-10-02, Claude; `claude/math-hint-quality`). **Migration önce:**
+      `server/migrations/2026-10-02_math_reviews.sql` (`math_reviews`). Tablo yokken sunucu eski
+      davranışa düşer: teklif yok, ebeveyne mesaj hemen gider (güvenli). Ekran oturumu bitince hatalı/
+      geçilen ya da iki yanlış denemeden sonra bulunan sorulardan (tek yanlış deneme dahil değil) en çok 5
+      soruluk tur teklif edilir (`server/mathReview.js`, test `scripts/tests/math-review.test.mjs`):
+      önce hatalı/geçilenler, beceri başına bir soru, sonra kalanlar; yalnız şablon soruları (LLM sorusu
+      yeniden üretilemez); soruları sunucu seçer, **metni istemci aynı şablondan üretir** (`startReview`).
+      Sonuç ekranında Done yerine "Pekiştirelim (n)" + "Şimdi değil"; hepsi doğruysa Done aynen kalır.
+      **Gem:** ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
+      pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
+      sebebi `math_review` (günlük matematik sayacına girmez). Seviyeyi/ilk skoru etkilemez, pekiştirme
+      cevapları `math_attempts`'e değil `math_reviews.result`'a yazılır (merdiven son oturumu yanlış okumasın).
+      **Ebeveyn mesajı tek:** ilk tur mesajı teklif varsa bekler; pekiştirme bitince, "Şimdi değil"de ya da
+      30 dk sonra (başlatıldıysa başlatmadan 30 dk; `expireMathReviews`, 2 dk'da bir) tek mesajla gider.
+      Yapılmayan/yarıda kalan pekiştirmede kalan beceriler `carry_topics` olur ve bir sonraki oturumda
+      `math-plan.review_topic_ids` ile planın başına ağırlık alır (bir kez, 7 gün).
+      Doğrulama: sahte API ile gerçek MathScreen'de 9 yaş TR: kabul + 3/3 + gem payı, "Şimdi değil", hepsi
+      doğru (teklif yok), yenileyince pekiştirmenin sürmesi, telefon ve geniş ekran. **Açık:** gerçek
+      Supabase/Railway ile uçtan uca denenmedi (migration bekliyor); kağıt modunda yok; sonuç ekranı
+      yenilenirse teklif kaybolur (mesaj 30 dk sonra yine gider); konu adları ebeveyn mesajında İngilizce
+      müfredat adı.
 - [ ] Matematik yardımı 9-12 yaş, içerik hazır, ekrana bağlı değil (2026-09-30, Claude; `claude/math-hint-quality`).
       Yeni araç yok: ekranda hazır olan `stepsHelp` (çocuğun her satırdaki küçük işlemi yazdığı, üstünde
       "neden bu adım" cümlesi olan zincir) 9-12 yaşın sayısal ve seçmeli soru tiplerine yazıldı, EN/TR/ES.

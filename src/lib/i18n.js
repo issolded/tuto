@@ -610,6 +610,17 @@ const STRINGS = {
   math_answer_was:    { en: 'The answer was', tr: 'Doğrusu', es: 'La respuesta era' },
   math_new_level:     { en: 'You unlocked a new level! 🎉', tr: 'Yeni bir seviye açtın! 🎉', es: '¡Has desbloqueado un nivel nuevo! 🎉' },
   math_done:          { en: 'Done',          tr: 'Bitti', es: 'Hechas' },
+  // The practice round offered after a session: fresh questions on the ones that went wrong.
+  math_review_title:  { en: 'Want to nail the tricky ones?', tr: 'Zor gelenleri pekiştirelim mi?', es: '¿Repasamos las difíciles?' },
+  math_review_body:   { en: 'New questions on the same things. It only takes a minute.', tr: 'Aynı konulardan yeni sorular. Bir dakika sürer.', es: 'Preguntas nuevas de lo mismo. Solo lleva un minuto.' },
+  math_review_gems:   { en: 'You can win a few gems back too! 💎', tr: 'Birkaç gem de geri kazanabilirsin! 💎', es: '¡También puedes recuperar algunos gems! 💎' },
+  math_review_nogems: { en: 'No gems this time, but it makes you stronger. 💪', tr: 'Bu sefer gem yok ama seni güçlendirir. 💪', es: 'Esta vez sin gems, pero te hace más fuerte. 💪' },
+  math_review_go:     { en: 'Practise', tr: 'Pekiştirelim', es: 'Repasemos' },
+  math_review_later:  { en: 'Not now', tr: 'Şimdi değil', es: 'Ahora no' },
+  math_review_tag:    { en: 'Practice', tr: 'Pekiştirme', es: 'Repaso' },
+  math_review_win:    { en: 'You fixed them! 🌟', tr: 'Hepsini düzelttin! 🌟', es: '¡Las arreglaste todas! 🌟' },
+  math_review_some:   { en: 'Nice work, that is how you get stronger! 💪', tr: 'Güzel iş, güçlenmek böyle olur! 💪', es: '¡Buen trabajo, así se mejora! 💪' },
+  gem_math_review:    { en: 'Math Practice', tr: 'Matematik Pekiştirme', es: 'Repaso de mates' },
   math_score:         { en: 'Score',         tr: 'Puan', es: 'Puntos' },
   math_earned:        { en: 'Earned',        tr: 'Kazandın', es: 'Has ganado' },
 

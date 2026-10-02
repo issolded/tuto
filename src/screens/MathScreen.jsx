@@ -2206,6 +2206,12 @@ export default function MathScreen() {
   const [firstWrongQs,  setFirstWrongQs] = useState(() => new Set(saved?.firstWrongQs ?? []))
   const [struckOpts,    setStruckOpts]   = useState(() => saved?.struckOpts ?? {})
   const [nudge,         setNudge]        = useState(0)
+  // Wrong answers given per question, so the review round can tell "two wrong tries, then right"
+  // from "one slip, then right". `review` is set while a review round is on screen —
+  // { id, picks } — and `reviewBusy` while it is being set up or turned down.
+  const [wrongCounts,   setWrongCounts]  = useState(() => saved?.wrongCounts ?? {})
+  const [review,        setReview]       = useState(() => saved?.review ?? null)
+  const [reviewBusy,    setReviewBusy]   = useState(false)
   const [wrongGuess,    setWrongGuess]   = useState(null)  // the answer the child tried; numeric sharing help can stage it and Skip can record it
   const [choiceMistake, setChoiceMistake] = useState(null) // why the selected option was wrong; becomes the first teaching step
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
@@ -2519,7 +2525,12 @@ export default function MathScreen() {
         const lvl = clampLevelToAge(plan?.level, age)
         const w = {
           focusTopicId: plan?.focus?.topic_id ?? null,
-          weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
+          // Skills left over from a review the child did not take come first: they were just shown to
+          // have gone wrong, and the weak list is the longer memory behind them.
+          weakTopicIds: [...new Set([
+            ...(Array.isArray(plan?.review_topic_ids) ? plan.review_topic_ids : []),
+            ...(Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : []),
+          ])],
         }
         // Only adopted while the built session is still sitting unclaimed. Once the child has
         // started, `startLoading` has taken the entry and `prefetch.current` is null — and the
@@ -2556,12 +2567,12 @@ export default function MathScreen() {
         step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
         answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
         skippable: [...skippable], helpUsedQs: [...helpUsedQs],
-        hintSeenQs: [...hintSeenQs], firstWrongQs: [...firstWrongQs], struckOpts,
+        hintSeenQs: [...hintSeenQs], firstWrongQs: [...firstWrongQs], struckOpts, wrongCounts, review,
       }))
     } catch { /* private mode or quota — the session simply will not survive a reload */ }
   }, [step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
       answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs,
-      hintSeenQs, firstWrongQs, struckOpts])
+      hintSeenQs, firstWrongQs, struckOpts, wrongCounts, review])
 
   // Reaching any of these means the session is over or was never started, and a snapshot left
   // behind would resume a session the child has already finished.
@@ -2622,7 +2633,9 @@ export default function MathScreen() {
   // never the cheaper way in.
   const hasHintFor = (i) => { const all = templateProblems[i]?.hint_steps ?? llmHints[i]; return Array.isArray(all) && all.length > 0 }
   const helpOpensNow = (i) => Number(age) <= 8 || !hasHintFor(i) || hintSeenQs.has(i) || firstWrongQs.has(i)
+  const noteWrong = (i) => setWrongCounts(prev => ({ ...prev, [i]: (prev[i] ?? 0) + 1 }))
   const nudgeToHint = (i, struck = null) => {
+    noteWrong(i)
     setFirstWrongQs(prev => { const next = new Set(prev); next.add(i); return next })
     setHelpUsedQs(prev => { const next = new Set(prev); next.add(i); return next })
     if (struck != null) setStruckOpts(prev => ({ ...prev, [i]: [...(prev[i] ?? []), struck] }))
@@ -2650,6 +2663,7 @@ export default function MathScreen() {
       setChoiceMistake(why)
       setWrongGuess(value)
       setGuessRound(r => r + 1)
+      noteWrong(qIdx)
       setSkippable(prev => { const next = new Set(prev); next.add(qIdx); return next })
       return
     }
@@ -2682,6 +2696,7 @@ export default function MathScreen() {
       // was too much or too little.
       setWrongGuess(Number(String(input).trim()))
       setGuessRound(r => r + 1)
+      noteWrong(qIdx)
       // Help does not end the question — the child tries again — so under nine a wrong answer
       // was unreachable: the same question came back until it was right, and every session
       // finished at 100%. That is a loop for the child and a broken signal for everything
@@ -2717,6 +2732,7 @@ export default function MathScreen() {
 
   // ── Screen mode: evaluate locally ────────────────────────────────────────
   const doScreenEval = async (finalAnswers) => {
+    if (review) return finishReview(finalAnswers)
     setStep('evaluating')
     const numCorrect = finalAnswers.filter((a, i) => sameAnswer(a, correctAns[i])).length
     const accuracy   = Math.round((numCorrect / questions.length) * 100)
@@ -2736,7 +2752,95 @@ export default function MathScreen() {
     // child never got — and only celebrates a level the child actually moved to.
     const saved = await saveResults(evalData)
     if (saved?.level_change === 'up') setLeveledUp(true)
-    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped, level_change: saved?.level_change ?? 'same' })
+    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped, level_change: saved?.level_change ?? 'same', review: saved?.review ?? null })
+    setStep('result')
+  }
+
+  // ── Review round ───────────────────────────────────────────────────────────
+  // After a screen session the server may offer up to five fresh questions on what went wrong. The
+  // questions are made here, from the same templates and rung as the ones missed (the server only
+  // says which ones, and what the first round paid), and are played on the same screen with the
+  // same rules; the answers go back to the server, which does the marking of gems.
+  const startReview = async () => {
+    const offer = evalResult?.review
+    if (!offer || reviewBusy) return
+    setReviewBusy(true)
+    const cap = maxQuestionChars(age)
+    // Never the same sums or the same sentences as the session just played.
+    const usedOperands = new Set(templateProblems.map(p => p?.operandKey).filter(Boolean))
+    const usedTexts = new Set(questions)
+    const built = []
+    for (const pk of offer.picks) {
+      const src = templateProblems[pk.idx]
+      if (!src?.topic) continue
+      try {
+        const p = generateProblem(src.topic, src.level, usedOperands, language, { maxChars: cap, avoidText: usedTexts })
+        usedOperands.add(p.operandKey); usedTexts.add(p.question_text)
+        built.push({ pk, p, curriculum: curriculumTopics[pk.idx] ?? null })
+      } catch (e) { console.error('review question:', e) }
+    }
+    if (!built.length) { await declineReview(); return }
+    fetch(`${SERVER}/api/children/${child.id}/math-review/${offer.id}/start`, { method: 'POST' }).catch(() => {})
+
+    setQuestions(built.map(b => b.p.question_text))
+    setCorrectAns(built.map(b => b.p.topic === 'area-grid'
+      ? measureGridCells(b.p.visual?.cells)[b.p.operandKey.startsWith('grid:a:') ? 'area' : 'perimeter']
+      : b.p.correct_answer))
+    setAnswerFormats(built.map(b => b.p.format === 'choice' ? 'choice' : b.p.format === 'decimal' ? 'decimal' : 'integer'))
+    setQTypes(built.map(() => null))
+    setCurriculumTopics(built.map(b => b.curriculum))
+    setTemplateProblems(built.map(b => b.p))
+    setLlmHints(built.map(() => null))
+    setTopic(built[0].curriculum?.name || 'math')
+    setQIdx(0); setUserAnswers([]); setInput(''); setFlash(null)
+    setHelpVisible(false); setHintOpenFor(null); setHelpUsed(false)
+    setHelpUsedQs(new Set()); setSkippable(new Set()); setHintSeenQs(new Set()); setFirstWrongQs(new Set())
+    setStruckOpts({}); setWrongCounts({}); setWrongGuess(null); setChoiceMistake(null); setGuessRound(0)
+    attempted.current = []
+    setLeveledUp(false)
+    setReview({ id: offer.id, picks: built.map(b => b.pk) })
+    setEvalResult(null)
+    setReviewBusy(false)
+    setStep('screen_questions')
+  }
+
+  // "Not now": the server sends the parent's message and weights these skills into the next session.
+  const declineReview = async () => {
+    const offer = evalResult?.review
+    setReviewBusy(true)
+    if (offer && child?.id) {
+      try { await fetch(`${SERVER}/api/children/${child.id}/math-review/${offer.id}/decline`, { method: 'POST' }) }
+      catch (e) { console.error('math-review decline:', e) }
+    }
+    nav('/child/home')
+  }
+
+  const finishReview = async (finalAnswers) => {
+    setStep('evaluating')
+    const results = questions.map((q, i) => ({
+      question: q, correct_answer: correctAns[i], child_answer: finalAnswers[i],
+      attempted: finalAnswers[i] == null ? attempted.current[i] ?? null : null,
+      correct: sameAnswer(finalAnswers[i], correctAns[i]),
+    }))
+    const numCorrect = results.filter(r => r.correct).length
+    let data = null
+    try {
+      const res = await fetch(`${SERVER}/api/children/${child.id}/math-review/${review.id}/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          results: results.map((r, i) => ({ idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i) })),
+        }),
+      })
+      if (res.ok) data = await res.json()
+    } catch (e) { console.error('math-review finish:', e) }
+    setReview(null)
+    setEvalResult({
+      results, isReview: true, topic,
+      accuracy: Math.round((numCorrect / questions.length) * 100),
+      encouragement: t(numCorrect === questions.length ? 'math_review_win' : 'math_review_some', language),
+      gems_earned: data ? data.gems_earned : null, capped: false,
+    })
     setStep('result')
   }
 
@@ -2811,6 +2915,10 @@ export default function MathScreen() {
             const topic = curriculumTopics[i]
             if (!topic?.id) return null
             return {
+              // Where the question sat in the session, and how many wrong answers it took: the
+              // server picks the review round from these.
+              idx: i,
+              wrong_tries: wrongCounts[i] ?? 0,
               topic_id: topic.id,
               topic_name: topic.name ?? null,
               source: templateProblems[i] ? 'template' : 'llm',
@@ -2829,6 +2937,9 @@ export default function MathScreen() {
           questions_correct: numCorrect,
           accuracy: derivedAccuracy,
           help_used: helpUsedQs.size,
+          // Only a screen session can be followed by a review: it is the one whose questions can be
+          // asked again, fresh, from the same templates.
+          review_ok: mode === 'screen',
           // Paper mode only — the model's read on how the work went, and what to try next.
           gemini_notes: evalData.gemini_notes || null,
           next_session: evalData.next_session || null,
@@ -3228,6 +3339,12 @@ export default function MathScreen() {
             <div style={{ flex: 1, background: 'rgba(255,255,255,.32)', borderRadius: 8, height: 10, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'white', borderRadius: 8, transition: 'width 0.5s ease' }} />
             </div>
+            {review && (
+              <div style={{
+                fontFamily: FRED, fontWeight: 600, fontSize: 12.5, color: MATH, background: '#fff',
+                borderRadius: 10, padding: '3px 10px', flexShrink: 0,
+              }}>🔁 {t('math_review_tag', language)}</div>
+            )}
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,.95)', flexShrink: 0 }}>
               {qIdx + 1} / {questions.length}
             </div>
@@ -3470,7 +3587,7 @@ export default function MathScreen() {
             boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease both',
           }}>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t('math_score', language)}</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t(evalResult.isReview ? 'math_review_tag' : 'math_score', language)}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: accuracy >= 80 ? GREEN : ORANGE, lineHeight: 1.05 }}>
                 {accuracy}%
               </div>
@@ -3562,17 +3679,60 @@ export default function MathScreen() {
             </div>
           )}
 
-          <button
-            className="math-press"
-            onClick={() => nav('/child/home')}
-            style={{
-              background: MATH, color: 'white', border: 'none', borderRadius: 18,
-              padding: '16px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
-              cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', marginTop: 4,
-            }}
-          >
-            {t('math_done', language)}! 🏠
-          </button>
+          {/* After a session with something to practise: the review is offered here, where the
+              child has just seen what went wrong. "Done" stays, quieter, as "not now" — the
+              parent's message waits for whichever they choose. */}
+          {evalResult.review && !evalResult.isReview ? (
+            <div style={{
+              background: 'white', borderRadius: 22, padding: '18px 20px', marginTop: 4,
+              display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'center',
+              boxShadow: '0 4px 16px rgba(0,0,0,.06)', border: `2px solid ${MATH}`,
+            }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, lineHeight: 1.35 }}>
+                🔁 {t('math_review_title', language)}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5 }}>
+                {t('math_review_body', language)}{' '}
+                {t(evalResult.review.gems_possible ? 'math_review_gems' : 'math_review_nogems', language)}
+              </div>
+              <button
+                className="math-press"
+                disabled={reviewBusy}
+                onClick={startReview}
+                style={{
+                  background: MATH, color: 'white', border: 'none', borderRadius: 18,
+                  padding: '15px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
+                  cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', opacity: reviewBusy ? .6 : 1,
+                }}
+              >
+                {t('math_review_go', language)} ({evalResult.review.picks.length})
+              </button>
+              <button
+                className="math-press"
+                disabled={reviewBusy}
+                onClick={declineReview}
+                style={{
+                  background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
+                  padding: '10px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
+                  opacity: reviewBusy ? .6 : 1,
+                }}
+              >
+                {t('math_review_later', language)}
+              </button>
+            </div>
+          ) : (
+            <button
+              className="math-press"
+              onClick={() => nav('/child/home')}
+              style={{
+                background: MATH, color: 'white', border: 'none', borderRadius: 18,
+                padding: '16px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
+                cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', marginTop: 4,
+              }}
+            >
+              {t('math_done', language)}! 🏠
+            </button>
+          )}
         </div>
       </div>
     )

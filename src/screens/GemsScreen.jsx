@@ -18,6 +18,7 @@ const ANIM = `
 const REASON_KEYS = {
   bonus:           'gem_bonus_gift',
   daily_bonus:     'gem_daily_bonus',
+  math_review:     'gem_math_review',
   adjustment:      'gem_adjustment',
   'Welcome bonus': 'gem_welcome',
   welcome:         'gem_welcome',
@@ -25,7 +26,7 @@ const REASON_KEYS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', bonus: '🫴', story: '📖', daily_bonus: '🏅',
+  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', bonus: '🫴', story: '📖', daily_bonus: '🏅', math_review: '🔁',
   adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
