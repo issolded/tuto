@@ -6306,14 +6306,14 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
     // not kept); only rows that name that sitting can be opened.
     if (row.reason === 'math' || row.reason === 'math_review') {
       let sessionId = row.ref_id || null
-      // Practice rows written before they carried a ref are matched through the review itself: it
-      // settled in the same request that wrote the row.
-      if (!sessionId && row.reason === 'math_review') {
-        const { data: revs } = await supabase.from('math_reviews').select('session_id, resolved_at, result')
-          .eq('child_id', childId).eq('state', 'done')
-          .gte('resolved_at', span[0]).lte('resolved_at', span[1])
+      // A practice row opens the practice's own questions when it kept them. The review is found by
+      // the sitting it followed (the row's ref) and, for older rows with no ref, by the moment it
+      // settled — in the same request that wrote this row.
+      if (row.reason === 'math_review') {
+        let q = supabase.from('math_reviews').select('session_id, resolved_at, result').eq('child_id', childId).eq('state', 'done')
+        q = row.ref_id ? q.eq('session_id', row.ref_id) : q.gte('resolved_at', span[0]).lte('resolved_at', span[1])
+        const { data: revs } = await q
         const rev = (revs || []).sort((x, y) => near(x.resolved_at) - near(y.resolved_at))[0]
-        // The practice's own questions, when it kept them; older ones fall back to the sitting they followed.
         const kept = Array.isArray(rev?.result) ? rev.result.filter(r => r?.question) : []
         if (kept.length) {
           return res.json({
@@ -6324,7 +6324,8 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
             })),
           })
         }
-        sessionId = rev?.session_id || null
+        // Older practice, questions not kept: the sitting it followed is the closest thing to show.
+        sessionId = sessionId || rev?.session_id || null
         if (!sessionId) return res.status(404).json({ error: 'no sitting found for this row' })
       }
       if (!sessionId) {
