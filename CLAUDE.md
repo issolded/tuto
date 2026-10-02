@@ -89,8 +89,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       listeden yüzde söyleme. Matematikte `recentMathQuestions` zaten vardı. Gerçek `handleMessage` ile (chat-probe) tekrar
       oynatıldı: iki koşuda da dört yanlış soru doğru listelendi.
 - [x] Karalama defteri (2026-10-02, Claude). `src/components/Scratchpad.jsx`: soru ekranının sağ altında ✏️, açılınca parmakla/kalemle/fareyle
-      sorunun ve şıkların üstüne yazılır; mürekkep 3 renk, silgi, hepsini sil. Tuval ekranın kendi kaydırma sütununun İÇİNDE
-      (`selector` ile bulunur) ve içerik kadar uzun, yani not şıkla birlikte kayar. Kapalıyken dokunuşları geçirir (ekran aynen
+      sorunun ve şıkların üstüne yazılır; mürekkep 3 renk, silgi, hepsini sil. Kalem seçilince ekranın tüm çalışma alanını kaplayan yarı saydam, hafif çizgili "aydınger" kâğıt gelir (telefonda şıkların yanında
+      yazacak yer yoktu): soru ve şıklar altında görünür, kalem bırakılınca kâğıt kalkar ama mürekkep soru bitene kadar ekranda kalır
+      (not okunarak cevap verilir). Kâğıt `position: fixed`, sütunun ekrandaki dikdörtgeni kadar (`selector` ile bulunur; ResizeObserver);
+      mürekkep sütunla birlikte KAYMAZ (kaydırma kalemle zaten kapalı). Kapalıyken dokunuşları geçirir (ekran aynen
       eskisi); açıkken sayfa parmak altında kaymaz (bilinçli ödünleşme). Yeni soruda defter boşalır ve kalem bırakılır; hiçbir
       şey kaydedilmez/gönderilmez. Matematik (`.math-qscroll`) ve İngilizce (`.pz-scroll`) soru ekranlarında; bulmaca ekranı henüz yok.
       Tarayıcıda matematik ekranında denendi (çizim, silgi, temizleme, yeni soruda boşalma); İngilizce ekranı derlemede doğrulandı,

@@ -431,7 +431,7 @@ export default function EnglishScreen() {
           )}
         </div>
       </div>
-      <Scratchpad selector=".pz-scroll" resetKey={qIdx} language={language} accent={ROSE} />
+      <Scratchpad key={qIdx} selector=".pz-scroll" language={language} accent={ROSE} />
     </>
   )
 }

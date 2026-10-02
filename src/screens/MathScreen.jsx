@@ -3667,7 +3667,7 @@ export default function MathScreen() {
         </div>
       </div>
       {/* Paper over the question: a pencil for notes next to the answers. Not saved, cleared with each question. */}
-      <Scratchpad selector=".math-qscroll" resetKey={`${qIdx}:${review ? 'r' : 'q'}`} language={language} accent={MATH} />
+      <Scratchpad key={`${qIdx}:${review ? 'r' : 'q'}`} selector=".math-qscroll" language={language} accent={MATH} />
       </>
     )
   }
