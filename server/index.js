@@ -6297,8 +6297,17 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
 
     // A practice row opens the sitting it followed (its questions are made fresh on the screen and
     // not kept); only rows that name that sitting can be opened.
-    if (row.reason === 'math' || (row.reason === 'math_review' && row.ref_id)) {
+    if (row.reason === 'math' || row.reason === 'math_review') {
       let sessionId = row.ref_id || null
+      // Practice rows written before they carried a ref are matched through the review itself: it
+      // settled in the same request that wrote the row.
+      if (!sessionId && row.reason === 'math_review') {
+        const { data: revs } = await supabase.from('math_reviews').select('session_id, resolved_at')
+          .eq('child_id', childId).eq('state', 'done')
+          .gte('resolved_at', span[0]).lte('resolved_at', span[1])
+        sessionId = (revs || []).sort((x, y) => near(x.resolved_at) - near(y.resolved_at))[0]?.session_id || null
+        if (!sessionId) return res.status(404).json({ error: 'no sitting found for this row' })
+      }
       if (!sessionId) {
         const { data: cands } = await supabase.from('math_attempts').select('session_id, created_at').eq('child_id', childId)
           .gte('created_at', span[0]).lte('created_at', span[1])
