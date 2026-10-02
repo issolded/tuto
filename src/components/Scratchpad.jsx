@@ -98,9 +98,9 @@ export default function Scratchpad({ selector, language = 'en', accent = '#5aa9e
           style={{
             position: 'fixed', left: rect.left, top: rect.top, width: rect.width, height: rect.height, zIndex: 35,
             pointerEvents: on ? 'auto' : 'none', touchAction: on ? 'none' : 'auto', cursor: on ? 'crosshair' : 'default',
-            // Tracing paper: warm, see-through, faintly ruled. Gone when the pencil is down; the ink stays.
+            // Tracing paper: warm, plain, see-through. Gone when the pencil is down; the ink stays.
             background: on
-              ? 'repeating-linear-gradient(to bottom, rgba(255,251,238,.5) 0, rgba(255,251,238,.5) 31px, rgba(90,169,230,.28) 31px, rgba(90,169,230,.28) 32px)'
+              ? 'rgba(255,251,238,.62)'
               : 'transparent',
             boxShadow: on ? `inset 0 0 0 3px ${accent}55` : 'none',
             transition: 'background .18s ease',
