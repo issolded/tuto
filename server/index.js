@@ -1,7 +1,7 @@
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
 import { localTopicName } from './topicNames.js'
-import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, REVIEW_WINDOW_MS } from './mathReview.js'
+import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -5597,12 +5597,22 @@ async function sendMathReviewMessage(row, review) {
   await sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
 }
 
+// The follow-up when a round the parent was told was not done is finished afterwards.
+async function sendMathReviewLateMessage(row, review) {
+  if (!row.summary?.kind) return
+  const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', row.child_id).maybeSingle()
+  if (!child) return
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const m = mathReviewLateNotice(child.name, review, parentLang(parentRow?.prefs))
+  await sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+}
+
 // One guarded update per way out of "offered": it only matches a row still offered, so a double
 // tap, a retry or the sweep arriving at the same moment cannot settle it twice.
-async function settleMathReview(id, childId, patch) {
+async function settleMathReview(id, childId, patch, from = ['offered']) {
   const { data, error } = await supabase.from('math_reviews')
     .update({ ...patch, resolved_at: new Date().toISOString() })
-    .eq('id', id).eq('child_id', childId).eq('state', 'offered')
+    .eq('id', id).eq('child_id', childId).in('state', from)
     .select('id, child_id, session_id, picks, summary, started_at').maybeSingle()
   if (error) { console.error(`[MATH-REVIEW] settle failed: ${error.message}`); return null }
   return data
@@ -5641,9 +5651,14 @@ app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
   const { childId, id } = req.params
   try {
     const { data: cur } = await supabase.from('math_reviews')
-      .select('picks, summary').eq('id', id).eq('child_id', childId).eq('state', 'offered').maybeSingle()
-    // Already settled (the 30 minutes ran out, or this is a repeat): nothing more to pay.
+      .select('picks, summary, state, created_at').eq('id', id).eq('child_id', childId).in('state', ['offered', 'expired']).maybeSingle()
+    // Already settled (declined, finished, or this is a repeat): nothing more to pay.
     if (!cur) return res.json({ gems_earned: 0, already: true })
+    // The 30 minutes can run out while a child is still working on it (or has put the tablet down and comes
+    // back to the saved round). The parent was told it was not done; finishing it later still counts, and
+    // the parent is told that too. Only within a few hours of the offer, as long as the saved round lasts.
+    const late = cur.state === 'expired'
+    if (late && Date.now() - new Date(cur.created_at).getTime() > 6 * 60 * 60 * 1000) return res.json({ gems_earned: 0, already: true })
 
     const results = (Array.isArray(req.body?.results) ? req.body.results : []).slice(0, 10)
       .map(r => ({
@@ -5665,7 +5680,9 @@ app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
     const row = await settleMathReview(id, childId, {
       state: 'done', result: results, gems: bonus,
       carry_topics: out.missed.length ? carryTopics(out.missed) : null,
-    })
+      // A skill the expiry had already handed to the next session, and that this round did not clear, is owed again.
+      ...(late && out.missed.length ? { carry_used_at: null } : {}),
+    }, late ? ['expired'] : ['offered'])
     if (!row) return res.json({ gems_earned: 0, already: true })
 
     let gems = bonus
@@ -5673,8 +5690,15 @@ app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
       // ref: the sitting this practice followed, so the gem history can open it.
       const led = await recordGems(childId, gems, 'math_review', { ref: row.session_id })
       if (!led.ok) gems = 0
+    } else {
+      // A practice that pays nothing is still a row in "what I did" (shown as a tick): without it a round the
+      // child finished left no trace anywhere on their side. Nothing in a sum or a daily count reads a zero.
+      const { error: zeroErr } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: 0, reason: 'math_review', capped: false, ref_id: row.session_id })
+      if (zeroErr) console.warn(`[MATH-REVIEW] zero row not written: ${zeroErr.message}`)
     }
-    await sendMathReviewMessage(row, { state: 'done', asked: out.asked, correct: out.correct, gems, topics: topicNames(out.missed) })
+    const result = { state: 'done', asked: out.asked, correct: out.correct, gems, topics: topicNames(out.missed) }
+    if (late) await sendMathReviewLateMessage(row, result)
+    else await sendMathReviewMessage(row, result)
     res.json({ gems_earned: gems, correct: out.correct, asked: out.asked })
   } catch (err) {
     console.error('[MATH-REVIEW]', err.message)

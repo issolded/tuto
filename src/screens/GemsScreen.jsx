@@ -141,6 +141,9 @@ export default function GemsScreen() {
                   </div>
                   {capped ? (
                     <div style={{ fontSize: 20, flexShrink: 0 }} aria-label={t('gems_capped', lang)}>🌙</div>
+                  ) : key === 'math_review' && !row.amount ? (
+                    // A practice round that paid nothing is still something the child did: a tick, not "+0".
+                    <div style={{ fontSize: 20, fontWeight: 900, color: '#2EC486', flexShrink: 0 }} aria-label={t('gem_math_review', lang)}>✓</div>
                   ) : (
                     <div style={{ fontSize: 16, fontWeight: 900, color: isPositive ? '#2EC486' : '#FF6B35', fontFamily: "'TrRound', 'Baloo 2', cursive", whiteSpace: 'nowrap' }}>
                       {isPositive ? '+' : ''}{row.amount} 💎

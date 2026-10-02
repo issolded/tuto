@@ -126,3 +126,15 @@ test('the parent message says how the right answers were reached, and why the ge
   const { unaided: _u, helped: _h, ...noRecord } = s
   assert.doesNotMatch(mathSessionNotice('Alp', noRecord, 'tr', null).text, /yardımsız/)
 })
+
+import { mathReviewLateNotice } from '../../server/mathReview.js'
+
+test('finishing the practice after the 30 minutes ran out tells the parent, in their language', () => {
+  const r = { state: 'done', asked: 5, correct: 4, gems: 0, topics: [{ topic_id: 'y3_multiplication', topic_name: 'x' }] }
+  const tr = mathReviewLateNotice('Ada', r, 'tr')
+  assert.match(tr.text, /Ada pekiştirmeye geri dönüp sonunda bitirdi — 4\/5 doğru\./)
+  assert.match(tr.text, /Çarpma: 3, 4 ve 8’in çarpım tabloları|çarpım tabloları/)
+  assert.doesNotMatch(tr.text, /\+0/)
+  assert.match(mathReviewLateNotice('Ada', { ...r, gems: 3, topics: [] }, 'en').text, /finished the practice round after all — 4\/5 right, \+3 gems/)
+  assert.match(mathReviewLateNotice('Ada', r, 'es').text, /terminó el repaso/)
+})

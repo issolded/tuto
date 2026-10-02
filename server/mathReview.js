@@ -98,6 +98,20 @@ export function carryTopics(picks) {
 // be sent now or, when a review was offered, once the review is settled. `review` is null (no
 // review in the story) or { state: 'done' | 'declined' | 'expired', asked, correct, gems,
 // started, topics: [{ topic_id, topic_name } still owed] }.
+// A round the parent was told was not finished (the 30 minutes ran out) that the child then finished.
+export function mathReviewLateNotice(name, review, language) {
+  const g = review.gems > 0
+  const topics = (review.topics || []).filter(Boolean).slice(0, 3).map(t => localTopicName(t.topic_id, t.topic_name, language)).join(', ')
+  const text = say(language,
+    `${name} went back and finished the practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
+    `${name} pekiştirmeye geri dönüp sonunda bitirdi — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${topics ? ` ${topics} konusuna yine de ağırlık vereceğim.` : ''}`,
+    `${name} volvió y terminó el repaso al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
+  return { text, notice: { kind: 'activity', child: name, detail: {
+    tr: `pekiştirmeyi sonradan bitirdi, ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem` : ''}`,
+    en: `finished the practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems` : ''}`,
+  } } }
+}
+
 export function mathSessionNotice(name, s, language, review) {
   // "10/10 correct" alone reads as a perfect session. When some of the right answers needed help, say how
   // many were found alone and how many were not, and that help-solved questions count for half the gems.
