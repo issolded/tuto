@@ -1543,20 +1543,31 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
     const stops = jumps.stops
     const count = stops.length - 1
     const allSolved = Object.keys(solvedArrows).length === count
+    // Between two times the stops are minutes since midnight and `labels` say them as clock times; the
+    // jump is how many minutes lie between two of them.
+    const timed = Array.isArray(jumps.labels)
     const N = (n) => num(n, language)
+    const L = (i) => (timed ? jumps.labels[i] : N(stops[i]))
+    const minWord = say(language, 'min', 'dk', 'min')
     const ask = (i) => {
       if (solvedArrows[i] !== undefined) return
       setActiveArrow(i)
       setArrowInput('')
-      setTutoBubble(say(language, `${N(stops[i])} to ${N(stops[i + 1])} — how big is the jump?`,
-        `${N(stops[i])} ile ${N(stops[i + 1])} arası kaç?`, `De ${N(stops[i])} a ${N(stops[i + 1])}: ¿cuánto mide el salto?`))
+      setTutoBubble(timed
+        ? say(language, `${L(i)} to ${L(i + 1)} — how many minutes?`, `${L(i)} ile ${L(i + 1)} arası kaç dakika?`, `De ${L(i)} a ${L(i + 1)}: ¿cuántos minutos?`)
+        : say(language, `${N(stops[i])} to ${N(stops[i + 1])} — how big is the jump?`,
+            `${N(stops[i])} ile ${N(stops[i + 1])} arası kaç?`, `De ${N(stops[i])} a ${N(stops[i + 1])}: ¿cuánto mide el salto?`))
     }
     const confirm = (i, input) => {
       const size = stops[i + 1] - stops[i]
       if (Number(input) !== size) {
-        setTutoBubble(say(language, `Not quite — count on from ${N(stops[i])} to ${N(stops[i + 1])} 🔢`,
-          `Tam değil — ${N(stops[i])} sayısından ${N(stops[i + 1])} sayısına kadar say 🔢`,
-          `Casi — cuenta desde ${N(stops[i])} hasta ${N(stops[i + 1])} 🔢`))
+        setTutoBubble(timed
+          ? say(language, `Not quite — count the minutes on from ${L(i)} to ${L(i + 1)} 🔢`,
+              `Tam değil — ${L(i)} saatinden ${L(i + 1)} saatine kadar dakikaları say 🔢`,
+              `Casi — cuenta los minutos desde ${L(i)} hasta ${L(i + 1)} 🔢`)
+          : say(language, `Not quite — count on from ${N(stops[i])} to ${N(stops[i + 1])} 🔢`,
+              `Tam değil — ${N(stops[i])} sayısından ${N(stops[i + 1])} sayısına kadar say 🔢`,
+              `Casi — cuenta desde ${N(stops[i])} hasta ${N(stops[i + 1])} 🔢`))
         setArrowInput('')
         return
       }
@@ -1567,9 +1578,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       const next = [...Array(count).keys()].find(k => solved[k] === undefined)
       if (next === undefined) {
         const parts = stops.slice(1).map((x, k) => N(x - stops[k])).join(' + ')
-        setTutoBubble(say(language, `Now add the jumps: ${parts} = ? Type it in! 💪`,
-          `Şimdi zıplamaları topla: ${parts} = ? Sonra cevabını yaz! 💪`,
-          `Ahora suma los saltos: ${parts} = ? ¡Escríbelo! 💪`))
+        setTutoBubble(say(language, `Now add the ${timed ? 'minutes' : 'jumps'}: ${parts} = ? Type it in! 💪`,
+          `Şimdi ${timed ? 'dakikaları' : 'zıplamaları'} topla: ${parts} = ? Sonra cevabını yaz! 💪`,
+          `Ahora suma ${timed ? 'los minutos' : 'los saltos'}: ${parts} = ? ¡Escríbelo! 💪`))
       } else ask(next)
     }
     sayalim = (
@@ -1579,7 +1590,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
           textAlign: 'center', maxWidth: 290,
         }}>
-          {tutoBubble || t.jumpsTap}
+          {tutoBubble || (timed
+            ? say(language, 'Let\'s jump to the o\'clock! Tap an arrow and type the minutes 🕐', 'Tam saate zıplayarak gidelim! Bir oka dokun, dakikayı yaz 🕐', '¡Saltemos hasta la hora en punto! Toca una flecha y escribe los minutos 🕐')
+            : t.jumpsTap)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
           {stops.map((n, i) => (
@@ -1590,7 +1603,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 border: i === 0 || i === count ? 'none' : `2px solid ${MATH}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: FRED, fontWeight: 600, fontSize: 17, boxSizing: 'border-box',
-              }}>{N(n)}</div>
+              }}>{L(i)}</div>
               {i < count && (
                 <div onClick={() => ask(i)} style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, padding: '4px 2px',
@@ -1598,7 +1611,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 }}>
                   <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1,
                     color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE }}>
-                    {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}` : '?'}
+                    {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}${timed ? ` ${minWord}` : ''}` : '?'}
                   </span>
                   <span style={{ fontSize: 24, lineHeight: 1,
                     color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : INK_SOFT }}>⤻</span>

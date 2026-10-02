@@ -5990,13 +5990,16 @@ function youngDivision(level, lang) {
     const q = randInt(3, band === 3 ? 10 : 12), rem = randInt(1, d - 1), n = q * d + rem
     return {
       topic: 'division-word', level,
-      question_text: say(lang, `What is the remainder? ${n} ÷ ${d} = ${q} r ?`, `Kalan kaçtır? ${n} ÷ ${d} = ${q} kalan ?`,
-                               `¿Cuál es el resto? ${n} ÷ ${d} = ${q} y resto ?`),
+      // The form each country's classroom uses. English: "13 ÷ 3 = 4 r 1", as the books write it. Turkish
+      // and Spanish children are taught the division as a sum, dividend = divisor × quotient + remainder,
+      // and a ÷ with "kalan"/"y resto" typed after it is not something they have seen.
+      question_text: say(lang, `What is the remainder? ${n} ÷ ${d} = ${q} r ?`, `Kalan kaçtır? ${n} = ${d} × ${q} + ?`,
+                               `¿Cuál es el resto? ${n} = ${d} × ${q} + ?`),
       format: 'numeric', correct_answer: rem, operandKey: `yrem:${n}:${d}`,
       ...(n <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: n, size: d, mode: 'remainder' } } : {}),
       hint_steps: [
-        say(lang, `${q} lots of ${d} is ${q} × ${d}.`, `${q} tane ${d}, ${q} × ${d} eder.`, `${q} veces ${d} es ${q} × ${d}.`),
-        say(lang, `What is left of ${n} after that?`, `Bundan sonra ${n} sayısından geriye ne kalır?`, `¿Qué queda de ${n} después de eso?`),
+        say(lang, `${q} × ${d} = ${q * d}.`, `${q} tane ${d}: ${q} × ${d} = ${q * d}.`, `${q} veces ${d}: ${q} × ${d} = ${q * d}.`),
+        say(lang, `Take ${q * d} away from ${n}. What is left over?`, `${n} sayısından ${q * d} çıkarınca geriye ne kalır?`, `Si a ${n} le quitas ${q * d}, ¿qué sobra?`),
       ],
     }
   }
@@ -6297,6 +6300,17 @@ function timeYoung(level, lang) {
       topic: 'time', level,
       question_text: say(lang, `How many minutes are there between these two times?`, `Bu iki saat arasında kaç dakika var?`, `¿Cuántos minutos hay entre estas dos horas?`),
       format: 'numeric', correct_answer: len, operandKey: `tbetween:${start_}:${len}`,
+      // Walked in jumps through the o'clocks on the way (14:45 → 15:00 → 15:43), each one tapped and typed in
+      // minutes, then added. Only when an o'clock really lies between the two times: without one there is
+      // a single jump and it IS the answer.
+      ...(() => {
+        const next = Math.ceil(start_ / 60) * 60
+        if (!(next < end)) return {}
+        const stops = [start_, next]
+        for (let h = next + 60; h <= end; h += 60) stops.push(h)
+        if (stops[stops.length - 1] !== end) stops.push(end)
+        return stops.length <= 6 ? { help: { kind: 'jumps', from: start_, to: end, stops, labels: stops.map(x => hm(x, pad)), unit: 'min' } } : {}
+      })(),
       hint_steps: [
         say(lang, `Count on from ${hm(start_, pad)} to the next o'clock.`, `${hm(start_, pad)} saatinden bir sonraki tam saate kadar say.`, `Cuenta desde las ${hm(start_, pad)} hasta la siguiente hora en punto.`),
         say(lang, `Then count on to ${hm(end, pad)} and add the two parts.`, `Sonra ${hm(end, pad)} saatine kadar say ve iki parçayı topla.`, `Luego sigue hasta las ${hm(end, pad)} y suma las dos partes.`),
