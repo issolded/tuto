@@ -5660,7 +5660,8 @@ app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
 
     let gems = bonus
     if (gems > 0) {
-      const led = await recordGems(childId, gems, 'math_review')
+      // ref: the sitting this practice followed, so the gem history can open it.
+      const led = await recordGems(childId, gems, 'math_review', { ref: row.session_id })
       if (!led.ok) gems = 0
     }
     await sendMathReviewMessage(row, { state: 'done', asked: out.asked, correct: out.correct, gems, topics: topicNames(out.missed) })
@@ -6294,7 +6295,9 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
       })
     }
 
-    if (row.reason === 'math') {
+    // A practice row opens the sitting it followed (its questions are made fresh on the screen and
+    // not kept); only rows that name that sitting can be opened.
+    if (row.reason === 'math' || (row.reason === 'math_review' && row.ref_id)) {
       let sessionId = row.ref_id || null
       if (!sessionId) {
         const { data: cands } = await supabase.from('math_attempts').select('session_id, created_at').eq('child_id', childId)
