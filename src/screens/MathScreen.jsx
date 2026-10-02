@@ -2198,7 +2198,7 @@ export default function MathScreen() {
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
-  // Nine and over get one try before help. `hintSeenQs` is the questions whose 💡 was opened, so a
+  // Seven and over get one try before help. `hintSeenQs` is the questions whose 💡 was opened, so a
   // wrong answer after looking at it goes straight to help; `firstWrongQs` the ones already given
   // their free retry. `struckOpts` are the choice cards a wrong tap has greyed out, and
   // `nudge` counts up to restart the hint button's shake — the same question can need it twice.
@@ -2622,17 +2622,17 @@ export default function MathScreen() {
 
   // ── Screen mode: submit one multiple-choice answer ───────────────────────
   // A wrong option opens the same scaffolded help as a typed answer: the explanation becomes the
-  // first hint and the child gets another try. Eight and under get it at once; nine and over get
+  // first hint and the child gets another try. Six and under get it at once; seven and over get
   // the card greyed out and the 💡 shaking first (see helpOpensNow). Help still reduces the reward,
   // and Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
-  // Where a wrong answer leads. Eight and under go straight to help, as they always have. Nine
+  // Where a wrong answer leads. Six and under go straight to help, as they always have. Seven
   // and over get the question back once, with the 💡 shaking and nothing revealed; help opens
   // when the hint had already been looked at, when the retry was also wrong, or when there is no
   // hint to point at. Either way the question stays in `helpUsedQs`, so the retry costs the same
   // half a question that the hint does: asking early, or being wrong on purpose to reach help, is
   // never the cheaper way in.
   const hasHintFor = (i) => { const all = templateProblems[i]?.hint_steps ?? llmHints[i]; return Array.isArray(all) && all.length > 0 }
-  const helpOpensNow = (i) => Number(age) <= 8 || !hasHintFor(i) || hintSeenQs.has(i) || firstWrongQs.has(i)
+  const helpOpensNow = (i) => Number(age) <= 6 || !hasHintFor(i) || hintSeenQs.has(i) || firstWrongQs.has(i)
   const noteWrong = (i) => setWrongCounts(prev => ({ ...prev, [i]: (prev[i] ?? 0) + 1 }))
   const nudgeToHint = (i, struck = null) => {
     noteWrong(i)
@@ -3414,7 +3414,7 @@ export default function MathScreen() {
 
               {/* Optional hint — the child can ask BEFORE answering, which is the only way an
                   older child could get one before their first try: the help panel comes on a wrong
-                  answer, for nine and over only once the hint has been looked at or the retry failed.
+                  answer, for seven and over only once the hint has been looked at or the retry failed.
                   This used to show the first step and nothing else, because a counting step ends
                   "…, 19, 20" with the answer sitting at the end of it. The partition steps stop
                   deliberately short — "5966 - 3000 = 2966. Now take away the 100." — and holding

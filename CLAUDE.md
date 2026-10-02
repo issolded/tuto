@@ -124,9 +124,9 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       **Açık:** yardım 9+ için ekrana bağlı değil (panel yalnız ≤8 yaş, yanlıştan sonra); ölçülmedi: bu zincirlerin
       gerçekten öğrettiği, Ada/Batu'yla denenmedi. Zincirsiz kalan: yer değeri/karşılaştırma gibi birkaç
       küçük şekil ve 13 yaşın tamamı.
-      **Bağlandı (aynı gün):** 9+ yaş artık "bir deneme, sonra yardım": ilk yanlışta soruya dönülür, 💡 titrer,
+      **Bağlandı (aynı gün):** 7+ yaş artık "bir deneme, sonra yardım" (başta 9+ idi; 2026-10-02'de 7-8 de alındı, 5-6 eski): ilk yanlışta soruya dönülür, 💡 titrer,
       seçmelide yanlış kart soluklaşır, sebep gösterilmez; ipucuna bakıp yanlış ya da ikinci yanlış → yardım
-      (`helpOpensNow`, `MathScreen.jsx`). ≤8 yaş aynı (hemen yardım). Yeniden deneme de ipucu gibi yarım pay
+      (`helpOpensNow`, `MathScreen.jsx`). ≤6 yaş aynı (hemen yardım). Yeniden deneme de ipucu gibi yarım pay
       (`helpUsedQs`). **Gem artık soru başı** (tam / yarım / yok; `server/mathGems.js`, test
       `scripts/tests/math-gem-share.test.mjs`): eski `0,33 + 0,67 × doğruluk` tabanı ve oturum düzeyi ×0,67 yalnız
       soru kaydı eksikse yedek. Kağıt modu da aynı formülden geçiyor (etkisi ölçülmedi). Sahte ağla gerçek
