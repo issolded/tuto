@@ -106,6 +106,7 @@ export function mathSessionNotice(name, s, language, review) {
   let tail = ''
   let tr = '', en = ''
   if (review) {
+    const preguntas = `${review.asked} ${review.asked === 1 ? 'pregunta' : 'preguntas'}`
     // Topics arrive as { topic_id, topic_name }; the name is written in the parent's language.
     const topics = (review.topics || []).filter(Boolean).slice(0, 3)
       .map(t => localTopicName(t.topic_id, t.topic_name, language)).join(', ')
@@ -125,18 +126,18 @@ export function mathSessionNotice(name, s, language, review) {
       tail = say(language,
         `I offered a quick ${review.asked}-question review of what they missed and they'd rather not today.${owed.en}`,
         `Kaçırdığı ${review.asked} soruluk kısa bir pekiştirme önerdim, bugün istemedi.${owed.tr}`,
-        `Le ofrecí un repaso corto de ${review.asked} preguntas de lo que falló y hoy prefirió no hacerlo.${owed.es}`)
+        `Le ofrecí un repaso corto de ${preguntas} de lo que falló y hoy prefirió no hacerlo.${owed.es}`)
       en = ', declined the review'; tr = ', pekiştirmeyi istemedi'
     } else {
       tail = review.started
         ? say(language,
             `They started the ${review.asked}-question review but didn't finish it.${owed.en}`,
             `${review.asked} soruluk pekiştirmeye başladı ama bitirmedi.${owed.tr}`,
-            `Empezó el repaso de ${review.asked} preguntas pero no lo terminó.${owed.es}`)
+            `Empezó el repaso de ${preguntas} pero no lo terminó.${owed.es}`)
         : say(language,
             `I offered a quick ${review.asked}-question review of what they missed; it wasn't picked up.${owed.en}`,
             `Kaçırdığı ${review.asked} soruluk kısa bir pekiştirme önerdim, yapılmadı.${owed.tr}`,
-            `Le ofrecí un repaso corto de ${review.asked} preguntas de lo que falló; no se hizo.${owed.es}`)
+            `Le ofrecí un repaso corto de ${preguntas} de lo que falló; no se hizo.${owed.es}`)
       en = ', review not done'; tr = ', pekiştirme yapılmadı'
     }
   }

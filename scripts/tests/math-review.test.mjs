@@ -100,3 +100,11 @@ test('every curriculum topic has a Turkish and a Spanish name, and unknown ids f
   }
   assert.equal(localTopicName('y99_new', 'New topic', 'tr'), 'New topic')
 })
+
+test('Spanish counts agree: una pregunta, no "1 preguntas"', () => {
+  const s = { correct: 9, total: 10, gems: 20, capped: false, daily_cap: 3, note: '', kind: 'rewarded' }
+  for (const state of ['declined', 'expired']) {
+    assert.match(mathSessionNotice('Ada', s, 'es', { state, asked: 1, topics: [] }).text, /1 pregunta /)
+    assert.match(mathSessionNotice('Ada', s, 'es', { state, asked: 3, topics: [] }).text, /3 preguntas /)
+  }
+})
