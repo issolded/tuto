@@ -97,6 +97,7 @@ const STRINGS = {
   home_open:          { en: 'Open', tr: 'Aç', es: 'Abrir' },
   home_level_long:    { en: 'Level %n%', tr: 'Seviye %n%', es: 'Nivel %n%' },
   // Under the stars on a 6-8 tile: they count today's sessions against the day's gem limit.
+  home_today_of:      { en: '%n%/%m% today', tr: 'bugün %n%/%m%', es: '%n%/%m% hoy' },
   home_today_short:   { en: 'today', tr: 'bugün', es: 'hoy' },
   home_this_week_n:   { en: '%n% this week', tr: 'bu hafta %n%', es: '%n% esta semana' },
   home_lets_play:     { en: "Let's play and learn!", tr: 'Hadi oynayalım, öğrenelim!', es: '¡A jugar y aprender!' },

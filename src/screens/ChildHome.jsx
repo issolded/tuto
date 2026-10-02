@@ -191,6 +191,33 @@ const MID_TILES = [
 const QUEST_ORDER = ['math', 'reading', 'puzzle', 'english', 'writing', 'drawing', 'homework']
 const QUEST_TARGET = 3
 
+// Today's sessions against the day's gem limit, the same figure on every age's home. It used to be a
+// week's count (and, on the 9-11 tile, the maths LEVEL), which a parent read as how good the child
+// is. `cap` is the parent's limit for that activity, or the default.
+function dailyFor(type, today, ts) {
+  const c = Number(ts?.[type]?.daily_cap)
+  const cap = Number.isFinite(c) && c >= 1 ? Math.trunc(c) : (TASK_DEFAULTS[type]?.daily_cap ?? 3)
+  return { done: today.activities?.[type] || 0, cap }
+}
+
+// A row of dots, one per session the day's limit allows (at most five: a limit of ten is scaled so it
+// does not run off a tile), lit as they are done and closed with a tick once the day's are all done.
+// Not stars: the star is the gem everywhere else in the app.
+function Dots({ done, cap, color, size = 10, label }) {
+  const of = Math.min(5, cap)
+  const lit = done <= 0 ? 0 : cap > 5 ? Math.max(1, Math.min(of, Math.round((done / cap) * of))) : Math.min(of, done)
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      {Array.from({ length: of }).map((_, i) => (
+        <i key={i} style={{ width: size, height: size, borderRadius: '50%', boxSizing: 'border-box', display: 'block',
+          background: i < lit ? color : 'transparent', border: `2px solid ${i < lit ? color : '#d9d4e8'}` }} />
+      ))}
+      {done >= cap && <span style={{ fontWeight: 800, fontSize: size + 3, color, lineHeight: 1, marginLeft: 1 }}>✓</span>}
+      {label && <span style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#8d83ad', marginLeft: 3 }}>{label}</span>}
+    </span>
+  )
+}
+
 function Ring({ value, label, color }) {
   const pct = Math.max(0, Math.min(1, value)) * 360
   return (
@@ -356,10 +383,9 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
   const goal = today.nearestGoal
 
   const ringFor = (type) => {
-    if (type === 'math' && today.mathLevel != null) return { value: (today.weekByType?.math || 0) / 5, label: t('home_level', lang).replace('%n%', today.mathLevel) }
     if (type === 'tree') return { value: (today.today || 0) / 4, label: `${today.today || 0}/4` }
-    const n = today.weekByType?.[type] || 0
-    return { value: n / 5, label: String(n) }
+    const { done, cap } = dailyFor(type, today, ts)
+    return { value: Math.min(1, done / cap), label: `${Math.min(done, cap)}/${cap}` }
   }
 
   return (
@@ -441,7 +467,10 @@ function MidHome({ child, lang, gems, today, ts, nav }) {
                     {x.type === 'homework' ? <HomeworkIcon /> : x.type === 'drawing' ? <DrawingsIcon age={child?.age} /> : <TaskIcon type={x.type} c={TASK_ACCENT[x.type]} />}
                   </div>
                 </div>
-                <Ring value={r.value} label={r.label} color={TASK_ACCENT[x.type] || MID.purple} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <Ring value={r.value} label={r.label} color={TASK_ACCENT[x.type] || MID.purple} />
+                  <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 9.5, color: MID.soft }}>{t('home_today_short', lang)}</span>
+                </div>
               </div>
               <div style={{ ...fred, fontSize: 17, marginTop: 10, lineHeight: 1.15 }}>{t(x.nameKey, lang)}</div>
               <div style={{ ...fred, fontSize: 13, color: '#b7720f', marginTop: 2 }}>
@@ -504,11 +533,16 @@ function TeenHome({ child, lang, gems, today, ts, nav }) {
   const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
   const subFor = (type) => {
     if (type === 'tree') return `${today.today || 0} ${t('tree_leaves_today', lang)}`
-    const n = today.weekByType?.[type] || 0
-    if (type === 'math' && today.mathLevel != null) return `${t('home_level_long', lang).replace('%n%', today.mathLevel)} · ${t('home_this_week_n', lang).replace('%n%', n)}`
-    return t('home_this_week_n', lang).replace('%n%', n)
+    const { done, cap } = dailyFor(type, today, ts)
+    const todayText = t('home_today_of', lang).replace('%n%', Math.min(done, cap)).replace('%m%', cap)
+    if (type === 'math' && today.mathLevel != null) return `${t('home_level_long', lang).replace('%n%', today.mathLevel)} · ${todayText}`
+    return todayText
   }
-  const fillFor = (type) => (type === 'tree' ? (today.today || 0) / 4 : (today.weekByType?.[type] || 0) / 5)
+  const fillFor = (type) => {
+    if (type === 'tree') return (today.today || 0) / 4
+    const { done, cap } = dailyFor(type, today, ts)
+    return done / cap
+  }
   const goal = today.nearestGoal
 
   return (
@@ -604,40 +638,14 @@ function TeenHome({ child, lang, gems, today, ts, nav }) {
 
 // ── 6–8: "playful" home (design_handoff_kids_home_ages/Kids Home 6-8.html) ────────
 // Fewer words, bigger things: a greeting, Tuto front and centre, the day's bonus for a seven- or
-// eight-year-old, and every activity as a big tile. Progress is stars, not numbers — a star for
-// each time this week, up to five.
-// `of` stars, `n` of them lit. On a tile they are TODAY's sessions against the day's gem limit — not
-// a level and not a week: a parent read "★★★☆☆" under Maths as how good the child is.
-function Stars({ n, of = 5, label }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
-      <span style={{ fontSize: 13, letterSpacing: 1, color: '#f5d35f', WebkitTextStroke: '.6px #d8a93b' }}>
-        {'★'.repeat(n)}<b style={{ color: '#e4e0d4', WebkitTextStroke: '.6px #cbc6b6' }}>{'★'.repeat(of - n)}</b>
-      </span>
-      {label && <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT }}>{label}</span>}
-    </span>
-  )
-}
-
+// eight-year-old, and every activity as a big tile. Progress is dots, not numbers — one for each
+// session today the day's gem limit allows, up to five.
 const YOUNG_WELL = { math: '#D4E4FB', reading: '#E7DDF6', writing: '#D4EED9', puzzle: '#D9F3F1', english: '#FBDDE5', homework: '#FFF1CF', drawing: '#F8D9E6', tree: '#FCE4CF' }
 
 function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
   const [streakWhy, setStreakWhy] = useState(false)
   const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
   const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
-  // Today against the day's limit, as many stars as the limit allows sessions (at most five, so a
-  // parent's limit of ten does not run off the tile). The leaf tree has no limit and keeps its five.
-  const capFor = (type) => {
-    const c = Number(ts[type]?.daily_cap)
-    return Math.min(5, Number.isFinite(c) && c >= 1 ? Math.trunc(c) : (TASK_DEFAULTS[type]?.daily_cap ?? 3))
-  }
-  const starsFor = (type) => {
-    if (type === 'tree') return { n: Math.min(5, today.today || 0), of: 5 }
-    const of = capFor(type)
-    const done = today.activities?.[type] || 0
-    const full = Number(ts[type]?.daily_cap) > 5 ? Math.round((done / Number(ts[type].daily_cap)) * of) : Math.min(of, done)
-    return { n: Math.min(of, done > 0 ? Math.max(1, full) : 0), of }
-  }
   const goal = today.nearestGoal
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -683,7 +691,9 @@ function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
               </div>
               <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '2px 0 0' }}>{t(x.nameKey, lang)}</h3>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                <Stars {...starsFor(x.type)} label={t('home_today_short', lang)} />
+                {x.type === 'tree'
+                  ? <Dots done={Math.min(5, today.today || 0)} cap={5} color={TASK_ACCENT.tree} label={t('home_today_short', lang)} />
+                  : <Dots {...dailyFor(x.type, today, ts)} color={TASK_ACCENT[x.type] || ACCENT} label={t('home_today_short', lang)} />}
                 {g != null
                   ? <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT }}>⭐+{g}</span>
                   : <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 12, color: '#37a06f' }}>🌱 {t('home_always_on', lang)}</span>}
