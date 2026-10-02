@@ -353,6 +353,9 @@ async function getParentContext(parentId) {
             .map(r => ({ topic: r.topic_name, question: r.question, child_answer: r.child_answer,
                          was_correct: r.correct, used_hint: r.help_used }))
         : `no maths questions recorded for ${child.name} yet`,
+      // Why a practice round can follow a perfect score: asked once, "why did a review come up after 10/10?" was
+      // answered with guesses. The rule is code's; this is it, in words.
+      mathPracticeRule: 'After an on-screen maths session Tuto offers an OPTIONAL practice round of up to 5 fresh questions of the same kind, for questions that were wrong, skipped, or got right only after the help panel was opened — so it can appear even at 10/10, because "correct" and "found alone" are different things (used_hint in recentMathQuestions says which got help). Gems: a right answer found with help earns half a question\'s gems; the practice round pays only for questions that earned nothing the first time, never for ones found with help. It never changes the score or the level, and the message to the parent waits until the child has done it, declined, or 30 minutes have passed.',
       // Puzzles are not maths and must not be reported as maths: they are shape-and-pattern
       // reasoning (the 11+ "non-verbal reasoning" papers). Same rule as mathTopics for the
       // per-skill read: the verdict is code's, and a skill under the floor carries no figures.
@@ -5860,8 +5863,16 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // it of meaning. If the parent asks, the agent knows what to do with it (see the prompt).
     const perTask = parentRow?.prefs?.notify_per_task !== false
     const note = typeof gemini_notes === 'string' ? gemini_notes.trim().slice(0, 220) : ''
+    // How the right answers were reached, so "10/10 correct" can say that eight were found alone and two with
+    // help — which is also why the gems are not the full amount. Only when the record covers every question
+    // (paper mode and a partial record have no per-question help flags).
+    const solved = Array.isArray(attempts) && attempts.length === Number(questions_total) ? attempts : null
     const summary = {
       correct: Number(questions_correct) || 0, total: Number(questions_total) || 0,
+      ...(solved ? {
+        unaided: solved.filter(a => a?.correct === true && !a?.help_used).length,
+        helped: solved.filter(a => a?.correct === true && a?.help_used).length,
+      } : {}),
       gems, capped, daily_cap: settings.dailyCap, note,
       kind: gems > 0 && (perTask || doneToday === 0) ? 'rewarded'
         : capped && settings.active && perTask ? 'capped' : null,

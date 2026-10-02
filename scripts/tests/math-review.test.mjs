@@ -109,3 +109,20 @@ test('Spanish counts agree: una pregunta, no "1 preguntas"', () => {
     assert.match(mathSessionNotice('Ada', s, 'es', { state, asked: 3, topics: [] }).text, /3 preguntas /)
   }
 })
+
+test('the parent message says how the right answers were reached, and why the gems are not the full amount', () => {
+  const s = { correct: 10, total: 10, unaided: 8, helped: 2, gems: 27, capped: false, daily_cap: 3, note: '', kind: 'rewarded' }
+  const tr = mathSessionNotice('Alp', s, 'tr', { state: 'done', asked: 2, correct: 2, gems: 0, topics: [] })
+  assert.match(tr.text, /10\/10 doğru \(yardımsız 8, yardımla 2\)/)
+  assert.match(tr.text, /\+27 gem/)
+  assert.match(tr.text, /Yardımla çözülen sorular yarım gem sayılıyor/)
+  assert.match(tr.notice.detail.tr, /10\/10 doğru \(yardımsız 8, yardımla 2\), \+27 gem, sonra pekiştirdi 2\/2/)
+  assert.match(mathSessionNotice('Alp', s, 'en', null).text, /10\/10 correct \(8 on their own, 2 with help\)\. \+27 gems/)
+  assert.match(mathSessionNotice('Alp', s, 'es', null).text, /10\/10 correctas \(8 solos, 2 con ayuda\)/)
+  // Nothing was helped: the line is exactly what it was.
+  const plain = { ...s, unaided: 10, helped: 0, gems: 30 }
+  assert.equal(mathSessionNotice('Alp', plain, 'tr', null).text, 'Alp matematiğini yaptı — 10/10 doğru. +30 gem 💎')
+  // No per-question record (paper mode): no breakdown rather than a guessed one.
+  const { unaided: _u, helped: _h, ...noRecord } = s
+  assert.doesNotMatch(mathSessionNotice('Alp', noRecord, 'tr', null).text, /yardımsız/)
+})

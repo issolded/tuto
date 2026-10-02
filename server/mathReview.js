@@ -99,17 +99,30 @@ export function carryTopics(picks) {
 // review in the story) or { state: 'done' | 'declined' | 'expired', asked, correct, gems,
 // started, topics: [{ topic_id, topic_name } still owed] }.
 export function mathSessionNotice(name, s, language, review) {
+  // "10/10 correct" alone reads as a perfect session. When some of the right answers needed help, say how
+  // many were found alone and how many were not, and that help-solved questions count for half the gems.
+  const helped = Number.isInteger(s.helped) && s.helped > 0 && Number.isInteger(s.unaided)
+  const how = helped ? say(language,
+    ` (${s.unaided} on their own, ${s.helped} with help)`,
+    ` (yardımsız ${s.unaided}, yardımla ${s.helped})`,
+    ` (${s.unaided} solos, ${s.helped} con ayuda)`) : ''
+  const halfNote = helped ? say(language,
+    ' Questions solved with help count half.',
+    ' Yardımla çözülen sorular yarım gem sayılıyor.',
+    ' Las preguntas resueltas con ayuda cuentan la mitad.') : ''
   const head = s.kind === 'capped'
     ? say(language,
-        `${name} did another maths session — ${s.correct}/${s.total} correct. That's past today's limit of ${s.daily_cap}, so it didn't add gems. 🌙`,
-        `${name} bir matematik daha yaptı — ${s.correct}/${s.total} doğru. Bugünkü sınırı (günde ${s.daily_cap}) geçtiği için gem eklenmedi. 🌙`,
-        `${name} ha hecho otra sesión de mates — ${s.correct}/${s.total} correctas. Pasa del límite de hoy (${s.daily_cap}), así que no ha sumado gems. 🌙`)
+        `${name} did another maths session — ${s.correct}/${s.total} correct${how}. That's past today's limit of ${s.daily_cap}, so it didn't add gems. 🌙`,
+        `${name} bir matematik daha yaptı — ${s.correct}/${s.total} doğru${how}. Bugünkü sınırı (günde ${s.daily_cap}) geçtiği için gem eklenmedi. 🌙`,
+        `${name} ha hecho otra sesión de mates — ${s.correct}/${s.total} correctas${how}. Pasa del límite de hoy (${s.daily_cap}), así que no ha sumado gems. 🌙`)
     : say(language,
-        `${name} did their maths — ${s.correct}/${s.total} correct. +${s.gems} gems 💎`,
-        `${name} matematiğini yaptı — ${s.correct}/${s.total} doğru. +${s.gems} gem 💎`,
-        `${name} ha hecho sus mates — ${s.correct}/${s.total} correctas. +${s.gems} gems 💎`)
+        `${name} did their maths — ${s.correct}/${s.total} correct${how}. +${s.gems} gems 💎${halfNote}`,
+        `${name} matematiğini yaptı — ${s.correct}/${s.total} doğru${how}. +${s.gems} gem 💎${halfNote}`,
+        `${name} ha hecho sus mates — ${s.correct}/${s.total} correctas${how}. +${s.gems} gems 💎${halfNote}`)
 
   let tail = ''
+  // The same facts for the short line a template message carries.
+  const howShort = helped ? { tr: ` (yardımsız ${s.unaided}, yardımla ${s.helped})`, en: ` (${s.unaided} on their own, ${s.helped} with help)` } : { tr: '', en: '' }
   let tr = '', en = ''
   if (review) {
     const preguntas = `${review.asked} ${review.asked === 1 ? 'pregunta' : 'preguntas'}`
@@ -124,9 +137,9 @@ export function mathSessionNotice(name, s, language, review) {
     if (review.state === 'done') {
       const g = review.gems > 0
       tail = say(language,
-        `They then went back over ${review.asked} they'd missed — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${owed.en}`,
-        `Sonra kaçırdığı ${review.asked} soruyu tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${owed.tr}`,
-        `Después repasó ${review.asked} que había fallado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${owed.es}`)
+        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${owed.en}`,
+        `Sonra zorlandığı ${review.asked} soruyu tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${owed.tr}`,
+        `Después repasó ${review.asked} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${owed.es}`)
       en = `, then reviewed ${review.correct}/${review.asked}`; tr = `, sonra pekiştirdi ${review.correct}/${review.asked}`
     } else if (review.state === 'declined') {
       tail = say(language,
@@ -149,9 +162,9 @@ export function mathSessionNotice(name, s, language, review) {
   }
   const text = [head, tail, s.note].filter(Boolean).join('\n\n')
   const detail = s.kind === 'capped'
-    ? { tr: `matematik, ${s.correct}/${s.total} doğru, günlük sınır dolduğu için gem yok${tr}`,
-        en: `maths, ${s.correct}/${s.total} correct, past the daily limit so no gems${en}` }
-    : { tr: `matematik, ${s.correct}/${s.total} doğru, +${s.gems} gem${tr}`,
-        en: `maths, ${s.correct}/${s.total} correct, +${s.gems} gems${en}` }
+    ? { tr: `matematik, ${s.correct}/${s.total} doğru${howShort.tr}, günlük sınır dolduğu için gem yok${tr}`,
+        en: `maths, ${s.correct}/${s.total} correct${howShort.en}, past the daily limit so no gems${en}` }
+    : { tr: `matematik, ${s.correct}/${s.total} doğru${howShort.tr}, +${s.gems} gem${tr}`,
+        en: `maths, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} gems${en}` }
   return { text, notice: { kind: 'activity', child: name, detail } }
 }
