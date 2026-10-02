@@ -2831,7 +2831,13 @@ export default function MathScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          results: results.map((r, i) => ({ idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i) })),
+          // The questions go with the marks: they are made on this screen and exist nowhere else, and
+          // the gem history opens the practice from what is stored here.
+          results: results.map((r, i) => ({
+            idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i),
+            question: r.question, child_answer: r.child_answer, correct_answer: r.correct_answer,
+            topic_name: curriculumTopics[i]?.name ?? null,
+          })),
         }),
       })
       if (res.ok) data = await res.json()

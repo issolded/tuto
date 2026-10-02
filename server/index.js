@@ -5643,7 +5643,14 @@ app.post('/api/children/:childId/math-review/:id/finish', async (req, res) => {
     if (!cur) return res.json({ gems_earned: 0, already: true })
 
     const results = (Array.isArray(req.body?.results) ? req.body.results : []).slice(0, 10)
-      .map(r => ({ idx: Number(r?.idx), correct: r?.correct === true, help_used: !!r?.help_used }))
+      .map(r => ({
+        idx: Number(r?.idx), correct: r?.correct === true, help_used: !!r?.help_used,
+        // Kept only so the practice can be opened again from the gem history; nothing is marked from these.
+        question: typeof r?.question === 'string' ? r.question.slice(0, 500) : null,
+        child_answer: r?.child_answer == null ? null : String(r.child_answer).slice(0, 120),
+        correct_answer: r?.correct_answer == null ? null : String(r.correct_answer).slice(0, 120),
+        topic_name: typeof r?.topic_name === 'string' ? r.topic_name.slice(0, 120) : null,
+      }))
     const out = reviewOutcome(cur.picks, results, cur.summary?.total)
 
     const { data: child } = await supabase.from('children').select('task_settings').eq('id', childId).maybeSingle()
@@ -6302,10 +6309,22 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
       // Practice rows written before they carried a ref are matched through the review itself: it
       // settled in the same request that wrote the row.
       if (!sessionId && row.reason === 'math_review') {
-        const { data: revs } = await supabase.from('math_reviews').select('session_id, resolved_at')
+        const { data: revs } = await supabase.from('math_reviews').select('session_id, resolved_at, result')
           .eq('child_id', childId).eq('state', 'done')
           .gte('resolved_at', span[0]).lte('resolved_at', span[1])
-        sessionId = (revs || []).sort((x, y) => near(x.resolved_at) - near(y.resolved_at))[0]?.session_id || null
+        const rev = (revs || []).sort((x, y) => near(x.resolved_at) - near(y.resolved_at))[0]
+        // The practice's own questions, when it kept them; older ones fall back to the sitting they followed.
+        const kept = Array.isArray(rev?.result) ? rev.result.filter(r => r?.question) : []
+        if (kept.length) {
+          return res.json({
+            kind: 'math', practice: true, at: row.created_at,
+            items: kept.map(r => ({
+              question: r.question, child_answer: r.child_answer ?? null, correct: !!r.correct,
+              correct_answer: r.correct_answer ?? null, help_used: !!r.help_used, topic_name: r.topic_name ?? null,
+            })),
+          })
+        }
+        sessionId = rev?.session_id || null
         if (!sessionId) return res.status(404).json({ error: 'no sitting found for this row' })
       }
       if (!sessionId) {
