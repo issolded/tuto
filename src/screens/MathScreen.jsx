@@ -2256,6 +2256,10 @@ export default function MathScreen() {
   const [firstWrongQs,  setFirstWrongQs] = useState(() => new Set(saved?.firstWrongQs ?? []))
   const [struckOpts,    setStruckOpts]   = useState(() => saved?.struckOpts ?? {})
   const [nudge,         setNudge]        = useState(0)
+  // The line shown after a first wrong answer, with the question it belongs to. The shaking 💡 alone said
+  // nothing: the typed number vanished and a seven-year-old was left to guess whether anything had happened.
+  const [nudgeNote,     setNudgeNote]    = useState(null)
+  const nudgeTimer = useRef(null)
   // Wrong answers given per question, so the review round can tell "two wrong tries, then right"
   // from "one slip, then right". `review` is set while a review round is on screen —
   // { id, picks } — and `reviewBusy` while it is being set up or turned down.
@@ -2707,6 +2711,9 @@ export default function MathScreen() {
     if (struck != null) setStruckOpts(prev => ({ ...prev, [i]: [...(prev[i] ?? []), struck] }))
     setInput('')
     setNudge(n => n + 1)
+    setNudgeNote(i)
+    clearTimeout(nudgeTimer.current)
+    nudgeTimer.current = setTimeout(() => setNudgeNote(null), 7000)
   }
 
   const submitChoiceAnswer = (value) => {
@@ -3559,6 +3566,15 @@ export default function MathScreen() {
                     >
                       💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
                     </button>
+                    {nudgeNote === qIdx && !open && (
+                      <div style={{
+                        background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 300,
+                        fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
+                        lineHeight: 1.4, animation: 'scaleIn .22s ease both',
+                      }}>
+                        {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
+                      </div>
+                    )}
                     {open && (
                       <div style={{
                         background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',

@@ -523,7 +523,9 @@ function gapSteps(from, to, lang) {
                       `Cuenta con los dedos desde ${N(from)} hasta ${N(to)}: ${run}. ¿Cuántos has contado?`)]
   }
   const r = roundNear(from)
-  if (r !== null && r < to && noExchange(to, r)) {
+  // Taking the round number away and putting the difference back is a Year 4+ strategy and the help here
+  // counts on through round numbers: for a two-digit gap (28 → 50) the hint says the same thing the help does.
+  if (r !== null && r < to && to > 100 && noExchange(to, r)) {
     const d = Math.abs(from - r)
     return from < r
       ? [say(lang, `${N(from)} is just ${d} less than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy.`,
@@ -6169,9 +6171,15 @@ function scaleReading(level, lang, types) {
     const value = Math.round((spec.min + randInt(1, steps - 1) * spec.minor) * 10) / 10
     v = { kind: 'scale', type: 'line', ...spec, value }
     q = say(lang, 'What number is the arrow pointing to?', 'Ok hangi sayıyı gösteriyor?', '¿A qué número apunta la flecha?')
-    hint = say(lang, `Work out how much each small step is worth: the gap between the two ends, shared by the number of steps.`,
-                     `Önce her küçük adımın kaç ettiğini bul: iki uç arasındaki farkı adım sayısına böl.`,
-                     `Averigua cuánto vale cada paso pequeño: la distancia entre los dos extremos entre el número de pasos.`)
+    // The grown-up wording ("the gap between the two ends, shared by the number of steps") is a sentence a
+    // seven-year-old cannot parse; the help asks the same thing as a sum they can do.
+    hint = band <= 2
+      ? say(lang, `Count the little steps between ${label0(spec.min, lang)} and ${label0(spec.max, lang)}. They are all the same size.`,
+                  `${label0(spec.min, lang)} ile ${label0(spec.max, lang)} arasındaki küçük adımları say. Hepsi aynı büyüklükte.`,
+                  `Cuenta los pasos pequeños entre ${label0(spec.min, lang)} y ${label0(spec.max, lang)}. Todos miden lo mismo.`)
+      : say(lang, `Work out how much each small step is worth: the gap between the two ends, shared by the number of steps.`,
+                  `Önce her küçük adımın kaç ettiğini bul: iki uç arasındaki farkı adım sayısına böl.`,
+                  `Averigua cuánto vale cada paso pequeño: la distancia entre los dos extremos entre el número de pasos.`)
     unit = say(lang, `Then count the steps from ${label0(spec.min, lang)} to the arrow.`, `Sonra ${label0(spec.min, lang)} sayısından oka kadar adımları say.`,
                      `Luego cuenta los pasos desde ${label0(spec.min, lang)} hasta la flecha.`)
   }
@@ -7019,12 +7027,14 @@ function dataTally(level, lang) {
   return {
     topic: 'pictogram', level, question_text: q, format: 'numeric', correct_answer: answer,
     operandKey: `tally:${ask}:${counts.join('-')}:${i}:${j}`,
-    hint_steps: [
-      say(lang, 'Each gate of four lines with one across is 5. Count the gates in fives, then the single lines.', 'Üstü çizili dört çizgi 5 demektir. Önce beşleri, sonra tek çizgileri say.', 'Cada grupo de cuatro rayas cruzadas es 5. Cuenta de 5 en 5 y luego las rayas sueltas.'),
-      ask === 'total' ? say(lang, 'Add up every row.', 'Bütün satırları topla.', 'Suma todas las filas.')
-        : ask === 'more' ? say(lang, 'Count both rows, then find the difference.', 'İki satırı da say, sonra farkı bul.', 'Cuenta las dos filas y calcula la diferencia.')
-          : say(lang, 'Find the right row first.', 'Önce doğru satırı bul.', 'Busca primero la fila correcta.'),
-    ],
+    // The row comes before the counting when the question is about one row: find it, then count it.
+    hint_steps: (() => {
+      const how = say(lang, 'Each gate of four lines with one across is 5. Count the gates in fives, then the single lines.', 'Üstü çizili dört çizgi 5 demektir. Önce beşleri, sonra tek çizgileri say.', 'Cada grupo de cuatro rayas cruzadas es 5. Cuenta de 5 en 5 y luego las rayas sueltas.')
+      const then = ask === 'total' ? say(lang, 'Add up every row.', 'Bütün satırları topla.', 'Suma todas las filas.')
+: ask === 'more' ? say(lang, 'Count both rows, then find the difference.', 'İki satırı da say, sonra farkı bul.', 'Cuenta las dos filas y calcula la diferencia.')
+: say(lang, 'Find the right row first.', 'Önce doğru satırı bul.', 'Busca primero la fila correcta.')
+      return ask === 'read' ? [then, how] : [how, then]
+    })(),
     visual: { kind: 'tally', rows },
     // The rows the question is about, counted gate by gate in the help panel.
     help: { kind: 'tally', rows, ask, use: ask === 'read' ? [i] : ask === 'more' ? [hi, lo] : [0, 1, 2, 3] },
