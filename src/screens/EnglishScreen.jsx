@@ -5,6 +5,7 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { EnglishStem, EnglishOptions, englishWhyLines } from '../components/EnglishView'
 import { EnglishReviewList } from '../components/SittingReview'
+import Scratchpad from '../components/Scratchpad'
 
 // The child's English: verbal reasoning, spelling and grammar in the Bond 11+ English books'
 // formats. Ten questions from the child's age band, one at a time, each marked when it is sent.
@@ -430,6 +431,7 @@ export default function EnglishScreen() {
           )}
         </div>
       </div>
+      <Scratchpad selector=".pz-scroll" resetKey={qIdx} language={language} accent={ROSE} />
     </>
   )
 }

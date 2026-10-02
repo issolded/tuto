@@ -7,6 +7,7 @@ import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock, DayPartChip } from '../components/ClockFace'
 import { sameKindProblem } from '../lib/reviewQuestions'
+import Scratchpad from '../components/Scratchpad'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
@@ -3665,6 +3666,8 @@ export default function MathScreen() {
           )}
         </div>
       </div>
+      {/* Paper over the question: a pencil for notes next to the answers. Not saved, cleared with each question. */}
+      <Scratchpad selector=".math-qscroll" resetKey={`${qIdx}:${review ? 'r' : 'q'}`} language={language} accent={MATH} />
       </>
     )
   }

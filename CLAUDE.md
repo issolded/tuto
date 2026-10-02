@@ -83,6 +83,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Karalama defteri (2026-10-02, Claude). `src/components/Scratchpad.jsx`: soru ekranının sağ altında ✏️, açılınca parmakla/kalemle/fareyle
+      sorunun ve şıkların üstüne yazılır; mürekkep 3 renk, silgi, hepsini sil. Tuval ekranın kendi kaydırma sütununun İÇİNDE
+      (`selector` ile bulunur) ve içerik kadar uzun, yani not şıkla birlikte kayar. Kapalıyken dokunuşları geçirir (ekran aynen
+      eskisi); açıkken sayfa parmak altında kaymaz (bilinçli ödünleşme). Yeni soruda defter boşalır ve kalem bırakılır; hiçbir
+      şey kaydedilmez/gönderilmez. Matematik (`.math-qscroll`) ve İngilizce (`.pz-scroll`) soru ekranlarında; bulmaca ekranı henüz yok.
+      Tarayıcıda matematik ekranında denendi (çizim, silgi, temizleme, yeni soruda boşalma); İngilizce ekranı derlemede doğrulandı,
+      uçtan uca oynanmadı; iPad/Apple Pencil gerçek cihazda denenmedi (avuç içi reddi pointerType'a göre eklenebilir).
 - [x] Kâğıtta matematik %20 fazla gem verir (2026-10-02, Claude; kullanıcı kararı). Mod seçim ekranında kâğıt kartı "En fazla 54 Gem
       🎁 %20 bonus" (45 × 1,2 yuvarlanmış), istemci `mode` gönderir, sunucu `sessionGems` (`server/mathGems.js`, `PAPER_BONUS`)
       ile çarpar; günlük sınır ve gem tavanı aynı. Ebeveyn mesajına "Kâğıtta çalıştığı için %20 bonus" eklenir. Kâğıtta
