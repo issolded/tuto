@@ -1,5 +1,5 @@
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
-import { questionShareMean } from './mathGems.js'
+import { questionShareMean, sessionGems } from './mathGems.js'
 import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import 'dotenv/config'
@@ -5700,7 +5700,9 @@ setInterval(() => { expireMathReviews().catch(err => console.error(`[MATH-REVIEW
 
 app.post('/api/children/:childId/math-session', async (req, res) => {
   const { childId } = req.params
-  const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session, review_ok } = req.body
+  const { level, topics, school_year, attempts, questions_total, questions_correct, accuracy, help_used, gemini_notes, next_session, review_ok, mode } = req.body
+  // Only the one word that earns the bonus is believed; anything else is a screen session.
+  const paper = mode === 'paper'
   try {
     // Finishing a session used to cost eleven database round trips in a row, and four of them
     // re-read a row the request already had in hand: the child row three times (here, inside
@@ -5751,10 +5753,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
       capped = true
     } else {
       // Per question when the record covers them all; the old session-level scale otherwise.
-      const share = questionShareMean(attempts, questions_total)
-      gems = share !== null
-        ? Math.round(settings.gems * share)
-        : Math.round(settings.gems * scale * (Number(help_used) > 0 ? 0.67 : 1))
+      gems = sessionGems({ max: settings.gems, share: questionShareMean(attempts, questions_total), scale, helpUsed: help_used, paper: paper === true })
     }
 
     // Advancing used to take a single good session, so a child who breezed through five
@@ -5873,7 +5872,7 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
         unaided: solved.filter(a => a?.correct === true && !a?.help_used).length,
         helped: solved.filter(a => a?.correct === true && a?.help_used).length,
       } : {}),
-      gems, capped, daily_cap: settings.dailyCap, note,
+      gems, capped, daily_cap: settings.dailyCap, note, paper,
       kind: gems > 0 && (perTask || doneToday === 0) ? 'rewarded'
         : capped && settings.active && perTask ? 'capped' : null,
     }

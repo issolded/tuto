@@ -11,3 +11,18 @@ export function questionShareMean(attempts, total) {
   return sum / n
 }
 
+
+// Working on paper pays a fifth more than the same work on the screen. Paper has no hints or help to
+// lean on and it is the offline option, so the choice screen offers it as a bonus and the amount is
+// the same figure the card shows: up to max × 1.2.
+export const PAPER_BONUS = 1.2
+
+// What one maths session pays. `share` is the per-question mean when the record covers every question
+// (null otherwise, then the session-level `scale` and the help count decide). The daily limit and the
+// ledger are the caller's.
+export function sessionGems({ max, share, scale, helpUsed = 0, paper = false }) {
+  const base = share !== null && share !== undefined
+    ? max * share
+    : max * scale * (Number(helpUsed) > 0 ? 0.67 : 1)
+  return Math.round(base * (paper ? PAPER_BONUS : 1))
+}

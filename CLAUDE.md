@@ -83,6 +83,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Kâğıtta matematik %20 fazla gem verir (2026-10-02, Claude; kullanıcı kararı). Mod seçim ekranında kâğıt kartı "En fazla 54 Gem
+      🎁 %20 bonus" (45 × 1,2 yuvarlanmış), istemci `mode` gönderir, sunucu `sessionGems` (`server/mathGems.js`, `PAPER_BONUS`)
+      ile çarpar; günlük sınır ve gem tavanı aynı. Ebeveyn mesajına "Kâğıtta çalıştığı için %20 bonus" eklenir. Kâğıtta
+      pekiştirme turu yok (soru başı kayıt/şablon yok) ve fotoğraf okumasına güveniyor: okuma hatası bonusu da götürür.
 - [x] Ebeveyn geri bildirimi + 6-8 yıldızları (2026-10-02, Claude). Ebeveyn sohbette uygulamadan
       memnuniyetsizlik/öneri/hata söylerse `submit_feedback` aracı `parent_feedback`'e yazar (migration
       `2026-10-02_parent_feedback.sql`): ebeveynin kendi sözü + modelin İngilizce özeti, aynı ebeveyn/alan/tür

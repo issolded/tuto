@@ -565,6 +565,7 @@ const STRINGS = {
   math_screen_desc:   { en: 'Type your answers right here, one by one.',
                         tr: 'Cevaplarını burada tek tek yaz.',
                         es: 'Escribe aquí tus respuestas, una a una.' },
+  math_paper_bonus:   { en: '+20% bonus', tr: '%20 bonus', es: '+20 % extra' },
   math_up_to_gems:    { en: 'Up to',         tr: 'En fazla', es: 'Hasta' },
   math_gems_word:     { en: 'Gems',          tr: 'Gem',      es: 'Gems' },
   math_lets_go:       { en: "Let's go! →",   tr: 'Haydi başlayalım! →', es: '¡Vamos! →' },

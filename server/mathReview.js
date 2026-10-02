@@ -110,15 +110,16 @@ export function mathSessionNotice(name, s, language, review) {
     ' Questions solved with help count half.',
     ' Yardımla çözülen sorular yarım gem sayılıyor.',
     ' Las preguntas resueltas con ayuda cuentan la mitad.') : ''
+  const paperNote = s.paper ? say(language, ' On paper, so a 20% bonus.', ' Kâğıtta çalıştığı için %20 bonus.', ' En papel, así que con un 20 % extra.') : ''
   const head = s.kind === 'capped'
     ? say(language,
         `${name} did another maths session — ${s.correct}/${s.total} correct${how}. That's past today's limit of ${s.daily_cap}, so it didn't add gems. 🌙`,
         `${name} bir matematik daha yaptı — ${s.correct}/${s.total} doğru${how}. Bugünkü sınırı (günde ${s.daily_cap}) geçtiği için gem eklenmedi. 🌙`,
         `${name} ha hecho otra sesión de mates — ${s.correct}/${s.total} correctas${how}. Pasa del límite de hoy (${s.daily_cap}), así que no ha sumado gems. 🌙`)
     : say(language,
-        `${name} did their maths — ${s.correct}/${s.total} correct${how}. +${s.gems} gems 💎${halfNote}`,
-        `${name} matematiğini yaptı — ${s.correct}/${s.total} doğru${how}. +${s.gems} gem 💎${halfNote}`,
-        `${name} ha hecho sus mates — ${s.correct}/${s.total} correctas${how}. +${s.gems} gems 💎${halfNote}`)
+        `${name} did their maths — ${s.correct}/${s.total} correct${how}. +${s.gems} gems 💎${paperNote}${halfNote}`,
+        `${name} matematiğini yaptı — ${s.correct}/${s.total} doğru${how}. +${s.gems} gem 💎${paperNote}${halfNote}`,
+        `${name} ha hecho sus mates — ${s.correct}/${s.total} correctas${how}. +${s.gems} gems 💎${paperNote}${halfNote}`)
 
   let tail = ''
   // The same facts for the short line a template message carries.

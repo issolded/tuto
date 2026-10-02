@@ -22,6 +22,8 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 // generated once and cannot be regenerated identically, so the child lost the work and the
 // answers already given. sessionStorage, not localStorage: this should survive a reload of the
 // same tab and nothing more. A half-finished session found a day later is not worth resuming.
+// Paper pays a fifth more; server/mathGems.js holds the same number and pays it.
+const PAPER_BONUS = 1.2
 const SESSION_KEY = 'tuto_math_session_v1'
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000
 const ANSWERING_STEPS = ['paper_questions', 'screen_questions']
@@ -3041,6 +3043,8 @@ export default function MathScreen() {
           // Only a screen session can be followed by a review: it is the one whose questions can be
           // asked again, fresh, from the same templates.
           review_ok: mode === 'screen',
+          // The server pays a fifth more for paper; it is told which it was.
+          mode,
           // Paper mode only — the model's read on how the work went, and what to try next.
           gemini_notes: evalData.gemini_notes || null,
           next_session: evalData.next_session || null,
@@ -3157,10 +3161,17 @@ export default function MathScreen() {
         >
           <span style={{ fontSize: 42 }}>✏️</span>
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>{t('math_on_paper', language)}</div>
-          <div style={{
-            alignSelf: 'flex-start', background: MATH, color: '#fff',
-            borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-          }}>⭐ {t('math_up_to_gems', language)} {maxGems} {t('math_gems_word', language)}</div>
+          {/* The figure is what the server pays at most for paper: the same maximum plus the bonus, rounded the same way. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{
+              background: MATH, color: '#fff',
+              borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+            }}>⭐ {t('math_up_to_gems', language)} {Math.round(maxGems * PAPER_BONUS)} {t('math_gems_word', language)}</div>
+            <div style={{
+              background: '#fff1d6', color: '#b7720f', border: '2px solid #f7c76a',
+              borderRadius: 11, padding: '2px 11px', fontFamily: FRED, fontWeight: 700, fontSize: 13,
+            }}>🎁 {t('math_paper_bonus', language)}</div>
+          </div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             {t('math_paper_desc', language)}
           </div>
