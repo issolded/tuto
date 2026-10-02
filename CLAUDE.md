@@ -81,6 +81,15 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Ebeveyn geri bildirimi + 6-8 yıldızları (2026-10-02, Claude). Ebeveyn sohbette uygulamadan
+      memnuniyetsizlik/öneri/hata söylerse `submit_feedback` aracı `parent_feedback`'e yazar (migration
+      `2026-10-02_parent_feedback.sql`): ebeveynin kendi sözü + modelin İngilizce özeti, aynı ebeveyn/alan/tür
+      günde tek satır (`repeats`), günde en çok 5. Model "kaydettim" demeyi yalnız success:true'dan sonra,
+      söz (düzeltilecek/güncellemede) vermeden yapabilir; kaydedilemediyse "kaydedemedim" der (probe ile
+      doğrulandı). Satırlar şimdilik Supabase'de okunur. Tetik: WhatsApp'ta model "ekibe iletiyorum" demişti, aracı yoktu.
+      6-8 ana sayfa yıldızları artık HAFTALIK değil BUGÜNÜN seansı / günlük gem sınırı (en çok 5 yıldız, sınır 10
+      ise ölçekli; "bugün" etiketli). Eskiden `weekByType` idi ve ebeveyn seviye diye okudu; sohbet modeli de
+      bunu "günlük kota" diye yanlış açıklamıştı. 9+ görünümler hâlâ "bu hafta" diyor.
 - [ ] Pekiştirme turu (2026-10-02, Claude; `claude/math-hint-quality`). **Migration önce:**
       `server/migrations/2026-10-02_math_reviews.sql` (`math_reviews`). Tablo yokken sunucu eski
       davranışa düşer: teklif yok, ebeveyne mesaj hemen gider (güvenli). Ekran oturumu bitince hatalı/

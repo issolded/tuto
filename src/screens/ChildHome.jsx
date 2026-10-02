@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { t, childLang, localeFor } from '../lib/i18n'
+import { TASK_DEFAULTS } from '../lib/taskDefaults'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import Shell from '../components/Shell'
@@ -605,10 +606,15 @@ function TeenHome({ child, lang, gems, today, ts, nav }) {
 // Fewer words, bigger things: a greeting, Tuto front and centre, the day's bonus for a seven- or
 // eight-year-old, and every activity as a big tile. Progress is stars, not numbers — a star for
 // each time this week, up to five.
-function Stars({ n }) {
+// `of` stars, `n` of them lit. On a tile they are TODAY's sessions against the day's gem limit — not
+// a level and not a week: a parent read "★★★☆☆" under Maths as how good the child is.
+function Stars({ n, of = 5, label }) {
   return (
-    <span style={{ fontSize: 13, letterSpacing: 1, color: '#f5d35f', WebkitTextStroke: '.6px #d8a93b' }}>
-      {'★'.repeat(n)}<b style={{ color: '#e4e0d4', WebkitTextStroke: '.6px #cbc6b6' }}>{'★'.repeat(5 - n)}</b>
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
+      <span style={{ fontSize: 13, letterSpacing: 1, color: '#f5d35f', WebkitTextStroke: '.6px #d8a93b' }}>
+        {'★'.repeat(n)}<b style={{ color: '#e4e0d4', WebkitTextStroke: '.6px #cbc6b6' }}>{'★'.repeat(of - n)}</b>
+      </span>
+      {label && <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT }}>{label}</span>}
     </span>
   )
 }
@@ -619,7 +625,19 @@ function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
   const [streakWhy, setStreakWhy] = useState(false)
   const tiles = MID_TILES.filter(x => x.type === 'tree' || (ts[x.type]?.active ?? true))
   const gemFor = (type) => ts[type]?.gems ?? DEFAULT_TASK_GEMS[type] ?? (type === 'homework' ? 25 : type === 'drawing' ? 20 : null)
-  const starsFor = (type) => Math.min(5, type === 'tree' ? (today.today || 0) : (today.weekByType?.[type] || 0))
+  // Today against the day's limit, as many stars as the limit allows sessions (at most five, so a
+  // parent's limit of ten does not run off the tile). The leaf tree has no limit and keeps its five.
+  const capFor = (type) => {
+    const c = Number(ts[type]?.daily_cap)
+    return Math.min(5, Number.isFinite(c) && c >= 1 ? Math.trunc(c) : (TASK_DEFAULTS[type]?.daily_cap ?? 3))
+  }
+  const starsFor = (type) => {
+    if (type === 'tree') return { n: Math.min(5, today.today || 0), of: 5 }
+    const of = capFor(type)
+    const done = today.activities?.[type] || 0
+    const full = Number(ts[type]?.daily_cap) > 5 ? Math.round((done / Number(ts[type].daily_cap)) * of) : Math.min(of, done)
+    return { n: Math.min(of, done > 0 ? Math.max(1, full) : 0), of }
+  }
   const goal = today.nearestGoal
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -665,7 +683,7 @@ function YoungHome({ child, lang, gems, today, ts, nav, greetingKey }) {
               </div>
               <h3 style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, margin: '2px 0 0' }}>{t(x.nameKey, lang)}</h3>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                <Stars n={starsFor(x.type)} />
+                <Stars {...starsFor(x.type)} label={t('home_today_short', lang)} />
                 {g != null
                   ? <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13, color: ACCENT }}>⭐+{g}</span>
                   : <span style={{ fontFamily: FRED, fontWeight: 600, fontSize: 12, color: '#37a06f' }}>🌱 {t('home_always_on', lang)}</span>}
