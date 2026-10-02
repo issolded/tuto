@@ -49,6 +49,8 @@ for (const [bk, band] of Object.entries(BANDS)) {
           for (const w of new Set(joined.split(/[^\p{L}]+/u))) freq.words.set(w, (freq.words.get(w) || 0) + 1)
           for (const r of right) {
             if (r.length < 3 || printed(it).includes(r)) continue
+            // Listing ALL the options the child can see ("-ance / -ence") is not giving one away.
+            if (it.options.length > 1 && it.options.every(o => joined.includes(o.text.toLowerCase())) && it.options.length <= 5 && it.type === 'ending') continue
             if (new RegExp(`(^|[^\\p{L}])${esc(r)}([^\\p{L}]|$)`, 'u').test(joined)) leaks.push({ key, r, msg: `${type} ${bk} seed ${s} ${lang}: hint before answering says "${r}": ${joined}` })
           }
         }

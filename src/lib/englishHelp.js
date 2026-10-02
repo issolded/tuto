@@ -14,6 +14,8 @@
 // server picks the child's language (children.language), not the parent's. The audit
 // (scripts/english-help-audit.mjs) fails any rung 1-3 that contains the answer.
 
+import { spell } from './englishTemplates.js'
+
 const L = (en, tr, es) => ({ en, tr, es })
 const up = (s) => String(s).toUpperCase()
 const ans = (it) => it.correct.map(i => it.options[i].text)
@@ -369,7 +371,10 @@ const HELP = {
   'odd-two': (it) => ({
     tip: L('Three of the words belong together in one group. The two that do not are the answer.', 'Kelimelerden üçü aynı gruba ait. Ait olmayan ikisi cevap.', 'Tres de las palabras forman un grupo. Las dos que no encajan son la respuesta.'),
     steps: [
-      L(`Three of the words are all kinds of ${it.rule.group}.`, `Üç kelime de bir tür: ${it.rule.group}.`, `Tres de las palabras son tipos de: ${it.rule.group}.`),
+      (() => {
+        const inside = it.options.filter((_, i) => !it.correct.includes(i)).map(o => o.text).slice(0, 2).join(', ')
+        return L(`Three of the words belong together, for example ${inside}: they are all kinds of ${it.rule.group}.`, `Üç kelime birbirine ait, örneğin ${inside}: hepsi bir tür: ${it.rule.group}.`, `Tres de las palabras van juntas, por ejemplo ${inside}: todas son tipos de: ${it.rule.group}.`)
+      })(),
       L(`The other two, ${ans(it).join(' and ')}, are not.`, `Diğer ikisi, ${ans(it).join(' ve ')}, değil.`, `Las otras dos, ${ans(it).join(' y ')}, no.`),
     ],
   }),
@@ -465,9 +470,13 @@ const HELP = {
       ies: L(`"${w}" ends in a consonant and then y. Change the y to i and add es.`, `"${w}" ünsüz + y ile bitiyor. y'yi i yap ve es ekle.`, `"${w}" acaba en consonante + y. Cambia la y por i y añade es.`),
       es: L(`"${w}" ends in a hissing sound (s, x, z, ch, sh), so it needs es to be said.`, `"${w}" tıslama sesiyle (s, x, z, ch, sh) bitiyor, o yüzden es alır.`, `"${w}" acaba en un sonido silbante (s, x, z, ch, sh), así que lleva es.`),
       's-after-vowel': L(`"${w}" ends in a vowel and then y. The y stays, and you just add s.`, `"${w}" ünlü + y ile bitiyor. y kalır, sadece s eklenir.`, `"${w}" acaba en vocal + y. La y se queda y solo se añade s.`),
-      's-after-o': L(`"${w}" ends in o, but it is a short form or a music word. It only takes s.`, `"${w}" o ile bitiyor ama kısaltma ya da müzik sözcüğü; yalnız s alır.`, `"${w}" acaba en o, pero es una forma corta o de música. Solo lleva s.`),
-      's-after-f': L(`"${w}" ends in f, but this one does not change. It only takes s.`, `"${w}" f ile bitiyor ama bu değişmiyor; yalnız s alır.`, `"${w}" acaba en f, pero esta no cambia. Solo lleva s.`),
-      irregular: L(`"${w}" is an irregular word: it does not follow the add-s rule, so you have to know its own form.`, `"${w}" düzensiz bir kelime: s ekleme kuralına uymaz, kendi çoğulunu bilmek gerekir.`, `"${w}" es irregular: no sigue la regla de añadir s, hay que conocer su forma.`),
+      's-after-o': L(`"${w}" ends in o, but this one only takes s (most short and borrowed o-words do).`, `"${w}" o ile bitiyor ama bu yalnız s alır (kısa ve yabancı kökenli o'lu kelimelerin çoğu öyle).`, `"${w}" acaba en o, pero esta solo lleva s (la mayoría de las palabras cortas o prestadas en o).`),
+      's-after-f': L(`"${w}" ends in f (or ff, fe), but this one does not change. It only takes s.`, `"${w}" f (ya da ff, fe) ile bitiyor ama bu değişmiyor; yalnız s alır.`, `"${w}" acaba en f (o ff, fe), pero esta no cambia. Solo lleva s.`),
+      irregular: /(f|fe)$/.test(w)
+        ? L(`"${w}" ends in f or fe, and this kind of word often changes to ves. Not all do, so you have to know this one.`, `"${w}" f ya da fe ile bitiyor ve böyle kelimeler çoğu zaman ves alır. Hepsi değil, bunu bilmek gerekir.`, `"${w}" acaba en f o fe, y este tipo de palabra suele cambiar a ves. No todas, así que hay que conocerla.`)
+        : /o$/.test(w)
+          ? L(`"${w}" ends in o, and a few words like this take es instead of just s. You have to know this one.`, `"${w}" o ile bitiyor ve böyle birkaç kelime yalnız s değil es alır. Bunu bilmek gerekir.`, `"${w}" acaba en o, y unas pocas palabras así llevan es y no solo s. Hay que conocerla.`)
+          : L(`"${w}" is an irregular word: it does not follow the add-s rule, so you have to know its own form.`, `"${w}" düzensiz bir kelime: s ekleme kuralına uymaz, kendi çoğulunu bilmek gerekir.`, `"${w}" es irregular: no sigue la regla de añadir s, hay que conocer su forma.`),
       latin: L(`"${w}" comes from Latin or Greek and keeps its old plural ending.`, `"${w}" Latince ya da Yunancadan geliyor ve eski çoğul ekini koruyor.`, `"${w}" viene del latín o del griego y conserva su plural antiguo.`),
     }[rule] || L(`Look at how "${w}" ends.`, `"${w}" kelimesinin sonuna bak.`, `Mira cómo acaba "${w}".`)
     return {
@@ -485,7 +494,7 @@ const HELP = {
     const kind = /ied$/.test(a) ? 'ied' : (a === w + w.slice(-1) + 'ed' ? 'double' : (/ed$|d$/.test(a) ? 'plain' : 'irregular'))
     const why = {
       ied: L(`"${w}" ends in a consonant and then y. Change the y to i, then add ed.`, `"${w}" ünsüz + y ile bitiyor. y'yi i yap, sonra ed ekle.`, `"${w}" acaba en consonante + y. Cambia la y por i y añade ed.`),
-      double: L(`"${w}" is short and ends in one vowel and one consonant, so the last letter is written twice before ed.`, `"${w}" kısa ve tek ünlü + tek ünsüzle bitiyor; o yüzden ed'den önce son harf ikilenir.`, `"${w}" es corta y acaba en una vocal y una consonante, así que la última letra se escribe dos veces antes de ed.`),
+      double: L(`"${w}" ends in one vowel and one consonant, with the stress on its last beat, so the last letter is written twice before ed.`, `"${w}" tek ünlü + tek ünsüzle bitiyor ve vurgu son hecede; o yüzden ed'den önce son harf ikilenir.`, `"${w}" acaba en una vocal y una consonante, con el acento en el último golpe, así que la última letra se escribe dos veces antes de ed.`),
       plain: L(`"${w}" just needs ed (or d), but check the spelling of the middle carefully.`, `"${w}" için ed (ya da d) yeter, ama yazılışı dikkatle kontrol et.`, `"${w}" solo necesita ed (o d), pero revisa bien la ortografía.`),
       irregular: L(`"${w}" is an irregular verb: it does not take ed, you have to know its own past form.`, `"${w}" düzensiz bir fiil: ed almaz, kendi geçmiş biçimini bilmek gerekir.`, `"${w}" es un verbo irregular: no lleva ed, hay que saber su forma de pasado.`),
     }[kind]
@@ -497,19 +506,40 @@ const HELP = {
       ],
     }
   },
-  suffix: (it) => ({
-    tip: L('Look at how the word ends before you add the new ending. Letters can change, double or disappear.', 'Yeni eki eklemeden önce kelimenin sonuna bak. Harfler değişebilir, ikilenebilir ya da düşebilir.', 'Mira cómo acaba la palabra antes de añadir la terminación. Las letras pueden cambiar, duplicarse o desaparecer.'),
-    steps: [
-      L(`Write "${it.rule.of}" and the ending -${it.rule.suffix} next to each other. What happens where they meet?`, `"${it.rule.of}" ile -${it.rule.suffix} ekini yan yana yaz. Birleştikleri yerde ne oluyor?`, `Escribe "${it.rule.of}" y la terminación -${it.rule.suffix} juntas. ¿Qué pasa donde se unen?`),
-      L('Cross out any option that just sticks the ending on without changing anything when the word needs a change.', 'Değişiklik gerekirken eki olduğu gibi yapıştıran şıkları çiz.', 'Tacha las que pegan la terminación sin cambiar nada cuando la palabra necesita un cambio.'),
-      L(`"${it.rule.of}" + -${it.rule.suffix} = ${ans(it)[0]}.`, `"${it.rule.of}" + -${it.rule.suffix} = ${ans(it)[0]}.`, `"${it.rule.of}" + -${it.rule.suffix} = ${ans(it)[0]}.`),
-    ],
-  }),
+  suffix: (it) => {
+    const base = it.rule.of, a = ans(it)[0], suf = it.rule.suffix
+    const last = base.slice(-1), stem = base.slice(0, -1)
+    const kind = a === base + suf ? 'plain'
+      : a === base + last + suf ? 'double'
+        : /y$/.test(base) && a === stem + 'i' + suf ? 'y-i'
+          : /y$/.test(base) && a === stem + suf ? 'drop-y'
+            : /e$/.test(base) && a === stem + suf ? 'drop-e'
+              : 'other'
+    const changes = kind !== 'plain'
+    const how = {
+      plain: L('Here the ending just sticks on and nothing else changes.', 'Burada ek olduğu gibi yapışıyor, başka bir şey değişmiyor.', 'Aquí la terminación simplemente se pega y nada más cambia.'),
+      double: L('Here the last letter is written twice before the ending.', 'Burada son harf, ekten önce ikilenir.', 'Aquí la última letra se escribe dos veces antes de la terminación.'),
+      'y-i': L('Here the y changes to i before the ending.', 'Burada y, ekten önce i olur.', 'Aquí la y cambia a i antes de la terminación.'),
+      'drop-y': L('Here the y is dropped before the ending.', 'Burada y, ekten önce düşer.', 'Aquí se quita la y antes de la terminación.'),
+      'drop-e': L('Here the silent e is dropped before the ending.', 'Burada sessiz e, ekten önce düşer.', 'Aquí se quita la e muda antes de la terminación.'),
+      other: L(`Here the end of the word changes in its own way, so it is one to learn.`, `Burada kelimenin sonu kendine özgü şekilde değişiyor; bunu öğrenmek gerekir.`, `Aquí el final de la palabra cambia a su manera, así que hay que aprenderla.`),
+    }[kind]
+    return {
+      tip: L('Look at how the word ends before you add the new ending. Letters can change, double or disappear.', 'Yeni eki eklemeden önce kelimenin sonuna bak. Harfler değişebilir, ikilenebilir ya da düşebilir.', 'Mira cómo acaba la palabra antes de añadir la terminación. Las letras pueden cambiar, duplicarse o desaparecer.'),
+      steps: [
+        L(`Write "${base}" and the ending -${suf} next to each other. What happens where they meet?`, `"${base}" ile -${suf} ekini yan yana yaz. Birleştikleri yerde ne oluyor?`, `Escribe "${base}" y la terminación -${suf} juntas. ¿Qué pasa donde se unen?`),
+        changes
+          ? L(`The end of "${base}" does not just stay as it is before -${suf}: cross out options that stick the ending on unchanged.`, `"${base}" kelimesinin sonu -${suf} ekinden önce olduğu gibi kalmıyor: eki değiştirmeden yapıştıran şıkları çiz.`, `El final de "${base}" no se queda igual ante -${suf}: tacha las opciones que pegan la terminación sin cambiar nada.`)
+          : L(`Here nothing in "${base}" needs to change: look for the option that simply adds -${suf}.`, `Burada "${base}" kelimesinde bir şey değişmiyor: eki sadece ekleyen şıkkı ara.`, `Aquí nada de "${base}" necesita cambiar: busca la opción que solo añade -${suf}.`),
+        L(`"${base}" + -${suf} = ${a}. ${how.en}`, `"${base}" + -${suf} = ${a}. ${how.tr}`, `"${base}" + -${suf} = ${a}. ${how.es}`),
+      ],
+    }
+  },
   'prefix-antonym': (it) => ({
     tip: L('A small beginning (un-, in-, im-, il-, ir-, dis-) turns a word into its opposite. Only one goes with this word.', 'Küçük bir başlangıç (un-, in-, im-, il-, ir-, dis-) kelimeyi zıttına çevirir. Bu kelimeyle yalnız biri gider.', 'Un comienzo pequeño (un-, in-, im-, il-, ir-, dis-) vuelve la palabra su contraria. Solo uno va con esta.'),
     steps: [
       L(`"${it.rule.of}" starts with the letter ${up(it.rule.of[0])}.`, `"${it.rule.of}" ${up(it.rule.of[0])} harfiyle başlıyor.`, `"${it.rule.of}" empieza por la letra ${up(it.rule.of[0])}.`),
-      L('The rule: il- goes before L, ir- before R, im- before M, B or P. un-, in- and dis- go with the rest.', 'Kural: il- L\'den önce, ir- R\'den önce, im- M, B, P\'den önce gelir. un-, in-, dis- diğerlerine gider.', 'La regla: il- va ante L, ir- ante R, im- ante M, B o P. un-, in- y dis- van con el resto.'),
+      L('The rule: il- goes before L, ir- before R, im- before M, B or P. With the rest it is un- (the commonest), in- or dis-, and you learn which word takes which.', 'Kural: il- L\'den önce, ir- R\'den önce, im- M, B, P\'den önce gelir. Diğerlerinde un- (en yaygını), in- ya da dis- olur; hangi kelimenin hangisini aldığı öğrenilir.', 'La regla: il- va ante L, ir- ante R, im- ante M, B o P. Con el resto es un- (la más común), in- o dis-, y se aprende qué palabra lleva cuál.'),
       L(`${ans(it)[0]}${it.rule.of} is the opposite.`, `${ans(it)[0]}${it.rule.of} zıt anlamlı.`, `${ans(it)[0]}${it.rule.of} es el opuesto.`),
     ],
   }),
@@ -547,20 +577,37 @@ const HELP = {
       L(`"${ans(it)[0]}" is the mistake. It should be "${it.rule.word}".`, `"${ans(it)[0]}" hatalı. Doğrusu "${it.rule.word}".`, `"${ans(it)[0]}" es el error. Lo correcto es "${it.rule.word}".`),
     ],
   }),
-  ending: (it) => ({
-    tip: L('Say the word. Three endings sound alike (-tion, -sion, -cian), so look at the letters BEFORE the gap.', 'Kelimeyi söyle. Üç son ek benzer okunur (-tion, -sion, -cian), o yüzden boşluktan ÖNCEKİ harflere bak.', 'Di la palabra. Tres terminaciones suenan igual (-tion, -sion, -cian), así que mira las letras ANTES del hueco.'),
-    steps: [
-      L(`Look at the letter before the gap in "${it.prompt.masked}": it is ${up(it.prompt.masked.replace('___', '').slice(-1))}.`, `"${it.prompt.masked}" kelimesinde boşluktan önceki harf: ${up(it.prompt.masked.replace('___', '').slice(-1))}.`, `Mira la letra antes del hueco en "${it.prompt.masked}": es ${up(it.prompt.masked.replace('___', '').slice(-1))}.`),
-      L('-cian is for people with a skill (musician). -sion often follows l, n, r or s. -tion is the most common, after a vowel or t.', '-cian becerisi olan kişiler için (musician). -sion çoğu zaman l, n, r ya da s\'den sonra gelir. -tion en yaygın olanı, ünlüden ya da t\'den sonra.', '-cian es para personas con un oficio (musician). -sion suele ir tras l, n, r o s. -tion es la más común, tras vocal o t.'),
-      L(`The word is ${it.rule.word}.`, `Kelime ${it.rule.word}.`, `La palabra es ${it.rule.word}.`),
-    ],
-  }),
+  ending: (it) => {
+    const set = it.options.map(o => o.text).sort().join('/')
+    const pair = it.options.map(o => `-${o.text}`).join(' / ')
+    const rules = {
+      'cian/sion/tion': L('-tion is by far the commonest. -sion often follows l, n, r or s. -cian is for people with a skill (musician, magician).', '-tion açık farkla en yaygını. -sion çoğu zaman l, n, r ya da s\'den sonra gelir. -cian becerisi olan kişiler için (musician, magician).', '-tion es con mucho la más común. -sion suele ir tras l, n, r o s. -cian es para personas con un oficio (musician, magician).'),
+      'able/ible': L('-able goes on a whole word (comfort, comfortable). -ible goes on a part that is not a word by itself (vis, visible).', '-able bütün bir kelimeye gelir (comfort, comfortable). -ible tek başına kelime olmayan bir parçaya gelir (vis, visible).', '-able va con una palabra entera (comfort, comfortable). -ible va con una parte que no es palabra sola (vis, visible).'),
+      'ance/ence': L('After a hard c or g sound the ending is -ance (elegance); after a soft c or g sound it is -ence (innocence). A related word helps: elegant → elegance.', 'Sert c ya da g sesinden sonra son ek -ance (elegance); yumuşak c ya da g sesinden sonra -ence (innocence). Akraba bir kelime yardım eder: elegant → elegance.', 'Tras un sonido c o g duro, la terminación es -ance (elegance); tras c o g suave, -ence (innocence). Una palabra de la familia ayuda: elegant → elegance.'),
+      'ancy/ency': L('After a hard c or g sound the ending is -ancy (vacancy); after a soft c or g sound it is -ency (emergency). A related word helps: vacant → vacancy.', 'Sert c ya da g sesinden sonra -ancy (vacancy); yumuşak c ya da g sesinden sonra -ency (emergency). Akraba kelime yardım eder: vacant → vacancy.', 'Tras c o g duro, -ancy (vacancy); tras c o g suave, -ency (emergency). Una palabra de la familia ayuda: vacant → vacancy.'),
+      'ant/ent': L('After a hard c or g sound the ending is -ant (significant); after a soft c or g sound it is -ent (innocent). A related word helps: significance → significant.', 'Sert c ya da g sesinden sonra -ant (significant); yumuşak c ya da g sesinden sonra -ent (innocent). Akraba kelime yardım eder: significance → significant.', 'Tras c o g duro, -ant (significant); tras c o g suave, -ent (innocent). Una palabra de la familia ayuda: significance → significant.'),
+      'ary/ery/ory': L('Nothing in the sound tells them apart. -ary is the commonest (library, necessary); -ery and -ory are words you learn (mystery, history).', 'Sesleri ayırt ettirmez. -ary en yaygını (library, necessary); -ery ve -ory ise kelime kelime öğrenilir (mystery, history).', 'El sonido no las distingue. -ary es la más común (library, necessary); -ery y -ory se aprenden palabra a palabra (mystery, history).'),
+      'cial/tial': L('-cial usually comes after a vowel (special, social). -tial usually comes after a consonant (essential, partial).', '-cial çoğu zaman ünlüden sonra gelir (special, social). -tial çoğu zaman ünsüzden sonra (essential, partial).', '-cial suele ir tras vocal (special, social). -tial suele ir tras consonante (essential, partial).'),
+      'sure/ture': L('-ture sounds like "cher" (picture, future). -sure sounds like "zher" (measure, pleasure).', '-ture "çır" gibi okunur (picture, future). -sure "jır" gibi okunur (measure, pleasure).', '-ture suena como "cher" (picture, future). -sure suena como "yer" (measure, pleasure).'),
+    }
+    const gap = it.prompt.masked.replace('___', '')
+    return {
+      tip: L(`These endings sound alike (${pair}), so look at the letters BEFORE the gap and remember which goes where.`, `Bu son ekler benzer okunur (${pair}); boşluktan ÖNCEKİ harflere bak ve hangisinin nerede kullanıldığını hatırla.`, `Estas terminaciones suenan parecido (${pair}), así que mira las letras ANTES del hueco y recuerda cuál va dónde.`),
+      steps: [
+        L(`Look at the letter before the gap in "${it.prompt.masked}": it is ${up(gap.slice(-1))}.`, `"${it.prompt.masked}" kelimesinde boşluktan önceki harf: ${up(gap.slice(-1))}.`, `Mira la letra antes del hueco en "${it.prompt.masked}": es ${up(gap.slice(-1))}.`),
+        rules[set] || L('Try each ending in the gap and read the whole word.', 'Her son eki boşluğa koy ve kelimenin tamamını oku.', 'Prueba cada terminación en el hueco y lee la palabra entera.'),
+        L(`The word is ${it.rule.word}.`, `Kelime ${it.rule.word}.`, `La palabra es ${it.rule.word}.`),
+      ],
+    }
+  },
   'ie-ei': (it) => ({
     tip: L('"i before e, except after c" — but only when it sounds like "ee".', '"i, e\'den önce gelir, c\'den sonra hariç" — ama yalnız "ii" gibi okunuyorsa.', '"i antes de e, excepto después de c" — pero solo cuando suena como "i".'),
     steps: [
       L(`Look at the letter before the gap in "${it.prompt.masked}": ${up(it.prompt.masked.split('__')[0].slice(-1))}.`, `"${it.prompt.masked}" kelimesinde boşluktan önceki harf: ${up(it.prompt.masked.split('__')[0].slice(-1))}.`, `Mira la letra antes del hueco en "${it.prompt.masked}": ${up(it.prompt.masked.split('__')[0].slice(-1))}.`),
       L('After C it is EI. If the sound is "ay" (like in "neighbour") it is EI too. Otherwise it is IE. A few words just break the rule.', 'C\'den sonra EI olur. Ses "ey" gibiyse ("neighbour" gibi) yine EI. Yoksa IE. Birkaç kelime kuralı bozar.', 'Tras C es EI. Si suena "ei" (como en "neighbour") también es EI. Si no, es IE. Unas pocas palabras rompen la regla.'),
-      L(`The word is ${it.rule.word}.`, `Kelime ${it.rule.word}.`, `La palabra es ${it.rule.word}.`),
+      L(`The word is ${it.rule.word}${ans(it)[0] === 'ei' && it.prompt.masked.split('__')[0].slice(-1) !== 'c' ? ' (EI without a C: say it carefully or learn it, it is one of the exceptions)' : ''}.`,
+        `Kelime ${it.rule.word}${ans(it)[0] === 'ei' && it.prompt.masked.split('__')[0].slice(-1) !== 'c' ? ' (C olmadan EI: istisnalardan biri, dikkatle söyle ya da ezberle)' : ''}.`,
+        `La palabra es ${it.rule.word}${ans(it)[0] === 'ei' && it.prompt.masked.split('__')[0].slice(-1) !== 'c' ? ' (EI sin C: es una de las excepciones, dila con cuidado o apréndela)' : ''}.`),
     ],
   }),
   'silent-letter': (it) => ({
@@ -587,7 +634,7 @@ const HELP = {
     tip: L('The options sound the same, so spelling is not enough. The meaning of the sentence decides.', 'Şıklar aynı okunuyor, yani yazım yetmez. Cümlenin anlamı belirler.', 'Las opciones suenan igual, así que no basta con la ortografía. Decide el sentido de la frase.'),
     steps: [
       L(`Read the sentence with each option: "${it.prompt.sentence.replace('___', '___')}".`, `Cümleyi her şıkla oku: "${it.prompt.sentence}".`, `Lee la frase con cada opción: "${it.prompt.sentence}".`),
-      L('Ask what the missing word is doing here: showing a place, owning something, joining, or counting?', 'Eksik kelime burada ne yapıyor: yer mi gösteriyor, sahiplik mi, bağ mı, sayı mı?', '¿Qué hace la palabra que falta: indica un lugar, posesión, une, o cuenta?'),
+      L('These words sound the same but mean different things. Which meaning does this sentence need?', 'Bu kelimeler aynı okunur ama farklı anlamlara gelir. Bu cümle hangi anlamı istiyor?', 'Estas palabras suenan igual pero significan cosas distintas. ¿Qué significado necesita esta frase?'),
       L(`"${ans(it)[0]}" is the one that fits.`, `Uyan şık "${ans(it)[0]}".`, `La que encaja es "${ans(it)[0]}".`),
     ],
   }),
@@ -621,7 +668,7 @@ const HELP = {
   gender: (it) => ({
     tip: L('Some pairs just add -ess (lion, lioness). Many are completely different words (bull, cow).', 'Bazı çiftler sadece -ess alır (lion, lioness). Çoğu tamamen farklı kelimedir (bull, cow).', 'Algunas parejas solo añaden -ess (lion, lioness). Muchas son palabras totalmente distintas (bull, cow).'),
     steps: [
-      L(`Think of "${it.rule.of}" and its partner: the other one in the pair, the ${it.prompt.backwards ? 'male' : 'female'} or ${it.prompt.backwards ? 'female' : 'male'}.`, `"${it.rule.of}" ve eşini düşün: çiftin diğeri.`, `Piensa en "${it.rule.of}" y su pareja: la otra de la pareja.`),
+      L(`Think of "${it.rule.of}" and the word for the other sex in the pair.`, `"${it.rule.of}" kelimesini ve çiftin diğer cinsiyetteki karşılığını düşün.`, `Piensa en "${it.rule.of}" y en la palabra del otro sexo de la pareja.`),
       L(`The partner of "${it.rule.of}" is "${ans(it)[0]}".`, `"${it.rule.of}" kelimesinin eşi "${ans(it)[0]}".`, `La pareja de "${it.rule.of}" es "${ans(it)[0]}".`),
     ],
   }),
@@ -648,9 +695,20 @@ const GENERIC = {
   steps: [L('Cross out the options that do not fit. Which ones are left?', 'Uymayan şıkları çiz. Hangileri kaldı?', 'Tacha las opciones que no encajan. ¿Cuáles quedan?')],
 }
 
+// The engine spells what a question PRINTS for the child's variety (colour/color) but keeps the lexicon's
+// spelling in `rule`; help that quoted `rule.of` printed a word the child never saw ("medalist" under
+// "medallist"). Every word in the rule is put through the same spelling before the text is built.
+const RULE_KEEP = new Set(['kind', 'relation', 'pattern', 'rule', 'key', 'variety'])
+function spelled(item) {
+  const sp = (v) => (typeof v === 'string' ? spell(v, item.variety) : Array.isArray(v) ? v.map(sp) : v)
+  const rule = {}
+  for (const [k, v] of Object.entries(item.rule || {})) rule[k] = RULE_KEEP.has(k) ? v : sp(v)
+  return { ...item, rule }
+}
+
 function build(item) {
   const make = HELP[item.type]
-  try { return make ? make(item) : GENERIC } catch { return GENERIC }
+  try { return make ? make(spelled(item)) : GENERIC } catch { return GENERIC }
 }
 
 const pickLang = (l, lang) => l[lang] ?? l.en
@@ -682,7 +740,7 @@ export function explanation(item, lang = 'en') {
 export function allHelp(item) {
   const make = HELP[item.type]
   if (!make) throw new Error(`no help written for ${item.type}`)
-  const h = make(item)
+  const h = make(spelled(item))
   return { tip: h.tip, steps: h.steps }
 }
 

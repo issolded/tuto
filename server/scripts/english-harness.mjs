@@ -19,6 +19,7 @@ const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i > 0 ?
 const PORT = Number(arg('port', 3999))
 const AGE = Number(arg('age', 8))
 const LANG = arg('lang', 'tr')
+const NOMIG = process.argv.includes('--no-migration')   // behave as if the English help migration had not been run
 
 const serverDir = join(dirname(fileURLToPath(import.meta.url)), '..')
 let src = readFileSync(join(serverDir, 'index.js'), 'utf8')
@@ -60,13 +61,15 @@ function builder(name) {
     }
   })
   const run = () => {
+    if (NOMIG && name === 'english_reviews') return { data: null, error: { message: 'relation "english_reviews" does not exist' } }
+    if (NOMIG && name === 'english_attempts' && q.op === 'insert' && [].concat(q.row).some(r => 'wrong_tries' in r)) return { data: null, error: { message: 'column "wrong_tries" of relation "english_attempts" does not exist' } }
     if (q.op === 'insert') {
       const list = Array.isArray(q.row) ? q.row : [q.row]
       const out = []
       for (const r of list) {
         const key = UNIQUE[name]
         if (key && rows().some(o => key.every(k => o[k] === r[k]))) return { data: null, error: { code: '23505', message: 'duplicate key' } }
-        const full = { id: randomUUID(), created_at: new Date().toISOString(), ...structuredClone(DEFAULTS[name] || {}), ...r }
+        const full = { id: randomUUID(), created_at: new Date().toISOString(), ...structuredClone((NOMIG && name === 'english_attempts') ? {} : (DEFAULTS[name] || {})), ...r }
         rows().push(full); out.push(full)
       }
       return { data: out, error: null }

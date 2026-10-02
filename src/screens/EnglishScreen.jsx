@@ -350,6 +350,7 @@ export default function EnglishScreen() {
               <button className="pz-press" onClick={startReview} style={{
                 background: ROSE, color: 'white', border: 'none', borderRadius: 16, padding: '14px 20px',
                 fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer', boxShadow: '0 8px 20px rgba(170,50,85,.3)',
+                alignSelf: 'center', width: '100%', maxWidth: 420,
               }}>{say(language, 'Practise', 'Pekiştirelim', 'Repasemos')} ({result.review.count})</button>
               <button className="pz-press" onClick={declineReview} style={{
                 background: 'none', border: 'none', color: INK_SOFT, fontFamily: FRED, fontWeight: 600, fontSize: 15, padding: 8, cursor: 'pointer',
@@ -521,8 +522,8 @@ export default function EnglishScreen() {
               )}
               {rungs.length > 0 && (
                 <div style={{
-                  background: 'rgba(255,255,255,.92)', borderRadius: 16, padding: '13px 17px', maxWidth: 440,
-                  fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT, lineHeight: 1.5,
+                  background: 'rgba(255,255,255,.92)', borderRadius: 16, padding: isTablet ? '16px 22px' : '13px 17px', maxWidth: isTablet ? 620 : 440,
+                  fontFamily: FRED, fontWeight: 600, fontSize: isTablet ? 19 : 15.5, color: INK_SOFT, lineHeight: 1.5,
                   textAlign: 'center', animation: 'scaleIn .22s ease both', display: 'flex', flexDirection: 'column', gap: 9,
                 }}>
                   {rungs.map((h, k) => (

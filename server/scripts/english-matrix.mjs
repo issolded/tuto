@@ -9,7 +9,7 @@ const fam = await get('/__h/families')
 const only = process.argv[2]
 const fails = []
 const rows = []
-const MARK = { tr: /[çğıöşüÇĞİÖŞÜ]|\b(bir|ve|mi|bu|için|kelime)\b/i, es: /[áéíóúñ¿¡]|\b(la|el|una|de|con|las|los|palabra)\b/i, en: /\b(the|a|of|is|and|word|did|some|they|their|find|say|comparing|add|never)\b/i }
+const MARK = { tr: /[çğıöşüÇĞİÖŞÜ]|\b(bir|ve|mi|bu|için|kelime)\b/i, es: /[áéíóúñ¿¡]|\b(la|el|una|de|con|las|los|palabra)\b/i, en: /\b(the|a|of|is|and|word|did|some|they|their|find|say|comparing|add|never|before|except|only|when|sounds)\b/i }
 const note = (key, m) => { fails.push(`${key}: ${m}`) }
 
 async function sitting(key, f, cid) {

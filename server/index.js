@@ -6940,6 +6940,8 @@ async function settleEnglishReview(id, childId, patch, from = ['offered']) {
     .eq('id', id).eq('child_id', childId).in('state', from)
     .select('id, child_id, session_id, picks, summary, started_at').maybeSingle()
   if (error) { console.error(`[ENGLISH-REVIEW] settle failed: ${error.message}`); return null }
+  // Settled for good (done, declined): nothing more can be answered. An expired round stays open, it can still be finished late.
+  if (data && patch.state !== 'expired') englishOpen.delete(id)
   return data
 }
 
