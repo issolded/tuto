@@ -17,6 +17,7 @@ const N = Number(process.env.HELP_AUDIT_N || 400)
 const AGES = (process.env.HELP_AUDIT_AGES || '5,6,7,8,9,10,11,12,13,14').split(',').map(Number)
 const LANGS = ['en', 'tr', 'es']
 const found = new Map()
+const advisory = new Map() // final-line sentences that write the answer out in words
 const seenSteps = new Map() // topic → number of chains inspected
 let inspected = 0
 
@@ -30,6 +31,20 @@ const fail = (where, what, sample) => {
 // Words that only English uses. Short, unambiguous, and chosen not to collide with Turkish or
 // Spanish ("add", "number" and "first" are not words in either).
 const ENGLISH = /\b(the|and|then|now|first|next|add|number|which|each|take|away|because|write|parts?|divide by|equal|together|answer)\b/i
+
+// A number written out ("Five are square corners") says the answer as plainly as the digit, and the
+// digit checks below cannot see it. 2-10 only: "one"/"bir"/"uno" are also the article. Turkish takes
+// suffixes ("Beşi"), so a word may run on into more letters there.
+const WORDS = {
+  en: ['', '', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'],
+  tr: ['', '', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz', 'on'],
+  es: ['', '', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez'],
+}
+const saysNumberWord = (text, n, lang) => {
+  const w = WORDS[lang]?.[n]
+  if (!w) return false
+  return new RegExp(`(?<![\\p{L}])${w}${lang === 'tr' ? '\\p{L}{0,4}' : ''}(?![\\p{L}])`, 'iu').test(text)
+}
 
 const numberWord = (v, lang) => {
   // Every way the child could read this number in this language, without a thousands mark
@@ -104,6 +119,13 @@ for (const age of AGES) {
           const big = Math.abs(a) >= 10 || !Number.isInteger(a)
           const inQuestion = standalone(textOf, a, lang)
           const inQ = standalone(String(st.q), a, lang)
+          // The final line, whose answer IS the question's: a sentence that writes that number out
+          // gives it away. Advisory, not a gate — counting words are everywhere ("two numbers", "two
+          // brackets") and a person has to read the list — but it is what found "Five are square corners".
+          if (last && st.say && !walksOptions && Number.isInteger(a) && a >= 2 && a <= 10 && !inQuestion && !inQ && saysNumberWord(st.say, a, lang)) {
+            const key = `${age}/${tt}/${lang} :: ${st.say}`.slice(0, 200)
+            advisory.set(key, (advisory.get(key) || 0) + 1)
+          }
           if (st.say && big && !walksOptions && !inQuestion && !inQ && standalone(sentence, a, lang)) fail(where, 'sentence states the answer of its own line', `${st.q} = ${a} | ${st.say}`.slice(0, 160))
           if (st.say && !choice && Number.isFinite(Number(answer)) && Math.abs(Number(answer)) >= 10 && !standalone(textOf, answer, lang) && !standalone(String(st.q), answer, lang) && standalone(sentence, answer, lang) && a !== Number(answer)) {
             fail(where, "sentence states the question's answer early", `${st.q} | ${st.say}`.slice(0, 160))
@@ -120,6 +142,10 @@ for (const age of AGES) {
 
 console.log(`Yardım zinciri kalite denetimi — ${AGES.join(',')} yaş × 3 dil × ${N} soru/konu`)
 console.log(`  incelenen zincir: ${inspected}`)
+if (process.env.HELP_AUDIT_WORDS) {
+  console.log(`\nSon satırda cevabı yazıyla söyleyen cümleler (bilgi amaçlı, ${advisory.size}):`)
+  for (const [k, n] of [...advisory.entries()].sort()) console.log(`  ×${String(n).padStart(4)}  ${k}`)
+}
 if (!found.size) { console.log('\nBulgu yok.'); process.exit(0) }
 console.log(`\n${found.size} farklı bulgu:\n`)
 const rows = [...found.entries()].sort((a, b) => b[1].n - a[1].n)

@@ -2741,28 +2741,44 @@ function timeTemplate(level, lang) {
   }
 
   if (shape === 'h24') {
-    // Afternoon only — the morning half is the same number twice over and teaches nothing.
+    // After midday only — the morning half is the same number twice over and teaches nothing.
     // The minutes are cosmetic here, so they stay in the first half of the hour: at 11:59 the
     // short hand is already touching the 12 and a child reads the hour as 12, which turns a
     // question about 24-hour time into a trick about hand positions.
+    //
+    // The face cannot say it is the afternoon, so the question does, in the word a child would use
+    // for that hour: 1-5 afternoon, 6-8 evening, 9-11 night ("afternoon" for 11 pm was wrong).
+    // Spanish has no separate evening before nine. The picture goes beside the clock too, for a
+    // child who reads the face faster than the sentence. And the question says to write the hour
+    // only: a child who has just read 18:10 off a clock wants to type all of it.
     const m = pick([0, 5, 10, 15, 20])
     const afternoon = randInt(1, 11)
+    const ex = afternoon <= 2 ? [3, 4] : [1, 2]
+    const part = afternoon <= 5 ? 'afternoon' : afternoon <= 8 ? 'evening' : 'night'
+    const word = {
+      afternoon: ['the afternoon', 'öğleden sonra', 'por la tarde'],
+      evening:   ['the evening', 'akşam', 'por la tarde'],
+      night:     ['night', 'gece', 'por la noche'],
+    }[part]
     return {
       topic: 'time', level,
       question_text: say(lang,
-        'The clock shows the afternoon. What is the hour on a 24-hour clock?',
-        'Saat öğleden sonrayı gösteriyor. 24 saatlik gösterimde saat kaçtır?',
-        'El reloj marca la tarde. ¿Qué hora es en el reloj de 24 horas?'),
+        `It is ${word[0]}. Write only the hour on a 24-hour clock.`,
+        `Şu an ${word[1]}. 24 saatlik gösterimde yalnızca saati yaz.`,
+        `Es ${word[2]}. Escribe solo la hora en el reloj de 24 horas.`),
       format: 'numeric',
       correct_answer: afternoon + 12,
       operandKey: `time:h24:${afternoon}:${m}`,
-      visual: { kind: 'clock', hour: afternoon, minute: m, ask: 'h24' },
+      visual: { kind: 'clock', hour: afternoon, minute: m, ask: 'h24', part },
       hint_steps: [
         say(lang, 'A 24-hour clock keeps counting after midday instead of starting again at 1.',
                   '24 saatlik gösterim öğleden sonra 1\'e dönmez, saymaya devam eder.',
                   'El reloj de 24 horas sigue contando después del mediodía en vez de volver a la 1.'),
-        say(lang, 'So an afternoon hour is that hour plus 12.', 'Yani öğleden sonraki saate 12 eklenir.',
-                  'Así que a una hora de la tarde se le suman 12.'),
+        // Two other hours as worked examples, never the question's own: "2 is 14" under a clock at
+        // two would be the answer.
+        say(lang, `So ${ex[0]} o'clock after midday is ${ex[0] + 12} and ${ex[1]} is ${ex[1] + 12}: add 12 to the hour.`,
+                  `Yani öğleden sonra saat ${ex[0]}, ${ex[0] + 12} olur; ${ex[1]}, ${ex[1] + 12} olur: saate 12 ekle.`,
+                  `Así, las ${ex[0]} de la tarde son las ${ex[0] + 12} y las ${ex[1]} son las ${ex[1] + 12}: suma 12 a la hora.`),
       ],
     }
   }
@@ -6176,8 +6192,15 @@ function scaleReading(level, lang, types) {
         say: say(lang, `On the picture, count the small steps from ${L(lo)} up to the reading. How many?`,
                        `Resimde ${L(lo)} sayısından gösterilen yere kadar küçük adımları say. Kaç tane?`,
                        `En el dibujo, cuenta los pasos pequeños desde ${L(lo)} hasta la marca. ¿Cuántos?`) },
-      { q: `${L(lo)} + ${m} × ${L(per)}`, a: answer,
-        say: say(lang, `So the reading is:`, `Yani gösterilen değer:`, `Así que la marca es:`) },
+      // One operation to a line: times first, then add. "800 + 3 × 50" in one go is three operations
+      // in the child's head, in the order that tempts them to add first. From 0 there is nothing to
+      // add, so the product is the reading; a single step is not split (1 × 50 is just the step).
+      ...(m > 1 || lo === 0 ? [{ q: `${m} × ${L(per)}`, a: Math.round(m * per * 1000) / 1000,
+        say: lo === 0
+          ? say(lang, `So the reading is:`, `Yani gösterilen değer:`, `Así que la marca es:`)
+          : say(lang, `So those ${m} steps are worth:`, `Yani bu ${m} adım şu kadar eder:`, `Así que esos ${m} pasos valen:`) }] : []),
+      ...(lo !== 0 ? [{ q: `${L(lo)} + ${L(Math.round(m * per * 1000) / 1000)}`, a: answer,
+        say: say(lang, `Now add that to ${L(lo)}. The reading is:`, `Şimdi bunu ${L(lo)}${trEk(lo, 'dat')} ekle. Gösterilen değer:`, `Ahora súmalo a ${L(lo)}. La marca es:`) }] : []),
     ], v)
   }
   return {
@@ -6422,9 +6445,10 @@ function geoSolid(level, lang) {
         ], { kind: 'solid', name }, true)
       : stepsHelp([
           stp(lang, say(lang, 'flat faces', 'düz yüzler', 'caras planas'), name === 'cylinder' ? 2 : name === 'cone' ? 1 : 0,
-            `Count the flat faces. This shape also has a curved surface: ${name === 'cylinder' ? 'two flat circles, one curved side' : name === 'cone' ? 'one flat circle, one curved side to a point' : 'no flat faces at all — it is completely curved'}.`,
-            `Düz yüzleri say. Bu cismin eğri bir yüzü de var: ${name === 'cylinder' ? 'iki düz daire, bir eğri yan yüz' : name === 'cone' ? 'bir düz daire, tepeye giden bir eğri yüz' : 'hiç düz yüz yok — tamamen eğri'}.`,
-            `Cuenta las caras planas. Esta figura también tiene superficie curva: ${name === 'cylinder' ? 'dos círculos planos y un lado curvo' : name === 'cone' ? 'un círculo plano y un lado curvo hasta la punta' : 'ninguna cara plana: es toda curva'}.`),
+            // The flat faces are the answer, so the sentence says how to tell one, not how many there are.
+            'Count only the flat faces, the ones you could stand on a table. A curved surface is not a flat face.',
+            'Yalnız düz yüzleri say, masaya oturtabileceklerini. Eğri yüzey düz yüz sayılmaz.',
+            'Cuenta solo las caras planas, las que podrías apoyar en una mesa. Una superficie curva no es una cara plana.'),
         ], { kind: 'solid', name }, true)),
     hint_steps: [
       say(lang, 'Are its faces flat, or is some of it curved?', 'Yüzleri düz mü, yoksa eğri bir yüzü var mı?', '¿Sus caras son planas o tiene alguna curva?'),
@@ -6452,7 +6476,7 @@ const POLY_SAY = {
     square: ['Fold it down the middle, across the middle, and along both corner-to-corner lines.', 'Ortadan dikey, ortadan yatay ve iki köşegen boyunca katla.', 'Dóblalo por la mitad, de lado a lado y por las dos diagonales.'],
     rectangle: ['Fold it down the middle and across the middle. The corner-to-corner folds do not match.', 'Ortadan dikey ve ortadan yatay katla. Köşegenler boyunca katlarsan üst üste gelmez.', 'Dóblalo por la mitad y de lado a lado. Por las diagonales no coincide.'],
     equilateral: ['All sides are equal: one fold from each corner to the middle of the opposite side.', 'Bütün kenarlar eşit: her köşeden karşı kenarın ortasına birer katlama.', 'Todos los lados son iguales: un pliegue desde cada esquina al centro del lado opuesto.'],
-    isosceles: ['Only one fold works: from the top corner straight down the middle.', 'Tek bir katlama tutar: üst köşeden dümdüz aşağı, ortadan.', 'Solo un pliegue coincide: desde la esquina de arriba recto por el centro.'],
+    isosceles: ['Try the folds. The one from the top corner straight down the middle matches; the others do not.', 'Katlamaları dene. Üst köşeden dümdüz aşağı, ortadan olan tutar; diğerleri tutmaz.', 'Prueba los pliegues. Coincide el que va desde la esquina de arriba recto por el centro; los demás no.'],
     pentagon: ['A regular shape folds once through each corner.', 'Düzgün bir şekil her köşesinden geçen bir katlamayla kapanır.', 'Una figura regular se dobla una vez por cada esquina.'],
     hexagon: ['A regular shape folds once through each corner.', 'Düzgün bir şekil her köşesinden geçen bir katlamayla kapanır.', 'Una figura regular se dobla una vez por cada esquina.'],
     octagon: ['A regular shape folds once through each corner.', 'Düzgün bir şekil her köşesinden geçen bir katlamayla kapanır.', 'Una figura regular se dobla una vez por cada esquina.'],
@@ -6465,11 +6489,11 @@ const POLY_SAY = {
   right: {
     square: ['Every corner of a square is a square corner.', 'Karenin her köşesi dik açıdır.', 'Todas las esquinas de un cuadrado son rectas.'],
     rectangle: ['Every corner of a rectangle is a square corner.', 'Dikdörtgenin her köşesi dik açıdır.', 'Todas las esquinas de un rectángulo son rectas.'],
-    rightTriangle: ['Only one corner is square; the other two are narrower.', 'Yalnız bir köşe dik açı; diğer ikisi daha dar.', 'Solo una esquina es recta; las otras dos son más estrechas.'],
-    rightTrapezium: ['Two corners are square corners; the other two slope.', 'İki köşe dik açı; diğer ikisi eğik.', 'Dos esquinas son rectas; las otras dos son inclinadas.'],
-    lShape: ['Check each corner. Five are square corners; the one that bends inward is wider, so it does not count.', 'Her köşeyi kontrol et. Beşi dik açı; içe kıvrılan köşe daha geniş, sayılmaz.', 'Mira cada esquina. Cinco son rectas; la que se dobla hacia dentro es más ancha y no cuenta.'],
+    rightTriangle: ['Compare each corner with the corner of a book. Count the ones that fit exactly; the narrower ones do not.', 'Her köşeyi bir kitabın köşesiyle karşılaştır. Tam oturanları say; daha dar olanlar sayılmaz.', 'Compara cada esquina con la esquina de un libro. Cuenta las que encajan exactamente; las más estrechas no cuentan.'],
+    rightTrapezium: ['Compare each corner with the corner of a book. The sloping corners do not fit, so they do not count.', 'Her köşeyi bir kitabın köşesiyle karşılaştır. Eğik köşeler tam oturmaz, sayılmaz.', 'Compara cada esquina con la esquina de un libro. Las inclinadas no encajan, así que no cuentan.'],
+    lShape: ['Compare each corner with the corner of a book. The one that bends inward is wider, so it does not count.', 'Her köşeyi bir kitabın köşesiyle karşılaştır. İçe kıvrılan köşe daha geniş, sayılmaz.', 'Compara cada esquina con la esquina de un libro. La que se dobla hacia dentro es más ancha y no cuenta.'],
     equilateral: ['Every corner is narrower than a square corner.', 'Her köşe dik açıdan daha dar.', 'Todas las esquinas son más estrechas que una recta.'],
-    parallelogram: ['Two corners are narrower and two are wider than a square corner. None is square.', 'İki köşe dik açıdan dar, ikisi geniş. Hiçbiri dik değil.', 'Dos esquinas son más estrechas y dos más anchas que una recta. Ninguna es recta.'],
+    parallelogram: ['Compare each corner with the corner of a book: some are narrower, some wider. Count the ones that fit exactly.', 'Her köşeyi bir kitabın köşesiyle karşılaştır: bazıları dar, bazıları geniş. Tam oturanları say.', 'Compara cada esquina con la esquina de un libro: unas son más estrechas y otras más anchas. Cuenta las que encajan exactamente.'],
   },
 }
 

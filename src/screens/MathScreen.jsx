@@ -5,7 +5,7 @@ import MathChart from '../components/MathChart'
 import PlaceValueHelp from '../components/PlaceValueHelp'
 import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
-import ClockFace, { DraggableClock } from '../components/ClockFace'
+import ClockFace, { DraggableClock, DayPartChip } from '../components/ClockFace'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
@@ -676,7 +676,7 @@ const CLOCK_GUIDE = {
     to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
     span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
     later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
-    h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
+    h24:   'Saat öğlen 12\'de başlıyor. Kolları sorudaki saate benzeyene kadar ileri çevir; 24 saatlik saat ve günün hangi vakti olduğu seninle değişir.',
   },
   es: {
     hour:  'Gira el reloj de abajo hasta que se parezca al de la pregunta. El número donde para la aguja corta es la hora.',
@@ -685,7 +685,7 @@ const CLOCK_GUIDE = {
     to:    'Primero cópialo. Luego gira la aguja larga hacia adelante hasta el 12: ¿cuántos minutos han sido?',
     span:  'Dale una vuelta entera a la aguja larga: la corta avanza una hora justa. Así que una hora son 60 minutos.',
     later: 'Mueve la aguja corta de hora en hora y ve contando.',
-    h24:   'Primero cópialo. Después del mediodía seguimos contando en vez de empezar de nuevo: suma 12 a la hora que marca la aguja corta.',
+    h24:   'El reloj empieza a mediodía. Gira las agujas hacia adelante hasta que se parezca al de la pregunta; la hora de 24 horas y la parte del día cambian contigo.',
   },
   en: {
     hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
@@ -694,7 +694,7 @@ const CLOCK_GUIDE = {
     to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
     span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
     later: 'Move the short hand on one hour at a time, counting as you go.',
-    h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
+    h24:   'The clock starts at midday. Turn the hands forward until it looks like the one in the question; the 24-hour time and the part of the day change with you.',
   },
 }
 
@@ -1026,6 +1026,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
               {say(language, 'The clock in the question', 'Sorudaki saat', 'El reloj de la pregunta')}
             </div>
             <ClockFace hour={clock.hour} minute={clock.minute} size={104} zoomable language={language} />
+            {clock.part && <DayPartChip part={clock.part} language={language} />}
           </div>
         )}
         <DraggableClock
@@ -1034,6 +1035,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           size={228}
           language={language}
           readout={READOUT_SAFE.has(clock.ask)}
+          h24={clock.ask === 'h24'}
         />
         {hintSteps?.length > 0 && (
           <StepHints
@@ -3404,6 +3406,7 @@ export default function MathScreen() {
                   <ClockFace hour={questionClock.hour} minute={questionClock.minute} size={168}
                     zoomable language={language} />
                 )}
+                {questionClock?.part && <DayPartChip part={questionClock.part} language={language} />}
                 {questionPicto && (
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
                 )}
