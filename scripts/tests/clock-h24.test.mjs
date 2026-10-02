@@ -97,3 +97,40 @@ test('a lone long division in a help chain is cut into parts that add back to th
   }
   assert.ok(cut >= 5, `only ${cut} cut chains seen`)
 })
+
+// "8 × ? = 80": from six up the help starts from a fact the child has and finishes the rest, one operation a
+// line; the pieces must add back to the product and the answer must not appear before the last line.
+test('missing-factor help: a known fact first, the rest after, and the answer never named early', () => {
+  let seen = 0
+  for (let i = 0; i < 6000 && seen < 200; i++) {
+    const p = generateProblem('multiplication-word', 6, null, 'en')
+    if (!p.operandKey?.startsWith('mfac:')) continue
+    const [, t, k] = p.operandKey.split(':').map(Number)
+    const total = t * k
+    if (k < 6) { assert.ok(!p.help || p.help.kind === 'fill'); continue }
+    seen++
+    const st = p.help.steps
+    assert.equal(st.length, 4)
+    assert.equal(st[0].a + st[1].a, total, `${p.operandKey}: ${st.map(s => `${s.q}=${s.a}`)}`)
+    assert.equal(st[2].a * t, st[1].a)
+    assert.equal(st[3].a, k)
+    assert.equal(p.correct_answer, k)
+    for (const s of [st[0], st[1]]) assert.notEqual(s.a, k, 'an early line equals the answer')
+    // The answer is not stated as a result ("= 10"), whatever else shares the number with the table.
+    assert.doesNotMatch(p.hint_steps.join(' '), new RegExp(`= ${k}(?![\\d])`), `hint states the answer ${k}: ${p.hint_steps.join(' | ')}`)
+  }
+  assert.ok(seen >= 50, `only ${seen} samples`)
+})
+
+// A jug read below its first numbered line has no numbered line "just below" the water.
+test('jug hint: water below the first number is read from the bottom, not from a line that is not there', () => {
+  let low = 0, high = 0
+  for (let i = 0; i < 8000 && (low < 20 || high < 20); i++) {
+    const p = generateProblem('measurement', 10, null, 'en')
+    if (p.visual?.type !== 'jug') continue
+    const first = p.hint_steps[0]
+    if (p.visual.value < p.visual.major) { low++; assert.match(first, /Start at the bottom/); assert.doesNotMatch(first, /just below the water/) }
+    else { high++; assert.match(first, /just below the water/) }
+  }
+  assert.ok(low >= 5 && high >= 5, `low ${low}, high ${high}`)
+})

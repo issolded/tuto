@@ -127,6 +127,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       "N'in 1/d'si" ipucu 12'ye kadar çarpım tablosuna bağlanır; Türkçe olasılık sorusu cümle başında küçük harfle ve
       bozuk ("mavi birini çekme") çıkıyordu; katı cisim "üstteki yüz = 4" çoğul; "7'nin çarpım tablosu" eki. 11-13 yaşta tek
       satırda karışık işlem (a + b × c) bilinçli bırakıldı.
+      Eksik çarpan sorusu ("8 × ? = 80", çarpan ≥ 6): ipucu ve yardım "bildiğin bir işlemle başla (5 × 8 = 40), kalan kaç tane daha" zinciri
+      (80 noktalı doldurma yardımı ve "10'la çarparken sıfır ekle" yok; ×10/×100 sorularında zaten "rakamlar sola kayar" dili var,
+      ondalıkta çöken "sıfır ekle" kuralı kullanılmıyor). Sürahi ipucu: su ilk numaranın altındaysa "alttan 0'dan başla" (olmayan
+      "hemen alttaki numaralı çizgi"ye yönlendirmiyor).
       "Çık" (yarım oturumdan çıkma) artık yarım oturum kaydını siler: sayfa açıklaması "cevapların kaydedilmeyecek" diyordu ama kayıt kalıyor ve matematiğe her girişte aynı soru geri geliyordu. Yenileme/kazara çıkış için kayıt hâlâ 2 saat saklanır. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
       üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
       Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;

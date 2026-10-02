@@ -5898,18 +5898,47 @@ function missingFactor(level, lang) {
   const t = pick(tableFor(band))
   const k = randInt(2, 12)
   const p = t * k
+  // The fact to start from: about half way, and never a product or a remainder that is the answer itself
+  // (6 × 2 = 12 as the first step of "? × 2 = 24" would hand over the 12).
+  const half = [Math.floor(k / 2), Math.floor(k / 2) - 1, Math.floor(k / 2) + 1, 2, 3]
+    .find(h => h >= 2 && h <= k - 2 && h * t !== k && p - h * t !== k && h !== k) ?? Math.floor(k / 2)
   const shape = randInt(0, 2)
   const q = shape === 0 ? `? × ${t} = ${p}` : shape === 1 ? `${t} × ? = ${p}` : `${p} = ? × ${t}`
   return {
     topic: 'multiplication-word', level, question_text: q, format: 'numeric', correct_answer: k,
     operandKey: `mfac:${t}:${k}`,
-    ...(p <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: p, size: t, mode: 'exact' } } : {}),
+    // From six up, counting up in 8s step by step is the long way round and a field of eighty dots is a lot to
+    // tap. Use a fact the child already has instead — half of the way — and then see how many more are needed.
+    // (Not "put a zero on the end" for tens: it stops being true the moment the number has a decimal point,
+    // and it explains nothing.)
+    ...(k >= 6
+      ? stepsHelp([
+        stp(lang, `${half} × ${t}`, half * t,
+          `Start with a fact you know. What is ${half} × ${t}?`,
+          `Bildiğin bir işlemle başla. ${half} × ${t} kaç eder?`,
+          `Empieza con algo que ya sabes. ¿Cuánto es ${half} × ${t}?`),
+        stp(lang, `${p} − ${half * t}`, p - half * t,
+          `That gets you part of the way to ${p}. How much is still missing?`,
+          `Bu seni ${p} sayısına kadar bir yere getirdi. Daha ne kadar eksik?`,
+          `Eso te lleva parte del camino hasta ${p}. ¿Cuánto falta todavía?`),
+        stp(lang, `${p - half * t} ÷ ${t}`, k - half,
+          `How many more ${t}s make that?`, `Bu kaç tane daha ${t} eder?`, `¿Cuántos ${t} más hacen eso?`),
+        stp(lang, `${half} + ${k - half}`, k,
+          `Add the ${t}s you used first and the ones you just found:`,
+          `Önce kullandığın ${t}'ları ve şimdi bulduklarını topla:`,
+          `Suma los ${t} que usaste primero y los que acabas de encontrar:`),
+      ])
+      : p <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: p, size: t, mode: 'exact' } } : {}),
     hint_steps: [
       say(lang, `Which number in the ${t} times table makes ${p}?`, `${t} çarpım tablosunda hangi sayı ${p} eder?`,
                 `¿Qué número de la tabla del ${t} da ${p}?`),
-      say(lang, `Count up in ${t}s until you reach ${p}, and count how many steps it took.`,
-                `${p} sayısına ulaşana kadar ${trDist(t)} ${trDist(t)} say ve kaç adım attığını say.`,
-                `Cuenta de ${t} en ${t} hasta llegar a ${p} y cuenta cuántos saltos has dado.`),
+      k >= 6
+        ? say(lang, `Use a fact you know: ${half} × ${t} = ${half * t}. How many more ${t}s do you need to reach ${p}?`,
+                    `Bildiğin bir işlemi kullan: ${half} × ${t} = ${half * t}. ${p} sayısına ulaşmak için kaç tane daha ${t} lazım?`,
+                    `Usa algo que sabes: ${half} × ${t} = ${half * t}. ¿Cuántos ${t} más necesitas para llegar a ${p}?`)
+        : say(lang, `Count up in ${t}s until you reach ${p}, and count how many steps it took.`,
+                    `${p} sayısına ulaşana kadar ${trDist(t)} ${trDist(t)} say ve kaç adım attığını say.`,
+                    `Cuenta de ${t} en ${t} hasta llegar a ${p} y cuenta cuántos saltos has dado.`),
     ],
   }
 }
@@ -6179,9 +6208,15 @@ function scaleReading(level, lang, types) {
     const value = randInt(2, steps - 1) * spec.minor
     v = { kind: 'scale', type, ...spec, value, unit: 'ml' }
     q = say(lang, 'How much water is in the jug, in ml?', 'Sürahide kaç ml su var?', '¿Cuántos ml de agua hay en la jarra?')
-    hint = say(lang, `Find the numbered line just below the water, then count the small marks up to the top of the water.`,
-                     `Suyun hemen altındaki numaralı çizgiyi bul, sonra suyun üstüne kadar küçük çizgileri say.`,
-                     `Busca la línea numerada justo debajo del agua y cuenta las marcas pequeñas hasta arriba.`)
+    // The bottom of the jug is 0 and carries no number. Water lower than the first numbered line has no numbered
+    // line "just below" it, so the hint starts from the bottom instead of pointing at a line that is not there.
+    hint = value < spec.major
+      ? say(lang, `The water is below the first number. Start at the bottom, 0, and count the small marks up to the top of the water.`,
+                  `Su, ilk sayının altında. Alttan, 0'dan başla ve suyun üstüne kadar küçük çizgileri say.`,
+                  `El agua está por debajo del primer número. Empieza abajo, en el 0, y cuenta las marcas pequeñas hasta arriba.`)
+      : say(lang, `Find the numbered line just below the water, then count the small marks up to the top of the water.`,
+                  `Suyun hemen altındaki numaralı çizgiyi bul, sonra suyun üstüne kadar küçük çizgileri say.`,
+                  `Busca la línea numerada justo debajo del agua y cuenta las marcas pequeñas hasta arriba.`)
     unit = say(lang, `Each small mark here is ${spec.minor} ml.`, `Buradaki her küçük çizgi ${spec.minor} ml.`, `Aquí cada marca pequeña es ${spec.minor} ml.`)
   } else if (type === 'thermo') {
     const spec = band <= 2 ? { min: 0, max: 40, major: 10, minor: 5 } : pick([{ min: 0, max: 40, major: 10, minor: 2 }, { min: 0, max: 50, major: 10, minor: 5 }])
