@@ -239,6 +239,8 @@ export function EnglishOptions({ item, states = [], onPick, disabled = false, si
     picked: { border: '#e0607e', background: '#fff0f3', transform: 'scale(1.04)' },
     ok: { border: '#4cb685', background: '#e9f8f0' },
     bad: { border: '#E2586A', background: '#fdecee' },
+    // Crossed out by a hint or by a first wrong try: still readable, plainly out of play.
+    struck: { border: '#DCD9EA', background: '#f6f5fa', opacity: 0.45, textDecoration: 'line-through' },
   }
   return (
     <div style={{
@@ -256,6 +258,7 @@ export function EnglishOptions({ item, states = [], onPick, disabled = false, si
               fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: big ? (grid ? 15 : 18) : 13.5,
               cursor: onPick && !disabled ? 'pointer' : 'default', transition: 'transform .12s ease, border-color .12s ease',
               transform: st.transform, overflowWrap: 'anywhere', textAlign: 'center',
+              opacity: st.opacity, textDecoration: st.textDecoration,
               boxShadow: big ? '0 4px 12px rgba(120,40,70,.08)' : 'none',
             }}>
             {o.text}

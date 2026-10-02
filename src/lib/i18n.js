@@ -625,6 +625,7 @@ const STRINGS = {
   math_review_win:    { en: 'You fixed them! 🌟', tr: 'Hepsini düzelttin! 🌟', es: '¡Las arreglaste todas! 🌟' },
   math_review_some:   { en: 'Nice work, that is how you get stronger! 💪', tr: 'Güzel iş, güçlenmek böyle olur! 💪', es: '¡Buen trabajo, así se mejora! 💪' },
   gem_math_review:    { en: 'Math Practice', tr: 'Matematik Pekiştirme', es: 'Repaso de mates' },
+  gem_english_review: { en: 'English Practice', tr: 'İngilizce Pekiştirme', es: 'Repaso de inglés' },
   math_score:         { en: 'Score',         tr: 'Puan', es: 'Puntos' },
   math_earned:        { en: 'Earned',        tr: 'Kazandın', es: 'Has ganado' },
 

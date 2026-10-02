@@ -3517,6 +3517,22 @@ export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {
   const seen = new Set()
   const topics = new Set()
   const perType = {}
+  // Kinds the child owes from the last review: one question of each (at most three) comes first,
+  // so the sitting leans on them without becoming only them.
+  for (const type of (Array.isArray(opts.focus) ? opts.focus : []).filter(t => band.types.includes(t)).slice(0, 3)) {
+    for (let i = 0; i < 60; i++) {
+      const item = generateItem(bandKey, type, (seed + 7 + i * 15485863) | 0, opts)
+      if (!item) continue
+      const sig = itemSignature(item)
+      if (seen.has(sig)) continue
+      seen.add(sig)
+      const topic = topicKey(item)
+      if (topic) topics.add(topic)
+      perType[item.type] = (perType[item.type] || 0) + 1
+      out.push(item)
+      break
+    }
+  }
   // Two passes, as the puzzle engine does: the first holds the per-type and per-topic caps so a
   // sitting is varied, the second drops them rather than return a short sitting.
   for (const capped of [true, false]) {

@@ -83,6 +83,28 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] İngilizce: ipucu, yardım ve pekiştirme (2026-10-02, Claude; `claude/math-hint-quality`). Matematiğin yapısı İngilizceye
+      taşındı. **Migration önce:** `server/migrations/2026-10-03_english_help_and_review.sql` (`english_attempts.wrong_tries/hints_used`,
+      `english_reviews`). Tablo yokken sunucu eski davranışa düşer: tur/ipucu kaydı yok, gem doğruluk ölçeğiyle, pekiştirme teklifi yok,
+      ebeveyne mesaj hemen gider. **Akış (7+ yaş = tüm İngilizce bantları, "bir deneme sonra yardım"):** ilk yanlışta soru geri gelir
+      (yanlış şık soluklaşır, tek cevaplıda; 💡 titrer, hiçbir şey açıklanmaz); ipucuna bakıp yanlış ya da ikinci yanlış → doğru kelimeler
+      + adım adım açıklama. Gem soru başı: yardımsız doğru 1, ipucu/ilk yanlış denemeden sonra doğru 0,5, yanlış/"bilmiyorum" 0
+      (`server/englishPlay.js`, test `english-play.test.mjs`). **İpucu 3 basamak, sunucudan istenince** (cevap anahtarı tarayıcıya hiç
+      gitmez): (1) o soru türüne nasıl bakılır, (2) yanlış bir şık çizilir + sebebi (`why`), (3) cevaptan bir adım önce biten zincir.
+      Cevap bildirilince aynı zincir cevabıyla tam gösterilir. 49 türün tamamı EN/TR/ES, `src/lib/englishHelp.js` (motorla birlikte
+      `server/english`'e senkronlanır); kapı: `scripts/english-help-audit.mjs` (`english:check` içinde: cevap ipucunda sızıyor mu,
+      eksik dil, "undefined", cevap açıklamada adı geçiyor mu, 2. basamak doğru şıkkı çiziyor mu). **Pekiştirme:** mathReview.js'in seçimi
+      ve payları aynen (tür = matematikteki konu): yanlış/geçilen + ipucu görülenlerden en çok 5; soruları sunucu aynı türden, çocuğun
+      görmediği taze üretir (`server/englishReview.js`), cevapları sunucu işaretler (matematikte istemciye güvenilir, burada değil);
+      ilk turda hiç gem almayanlar 0,5 pay geri kazandırır, ipucu görülenler yalnız pratik; ebeveyn mesajı tek ve pekiştirme bitene
+      kadar bekler (`englishSessionNotice`); "Şimdi değil"/30 dk sonra kalan türler bir sonraki oturumun başına (7 gün, bir kez,
+      `generateSession` `focus`). Gem geçmişi `english_review` satırı (✓ ya da +n), oturumu açar. Doğrulama: gerçek `server/index.js`
+      bellek içi sahte Supabase'le (`server/scripts/english-harness.mjs`) uçtan uca, ve gerçek ekranda 390px'te oynandı (yanlış→nudge→
+      ipucu 3 basamak→açıklama, pekiştirme teklifi/oynama/gem). **Açık:** gerçek Supabase/Railway ile denenmedi (migration bekliyor);
+      ipuçlarının çocuğa gerçekten öğrettiği ölçülmedi (audit sızıntıyı ve tutarlılığı ölçer, pedagojiyi değil), TR/ES metinler anadili
+      konuşan biri tarafından okunmadı; ipucu "ayrı çizilmiş yanlış örnek" adımı (join-letter, hidden-word, front-letter…) açıklamada da
+      çıkıyor; pekiştirme teklifi sonuç ekranı yenilenince geri gelmez (30 dk içinde ebeveyne "yapılmadı" gider); sohbet bağlamı
+      (`englishSessions`) yardım sayısını henüz taşımıyor; iPad/Ada'nın cihazında denenmedi.
 - [x] Sohbet bağlamına son İngilizce oturumun soruları (2026-10-02, Claude). Ebeveyn "neyi yanlış yapmış?" diye sorunca model yalnızca
       beceri yüzdelerini görüyordu, "birebir detayları göremiyorum" deyip tahmin yürütüyordu. `recentEnglishQuestions`: son bitmiş
       oturumun yanlış/geçilen soruları (ne soruldu, çocuk ne seçti, doğru neydi) bağlamda; not: bunun ötesinde tahmin yok, bu

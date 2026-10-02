@@ -21,6 +21,7 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 const TASK_LABELS = {
   math:     { key: 'task_math',     type: 'math' },
   math_review: { key: 'gem_math_review', type: 'math' },
+  english_review: { key: 'gem_english_review', type: 'english' },
   reading:  { key: 'task_reading',  type: 'reading' },
   writing:  { key: 'task_writing',  type: 'writing' },
   story:    { key: 'task_writing',  type: 'writing' },
@@ -987,7 +988,7 @@ export default function ParentChildDetail() {
   // A session that hit the day's limit belongs here too. It earned nothing, and filtering on
   // the amount alone hid it — so a parent whose child did four maths sessions was told about
   // three, which is the one number here they could be misled by.
-  const reviewable = (sub) => (['math', 'puzzle', 'english'].includes(sub.task_type) || sub.task_type === 'math_review') && !!sub.ledgerId
+  const reviewable = (sub) => (['math', 'puzzle', 'english'].includes(sub.task_type) || sub.task_type === 'math_review' || sub.task_type === 'english_review') && !!sub.ledgerId
   const todayDone = (ledger || [])
     .filter(e => (e.amount > 0 || e.capped) && isToday(e.created_at) && e.reason !== 'Welcome bonus')
     .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, ledgerId: e.id, refId: e.ref_id, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))

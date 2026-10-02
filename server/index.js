@@ -1,5 +1,7 @@
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
+import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './englishPlay.js'
+import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
 import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import 'dotenv/config'
@@ -6321,7 +6323,7 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
       })
     }
 
-    if (row.reason === 'english') {
+    if (row.reason === 'english' || row.reason === 'english_review') {
       let session = null
       if (row.ref_id) ({ data: session } = await supabase.from('english_sessions').select('*').eq('id', row.ref_id).maybeSingle())
       if (!session) {
@@ -6642,8 +6644,21 @@ app.post('/api/children/:childId/english-session', async (req, res) => {
     const band = bandForAge(child.age)
     const variety = await englishVarietyFor(child)
     const seed = crypto.randomInt(1, 2 ** 31)
-    const sheet = generateSession(band, ENGLISH_QUESTIONS, seed, { variety })
+    // The kinds the last review left owed (once, within a week): one question of each leads the sitting.
+    let carryIds = []
+    let focus = []
+    {
+      const { data: owed, error: owedErr } = await supabase.from('english_reviews')
+        .select('id, carry_types').eq('child_id', childId).is('carry_used_at', null).not('carry_types', 'is', null)
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString())
+      if (!owedErr) {
+        carryIds = (owed || []).map(o => o.id)
+        focus = [...new Set((owed || []).flatMap(o => (o.carry_types || []).map(t => t.topic_id)))]
+      }
+    }
+    const sheet = generateSession(band, ENGLISH_QUESTIONS, seed, { variety, focus })
     if (sheet.length < ENGLISH_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
+    if (carryIds.length) supabase.from('english_reviews').update({ carry_used_at: new Date().toISOString() }).in('id', carryIds).then(() => {}, () => {})
 
     const { data: session, error } = await supabase.from('english_sessions')
       .insert({ child_id: childId, band, variety, seed, question_count: sheet.length, sheet })
@@ -6666,18 +6681,73 @@ app.post('/api/children/:childId/english-session', async (req, res) => {
   }
 })
 
+// The play state of a question in progress (wrong tries, hints looked at): memory only. A restart
+// mid-question gives the child a fresh first try and costs the sitting nothing but that.
+const englishPlay = new Map()
+function playState(sessionId, index) {
+  const key = `${sessionId}:${index}`
+  let st = englishPlay.get(key)
+  if (!st) {
+    st = newPlayState()
+    englishPlay.set(key, st)
+    if (englishPlay.size > 4000) englishPlay.delete(englishPlay.keys().next().value)
+  }
+  return st
+}
+async function englishLangOf(childId) {
+  const { data } = await supabase.from('children').select('language').eq('id', childId).maybeSingle()
+  return ['en', 'tr', 'es'].includes(data?.language) ? data.language : 'en'
+}
+async function openEnglishSession(sessionId) {
+  let session = englishOpen.get(sessionId)
+  if (!session) {
+    ;({ data: session } = await supabase.from('english_sessions').select('*').eq('id', sessionId).maybeSingle())
+    if (session) {
+      if (session.finished_at) return { error: [409, 'session already finished'] }
+      keepEnglishOpen(session)
+    } else {
+      // A review's id plays the same part: its questions are dealt by the server and answered here.
+      const { data: rv } = await supabase.from('english_reviews').select('*').eq('id', sessionId).maybeSingle()
+      if (!rv) return { error: [404, 'session not found'] }
+      if (!['offered', 'expired'].includes(rv.state)) return { error: [409, 'session already finished'] }
+      session = { id: rv.id, child_id: rv.child_id, review: true, sheet: rv.sheet, picks: rv.picks, finished_at: null }
+      keepEnglishOpen(session)
+    }
+  }
+  return { session }
+}
+
+// A hint, one rung at a time. Looking at any rung is what costs the question its half; the rungs
+// themselves are built from the key and shown only now, never sent with the question.
+app.post('/api/english-sessions/:sessionId/hint', async (req, res) => {
+  const index = Number(req.body?.question_index)
+  try {
+    const { session, error } = await openEnglishSession(req.params.sessionId)
+    if (error) return res.status(error[0]).json({ error: error[1] })
+    const sheet = await englishSheet(session)
+    const q = sheet[index]
+    if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
+    const st = playState(session.id, index)
+    if (st.settled) return res.status(409).json({ error: 'question already answered' })
+    const { hintAt } = await import('./english/englishHelp.js')
+    const lang = session.lang || (session.lang = await englishLangOf(session.child_id))
+    const level = nextHintLevel(st)
+    const h = hintAt(q, level, lang, { eliminated: st.eliminated })
+    if (h.eliminate != null) st.eliminated.push(h.eliminate)
+    res.json({ ...h, last: level >= 3 })
+  } catch (err) {
+    console.error('[ENGLISH]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/english-sessions/:sessionId/answer', async (req, res) => {
   const { sessionId } = req.params
   const index = Number(req.body?.question_index)
   const raw = Array.isArray(req.body?.chosen) ? req.body.chosen : [req.body?.chosen]
   try {
-    let session = englishOpen.get(sessionId)
-    if (!session) {
-      ;({ data: session } = await supabase.from('english_sessions').select('*').eq('id', sessionId).maybeSingle())
-      if (!session) return res.status(404).json({ error: 'session not found' })
-      if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
-      keepEnglishOpen(session)
-    }
+    const { session, error: openErr } = await openEnglishSession(sessionId)
+    if (openErr) return res.status(openErr[0]).json({ error: openErr[1] })
     const sheet = await englishSheet(session)
     const q = sheet[index]
     if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
@@ -6689,20 +6759,48 @@ app.post('/api/english-sessions/:sessionId/answer', async (req, res) => {
     if (!skip && (chosen.length !== q.pick || chosen.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length))) {
       return res.status(400).json({ error: `choose exactly ${q.pick}` })
     }
-    const correct = !skip && chosen.length === q.correct.length && q.correct.every(i => chosen.includes(i))
+    const st = playState(session.id, index)
+    const verdict = judgeAnswer(st, { correct: q.correct, chosen, skip })
+    if (verdict.status === 'retry') {
+      // The first wrong answer gives the question back and reveals nothing. A wrong pick is out of play
+      // for the hints too (the screen strikes it), single answer only.
+      if (q.pick === 1) chosen.forEach(i => { if (!st.eliminated.includes(i)) st.eliminated.push(i) })
+      return res.json({ correct: false, retry: true, chosen })
+    }
 
-    const { error } = await supabase.from('english_attempts').insert({
+    const correct = verdict.status === 'right'
+    const lang = session.lang || (session.lang = await englishLangOf(session.child_id))
+    const { explanation } = await import('./english/englishHelp.js')
+    const reveal = (right) => (right ? {} : { explain: explanation(q, lang) })
+
+    if (session.review) {
+      // A review's answers live on its own row, marked here like any sitting's. `idx` is the question
+      // of the sitting this one stands in for, which is what the outcome is matched on.
+      const { data: cur } = await supabase.from('english_reviews').select('results').eq('id', session.id).maybeSingle()
+      const results = Array.isArray(cur?.results) ? cur.results : []
+      const had = results.find(r => r.q === index)
+      if (had) return res.json({ correct: !!had.correct, chosen: had.chosen, ...englishFeedback(q, had.chosen || chosen), ...reveal(had.correct), repeated: true })
+      results.push({ q: index, idx: session.picks[index]?.idx ?? index, correct, chosen, help_used: st.tries > 0 || st.hints > 0, help_shown: st.hints > 0 })
+      const { error: wErr } = await supabase.from('english_reviews').update({ results }).eq('id', session.id)
+      if (wErr) return res.status(500).json({ error: wErr.message })
+      return res.json({ correct, chosen, helped: correct && verdict.helped, ...englishFeedback(q, chosen), ...reveal(correct) })
+    }
+
+    const row = {
       session_id: session.id, child_id: session.child_id, question_index: index,
       type: q.type, band: session.band, chosen, correct,
-    })
+    }
+    let { error } = await supabase.from('english_attempts').insert({ ...row, wrong_tries: st.tries, hints_used: st.hints > 0 ? 1 : 0 })
+    // The columns arrive with a migration; until then the answer is still recorded.
+    if (error && /wrong_tries|hints_used/.test(error.message || '')) ({ error } = await supabase.from('english_attempts').insert(row))
     if (error?.code === '23505') {
       const { data: first } = await supabase.from('english_attempts')
         .select('chosen, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
       const was = first?.chosen || chosen
-      return res.json({ correct: !!first?.correct, chosen: was, ...englishFeedback(q, was), repeated: true })
+      return res.json({ correct: !!first?.correct, chosen: was, ...englishFeedback(q, was), ...reveal(first?.correct), repeated: true })
     }
     if (error) return res.status(500).json({ error: error.message })
-    res.json({ correct, chosen, ...englishFeedback(q, chosen) })
+    res.json({ correct, chosen, helped: correct && verdict.helped, ...englishFeedback(q, chosen), ...reveal(correct) })
   } catch (err) {
     console.error('[ENGLISH]', err.message)
     res.status(500).json({ error: err.message })
@@ -6714,20 +6812,20 @@ app.post('/api/english-sessions/:sessionId/finish', async (req, res) => {
   englishOpen.delete(sessionId)
   try {
     const { data: session } = await supabase.from('english_sessions')
-      .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
+      .select('id, child_id, band, variety, seed, sheet, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
     if (!session) return res.status(404).json({ error: 'session not found' })
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', session.child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
     const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
-    const done = (s) => res.json({
+    const done = (s, review = null) => res.json({
       correct: s.correct, total: session.question_count, gems_earned: s.gems_earned ?? 0,
-      capped: !!s.capped, daily_cap: settings.dailyCap,
+      capped: !!s.capped, daily_cap: settings.dailyCap, review,
     })
     if (session.finished_at) return done(session)
 
     const { data: attempts, error: attErr } = await supabase.from('english_attempts')
-      .select('correct').eq('session_id', session.id)
+      .select('*').eq('session_id', session.id)
     if (attErr) return res.status(500).json({ error: attErr.message })
     if ((attempts || []).length < session.question_count) return res.status(400).json({ error: 'not every question is answered' })
     const correct = attempts.filter(a => a.correct).length
@@ -6752,43 +6850,179 @@ app.post('/api/english-sessions/:sessionId/finish', async (req, res) => {
     let gems = 0
     let capped = false
     if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) capped = true
-    else gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+    else {
+      // Per question: right alone is a whole share, right after a hint or a first wrong try a half, wrong
+      // or skipped nothing. A record from before the migration has no tries and is paid on accuracy.
+      const counted = attempts.every(a => Number.isInteger(a.wrong_tries))
+      gems = counted
+        ? Math.round(settings.gems * (attempts.reduce((n, a) => n + questionShare(a), 0) / session.question_count))
+        : Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+    }
     const led = await recordGems(child.id, gems, 'english', { capped, ref: session.id })
     if (gems > 0 && !led.ok) gems = 0
     await supabase.from('english_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
     queueDailyBonus(child.id)
-    englishSheets.delete(session.id)
 
     const { data: prefsRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
     const perTask = prefsRow?.prefs?.notify_per_task !== false
     const language = parentLang(prefsRow?.prefs)
     const total = session.question_count
-    if (gems > 0 && (perTask || doneToday === 0)) {
-      sendNotification(child.parent_id, say(language,
-        `${child.name} did their English — ${correct}/${total} correct. +${gems} gems 💎`,
-        `${child.name} İngilizce sorularını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`,
-        `${child.name} ha hecho su inglés — ${correct}/${total} correctas. +${gems} gems 💎`),
-      { kind: 'activity', child: child.name, detail: {
-        tr: `İngilizce, ${correct}/${total} doğru, +${gems} gem`,
-        en: `English, ${correct}/${total} correct, +${gems} gems`,
-      } }).catch(() => {})
-    } else if (capped && settings.active && perTask) {
-      sendNotification(child.parent_id, say(language,
-        `${child.name} did another round of English — ${correct}/${total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
-        `${child.name} bir tur İngilizce daha çözdü — ${correct}/${total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
-        `${child.name} ha hecho otra ronda de inglés — ${correct}/${total} correctas. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`),
-      { kind: 'activity', child: child.name, detail: {
-        tr: `İngilizce, ${correct}/${total} doğru, günlük sınır dolduğu için gem yok`,
-        en: `English, ${correct}/${total} correct, past the daily limit so no gems`,
-      } }).catch(() => {})
+    const helpedOf = (a) => a.wrong_tries > 0 || a.hints_used > 0
+    const counted = attempts.every(a => Number.isInteger(a.wrong_tries))
+    const summary = {
+      correct, total, gems, capped, daily_cap: settings.dailyCap,
+      // How the right answers were reached: "10/10" alone reads as a perfect sitting.
+      ...(counted ? {
+        unaided: attempts.filter(a => a.correct && !helpedOf(a)).length,
+        helped: attempts.filter(a => a.correct && helpedOf(a)).length,
+      } : {}),
+      kind: gems > 0 && (perTask || doneToday === 0) ? 'rewarded'
+        : capped && settings.active && perTask ? 'capped' : null,
     }
 
-    done({ correct, gems_earned: gems, capped })
+    // A sitting with something to practise offers a review, and the parent's message waits for how
+    // that goes (one message, not one now and another later). If the offer cannot be stored (the table
+    // is not there yet) the parent is told now, as before.
+    let review = null
+    if (counted) {
+      try {
+        const { generateItem, itemSignature } = await import('./english/englishTemplates.js')
+        const sheet = await englishSheet(session)
+        const built = buildReview({
+          attempts, sheet, band: session.band, variety: session.variety, generateItem, itemSignature,
+          skillOf: (type) => ENGLISH_SKILLS[type] || type, seed: crypto.randomInt(1, 2 ** 31),
+        })
+        if (built.picks.length) {
+          const { data: row, error: revErr } = await supabase.from('english_reviews')
+            .insert({ child_id: child.id, session_id: session.id, picks: built.picks, sheet: built.items, summary }).select('id').maybeSingle()
+          if (revErr || !row) {
+            if (!/english_reviews/i.test(revErr?.message || '')) console.error(`[ENGLISH] review offer not stored for ${child.id}: ${revErr?.message}`)
+            else console.warn('[ENGLISH] english_reviews table missing — RUN THE MIGRATION (server/migrations/2026-10-03_english_help_and_review.sql)')
+          } else {
+            review = { id: row.id, count: built.picks.length, gems_possible: !capped && settings.active && settings.gems > 0 && built.picks.some(p => p.earned === 0) }
+          }
+        }
+      } catch (err) { console.error(`[ENGLISH] review not built: ${err.message}`) }
+    }
+    englishSheets.delete(session.id)
+
+    if (!review && summary.kind) {
+      const m = englishSessionNotice(child.name, summary, language, null)
+      sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+    }
+
+    done({ correct, gems_earned: gems, capped }, review)
   } catch (err) {
     console.error('[ENGLISH]', err.message)
     res.status(500).json({ error: err.message })
   }
 })
+
+
+// ── English review round ─────────────────────────────────────────────────────────────────────
+// The maths review's contract (see /math-review): offered once on the result screen, a way out each
+// of declined / done / expired, each a single guarded update, the parent's message held until it is
+// settled, and the kinds still owed weighted into the next sitting once. What is different is that
+// the server deals the questions and marks them, so the outcome is read from its own record.
+async function sendEnglishReviewMessage(row, review, late = false) {
+  if (!row.summary?.kind) return
+  const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', row.child_id).maybeSingle()
+  if (!child) return
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const lang = parentLang(parentRow?.prefs)
+  const m = late ? englishReviewLateNotice(child.name, review, lang) : englishSessionNotice(child.name, row.summary, lang, review)
+  await sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+}
+
+async function settleEnglishReview(id, childId, patch, from = ['offered']) {
+  const { data, error } = await supabase.from('english_reviews')
+    .update({ ...patch, resolved_at: new Date().toISOString() })
+    .eq('id', id).eq('child_id', childId).in('state', from)
+    .select('id, child_id, session_id, picks, summary, started_at').maybeSingle()
+  if (error) { console.error(`[ENGLISH-REVIEW] settle failed: ${error.message}`); return null }
+  return data
+}
+
+// The child opened the review: the questions (words only) and the 30 minutes start.
+app.post('/api/children/:childId/english-review/:id/start', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: rv } = await supabase.from('english_reviews').select('*').eq('id', id).eq('child_id', childId).maybeSingle()
+    if (!rv || !['offered', 'expired'].includes(rv.state)) return res.status(404).json({ error: 'review not available' })
+    if (!rv.started_at) await supabase.from('english_reviews').update({ started_at: new Date().toISOString() }).eq('id', id).eq('state', 'offered')
+    res.json({ session_id: rv.id, review: true, questions: rv.sheet.map(publicEnglishItem) })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/children/:childId/english-review/:id/decline', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: cur } = await supabase.from('english_reviews').select('picks').eq('id', id).eq('child_id', childId).eq('state', 'offered').maybeSingle()
+    if (!cur) return res.json({ ok: true, already: true })
+    const row = await settleEnglishReview(id, childId, { state: 'declined', carry_types: carryTopics(cur.picks) })
+    if (row) await sendEnglishReviewMessage(row, { state: 'declined', asked: row.picks.length, topics: carryTopics(row.picks) })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[ENGLISH-REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/children/:childId/english-review/:id/finish', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: cur } = await supabase.from('english_reviews')
+      .select('picks, summary, state, results, created_at').eq('id', id).eq('child_id', childId).in('state', ['offered', 'expired']).maybeSingle()
+    if (!cur) return res.json({ gems_earned: 0, already: true })
+    const late = cur.state === 'expired'
+    if (late && Date.now() - new Date(cur.created_at).getTime() > 6 * 60 * 60 * 1000) return res.json({ gems_earned: 0, already: true })
+
+    // Marked by the server as each answer came in; nothing here is taken from the browser.
+    const results = Array.isArray(cur.results) ? cur.results : []
+    const out = reviewOutcome(cur.picks, results, cur.summary?.total)
+
+    const { data: child } = await supabase.from('children').select('task_settings').eq('id', childId).maybeSingle()
+    const settings = taskSettingsFor(child?.task_settings, 'english', ENGLISH_DEFAULTS)
+    const bonus = cur.summary?.capped || !settings.active ? 0 : Math.round(settings.gems * out.share)
+
+    const row = await settleEnglishReview(id, childId, {
+      state: 'done', gems: bonus,
+      carry_types: out.missed.length ? carryTopics(out.missed) : null,
+      ...(late && out.missed.length ? { carry_used_at: null } : {}),
+    }, late ? ['expired'] : ['offered'])
+    if (!row) return res.json({ gems_earned: 0, already: true })
+
+    let gems = bonus
+    if (gems > 0) {
+      const led = await recordGems(childId, gems, 'english_review', { ref: row.session_id })
+      if (!led.ok) gems = 0
+    } else {
+      // A practice that pays nothing is still a row in "what I did" (shown as a tick).
+      const { error: zeroErr } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: 0, reason: 'english_review', capped: false, ref_id: row.session_id })
+      if (zeroErr) console.warn(`[ENGLISH-REVIEW] zero row not written: ${zeroErr.message}`)
+    }
+    const result = { state: 'done', asked: out.asked, correct: out.correct, gems, topics: carryTopics(out.missed) }
+    await sendEnglishReviewMessage(row, result, late)
+    res.json({ gems_earned: gems, correct: out.correct, asked: out.asked })
+  } catch (err) {
+    console.error('[ENGLISH-REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// A review nobody answered is closed after the window and told as it is.
+async function expireEnglishReviews() {
+  const cutoff = new Date(Date.now() - REVIEW_WINDOW_MS).toISOString()
+  const { data, error } = await supabase.from('english_reviews')
+    .select('id, child_id, started_at, picks').eq('state', 'offered').lt('created_at', cutoff).limit(50)
+  if (error) { if (!/english_reviews/i.test(error.message || '')) console.error(`[ENGLISH-REVIEW] sweep: ${error.message}`); return }
+  for (const r of data || []) {
+    if (r.started_at && r.started_at > cutoff) continue
+    const row = await settleEnglishReview(r.id, r.child_id, { state: 'expired', carry_types: carryTopics(r.picks) })
+    if (row) await sendEnglishReviewMessage(row, { state: 'expired', asked: row.picks.length, started: !!row.started_at, topics: carryTopics(row.picks) })
+  }
+}
+setInterval(() => { expireEnglishReviews().catch(err => console.error(`[ENGLISH-REVIEW] sweep: ${err.message}`)) }, 2 * 60 * 1000).unref()
 
 app.post('/api/children/:childId/paintings', async (req, res) => {
   const { childId } = req.params

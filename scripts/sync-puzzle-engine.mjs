@@ -21,7 +21,7 @@ const ENGINES = [
     'puzzleSpatial.js', 'puzzleTemplates.js', 'puzzleFigures.js', 'puzzleGlyphs.js', 'puzzleIcons.js',
     'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js',
   ] },
-  { to: 'server/english', files: ['englishTemplates.js', 'englishTables.js', 'englishLexicon.generated.js'] },
+  { to: 'server/english', files: ['englishTemplates.js', 'englishTables.js', 'englishLexicon.generated.js', 'englishHelp.js'] },
 ]
 const FROM = 'src/lib'
 
