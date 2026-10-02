@@ -19,7 +19,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 const ENGINES = [
   { to: 'server/puzzle', files: [
     'puzzleSpatial.js', 'puzzleTemplates.js', 'puzzleFigures.js', 'puzzleGlyphs.js', 'puzzleIcons.js',
-    'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js',
+    'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js', 'puzzleHelp.js',
   ] },
   { to: 'server/english', files: ['englishTemplates.js', 'englishTables.js', 'englishLexicon.generated.js', 'englishHelp.js'] },
 ]

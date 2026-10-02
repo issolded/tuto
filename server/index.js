@@ -2,6 +2,7 @@ import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
 import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './englishPlay.js'
 import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
+import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from './puzzleReview.js'
 import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import 'dotenv/config'
@@ -6194,8 +6195,21 @@ app.post('/api/children/:childId/puzzle-session', async (req, res) => {
     const icons = req.body?.icons !== false
     const seed = crypto.randomInt(1, 2 ** 31)
     const { generateSession } = await import('./puzzle/puzzleTemplates.js')
-    const sheet = generateSession(band, PUZZLE_QUESTIONS, seed, { icons })
+    // The kinds the last review left owed (once, within a week): one puzzle of each leads the sitting.
+    let carryIds = []
+    let focus = []
+    {
+      const { data: owed, error: owedErr } = await supabase.from('puzzle_reviews')
+        .select('id, carry_types').eq('child_id', childId).is('carry_used_at', null).not('carry_types', 'is', null)
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString())
+      if (!owedErr) {
+        carryIds = (owed || []).map(o => o.id)
+        focus = [...new Set((owed || []).flatMap(o => (o.carry_types || []).map(t => t.topic_id)))]
+      }
+    }
+    const sheet = generateSession(band, PUZZLE_QUESTIONS, seed, { icons, focus })
     if (sheet.length < PUZZLE_QUESTIONS) return res.status(500).json({ error: 'could not build a session' })
+    if (carryIds.length) supabase.from('puzzle_reviews').update({ carry_used_at: new Date().toISOString() }).in('id', carryIds).then(() => {}, () => {})
 
     const { data: session, error } = await supabase.from('puzzle_sessions')
       .insert({ child_id: childId, band, seed, icons, question_count: sheet.length, sheet })
@@ -6224,42 +6238,102 @@ app.post('/api/children/:childId/puzzle-session', async (req, res) => {
   }
 })
 
+// A puzzle session or a review's id, as one open session. A review's questions are dealt and marked by the
+// server like a sitting's; only where the answers are recorded differs (see the answer endpoint).
+async function openPuzzleSession(sessionId) {
+  let session = puzzleOpen.get(sessionId)
+  if (!session) {
+    ;({ data: session } = await supabase.from('puzzle_sessions').select('*').eq('id', sessionId).maybeSingle())
+    if (session) {
+      if (session.finished_at) return { error: [409, 'session already finished'] }
+      keepOpen(session)
+    } else {
+      const { data: rv } = await supabase.from('puzzle_reviews').select('*').eq('id', sessionId).maybeSingle()
+      if (!rv) return { error: [404, 'session not found'] }
+      if (!['offered', 'expired'].includes(rv.state)) return { error: [409, 'session already finished'] }
+      session = { id: rv.id, child_id: rv.child_id, review: true, sheet: rv.sheet, picks: rv.picks, finished_at: null }
+      keepOpen(session)
+    }
+  }
+  return { session }
+}
+
+// A hint, one rung at a time (src/lib/puzzleHelp.js). Looking at any rung costs the question its half.
+app.post('/api/puzzle-sessions/:sessionId/hint', async (req, res) => {
+  const index = Number(req.body?.question_index)
+  try {
+    const { session, error } = await openPuzzleSession(req.params.sessionId)
+    if (error) return res.status(error[0]).json({ error: error[1] })
+    const q = (await puzzleSheet(session))[index]
+    if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
+    const st = playState(session.id, index)
+    if (st.settled) return res.status(409).json({ error: 'question already answered' })
+    const { puzzleHintAt } = await import('./puzzle/puzzleHelp.js')
+    const lang = ['tr', 'es'].includes(req.body?.lang) ? req.body.lang : 'en'
+    const level = nextHintLevel(st)
+    const h = puzzleHintAt(q, level, lang, { eliminated: st.eliminated })
+    if (h.eliminate != null) st.eliminated.push(h.eliminate)
+    res.json({ ...h, last: level >= 3 })
+  } catch (err) {
+    console.error('[PUZZLE]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/puzzle-sessions/:sessionId/answer', async (req, res) => {
   const { sessionId } = req.params
   const index = Number(req.body?.question_index)
   const chosen = Number(req.body?.chosen_index)
+  const skip = req.body?.skip === true
   try {
-    let session = puzzleOpen.get(sessionId)
-    if (!session) {
-      ;({ data: session } = await supabase.from('puzzle_sessions')
-        .select('*').eq('id', sessionId).maybeSingle())
-      if (!session) return res.status(404).json({ error: 'session not found' })
-      if (session.finished_at) return res.status(409).json({ error: 'session already finished' })
-      keepOpen(session)
-    }
+    const { session, error: openErr } = await openPuzzleSession(sessionId)
+    if (openErr) return res.status(openErr[0]).json({ error: openErr[1] })
     const sheet = await puzzleSheet(session)
     const q = sheet[index]
     if (!Number.isInteger(index) || !q) return res.status(400).json({ error: 'no such question' })
-    if (!Number.isInteger(chosen) || chosen < 0 || chosen >= q.options.length) return res.status(400).json({ error: 'no such option' })
+    if (!skip && (!Number.isInteger(chosen) || chosen < 0 || chosen >= q.options.length)) return res.status(400).json({ error: 'no such option' })
 
-    const correct = chosen === q.correct_index
-    // Why the answer is the answer, for the child who missed it. Only here, after the answer is
-    // in: it names the rule, which is the key.
+    // One try, then help (maths' rule): the first wrong answer gives the question back and reveals nothing; a wrong
+    // answer after a hint, a second wrong one, or "I don't know" settles it.
+    const st = playState(session.id, index)
+    const verdict = judgeAnswer(st, { correct: [q.correct_index], chosen: skip ? [] : [chosen], skip })
+    if (verdict.status === 'retry') {
+      if (!st.eliminated.includes(chosen)) st.eliminated.push(chosen)
+      return res.json({ correct: false, retry: true, chosen_index: chosen })
+    }
+    const correct = verdict.status === 'right'
+    // Why the answer is the answer, for the child who missed it. Only here, after the answer is in: it names the rule.
     const { explainQuestion } = await import('./puzzle/puzzleExplain.js')
-    const why = explainQuestion(q, ['tr', 'es'].includes(req.body?.lang) ? req.body.lang : 'en')
-    const { error } = await supabase.from('puzzle_attempts').insert({
+    const why = correct ? null : explainQuestion(q, ['tr', 'es'].includes(req.body?.lang) ? req.body.lang : 'en')
+    const reveal = { correct_index: q.correct_index, why }
+
+    if (session.review) {
+      const { data: cur } = await supabase.from('puzzle_reviews').select('results').eq('id', session.id).maybeSingle()
+      const results = Array.isArray(cur?.results) ? cur.results : []
+      const had = results.find(r => r.q === index)
+      if (had) return res.json({ correct: !!had.correct, chosen_index: had.chosen_index, ...reveal, repeated: true })
+      results.push({ q: index, idx: session.picks[index]?.idx ?? index, correct, chosen_index: skip ? null : chosen, help_used: st.tries > 0 || st.hints > 0, help_shown: st.hints > 0 })
+      const { error: wErr } = await supabase.from('puzzle_reviews').update({ results }).eq('id', session.id)
+      if (wErr) return res.status(500).json({ error: wErr.message })
+      return res.json({ correct, chosen_index: skip ? null : chosen, helped: correct && verdict.helped, ...reveal })
+    }
+
+    const row = {
       session_id: session.id, child_id: session.child_id, question_index: index,
-      type: q.type, rule: q.rule?.attr ?? null, band: session.band, chosen_index: chosen, correct,
-    })
+      type: q.type, rule: q.rule?.attr ?? null, band: session.band, chosen_index: skip ? -1 : chosen, correct,
+    }
+    let { error } = await supabase.from('puzzle_attempts').insert({ ...row, wrong_tries: st.tries, hints_used: st.hints > 0 ? 1 : 0 })
+    // The columns arrive with a migration; until then the answer is still recorded.
+    if (error && /wrong_tries|hints_used/.test(error.message || '')) ({ error } = await supabase.from('puzzle_attempts').insert(row))
     if (error?.code === '23505') {
       // Already answered — a double tap, or a retry after a dropped response. The first answer
       // stands; the second gets told what the first was.
       const { data: first } = await supabase.from('puzzle_attempts')
         .select('chosen_index, correct').eq('session_id', session.id).eq('question_index', index).maybeSingle()
-      return res.json({ correct: !!first?.correct, chosen_index: first?.chosen_index, correct_index: q.correct_index, why, repeated: true })
+      return res.json({ correct: !!first?.correct, chosen_index: first?.chosen_index, correct_index: q.correct_index, why: first?.correct ? null : why ?? (await import('./puzzle/puzzleExplain.js')).explainQuestion(q, ['tr', 'es'].includes(req.body?.lang) ? req.body.lang : 'en'), repeated: true })
     }
     if (error) return res.status(500).json({ error: error.message })
-    res.json({ correct, chosen_index: chosen, correct_index: q.correct_index, why })
+    res.json({ correct, chosen_index: skip ? null : chosen, helped: correct && verdict.helped, ...reveal })
   } catch (err) {
     console.error('[PUZZLE]', err.message)
     res.status(500).json({ error: err.message })
@@ -6285,7 +6359,7 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
     const near = (iso) => Math.abs(DateTime.fromISO(iso, { zone: 'utc' }).diff(at).as('milliseconds'))
     const span = [at.minus({ minutes: 3 }).toISO(), at.plus({ minutes: 1 }).toISO()]
 
-    if (row.reason === 'puzzle') {
+    if (row.reason === 'puzzle' || row.reason === 'puzzle_review') {
       let session = null
       const cols = '*'
       if (row.ref_id) ({ data: session } = await supabase.from('puzzle_sessions').select(cols).eq('id', row.ref_id).maybeSingle())
@@ -6400,22 +6474,22 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
   puzzleOpen.delete(sessionId)
   try {
     const { data: session } = await supabase.from('puzzle_sessions')
-      .select('id, child_id, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
+      .select('id, child_id, band, icons, sheet, seed, question_count, finished_at, correct, gems_earned, capped').eq('id', sessionId).maybeSingle()
     if (!session) return res.status(404).json({ error: 'session not found' })
     const { data: child } = await supabase
       .from('children').select('id, name, parent_id, task_settings').eq('id', session.child_id).maybeSingle()
     if (!child) return res.status(404).json({ error: 'child not found' })
     const settings = taskSettingsFor(child.task_settings, 'puzzle', PUZZLE_DEFAULTS)
-    const done = (s) => res.json({
+    const done = (s, review = null) => res.json({
       correct: s.correct, total: session.question_count, gems_earned: s.gems_earned ?? 0,
-      capped: !!s.capped, daily_cap: settings.dailyCap,
+      capped: !!s.capped, daily_cap: settings.dailyCap, review,
     })
     if (session.finished_at) return done(session)
 
     // The score is counted from what was recorded here, one answer at a time — never taken from
     // the browser.
     const { data: attempts, error: attErr } = await supabase.from('puzzle_attempts')
-      .select('correct').eq('session_id', session.id)
+      .select('*').eq('session_id', session.id)
     if (attErr) return res.status(500).json({ error: attErr.message })
     if ((attempts || []).length < session.question_count) return res.status(400).json({ error: 'not every question is answered' })
     const correct = attempts.filter(a => a.correct).length
@@ -6444,7 +6518,12 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
     if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) {
       capped = true
     } else {
-      gems = Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
+      // Per question: right alone a whole share, right after a hint or a first wrong try a half, wrong or skipped nothing.
+      // A record from before the migration has no tries and is paid on accuracy.
+      const counted = attempts.every(a => Number.isInteger(a.wrong_tries))
+      gems = counted
+        ? Math.round(settings.gems * (attempts.reduce((n, a) => n + questionShare(a), 0) / session.question_count))
+        : Math.round(settings.gems * rewardScale((correct / session.question_count) * 100))
     }
     // Through recordGems like every other scored task, so a sitting past the limit is a line in
     // the gem history too, not a gap.
@@ -6452,40 +6531,167 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
     if (gems > 0 && !led.ok) gems = 0
     await supabase.from('puzzle_sessions').update({ gems_earned: gems, capped }).eq('id', session.id)
     queueDailyBonus(child.id)
-    puzzleSheets.delete(session.id)
 
     const { data: prefsRow } = await supabase
       .from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
     const perTask = prefsRow?.prefs?.notify_per_task !== false
     const language = parentLang(prefsRow?.prefs)
     const total = session.question_count
-    if (gems > 0 && (perTask || doneToday === 0)) {
-      const msg = say(language,
-        `${child.name} did their puzzles — ${correct}/${total} correct. +${gems} gems 💎`,
-        `${child.name} bulmacalarını çözdü — ${correct}/${total} doğru. +${gems} gem 💎`,
-        `${child.name} ha hecho sus acertijos — ${correct}/${total} correctos. +${gems} gems 💎`)
-      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
-        tr: `şekil ve örüntü bulmacaları, ${correct}/${total} doğru, +${gems} gem`,
-        en: `shape & pattern puzzles, ${correct}/${total} correct, +${gems} gems`,
-      } }).catch(() => {})
-    } else if (capped && settings.active && perTask) {
-      // The sitting past the day's limit is told too, and not as an offer — the maths rule.
-      const msg = say(language,
-        `${child.name} did another round of puzzles — ${correct}/${total} correct. That's past today's limit of ${settings.dailyCap}, so it didn't add gems. 🌙`,
-        `${child.name} bir tur bulmaca daha çözdü — ${correct}/${total} doğru. Bugünkü sınırı (günde ${settings.dailyCap}) geçtiği için gem eklenmedi. 🌙`,
-        `${child.name} ha hecho otra ronda de acertijos — ${correct}/${total} correctos. Pasa del límite de hoy (${settings.dailyCap}), así que no ha sumado gems. 🌙`)
-      sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
-        tr: `bulmaca, ${correct}/${total} doğru, günlük sınır dolduğu için gem yok`,
-        en: `puzzles, ${correct}/${total} correct, past the daily limit so no gems`,
-      } }).catch(() => {})
+    const helpedOf = (a) => a.wrong_tries > 0 || a.hints_used > 0
+    const counted = attempts.every(a => Number.isInteger(a.wrong_tries))
+    const summary = {
+      correct, total, gems, capped, daily_cap: settings.dailyCap,
+      ...(counted ? {
+        unaided: attempts.filter(a => a.correct && !helpedOf(a)).length,
+        helped: attempts.filter(a => a.correct && helpedOf(a)).length,
+      } : {}),
+      kind: gems > 0 && (perTask || doneToday === 0) ? 'rewarded'
+        : capped && settings.active && perTask ? 'capped' : null,
     }
 
-    done({ correct, gems_earned: gems, capped })
+    // A sitting with something to practise offers a review and the parent's message waits for it (see English).
+    let review = null
+    if (counted) {
+      try {
+        const { generateQuestion, questionSignature } = await import('./puzzle/puzzleTemplates.js')
+        const sheet = await puzzleSheet(session)
+        const built = buildPuzzleReview({
+          attempts, sheet, band: session.band, icons: session.icons !== false, generateQuestion, questionSignature,
+          skillOf: (type) => PUZZLE_SKILLS[type] || type, seed: crypto.randomInt(1, 2 ** 31),
+        })
+        if (built.picks.length) {
+          const { data: row, error: revErr } = await supabase.from('puzzle_reviews')
+            .insert({ child_id: child.id, session_id: session.id, picks: built.picks, sheet: built.items, summary }).select('id').maybeSingle()
+          if (revErr || !row) {
+            if (!/puzzle_reviews/i.test(revErr?.message || '')) console.error(`[PUZZLE] review offer not stored for ${child.id}: ${revErr?.message}`)
+            else console.warn('[PUZZLE] puzzle_reviews table missing — RUN THE MIGRATION (server/migrations/2026-10-03_puzzle_help_and_review.sql)')
+          } else {
+            review = { id: row.id, count: built.picks.length, gems_possible: !capped && settings.active && settings.gems > 0 && built.picks.some(p => p.earned === 0) }
+          }
+        }
+      } catch (err) { console.error(`[PUZZLE] review not built: ${err.message}`) }
+    }
+    puzzleSheets.delete(session.id)
+
+    if (!review && summary.kind) {
+      const m = puzzleSessionNotice(child.name, summary, language, null)
+      sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+    }
+
+    done({ correct, gems_earned: gems, capped }, review)
   } catch (err) {
     console.error('[PUZZLE]', err.message)
     res.status(500).json({ error: err.message })
   }
 })
+
+
+// ── Puzzle review round ─────────────────────────────────────────────────────────────────────
+// The English review's contract, for puzzles (see /english-review, itself the maths review's): offered once on the result screen, a way out each
+// of declined / done / expired, each a single guarded update, the parent's message held until it is
+// settled, and the kinds still owed weighted into the next sitting once. What is different is that
+// the server deals the questions and marks them, so the outcome is read from its own record.
+async function sendPuzzleReviewMessage(row, review, late = false) {
+  if (!row.summary?.kind) return
+  const { data: child } = await supabase.from('children').select('name, parent_id').eq('id', row.child_id).maybeSingle()
+  if (!child) return
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', child.parent_id).maybeSingle()
+  const lang = parentLang(parentRow?.prefs)
+  const m = late ? puzzleReviewLateNotice(child.name, review, lang) : puzzleSessionNotice(child.name, row.summary, lang, review)
+  await sendNotification(child.parent_id, m.text, m.notice).catch(() => {})
+}
+
+async function settlePuzzleReview(id, childId, patch, from = ['offered']) {
+  const { data, error } = await supabase.from('puzzle_reviews')
+    .update({ ...patch, resolved_at: new Date().toISOString() })
+    .eq('id', id).eq('child_id', childId).in('state', from)
+    .select('id, child_id, session_id, picks, summary, started_at').maybeSingle()
+  if (error) { console.error(`[PUZZLE-REVIEW] settle failed: ${error.message}`); return null }
+  // Settled for good (done, declined): nothing more can be answered. An expired round stays open, it can still be finished late.
+  if (data && patch.state !== 'expired') puzzleOpen.delete(id)
+  return data
+}
+
+// The child opened the review: the questions (words only) and the 30 minutes start.
+app.post('/api/children/:childId/puzzle-review/:id/start', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: rv } = await supabase.from('puzzle_reviews').select('*').eq('id', id).eq('child_id', childId).maybeSingle()
+    if (!rv || !['offered', 'expired'].includes(rv.state)) return res.status(404).json({ error: 'review not available' })
+    if (!rv.started_at) await supabase.from('puzzle_reviews').update({ started_at: new Date().toISOString() }).eq('id', id).eq('state', 'offered')
+    res.json({ session_id: rv.id, review: true, questions: rv.sheet.map(publicQuestion) })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/children/:childId/puzzle-review/:id/decline', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: cur } = await supabase.from('puzzle_reviews').select('picks').eq('id', id).eq('child_id', childId).eq('state', 'offered').maybeSingle()
+    if (!cur) return res.json({ ok: true, already: true })
+    const row = await settlePuzzleReview(id, childId, { state: 'declined', carry_types: carryTopics(cur.picks) })
+    if (row) await sendPuzzleReviewMessage(row, { state: 'declined', asked: row.picks.length, topics: carryTopics(row.picks) })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[PUZZLE-REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/children/:childId/puzzle-review/:id/finish', async (req, res) => {
+  const { childId, id } = req.params
+  try {
+    const { data: cur } = await supabase.from('puzzle_reviews')
+      .select('picks, summary, state, results, created_at').eq('id', id).eq('child_id', childId).in('state', ['offered', 'expired']).maybeSingle()
+    if (!cur) return res.json({ gems_earned: 0, already: true })
+    const late = cur.state === 'expired'
+    if (late && Date.now() - new Date(cur.created_at).getTime() > 6 * 60 * 60 * 1000) return res.json({ gems_earned: 0, already: true })
+
+    // Marked by the server as each answer came in; nothing here is taken from the browser.
+    const results = Array.isArray(cur.results) ? cur.results : []
+    const out = reviewOutcome(cur.picks, results, cur.summary?.total)
+
+    const { data: child } = await supabase.from('children').select('task_settings').eq('id', childId).maybeSingle()
+    const settings = taskSettingsFor(child?.task_settings, 'puzzle', PUZZLE_DEFAULTS)
+    const bonus = cur.summary?.capped || !settings.active ? 0 : Math.round(settings.gems * out.share)
+
+    const row = await settlePuzzleReview(id, childId, {
+      state: 'done', gems: bonus,
+      carry_types: out.missed.length ? carryTopics(out.missed) : null,
+      ...(late && out.missed.length ? { carry_used_at: null } : {}),
+    }, late ? ['expired'] : ['offered'])
+    if (!row) return res.json({ gems_earned: 0, already: true })
+
+    let gems = bonus
+    if (gems > 0) {
+      const led = await recordGems(childId, gems, 'puzzle_review', { ref: row.session_id })
+      if (!led.ok) gems = 0
+    } else {
+      // A practice that pays nothing is still a row in "what I did" (shown as a tick).
+      const { error: zeroErr } = await supabase.from('bt_ledger').insert({ child_id: childId, amount: 0, reason: 'puzzle_review', capped: false, ref_id: row.session_id })
+      if (zeroErr) console.warn(`[PUZZLE-REVIEW] zero row not written: ${zeroErr.message}`)
+    }
+    const result = { state: 'done', asked: out.asked, correct: out.correct, gems, topics: carryTopics(out.missed) }
+    await sendPuzzleReviewMessage(row, result, late)
+    res.json({ gems_earned: gems, correct: out.correct, asked: out.asked })
+  } catch (err) {
+    console.error('[PUZZLE-REVIEW]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// A review nobody answered is closed after the window and told as it is.
+async function expirePuzzleReviews() {
+  const cutoff = new Date(Date.now() - REVIEW_WINDOW_MS).toISOString()
+  const { data, error } = await supabase.from('puzzle_reviews')
+    .select('id, child_id, started_at, picks').eq('state', 'offered').lt('created_at', cutoff).limit(50)
+  if (error) { if (!/puzzle_reviews/i.test(error.message || '')) console.error(`[PUZZLE-REVIEW] sweep: ${error.message}`); return }
+  for (const r of data || []) {
+    if (r.started_at && r.started_at > cutoff) continue
+    const row = await settlePuzzleReview(r.id, r.child_id, { state: 'expired', carry_types: carryTopics(r.picks) })
+    if (row) await sendPuzzleReviewMessage(row, { state: 'expired', asked: row.picks.length, started: !!row.started_at, topics: carryTopics(row.picks) })
+  }
+}
+setInterval(() => { expirePuzzleReviews().catch(err => console.error(`[PUZZLE-REVIEW] sweep: ${err.message}`)) }, 2 * 60 * 1000).unref()
 
 // ── English sessions (verbal reasoning, spelling and grammar) ────────────────────────────────
 // The puzzle contract, word for word: the server deals the sheet from a seed it chooses, keeps the

@@ -33,14 +33,14 @@ cut(/^import \{ startTelegramBot[^\n]*\n/m.exec(src)[0],
 cut('const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)', 'const supabase = __h.db')
 src = src.replace(/setInterval\(/g, '__h.interval(')
 // Test-only peek at the stored keys and tables, so a script can play right and wrong on purpose.
-const peek = `\napp.get('/__h/families', (req, res) => res.json(__h.families))\napp.get('/__h/sweep', async (req, res) => { for (const r of __h.tables.english_reviews || []) if (r.state === 'offered') r.created_at = new Date(Date.now() - 3600e3).toISOString(); await expireEnglishReviews(); res.json({ ok: true }) })\napp.post('/__h/clear-ledger', (req, res) => { __h.tables.bt_ledger = []; res.json({ ok: true }) })\n\napp.get('/__h/sheet/:id', (req, res) => { const t = __h.tables; const r = (t.english_sessions || []).find(x => x.id === req.params.id) || (t.english_reviews || []).find(x => x.id === req.params.id); res.json(r?.sheet || null) })\napp.get('/__h/table/:name', (req, res) => res.json(__h.tables[req.params.name] || []))\napp.get('/__h/notes', (req, res) => res.json(__h.notes))\n`
+const peek = `\napp.get('/__h/families', (req, res) => res.json(__h.families))\napp.get('/__h/sweep', async (req, res) => { for (const r of [...(__h.tables.english_reviews || []), ...(__h.tables.puzzle_reviews || [])]) if (r.state === 'offered') r.created_at = new Date(Date.now() - 3600e3).toISOString(); await expireEnglishReviews(); await expirePuzzleReviews(); res.json({ ok: true }) })\napp.post('/__h/clear-ledger', (req, res) => { __h.tables.bt_ledger = []; res.json({ ok: true }) })\n\napp.get('/__h/sheet/:id', (req, res) => { const t = __h.tables; const r = (t.english_sessions || []).find(x => x.id === req.params.id) || (t.puzzle_sessions || []).find(x => x.id === req.params.id) || (t.puzzle_reviews || []).find(x => x.id === req.params.id) || (t.english_reviews || []).find(x => x.id === req.params.id); res.json(r?.sheet || null) })\napp.get('/__h/table/:name', (req, res) => res.json(__h.tables[req.params.name] || []))\napp.get('/__h/notes', (req, res) => res.json(__h.notes))\n`
 src = src.slice(0, src.indexOf('app.listen(3000')) + peek + `\napp.listen(${PORT}, () => console.log('[harness] server on ${PORT}'))\nexport { supabase as db }\n`
 
 // ── in-memory tables ──
 const tables = {}
-const UNIQUE = { english_attempts: ['session_id', 'question_index'] }
+const UNIQUE = { english_attempts: ['session_id', 'question_index'], puzzle_attempts: ['session_id', 'question_index'] }
 // Column defaults the real tables carry (migrations).
-const DEFAULTS = { english_reviews: { state: 'offered', results: [], gems: 0 }, english_attempts: { wrong_tries: 0, hints_used: 0 } }
+const DEFAULTS = { english_reviews: { state: 'offered', results: [], gems: 0 }, english_attempts: { wrong_tries: 0, hints_used: 0 }, puzzle_reviews: { state: 'offered', results: [], gems: 0 }, puzzle_attempts: { wrong_tries: 0, hints_used: 0 } }
 const T = (name) => (tables[name] ||= [])
 function builder(name) {
   const q = { op: 'select', filters: [], order: null, limit: null, row: null, patch: null, count: null, head: false, returning: false }
@@ -61,15 +61,15 @@ function builder(name) {
     }
   })
   const run = () => {
-    if (NOMIG && name === 'english_reviews') return { data: null, error: { message: 'relation "english_reviews" does not exist' } }
-    if (NOMIG && name === 'english_attempts' && q.op === 'insert' && [].concat(q.row).some(r => 'wrong_tries' in r)) return { data: null, error: { message: 'column "wrong_tries" of relation "english_attempts" does not exist' } }
+    if (NOMIG && (name === 'english_reviews' || name === 'puzzle_reviews')) return { data: null, error: { message: 'relation "english_reviews" does not exist' } }
+    if (NOMIG && (name === 'english_attempts' || name === 'puzzle_attempts') && q.op === 'insert' && [].concat(q.row).some(r => 'wrong_tries' in r)) return { data: null, error: { message: 'column "wrong_tries" of relation "english_attempts" does not exist' } }
     if (q.op === 'insert') {
       const list = Array.isArray(q.row) ? q.row : [q.row]
       const out = []
       for (const r of list) {
         const key = UNIQUE[name]
         if (key && rows().some(o => key.every(k => o[k] === r[k]))) return { data: null, error: { code: '23505', message: 'duplicate key' } }
-        const full = { id: randomUUID(), created_at: new Date().toISOString(), ...structuredClone((NOMIG && name === 'english_attempts') ? {} : (DEFAULTS[name] || {})), ...r }
+        const full = { id: randomUUID(), created_at: new Date().toISOString(), ...structuredClone((NOMIG && (name === 'english_attempts' || name === 'puzzle_attempts')) ? {} : (DEFAULTS[name] || {})), ...r }
         rows().push(full); out.push(full)
       }
       return { data: out, error: null }
@@ -126,7 +126,7 @@ const mk = (key, age, lang, plang) => {
 }
 mk('main', AGE, LANG, 'en')
 if (process.argv.includes('--matrix')) {
-  for (const a of [7, 8, 9, 10, 11, 12]) for (const l of ['en', 'tr', 'es']) mk(`${a}-${l}`, a, l, l)
+  for (const a of [5, 6, 7, 8, 9, 10, 11, 12]) for (const l of ['en', 'tr', 'es']) mk(`${a}-${l}`, a, l, l)
   mk('cross', 8, 'tr', 'en')
 }
 

@@ -20,6 +20,7 @@ const REASON_KEYS = {
   daily_bonus:     'gem_daily_bonus',
   math_review:     'gem_math_review',
   english_review:  'gem_english_review',
+  puzzle_review:   'gem_puzzle_review',
   adjustment:      'gem_adjustment',
   'Welcome bonus': 'gem_welcome',
   welcome:         'gem_welcome',
@@ -27,7 +28,7 @@ const REASON_KEYS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', bonus: '🫴', story: '📖', daily_bonus: '🏅', math_review: '🔁', english_review: '🔁',
+  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', bonus: '🫴', story: '📖', daily_bonus: '🏅', math_review: '🔁', english_review: '🔁', puzzle_review: '🔁',
   adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
@@ -123,7 +124,7 @@ export default function GemsScreen() {
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               const day = row.created_at ? formatDate(row.created_at, lang) : ''
               // A maths, puzzle or English sitting opens again, question by question.
-              const opens = (key === 'math' || key === 'puzzle' || key === 'english' || key === 'math_review' || key === 'english_review') && row.id
+              const opens = (key === 'math' || key === 'puzzle' || key === 'english' || key === 'math_review' || key === 'english_review' || key === 'puzzle_review') && row.id
               return (
                 <div
                   key={row.id ?? i}
@@ -142,7 +143,7 @@ export default function GemsScreen() {
                   </div>
                   {capped ? (
                     <div style={{ fontSize: 20, flexShrink: 0 }} aria-label={t('gems_capped', lang)}>🌙</div>
-                  ) : (key === 'math_review' || key === 'english_review') && !row.amount ? (
+                  ) : (key === 'math_review' || key === 'english_review' || key === 'puzzle_review') && !row.amount ? (
                     // A practice round that paid nothing is still something the child did: a tick, not "+0".
                     <div style={{ fontSize: 20, fontWeight: 900, color: '#2EC486', flexShrink: 0 }} aria-label={t(labelKey, lang)}>✓</div>
                   ) : (

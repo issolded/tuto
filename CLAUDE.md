@@ -83,6 +83,17 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] NVR (şekil ve örüntü bulmacaları): ipucu, yardım ve pekiştirme (2026-10-03, Claude). İngilizcenin aynı yapısı, aynı sunucu çekirdeği
+      (`server/englishPlay.js`: bir deneme sonra yardım, soru başı pay; `mathReview.js`'in seçimi). **Migration önce:**
+      `server/migrations/2026-10-03_puzzle_help_and_review.sql` (`puzzle_attempts.wrong_tries/hints_used`, `puzzle_reviews`); yokken eski davranış
+      (kayıt yok, gem doğruluk ölçeğiyle, teklif yok, mesaj hemen). İpucu 3 basamak, sunucudan istenince (`src/lib/puzzleHelp.js`, 23 tür EN/TR/ES):
+      (1) bu tür bulmacaya nasıl bakılır, (2) yanlış bir resim soluklaşır, (3) neye bakılacağı (kuralın niteliği adıyla, cevap değil);
+      cevap bildirilince mevcut `explainQuestion` cümlesi. Pekiştirme: aynı TÜR + aynı nitelikten ("sequence|dots") taze bulmaca, sunucu işaretler;
+      ebeveyn mesajı pekiştirme bitene kadar bekler (`puzzleSessionNotice`); kalan türler sonraki oturumun başına (`generateSession` `focus`).
+      Doğrulama: harness'te yaş 5-12 × EN/TR/ES (`server/scripts/puzzle-matrix.mjs`), uç durumlar (`puzzle-edge.mjs`), migration yokken
+      (`puzzle-premigration.mjs`), ekranda 390px; `npm run english:check` artık `puzzle-help-audit`'i de çalıştırıyor. **Açık:** canlıda
+      denenmedi (migration bekliyor); ipuçlarının çocuğa öğrettiği ölçülmedi; görsel bulmacalarda (matris, küp açınımı) üçüncü basamak
+      genel kalıyor; TR/ES metinleri anadili konuşan biri okumadı.
 - [ ] İngilizce: ipucu, yardım ve pekiştirme (2026-10-02, Claude; `claude/math-hint-quality`). Matematiğin yapısı İngilizceye
       taşındı. **Migration önce:** `server/migrations/2026-10-03_english_help_and_review.sql` (`english_attempts.wrong_tries/hints_used`,
       `english_reviews`). Tablo yokken sunucu eski davranışa düşer: tur/ipucu kaydı yok, gem doğruluk ölçeğiyle, pekiştirme teklifi yok,

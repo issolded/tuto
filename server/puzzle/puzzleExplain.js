@@ -10,7 +10,7 @@
 // suffix has to agree with a word chosen at run time. Spanish carries its article in the table and
 // avoids adjectives that would have to agree with it ("es diferente", never "distinta").
 
-const ATTR = {
+export const ATTR = {
   tr: {
     shape: 'şekli', fill: 'içinin deseni', rotation: 'yönü', size: 'büyüklüğü', stretch: 'genişliği',
     half: 'boyalı yarısı', dots: 'nokta sayısı', corner: 'köşedeki işareti', inner: 'içindeki şekil',
@@ -30,7 +30,7 @@ const ATTR = {
 
 // The same, standing alone — "the shape changes" rather than "its shape". Turkish needs both:
 // "Hepsinin yönü aynı" but "Bir yönde şekil, öbür yönde desen değişiyor". English does not.
-const NOM = {
+export const NOM = {
   tr: {
     shape: 'şekil', fill: 'desen', rotation: 'yön', size: 'büyüklük', stretch: 'genişlik',
     half: 'boyalı yarı', dots: 'nokta sayısı', corner: 'köşedeki işaret', inner: 'içteki şekil',
