@@ -72,16 +72,31 @@ import { mathSessionNotice } from '../../server/mathReview.js'
 
 test('the held parent message tells how the review went, in the parent\'s language', () => {
   const s = { correct: 7, total: 10, gems: 21, capped: false, daily_cap: 3, note: '', kind: 'rewarded' }
-  const done = mathSessionNotice('Ada', s, 'en', { state: 'done', asked: 3, correct: 2, gems: 5, topics: ['Fractions'] })
+  const done = mathSessionNotice('Ada', s, 'en', { state: 'done', asked: 3, correct: 2, gems: 5, topics: [{ topic_id: 'y4_fractions', topic_name: 'Fractions and Decimals' }] })
   assert.match(done.text, /7\/10 correct\. \+21 gems/)
   assert.match(done.text, /2\/3 right, \+5 gems/)
-  assert.match(done.text, /Fractions/)
-  const declined = mathSessionNotice('Ada', s, 'tr', { state: 'declined', asked: 3, topics: ['Kesirler', 'Saat'] })
+  assert.match(done.text, /Fractions and Decimals/)
+  const declined = mathSessionNotice('Ada', s, 'tr', { state: 'declined', asked: 3, topics: [{ topic_id: 'y4_fractions', topic_name: 'Fractions and Decimals' }, { topic_id: 'y3_time', topic_name: 'Time' }] })
   assert.match(declined.text, /istemedi/)
-  assert.match(declined.text, /Kesirler, Saat/)
+  assert.match(declined.text, /Kesirler ve ondalık sayılar, Saat ve zaman/)
+  assert.doesNotMatch(declined.text, /Fractions|Time/)
   const left = mathSessionNotice('Ada', s, 'es', { state: 'expired', asked: 3, started: false, topics: [] })
   assert.match(left.text, /no se hizo/)
   assert.doesNotMatch(left.text, /prioridad|peso/)
   // No review in the story: the message is exactly the old one.
   assert.equal(mathSessionNotice('Ada', s, 'en', null).text, 'Ada did their maths — 7/10 correct. +21 gems 💎')
+})
+
+import { TOPIC_IDS, localTopicName } from '../../server/topicNames.js'
+import { readFileSync } from 'node:fs'
+
+test('every curriculum topic has a Turkish and a Spanish name, and unknown ids fall back', () => {
+  const ids = [...readFileSync(new URL('../../src/lib/gemini.js', import.meta.url), 'utf8').matchAll(/id: "(y\d+_[a-z_0-9]+)", name: "([^"]*)"/g)]
+  assert.ok(ids.length > 60)
+  for (const [, id, name] of ids) {
+    assert.ok(TOPIC_IDS.includes(id), `${id} has no translation in server/topicNames.js`)
+    assert.equal(localTopicName(id, name, 'en'), name, `${id}: English name drifted from the curriculum`)
+    assert.ok(localTopicName(id, name, 'tr') && localTopicName(id, name, 'es'))
+  }
+  assert.equal(localTopicName('y99_new', 'New topic', 'tr'), 'New topic')
 })

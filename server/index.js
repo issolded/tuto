@@ -1,5 +1,6 @@
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean } from './mathGems.js'
+import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import 'dotenv/config'
 import express from 'express'
@@ -5457,7 +5458,7 @@ async function clearFocusIfMastered(childId, focus, hasNewAttempts) {
   const t = standing?.find(x => x.topic_id === focus.topic_id)
   if (!t || t.attempts < MASTERY_MIN_ATTEMPTS || t.accuracy < MASTERY_CLEARS_AT) return null
   await supabase.from('children').update({ math_focus: null }).eq('id', childId)
-  return { topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
+  return { topic_id: focus.topic_id, topic_name: t.topic_name || focus.topic_name, accuracy: t.accuracy, attempts: t.attempts }
 }
 
 // Split in two so the read can go out alongside the other reads this request needs: the query
@@ -5516,7 +5517,7 @@ async function settleMathReview(id, childId, patch) {
   return data
 }
 
-const topicNames = (list) => carryTopics(list || []).map(t => t.topic_name).filter(Boolean)
+const topicNames = (list) => carryTopics(list || [])
 
 // The child opened the review: the 30 minutes run from here.
 app.post('/api/children/:childId/math-review/:id/start', async (req, res) => {
@@ -5806,10 +5807,11 @@ app.post('/api/children/:childId/math-session', async (req, res) => {
     // stop routine progress becoming noise, not to swallow this.
     if (focusCleared) {
       const language = parentLang(parentRow?.prefs)
+      const topicLabel = localTopicName(focusCleared.topic_id, focusCleared.topic_name, language)
       const msg = say(language,
-        `${child.name} has got on top of ${focusCleared.topic_name} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`,
-        `${child.name} ${focusCleared.topic_name} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`,
-        `${child.name} ya domina ${focusCleared.topic_name}: ${focusCleared.accuracy} % en las últimas ${focusCleared.attempts}. He dejado de darle prioridad. 🎉`)
+        `${child.name} has got on top of ${topicLabel} — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}. I've stopped weighting it. 🎉`,
+        `${child.name} ${topicLabel} konusunu toparladı — son ${focusCleared.attempts} soruda %${focusCleared.accuracy}. Ağırlığı kaldırdım. 🎉`,
+        `${child.name} ya domina ${topicLabel}: ${focusCleared.accuracy} % en las últimas ${focusCleared.attempts}. He dejado de darle prioridad. 🎉`)
       sendNotification(child.parent_id, msg, { kind: 'activity', child: child.name, detail: {
         tr: `${focusCleared.topic_name} artık oturdu, son ${focusCleared.attempts} soruda %${focusCleared.accuracy}`,
         en: `${focusCleared.topic_name} is solid now — ${focusCleared.accuracy}% over the last ${focusCleared.attempts}`,

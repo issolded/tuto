@@ -1,4 +1,5 @@
 import { say } from './lang.js'
+import { localTopicName } from './topicNames.js'
 
 // The review round offered after a maths session: up to five fresh questions on the skills the
 // child missed. Pure functions only — the endpoints in index.js do the reading and writing.
@@ -90,7 +91,7 @@ export function carryTopics(picks) {
 // The parent's message about a maths session, built from the facts a session row carries so it can
 // be sent now or, when a review was offered, once the review is settled. `review` is null (no
 // review in the story) or { state: 'done' | 'declined' | 'expired', asked, correct, gems,
-// started, topics: [names still owed] }.
+// started, topics: [{ topic_id, topic_name } still owed] }.
 export function mathSessionNotice(name, s, language, review) {
   const head = s.kind === 'capped'
     ? say(language,
@@ -105,7 +106,9 @@ export function mathSessionNotice(name, s, language, review) {
   let tail = ''
   let tr = '', en = ''
   if (review) {
-    const topics = (review.topics || []).filter(Boolean).slice(0, 3).join(', ')
+    // Topics arrive as { topic_id, topic_name }; the name is written in the parent's language.
+    const topics = (review.topics || []).filter(Boolean).slice(0, 3)
+      .map(t => localTopicName(t.topic_id, t.topic_name, language)).join(', ')
     const owed = topics ? {
       en: ` I'll give ${topics} extra weight in the next maths session.`,
       tr: ` Bir sonraki matematikte ${topics} konusuna ağırlık vereceğim.`,
