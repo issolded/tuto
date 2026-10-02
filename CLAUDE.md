@@ -57,6 +57,8 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **PIN kilidi 1 dakika** (2026-10-02, kullanıcı kararı). Aile başına 5 yanlış PIN sonrası 60 saniye; ebeveyn bildirimleri EN/TR/ES aynı süreyi söyler.
+
 - **Baileys / WhatsApp bırakıldı.** Test yalnızca Telegram, WhatsApp Business erişimi
   alınana kadar. Tekrar Baileys önerme.
 - Persona parametreleri (`bot_name`, `tone`) typing promptuna değil, `prefs` şemasına bağlı.

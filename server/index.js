@@ -3273,7 +3273,7 @@ app.get('/api/family/:code/children', async (req, res) => {
 // lost is the parent being told, and that goes out as it happens.
 const pinAttempts = new Map()   // family code → { fails, lockedUntil, notifiedAt }
 const PIN_MAX_FAILS = 5
-const PIN_LOCK_MS = 10 * 60 * 1000
+const PIN_LOCK_MS = 60 * 1000
 const PIN_NOTIFY_GAP_MS = 30 * 60 * 1000
 
 function hashPinServer(pin) {
@@ -3311,16 +3311,16 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
         const { data: p } = await supabase.from('parents').select('prefs').eq('id', parent.id).maybeSingle()
         const lang = parentLang(p?.prefs)
         sendNotification(parent.id, say(lang,
-          `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 10 minutes. If that wasn't one of your children, you can change their PIN in settings. 🔒`,
-          `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 10 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
-          `Se han introducido ${PIN_MAX_FAILS} PIN incorrectos seguidos en el Tuto de tu familia. Lo he bloqueado 10 minutos. Si no ha sido ninguno de tus hijos, puedes cambiar su PIN en los ajustes. 🔒`),
+          `${PIN_MAX_FAILS} wrong PIN attempts on your family's Tuto. It's locked for 1 minute. If that wasn't one of your children, you can change their PIN in settings. 🔒`,
+          `Tuto'da art arda ${PIN_MAX_FAILS} kez yanlış PIN girildi. 1 dakika kilitledim. Çocuklarınızdan biri değilse PIN'i ayarlardan değiştirebilirsiniz. 🔒`,
+          `Se han introducido ${PIN_MAX_FAILS} PIN incorrectos seguidos en el Tuto de tu familia. Lo he bloqueado 1 minuto. Si no ha sido ninguno de tus hijos, puedes cambiar su PIN en los ajustes. 🔒`),
           // No child name: a wrong PIN belongs to whoever typed it, and that is the one
           // thing a failed attempt cannot tell us. The template falls back to the family's
           // first child, which is the same guess the welcome message already makes.
           { kind: 'attention', detail: {
-            tr: `art arda ${PIN_MAX_FAILS} yanlış PIN denemesi oldu, 10 dakika kilitledim`,
-            en: `${PIN_MAX_FAILS} wrong PIN attempts in a row — locked for 10 minutes`,
-            es: `${PIN_MAX_FAILS} intentos de PIN incorrectos seguidos: bloqueado 10 minutos`,
+            tr: `art arda ${PIN_MAX_FAILS} yanlış PIN denemesi oldu, 1 dakika kilitledim`,
+            en: `${PIN_MAX_FAILS} wrong PIN attempts in a row — locked for 1 minute`,
+            es: `${PIN_MAX_FAILS} intentos de PIN incorrectos seguidos: bloqueado 1 minuto`,
           } }
         ).catch(() => {})
       }

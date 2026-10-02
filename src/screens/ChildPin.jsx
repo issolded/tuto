@@ -77,7 +77,7 @@ export default function ChildPin() {
         setExpression('excited')
         setTimeout(() => nav('/child/home'), 350)
       } else if (res.status === 429) {
-        const mins = Math.max(1, Math.ceil((data.retry_in_seconds ?? 600) / 60))
+        const mins = Math.max(1, Math.ceil((data.retry_in_seconds ?? 60) / 60))
         fail(s('cp_too_many', { n: mins }))
       } else if (typeof data.attempts_left === 'number' && data.attempts_left <= 2) {
         fail(data.attempts_left === 1 ? s('cp_wrong_left_one') : s('cp_wrong_left', { n: data.attempts_left }))
