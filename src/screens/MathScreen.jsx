@@ -6,6 +6,7 @@ import PlaceValueHelp from '../components/PlaceValueHelp'
 import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
 import ClockFace, { DraggableClock, DayPartChip } from '../components/ClockFace'
+import { sameKindProblem } from '../lib/reviewQuestions'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
@@ -2804,31 +2805,16 @@ export default function MathScreen() {
     const cap = maxQuestionChars(age)
     // Never the same sums or the same sentences as the session just played.
     const usedOperands = new Set(templateProblems.map(p => p?.operandKey).filter(Boolean))
-    const usedTexts = new Set(questions)
     const built = []
     for (const pk of offer.picks) {
       const src = templateProblems[pk.idx]
       if (!src?.topic) continue
       try {
-        // The same kind of question, not just the same topic: "time" holds reading a clock, 24-hour time and
-        // how long a lesson lasted, and passing one proves nothing about another. The kind is the front of
-        // the operand key ('tbetween', 'time:h24', 'yrem'); numbers change, the kind does not. Generation
-        // costs microseconds, so it is simply drawn again until it matches (and falls back to any question
-        // of the topic if the kind cannot be reproduced).
-        // Shapes are the one place where the key's second part is a detail, not the kind: "poly:square:right"
-        // and "poly:rhombus:right" ask the same thing (how many right angles), so only the last part counts.
-        const kind = (k) => {
-          const parts = String(k).split(':').filter(x => !/\d/.test(x))
-          return parts[0] === 'poly' ? `poly:${parts.at(-1)}` : parts.slice(0, 3).join(':')
-        }
-        const want = kind(src.operandKey)
-        let p = null
-        for (let tries = 0; tries < 80; tries++) {
-          const cand = generateProblem(src.topic, src.level, usedOperands, language, { maxChars: cap, avoidText: usedTexts })
-          if (!p) p = cand
-          if (kind(cand.operandKey) === want) { p = cand; break }
-        }
-        usedOperands.add(p.operandKey); usedTexts.add(p.question_text)
+        // The same kind of question, not just the same topic (see reviewQuestions.js). When the kind cannot
+        // be drawn at all the question is left out rather than swapped for a different one.
+        const p = sameKindProblem(src, { topic: templateTopicFor(curriculumTopics[pk.idx]) || src.topic, usedOperands, language, maxChars: cap })
+        if (!p) continue
+        usedOperands.add(p.operandKey)
         built.push({ pk, p, curriculum: curriculumTopics[pk.idx] ?? null })
       } catch (e) { console.error('review question:', e) }
     }

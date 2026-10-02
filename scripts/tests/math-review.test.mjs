@@ -58,7 +58,7 @@ test('outcome counts only picked questions, once each, and keeps skills that wer
   const out = reviewOutcome(picks, [
     { idx: 1, correct: true }, { idx: 1, correct: true },                 // repeated: counted once
     { idx: 3, correct: false }, { idx: 9, correct: true },                // not picked: ignored
-    { idx: 4, correct: true, help_used: true, help_shown: true },         // right, but with the help panel open again
+    { idx: 4, correct: true, help_used: true },                           // right, but only after a hint: not an unaided pass
   ], 10)
   assert.equal(out.share, 0.075)
   assert.equal(out.correct, 2)

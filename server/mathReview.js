@@ -75,8 +75,9 @@ export function reviewOutcome(picks, results, total) {
     const r = byIdx.get(p.idx)
     share += reviewShare(p, r)
     if (r?.correct === true) correct++
-    // Found only with the help panel open again is not found alone: the skill stays on the list for the next session.
-    if (r?.correct !== true || r?.help_shown === true) missed.push(p)
+    // Found only with a hint or the help panel is not found alone: the review is the first unaided check, so
+    // the skill stays on the list for the next session until one is passed without any.
+    if (r?.correct !== true || r?.help_shown === true || r?.help_used === true) missed.push(p)
   }
   return { share: share / n, correct, asked: picks.length, missed }
 }
