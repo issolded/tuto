@@ -48,7 +48,8 @@ export function buildReview({ attempts, sheet, band, variety, generateItem, item
 }
 
 function skills(review, language) {
-  return (review.topics || []).filter(Boolean).slice(0, 3).map(t => skillName(t.topic_name, language)).join(', ')
+  // Several question kinds share one skill name ("letter and code puzzles"): each is named once.
+  return [...new Set((review.topics || []).filter(Boolean).map(t => skillName(t.topic_name, language)))].slice(0, 3).join(', ')
 }
 
 // The parent's message about a sitting, built from facts the session carries, so it can be sent

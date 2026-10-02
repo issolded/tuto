@@ -32,7 +32,7 @@ cut(/^import \{ startTelegramBot[^\n]*\n/m.exec(src)[0],
 cut('const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)', 'const supabase = __h.db')
 src = src.replace(/setInterval\(/g, '__h.interval(')
 // Test-only peek at the stored keys and tables, so a script can play right and wrong on purpose.
-const peek = `\napp.get('/__h/sheet/:id', (req, res) => { const t = __h.tables; const r = (t.english_sessions || []).find(x => x.id === req.params.id) || (t.english_reviews || []).find(x => x.id === req.params.id); res.json(r?.sheet || null) })\napp.get('/__h/table/:name', (req, res) => res.json(__h.tables[req.params.name] || []))\napp.get('/__h/notes', (req, res) => res.json(__h.notes))\n`
+const peek = `\napp.get('/__h/families', (req, res) => res.json(__h.families))\napp.get('/__h/sweep', async (req, res) => { for (const r of __h.tables.english_reviews || []) if (r.state === 'offered') r.created_at = new Date(Date.now() - 3600e3).toISOString(); await expireEnglishReviews(); res.json({ ok: true }) })\napp.post('/__h/clear-ledger', (req, res) => { __h.tables.bt_ledger = []; res.json({ ok: true }) })\n\napp.get('/__h/sheet/:id', (req, res) => { const t = __h.tables; const r = (t.english_sessions || []).find(x => x.id === req.params.id) || (t.english_reviews || []).find(x => x.id === req.params.id); res.json(r?.sheet || null) })\napp.get('/__h/table/:name', (req, res) => res.json(__h.tables[req.params.name] || []))\napp.get('/__h/notes', (req, res) => res.json(__h.notes))\n`
 src = src.slice(0, src.indexOf('app.listen(3000')) + peek + `\napp.listen(${PORT}, () => console.log('[harness] server on ${PORT}'))\nexport { supabase as db }\n`
 
 // ── in-memory tables ──
@@ -66,7 +66,7 @@ function builder(name) {
       for (const r of list) {
         const key = UNIQUE[name]
         if (key && rows().some(o => key.every(k => o[k] === r[k]))) return { data: null, error: { code: '23505', message: 'duplicate key' } }
-        const full = { id: randomUUID(), created_at: new Date().toISOString(), ...(DEFAULTS[name] || {}), ...r }
+        const full = { id: randomUUID(), created_at: new Date().toISOString(), ...structuredClone(DEFAULTS[name] || {}), ...r }
         rows().push(full); out.push(full)
       }
       return { data: out, error: null }
@@ -112,8 +112,20 @@ function builder(name) {
 }
 
 const parentId = randomUUID(), childId = randomUUID()
-T('parents').push({ id: parentId, timezone: 'Europe/London', prefs: { language: 'en' } })
-T('children').push({ id: childId, parent_id: parentId, name: 'Ada', age: AGE, language: LANG, task_settings: {}, english_variety: null })
+const FAMILIES = {}
+// One family (own parent, Telegram channel so messages are captured) per age x language; the parent's
+// language follows the child's, plus one crossed family (child reads Turkish, parent English).
+const mk = (key, age, lang, plang) => {
+  const pid = randomUUID(), cid = randomUUID()
+  T('parents').push({ id: pid, timezone: 'Europe/London', notification_channel: 'telegram', telegram_chat_id: key, prefs: { language: plang } })
+  T('children').push({ id: cid, parent_id: pid, name: 'Ada', age, language: lang, task_settings: {}, english_variety: null })
+  FAMILIES[key] = { child: cid, parent: pid, age, lang, plang }
+}
+mk('main', AGE, LANG, 'en')
+if (process.argv.includes('--matrix')) {
+  for (const a of [7, 8, 9, 10, 11, 12]) for (const l of ['en', 'tr', 'es']) mk(`${a}-${l}`, a, l, l)
+  mk('cross', 8, 'tr', 'en')
+}
 
 const notes = []
 const __h = {
@@ -121,12 +133,12 @@ const __h = {
   stub: (n) => new Proxy({}, { get: () => new Proxy(() => {}, { get: () => (...a) => { notes.push([n, a]); return Promise.resolve({}) } }) }),
   telegram: new Proxy({}, { get: (_, fn) => (...a) => { notes.push([`telegram.${String(fn)}`, a]); return Promise.resolve(null) } }),
   interval: (fn, ms) => ({ unref() {}, fn, ms }),
-  tables, notes,
+  tables, notes, families: FAMILIES,
 }
 globalThis.__h = __h
 
 const gen = join(serverDir, `.english-harness-${process.pid}.gen.mjs`)
 writeFileSync(gen, src)
 try { await import(pathToFileURL(gen).href) } finally { unlinkSync(gen) }
-console.log(JSON.stringify({ child: { id: childId, name: 'Ada', age: AGE, language: LANG }, vite: `VITE_SERVER_URL=http://localhost:${PORT} npm run dev` }))
+console.log(JSON.stringify({ child: { id: FAMILIES.main.child, name: 'Ada', age: AGE, language: LANG }, vite: `VITE_SERVER_URL=http://localhost:${PORT} npm run dev` }))
 globalThis.__harnessNotes = notes

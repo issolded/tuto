@@ -49,3 +49,9 @@ test('parent notices read in all three languages and say how the answers were re
   assert.match(englishSessionNotice('Ada', s, 'tr', rv).text, /dilbilgisi/)
   assert.equal(skillName('spelling', 'es'), 'ortografía')
 })
+
+test('a skill shared by several kinds is named once in the parent message', () => {
+  const rv = { state: 'declined', asked: 2, topics: [{ topic_id: 'letter-code', topic_name: 'letter and code puzzles' }, { topic_id: 'alpha-order', topic_name: 'letter and code puzzles' }] }
+  const m = englishSessionNotice('Ada', { correct: 6, total: 10, gems: 18, kind: 'rewarded' }, 'en', rv).text
+  assert.equal(m.match(/letter and code puzzles/g).length, 1)
+})
