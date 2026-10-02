@@ -111,7 +111,8 @@ for (const age of AGES) {
           // and numbers the question or its picture already print are not a give-away.
           // "Split 92 into 80 and 12" and "5% is half of 10%" carry numbers as parts and labels; one of
           // them landing on an answer is a coincidence of the numbers, not the sentence giving it away.
-          const sentence = String(st.say ?? '').replace(/\d+\s?%|%\s?\d+/g, '').replace(/\d+\s?(g|kg|cm|mm|m|km|ml|l)\b/gi, '').replace(/[^:]*\b(split|separa|ayır|parçala|break)\b[^:]*:/gi, '').replace(/(sobran|left over)\s+\d+/gi, '').replace(/\d+ (tane|are|son|sobran)[^.:]*(artıyor|left over|sobran)[^.:]*[.:]?/gi, '')
+          // A clock time ("10:00") is a label, not the number 10.
+          const sentence = String(st.say ?? '').replace(/\d{1,2}:\d{2}/g, '').replace(/\d+\s?%|%\s?\d+/g, '').replace(/\d+\s?(g|kg|cm|mm|m|km|ml|l)\b/gi, '').replace(/[^:]*\b(split|separa|ayır|parçala|break)\b[^:]*:/gi, '').replace(/(sobran|left over)\s+\d+/gi, '').replace(/\d+ (tane|are|son|sobran)[^.:]*(artıyor|left over|sobran)[^.:]*[.:]?/gi, '')
           // A chain that walks through the cards one by one names each of them in turn; that is the method.
           const optionVals = (p.options || []).map(o => String(o.value))
           const walksOptions = choice && steps.length >= 3 && steps.filter(x => /First|Next|Önce|Sıradaki|Primero|Después|Siguiente/.test(String(x.say))).length >= steps.length - 1

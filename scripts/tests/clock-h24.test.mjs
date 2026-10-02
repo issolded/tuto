@@ -58,3 +58,25 @@ test('remainder question is worded as the sum in Turkish and Spanish, as the boo
   }
   assert.equal(seen.size, 3)
 })
+
+// "What time does it finish / start?" now has a chain of minute sums; its last line is the minutes past the
+// hour of the answer, which the test reads off the CORRECT OPTION, not off the chain.
+test('time-after/before help: the last typed line is the minutes of the correct time, every line is typeable', () => {
+  let seen = 0, crossing = 0
+  for (let i = 0; i < 8000 && seen < 300; i++) {
+    const p = generateProblem('time', 10, null, 'en')
+    if (!/^t(after|before):/.test(p.operandKey)) continue
+    const minutes = Number(String(p.correct_answer).split(':')[1])
+    // On the hour the sentences would name the answer, so there is no chain, only the hint.
+    if (minutes === 0) { assert.equal(p.help, undefined); continue }
+    seen++
+    const steps = p.help?.steps
+    assert.ok(steps?.length >= 1 && steps.length <= 3, `no chain for ${p.operandKey}`)
+    assert.equal(p.help.pick, true)
+    assert.equal(steps.at(-1).a, minutes, `${p.operandKey}: ${steps.map(s => `${s.q}=${s.a}`).join(' ; ')} vs ${p.correct_answer}`)
+    for (const st of steps) assert.ok(Number.isInteger(st.a) && st.a >= 0 && st.a <= 59, `untypeable step ${st.q} = ${st.a}`)
+    if (steps.length > 1) crossing++
+  }
+  assert.ok(seen >= 100, `only ${seen} samples`)
+  assert.ok(crossing > 10, 'the chains that cross an o\'clock never appeared')
+})

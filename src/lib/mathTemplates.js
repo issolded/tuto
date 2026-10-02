@@ -1259,8 +1259,9 @@ function divisionWordTemplate(level, lang) {
     hint_steps: [
       say(lang, `${a} shared into ${b} equal groups.`, `${a} tane, ${b} eşit gruba paylaştırılıyor.`,
                 `${a} se reparten en ${b} grupos iguales.`),
-      say(lang, `Split ${a} into ${b} groups: ${a} ÷ ${b}.`, `${a} sayısını ${b} gruba ayır: ${a} ÷ ${b}.`,
-                `Reparte ${a} en ${b} grupos: ${a} ÷ ${b}.`),
+      // Said as the times table it comes from: "÷" restated is not a way to find the answer.
+      say(lang, `Which number times ${b} makes ${a}?`, `${b} ile çarpınca ${a} eden sayı kaç?`,
+                `¿Qué número por ${b} da ${a}?`),
     ],
   }
 }
@@ -3129,9 +3130,9 @@ function placeCountInMultiples(level, lang) {
       say(lang, `Every step goes up by the same amount.`,
                 `Her adımda aynı kadar artıyor.`,
                 `Cada paso sube lo mismo.`),
-      say(lang, `Check the gap between two of them, then add that to ${num(terms[3], lang)}.`,
-                `İkisinin arasındaki farka bak, sonra onu ${num(terms[3], lang)} sayısına ekle.`,
-                `Mira el salto entre dos de ellos y súmalo a ${num(terms[3], lang)}.`),
+      say(lang, `Look at two numbers next to each other: how much did it go up? Add that to ${num(terms[3], lang)}.`,
+                `Yan yana iki sayıya bak: ne kadar arttı? O kadarını ${num(terms[3], lang)} sayısına ekle.`,
+                `Mira dos números seguidos: ¿cuánto subió? Súmalo a ${num(terms[3], lang)}.`),
     ],
   }
 }
@@ -6287,6 +6288,40 @@ function timeYoung(level, lang) {
                     `Una clase terminó a la hora que se ve. Duró ${add} minutos. ¿A qué hora empezó?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value,
       operandKey: `t${shape}:${start}:${add}`,
+      // The minutes, one sum at a time, and then the child picks the time: through the next o'clock when
+      // the minutes run past the hour, or within the hour when they do not. (These had a hint and nothing else.)
+      // Not when the answer IS an o'clock: the sentences name the o'clock they count to.
+      ...(answer % 60 === 0 ? {} : (() => {
+        const m = start % 60
+        const here = hm(start, pad)
+        const tick = hm(after ? (Math.floor(start / 60) + 1) * 60 : Math.floor(start / 60) * 60, pad)
+        const steps = []
+        if (after && crosses) {
+          steps.push(
+            stp(lang, `60 − ${m}`, 60 - m, `From ${here} to the next o'clock, ${tick}: how many minutes is that?`,
+              `${here} saatinden bir sonraki tam saate, ${tick}, kaç dakika var?`, `De las ${here} a la siguiente hora en punto, las ${tick}: ¿cuántos minutos son?`),
+            stp(lang, `${add} − ${60 - m}`, add - (60 - m), `That used up part of the ${add} minutes. How many are left after ${tick}?`,
+              `Bu, ${add} dakikanın bir kısmını harcadı. ${tick} saatinden sonra kaç dakika kaldı?`, `Eso gasta parte de los ${add} minutos. ¿Cuántos quedan después de las ${tick}?`))
+        } else if (after) {
+          steps.push(stp(lang, `${m} + ${add}`, m + add, `${here} is ${m} minutes past the hour. The ${add} minutes stay inside this hour, so add them on:`,
+            `${here}, saatin ${m} dakika geçesi. ${add} dakika bu saatin içinde kalıyor, ekle:`, `${here} son ${m} minutos pasadas. Los ${add} minutos caben en esta hora, así que súmalos:`))
+        } else if (m >= add) {
+          steps.push(stp(lang, `${m} − ${add}`, m - add, `${here} is ${m} minutes past the hour. Going back ${add} minutes stays inside this hour, so take them away:`,
+            `${here}, saatin ${m} dakika geçesi. ${add} dakika geri gitmek bu saatin içinde kalıyor, çıkar:`, `${here} son ${m} minutos pasadas. Retroceder ${add} minutos cabe en esta hora, así que réstalos:`))
+        } else if (m === 0) {
+          steps.push(stp(lang, `60 − ${add}`, 60 - add, `${here} is exactly on the hour. Going back ${add} minutes is ${add} minutes before it. How many minutes past the hour before is that?`,
+            `${here} tam saat. ${add} dakika geri gitmek, bir önceki saatin kaç dakika geçesi?`, `${here} es en punto. Retroceder ${add} minutos es llegar a cuántos minutos pasadas de la hora anterior?`))
+        } else {
+          steps.push(
+            stp(lang, `${here} → ${tick}`, m, `Go back from ${here} to the o'clock, ${tick}: how many minutes is that?`,
+              `${here} saatinden geri doğru tam saate, ${tick}, kaç dakika var?`, `Retrocede de las ${here} a la hora en punto, las ${tick}: ¿cuántos minutos son?`),
+            stp(lang, `${add} − ${m}`, add - m, `That used up part of the ${add} minutes. How many are left to go back?`,
+              `Bu, ${add} dakikanın bir kısmını harcadı. Geri gitmek için kaç dakika kaldı?`, `Eso gasta parte de los ${add} minutos. ¿Cuántos quedan por retroceder?`),
+            stp(lang, `60 − ${add - m}`, 60 - (add - m), `Back from ${tick} by that many. How many minutes past the hour before are you?`,
+              `${tick} saatinden o kadar geri git. Bir önceki saatin kaç dakika geçesindesin?`, `Retrocede esos minutos desde las ${tick}. ¿A cuántos minutos pasadas de la hora anterior estás?`))
+        }
+        return stepsHelp(steps, { kind: 'digital', times: [here] }, true)
+      })()),
       hint_steps: [
         say(lang, `Count ${after ? 'on' : 'back'} to the o'clock first.`, `Önce ${after ? 'ileri' : 'geri'} doğru tam saate kadar say.`,
                   `Cuenta primero ${after ? 'hacia delante' : 'hacia atrás'} hasta la hora en punto.`),

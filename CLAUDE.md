@@ -112,7 +112,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       üreticinin açık bir `skillKey` vermesi (şu an biçim anahtar+metinden tahmin ediliyor). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir.
       7 yaş çocuk gözüyle uçtan uca oynama (2026-10-02): ilk yanlışta artık söz de var ("Hmm, tam değil. 💡'ya dokunup ipucuna
       bak!", 7 sn, ipucu açılınca kalkar); iki basamaklı aralıkta (28 → 50) ipucu da yardım gibi yuvarlak sayılara sayarak
-      gidiyor (telafi yöntemi yalnız 100'ün üstünde); çetelede satır önce bulunur sonra sayılır; 5-8 yaş sayı doğrusu ipucu yalın. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
+      gidiyor (telafi yöntemi yalnız 100'ün üstünde); çetelede satır önce bulunur sonra sayılır; 5-8 yaş sayı doğrusu ipucu yalın.
+      8 yaş (TR) oynama: "bitirme/başlama saati" soruları (tafter/tbefore) artık adım adım dakika zincirli yardıma sahip (saat
+      sınırını geçerse tam saate kadar, sonra kalan; cevap tam saatse zincir yok); bölme hikâyesi ipucu "hangi sayı × b = a" der
+      (÷'yı yinelemek yöntem değildi); dizi ipucundaki "ikisinin arasındaki fark" belirsizliği düzeltildi. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
       üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
       Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
       pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
