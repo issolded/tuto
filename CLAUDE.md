@@ -83,6 +83,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [ ] Uygulamada hikâye yazma (2026-10-02, Codex): yerel geliştirme hazır. Otomatik kayıt,
+      cihazda kurtarma kopyası, birden fazla taslak, kütüphaneden devam, sürüm çakışması koruması.
+      Değerlendirme sunucuda; taslakta Gem yok, ilk tamamlamada mevcut ödül akışı.
+      **Önce migration:** server/migrations/2026-10-02_story_drafts.sql. Sonra backend/frontend yayın.
+      Gerçek Supabase/Gemini testi ve fiziksel iPad doğrulaması bekliyor. Ayrıntı: handoff/STORY-WRITER.md.
+
+
 - [x] Astra notları: denklem sistemi, saat sayacı, geçme dili, gem açıklaması (2026-10-03, Claude). **(1)** 13 yaş denklem sistemi yardımı artık gerçek eleme
       zinciri (`simultSteps`, `mathTemplates.js`): sorulmayan harf elenir, çarpanlar söylenir, çarpılan sayılar tek tek yazdırılır, topla/çıkar, böl;
       negatifler `stpS` ile (eksi tuşu yok). "O harfi" → "bu değişkeni". math:check (13 yaş × 3 dil × 400) temiz. **(2)** Saat "N saatte kaç dakika" yardımında
