@@ -343,6 +343,19 @@ export default function PuzzleScreen() {
             </div>
           </div>
 
+          {!result.review_done && (() => {
+            const own = answers.filter(a => a?.correct && !a.helped).length
+            const helped = answers.filter(a => a?.correct && a.helped).length
+            const missed = answers.filter(a => a && !a.correct).length
+            if (helped === 0 && missed === 0) return null
+            const parts = [
+              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} tú solo`),
+              helped > 0 && say(language, `${helped} right with a hint`, `${helped} ipucuyla doğru`, `${helped} bien con una pista`),
+              missed > 0 && say(language, `${missed} to practise`, `${missed} geliştirilecek`, `${missed} por repasar`),
+            ].filter(Boolean)
+            return <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK_SOFT, lineHeight: 1.5 }}>{parts.join(' · ')}</div>
+          })()}
+
           {result.review && !result.review_done && (
             <div style={{ background: 'white', borderRadius: 22, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease 0.12s both' }}>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16.5, color: INK, lineHeight: 1.4, textAlign: 'center' }}>

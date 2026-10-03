@@ -83,6 +83,12 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Astra notları: denklem sistemi, saat sayacı, geçme dili, gem açıklaması (2026-10-03, Claude). **(1)** 13 yaş denklem sistemi yardımı artık gerçek eleme
+      zinciri (`simultSteps`, `mathTemplates.js`): sorulmayan harf elenir, çarpanlar söylenir, çarpılan sayılar tek tek yazdırılır, topla/çıkar, böl;
+      negatifler `stpS` ile (eksi tuşu yok). "O harfi" → "bu değişkeni". math:check (13 yaş × 3 dil × 400) temiz. **(2)** Saat "N saatte kaç dakika" yardımında
+      sayaç: "🔄 2 tam tur = 120 dakika (+24)" (`DraggableClock turnCounter`, yalnız `ask: 'span'`), tarayıcıda 2,4 tur çevrilerek denendi. **(3)** "Bunu geç":
+      "Bu soruyu geçtin. Doğru cevap:", 1,3 sn (eskiden 0,9 sn ve "Hmm, bu değil!"). **(4)** Sonuç ekranında gem altında küçük satır: "6 yardımsız doğru · 3 ipucuyla
+      doğru · 1 geliştirilecek" (matematik, İngilizce, NVR; hepsi yardımsız ve hatasızsa görünmez). Gerçek MathScreen oturumunda uçtan uca oynanmadı.
 - [ ] NVR (şekil ve örüntü bulmacaları): ipucu, yardım ve pekiştirme (2026-10-03, Claude). İngilizcenin aynı yapısı, aynı sunucu çekirdeği
       (`server/englishPlay.js`: bir deneme sonra yardım, soru başı pay; `mathReview.js`'in seçimi). **Migration önce:**
       `server/migrations/2026-10-03_puzzle_help_and_review.sql` (`puzzle_attempts.wrong_tries/hints_used`, `puzzle_reviews`); yokken eski davranış

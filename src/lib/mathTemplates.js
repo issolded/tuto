@@ -8539,6 +8539,64 @@ const stpS = (lang, q, a, en, tr, es) => {
   return stp(lang, q, Math.abs(a), t[0] ? cut(en) + t[0] : en, t[1] ? cut(tr) + t[1] : tr, t[2] ? cut(es) + t[2] : es)
 }
 
+// Simultaneous equations by elimination, the way a child works them: pick the letter that is NOT asked for, make its
+// number the same size in both equations (multiply one or both), add or subtract so it disappears, then divide.
+// Every line is one number the child types: the multiplied numbers, the combined ones, and the last division.
+// eq = [coefficient of x, coefficient of y, right-hand side]; the answer is positive by construction (x, y in 1-9).
+function simultSteps(e1, e2, askX, answer, lang) {
+  const gcd = (a, b) => (b ? gcd(b, a % b) : a)
+  const X = askX ? 'x' : 'y', V = askX ? 'y' : 'x'
+  const A = [askX ? e1[0] : e1[1], askX ? e2[0] : e2[1]]     // the asked letter's numbers
+  const P = [askX ? e1[1] : e1[0], askX ? e2[1] : e2[0]]     // the other letter's numbers
+  const C = [e1[2], e2[2]]
+  const m = (Math.abs(P[0]) * Math.abs(P[1])) / gcd(Math.abs(P[0]), Math.abs(P[1]))
+  const k = [m / Math.abs(P[0]), m / Math.abs(P[1])]
+  const A2 = [A[0] * k[0], A[1] * k[1]], C2 = [C[0] * k[0], C[1] * k[1]]
+  const P2 = [P[0] * k[0], P[1] * k[1]]
+  const par = n => (n < 0 ? `(−${-n})` : String(n))
+  const subtract = Math.sign(P2[0]) === Math.sign(P2[1])
+  // Take the equation with the larger asked number first, so the combined number stays positive.
+  let first = 0
+  if (subtract && A2[0] - A2[1] < 0) first = 1
+  const second = 1 - first
+  const K = subtract ? A2[first] - A2[second] : A2[0] + A2[1]
+  const R = subtract ? C2[first] - C2[second] : C2[0] + C2[1]
+  if (K <= 0 || R <= 0 || R / K !== answer) return {}
+  const steps = []
+  const ord = ['first', 'second'], ordTr = ['1.', '2.'], ordEs = ['primera', 'segunda']
+  const intro = {
+    en: `To get rid of ${V}, make its number the same size in both equations. ${k[0] === 1 ? 'The first equation stays as it is' : `Multiply the first equation by ${k[0]}`}${k[1] === 1 ? ', and the second stays as it is' : `${k[0] === 1 ? ', and' : ' and'} the second by ${k[1]}`}.`,
+    tr: `${V} değişkenini yok etmek için, onun sayısını iki denklemde de aynı büyüklüğe getir. ${k[0] === 1 ? '1. denklem olduğu gibi kalır' : `1. denklemi ${k[0]} ile çarp`}${k[1] === 1 ? ', 2. denklem de olduğu gibi kalır' : `${k[0] === 1 ? ',' : ' ve'} 2. denklemi ${k[1]} ile çarp`}.`,
+    es: `Para eliminar ${V}, haz que su número sea igual en las dos ecuaciones. ${k[0] === 1 ? 'La primera ecuación se queda como está' : `Multiplica la primera ecuación por ${k[0]}`}${k[1] === 1 ? ', y la segunda también' : `${k[0] === 1 ? ', y' : ' y'} la segunda por ${k[1]}`}.`,
+  }
+  let pre = true
+  const withIntro = (en, tr, es) => { const r = pre ? [`${intro.en} ${en}`, `${intro.tr} ${tr}`, `${intro.es} ${es}`] : [en, tr, es]; pre = false; return r }
+  for (const i of [0, 1]) {
+    if (k[i] === 1) continue
+    steps.push(stpS(lang, `${par(A[i])} × ${k[i]}`, A2[i],
+      ...withIntro(`Equation ${i + 1}: the ${X} number times ${k[i]}:`, `${i + 1}. denklem: ${X} sayısı çarpı ${k[i]}:`, `Ecuación ${i + 1}: el número de ${X} por ${k[i]}:`)))
+    steps.push(stpS(lang, `${par(C[i])} × ${k[i]}`, C2[i],
+      'The number on the other side of the equals sign, times the same:', 'Eşitliğin öbür tarafındaki sayı, aynı sayıyla çarpılır:', 'El número del otro lado del igual, por el mismo número:'))
+  }
+  const opEn = subtract ? 'subtract one equation from the other' : 'add the two equations'
+  const opTr = subtract ? 'denklemleri birbirinden çıkar' : 'iki denklemi topla'
+  const opEs = subtract ? 'resta una ecuación de la otra' : 'suma las dos ecuaciones'
+  const sym = subtract ? '−' : '+'
+  const aExpr = subtract ? `${par(A2[first])} − ${par(A2[second])}` : `${par(A2[0])} + ${par(A2[1])}`
+  const cExpr = subtract ? `${par(C2[first])} − ${par(C2[second])}` : `${par(C2[0])} + ${par(C2[1])}`
+  const kStep = withIntro(`Now the ${V} numbers match: ${opEn}, and ${V} disappears. The ${X} numbers:`,
+    `Artık ${V} sayıları aynı: ${opTr}, ${V} yok olur. ${X} sayıları:`,
+    `Ahora los números de ${V} son iguales: ${opEs} y ${V} desaparece. Los números de ${X}:`)
+  steps.push(stpS(lang, aExpr, K, ...kStep))
+  if (K !== 1) {
+    steps.push(stpS(lang, cExpr, R, 'The numbers on the other side of the equals sign, the same way:', 'Eşitliğin öbür tarafındaki sayılar, aynı şekilde:', 'Los números del otro lado del igual, de la misma forma:'))
+    steps.push(stp(lang, `${R} ÷ ${K}`, answer, `${K} lots of ${X} make ${R}. Share it out to find one ${X}:`, `${K} tane ${X} ${R} ediyor. Bir ${X}'i bulmak için paylaştır:`, `${K} veces ${X} hacen ${R}. Repártelo para hallar una ${X}:`))
+  } else {
+    steps.push(stp(lang, cExpr, answer, `There is one ${X} left, so the other side is its value:`, `Bir ${X} kaldı, o hâlde öbür taraf onun değeri:`, `Queda una ${X}, así que el otro lado es su valor:`))
+  }
+  return stepsHelp(steps)
+}
+
 // Keep dividing by the smallest prime that goes in; the quotients are what the child types, and the
 // primes used (counted) make the product written with indices.
 function primeDivisionSteps(n, lang) {
@@ -9251,8 +9309,9 @@ function y8Algebra(level, lang) {
         topic: T, level,
         question_text: say(lang, `Solve the simultaneous equations ${e1} and ${e2}. What is ${askX ? 'x' : 'y'}?`, `${e1} ve ${e2} denklem sistemini çöz. ${askX ? 'x' : 'y'} kaçtır?`, `Resuelve el sistema ${e1} y ${e2}. ¿Cuánto vale ${askX ? 'x' : 'y'}?`),
         format: 'numeric', correct_answer: askX ? x : y, operandKey: `a8:m:${e1}:${e2}:${askX}`,
+        ...simultSteps([a1, b1, a1 * x + b1 * y], [a2, b2, a2 * x + b2 * y], askX, askX ? x : y, lang),
         hint_steps: [say(lang, 'Multiply one or both equations so that x (or y) has the same number in front in both.', 'Denklemlerden birini ya da ikisini, x\'in (ya da y\'nin) katsayısı ikisinde de aynı olacak şekilde çarp.', 'Multiplica una o las dos ecuaciones para que x (o y) tenga el mismo coeficiente en ambas.'),
-                     say(lang, 'Add or subtract the equations to get rid of that letter, solve, then put the answer back in.', 'O harfi yok etmek için denklemleri topla ya da çıkar, çöz, sonra bulduğunu yerine koy.', 'Suma o resta las ecuaciones para eliminar esa letra, resuelve y sustituye.')],
+                     say(lang, 'Add or subtract the equations to get rid of that variable, solve, then put the answer back in.', 'Bu değişkeni yok etmek için denklemleri topla ya da çıkar, çöz, sonra bulduğunu yerine koy.', 'Suma o resta las ecuaciones para eliminar esa variable, resuelve y sustituye.')],
       }
     }
   }

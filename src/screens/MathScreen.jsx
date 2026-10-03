@@ -1056,6 +1056,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           language={language}
           readout={READOUT_SAFE.has(clock.ask)}
           h24={clock.ask === 'h24'}
+          turnCounter={clock.ask === 'span'}
         />
         {hintSteps?.length > 0 && (
           <StepHints
@@ -2805,7 +2806,7 @@ export default function MathScreen() {
     attempted.current[qIdx] = wrongGuess
     const newAnswers = [...userAnswers, null]
     setFlash({ correct: false, answer: correctAns[qIdx], skipped: true })
-    flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 900)
+    flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 1300)
   }
 
   // ── Screen mode: evaluate locally ────────────────────────────────────────
@@ -2821,8 +2822,15 @@ export default function MathScreen() {
       attempted: finalAnswers[i] == null ? attempted.current[i] ?? null : null,
       correct: sameAnswer(finalAnswers[i], correctAns[i]),
     }))
+    // How the right answers were reached, so the gems below read as what they are: a question found alone pays in full,
+    // one found with a hint or a second try pays half, one missed or skipped nothing.
+    const breakdown = {
+      unaided: results.filter((r, i) => r.correct && !helpUsedQs.has(i)).length,
+      helped: results.filter((r, i) => r.correct && helpUsedQs.has(i)).length,
+      missed: results.filter(r => !r.correct).length,
+    }
     const evalData = {
-      results, score: accuracy, accuracy, topic,
+      results, score: accuracy, accuracy, topic, breakdown,
       encouragement: getScoreMsg(accuracy, age, language),
     }
     // Both the reward and the level come back from the server, so the screen shows what was
@@ -3436,8 +3444,9 @@ export default function MathScreen() {
                       </div>
                     </>
                   : <>
-                      {t('math_not_this', language)}
-                      <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{t('math_answer_is', language)}</div>
+                      {/* Chosen on purpose, so no "not this one": it says what happened and shows the answer. */}
+                      {flash.skipped ? say(language, 'You skipped this one.', 'Bu soruyu geçtin.', 'Te saltaste esta.') : t('math_not_this', language)}
+                      <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{flash.skipped ? say(language, 'The answer was:', 'Doğru cevap:', 'La respuesta era:') : t('math_answer_is', language)}</div>
                       <div style={{ fontSize: 34 }}>{dnum(flash.answer, language)}</div>
                     </>}
             </div>
@@ -3746,6 +3755,20 @@ export default function MathScreen() {
               </div>
             </div>
           </div>
+
+          {!evalResult.isReview && evalResult.breakdown && (evalResult.breakdown.helped > 0 || evalResult.breakdown.missed > 0) && (() => {
+            const b = evalResult.breakdown
+            const parts = [
+              b.unaided > 0 && say(language, `${b.unaided} on your own`, `${b.unaided} yardımsız doğru`, `${b.unaided} tú solo`),
+              b.helped > 0 && say(language, `${b.helped} right with a hint`, `${b.helped} ipucuyla doğru`, `${b.helped} bien con una pista`),
+              b.missed > 0 && say(language, `${b.missed} to practise`, `${b.missed} geliştirilecek`, `${b.missed} por repasar`),
+            ].filter(Boolean)
+            return (
+              <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK_SOFT, lineHeight: 1.5, padding: '0 6px', animation: 'fadeUp 0.4s ease 0.05s both' }}>
+                {parts.join(' · ')}
+              </div>
+            )
+          })()}
 
           {evalResult.retry && (
             <button

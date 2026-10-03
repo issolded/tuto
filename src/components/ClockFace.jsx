@@ -172,7 +172,7 @@ export default function ClockFace({ hour, minute, size = 150, minuteNumbers = fa
 // `readout` is off for any shape whose answer is the time itself, because the help tells the
 // child to turn the hands until they match the question — and the moment they do, a readout
 // saying "twenty-five past eleven" has answered "how many minutes past eleven?" for them.
-export function DraggableClock({ hour, minute, size = 250, language = 'en', onSpin, readout = true, h24 = false }) {
+export function DraggableClock({ hour, minute, size = 250, language = 'en', onSpin, readout = true, h24 = false, turnCounter = false }) {
   // With `h24` the single state runs over a whole day (1440 minutes) instead of twelve hours: the
   // hands still show it on a 12-hour face, but crossing 12 carries on into the afternoon, and the
   // readout can say 18:10 and which part of the day that is.
@@ -189,6 +189,10 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
   // every frame instead would lose a fraction of a minute per move, so a slow drag right
   // round the face would come back short.
   const drag = useRef({ hand: null, lastDeg: 0, exact: start })
+  // Minutes turned forward since the hands were last at their start, unwrapped: the face forgets how many times round it
+  // has been, and a child asked "how many minutes in 3 hours?" has to hold 60, 120, 180 in their head. Counted aloud by
+  // the page when `turnCounter` is set.
+  const [turned, setTurned] = useState(0)
 
   const at = (e) => {
     const r = svgRef.current.getBoundingClientRect()
@@ -219,7 +223,9 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
     if (d < -180) d += 360
     drag.current.lastDeg = deg
     // One turn of the long hand is an hour; one turn of the short hand is twelve.
-    drag.current.exact += drag.current.hand === 'minute' ? d / 6 : d * 2
+    const delta = drag.current.hand === 'minute' ? d / 6 : d * 2
+    drag.current.exact += delta
+    if (turnCounter) setTurned(prev => Math.max(0, prev + delta))
     const next = wrap(Math.round(drag.current.exact))
     setMins(prev => {
       if (prev !== next) onSpin?.()
@@ -260,6 +266,23 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
           <DayPartChip part={dayPart(h24Now)} language={language} />
         </div>
       )}
+      {turnCounter && (() => {
+        const n = Math.floor(turned / 60), rest = Math.round(turned - n * 60)
+        const partial = rest > 0 && n > 0
+        return (
+          <div style={{
+            fontFamily: FRED, fontWeight: 700, fontSize: 17, color: MATH_DEEP, textAlign: 'center',
+            background: 'rgba(90,169,230,.12)', borderRadius: 14, padding: '7px 14px', minHeight: 24,
+          }}>
+            {n === 0
+              ? say(language, 'One full turn = 60 minutes', 'Bir tam tur = 60 dakika', 'Una vuelta entera = 60 minutos')
+              : say(language,
+                `🔄 ${n} full turn${n === 1 ? '' : 's'} = ${n * 60} minutes${partial ? ` (+${rest})` : ''}`,
+                `🔄 ${n} tam tur = ${n * 60} dakika${partial ? ` (+${rest})` : ''}`,
+                `🔄 ${n} vuelta${n === 1 ? '' : 's'} entera${n === 1 ? '' : 's'} = ${n * 60} minutos${partial ? ` (+${rest})` : ''}`)}
+          </div>
+        )
+      })()}
       {readout && !h24 && (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 30, color: MATH_DEEP, letterSpacing: 0.5 }}>
@@ -280,7 +303,7 @@ export function DraggableClock({ hour, minute, size = 250, language = 'en', onSp
       {moved && (
         <button
           className="math-press"
-          onClick={() => { drag.current.exact = start; setTotal(start) }}
+          onClick={() => { drag.current.exact = start; setTotal(start); setTurned(0) }}
           style={{
             border: 'none', background: 'rgba(90,169,230,.14)', color: MATH_DEEP,
             borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
