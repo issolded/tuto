@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { mergeDrafts } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
@@ -90,8 +91,8 @@ export default function LibraryScreen() {
       .then(({ data }) => setBooks(data ?? []))
       .catch(() => setBooks([]))
     getChildStories(child.id)
-      .then(data => setStories(data))
-      .catch(() => setStories([]))
+      .then(data => setStories(mergeDrafts(data, child.id)))
+      .catch(() => setStories(mergeDrafts([], child.id)))
   }, [])
 
   async function handleDeleteConfirm() {
@@ -175,7 +176,7 @@ export default function LibraryScreen() {
             <BookShelfGrid
               items={stories}
               renderItem={(story, i) => (
-                <StoryCover key={story.id} story={story} fallbackColor={STORY_BG_COLORS[i % STORY_BG_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: STORY_BG_COLORS[i % STORY_BG_COLORS.length] })} />
+                <div key={story.id}><StoryCover story={story} fallbackColor={STORY_BG_COLORS[i % STORY_BG_COLORS.length]} childName={child?.name} onTap={() => story.writing_source === 'typed' && story.status === 'in_progress' ? nav('/child/stories', { state: { story, from: '/child/library' } }) : setOpening({ story, fallbackColor: STORY_BG_COLORS[i % STORY_BG_COLORS.length] })} />{story.status === 'in_progress' && <button onClick={() => nav('/child/stories', { state: { story, from: '/child/library' } })} style={{ border: 0, background: 'transparent', color: '#246644', padding: '8px 0', width: '100%', fontWeight: 800 }}>{t('sw_continue', lang)}</button>}</div>
               )}
             />
           )}
