@@ -57,6 +57,11 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Hikâye kitaplığı kompakt kapaklar** (2026-10-03, kullanıcı kararı): kapaklar en fazla 190px,
+  dar ekranda otomatik satırlanır. Görselsiz hikâyeler kitap sırtı/sayfa kenarı, büyük harfli başlık
+  ve by + çocuk adıyla görünür; uzun başlık kırpılır, tam adı erişilebilir etikette kalır.
+
+
 - **PIN kilidi 1 dakika** (2026-10-02, kullanıcı kararı). Aile başına 5 yanlış PIN sonrası 60 saniye; ebeveyn bildirimleri EN/TR/ES aynı süreyi söyler.
 
 - **Baileys / WhatsApp bırakıldı.** Test yalnızca Telegram, WhatsApp Business erişimi
