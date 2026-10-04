@@ -33,13 +33,13 @@ export default function ParentLogin() {
   }
 
   return (
-    <div style={{
+    <div className="tc-col" style={{
       display: 'flex', flexDirection: 'column', minHeight: '100dvh',
       background: PC.bg, fontFamily: FONT,
     }}>
       <TopBar onBack={() => nav('/')} />
 
-      <div style={{ flex: 1, padding: '8px 26px 48px', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 440, width: '100%', margin: '0 auto' }}>
+      <div style={{ flex: 1, padding: '8px 26px 48px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* heading */}
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 30, color: PC.ink, letterSpacing: '-.5px', lineHeight: 1.15 }}>

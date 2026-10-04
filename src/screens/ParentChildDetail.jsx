@@ -11,6 +11,7 @@ import {
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot, BirthDateField,
 } from '../lib/parentUI'
 import { ageFromBirthDate } from '../lib/age'
+import ParentNav from '../components/ParentNav'
 import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -1170,7 +1171,7 @@ export default function ParentChildDetail() {
   )
 
   return (
-    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
       {justApproved && <Confetti n={16} />}
       {lightbox && (
         <PhotoLightbox
@@ -1187,7 +1188,7 @@ export default function ParentChildDetail() {
         onBack={() => nav('/parent/dashboard', { state: { updatedChild: child } })}
       />
 
-      <div className="tc-scroll" style={{ flex: 1, padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingTop: 4, paddingInline: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
 
         {/* profile card */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '4px 2px 0' }}>
@@ -1593,6 +1594,7 @@ export default function ParentChildDetail() {
           }}
         />
       )}
+      <ParentNav active="children" />
     </div>
   )
 }

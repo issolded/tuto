@@ -8,6 +8,7 @@ import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from '
 import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
+import { buildWeekReport } from './week.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -7843,6 +7844,9 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
       { data: ledger },
       { data: subs },
       { data: maths },
+      // Not destructured on purpose: completedStoriesBetween hands back the supabase result,
+      // not the rows. rowsOf() in server/week.js reads either shape — taking the raw value
+      // and calling .map on it is exactly what threw here on every request.
       storyRows,
       { data: paintings },
       { data: puzzles },
@@ -7863,58 +7867,21 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
     ])
 
     const dayOf = (iso) => DateTime.fromISO(iso, { zone: 'utc' }).setZone(tz).toISODate()
-    const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
-    const blank = () => Object.fromEntries(TYPES.map(k => [k, 0]))
+    const sevenFrom = (d) => Array.from({ length: 7 }, (_, i) => d.plus({ days: i }).toISODate())
 
-    const done = [
-      ...(subs || []).map(r => [r.task_type, dayOf(r.created_at)]),
-      ...(maths || []).map(r => ['math', dayOf(r.created_at)]),
-      ...(storyRows || []).map(r => ['writing', dayOf(r.completed_at || r.created_at)]),
-      ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
-      ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
-      ...(englishes || []).map(r => ['english', dayOf(r.created_at)]),
-    ]
-    const byDay = new Map()
-    for (const [type, day] of done) {
-      if (!byDay.has(day)) byDay.set(day, blank())
-      byDay.get(day)[type]++
-    }
-    const countOn = (iso) => Object.values(byDay.get(iso) || {}).reduce((a, b) => a + b, 0)
-
-    const gemsByDay = new Map(), cappedByDay = new Map()
-    for (const r of (ledger || [])) {
-      const d = dayOf(r.created_at)
-      if (r.capped === true) cappedByDay.set(d, (cappedByDay.get(d) || 0) + 1)
-      else gemsByDay.set(d, (gemsByDay.get(d) || 0) + (r.amount || 0))
-    }
-
-    // Oldest first, Monday to Sunday — the order a bar chart reads in.
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const iso = start.plus({ days: i }).toISODate()
-      return {
-        date: iso,
-        gems: gemsByDay.get(iso) || 0,
-        capped: cappedByDay.get(iso) || 0,
-        sessions: countOn(iso),
-        byType: byDay.get(iso) || blank(),
-      }
+    // Everything past the fetch lives in server/week.js, with no database and no clock in it,
+    // so `npm test` can hold it to the shapes these eight reads actually return.
+    const report = buildWeekReport({
+      dayOf,
+      weekDays: sevenFrom(start),
+      prevDays: sevenFrom(prevStart),
+      ledger, subs, maths, stories: storyRows, paintings, puzzles, englishes,
     })
-    const prevDays = Array.from({ length: 7 }, (_, i) => {
-      const iso = prevStart.plus({ days: i }).toISODate()
-      return { gems: gemsByDay.get(iso) || 0, sessions: countOn(iso) }
-    })
-
-    const sum = (rows, k) => rows.reduce((a, r) => a + r[k], 0)
-    const byType = blank()
-    for (const d of days) for (const k of TYPES) byType[k] += d.byType[k]
 
     res.json({
       childId, name: child.name,
       range: { start: start.toISODate(), end: end.toISODate(), offset },
-      days,
-      byType,
-      totals: { gems: sum(days, 'gems'), sessions: sum(days, 'sessions'), capped: sum(days, 'capped') },
-      previous: { gems: sum(prevDays, 'gems'), sessions: sum(prevDays, 'sessions') },
+      ...report,
       mathLevel: lastMath?.[0]?.level ?? null,
       // A week entirely in the future (offset 0 on a Monday morning) is not an error, but it
       // is not a report either; the screen says so rather than drawing seven empty bars.
