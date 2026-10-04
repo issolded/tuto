@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import './BookOpenTransition.css'
 import { t, childLang } from '../lib/i18n'
 import { StoryCoverFace } from './StoryCover'
 
@@ -77,12 +79,13 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
     // no flash of the new content before the turn has actually happened. Forward rotates
     // it away to the left (-170deg); backward rotates the same leaf the other way
     // (+170deg) so the two directions read as visually distinct motions.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setPageIndex(next); return }
     setTurn({ key: Date.now(), dir, content: pages[pageIndex], showTitle: pageIndex === 0 })
     setPageIndex(next)
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, maxWidth: 430, margin: '0 auto', background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 30, zIndex: 200 }}>
+    <div style={{ position: 'fixed', inset: 0, maxWidth: 'none', margin: '0 auto', background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, zIndex: 200 }}>
       <style>{`
         /* backface-visibility:hidden is the real fix for mirrored text past 90deg — a
            rotated flat div otherwise shows its (browser-rendered, mirrored) back face.
@@ -125,15 +128,14 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
         }
       `}</style>
 
-      <div style={{ position: 'absolute', top: 120, left: 0, right: 0, textAlign: 'center', fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 800, fontSize: 74, letterSpacing: 6, color: '#fff', opacity: 0.45, pointerEvents: 'none' }}>story</div>
 
       <button onClick={onClose} aria-label={t('a_close', lang)} style={{ position: 'absolute', top: 14, left: 18, width: 38, height: 38, borderRadius: '50%', border: 'none', background: '#fff', color: '#241f3a', fontSize: 17, cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.14)', zIndex: 5 }}>✕</button>
 
-      <div style={{ width: 300, height: 430, display: 'flex', alignItems: 'center', justifyContent: 'center', perspective: 1700, perspectiveOrigin: '50% 46%', position: 'relative', zIndex: 2 }}>
-        <div style={{ position: 'relative', width: 250, height: 348, transformStyle: 'preserve-3d', transform: 'rotateX(2deg)' }}>
+      <div className="story-reader-stage" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', perspective: 1700, perspectiveOrigin: '50% 46%', position: 'relative', zIndex: 2 }}>
+        <div className="story-reader-book" style={{ position: 'relative', transformStyle: 'preserve-3d', transform: 'rotateX(2deg)' }}>
 
           {/* Reading page — the child's own writing, under everything */}
-          <div style={{ position: 'absolute', inset: 0, background: '#fff8ef', borderRadius: '5px 13px 13px 5px', boxShadow: 'inset 12px 0 26px -18px rgba(120,90,60,.55), 0 22px 44px -16px rgba(40,30,70,.42)', padding: '24px 22px 26px 30px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div key={pageIndex} className="story-reader-page" style={{ position: 'absolute', inset: 0, background: '#fff8ef', borderRadius: '5px 13px 13px 5px', boxShadow: 'inset 12px 0 26px -18px rgba(120,90,60,.55), 0 22px 44px -16px rgba(40,30,70,.42)', padding: '24px 22px 26px 30px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, background: 'linear-gradient(90deg, rgba(120,90,60,.22), rgba(120,90,60,.04))' }} />
             {pageIndex === 0 && (
               <>
@@ -141,7 +143,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
                 <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
               </>
             )}
-            <div style={{ fontFamily: "'Lexend', sans-serif", fontSize: 13, lineHeight: 1.78, color: '#1a3d2b', whiteSpace: 'pre-wrap', flex: 1, minHeight: 0 }}>{pages[pageIndex]}</div>
+            <div style={{ fontFamily: "'Lexend', sans-serif", fontSize: 18, lineHeight: 1.8, color: '#1a3d2b', whiteSpace: 'pre-wrap', flexShrink: 0, overflowWrap: 'anywhere' }}>{pages[pageIndex]}</div>
             {pages.length > 1 && (
               <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#c2cfc7', alignSelf: 'center', marginTop: 6, flexShrink: 0 }}>{pageIndex + 1} / {pages.length}</div>
             )}
@@ -161,7 +163,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
                   <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 600, fontSize: 11, color: '#6dbf94', marginBottom: 13, flexShrink: 0 }}>by {childName}</div>
                 </>
               )}
-              <div style={{ fontFamily: "'Lexend', sans-serif", fontSize: 13, lineHeight: 1.78, color: '#1a3d2b', whiteSpace: 'pre-wrap', flex: 1, minHeight: 0, overflow: 'hidden' }}>{turn.content}</div>
+              <div style={{ fontFamily: "'Lexend', sans-serif", fontSize: 18, lineHeight: 1.8, color: '#1a3d2b', whiteSpace: 'pre-wrap', flexShrink: 0, overflowWrap: 'anywhere', overflow: 'hidden' }}>{turn.content}</div>
             </div>
           )}
 
@@ -202,7 +204,7 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
         )}
       </div>
 
-      <div style={{ textAlign: 'center', position: 'relative', zIndex: 2, opacity: isOpen ? 1 : 0, transform: isOpen ? 'translateY(0)' : 'translateY(8px)', transition: 'all 0.4s ease' }}>
+      <div className="story-reader-footer" style={{ textAlign: 'center', position: 'relative', zIndex: 2, opacity: isOpen ? 1 : 0, transform: isOpen ? 'translateY(0)' : 'translateY(8px)', transition: 'all 0.4s ease' }}>
         <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontWeight: 800, fontSize: 20, color: '#8a6bd4' }}>{story.title || t('story_untitled', lang)}</div>
         <div style={{ fontFamily: "'TrRound', 'Fredoka', 'Baloo 2', sans-serif", fontWeight: 500, fontSize: 13, color: '#8d83ad', marginTop: 3 }}>
           Written by {childName}
