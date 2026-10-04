@@ -145,7 +145,7 @@ function Diff({ v, scale }) {
   )
 }
 
-function Ladder({ v, scale }) {
+function Ladder({ v, scale, lang }) {
   const s = 32 * scale
   const lit = (a, b) => new Set([...a].map((c, i) => (c !== b[i] ? i : -1)).filter(i => i >= 0))
   const row = (word, hi) => (
@@ -153,7 +153,7 @@ function Ladder({ v, scale }) {
       {[...word].map((ch, i) => <span key={i} style={box({ width: s, height: s, fontSize: 18 * scale, ...(hi.has(i) ? { borderColor: ROSE, background: `${ROSE}22`, color: ROSE } : {}) })}>{ch}</span>)}
     </div>
   )
-  const arrow = <div style={{ color: SOFT, fontFamily: FRED, fontWeight: 700, fontSize: 14 * scale, lineHeight: 1 }}>↓ 1 letter</div>
+  const arrow = <div style={{ color: SOFT, fontFamily: FRED, fontWeight: 700, fontSize: 14 * scale, lineHeight: 1 }}>↓ {({ tr: '1 harf', es: '1 letra' }[lang] ?? '1 letter')}</div>
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
       {row(v.from, v.middle ? lit(v.from, v.middle) : (v.from.length === v.to.length ? lit(v.from, v.to) : new Set()))}
@@ -192,7 +192,7 @@ export default function EnglishHelpVisual({ visual, scale = 1, lang = 'en' }) {
   const body = visual.kind === 'alphabet' ? <Alphabet v={visual} scale={scale} lang={lang} />
     : visual.kind === 'keytable' ? <KeyTable v={visual} scale={scale} lang={lang} />
       : visual.kind === 'diff' ? <Diff v={visual} scale={scale} />
-        : visual.kind === 'ladder' ? <Ladder v={visual} scale={scale} />
+        : visual.kind === 'ladder' ? <Ladder v={visual} scale={scale} lang={lang} />
           : visual.kind === 'grid' ? <Grid v={visual} scale={scale} lang={lang} />
             : null
   if (!body) return null

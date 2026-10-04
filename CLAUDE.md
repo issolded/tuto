@@ -107,6 +107,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Astra'nın İngilizce/NVR/PIN incelemesi (2026-10-04, Claude; `e15821e` üzerinde). Düzeltilenler: **NVR'a "Bilmiyorum"** (sıfır gem, cevap + açıklama; İngilizcedeki gibi, yalnız hiçbir şık seçili değilken);
+      **NVR ipucu 2'de çizilen şıkkın sebebi** (`reasonFor`: şıkın `why`'ı + türün anlamı — "farklı olan"da şık özelliği paylaşır, "ait olan"da paylaşmaz; glyph/icon aileleri için tür bazlı sebep);
+      glyph-odd 3. basamak "ne işe yarar/nerede yaşar" kalktı (meyve/bitki sorusunu yanlış eksene götürüyordu); TR "farklı bak" dilbilgisi; kelime merdiveni "↓ 1 letter" etiketi çevrildi;
+      İngilizce 2. ve 3. basamak aynı yanlış şıkkı tekrarlıyordu → örnek artık İKİNCİ yanlış şık; TR "Yalnızca bu kelimeyle kafiyeli", ES "No forman dos palabras reales", "tú solo" → "sin ayuda",
+      ES ebeveyn mesajında "solos/puzzles" → "sin ayuda/acertijos", "+1 gems" → "+1 gem" (matematik dahil); pekiştirme teklif kartı kesin üst sınırı gösteriyor ("En fazla +3 gem", ya da "Bu sefer gem yok",
+      `review.max_gems`). Odak sırasında nadir bir nitelik çifti ("inner+size") bulunamazsa aynı türden soru araya girer. Astra'nın önerisi uygulanmadı: ipucunu geciktirme (sabır ölçer, takılan çocuğu cezalandırır) — kabul.
+      Açık: gerçek iPad WebKit çizimi doğrulanmadı; ES ebeveyn mesajında "gems" kelimesi uygulamanın geri kalanıyla tutarlı olsun diye bırakıldı.
 - [x] Çocuk PIN'ini unutursa (2026-10-04, Claude). **Çocuk kendi kendine sıfırlayamaz** (PIN çocukları ayırır ve gem/ekran süresini kardeşten korur); ebeveyn yeni PIN verir ve çocuğa
       KENDİ söyler. Akış: PIN ekranında "PIN'imi unuttum" → `POST /api/family/:code/forgot-pin` ebeveyne `attention` mesajı (10 dk'da bir, aile kodu yoksa da aynı cevap, hiçbir şey
       değişmez) → ebeveyn sohbette "Ada'nın PIN'ini sıfırla" / "Ada'nın PIN'i 4821 olsun" → `reset_child_pin` aracı (`resetChildPinTool`: kendi seçtiği ya da sunucunun ürettiği 4 hane,

@@ -120,6 +120,7 @@ for (const [key, f] of Object.entries(fam)) {
     const carried = (rvAfter.carry_types || []).map(t => t.topic_id)
     const shouldCarry = rv.picks.filter(p => p.idx === 3 || p.idx === 4).map(p => p.topic_id)
     if (shouldCarry.some(t => !carried.includes(t)) || carried.length !== new Set(shouldCarry).size) note(key, `B carry ${carried} vs ${shouldCarry}`)
+    if (rf.gems_earned > (finB.review.max_gems ?? 0)) note(key, `B review paid ${rf.gems_earned}, above the offered maximum ${finB.review.max_gems}`)
     log.push(`B:${finB.gems_earned}g review ${rv.picks.length}q +${rf.gems_earned}g carry ${carried.join('/')}`)
 
     // ── C: next sitting leans on the carried kinds, then the child says "not now" ──

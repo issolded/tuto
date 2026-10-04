@@ -6713,7 +6713,8 @@ app.post('/api/puzzle-sessions/:sessionId/finish', async (req, res) => {
             if (!/puzzle_reviews/i.test(revErr?.message || '')) console.error(`[PUZZLE] review offer not stored for ${child.id}: ${revErr?.message}`)
             else console.warn('[PUZZLE] puzzle_reviews table missing — RUN THE MIGRATION (server/migrations/2026-10-03_puzzle_help_and_review.sql)')
           } else {
-            review = { id: row.id, count: built.picks.length, gems_possible: !capped && settings.active && settings.gems > 0 && built.picks.some(p => p.earned === 0) }
+            const maxGems = !capped && settings.active ? Math.round(settings.gems * (0.5 * built.picks.filter(p => p.earned === 0).length) / session.question_count) : 0
+            review = { id: row.id, count: built.picks.length, gems_possible: maxGems > 0, max_gems: maxGems }
           }
         }
       } catch (err) { console.error(`[PUZZLE] review not built: ${err.message}`) }
@@ -7252,7 +7253,9 @@ app.post('/api/english-sessions/:sessionId/finish', async (req, res) => {
             if (!/english_reviews/i.test(revErr?.message || '')) console.error(`[ENGLISH] review offer not stored for ${child.id}: ${revErr?.message}`)
             else console.warn('[ENGLISH] english_reviews table missing — RUN THE MIGRATION (server/migrations/2026-10-03_english_help_and_review.sql)')
           } else {
-            review = { id: row.id, count: built.picks.length, gems_possible: !capped && settings.active && settings.gems > 0 && built.picks.some(p => p.earned === 0) }
+            // The most it can pay: half a question for each question the sitting paid nothing for (see reviewShare).
+            const maxGems = !capped && settings.active ? Math.round(settings.gems * (0.5 * built.picks.filter(p => p.earned === 0).length) / session.question_count) : 0
+            review = { id: row.id, count: built.picks.length, gems_possible: maxGems > 0, max_gems: maxGems }
           }
         }
       } catch (err) { console.error(`[ENGLISH] review not built: ${err.message}`) }

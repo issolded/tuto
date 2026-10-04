@@ -966,7 +966,7 @@ const STRINGS = {
     es: 'La cuenta da otro resultado.' },
   eng_why_opposite: { en: 'That means the opposite.', tr: 'Bu, tersi anlama geliyor.',
     es: 'Esa significa lo contrario.' },
-  eng_why_rhyme: { en: 'It only sounds like the word.', tr: 'Yalnızca kelimeye benzer sesleniyor.',
+  eng_why_rhyme: { en: 'It only sounds like the word.', tr: 'Yalnızca bu kelimeyle kafiyeli.',
     es: 'Solo suena parecido a la palabra.' },
   eng_why_same_meaning: { en: 'That means the same, not the opposite.', tr: 'Bu aynı anlama geliyor, tersini değil.',
     es: 'Esa significa lo mismo, no lo contrario.' },

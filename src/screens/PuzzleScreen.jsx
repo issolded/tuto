@@ -203,6 +203,23 @@ export default function PuzzleScreen() {
     }
   }
 
+  // An honest way out of a puzzle the child cannot see: it counts as wrong, pays nothing, and shows the answer and why, as in
+  // English. Only while nothing is chosen, so it cannot be hit instead of Send.
+  async function skip() {
+    if (pending || answers[qIdx]) return
+    setPending(true)
+    setAnswerFailed(false)
+    try {
+      const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, skip: true, lang: language })
+      setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
+      setFlash({ correct: false, correct_index: r.correct_index, why: r.why, skipped: true })
+    } catch {
+      setAnswerFailed(true)
+    } finally {
+      setPending(false)
+    }
+  }
+
   async function send() {
     const i = picked
     if (i === null || pending || answers[qIdx]) return
@@ -349,7 +366,7 @@ export default function PuzzleScreen() {
             const missed = answers.filter(a => a && !a.correct).length
             if (helped === 0 && missed === 0) return null
             const parts = [
-              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} tú solo`),
+              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} sin ayuda`),
               helped > 0 && say(language, `${helped} right with a hint`, `${helped} ipucuyla doğru`, `${helped} bien con una pista`),
               missed > 0 && say(language, `${missed} to practise`, `${missed} geliştirilecek`, `${missed} por repasar`),
             ].filter(Boolean)
@@ -360,7 +377,11 @@ export default function PuzzleScreen() {
             <div style={{ background: 'white', borderRadius: 22, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease 0.12s both' }}>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16.5, color: INK, lineHeight: 1.4, textAlign: 'center' }}>
                 {say(language, `Let's practise the tricky ones — ${result.review.count} new puzzles.`, `Zorlandıklarını pekiştirelim — ${result.review.count} yeni bulmaca.`, `Repasemos las difíciles: ${result.review.count} acertijos nuevos.`)}
-                {result.review.gems_possible && <span style={{ color: ORANGE }}> ⭐</span>}
+              </div>
+              <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: result.review.max_gems > 0 ? ORANGE : INK_SOFT }}>
+                {result.review.max_gems > 0
+                  ? say(language, `⭐ Up to +${result.review.max_gems} gems`, `⭐ En fazla +${result.review.max_gems} gem`, `⭐ Hasta +${result.review.max_gems} gems`)
+                  : say(language, 'No gems this time, but it makes you stronger 💪', 'Bu sefer gem yok ama seni güçlendirir 💪', 'Esta vez sin gems, pero te hace más fuerte 💪')}
               </div>
               <button className="pz-press" onClick={startReview} style={{
                 background: TEAL, color: 'white', border: 'none', borderRadius: 16, padding: '14px 20px',
@@ -444,7 +465,7 @@ export default function PuzzleScreen() {
             <div className="pz-feedback" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
               <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
-                {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
+                {flash.correct ? t('math_yes', language) : flash.skipped ? say(language, 'No problem!', 'Olsun!', '¡No pasa nada!') : t('math_not_this', language)}
               </div>
               {!flash.correct && rightOption && (
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>{t('math_answer_is', language)}</div>
@@ -561,6 +582,13 @@ export default function PuzzleScreen() {
             opacity: picked === null ? 0.4 : 1, cursor: picked === null ? 'default' : 'pointer',
             boxShadow: picked === null ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
           }}>{pending ? '…' : t('puzzle_send', language)}</button>
+
+          {!answer && picked === null && (
+            <button className="pz-press" onClick={skip} disabled={pending} style={{
+              alignSelf: 'center', border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
+              borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontFamily: FRED, fontWeight: 600, fontSize: 15,
+            }}>{t('rd_skip', language)}</button>
+          )}
 
           {answerFailed && (
             <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>

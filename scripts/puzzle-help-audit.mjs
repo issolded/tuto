@@ -23,6 +23,10 @@ for (const bk of BAND_KEYS) {
           if (!h.text || h.text.length < 15 || /undefined|NaN|\[object/.test(h.text)) note(`${q.type} ${bk} ${lang} rung${lvl}: "${h.text}"`)
         }
       }
+      for (const lang of ['en', 'tr', 'es']) {
+        const r = puzzleHintAt(q, 2, lang)
+        if (r.text != null && (r.text.length < 12 || /undefined|NaN|\[object|\{/.test(r.text))) note(`${q.type} ${bk} ${lang} rung2 reason: "${r.text}"`)
+      }
       const eg = []
       const h2 = puzzleHintAt(q, 2, 'en', { eliminated: eg })
       if (h2.eliminate === q.correct_index) note(`${q.type} ${bk}: rung 2 crosses out the right option`)

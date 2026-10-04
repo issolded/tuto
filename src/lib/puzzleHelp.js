@@ -81,7 +81,7 @@ const HELP = {
   ],
   'glyph-odd': [
     L('Say what each picture is. All but one are the same kind of thing.', 'Her resmin ne olduğunu söyle. Biri dışında hepsi aynı türden.', 'Di qué es cada dibujo. Todos menos uno son del mismo tipo.'),
-    () => L('Put the pictures into groups in your head: what could each one be used for, or where does it live? One does not fit.', 'Resimleri kafanda gruplara ayır: her biri ne için kullanılır ya da nerede yaşar? Biri uymuyor.', 'Agrupa los dibujos en tu cabeza: ¿para qué sirve cada uno o dónde vive? Uno no encaja.'),
+    () => L('Name each picture, then sort them into groups. One group has only a single picture in it.', 'Her resmin adını söyle, sonra gruplara ayır. Bir grupta yalnızca tek resim kalıyor.', 'Nombra cada dibujo y agrúpalos. Un grupo se queda con un solo dibujo.'),
   ],
   'glyph-belongs': [
     L('The pictures above are the same kind of thing. The answer is the one option of that kind.', 'Üstteki resimler aynı türden. Cevap, o türden olan tek seçenek.', 'Los dibujos de arriba son del mismo tipo. La respuesta es la única opción de ese tipo.'),
@@ -89,7 +89,7 @@ const HELP = {
   ],
   'glyph-trait': [
     L('Think about what each thing can do or has. One of them is different from the rest in that way.', 'Her şeyin ne yapabildiğini ya da neye sahip olduğunu düşün. Biri bu yönden diğerlerinden farklı.', 'Piensa en lo que puede hacer o tiene cada cosa. Una es distinta de las demás en eso.'),
-    () => L('Ask the same question about every picture, such as "can it fly?" or "does it have wings?", and see which answer is different.', 'Her resim için aynı soruyu sor ("uçabilir mi?", "kanadı var mı?") ve hangisinin cevabı farklı bak.', 'Haz la misma pregunta de cada dibujo, como "¿puede volar?" o "¿tiene alas?", y mira cuál responde distinto.'),
+    () => L('Ask the same question about every picture, such as "can it fly?" or "does it have wings?", and see which answer is different.', 'Her resim için aynı soruyu sor ("uçabilir mi?", "kanadı var mı?") ve hangisinin cevabının farklı olduğuna bak.', 'Haz la misma pregunta de cada dibujo, como "¿puede volar?" o "¿tiene alas?", y mira cuál responde distinto.'),
   ],
   'glyph-sequence': [
     L('The pictures repeat in the same order again and again. Find the part that repeats.', 'Resimler hep aynı sırayla tekrar ediyor. Tekrar eden kısmı bul.', 'Los dibujos se repiten siempre en el mismo orden. Busca la parte que se repite.'),
@@ -121,6 +121,58 @@ const entry = (q) => HELP[q.type] || GENERIC
 
 export const PUZZLE_HELP_TYPES = Object.keys(HELP)
 
+// Why a wrong option is wrong, in the child's words, from the option's own `why` (the attribute it is judged on) and the
+// type, whose meaning flips (see puzzleTemplates.js): in odd-one-out the wrong option SHARES the attribute with the
+// others, in belongs it does not, and where something moves (identical, sequence, analogy, grid) it moved the wrong way.
+// Spanish avoids adjectives that would have to agree ("no coincide", never "es distinta").
+const REASON_TYPES = {
+  'odd-one-out': 'shares', belongs: 'lacks', identical: 'moved', sequence: 'moved', 'grid-complete': 'moved', analogy: 'moved', reflection: 'moved',
+}
+const FAMILY_REASON = {
+  'glyph-odd': L('This one is the same kind of thing as most of the others, so it is not the odd one.', 'Bu, diğerlerinin çoğuyla aynı türden; farklı olan bu değil.', 'Este es del mismo tipo que casi todos los demás, así que no es el que sobra.'),
+  'icon-odd': L('This one is the same kind of thing as most of the others, so it is not the odd one.', 'Bu, diğerlerinin çoğuyla aynı türden; farklı olan bu değil.', 'Este es del mismo tipo que casi todos los demás, así que no es el que sobra.'),
+  'glyph-trait': L('This one is like the others in that way, so it is not the different one.', 'Bu, o yönden diğerlerine benziyor; farklı olan bu değil.', 'Este se parece a los demás en eso, así que no es el diferente.'),
+  'glyph-belongs': L('This is not the same kind of thing as the pictures above.', 'Bu, üstteki resimlerle aynı türden değil.', 'Este no es del mismo tipo que los dibujos de arriba.'),
+  'icon-belongs': L('This is not the same kind of thing as the pictures above.', 'Bu, üstteki resimlerle aynı türden değil.', 'Este no es del mismo tipo que los dibujos de arriba.'),
+  'glyph-sequence': L('This is not what comes next in the repeating order.', 'Sırada bunun gelmesi gerekmiyor; tekrar eden sıraya uymuyor.', 'Este no es el que viene después en el orden que se repite.'),
+  'icon-sequence': L('This is not what comes next in the repeating order.', 'Sırada bunun gelmesi gerekmiyor; tekrar eden sıraya uymuyor.', 'Este no es el que viene después en el orden que se repite.'),
+  'glyph-analogy': L('This does not fit the link between the first two pictures.', 'Bu, ilk iki resim arasındaki bağa uymuyor.', 'Este no encaja con el vínculo de los dos primeros dibujos.'),
+}
+const MOVED = {
+  sequence: (A) => L(`Its ${A} does not continue the pattern.`, `Bunun ${A} örüntünün devamı değil.`, `En esta, ${A} no continúa el patrón.`),
+  identical: (A) => L(`Its ${A} is different from the picture above.`, `Bunun ${A} üstteki şekilden farklı.`, `En esta, ${A} no coincide con la figura de arriba.`),
+  analogy: (A) => L(`Its ${A} does not match the change from the first shape to the second.`, `Bunun ${A}, ilk şekilden ikinciye olan değişikliğe uymuyor.`, `En esta, ${A} no sigue el cambio de la primera figura a la segunda.`),
+  'grid-complete': (A) => L(`Its ${A} does not fit the grid.`, `Bunun ${A} tabloya uymuyor.`, `En esta, ${A} no encaja en la cuadrícula.`),
+  reflection: (A) => L(`Its ${A} is not what a mirror would show.`, `Bunun ${A} aynada görünecek gibi değil.`, `En esta, ${A} no es lo que mostraría un espejo.`),
+  code: (A) => L(`Its ${A} do not both match the code letters.`, `Bunun ${A} kod harflerine birlikte uymuyor.`, `En esta, ${A} no coinciden a la vez con las letras del código.`),
+}
+function reasonFor(q, i, g) {
+  const why = q.options[i]?.why
+  if (!why) return FAMILY_REASON[q.type] ? pick(FAMILY_REASON[q.type], g) : null
+  const fixed = {
+    'hidden-part': L('The small shape is not hiding in this picture.', 'Küçük şekil bu resmin içinde saklanmıyor.', 'La figura pequeña no se esconde en este dibujo.'),
+    overlay: L('Putting the two pictures together does not make this one.', 'İki resmi üst üste koyunca bu çıkmıyor.', 'Al juntar los dos dibujos no sale este.'),
+    matrix: L('This one does not follow the pattern along the rows and down the columns.', 'Bu, satırlardaki ve sütunlardaki örüntüye uymuyor.', 'Este no sigue el patrón de las filas y las columnas.'),
+    'compound-analogy': L('The change the first two pictures show was not made correctly here.', 'İlk iki resimdeki değişiklik burada doğru yapılmamış.', 'El cambio de los dos primeros dibujos no está bien hecho aquí.'),
+    'compound-mirror': L('This is not the mirror image: left and right are not swapped properly.', 'Bu aynadaki görüntü değil: sağ ile sol doğru yer değiştirmemiş.', 'Esta no es la imagen en espejo: la izquierda y la derecha no están bien cambiadas.'),
+    'cube-net': L('This cube does not match how the net folds.', 'Bu küp, açınımın katlanışına uymuyor.', 'Este cubo no coincide con cómo se pliega el desarrollo.'),
+    symmetry: L('This shape does not fold into two matching halves.', 'Bu şekil ikiye katlanınca yarıları örtüşmüyor.', 'Esta figura no se dobla en dos mitades iguales.'),
+    first: L('The first letter of its code does not fit.', 'Kodunun ilk harfi uymuyor.', 'La primera letra de su código no encaja.'),
+    second: L('The second letter of its code does not fit.', 'Kodunun ikinci harfi uymuyor.', 'La segunda letra de su código no encaja.'),
+  }[why]
+  if (fixed) return pick(fixed, g)
+  const names = why === 'both' ? attrNames(q, g) : [ATTR[g]?.[why] || ATTR.en[why]].filter(Boolean)
+  const A = joinAnd(names, g)
+  if (!A) return null
+  const kind = REASON_TYPES[q.type] || (String(q.type).startsWith('glyph') || String(q.type).startsWith('icon') ? (String(q.type).endsWith('odd') ? 'shares' : 'lacks') : 'moved')
+  const T = {
+    shares: L(`Its ${A} is the same as the others, so it is not the odd one.`, `Bunun ${A} diğerleriyle aynı, farklı olan bu değil.`, `En esta, ${A} es igual que en las demás, así que no es la que sobra.`),
+    lacks: L(`Its ${A} is not the same as the pictures above.`, `Bunun ${A} üsttekilerle aynı değil.`, `En esta, ${A} no coincide con los dibujos de arriba.`),
+    moved: (MOVED[q.type] || ((x) => L(`Its ${x} is not what this puzzle needs.`, `Bunun ${x} bu bulmacanın istediği gibi değil.`, `En esta, ${x} no es lo que pide el acertijo.`)))(A),
+  }[kind]
+  return pick(T, g)
+}
+
 /** Rung 1 { text }, rung 2 { eliminate } (an option index, null when none is left), rung 3 { text }. */
 export function puzzleHintAt(q, level, lang = 'en', { eliminated = [] } = {}) {
   const [tip, look] = entry(q)
@@ -128,7 +180,8 @@ export function puzzleHintAt(q, level, lang = 'en', { eliminated = [] } = {}) {
   if (level <= 1) return { level: 1, text: pick(tip, g) }
   if (level === 2) {
     const left = q.options.map((_, i) => i).filter(i => i !== q.correct_index && !eliminated.includes(i))
-    return { level: 2, eliminate: left.length ? left[0] : null }
+    const i = left.length ? left[0] : null
+    return { level: 2, eliminate: i, ...(i != null ? { text: reasonFor(q, i, g) } : {}) }
   }
   return { level: 3, text: pick(look(q, g), g) }
 }

@@ -24,7 +24,8 @@ const spaced = (w) => [...String(w)].join(' ')
 const sortedLetters = (w) => [...String(w)].sort().join('')
 
 // One wrong option to use as a worked example: the first, so the same question always shows the same one.
-const sample = (it) => wrongOptions(it)[0]?.text ?? ''
+// The second wrong option, not the first: rung 2 crosses out the first, and a worked example on the same word would repeat it.
+const sample = (it) => (wrongOptions(it)[1] ?? wrongOptions(it)[0])?.text ?? ''
 
 // An example pair for "opposite" tips that is none of the question's own words: a tip that used
 // "hot, cold" ahead of a question whose answer is "hot" would hand it over.
@@ -314,7 +315,7 @@ const HELP = {
     ],
   }),
   'letters-in-order': (it) => {
-    const bad = wrongOptions(it)[0]?.text || ''
+    const bad = (wrongOptions(it)[1] ?? wrongOptions(it)[0])?.text || ''
     let at = -1
     for (let i = 1; i < bad.length; i++) if (bad[i] < bad[i - 1]) { at = i; break }
     const show = at > 0
@@ -400,7 +401,7 @@ const HELP = {
     return {
       tip: L('The SAME three letters, in the same order, must make a real word in BOTH gaps.', 'AYNI üç harf, aynı sırayla, İKİ boşlukta da gerçek bir kelime yapmalı.', 'Las MISMAS tres letras, en el mismo orden, deben formar una palabra real en LOS DOS huecos.'),
       steps: [
-        L(`Try an option in both gaps. "${w}" gives ${b1.replace('___', w)} and ${b2.replace('___', w)}. Not both are words, so cross it out.`, `Bir şıkkı iki boşlukta dene. "${w}": ${b1.replace('___', w)} ve ${b2.replace('___', w)}. İkisi birden kelime değil, çiz.`, `Prueba una opción en los dos huecos. "${w}" da ${b1.replace('___', w)} y ${b2.replace('___', w)}. No son palabras las dos, táchala.`),
+        L(`Try an option in both gaps. "${w}" gives ${b1.replace('___', w)} and ${b2.replace('___', w)}. Not both are words, so cross it out.`, `Bir şıkkı iki boşlukta dene. "${w}": ${b1.replace('___', w)} ve ${b2.replace('___', w)}. İkisi birden kelime değil, çiz.`, `Prueba una opción en los dos huecos. "${w}" da ${b1.replace('___', w)} y ${b2.replace('___', w)}. No forman dos palabras reales, táchala.`),
         L(`${ans(it)[0]} gives ${it.rule.words.join(' and ')}.`, `${ans(it)[0]}: ${it.rule.words.join(' ve ')}.`, `${ans(it)[0]} da ${it.rule.words.join(' y ')}.`),
       ],
     }
@@ -451,7 +452,8 @@ const HELP = {
     ],
   }),
   syllables: (it) => {
-    const bad = wrongOptions(it).find(o => /^syllables-\d$/.test(o.why || ''))
+    const cands = wrongOptions(it).filter(o => /^syllables-\d$/.test(o.why || ''))
+    const bad = cands[1] ?? cands[0]
     const n = bad ? Number(bad.why.slice(-1)) : null
     return {
       tip: L('Clap or tap once for every beat in the word, then count the claps.', 'Kelimedeki her vuruş için bir kez el çırp, sonra çırpışları say.', 'Da una palmada por cada golpe de la palabra y cuenta las palmadas.'),

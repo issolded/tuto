@@ -51,7 +51,7 @@ const skills = (review, language) => [...new Set((review.topics || []).filter(Bo
 
 export function puzzleSessionNotice(name, s, language, review) {
   const helped = Number.isInteger(s.helped) && s.helped > 0 && Number.isInteger(s.unaided)
-  const how = helped ? say(language, ` (${s.unaided} on their own, ${s.helped} with help)`, ` (yardımsız ${s.unaided}, yardımla ${s.helped})`, ` (${s.unaided} solos, ${s.helped} con ayuda)`) : ''
+  const how = helped ? say(language, ` (${s.unaided} on their own, ${s.helped} with help)`, ` (yardımsız ${s.unaided}, yardımla ${s.helped})`, ` (${s.unaided} sin ayuda, ${s.helped} con ayuda)`) : ''
   const halfNote = helped ? say(language, ' Puzzles solved with help count half.', ' Yardımla çözülen bulmacalar yarım gem sayılıyor.', ' Los acertijos resueltos con ayuda cuentan la mitad.') : ''
   const head = s.kind === 'capped'
     ? say(language,
@@ -59,9 +59,9 @@ export function puzzleSessionNotice(name, s, language, review) {
       `${name} bir tur bulmaca daha çözdü — ${s.correct}/${s.total} doğru${how}. Bugünkü sınırı (günde ${s.daily_cap}) geçtiği için gem eklenmedi. 🌙`,
       `${name} ha hecho otra ronda de acertijos — ${s.correct}/${s.total} correctos${how}. Pasa del límite de hoy (${s.daily_cap}), así que no ha sumado gems. 🌙`)
     : say(language,
-      `${name} did their puzzles — ${s.correct}/${s.total} correct${how}. +${s.gems} gems 💎${halfNote}`,
+      `${name} did their puzzles — ${s.correct}/${s.total} correct${how}. +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'} 💎${halfNote}`,
       `${name} bulmacalarını çözdü — ${s.correct}/${s.total} doğru${how}. +${s.gems} gem 💎${halfNote}`,
-      `${name} ha hecho sus acertijos — ${s.correct}/${s.total} correctos${how}. +${s.gems} gems 💎${halfNote}`)
+      `${name} ha hecho sus acertijos — ${s.correct}/${s.total} correctos${how}. +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'} 💎${halfNote}`)
   let tail = ''
   let tr = '', en = ''
   if (review) {
@@ -75,9 +75,9 @@ export function puzzleSessionNotice(name, s, language, review) {
     if (review.state === 'done') {
       const g = review.gems > 0
       tail = say(language,
-        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${owed.en}`,
+        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${owed.en}`,
         `Sonra zorlandığı ${review.asked} bulmacayı tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${owed.tr}`,
-        `Después repasó ${q} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${owed.es}`)
+        `Después repasó ${q} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${owed.es}`)
       en = `, then reviewed ${review.correct}/${review.asked}`; tr = `, sonra pekiştirdi ${review.correct}/${review.asked}`
     } else if (review.state === 'declined') {
       tail = say(language,
@@ -95,7 +95,7 @@ export function puzzleSessionNotice(name, s, language, review) {
   const howShort = helped ? { tr: ` (yardımsız ${s.unaided}, yardımla ${s.helped})`, en: ` (${s.unaided} on their own, ${s.helped} with help)` } : { tr: '', en: '' }
   const detail = s.kind === 'capped'
     ? { tr: `bulmaca, ${s.correct}/${s.total} doğru${howShort.tr}, günlük sınır dolduğu için gem yok${tr}`, en: `puzzles, ${s.correct}/${s.total} correct${howShort.en}, past the daily limit so no gems${en}` }
-    : { tr: `şekil ve örüntü bulmacaları, ${s.correct}/${s.total} doğru${howShort.tr}, +${s.gems} gem${tr}`, en: `shape & pattern puzzles, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} gems${en}` }
+    : { tr: `şekil ve örüntü bulmacaları, ${s.correct}/${s.total} doğru${howShort.tr}, +${s.gems} gem${tr}`, en: `shape & pattern puzzles, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'}${en}` }
   return { text: [head, tail].filter(Boolean).join('\n\n'), notice: { kind: 'activity', child: name, detail } }
 }
 
@@ -103,11 +103,11 @@ export function puzzleReviewLateNotice(name, review, language) {
   const g = review.gems > 0
   const topics = skills(review, language)
   const text = say(language,
-    `${name} went back and finished the puzzle practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
+    `${name} went back and finished the puzzle practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
     `${name} bulmaca pekiştirmesine geri dönüp sonunda bitirdi — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${topics ? ` ${topics} konusuna yine de ağırlık vereceğim.` : ''}`,
-    `${name} volvió y terminó el repaso de acertijos al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
+    `${name} volvió y terminó el repaso de acertijos al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
   return { text, notice: { kind: 'activity', child: name, detail: {
     tr: `bulmaca pekiştirmesini sonradan bitirdi, ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem` : ''}`,
-    en: `finished the puzzle practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems` : ''}`,
+    en: `finished the puzzle practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'}` : ''}`,
   } } }
 }

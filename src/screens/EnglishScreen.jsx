@@ -348,7 +348,7 @@ export default function EnglishScreen() {
             const missed = answers.filter(a => a && !a.correct).length
             if (helped === 0 && missed === 0) return null
             const parts = [
-              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} tú solo`),
+              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} sin ayuda`),
               helped > 0 && say(language, `${helped} right with a hint`, `${helped} ipucuyla doğru`, `${helped} bien con una pista`),
               missed > 0 && say(language, `${missed} to practise`, `${missed} geliştirilecek`, `${missed} por repasar`),
             ].filter(Boolean)
@@ -359,7 +359,11 @@ export default function EnglishScreen() {
             <div style={{ background: 'white', borderRadius: 22, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease 0.12s both' }}>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16.5, color: INK, lineHeight: 1.4, textAlign: 'center' }}>
                 {say(language, `Let's practise the tricky ones — ${result.review.count} new questions.`, `Zorlandıklarını pekiştirelim — ${result.review.count} yeni soru.`, `Repasemos las difíciles: ${result.review.count} preguntas nuevas.`)}
-                {result.review.gems_possible && <span style={{ color: ORANGE }}> ⭐</span>}
+              </div>
+              <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: result.review.max_gems > 0 ? ORANGE : INK_SOFT }}>
+                {result.review.max_gems > 0
+                  ? say(language, `⭐ Up to +${result.review.max_gems} gems`, `⭐ En fazla +${result.review.max_gems} gem`, `⭐ Hasta +${result.review.max_gems} gems`)
+                  : say(language, 'No gems this time, but it makes you stronger 💪', 'Bu sefer gem yok ama seni güçlendirir 💪', 'Esta vez sin gems, pero te hace más fuerte 💪')}
               </div>
               <button className="pz-press" onClick={startReview} style={{
                 background: ROSE, color: 'white', border: 'none', borderRadius: 16, padding: '14px 20px',

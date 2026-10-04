@@ -13,8 +13,8 @@ const SKILL_NAMES = {
   'word meanings (same and opposite)': ['word meanings (same and opposite)', 'kelime anlamları (eş ve zıt)', 'significado de palabras (sinónimos y antónimos)'],
   'what a word means': ['what a word means', 'bir kelimenin anlamı', 'qué significa una palabra'],
   'word groups and analogies': ['word groups and analogies', 'kelime grupları ve benzetmeler', 'grupos de palabras y analogías'],
-  'letter and code puzzles': ['letter and code puzzles', 'harf ve şifre bulmacaları', 'puzzles de letras y códigos'],
-  'logic puzzles': ['logic puzzles', 'mantık bulmacaları', 'puzzles de lógica'],
+  'letter and code puzzles': ['letter and code puzzles', 'harf ve şifre bulmacaları', 'acertijos de letras y códigos'],
+  'logic puzzles': ['logic puzzles', 'mantık bulmacaları', 'acertijos de lógica'],
   'sounds of words (rhymes, homophones, syllables)': ['sounds of words (rhymes, homophones, syllables)', 'kelimelerin sesleri (uyak, eş sesli, hece)', 'sonidos de las palabras (rimas, homófonas, sílabas)'],
   'grammar and word forms': ['grammar and word forms', 'dilbilgisi ve kelime biçimleri', 'gramática y formas de las palabras'],
   spelling: ['spelling', 'yazım', 'ortografía'],
@@ -59,7 +59,7 @@ function skills(review, language) {
 export function englishSessionNotice(name, s, language, review) {
   const helped = Number.isInteger(s.helped) && s.helped > 0 && Number.isInteger(s.unaided)
   const how = helped ? say(language,
-    ` (${s.unaided} on their own, ${s.helped} with help)`, ` (yardımsız ${s.unaided}, yardımla ${s.helped})`, ` (${s.unaided} solos, ${s.helped} con ayuda)`) : ''
+    ` (${s.unaided} on their own, ${s.helped} with help)`, ` (yardımsız ${s.unaided}, yardımla ${s.helped})`, ` (${s.unaided} sin ayuda, ${s.helped} con ayuda)`) : ''
   const halfNote = helped ? say(language,
     ' Questions solved with help count half.', ' Yardımla çözülen sorular yarım gem sayılıyor.', ' Las preguntas resueltas con ayuda cuentan la mitad.') : ''
   const head = s.kind === 'capped'
@@ -68,9 +68,9 @@ export function englishSessionNotice(name, s, language, review) {
       `${name} bir tur İngilizce daha çözdü — ${s.correct}/${s.total} doğru${how}. Bugünkü sınırı (günde ${s.daily_cap}) geçtiği için gem eklenmedi. 🌙`,
       `${name} ha hecho otra ronda de inglés — ${s.correct}/${s.total} correctas${how}. Pasa del límite de hoy (${s.daily_cap}), así que no ha sumado gems. 🌙`)
     : say(language,
-      `${name} did their English — ${s.correct}/${s.total} correct${how}. +${s.gems} gems 💎${halfNote}`,
+      `${name} did their English — ${s.correct}/${s.total} correct${how}. +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'} 💎${halfNote}`,
       `${name} İngilizce sorularını çözdü — ${s.correct}/${s.total} doğru${how}. +${s.gems} gem 💎${halfNote}`,
-      `${name} ha hecho su inglés — ${s.correct}/${s.total} correctas${how}. +${s.gems} gems 💎${halfNote}`)
+      `${name} ha hecho su inglés — ${s.correct}/${s.total} correctas${how}. +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'} 💎${halfNote}`)
 
   let tail = ''
   let tr = '', en = ''
@@ -85,9 +85,9 @@ export function englishSessionNotice(name, s, language, review) {
     if (review.state === 'done') {
       const g = review.gems > 0
       tail = say(language,
-        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${owed.en}`,
+        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${owed.en}`,
         `Sonra zorlandığı ${review.asked} soruyu tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${owed.tr}`,
-        `Después repasó ${preguntas} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${owed.es}`)
+        `Después repasó ${preguntas} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${owed.es}`)
       en = `, then reviewed ${review.correct}/${review.asked}`; tr = `, sonra pekiştirdi ${review.correct}/${review.asked}`
     } else if (review.state === 'declined') {
       tail = say(language,
@@ -113,7 +113,7 @@ export function englishSessionNotice(name, s, language, review) {
     ? { tr: `İngilizce, ${s.correct}/${s.total} doğru${howShort.tr}, günlük sınır dolduğu için gem yok${tr}`,
       en: `English, ${s.correct}/${s.total} correct${howShort.en}, past the daily limit so no gems${en}` }
     : { tr: `İngilizce, ${s.correct}/${s.total} doğru${howShort.tr}, +${s.gems} gem${tr}`,
-      en: `English, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} gems${en}` }
+      en: `English, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'}${en}` }
   return { text: [head, tail].filter(Boolean).join('\n\n'), notice: { kind: 'activity', child: name, detail } }
 }
 
@@ -122,11 +122,11 @@ export function englishReviewLateNotice(name, review, language) {
   const g = review.gems > 0
   const topics = skills(review, language)
   const text = say(language,
-    `${name} went back and finished the English practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
+    `${name} went back and finished the English practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
     `${name} İngilizce pekiştirmeye geri dönüp sonunda bitirdi — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${topics ? ` ${topics} konusuna yine de ağırlık vereceğim.` : ''}`,
-    `${name} volvió y terminó el repaso de inglés al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
+    `${name} volvió y terminó el repaso de inglés al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
   return { text, notice: { kind: 'activity', child: name, detail: {
     tr: `İngilizce pekiştirmeyi sonradan bitirdi, ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem` : ''}`,
-    en: `finished the English practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems` : ''}`,
+    en: `finished the English practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'}` : ''}`,
   } } }
 }

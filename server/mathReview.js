@@ -103,12 +103,12 @@ export function mathReviewLateNotice(name, review, language) {
   const g = review.gems > 0
   const topics = (review.topics || []).filter(Boolean).slice(0, 3).map(t => localTopicName(t.topic_id, t.topic_name, language)).join(', ')
   const text = say(language,
-    `${name} went back and finished the practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
+    `${name} went back and finished the practice round after all — ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${topics ? ` I'll still give ${topics} some weight next time.` : ''}`,
     `${name} pekiştirmeye geri dönüp sonunda bitirdi — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${topics ? ` ${topics} konusuna yine de ağırlık vereceğim.` : ''}`,
-    `${name} volvió y terminó el repaso al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
+    `${name} volvió y terminó el repaso al final — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${topics ? ` Aun así daré más peso a ${topics}.` : ''}`)
   return { text, notice: { kind: 'activity', child: name, detail: {
     tr: `pekiştirmeyi sonradan bitirdi, ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem` : ''}`,
-    en: `finished the practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems` : ''}`,
+    en: `finished the practice round afterwards, ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'}` : ''}`,
   } } }
 }
 
@@ -119,7 +119,7 @@ export function mathSessionNotice(name, s, language, review) {
   const how = helped ? say(language,
     ` (${s.unaided} on their own, ${s.helped} with help)`,
     ` (yardımsız ${s.unaided}, yardımla ${s.helped})`,
-    ` (${s.unaided} solos, ${s.helped} con ayuda)`) : ''
+    ` (${s.unaided} sin ayuda, ${s.helped} con ayuda)`) : ''
   const halfNote = helped ? say(language,
     ' Questions solved with help count half.',
     ' Yardımla çözülen sorular yarım gem sayılıyor.',
@@ -131,9 +131,9 @@ export function mathSessionNotice(name, s, language, review) {
         `${name} bir matematik daha yaptı — ${s.correct}/${s.total} doğru${how}. Bugünkü sınırı (günde ${s.daily_cap}) geçtiği için gem eklenmedi. 🌙`,
         `${name} ha hecho otra sesión de mates — ${s.correct}/${s.total} correctas${how}. Pasa del límite de hoy (${s.daily_cap}), así que no ha sumado gems. 🌙`)
     : say(language,
-        `${name} did their maths — ${s.correct}/${s.total} correct${how}. +${s.gems} gems 💎${paperNote}${halfNote}`,
+        `${name} did their maths — ${s.correct}/${s.total} correct${how}. +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'} 💎${paperNote}${halfNote}`,
         `${name} matematiğini yaptı — ${s.correct}/${s.total} doğru${how}. +${s.gems} gem 💎${paperNote}${halfNote}`,
-        `${name} ha hecho sus mates — ${s.correct}/${s.total} correctas${how}. +${s.gems} gems 💎${paperNote}${halfNote}`)
+        `${name} ha hecho sus mates — ${s.correct}/${s.total} correctas${how}. +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'} 💎${paperNote}${halfNote}`)
 
   let tail = ''
   // The same facts for the short line a template message carries.
@@ -152,9 +152,9 @@ export function mathSessionNotice(name, s, language, review) {
     if (review.state === 'done') {
       const g = review.gems > 0
       tail = say(language,
-        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} gems 💎` : ''}.${owed.en}`,
+        `They then went back over ${review.asked} they'd found hard — ${review.correct}/${review.asked} right${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${owed.en}`,
         `Sonra zorlandığı ${review.asked} soruyu tekrar çözdü — ${review.correct}/${review.asked} doğru${g ? `, +${review.gems} gem 💎` : ''}.${owed.tr}`,
-        `Después repasó ${review.asked} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} gems 💎` : ''}.${owed.es}`)
+        `Después repasó ${review.asked} que se le habían atascado — ${review.correct}/${review.asked} bien${g ? `, +${review.gems} ${review.gems === 1 ? 'gem' : 'gems'} 💎` : ''}.${owed.es}`)
       en = `, then reviewed ${review.correct}/${review.asked}`; tr = `, sonra pekiştirdi ${review.correct}/${review.asked}`
     } else if (review.state === 'declined') {
       tail = say(language,
@@ -180,6 +180,6 @@ export function mathSessionNotice(name, s, language, review) {
     ? { tr: `matematik, ${s.correct}/${s.total} doğru${howShort.tr}, günlük sınır dolduğu için gem yok${tr}`,
         en: `maths, ${s.correct}/${s.total} correct${howShort.en}, past the daily limit so no gems${en}` }
     : { tr: `matematik, ${s.correct}/${s.total} doğru${howShort.tr}, +${s.gems} gem${tr}`,
-        en: `maths, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} gems${en}` }
+        en: `maths, ${s.correct}/${s.total} correct${howShort.en}, +${s.gems} ${s.gems === 1 ? 'gem' : 'gems'}${en}` }
   return { text, notice: { kind: 'activity', child: name, detail } }
 }

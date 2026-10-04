@@ -3759,7 +3759,7 @@ export default function MathScreen() {
           {!evalResult.isReview && evalResult.breakdown && (evalResult.breakdown.helped > 0 || evalResult.breakdown.missed > 0) && (() => {
             const b = evalResult.breakdown
             const parts = [
-              b.unaided > 0 && say(language, `${b.unaided} on your own`, `${b.unaided} yardımsız doğru`, `${b.unaided} tú solo`),
+              b.unaided > 0 && say(language, `${b.unaided} on your own`, `${b.unaided} yardımsız doğru`, `${b.unaided} sin ayuda`),
               b.helped > 0 && say(language, `${b.helped} right with a hint`, `${b.helped} ipucuyla doğru`, `${b.helped} bien con una pista`),
               b.missed > 0 && say(language, `${b.missed} to practise`, `${b.missed} geliştirilecek`, `${b.missed} por repasar`),
             ].filter(Boolean)

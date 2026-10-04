@@ -86,12 +86,14 @@ for (const [key, f] of Object.entries(fam)) {
     const carried = (after.carry_types || []).map(t => t.topic_id)
     const should = rv.picks.filter(p => p.idx === 3 || p.idx === 4).map(p => p.topic_id)
     if (should.some(t => !carried.includes(t)) || carried.length !== new Set(should).size) note(key, `B carry ${carried} vs ${should}`)
+    if (rf.gems_earned > (finB.review.max_gems ?? 0)) note(key, `B review paid ${rf.gems_earned}, above the offered maximum ${finB.review.max_gems}`)
     log.push(`B:21g review ${rv.picks.length}q +${rf.gems_earned}g carry ${carried.map(c => c.split('|')[0]).join('/')}`)
 
     // C: leans on carried kinds, then "not now"
     const C = await sitting()
     const lead = C.sheet.slice(0, 3).map(x => x.type)
-    if (carried.length && !carried.every(t => C.sheet.slice(0, 3).some(x => x.type === t.split('|')[0] && String(x.rule?.attr ?? '') === t.split('|')[1]))) note(key, `C does not lead with ${carried}: ${C.sheet.slice(0, 3).map(x => x.type + '|' + x.rule?.attr)}`)
+    // The type must lead; the exact attribute usually does, and may stand in for a rare one (see generateSession).
+    if (carried.length && !carried.every(t => C.sheet.slice(0, 3).some(x => x.type === t.split('|')[0]))) note(key, `C does not lead with ${carried}: ${C.sheet.slice(0, 3).map(x => x.type + '|' + x.rule?.attr)}`)
     const nC = (await lastMsgs(key)).length
     for (let i = 0; i < 10; i++) { const cq = C.sheet[i]; await ans(C.sid, i, i < 6 ? cq.correct_index : wrongOf(cq)) }
     for (let i = 6; i < 10; i++) { const cq = C.sheet[i]; await ans(C.sid, i, cq.options.map((_, k) => k).filter(k => k !== cq.correct_index)[1] ?? wrongOf(cq)) }
