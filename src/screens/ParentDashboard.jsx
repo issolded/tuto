@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import ParentNav from '../components/ParentNav'
 import { supabase, getTodaySummary } from '../lib/supabase'
+import { useChildWeek } from '../lib/parentWeek'
 import { updateParentPrefs } from '../lib/parentPrefs'
 import { hashPin } from '../lib/hash'
 import { LangPicker, BirthDateField } from '../lib/parentUI'
@@ -151,8 +152,10 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 // same summary the child's home reads, so the two never disagree.
 const ACT_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', english: '🔤', homework: '📸' }
 
-function ChildCard({ child, pending, onClick }) {
+function ChildCard({ child, pending, onClick, onReport }) {
   const s = useT()
+  const week = useChildWeek(child.id)
+  const wmax = Math.max(0, ...(week?.days || []).map(d => d.gems))
   const [today, setToday] = useState(null)
   useEffect(() => { getTodaySummary(child.id).then(setToday) }, [child.id])
   const acts = Object.entries(today?.activities || {}).filter(([, n]) => n > 0)
@@ -187,6 +190,21 @@ function ChildCard({ child, pending, onClick }) {
           </span>
         )}
       </div>
+      {/* This week, under each child — the report's door from the Children tab, one per child. A
+          button of its own, so it opens the report rather than the child page the card opens. */}
+      <button className="tc-tap" onClick={e => { e.stopPropagation(); onReport() }}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderTop: `1px solid ${PC.line}`, padding: '11px 0 0', cursor: 'pointer', fontFamily: FONT, textAlign: 'left', width: '100%' }}>
+        <span style={{ fontWeight: 800, fontSize: 12, color: PC.inkFaint, textTransform: 'uppercase', letterSpacing: '.5px', whiteSpace: 'nowrap' }}>{s('cd_week')}</span>
+        <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 13, color: PC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {week ? s('cd_week_short', { n: week.totals.sessions, g: week.totals.gems }) : '…'}
+        </span>
+        <span aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 18, flex: 'none' }}>
+          {(week?.days || Array.from({ length: 7 }, () => ({ gems: 0 }))).map((d, i) => (
+            <span key={i} style={{ width: 4, height: wmax ? Math.max(2, Math.round(d.gems / wmax * 18)) : 2, borderRadius: '2px 2px 0 0', background: d.gems ? PC.tealInk : PC.line }} />
+          ))}
+        </span>
+        <Icon name="chevron" size={16} color={PC.inkFaint} />
+      </button>
     </Card>
   )
 }
@@ -757,7 +775,7 @@ export default function ParentDashboard({ view = 'dashboard' }) {
               </Card>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                {children.map(child => <ChildCard key={child.id} child={child} pending={pendingFor[child.id]} onClick={() => nav(`/parent/child/${child.id}`)} />)}
+                {children.map(child => <ChildCard key={child.id} child={child} pending={pendingFor[child.id]} onClick={() => nav(`/parent/child/${child.id}`)} onReport={() => nav(`/parent/reports?child=${child.id}`)} />)}
               </div>
             )}
           </div>

@@ -9,6 +9,7 @@ import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathRe
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
 import { buildWeekReport, weekContext } from './week.js'
 import { inboundVerdict, inboundRefusal } from './inboundGate.js'
+import { appChatView, joinReplies, isMissingTable } from './appChat.js'
 import { applyScreenExtra, screenTimeContext, SCREEN_EXTRA_MAX } from './screenTime.js'
 import 'dotenv/config'
 import express from 'express'
@@ -7997,8 +7998,13 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
 // The in-app chat: a third channel into the same brain. handleMessage does not know or care
 // which channel it is answering — Telegram and WhatsApp hand it a reply callback, this hands it
 // one that collects. Tuto never starts a conversation here: the screen shows only what was asked
-// in it (kept on the device), while the brain still remembers the whole shared transcript, so an
-// answer here can build on what was said on Telegram. The entry gate counts this channel too.
+// in it, while the brain still remembers the whole shared transcript, so an answer here can build
+// on what was said on Telegram. The entry gate counts this channel too.
+//
+// The question is written to parent_app_chat and answered in the background, so leaving the
+// screen (or closing the app) does not lose the answer — it is in the row when the parent comes
+// back. Without that table (migration 2026-10-04_parent_app_chat.sql not run yet) the answer is
+// produced inside the request, as before.
 async function parentFromBearer(req) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
   if (!token) return null
@@ -8022,6 +8028,13 @@ const APP_SCOPE_NOTE =
   'screen in the app. Answer only what was asked: do not bring up pending approvals, news or reminders on your ' +
   'own in this tab — the parent opened it to ask something, not to be told things.'
 
+async function answerInApp(parentId, text) {
+  const replies = [], photos = []
+  await handleMessage(parentId, async (msg) => { if (msg) replies.push(String(msg)) }, text,
+    { scope: 'app', showPhotos: (urls) => photos.push(...urls) })
+  return { replies, photos }
+}
+
 app.post('/api/parent/chat', async (req, res) => {
   try {
     const parentId = await parentFromBearer(req)
@@ -8029,10 +8042,46 @@ app.post('/api/parent/chat', async (req, res) => {
     const text = String(req.body?.text || '').trim()
     if (!text) return res.status(400).json({ error: 'empty' })
     if (text.length > APP_CHAT_MAX) return res.status(400).json({ error: 'too long', max: APP_CHAT_MAX })
-    const replies = [], photos = []
-    await handleMessage(parentId, async (msg) => { if (msg) replies.push(String(msg)) }, text,
-      { scope: 'app', showPhotos: (urls) => photos.push(...urls) })
-    res.json({ replies, photos })
+
+    const { data: row, error } = await supabase.from('parent_app_chat')
+      .insert({ parent_id: parentId, question: text }).select('*').single()
+    if (error) {
+      if (!isMissingTable(error)) console.error(`[APP-CHAT] insert failed for ${parentId}: ${error.message}`)
+      // No table (or it failed): answer inside the request, the way it worked before.
+      return res.json(await answerInApp(parentId, text))
+    }
+
+    res.status(202).json({ item: appChatView(row, Date.now()) })
+
+    // After the response: the parent may already be on another tab, or gone.
+    try {
+      const { replies, photos } = await answerInApp(parentId, text)
+      await supabase.from('parent_app_chat')
+        .update({ answer: joinReplies(replies), photos, status: 'answered', answered_at: new Date().toISOString() })
+        .eq('id', row.id)
+    } catch (err) {
+      console.error(`[APP-CHAT] answer failed for ${row.id}: ${err.message}`)
+      await supabase.from('parent_app_chat').update({ status: 'failed' }).eq('id', row.id).then(() => {}, () => {})
+    }
+  } catch (err) {
+    if (!res.headersSent) res.status(500).json({ error: err.message })
+  }
+})
+
+// The tab's history, newest last. `available: false` tells the app the table is not there yet,
+// so it keeps its history on the device instead.
+app.get('/api/parent/chat', async (req, res) => {
+  try {
+    const parentId = await parentFromBearer(req)
+    if (!parentId) return res.status(401).json({ error: 'unauthorized' })
+    const { data, error } = await supabase.from('parent_app_chat').select('*')
+      .eq('parent_id', parentId).order('created_at', { ascending: false }).limit(60)
+    if (error) {
+      if (isMissingTable(error)) return res.json({ available: false, items: [] })
+      throw error
+    }
+    const now = Date.now()
+    res.json({ available: true, items: (data || []).slice().reverse().map(r => appChatView(r, now)) })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

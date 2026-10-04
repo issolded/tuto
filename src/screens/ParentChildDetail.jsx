@@ -12,6 +12,7 @@ import {
 } from '../lib/parentUI'
 import { ageFromBirthDate } from '../lib/age'
 import ParentNav from '../components/ParentNav'
+import { useChildWeek } from '../lib/parentWeek'
 import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -855,20 +856,7 @@ function RemoveSheet({ child, onClose, onConfirm }) {
 // The week's numbers from the same endpoint the report draws, as one line and seven small bars.
 function WeekCard({ childId, onOpen }) {
   const s = useT()
-  const [w, setW] = useState(null)
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        const r = await fetch(`${SERVER}/api/parent/children/${encodeURIComponent(childId)}/week?offset=0`,
-          { headers: { Authorization: `Bearer ${session?.access_token}` } })
-        const j = await r.json()
-        if (alive && r.ok) setW(j)
-      } catch { /* The card simply stays quiet; the report itself shows the error. */ }
-    })()
-    return () => { alive = false }
-  }, [childId])
+  const w = useChildWeek(childId)
   const max = Math.max(0, ...(w?.days || []).map(d => d.gems))
   const delta = w ? w.totals.gems - w.previous.gems : 0
   return (

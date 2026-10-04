@@ -800,7 +800,22 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       aynı ebeveyn için uygulama reddedilirken Telegram yolunun modele gittiği doğrulandı. Haftalık rapor
       `weekForChild()` tek kaynaktan (uç + sohbet bağlamı `thisWeek`, yalnız uygulama kanalında) — sohbetteki
       sayı grafikle aynı. Testler: `inbound-gate.test.mjs`, `parent-week.test.mjs` (weekContext). Gerçek
-      Gemini ile uygulama kanalı denenmedi (anahtar yok): kapsam dışı soruya modelin cevabı görülmedi. Sekme çubuğu prototipin birebir tasarımı
+      Gemini ile uygulama kanalı denenmedi (anahtar yok): kapsam dışı soruya modelin cevabı görülmedi.
+      **Dördüncü tur (kullanıcı bulgusu):** soru sorup başka sekmeye geçince cevap kayboluyordu (istek
+      ekranın içindeydi; sunucu cevabı üretip transkripte yazıyor ama ekrana dönemiyordu). İki katman:
+      (1) `src/lib/parentAsk.js` — sorular ekrandan bağımsız bir depoda; sekme değişse de cevap yerine
+      oturur, uzaktayken gelen cevap için Tuto sekmesinde kırmızı nokta (bildirim değil, uygulama içi).
+      (2) **Migration önce:** `server/migrations/2026-10-04_parent_app_chat.sql` (`parent_app_chat`): POST
+      soruyu yazar, 202 ile hemen döner, cevabı arka planda satıra yazar; ekran geçmişi sunucudan okur
+      (uygulama kapansa/cihaz değişse de cevap orada; sonraki bildirim işi bu satıra dayanacak). 3 dk'dan
+      eski "pending" satır "Cevap gelmedi" + "Tekrar sor" olarak görünür (arada sunucu yeniden başlarsa).
+      **Tablo yokken** eski davranış: cevap istek içinde, geçmiş cihazda — ama (1) sayesinde sekme
+      değiştirmek yine kaybettirmez. `server/appChat.js` + `scripts/tests/app-chat.test.mjs`. Harness'te
+      iki mod da gerçek `index.js` ile: tablo varken 202 (16 ms) ve 2 sn sonra GET'te cevap; yokken 200 +
+      cevap. Tarayıcıda iki modda: sor → hemen Çocuklar → nokta → geri → cevap orada, nokta gitti, yenileme sonrası da.
+      **Rapor her çocuğun altında:** Çocuklar sekmesinde her çocuk kartında "BU HAFTA 18 etkinlik · 255 ⭐"
+      satırı + yedi çubuk → o çocuğun raporu (çocuk sayfasındaki kartla aynı kanca, `src/lib/parentWeek.js`).
+      Raporun geri düğmesi geldiği yere döner (ana ekran ya da çocuk sayfası). Sekme çubuğu prototipin birebir tasarımı
       (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
       bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
       (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.
