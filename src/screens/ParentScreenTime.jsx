@@ -16,11 +16,11 @@
 // the only thing validRules() can still refuse is a schedule whose start equals its end.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, getTodaySummary } from '../lib/supabase'
 import { useT, adoptAccountLang } from '../lib/parentI18n'
 import { cacheDemoRules } from '../lib/screenControlDemo'
 import { updateParentPrefs } from '../lib/parentPrefs'
-import { SAMPLE_APPS, readRules, validRules } from '../lib/screenControl'
+import { SAMPLE_APPS, EXTRA_MAX, readRules, validRules, localDay, onHoliday, isWeekendRules, dayBudget, extraToday } from '../lib/screenControl'
 import { PC, FONT, TEXT, SPACE, RADIUS, PCSS, TopBar, Card, Icon } from '../lib/parentUI'
 import ParentNav from '../components/ParentNav'
 
@@ -39,6 +39,7 @@ export default function ParentScreenTime() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error | invalid
+  const [learned, setLearned] = useState(null) // today's finished tasks for the chosen child; null = not known yet
   const pending = useRef(null) // { childId, rules } not yet written
   const timer = useRef(null)
   // What the account holds, readable from handlers that run after an await (a closure would
@@ -106,16 +107,29 @@ export default function ParentScreenTime() {
     }
   }, [parentId])
 
+  // Today's finished tasks are real (the same summary the child's home reads), unlike usage,
+  // which nothing measures yet — so "learn first" can say where the child actually stands.
+  useEffect(() => {
+    if (!childId) return
+    let alive = true
+    getTodaySummary(childId).then(t => {
+      if (alive) setLearned(Object.values(t?.activities || {}).reduce((a, n) => a + (Number(n) || 0), 0))
+    })
+    return () => { alive = false; setLearned(null) }
+  }, [childId])
+
   // Leaving the tab writes what is waiting rather than dropping it.
   useEffect(() => () => { flush() }, [flush])
 
-  const change = (patch) => {
+  const change = (patch, { now = false } = {}) => {
     const next = { ...rules, ...patch }
     pending.current = { childId, rules: next }
     setRules(next)
     setSaveState('saving')
     clearTimeout(timer.current)
-    timer.current = setTimeout(flush, SAVE_DELAY)
+    // A button press (today's extra time) is one deliberate act, written at once; steppers
+    // are tapped in runs and wait for the run to end.
+    timer.current = setTimeout(flush, now ? 0 : SAVE_DELAY)
   }
 
   const pickChild = async (id) => {
@@ -127,9 +141,14 @@ export default function ParentScreenTime() {
   const child = children.find(c => c.id === childId)
   const r = rules
   const longest = Math.max(r.weekday, r.weekend)
-  const today = new Date().getDay()
-  const isWeekend = today === 0 || today === 6
-  const budget = isWeekend ? r.weekend : r.weekday
+  const now = new Date()
+  const today = localDay(now)
+  const holidayNow = onHoliday(r, now)
+  const isWeekend = isWeekendRules(r, now)
+  const extra = extraToday(r, now)
+  const budget = dayBudget(r, now) + extra
+  const giveExtra = (n) => change({ extra: { date: today, minutes: Math.min(EXTRA_MAX, extra + n) } }, { now: true })
+  const plusDays = (n) => { const d = new Date(now); d.setDate(d.getDate() + n); return localDay(d) }
 
   return (
     <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
@@ -164,14 +183,41 @@ export default function ParentScreenTime() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1 }}>{s('st_min', { n: budget })}</div>
                 <div style={{ ...TEXT.bodySm, fontWeight: 700, opacity: .93, marginTop: 4 }}>
-                  {s(isWeekend ? 'st_today_weekend' : 'st_today_weekday', { name: child.name })}
+                  {s(holidayNow ? 'st_today_holiday' : isWeekend ? 'st_today_weekend' : 'st_today_weekday', { name: child.name })}
                 </div>
                 <div style={{ ...TEXT.caption, fontWeight: 700, opacity: .85, marginTop: 6 }}>
-                  {[r.school && !isWeekend && `🏫 ${r.schoolStart}–${r.schoolEnd}`, r.bedtime && `🌙 ${r.bedStart}`, r.earnedCap > 0 && `⭐ +${r.earnedCap}`].filter(Boolean).join('  ·  ')}
+                  {[
+                    extra > 0 && `🎁 +${extra}`,
+                    r.learnFirst && `🔒 ${learned ?? '…'}/${r.learnNeed}`,
+                    r.school && !isWeekend && `🏫 ${r.schoolStart}–${r.schoolEnd}`,
+                    r.bedtime && `🌙 ${r.bedStart}`,
+                    r.earnedCap > 0 && `⭐ +${r.earnedCap}`,
+                  ].filter(Boolean).join('  ·  ')}
                 </div>
               </div>
               <div aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flex: 'none' }}>⏱️</div>
             </div>
+
+            <Head>{s('st_extra')}</Head>
+            <Card pad={16}>
+              <div style={{ ...TEXT.bodySm, color: PC.inkSoft, marginBottom: SPACE.s3 }}>{s('st_extra_intro', { name: child.name })}</div>
+              <div style={{ display: 'flex', gap: SPACE.s2 }}>
+                {[15, 30, 60].map(n => (
+                  <button key={n} className="tc-press tc-tap" disabled={extra + n > EXTRA_MAX} onClick={() => giveExtra(n)}
+                    style={{ flex: 1, minHeight: 44, borderRadius: RADIUS.sm, border: 'none', fontFamily: FONT, fontWeight: 800, fontSize: 14,
+                      background: extra + n > EXTRA_MAX ? PC.field : PC.tealBg, color: extra + n > EXTRA_MAX ? PC.inkFaint : PC.tealInk,
+                      cursor: extra + n > EXTRA_MAX ? 'default' : 'pointer' }}>+{s('st_min', { n })}</button>
+                ))}
+              </div>
+              {extra > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.s2, marginTop: SPACE.s3 }}>
+                  <div role="status" style={{ flex: 1, ...TEXT.bodySm, fontWeight: 800, color: PC.ink }}>🎁 {s('st_extra_given', { n: extra })}</div>
+                  <button onClick={() => change({ extra: null }, { now: true })} className="tc-tap"
+                    style={{ border: 'none', background: 'none', color: PC.danger, fontFamily: FONT, fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: 6 }}>{s('st_extra_undo')}</button>
+                </div>
+              )}
+              <div style={{ ...TEXT.caption, fontWeight: 600, color: PC.inkFaint, marginTop: SPACE.s3 }}>{s('st_extra_chat')}</div>
+            </Card>
 
             <Head>{s('st_daily')}</Head>
             <Card pad={16}>
@@ -186,6 +232,23 @@ export default function ParentScreenTime() {
               <Row title={s('st_cap')} sub={s('st_cap_sub')}>
                 <MinuteStepper label={s('st_cap')} value={r.cap} min={Math.max(longest, r.earnedCap)} max={480} step={15} onChange={v => change({ cap: v })} s={s} />
               </Row>
+            </Card>
+
+            <Head>{s('st_learn')}</Head>
+            <Card pad={16}>
+              <Row title={s('st_learn_on')} sub={s('st_learn_sub')}>
+                <Switch on={r.learnFirst} label={s('st_learn_on')} onChange={v => change({ learnFirst: v })} />
+              </Row>
+              {r.learnFirst && <>
+                <Hr />
+                <Row title={s('st_learn_need')} sub={learned == null ? s('loading') : s('st_learn_today', { name: child.name, n: learned })}>
+                  <MinuteStepper label={s('st_learn_need')} value={r.learnNeed} min={1} max={5} step={1} unit="task" onChange={v => change({ learnNeed: v })} s={s} />
+                </Row>
+                <div role="status" style={{ marginTop: SPACE.s3, borderRadius: RADIUS.sm, padding: `${SPACE.s2}px ${SPACE.s3}px`, ...TEXT.bodySm, fontWeight: 800,
+                  background: learned != null && learned >= r.learnNeed ? PC.greenBg : PC.amberBg, color: PC.ink }}>
+                  {learned == null ? '…' : learned >= r.learnNeed ? `✅ ${s('st_learn_open')}` : `🔒 ${s('st_learn_closed', { n: r.learnNeed - learned })}`}
+                </div>
+              </>}
             </Card>
 
             <Head>{s('st_school')}</Head>
@@ -204,6 +267,18 @@ export default function ParentScreenTime() {
               </Row>
               {r.bedtime && <TimeRange start={r.bedStart} end={r.bedEnd} s={s}
                 onChange={(a, b) => change({ bedStart: a, bedEnd: b })} />}
+            </Card>
+
+            <Head>{s('st_holiday')}</Head>
+            <Card pad={16}>
+              <Row title={s('st_holiday_on')} sub={s('st_holiday_sub')}>
+                <Switch on={r.holiday} label={s('st_holiday_on')}
+                  onChange={v => change(v && !r.holidayFrom ? { holiday: true, holidayFrom: today, holidayTo: plusDays(6) } : { holiday: v })} />
+              </Row>
+              {r.holiday && <DateRange from={r.holidayFrom} to={r.holidayTo} s={s} onChange={(a, b) => change({ holidayFrom: a, holidayTo: b })} />}
+              {r.holiday && r.holidayTo && r.holidayTo < today && (
+                <div style={{ ...TEXT.caption, fontWeight: 700, color: PC.peachDeep, marginTop: SPACE.s2 }}>{s('st_holiday_past')}</div>
+              )}
             </Card>
 
             <Head>{s('st_gems')}</Head>
@@ -307,7 +382,7 @@ function MinuteStepper({ value, onChange, min = 0, max = 480, step = 5, unit = '
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
       <button aria-label={`${label} −${step}`} disabled={value <= min} onClick={() => onChange(clamp(value - step))} style={btn(value <= min)}>−</button>
       <span aria-live="polite" style={{ minWidth: 54, textAlign: 'center', ...TEXT.bodySm, fontWeight: 800, color: PC.ink, fontVariantNumeric: 'tabular-nums' }}>
-        {unit === 'gem' ? `${value} ⭐` : s('st_min', { n: value })}
+        {unit === 'gem' ? `${value} ⭐` : unit === 'task' ? s('st_tasks', { n: value }) : s('st_min', { n: value })}
       </span>
       <button aria-label={`${label} +${step}`} disabled={value >= max} onClick={() => onChange(clamp(value + step))} style={btn(value >= max)}>+</button>
     </div>
@@ -321,6 +396,17 @@ function TimeRange({ start, end, onChange, s }) {
       <input type="time" aria-label={s('sc_start')} value={start} onChange={e => e.target.value && onChange(e.target.value, end)} style={input} />
       <span style={{ color: PC.inkFaint, fontWeight: 800 }}>—</span>
       <input type="time" aria-label={s('sc_end')} value={end} onChange={e => e.target.value && onChange(start, e.target.value)} style={input} />
+    </div>
+  )
+}
+
+function DateRange({ from, to, onChange, s }) {
+  const input = { flex: 1, minWidth: 0, border: `1.5px solid ${PC.line}`, borderRadius: 11, background: PC.field, padding: '9px 6px', textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.s2, marginTop: SPACE.s3 }}>
+      <input type="date" aria-label={s('sc_start')} value={from} max={to || undefined} onChange={e => e.target.value && onChange(e.target.value, to < e.target.value ? e.target.value : to)} style={input} />
+      <span style={{ color: PC.inkFaint, fontWeight: 800 }}>—</span>
+      <input type="date" aria-label={s('sc_end')} value={to} min={from || undefined} onChange={e => e.target.value && onChange(from > e.target.value ? e.target.value : from, e.target.value)} style={input} />
     </div>
   )
 }
