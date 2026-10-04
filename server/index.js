@@ -8,6 +8,7 @@ import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
 import { buildWeekReport } from './week.js'
+import { applyScreenExtra, screenTimeContext, SCREEN_EXTRA_MAX } from './screenTime.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -431,6 +432,9 @@ async function getParentContext(parentId) {
           return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
+      // Screen time rules from the parent's Screen time tab. A web trial: rules only, nothing on
+      // a device is measured or enforced, so there is no usage figure to report — only the plan.
+      screenTime: screenTimeContext(prefsAll?.screen_control_web?.[child.id], userNow.toISODate()),
       // The once-a-day bonus for doing every activity (Hezarfen / All-Rounder / Todoterreno).
       dailyBonus: (() => {
         const b = bonusSettings(child.task_settings, child.age)
@@ -1480,6 +1484,27 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'give_screen_time',
+      description:
+        'The parent wants to give a child EXTRA SCREEN / PLAY TIME for TODAY only ("Ada\'ya bugün 15 dk daha ver", ' +
+        '"give Ada 30 more minutes today", "dale a Ada 15 minutos más"). Minutes, not gems — this is NOT gift_gems. ' +
+        'It does not change the child\'s rules; it adds to today and is gone tomorrow. The server allows 5-120 ' +
+        'minutes and at most 120 extra minutes per child per day in total — if the parent asks for more, say ' +
+        'that is the most and ask, do not silently reduce. clear:true takes today\'s extra time away ("geri al", ' +
+        '"vazgeçtim"). HONESTY: screen time is still a web trial — nothing on the child\'s device is measured, ' +
+        'blocked or unlocked yet. After success say the extra time is saved to today\'s rules and will apply when ' +
+        'the Tuto phone app arrives; never say the child can play now or that a device was unlocked.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
+          minutes: { type: 'NUMBER', description: 'Extra minutes to ADD for today (whole number, 5-120). Omit when clear is true.' },
+          clear: { type: 'BOOLEAN', description: 'true to remove all of today\'s extra time instead of adding.' },
+        },
+        required: ['child_id'],
+      },
+    },
+    {
       name: 'deduct_gems',
       description:
         'The opposite of gift_gems — the parent wants to REMOVE gems from a child\'s balance with no reward or ' +
@@ -2415,6 +2440,41 @@ async function giftGemsTool(childId, amount, parentId, note) {
   return { success: true, childName: child.name, amount: n }
 }
 
+// Today's extra screen time, from chat. Writes the same field the parent's Screen time tab
+// writes (prefs.screen_control_web[childId].extra = { date, minutes }), with the same
+// compare-and-swap, so a tap in the app and a message in the same minute cannot overwrite each
+// other. The limits are here, not in the prompt: 5-120 per request, 120 per child per day.
+// "Today" is the parent's day (parents.timezone), the same day the tab shows them.
+async function giveScreenTimeTool(childId, minutes, parentId, clear = false) {
+  const n = Math.round(Number(minutes))
+  if (!clear && (!Number.isFinite(n) || n < 5 || n > SCREEN_EXTRA_MAX)) {
+    return { success: false, error: `minutes must be between 5 and ${SCREEN_EXTRA_MAX}` }
+  }
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: parent, error: readErr } = await supabase
+      .from('parents').select('prefs, timezone').eq('id', parentId).maybeSingle()
+    if (readErr || !parent) return { success: false, error: readErr?.message || 'parent not found' }
+    const today = DateTime.now().setZone(parent.timezone || 'UTC').toISODate()
+    const step = applyScreenExtra(parent.prefs, childId, today, n, clear)
+    if (!step.ok) return { success: false, ...step.refusal }
+    const { next, total } = step
+    let q = supabase.from('parents').update({ prefs: next }).eq('id', parentId)
+    q = parent.prefs == null ? q.is('prefs', null) : q.eq('prefs', JSON.stringify(parent.prefs))
+    const { data: saved, error } = await q.select('id')
+    if (error) return { success: false, error: error.message }
+    if (saved?.length) {
+      return { success: true, childName: child.name, extraMinutesToday: total, date: today,
+               webTrial: 'Saved to the rules only. Nothing on the device is blocked or unlocked yet; it applies when the Tuto phone app arrives.' }
+    }
+  }
+  return { success: false, error: 'the settings changed at the same moment — try again' }
+}
+
 // note is optional and free-text (e.g. "Toy purchase") — used as the
 // bt_ledger reason in place of the generic 'adjustment' so it reads clearly
 // in the child's gem history, same pattern as a reward claim using the
@@ -3073,6 +3133,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectClaimById(args.claim_id, parentId)
       } else if (name === 'gift_gems') {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId, args.note)
+      } else if (name === 'give_screen_time') {
+        toolResult = await giveScreenTimeTool(args.child_id, args.minutes, parentId, args.clear === true)
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'reset_child_pin') {

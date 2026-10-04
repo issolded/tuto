@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT, adoptAccountLang } from '../lib/parentI18n'
 import { childLang, t } from '../lib/i18n'
-import { cacheDemoRules, useScreenDemo } from '../lib/screenControlDemo'
+import { cacheDemoRules, useScreenDemo, useLearnedToday } from '../lib/screenControlDemo'
 import { updateParentPrefs } from '../lib/parentPrefs'
 import { SAMPLE_APPS, readRules, validRules, status, canRedeem } from '../lib/screenControl'
 import { PC, PCSS, FONT, TopBar, Card, Btn, Pill } from '../lib/parentUI'
@@ -46,6 +46,7 @@ function Demo({ rules, child }) {
   const s = useT()
   const c = key => t(key, childLang(child))
   const [demo, act] = useScreenDemo(child.id, rules, true)
+  useLearnedToday(child.id, act)
   const info = status(rules, demo)
   const remaining = `${Math.floor(info.remaining / 60)}:${String(info.remaining % 60).padStart(2, '0')}`
   const base = [0, 6].includes(new Date(demo.now).getDay()) ? rules.weekend : rules.weekday

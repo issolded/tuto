@@ -74,6 +74,7 @@ const STRINGS = {
   sc_redeem: {en: "Get 5 min · %n% demo Gems", tr: "5 dk al · %n% deneme Gem’i", es: "Obtener 5 min · %n% Gems de prueba"},
   sc_request_hint: {en: "Requests need enough demo Gems and room in both daily limits. Protected hours and paused or blocked apps cannot be opened with Gems.", tr: "Talep için yeterli deneme Gem’i ve her iki günlük sınırda yer gerekir. Korunan saatler, duraklatılan veya engellenen uygulamalar Gem ile açılamaz.", es: "Se necesitan Gems de prueba y margen en ambos límites. Las horas protegidas y apps pausadas o bloqueadas no se abren con Gems."},
   sc_status_ready: {en: "Ready to play", tr: "Oyun için hazır", es: "Listo para jugar"},
+  sc_status_learn_first: {en: "Finish today's task first, then games open", tr: "Önce bugünkü görevini bitir, sonra oyunlar açılır", es: "Primero termina la tarea de hoy y luego se abren los juegos"},
   sc_status_allowed: {en: "Always available · no play time used", tr: "Her zaman açık · oyun süresi harcanmaz", es: "Siempre disponible · no consume tiempo"},
   sc_status_blocked: {en: "This app is blocked in the demo", tr: "Bu uygulama denemede engelli", es: "App bloqueada en la prueba"},
   sc_status_paused: {en: "Play is paused by your parent", tr: "Ebeveynin oyunları duraklattı", es: "Tu familia ha pausado los juegos"},

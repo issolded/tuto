@@ -769,7 +769,20 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       düzenleme kaybettirir). Değerler girilirken sıkıştırılıyor (hafta içi ≤ tavan, ek süre ≤ tavan),
       kaydedilemeyen tek şey başı = sonu olan program. Ekran KULLANIMI değil bugünün PLANINI gösteriyor
       ve üstte web denemesi uyarısı duruyor (bkz. 2026-09-20 sınırı). Çocuk görünümü denemesi eski
-      `/parent/settings/screen-control?view=preview`'da. Sekme çubuğu prototipin birebir tasarımı
+      `/parent/settings/screen-control?view=preview`'da.
+      **Aynı gün ikinci tur (kullanıcı onayı, piyasa karşılaştırmasından):** (1) **Önce öğren, sonra oyna**
+      (`learnFirst`, `learnNeed` 1-5): o günün BİTMİŞ görev sayısı (today-summary, gerçek veri) yetene kadar
+      süreli uygulamalar kapalı; sayı bilinmiyorsa kapatmaz; uyku/okul saati önceliği korur. (2) **Bugünlük
+      ek süre** (`extra: {date, minutes}`): kuralları değiştirmez, yalnız o gün; günlük tavanın ÜSTÜNE biner
+      (tavan Gem'le kazanılan süreyi yönetir, bu ebeveynin kendi kuralını bir günlüğüne aşması); kişi başı
+      günde en fazla 120 dk, kodda. Sohbette `give_screen_time` (5-120 dk, `clear`), sekmeyle aynı alanı
+      compare-and-swap ile yazar; "bugün" ebeveynin saat dilimi. Model "şimdi oynayabilir/cihaz açıldı"
+      diyemez — araç açıklaması ve sonuç web denemesi olduğunu söyler. (3) **Tatil modu** (`holiday`,
+      `holidayFrom..holidayTo` dahil): okul saati kapalı, her gün hafta sonu süresi. Eski kayıtlı kurallar
+      varsayılanların üstüne okunuyor (`readRules` birleştirir), sıfırlanmıyor. Sohbet bağlamında
+      `screenTime` cümlesi (plan, kullanım değil). Sunucu mantığı `server/screenTime.js`, test
+      `scripts/tests/screen-time.test.mjs`; model testi `src/lib/__tests__/screenControl.test.js` 10/10.
+      Gerçek Supabase ve gerçek sohbet modeliyle (`give_screen_time` çağrısı) denenmedi. Sekme çubuğu prototipin birebir tasarımı
       (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
       bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
       (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.
