@@ -761,10 +761,34 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       dönüyor. Üç kırılma senaryosuyla (bare Fredoka, eksik rescue, range'den İ'nin düşmesi)
       doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
       tamamını taşıyor; Georgia ve monospace sistem fontu.
+- [x] Ebeveyn uygulaması: alt sekmeler, Raporlar ve tek telefon kolonu (2026-10-04, Claude).
+      Üç sekme — **Çocuklar** (ana ekran), **Raporlar** (haftalık), **Ayarlar**. Ekran Kontrolü sekme
+      ALMADI: cihazda hiçbir şey engellemiyor ve sekme "bu uygulamanın ana işlerinden biri" demek;
+      çocuğun sayfasında duruyor, gerçek olunca sekme olur. Sekme çubuğu prototipin birebir tasarımı
+      (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
+      bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
+      (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.
+      **Raporlar:** `GET /api/parent/children/:childId/week` (ebeveyn JWT + sahiplik), Pazartesi
+      başlangıçlı hafta, gün gün gem + sınıra takılan gün + geçen haftayla karşılaştırma. Toplama
+      mantığı `server/week.js`'te — DB'siz ve saatsiz, `scripts/tests/parent-week.test.mjs` ile.
+      **Tek genişlik:** 980px tablet düzeni kaldırıldı (tarayıcıda vardı, cihazda yoktu); her ebeveyn
+      ekranı `.tc-col`, 430px, geniş ekranda arkası koyulaşıyor. Ekran Kontrolü 1100px'ti ve iki
+      sütunu VIEWPORT'a bakıyordu — laptopta telefon kolonunu ikiye bölüyordu.
+      **Yolda çıkan üç hata:** (1) `completedStoriesBetween` satır değil supabase sonucu döndürüyor,
+      `.map` her istekte patlıyordu — uç canlı DB olmadan çalıştırılamadığı için fark edilemiyordu;
+      `rowsOf()` iki şekli de okuyor. (2) `.tc-tabbed`'in 96px alt boşluğunu üç ekran satır içi
+      `padding` kısayoluyla 32px'e eziyordu — bar sayfanın son 37px'ini kapatıyor, raporun "sınıra
+      takıldı" uyarısı altında kalıyordu. (3) Rapor tarihleri ÇOCUĞUN diliyle yazılıyordu: görev
+      adları çocuğun sözlüğünden gelmeli ama hafta aralığı ve gün adları ebeveynin dili
+      (İspanyolca okuyan ebeveyn kendi raporunda "22–28 Eylül · Pzt Sal Çar" görüyordu).
+      Doğrulama: npm test 107/107, build, font:check; i18n:check 82'de, eslint 353'te değişmedi;
+      tarayıcıda 9 ebeveyn rotası × 320/390/1280 × 3 dil, yatay taşma ve runtime hatası 0.
+      Gerçek Supabase/Railway ile denenmedi.
 - [x] Parent dashboard keşfedilebilirliği (2026-09-20): panel "bugün" ekranı oldu — çocuk kartları bugünkü
       etkinlik, gem, Hezarfen ve "N onay bekliyor" rozetiyle (`/api/parent/overview`), "Bir süre meşgulüm" panelde,
       kanal bağlı değilse hatırlatma. Bütün ayarlar üstteki ⚙️ **Ayarlar** düğmesinden `/parent/settings`'e taşındı
-      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). Tablette iki sütun.
+      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). (Tabletteki iki sütun ve
+      ⚙️ düğmesi 2026-10-04'te kalktı: ayarlar alt sekme oldu, uygulama tek telefon kolonu.)
 - [ ] Drawings, Eylül 2026 partilerinden kalan tek şey: `cizims_sep2026/drawings/robot`
       yayınlanmadı — çizim Optimus Prime, omzunda Autobot arması ve elinde silahla. Marka
       korumalı bir karakter; jenerik bir robot çizdirip aynı boru hattından geçirmek gerek.
