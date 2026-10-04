@@ -736,6 +736,10 @@ export default function ChildHome() {
 
   const ts = child?.task_settings || {}
   useEffect(() => {
+    let device
+    try { device = JSON.parse(localStorage.getItem('child_device') || 'null') } catch { /* require setup */ }
+    if (!device?.device_token) { nav('/setup/assign', { replace: true }); return }
+    if (device.child?.id !== child?.id) { nav('/child', { replace: true }); return }
     if (!localStorage.getItem('family_code')) { nav('/setup', { replace: true }); return }
     if (!child?.id) { nav('/child', { replace: true }); return }
 

@@ -32,6 +32,7 @@ const EnglishScreen = lazy(() => import('./screens/EnglishScreen'))
 const PuzzleScreen = lazy(() => import('./screens/PuzzleScreen'))
 const ReviewScreen = lazy(() => import('./screens/ReviewScreen'))
 import FamilySetup from './screens/FamilySetup'
+import DeviceSetup from './screens/DeviceSetup'
 import TaskSettings from './screens/TaskSettings'
 const ChildSettings = lazy(() => import('./screens/ChildSettings'))
 const ScreenControlSettings = lazy(() => import('./screens/ScreenControlSettings'))
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/settings" element={session ? <TaskSettings /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/review/:ledgerId" element={session ? <Suspense fallback={null}><ReviewScreen parent /></Suspense> : <Navigate to="/parent/login" />} />
+        <Route path="/setup/assign" element={<DeviceSetup />} />
         <Route path="/setup" element={<FamilySetup />} />
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/settings" element={<Suspense fallback={null}><ChildSettings /></Suspense>} />

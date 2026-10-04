@@ -1,3 +1,4 @@
+import { issueDeviceBinding, verifyDeviceBinding } from './deviceBinding.js'
 import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
@@ -3305,6 +3306,29 @@ app.post('/api/gemini/generate', async (req, res) => {
 // column of every child to anyone who knew the family code, pin_hash included. A four-digit
 // PIN whose hash is already in the browser is 10,000 offline guesses, and there is no counter
 // that can sit in front of that. Only what the screen draws goes out now.
+// Pairing is a parent-authorized operation; knowing a family code is not permission.
+app.get('/api/device/children', async (req, res) => {
+ const token = req.headers.authorization?.replace(/^Bearer /i, '')
+ if (!token) return res.status(401).json({ error: 'parent required' })
+ const { data, error } = await supabase.auth.getUser(token)
+ if (error || !data?.user) return res.status(401).json({ error: 'parent required' })
+ const result = await supabase.from('children').select('id, name').eq('parent_id', data.user.id)
+ if (result.error) return res.status(503).json({ error: 'unavailable' })
+ res.json({ children: result.data || [] })
+})
+app.post('/api/device/bind', async (req, res) => {
+ const token = req.headers.authorization?.replace(/^Bearer /i, '')
+ if (!token) return res.status(401).json({ error: 'parent required' })
+ const { data, error } = await supabase.auth.getUser(token)
+ if (error || !data?.user) return res.status(401).json({ error: 'parent required' })
+ const { data: child, error: childError } = await supabase.from('children').select('id, name').eq('parent_id', data.user.id).eq('id', req.body?.child_id || '').maybeSingle()
+ if (childError || !child) return res.status(403).json({ error: 'not your child' })
+ const { data: parent } = await supabase.from('parents').select('family_code').eq('id', data.user.id).single()
+ if (!parent?.family_code) return res.status(409).json({ error: 'family setup required' })
+ const device_token = issueDeviceBinding(data.user.id, child.id, SUPABASE_SERVICE_ROLE_KEY)
+ res.json({ device_token, child, family_code: parent.family_code })
+})
+
 app.get('/api/family/:code/children', async (req, res) => {
   const code = req.params.code?.trim().toUpperCase()
   if (!code) return res.status(400).json({ error: 'code required' })
@@ -3332,6 +3356,8 @@ function hashPinServer(pin) {
 app.post('/api/family/:code/verify-pin', async (req, res) => {
   const code = req.params.code?.trim().toUpperCase()
   const pin = String(req.body?.pin ?? '').trim()
+  const binding = verifyDeviceBinding(req.body?.device_token, SUPABASE_SERVICE_ROLE_KEY)
+  if (!binding) return res.status(403).json({ error: 'device setup required' })
   if (!code || !/^\d{4}$/.test(pin)) return res.status(400).json({ error: 'code and 4-digit pin required' })
 
   const now = Date.now()
@@ -3346,7 +3372,8 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
   const { data: children } = await supabase.from('children')
     .select('id, name, age, pin_hash, language, task_settings').eq('parent_id', parent.id)
   // PINs are checked only against the selected sibling; ambiguous legacy requests fail.
-  const match = matchFamilyChild(children, hashPinServer(pin), req.body?.child_id)
+  if (binding.parentId !== parent.id) return res.status(403).json({ error: 'device family mismatch' })
+  const match = matchFamilyChild(children, hashPinServer(pin), binding.childId)
 
   if (!match) {
     state.fails += 1
