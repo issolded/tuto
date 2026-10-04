@@ -29,6 +29,7 @@ export default function ChildPin() {
   const [expression, setExpression] = useState('default')
   // null = still loading, 'unreachable' = lookup failed, [] = family really has no children
   const [familyChildren, setFamilyChildren] = useState(null)
+  const [forgot, setForgot] = useState(false)
 
   const familyCode = localStorage.getItem('family_code')
 
@@ -45,6 +46,14 @@ export default function ChildPin() {
     const next = pin + d
     setPin(next)
     if (next.length === 4) verifyPin(next)
+  }
+
+  // Nothing is reset from here: it only tells the parent, who makes a new PIN (see /forgot-pin on the server).
+  const forgotPin = async () => {
+    setForgot(true)
+    try {
+      await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/forgot-pin`, { method: 'POST' })
+    } catch { /* the child still sees that they asked; the parent hears at the next try */ }
   }
 
   const fail = (msg) => {
@@ -164,6 +173,12 @@ export default function ChildPin() {
         <button onClick={() => addPin('0')} disabled={checking} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 24, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer' }}>0</button>
         <button onClick={() => setPin(p => p.slice(0,-1))} disabled={checking} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 20, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer' }}>⌫</button>
       </div>
+
+      {forgot ? (
+        <div style={{ marginTop: 22, color: 'white', fontSize: 15, fontWeight: 700, background: 'rgba(0,0,0,0.2)', borderRadius: 14, padding: '10px 18px', textAlign: 'center', maxWidth: 300, lineHeight: 1.4 }}>{s('cp_forgot_sent')}</div>
+      ) : (
+        <button onClick={forgotPin} style={{ marginTop: 22, background: 'none', border: 'none', color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: 800, fontFamily: 'Nunito', textDecoration: 'underline', cursor: 'pointer' }}>{s('cp_forgot')}</button>
+      )}
     </div>
   )
 }

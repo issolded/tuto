@@ -330,6 +330,23 @@ function ChangePinSheet({ childId, parentId, onClose }) {
   const [confirm, setConfirm] = useState('')
   const [errMsg, setErrMsg]   = useState('')
   const [done, setDone]       = useState(false)
+  // A PIN the app makes for the parent to pass on, so nobody has to think of one: four digits, none a sibling already
+  // has (the PIN is how the app tells the children apart), and not 0000 or 1234.
+  const [made, setMade]       = useState(null)
+
+  const makeOne = async () => {
+    const { data: siblings } = parentId
+      ? await supabase.from('children').select('pin_hash').eq('parent_id', parentId).neq('id', childId)
+      : { data: [] }
+    const taken = new Set((siblings || []).map(x => x.pin_hash))
+    for (let i = 0; i < 200; i++) {
+      const p = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+      if (/^(\d)\1{3}$/.test(p) || ['0123', '1234', '2345', '3456', '4567', '5678', '6789', '9876', '4321'].includes(p)) continue
+      if (taken.has(await hashPin(p))) continue
+      setMade(p)
+      return
+    }
+  }
 
   const handleInput = (val) => {
     if (phase === 'enter') {
@@ -370,6 +387,16 @@ function ChangePinSheet({ childId, parentId, onClose }) {
         <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.green, padding: '16px 0' }}>
           {s('cd_pin_updated')}
         </div>
+      ) : made ? (
+        <>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.inkSoft }}>{s('cd_pin_made')}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 52, letterSpacing: 10, color: PC.ink, margin: '6px 0' }}>{made}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, lineHeight: 1.45 }}>{s('cd_pin_made_b')}</div>
+          </div>
+          <Btn onClick={() => savePin(made)}>{s('cd_pin_save')}</Btn>
+          <Btn variant="ghost" onClick={() => setMade(null)}>{s('cancel')}</Btn>
+        </>
       ) : (
         <>
           <div style={{ textAlign: 'center' }}>
@@ -384,6 +411,7 @@ function ChangePinSheet({ childId, parentId, onClose }) {
             <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 12, padding: '10px 16px', fontFamily: FONT, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{errMsg}</div>
           )}
           <PinPad value={phase === 'enter' ? pin : confirm} onChange={handleInput} />
+          {phase === 'enter' && pin.length === 0 && <Btn variant="ghost" onClick={makeOne}>{s('cd_pin_random')}</Btn>}
           <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
         </>
       )}

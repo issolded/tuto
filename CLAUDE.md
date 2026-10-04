@@ -107,6 +107,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] Çocuk PIN'ini unutursa (2026-10-04, Claude). **Çocuk kendi kendine sıfırlayamaz** (PIN çocukları ayırır ve gem/ekran süresini kardeşten korur); ebeveyn yeni PIN verir ve çocuğa
+      KENDİ söyler. Akış: PIN ekranında "PIN'imi unuttum" → `POST /api/family/:code/forgot-pin` ebeveyne `attention` mesajı (10 dk'da bir, aile kodu yoksa da aynı cevap, hiçbir şey
+      değişmez) → ebeveyn sohbette "Ada'nın PIN'ini sıfırla" / "Ada'nın PIN'i 4821 olsun" → `reset_child_pin` aracı (`resetChildPinTool`: kendi seçtiği ya da sunucunun ürettiği 4 hane,
+      kardeşte olanı ve 0000/1234 gibileri reddeder, ailenin kilidini açar, PIN'i bir kez döner, yalnız hash saklanır). Panelde de: çocuk sayfası → PIN'i değiştir → "🎲 Benim için oluştur".
+      **Eski PIN gösterilmez** (hash). Sohbet modeli "unuttu" deyince önce "yapamıyorum, ayarlara git" diyordu: sistem istemine ve araç açıklamasına açık kural eklendi, `chat-probe` ile
+      TR/ES/EN'de 2'şer koşuda doğrulandı (sorar, evet deyince çağırır; yazma duvarı açıkken gerçek PIN değişmedi). Test: `server/scripts/pin-flow.mjs`. **Açık:** PIN ekranındaki düğme
+      küçük telefonlarda tuş takımının altında kalıyor (kaydırınca görünür); yeni PIN sohbet geçmişinde kalır (4 haneli çocuk PIN'i için kabul edildi).
 - [x] İngilizce yardımda resimli üçüncü basamak (2026-10-04, Claude; kullanıcı fikri). Yapıya dair sorularda metin yerine çizim: alfabe şeridi
       (`alpha-order` ilk harfler, `letter-analogy` kaydırma okları + sayı kısmı), anahtar tablosu (`letter-code` ilk harf çözülü gerisi "?", `letter-sum`),
       iki kelime alt alta değişen harf yanık (`change-pattern`), kelime merdiveni (`word-ladder`; `?` ortada, uçlarda farklı harfler yanık), mantık tablosu

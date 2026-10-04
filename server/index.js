@@ -1725,6 +1725,31 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'reset_child_pin',
+      description:
+        'A child has forgotten their PIN, or the parent wants a new one ("Ada\'nın PIN\'ini sıfırla", "Ada PIN\'ini unuttu", ' +
+        '"resetea el PIN de Ada", "make Ada a new PIN", "Ada\'nın PIN\'i 4821 olsun"). Take child_id from the children list ' +
+        'in context. If the parent names the PIN they want, pass it as pin (exactly four digits). If they do not, OMIT pin and ' +
+        'the server makes a random one — never invent a PIN yourself. If more than one child could be meant, ask which first.\n' +
+        'YOU CAN do this, so never tell a parent you cannot change or reset a child\'s PIN, and never just send them to ' +
+        'the settings. What you cannot do is SHOW the old PIN (only a scrambled copy is kept): say that, and offer a new one. ' +
+        'So when a parent says a child forgot their PIN, answer in their language: you cannot read the old one, but you can make ' +
+        'a new one now (random) or use one they choose, and ask which. Then call this once they say yes.\n' +
+        'Only call this when the parent clearly asks. A message saying someone forgot a PIN is not a reset by itself: ask ' +
+        'which child and whether they want you to make one or have one in mind.\n' +
+        'After it succeeds, tell the parent the PIN from the tool result once, say it is for THEM to tell the child (you ' +
+        'never tell the child), and that the old PIN no longer works. If the tool says the PIN is already another child\'s, ' +
+        'say so and ask for a different one. Do not repeat the PIN in later messages.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
+          pin: { type: 'STRING', description: 'Optional: the exact four-digit PIN the parent asked for. Omit to have the server make one.' },
+        },
+        required: ['child_id'],
+      },
+    },
+    {
       name: 'set_autopilot',
       description:
         'Takes the approvals off this parent for a while and keeps their phone quiet, then hands them back. ' +
@@ -2828,6 +2853,11 @@ async function handleMessage(parentId, replyCb, text) {
         `- Yukarıdaki "onay bekleyen katkılar" listesinde bir veya daha fazla kayıt VARSA, asla "onay bekleyen ` +
         `bir şey yok" deme. Parent onay sorduğunda ya da "onayla" dediğinde, bu listeyi referans al. Liste boşsa, ` +
         `o zaman bekleyen olmadığını söyle.\n\n` +
+        `- ÇOCUĞUN PIN'İ: reset_child_pin aracın VAR. Çocuk PIN'ini unuttuysa ("Ada pinini unuttu", "Ada olvidó su pin", ` +
+        `"she forgot her PIN") "yapamıyorum" DEME ve ayarlara yönlendirme: eski PIN'i GÖREMEZSİN (yalnızca karışık ` +
+        `hâli saklanıyor) — bunu söyle — ama yenisini hemen yapabilirsin: rastgele bir PIN oluşturmayı mı yoksa onların ` +
+        `seçtiği bir PIN'i mi istediklerini sor (parent'ın dilinde, kısa), evet derse reset_child_pin çağır. PIN'i çocuğa ` +
+        `SEN söylemezsin, parent söyler.\n\n` +
         `- GENEL KURAL (her tool için geçerli, sadece gift_gems için değil): bir şeyi değiştirdiğini, ` +
         `kaydettiğini, güncellediğini, sildiğini, gönderdiğini ya da onayladığını SADECE bu turda gerçekten ` +
         `bir tool çağırdıysan ve sonucu success:true olarak döndüyse söyleyebilirsin. Parent bir şey yapmanı ` +
@@ -3043,6 +3073,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
+      } else if (name === 'reset_child_pin') {
+        toolResult = await resetChildPinTool(args.child_id, args.pin, parentId)
       } else if (name === 'update_task_reward') {
         toolResult = args.task_type === 'bonus'
           ? await updateBonusTool(args.child_id, args.gems, args.active, parentId, args.bonus_types)
@@ -3349,6 +3381,73 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
   const { pin_hash, ...child } = match
   res.json({ child })
 })
+
+// A child who has forgotten the PIN taps "I forgot my PIN". Nothing is reset by that: the PIN is what keeps one sibling out of
+// another's gems and screen time, so only the PARENT can make a new one (the chat tool reset_child_pin, or the
+// child's page in the dashboard). This only tells the parent, at most once in ten minutes, and answers the same
+// whether or not the family code exists.
+const forgotNotified = new Map()
+const FORGOT_GAP_MS = 10 * 60 * 1000
+app.post('/api/family/:code/forgot-pin', async (req, res) => {
+  const code = req.params.code?.trim().toUpperCase()
+  if (!code) return res.status(400).json({ error: 'code required' })
+  try {
+    const last = forgotNotified.get(code) || 0
+    if (Date.now() - last > FORGOT_GAP_MS) {
+      const { data: parent } = await supabase.from('parents').select('id, prefs').eq('family_code', code).maybeSingle()
+      if (parent) {
+        forgotNotified.set(code, Date.now())
+        const { data: kids } = await supabase.from('children').select('name').eq('parent_id', parent.id)
+        const names = (kids || []).map(k => k.name).join(', ')
+        const lang = parentLang(parent.prefs)
+        sendNotification(parent.id, say(lang,
+          `Someone tapped "I forgot my PIN" on your family's Tuto${names ? ` (${names})` : ''}. If it's one of your children, tell me which one and I'll make them a new PIN, or tell me the one you'd like them to have. I won't change anything until you say so. 🔑`,
+          `Tuto'da biri "PIN'imi unuttum" dedi${names ? ` (${names})` : ''}. Çocuklarınızdan biriyse hangisi olduğunu yazın, yeni bir PIN oluşturayım; ya da vermek istediğiniz PIN'i söyleyin. Siz söylemeden hiçbir şeyi değiştirmem. 🔑`,
+          `Alguien ha tocado "He olvidado mi PIN" en el Tuto de tu familia${names ? ` (${names})` : ''}. Si es uno de tus hijos, dime cuál y le haré un PIN nuevo, o dime el que quieras darle. No cambiaré nada hasta que me lo digas. 🔑`),
+        { kind: 'attention', detail: {
+          tr: "biri PIN'ini unuttuğunu söyledi, siz söyleyene kadar bir şey değişmeyecek",
+          en: 'someone said they forgot their PIN; nothing changes until you say so',
+          es: 'alguien ha dicho que olvidó su PIN; no cambia nada hasta que lo digas',
+        } }).catch(() => {})
+      }
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[PIN]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// A new PIN for a child, on the parent's say-so: the one they chose, or one made here. Four digits, never one a
+// sibling already has (the PIN is how the app tells the children apart), and never a pattern a sibling would try
+// first (0000, 1234). The family's lockout is cleared so the new PIN works at once. The PIN is returned once, to be
+// told to the child by the parent; only its hash is stored.
+async function resetChildPinTool(childId, pin, parentId) {
+  const { data: child } = await supabase.from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+  const { data: sibs } = await supabase.from('children').select('pin_hash').eq('parent_id', parentId).neq('id', childId)
+  const taken = new Set((sibs || []).map(c => c.pin_hash))
+  const weak = (p) => /^(\d)\1{3}$/.test(p) || ['0123', '1234', '2345', '3456', '4567', '5678', '6789', '9876', '4321'].includes(p)
+  let chosen = null
+  if (pin !== undefined && pin !== null && String(pin).trim() !== '') {
+    const p = String(pin).trim()
+    if (!/^\d{4}$/.test(p)) return { success: false, error: 'a PIN is exactly four digits' }
+    if (taken.has(hashPinServer(p))) return { success: false, error: 'that PIN already belongs to one of the other children — they would be signed in as each other. Ask for a different one.' }
+    chosen = p
+  } else {
+    for (let i = 0; i < 200 && !chosen; i++) {
+      const p = String(crypto.randomInt(0, 10000)).padStart(4, '0')
+      if (!weak(p) && !taken.has(hashPinServer(p))) chosen = p
+    }
+    if (!chosen) return { success: false, error: 'could not make a PIN' }
+  }
+  const { error } = await supabase.from('children').update({ pin_hash: hashPinServer(chosen) }).eq('id', childId)
+  if (error) return { success: false, error: error.message }
+  const { data: par } = await supabase.from('parents').select('family_code').eq('id', parentId).maybeSingle()
+  if (par?.family_code) pinAttempts.delete(par.family_code.toUpperCase())
+  return { success: true, childName: child.name, pin: chosen, chosen_by_parent: !!(pin !== undefined && pin !== null && String(pin).trim() !== '') }
+}
 
 app.get('/api/children/:childId/rewards', async (req, res) => {
   const { childId } = req.params

@@ -193,6 +193,8 @@ const P = {
   // The child reads these, but nothing here knows WHICH child yet — the PIN is what
   // identifies them — so children.language is not available. The device language, which
   // the parent set when they linked this device, is the only honest source.
+  cp_forgot:         { en: 'I forgot my PIN', tr: 'PIN’imi unuttum', es: 'He olvidado mi PIN' },
+  cp_forgot_sent:    { en: 'I told your grown-up. They will give you a new PIN! 💌', tr: 'Büyüğüne haber verdim. Sana yeni bir PIN verecek! 💌', es: 'Se lo he dicho a tu persona mayor. ¡Te dará un PIN nuevo! 💌' },
   cp_hi:             { en: "Hi! I'm Tuto 👋", tr: 'Merhaba! Ben Tuto 👋', es: '¡Hola! Soy Tuto 👋' },
   cp_enter_pin:      { en: 'Enter your PIN to start!', tr: 'Başlamak için PIN’ini gir!', es: '¡Escribe tu PIN para empezar!' },
   cp_too_many:       { en: 'Too many tries! Ask a grown-up — try again in %n% minutes ⏳',
@@ -627,6 +629,10 @@ const P = {
   cd_prev:           { en: 'Previous', tr: 'Önceki', es: 'Anterior' },
   cd_today:          { en: 'Today', tr: 'Bugün', es: 'Hoy' },
   cd_pin_updated:    { en: 'PIN updated! ✅', tr: 'PIN güncellendi! ✅', es: '¡PIN actualizado! ✅' },
+  cd_pin_random:     { en: '🎲 Make one for me', tr: '🎲 Benim için oluştur', es: '🎲 Hazme uno' },
+  cd_pin_made:       { en: 'The new PIN', tr: 'Yeni PIN', es: 'El PIN nuevo' },
+  cd_pin_made_b:     { en: 'Tell it to your child yourself. It is only shown now, and the old PIN stops working when you save.', tr: 'Çocuğunuza kendiniz söyleyin. Yalnızca şimdi gösteriliyor; kaydedince eski PIN çalışmaz.', es: 'Díselo tú a tu hijo. Solo se muestra ahora, y el PIN anterior deja de funcionar al guardar.' },
+  cd_pin_save:       { en: 'Save this PIN', tr: 'Bu PIN’i kaydet', es: 'Guardar este PIN' },
   cd_pin_new:        { en: 'Enter new PIN 🔐', tr: 'Yeni PIN gir 🔐', es: 'Escribe el PIN nuevo 🔐' },
   cd_pin_confirm:    { en: 'Confirm PIN 🔁', tr: "PIN'i onayla 🔁", es: 'Confirma el PIN 🔁' },
   cd_pin_new_b:      { en: 'Choose a 4-digit PIN', tr: '4 haneli bir PIN seç', es: 'Elige un PIN de 4 cifras' },
