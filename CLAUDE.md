@@ -1100,3 +1100,5 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 - 2026-10-04 kullanıcı geri alma kararı: ebeveyn oturumuyla cihaz eşleştirme geri alındı. /setup yeniden aile kodu veya QR -> çocuk PIN akışı. /setup/assign eski bağlantısı /setup yönlendirmesidir. Cihaz belgesi zorunluluğu ve çocuk kurulumunda ebeveyn sign-out kaldırıldı. Aile kodunun sabit kalması düzeltmesi korunur. Yukarıdaki cihaz belgesi kararı artık geçerli değildir.
 
 - 2026-10-04: ReadingFlow kitap kayıt hatasında kapağa dönmez; başlık/kapak korunur, tekrar deneme aynı kitap ID ile yapılır. Sayfa alanları DB hatasında ilerlemez. QA hesabında doğrudan anon insert başarılı; kullanıcının asıl kayıt hatası henüz yeniden üretilemedi.
+
+- 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
