@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase'
 import { PC, FONT, TEXT, SPACE, RADIUS, PCSS, TopBar, Card, TaskIcon } from '../lib/parentUI'
 import { useT } from '../lib/parentI18n'
 import { t as childT, childLang as childLangOf, localeFor } from '../lib/i18n'
+import ParentNav from '../components/ParentNav'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
@@ -102,10 +103,10 @@ export default function ParentReports() {
   const delta = data ? (data.totals.gems - data.previous.gems) : 0
 
   return (
-    <div style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <TopBar title={s('rp_title')} sub={child?.name} onBack={() => nav('/parent/dashboard')} />
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <TopBar title={s('rp_title')} sub={child?.name} />
 
-      <div className="tc-scroll" style={{ flex: 1, padding: `0 ${SPACE.s5}px ${SPACE.s8}px` }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, padding: `0 ${SPACE.s5}px ${SPACE.s8}px` }}>
 
         {children.length > 1 && (
           <div style={{ display: 'flex', gap: SPACE.s2, marginBottom: SPACE.s3 }}>
@@ -241,6 +242,7 @@ export default function ParentReports() {
           </>
         )}
       </div>
+      <ParentNav active="reports" />
     </div>
   )
 }
