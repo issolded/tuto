@@ -1504,7 +1504,7 @@ export default function ParentChildDetail() {
           <SectionHead>{s('cd_settings')}</SectionHead>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { icon: 'clock', label: s('sc_title'), sub: s('sc_intro'), onClick: () => nav(`/parent/settings/screen-control?child=${id}`) },
+              { icon: 'clock', label: s('sc_title'), sub: s('sc_intro'), onClick: () => nav(`/parent/screen-time?child=${id}`) },
               { icon: 'gear',  label: s('cd_task_settings'), sub: s('cd_task_settings_b'), onClick: () => nav(`/parent/child/${id}/settings`) },
               { icon: 'edit',  label: s('cd_edit_child').replace(' ✏️', ''), sub: s('cd_edit_child_b'), onClick: () => setShowEditModal(true) },
               { icon: 'lock',  label: s('cd_change_pin'),     sub: s('cd_change_pin_b'),     onClick: () => setShowPinModal(true) },

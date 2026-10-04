@@ -92,10 +92,12 @@ export default function ScreenControlSettings() {
   // Opened from a child's page, so it starts on that child instead of asking which one.
   const [params] = useSearchParams()
   const fromChild = params.get('child') || ''
+  // The Screen time tab owns the rules now; it sends parents here only for the child-view trial.
+  const startView = params.get('view') === 'preview' ? 'preview' : 'rules'
   const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState(false)
   const [children, setChildren] = useState([]), [childId, setChildId] = useState('')
   const [parentId, setParentId] = useState(''), [saved, setSaved] = useState({})
-  const [rules, setRules] = useState(() => readRules()), [tab, setTab] = useState('rules')
+  const [rules, setRules] = useState(() => readRules()), [tab, setTab] = useState(startView)
   const [saving, setSaving] = useState(false), [message, setMessage] = useState('')
   async function load(preferred) {
     try {
@@ -133,7 +135,7 @@ export default function ScreenControlSettings() {
     finally { setSaving(false) }
   }
   return <div className="sc-page tc-col"><style>{CSS}</style>
-    <TopBar title={s('sc_title')} onBack={() => nav(fromChild ? `/parent/child/${fromChild}` : '/parent/dashboard')} />
+    <TopBar title={s('sc_title')} onBack={() => nav(fromChild ? `/parent/screen-time?child=${fromChild}` : '/parent/screen-time')} />
     <main className="sc-body">
       <Card style={{ background: PC.tealBg }}><div className="sc-stack"><Pill>{s('sc_demo')}</Pill><p className="sc-help">{s('sc_notice')}</p></div></Card>
       {loading ? <p role="status">{s('loading')}</p> : loadError ? <Card><p role="alert">{s('sc_load_error')}</p><Btn onClick={() => { setLoading(true); setLoadError(false); load() }}>{s('sc_retry')}</Btn></Card> : !child ? <p>{s('sc_no_child')}</p> : <>
