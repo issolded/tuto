@@ -55,6 +55,8 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
   const M = {
     back:    <path d="M15 5l-7 7 7 7" {...p} />,
     chevron: <path d="M9 6l6 6-6 6" {...p} />,
+    // Three bars on a baseline — the weekly report, drawn at the same 2px weight as the rest.
+    chart:   <g {...p}><path d="M4 20h16" /><path d="M7 20v-6" /><path d="M12 20V7" /><path d="M17 20v-9" /></g>,
     plus:    <path d="M12 5v14M5 12h14" {...p} />,
     close:   <path d="M6 6l12 12M18 6L6 18" {...p} />,
     check:   <path d="M5 12.5l4.5 4.5L19 7" {...p} />,
