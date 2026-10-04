@@ -118,7 +118,7 @@ test('the parent message says how the right answers were reached, and why the ge
   assert.match(tr.text, /Yardımla çözülen sorular yarım gem sayılıyor/)
   assert.match(tr.notice.detail.tr, /10\/10 doğru \(yardımsız 8, yardımla 2\), \+27 gem, sonra pekiştirdi 2\/2/)
   assert.match(mathSessionNotice('Alp', s, 'en', null).text, /10\/10 correct \(8 on their own, 2 with help\)\. \+27 gems/)
-  assert.match(mathSessionNotice('Alp', s, 'es', null).text, /10\/10 correctas \(8 solos, 2 con ayuda\)/)
+  assert.match(mathSessionNotice('Alp', s, 'es', null).text, /10\/10 correctas \(8 sin ayuda, 2 con ayuda\)/)
   // Nothing was helped: the line is exactly what it was.
   const plain = { ...s, unaided: 10, helped: 0, gems: 30 }
   assert.equal(mathSessionNotice('Alp', plain, 'tr', null).text, 'Alp matematiğini yaptı — 10/10 doğru. +30 gem 💎')
