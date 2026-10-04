@@ -262,6 +262,7 @@ const STRINGS = {
   rd_low_confidence:  { en: 'Is this your book? Let me make sure I got it right!',
                         tr: 'Kitabın bu mu? Doğru anladığımdan emin olayım!',
                         es: '¿Es este tu libro? Quiero asegurarme de que lo he entendido bien.' },
+  rd_book_save_failed: { en: 'Could not save. Your information is still here. Check your connection and try again.', tr: 'Kaydedilemedi. Bilgilerin burada duruyor. Bağlantını kontrol edip yeniden dene.', es: 'No se pudo guardar. Tus datos siguen aquí. Comprueba la conexión e inténtalo de nuevo.' },
   rd_try_again:       { en: "I couldn't see the cover clearly... try better lighting? 📸",
                         tr: 'Kapağı net göremedim… Işık biraz daha iyi olabilir mi? 📸',
                         es: 'No he visto bien la portada… ¿Pruebas con más luz? 📸' },
