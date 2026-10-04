@@ -19,7 +19,9 @@ const joinAnd = (names, lang) => names.length < 2 ? (names[0] || '') : `${names.
 const HELP = {
   'odd-one-out': [
     L('All the shapes but one share something. Find what they share, then pick the one that does not.', 'Biri dışında hepsinin ortak bir yanı var. Ortak yanı bul, sonra olmayanı seç.', 'Todas las figuras menos una comparten algo. Busca qué comparten y elige la que no.'),
-    (q, g) => L(`Compare ${joinAnd(attrNames(q, 'en'), 'en') ? 'their ' + joinAnd(attrNames(q, 'en'), 'en') : 'them'} one shape at a time: all but one are the same.`, `Şekillerin ${joinAnd(nomNames(q, 'tr'), 'tr')} özelliğini tek tek karşılaştır: biri dışında hepsi aynı.`, `Compara ${joinAnd(attrNames(q, 'es'), 'es')} figura a figura: todas menos una son iguales.`),
+    (q, g) => String(q.rule?.attr) === 'corner'
+      ? L('Look for the little dot in each shape: is it there, and in which corner? All but one are the same.', 'Her şekilde küçük noktaya bak: var mı, hangi köşede? Biri dışında hepsi aynı.', 'Busca el puntito en cada figura: ¿está y en qué esquina? Todas menos una son iguales.')
+      : L(`Compare ${joinAnd(attrNames(q, 'en'), 'en') ? 'their ' + joinAnd(attrNames(q, 'en'), 'en') : 'them'} one shape at a time: all but one are the same.`, `Şekillerin ${joinAnd(nomNames(q, 'tr'), 'tr')} özelliğini tek tek karşılaştır: biri dışında hepsi aynı.`, `Compara ${joinAnd(attrNames(q, 'es'), 'es')} figura a figura: todas menos una son iguales.`),
   ],
   identical: [
     L('Look at the shape above, then check each option against it, one detail at a time.', 'Üstteki şekle bak, sonra her seçeneği ona göre tek tek, ayrıntı ayrıntı kontrol et.', 'Mira la figura de arriba y compara cada opción con ella, detalle a detalle.'),

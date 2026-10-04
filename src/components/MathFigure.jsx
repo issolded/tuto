@@ -32,7 +32,7 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
   if (v.kind === 'prices') return <Prices items={v.items} />
   if (v.kind === 'digital') return <Digital times={v.times} labels={v.labels} />
   const body = v.kind === 'scale' ? scale(v, lang)
-    : v.kind === 'fraction' ? fraction(v)
+    : v.kind === 'fraction' ? fraction(v, lang)
       : v.kind === 'coords' ? coords(v, lang, hint)
         : v.kind === 'solid' ? solid(v)
           : v.kind === 'tally' ? tally(v)
@@ -222,10 +222,28 @@ function numberLine(v, lang) {
 }
 
 // ── a shape with some of its parts shaded ─────────────────────────────────────
-function fraction(v) {
+// Which colour is "shaded" has to be unmistakable: a pale tint next to white read as two colours, and a child could not tell which
+// one the question meant. The shaded parts are a strong blue, the others plain white, and a key under the picture says so.
+const SHADE = '#4f9be8'
+function fractionKey(h, lang) {
+  const y = h + 8
+  return (
+    <g>
+      <rect x={W / 2 - 112} y={y} width={16} height={16} fill={SHADE} stroke={INK} strokeWidth="1.5" />
+      {txt(W / 2 - 90, y + 8, say(lang, 'shaded', 'boyalı', 'coloreada'), { size: 13, anchor: 'start' })}
+      <rect x={W / 2 + 6} y={y} width={16} height={16} fill="white" stroke={INK} strokeWidth="1.5" />
+      {txt(W / 2 + 28, y + 8, say(lang, 'not shaded', 'boyalı değil', 'sin colorear'), { size: 13, anchor: 'start' })}
+    </g>
+  )
+}
+function fraction(v, lang = 'en') {
+  const r = fractionShapes(v)
+  return { h: r.h + 34, g: <g>{r.g}{fractionKey(r.h, lang)}</g> }
+}
+function fractionShapes(v) {
   const { shape, parts, shaded } = v
   const on = new Set(shaded)
-  const fill = i => (on.has(i) ? FILL : 'white')
+  const fill = i => (on.has(i) ? SHADE : 'white')
   if (shape === 'circle') {
     const cx = 160, cy = 100, r = 84
     const g = <g>
