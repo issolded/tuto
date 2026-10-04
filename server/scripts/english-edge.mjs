@@ -82,8 +82,8 @@ if (rv) {
 
 // the answer key never travels with the question
 const s2 = await post(`/api/children/${cid}/english-session`)
-const leak = JSON.stringify(s2.questions)
-ok(!/"correct"|"why"|"rule"/.test(leak), 'session payload leaks key fields')
+const keysOf = (v) => (v && typeof v === 'object' ? Object.entries(v).flatMap(([k, x]) => [k, ...keysOf(x)]) : [])
+ok(!keysOf(s2.questions).some(k => ['correct', 'why', 'rule'].includes(k)), 'session payload leaks key fields')
 
 console.log(fails.length ? `${fails.length} FAILURES\n` + fails.join('\n') : 'all edge checks passed')
 process.exit(fails.length ? 1 : 0)

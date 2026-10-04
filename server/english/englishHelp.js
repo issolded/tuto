@@ -688,6 +688,77 @@ const HELP = {
   }),
 }
 
+// ── pictures ─────────────────────────────────────────────────────────────────────────────────
+// Some questions are about STRUCTURE (where a letter sits in the alphabet, which digit stands for which letter, which
+// letter changed between two words), and a sentence is the weak way to say it. For those the third rung and the
+// explanation carry a picture as plain data, drawn by src/components/EnglishHelpVisual.jsx. While the question is open the
+// answer is "?"; once it is settled (`shown`) the answer is filled in. Types with no picture return null.
+const A_Z = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const letterIdx = (c) => A_Z.indexOf(String(c).toUpperCase())
+
+export function visualFor(rawItem, shown = false) {
+  const it = spelled(rawItem)
+  const ans1 = () => ans(it)[0]
+  try {
+    switch (it.type) {
+      case 'alpha-order': {
+        // The first letters of the five words, marked on the alphabet: the order is read off the strip.
+        const marks = {}
+        it.options.forEach(o => { marks[o.text[0].toUpperCase()] = 'pick' })
+        return { kind: 'alphabet', marks, rows: [], question: [], note: 'first-letters' }
+      }
+      case 'letter-analogy': {
+        const { a, b, c } = it.prompt
+        const la = a.match(/[A-Z]/g) || [], lb = b.match(/[A-Z]/g) || [], lc = c.match(/[A-Z]/g) || []
+        const answer = shown ? (ans1().match(/[A-Z]/g) || []) : []
+        const marks = {}
+        la.forEach(x => { marks[x] = 'from' }); lb.forEach(x => { marks[x] = 'to' }); lc.forEach(x => { marks[x] = 'ask' })
+        answer.forEach(x => { marks[x] = 'ans' })
+        const rows = la.map((x, i) => ({ from: x, to: lb[i], shift: letterIdx(lb[i]) - letterIdx(x) }))
+        const question = lc.map((x, i) => ({ from: x, to: shown ? answer[i] : null, shift: shown ? letterIdx(answer[i]) - letterIdx(x) : null }))
+        const na = a.replace(/[A-Z]/g, ''), nb = b.replace(/[A-Z]/g, ''), nc = c.replace(/[A-Z]/g, '')
+        const numbers = na ? { from: na, to: nb, ask: nc, ans: shown ? ans1().replace(/[A-Z]/g, '') : null } : null
+        return { kind: 'alphabet', marks, rows, question, numbers }
+      }
+      case 'letter-code': {
+        const key = [...it.rule.key.toUpperCase()]
+        const nums = it.prompt.keyCode.split(' ')
+        const pairs = key.map((ch, i) => [ch, nums[i]])
+        const word = [...it.rule.word.toUpperCase()]
+        if (it.rule.decode) {
+          const digits = it.prompt.code.split(' ')
+          return { kind: 'keytable', pairs, line: digits.map((d, i) => ({ top: d, bottom: shown || i === 0 ? word[i] : null })), mode: 'decode' }
+        }
+        const codeDigits = word.map(ch => String(key.indexOf(ch) + 1))
+        return { kind: 'keytable', pairs, line: word.map((ch, i) => ({ top: ch, bottom: shown || i === 0 ? codeDigits[i] : null })), mode: 'encode' }
+      }
+      case 'letter-sum': {
+        const { val, x, op, y } = it.rule
+        const pairs = Object.entries(val).map(([k, v]) => [k, String(v)])
+        return { kind: 'keytable', pairs, expr: { left: `${val[x]} ${op} ${val[y]}`, right: shown ? ans1() : null, named: `${x} ${op} ${y}` }, mode: 'sum' }
+      }
+      case 'change-pattern': {
+        const rows = it.prompt.pairs.map(([p, q]) => ({ from: p, to: q }))
+        const rule = it.rule.rule.split(':'), word = it.prompt.word
+        const kind = rule[0]
+        const at = kind === 'sub' ? Number(rule[1]) : kind === 'subr' ? word.length - 1 - Number(rule[1]) : kind === 'ins' ? Number(rule[1]) : kind === 'insr' ? word.length - Number(rule[1]) : null
+        return { kind: 'diff', rows, word, change: { type: kind.startsWith('sub') ? 'sub' : kind.startsWith('ins') ? 'ins' : kind, at }, answer: shown ? ans1() : null }
+      }
+      case 'word-ladder': {
+        const { from, to } = it.prompt
+        return { kind: 'ladder', from, to, middle: shown ? ans1() : null }
+      }
+      case 'logic-grid': {
+        if (!shown || it.rule.kind !== 'logic-grid') return null
+        const keys = Object.keys(it.rule.who).map(k => k.split('|'))
+        const rowsV = [...new Set(keys.map(k => k[0]))], colsV = [...new Set(keys.map(k => k[1]))]
+        return { kind: 'grid', rows: rowsV, cols: colsV, cells: rowsV.map(r => colsV.map(cc => it.rule.who[`${r}|${cc}`])), pick: it.rule.ask }
+      }
+      default: return null
+    }
+  } catch { return null }
+}
+
 // ── public ──────────────────────────────────────────────────────────────────────────────────
 
 const GENERIC = {
@@ -728,7 +799,7 @@ export function hintAt(item, level, lang = 'en', { eliminated = [], chosen = [] 
     return o ? { level: 2, eliminate: o.i, why: o.why || null } : { level: 2, eliminate: null, why: null }
   }
   const steps = h.steps.slice(0, Math.max(1, h.steps.length - 1)).map(s => pickLang(s, lang))
-  return { level: 3, steps }
+  return { level: 3, steps, visual: visualFor(item, false) }
 }
 
 /** The full explanation, answer included, shown once the question is settled. */

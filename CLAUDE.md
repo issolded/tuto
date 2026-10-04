@@ -83,6 +83,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Açık işler / yol haritası
 
+- [x] İngilizce yardımda resimli üçüncü basamak (2026-10-04, Claude; kullanıcı fikri). Yapıya dair sorularda metin yerine çizim: alfabe şeridi
+      (`alpha-order` ilk harfler, `letter-analogy` kaydırma okları + sayı kısmı), anahtar tablosu (`letter-code` ilk harf çözülü gerisi "?", `letter-sum`),
+      iki kelime alt alta değişen harf yanık (`change-pattern`), kelime merdiveni (`word-ladder`; `?` ortada, uçlarda farklı harfler yanık), mantık tablosu
+      (`logic-grid`, yalnız cevap bildirilince). Veri sunucuda (`visualFor` in `englishHelp.js`, cevap açıkken `?`, kapanınca dolu `explain_visual`), çizim
+      `src/components/EnglishHelpVisual.jsx`. Denetim: açık resim cevabı taşımıyor, dolu resim cevabı yazıyor (`english-help-audit`). Tarayıcıda 390px.
+      **Sıradaki fikir (kullanıcı):** kapalı küme "ölçek kartı" (north→south için dört yön, "?" karşıda; günler, mevsimler, aylar, büyüklük/sıcaklık
+      ölçekleri) — elle yazılmış küçük bir tablo ister (antonimlerin çoğu kapalı küme değil), kapsam tahminen %5-15.
 - [x] Astra notları: denklem sistemi, saat sayacı, geçme dili, gem açıklaması (2026-10-03, Claude). **(1)** 13 yaş denklem sistemi yardımı artık gerçek eleme
       zinciri (`simultSteps`, `mathTemplates.js`): sorulmayan harf elenir, çarpanlar söylenir, çarpılan sayılar tek tek yazdırılır, topla/çıkar, böl;
       negatifler `stpS` ile (eksi tuşu yok). "O harfi" → "bu değişkeni". math:check (13 yaş × 3 dil × 400) temiz. **(2)** Saat "N saatte kaç dakika" yardımında

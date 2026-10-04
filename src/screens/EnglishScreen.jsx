@@ -6,6 +6,7 @@ import { useIsTablet } from '../components/Shell'
 import { EnglishStem, EnglishOptions, englishWhyLines } from '../components/EnglishView'
 import { EnglishReviewList } from '../components/SittingReview'
 import Scratchpad from '../components/Scratchpad'
+import EnglishHelpVisual from '../components/EnglishHelpVisual'
 
 // The child's English: verbal reasoning, spelling and grammar in the Bond 11+ English books'
 // formats. Ten questions from the child's age band, one at a time, each marked when it is sent.
@@ -463,6 +464,7 @@ export default function EnglishScreen() {
                       ))}
                     </div>
                   )}
+                  {flash.explain_visual && <EnglishHelpVisual visual={flash.explain_visual} scale={isTablet ? 1.3 : 1} lang={language} />}
                   {whys.map((w, k) => (
                     <div key={k} style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: 'white', textAlign: 'center', lineHeight: 1.45, maxWidth: 420, marginTop: 6 }}>
                       {w}
@@ -547,6 +549,7 @@ export default function EnglishScreen() {
                         : (englishWhyLines(q, [{ index: h.eliminate, key: h.why }], language)[0]
                           || `${q.options[h.eliminate]?.text}: ${say(language, 'not this one', 'bu değil', 'esta no')}`))}
                       {h.level === 3 && (h.steps || []).map((line, j) => <div key={j} style={{ marginTop: j ? 6 : 0 }}>{line}</div>)}
+                      {h.level === 3 && h.visual && <div style={{ marginTop: 10 }}><EnglishHelpVisual visual={h.visual} scale={isTablet ? 1.3 : 1} lang={language} /></div>}
                     </div>
                   ))}
                 </div>

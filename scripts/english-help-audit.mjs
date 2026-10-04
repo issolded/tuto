@@ -8,7 +8,7 @@
 //   - an option crossed out at rung 2 is a right one.
 // Usage: node scripts/english-help-audit.mjs [seedsPerType]
 import { generateItem, BANDS } from '../src/lib/englishTemplates.js'
-import { allHelp, hintAt, explanation, HELP_TYPES } from '../src/lib/englishHelp.js'
+import { allHelp, hintAt, explanation, visualFor, HELP_TYPES } from '../src/lib/englishHelp.js'
 
 const N = Number(process.argv[2]) || 60
 const LANGS = ['en', 'tr', 'es']
@@ -56,6 +56,20 @@ for (const [bk, band] of Object.entries(BANDS)) {
         }
         const ex = explanation(it, 'en').join(' ').toLowerCase()
         if (right.some(r => r.length >= 3) && !right.some(r => ex.includes(r))) note(`${type} ${bk} seed ${s}: explanation does not name the answer`)
+        // The picture shown while the question is open must not carry the answer; filled in, it must.
+        const open = JSON.stringify(visualFor(it, false) ?? '', (k, v) => (k === 'kind' ? undefined : v)).toLowerCase()
+        const filled = JSON.stringify(visualFor(it, true) ?? '').toLowerCase()
+        for (const r of right) {
+          if (r.length >= 3 && !['alpha-order'].includes(type) && open.includes(`"${r}"`) && !printed(it).includes(r)) note(`${type} ${bk} seed ${s}: open picture holds the answer "${r}"`)
+        }
+        const fv = visualFor(it, true)
+        const filledCode = fv?.line ? fv.line.map(c => c.bottom).join('').toLowerCase() : ''
+        if (type === 'letter-code' && !right.some(r => r.replace(/\s+/g, '').toLowerCase() === filledCode)) note(`${type} ${bk} seed ${s}: filled code row does not spell the answer`)
+        if (type === 'letter-analogy') {
+          const L = fv.question.map(q => q.to).join(''), D = fv.numbers?.ans ?? ''
+          if (!right.some(r => (r.toUpperCase().match(/[A-Z]/g) || []).join('') === L && r.replace(/[a-z]/gi, '') === D)) note(`${type} ${bk} seed ${s}: filled picture does not spell the answer (${L}${D})`)
+        }
+        if (['change-pattern', 'word-ladder', 'letter-sum'].includes(type) && right.some(r => r.length >= 1) && !right.some(r => filled.includes(r.toLowerCase()))) note(`${type} ${bk} seed ${s}: filled picture lacks the answer`)
         const h2 = hintAt(it, 2, 'en')
         if (h2.eliminate != null && it.correct.includes(h2.eliminate)) note(`${type} ${bk}: rung 2 crosses out a right option`)
       }

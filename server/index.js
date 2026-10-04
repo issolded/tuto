@@ -6976,8 +6976,8 @@ app.post('/api/english-sessions/:sessionId/answer', async (req, res) => {
 
     const correct = verdict.status === 'right'
     const lang = session.lang || (session.lang = await englishLangOf(session.child_id))
-    const { explanation } = await import('./english/englishHelp.js')
-    const reveal = (right) => (right ? {} : { explain: explanation(q, lang) })
+    const { explanation, visualFor } = await import('./english/englishHelp.js')
+    const reveal = (right) => (right ? {} : { explain: explanation(q, lang), explain_visual: visualFor(q, true) })
 
     if (session.review) {
       // A review's answers live on its own row, marked here like any sitting's. `idx` is the question
