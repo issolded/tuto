@@ -1117,3 +1117,5 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 - 2026-10-04: ReadingFlow kitap kayıt hatasında kapağa dönmez; başlık/kapak korunur, tekrar deneme aynı kitap ID ile yapılır. Sayfa alanları DB hatasında ilerlemez. QA hesabında doğrudan anon insert başarılı; kullanıcının asıl kayıt hatası henüz yeniden üretilemedi.
 
 - 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
+
+- 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.

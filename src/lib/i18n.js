@@ -13,6 +13,11 @@
 // "ordenador"). Where English has a gendered address the Spanish avoids picking one — the app
 // does not know whether the child is a boy or a girl and must not guess at them by name.
 const STRINGS = {
+  bw_studio: { en: 'Story Studio', tr: 'Hikâye Atölyesi', es: 'Taller de Cuentos' },
+  bw_explorer: { en: 'Book Explorer', tr: 'Kitap Kaşifi', es: 'Explorador de Libros' },
+  bw_studio_hint: { en: 'Little ideas, amazing stories!', tr: 'Küçük fikirler, harika hikâyeler!', es: '¡Pequeñas ideas, grandes cuentos!' },
+  bw_explorer_hint: { en: 'A new adventure on every page!', tr: 'Her sayfada yeni bir macera!', es: '¡Una aventura en cada página!' },
+  bw_library_hint: { en: 'A home for books you’ve finished', tr: 'Bitirdiğin kitapların yuvası', es: 'Un hogar para los libros que terminaste' },
   la_no_drafts: { en: 'No stories in progress.', tr: 'Devam eden hikâye yok.', es: 'No hay cuentos en curso.' },
   la_no_reading: { en: 'Ready for your next book?', tr: 'Sıradaki kitabına hazır mısın?', es: '¿Listo para tu próximo libro?' },
   la_title: { en: 'My Library', tr: 'Kitaplığım', es: 'Mi Biblioteca' },
