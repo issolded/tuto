@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
@@ -41,6 +41,11 @@ const ParentTuto = lazy(() => import('./screens/ParentTuto'))
 const ParentReports = lazy(() => import('./screens/ParentReports'))
 import HomeworkScreen from './screens/HomeworkScreen'
 import DrawingsScreen from './screens/DrawingsScreen'
+
+function StoriesEntry() {
+  const location = useLocation()
+  return <StoriesScreen key={location.key} />
+}
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -90,7 +95,7 @@ export default function App() {
         <Route path="/math-lab" element={<MathLab />} />
         <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
         <Route path="/english-lab" element={<Suspense fallback={null}><EnglishLab /></Suspense>} />
-        <Route path="/child/stories" element={<StoriesScreen />} />
+        <Route path="/child/stories" element={<StoriesEntry />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
         <Route path="/child/puzzle" element={<Suspense fallback={null}><PuzzleScreen /></Suspense>} />

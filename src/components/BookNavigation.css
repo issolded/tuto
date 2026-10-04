@@ -1,1 +1,4 @@
 .book-navigation{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:0 0 22px}.book-navigation a{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:54px;padding:12px 14px;border:1px solid #d7dfd6;border-radius:15px;background:#fffdf7;color:#304f3c;text-decoration:none;font:700 15px 'TrRound','Baloo 2',sans-serif;box-sizing:border-box}.book-navigation a:hover{background:#f1f7eb}.book-navigation a:focus-visible{outline:3px solid #ed963e;outline-offset:3px}
+.book-navigation a[aria-current=page]{background:#315b45;color:white;border-color:#315b45}.books-upload{margin:0;border:1px solid #d7dfd6;border-radius:12px;padding:6px 14px;background:white;color:#315b45;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+
+.books-writing-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}

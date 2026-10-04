@@ -15,7 +15,7 @@
 const STRINGS = {
   la_no_drafts: { en: 'No stories in progress.', tr: 'Devam eden hikâye yok.', es: 'No hay cuentos en curso.' },
   la_no_reading: { en: 'Ready for your next book?', tr: 'Sıradaki kitabına hazır mısın?', es: '¿Listo para tu próximo libro?' },
-  la_title: {en: "My book archive",tr: "Kitap arşivim",es: "Mi archivo de libros"},
+  la_title: { en: 'My Library', tr: 'Kitaplığım', es: 'Mi Biblioteca' },
   la_search: {en: "Search books or authors",tr: "Kitap veya yazar ara",es: "Buscar libros o autores"},
   la_year: {en: "Completion year",tr: "Bitirme yılı",es: "Año de finalización"},
   la_kind: {en: "All books",tr: "Tüm kitaplar",es: "Todos los libros"},
@@ -200,7 +200,7 @@ const STRINGS = {
   hw_yes_today:       { en: 'Yes, today',    tr: 'Evet, bugün',    es: 'Sí, hoy' },
 
   // ── Library ─────────────────────────────────────────────────────────────────
-  lib_title:          { en: 'My Library 📚', tr: 'Kitaplığım 📚', es: 'Mi Biblioteca 📚' },
+  lib_title: { en: 'My Books', tr: 'Kitaplarım', es: 'Mis libros' },
   lib_loading:        { en: 'Loading...',    tr: 'Yükleniyor…',   es: 'Cargando…' },
   lib_no_books:       { en: 'No books yet!',   tr: 'Henüz kitap yok!',   es: '¡Todavía no hay libros!' },
   lib_no_stories:     { en: 'No stories yet!', tr: 'Henüz hikâye yok!',  es: '¡Todavía no hay cuentos!' },
@@ -215,7 +215,7 @@ const STRINGS = {
   lib_remove:         { en: 'Remove', tr: 'Kaldır', es: 'Quitar' },
   lib_cancel:         { en: 'Cancel', tr: 'Vazgeç', es: 'Cancelar' },
 
-  lib_my_books:       { en: '✍️ Books I Wrote', tr: '✍️ Benim Yazdığım Kitaplar', es: '✍️ Libros que he escrito' },
+  lib_my_books: { en: 'Books I’m writing', tr: 'Yazdıklarım', es: 'Libros que escribo' },
   lib_write_first:    { en: 'Write your first story →', tr: 'İlk hikâyeni yaz →', es: 'Escribe tu primer cuento →' },
   lib_add_first:      { en: 'Add your first book →',    tr: 'İlk kitabını ekle →', es: 'Añade tu primer libro →' },
   lib_reading_now:    { en: 'Reading Now 📖',    tr: 'Şu An Okuduklarım 📖', es: 'Leyendo ahora 📖' },
@@ -226,7 +226,7 @@ const STRINGS = {
   story_untitled:     { en: 'Untitled Story', tr: 'Adsız Hikâye', es: 'Cuento sin título' },
   story_in_progress:  { en: 'In Progress',    tr: 'Devam ediyor', es: 'En marcha' },
 
-  lib_other_authors:  { en: '📚 Books from Other Authors', tr: '📚 Başka Yazarların Kitapları', es: '📚 Libros de otros autores' },
+  lib_other_authors: { en: 'Books I’m reading', tr: 'Okuduklarım', es: 'Libros que leo' },
   lib_write:          { en: '✏️ Write', tr: '✏️ Yaz',  es: '✏️ Escribir' },
   lib_add:            { en: '+ Add',    tr: '+ Ekle',  es: '+ Añadir' },
   lib_books_of:       { en: "📖 Books by",  tr: '📖 Kendi Kitapları:', es: '📖 Libros de' },
@@ -552,7 +552,7 @@ const STRINGS = {
 
   // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
   nav_home:           { en: 'Home',     tr: 'Ana Sayfa', es: 'Inicio' },
-  nav_library:        { en: 'Library',  tr: 'Kitaplık',  es: 'Biblioteca' },
+  nav_library: { en: 'My Books', tr: 'Kitaplarım', es: 'Mis libros' },
   // "Gem" stays the currency word everywhere — parent messages, the ledger, the parent app —
   // so translating it here alone would split the name in two.
   nav_gems:           { en: 'Gems',     tr: 'Gem’lerim', es: 'Gems' },
