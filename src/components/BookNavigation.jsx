@@ -9,6 +9,6 @@ export default function BookNavigation({ lang, current, settings = {} }) {
   { id: 'archive', label: 'la_title', icon: '🗄️', to: '/child/library?view=archive' },
  ]
  return <nav className="book-navigation" aria-label={t('lib_title', lang)}>
-  {links.filter(link => link.id !== current && (settings[link.id]?.active ?? true)).map(link => <Link key={link.id} to={link.to}><span>{link.icon} {t(link.label, lang)}</span><span aria-hidden="true">→</span></Link>)}
+  {links.filter(link => link.id !== current && (settings?.[link.id]?.active ?? true)).map(link => <Link key={link.id} to={link.to}><span>{link.icon} {t(link.label, lang)}</span><span aria-hidden="true">→</span></Link>)}
  </nav>
 }
