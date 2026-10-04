@@ -195,12 +195,6 @@ const P = {
   // the parent set when they linked this device, is the only honest source.
   cp_forgot:         { en: 'I forgot my PIN', tr: 'PIN’imi unuttum', es: 'He olvidado mi PIN' },
   cp_forgot_sent:    { en: 'I told your grown-up. They will give you a new PIN! 💌', tr: 'Büyüğüne haber verdim. Sana yeni bir PIN verecek! 💌', es: 'Se lo he dicho a tu persona mayor. ¡Te dará un PIN nuevo! 💌' },
-  ds_title: { en: 'Set up this child’s device', tr: 'Çocuğun cihazını eşleştir', es: 'Configurar el dispositivo infantil' },
-  ds_explain: { en: 'A parent chooses who will use this browser. After setup, only that child can sign in here. Changing the child requires a parent sign-in. The parent session on this browser will close after setup.', tr: 'Bu tarayıcıyı kimin kullanacağını ebeveyn seçer. Kurulumdan sonra burada yalnızca o çocuk giriş yapar. Çocuğu değiştirmek için ebeveyn girişi gerekir. Kurulum sonunda bu tarayıcıdaki ebeveyn oturumu kapatılır.', es: 'Un adulto elige quién usará este navegador. Después, solo ese niño podrá entrar aquí. Cambiar de niño requiere acceso de un adulto. La sesión del adulto se cerrará al terminar.' },
-  ds_parent_login: { en: 'Parent sign-in to set up', tr: 'Eşleştirmek için ebeveyn girişi', es: 'Entrar como adulto para configurar' },
-  ds_owner: { en: 'Who will use this device?', tr: 'Bu cihazı hangi çocuk kullanacak?', es: '¿Qué niño usará este dispositivo?' },
-  ds_bind: { en: 'Assign this device', tr: 'Bu cihazı eşleştir', es: 'Asignar este dispositivo' },
-  ds_device_for: { en: '%name%’s device', tr: '%name% için eşleştirilmiş cihaz', es: 'Dispositivo de %name%' },
   cp_choose_child: { en: 'Who is signing in?', tr: 'Kim giriş yapıyor?', es: '¿Quién va a entrar?' },
   cp_hi:             { en: "Hi! I'm Tuto 👋", tr: 'Merhaba! Ben Tuto 👋', es: '¡Hola! Soy Tuto 👋' },
   cp_enter_pin:      { en: 'Enter your PIN to start!', tr: 'Başlamak için PIN’ini gir!', es: '¡Escribe tu PIN para empezar!' },
