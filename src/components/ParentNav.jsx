@@ -18,7 +18,10 @@ import { useT } from '../lib/parentI18n'
 
 const PARENT_TABS = [
   { id: 'children', glyph: '👧', labelKey: 'nav_children', route: '/parent/dashboard' },
-  { id: 'reports',  glyph: '📊', labelKey: 'nav_reports',  route: '/parent/reports' },
+  // Tuto's own tab: the same conversation the parent has on Telegram/WhatsApp. Reports moved
+  // under each child (a week is always one child's week), so this place went to the product's
+  // heart rather than to a second list of numbers.
+  { id: 'tuto',     glyph: '💬', labelKey: 'nav_tuto',     route: '/parent/tuto' },
   { id: 'screen',   glyph: '⏱️', labelKey: 'nav_screen',   route: '/parent/screen-time' },
   { id: 'settings', glyph: '⚙️', labelKey: 'db_settings',  route: '/parent/settings' },
 ]
@@ -27,7 +30,9 @@ const PARENT_TABS = [
 // keeps that tab lit rather than lighting none. Module-local: this file exports a component
 // and nothing else, which is what React Fast Refresh needs.
 function tabForPath(pathname) {
-  if (pathname.startsWith('/parent/reports')) return 'reports'
+  if (pathname.startsWith('/parent/tuto')) return 'tuto'
+  // A report is one child's week, opened from that child: it lives under Children.
+  if (pathname.startsWith('/parent/reports')) return 'children'
   // Before /parent/settings: the child-view trial still lives under that path.
   if (pathname.startsWith('/parent/screen-time') || pathname.startsWith('/parent/settings/screen-control')) return 'screen'
   if (pathname.startsWith('/parent/settings')) return 'settings'

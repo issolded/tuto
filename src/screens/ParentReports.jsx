@@ -30,6 +30,9 @@ export default function ParentReports() {
   const [params, setParams] = useSearchParams()
   const [children, setChildren] = useState([])
   const [childId, setChildId] = useState(params.get('child') || '')
+  // Arrived from one child's page: the report is that child's, and switching children here would
+  // leave the back button pointing at the wrong one.
+  const fromChild = params.get('child') || ''
   const [offset, setOffset] = useState(0)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -110,11 +113,12 @@ export default function ParentReports() {
 
   return (
     <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <TopBar title={s('rp_title')} sub={child?.name} />
+      {/* Opened from a child's page now (the tab went to Tuto), so it has a way back to that child. */}
+      <TopBar title={s('rp_title')} sub={child?.name} onBack={() => nav(fromChild ? `/parent/child/${fromChild}` : '/parent/dashboard')} />
 
       <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingInline: SPACE.s5 }}>
 
-        {children.length > 1 && (
+        {children.length > 1 && !fromChild && (
           <div style={{ display: 'flex', gap: SPACE.s2, marginBottom: SPACE.s3 }}>
             {children.map(k => (
               <button key={k.id} className="tc-press tc-tap" onClick={() => pickChild(k.id)}
@@ -237,6 +241,14 @@ export default function ParentReports() {
               )}
             </Card>
 
+            {/* The question a chart raises is "why" — and the chat has these same numbers to answer it. */}
+            {child && offset === 0 && (
+              <button className="tc-press tc-tap" onClick={() => nav(`/parent/tuto?ask=${encodeURIComponent(s('tt_q_week', { name: child.name }))}`)}
+                style={{ width: '100%', marginTop: SPACE.s3, minHeight: 48, borderRadius: RADIUS.md, border: 'none', background: PC.tealBg, color: PC.tealInk, fontFamily: FONT, fontWeight: 800, fontSize: 14.5, cursor: 'pointer' }}>
+                💬 {s('rp_ask_tuto', { name: child.name })}
+              </button>
+            )}
+
             {/* The limit is reported, not hidden: these are sessions that happened and paid nothing. */}
             {totals.capped > 0 && (
               <Card pad={18} style={{ marginTop: SPACE.s3, background: PC.peachBg, boxShadow: 'none' }}>
@@ -248,7 +260,7 @@ export default function ParentReports() {
           </>
         )}
       </div>
-      <ParentNav active="reports" />
+      <ParentNav active="children" />
     </div>
   )
 }
