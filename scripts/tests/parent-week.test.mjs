@@ -102,3 +102,19 @@ test('several sessions on one day add up on that day', () => {
   assert.equal(r.days[4].sessions, 4)
   assert.equal(r.byType.math, 4)
 })
+
+test('the chat reads the same week the chart draws', async () => {
+  const { weekContext } = await import('../../server/week.js')
+  assert.equal(weekContext(null), 'unavailable right now')
+  const r = build({
+    maths: [{ created_at: '2026-09-22T09:00:00Z' }, { created_at: '2026-09-23T09:00:00Z' }],
+    ledger: [{ amount: 30, created_at: '2026-09-22T09:00:00Z' }, { amount: 0, capped: true, created_at: '2026-09-23T19:00:00Z' }, { amount: 50, created_at: '2026-09-16T09:00:00Z' }],
+  })
+  const c = weekContext({ range: { start: WEEK[0], end: WEEK[6] }, ...r })
+  assert.equal(c.week, '2026-09-21..2026-09-27')
+  assert.equal(c.activities, '2 (math 2)')
+  assert.equal(c.gemsEarned, 30)
+  assert.equal(c.daysOverDailyLimit, 1)
+  assert.equal(c.lastWeek, '0 activities, 50 gems')
+  assert.match(c.gemsByDay, /2026-09-23: 0 \(\+1 past limit\)/)
+})

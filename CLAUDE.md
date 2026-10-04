@@ -762,7 +762,7 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
       tamamını taşıyor; Georgia ve monospace sistem fontu.
 - [x] Ebeveyn uygulaması: alt sekmeler, Raporlar ve tek telefon kolonu (2026-10-04, Claude).
-      Dört sekme — **Çocuklar** (ana ekran), **Raporlar** (haftalık), **Ekran süresi**, **Ayarlar**.
+      Dört sekme — **Çocuklar** (ana ekran), **Tuto'ya Sor** (aynı gün Raporlar'ın yerine), **Ekran süresi**, **Ayarlar**.
       Ekran süresi sekmesi aynı gün kullanıcı kararıyla eklendi (önerim native'i beklemekti): kurallar
       çocuk çipleriyle, her kontrol kendini kaydediyor (700ms debounce, compare-and-swap; çocuk
       değişince ve sekmeden çıkınca bekleyen yazılıyor — sekme barının üstünde "Kaydet" düğmesi
@@ -782,7 +782,25 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       varsayılanların üstüne okunuyor (`readRules` birleştirir), sıfırlanmıyor. Sohbet bağlamında
       `screenTime` cümlesi (plan, kullanım değil). Sunucu mantığı `server/screenTime.js`, test
       `scripts/tests/screen-time.test.mjs`; model testi `src/lib/__tests__/screenControl.test.js` 10/10.
-      Gerçek Supabase ve gerçek sohbet modeliyle (`give_screen_time` çağrısı) denenmedi. Sekme çubuğu prototipin birebir tasarımı
+      Gerçek Supabase ve gerçek sohbet modeliyle (`give_screen_time` çağrısı) denenmedi.
+      **Üçüncü tur: "Tuto'ya Sor" sekmesi (kullanıcı kararı).** Raporlar sekmesi gitti; rapor artık çocuğun
+      sayfasında ("📊 Bu hafta" kartı → `/parent/reports?child=`, geri çocuğa döner, çocuk çipleri yok).
+      Yerine 💬 **Tuto'ya Sor**: aynı beyin (`handleMessage`, `POST /api/parent/chat`, ebeveyn JWT, 1000
+      karakter), ama **yalnız soru-cevap ve yalnız üç konu: çocuğun gelişimi, ekran süresi, gem.** Tuto burada
+      kendiliğinden bir şey demez — bildirim/onay gösterilmez; ekran yalnız burada sorulanları gösterir
+      (cihazda, `tuto_ask_v1:<uid>`, son 60), beyin yine ortak transkripti hatırlar. Kapsam KODDA: bu kanalda
+      modele yalnız `give_screen_time`, `gift_gems`, `deduct_gems`, `update_task_reward`, `set_math_focus`
+      sunuluyor ve dispatch'in en başında başka araç reddediliyor; davranışı `APP_SCOPE_NOTE` anlatıyor
+      (kapsam dışını tek cümleyle Telegram/WhatsApp'a ya da ilgili ekrana yönlendirir). Fotoğraf yeniden
+      gönderen iki araç uygulamadan çağrılınca fotoğrafı Telegram'a değil cevaba koyar. **Giriş kapısı ilk kez
+      kuruldu ama YALNIZ bu sekme için** (`server/inboundGate.js`: dakikada 10, günde 150 ebeveyn mesajı;
+      sayım `messages`'tan, kanal sütunu olmadığı için bütün kanalların toplamı; sayım başarısızsa geçer;
+      model çağrılmadan sabit cevap). **Telegram ve WhatsApp davranışı DEĞİŞMEDİ** (kullanıcı: "o kısım tamamen
+      farklı"): kapı, haftalık rapor bağlamı ve kapsam yalnız `opts.scope === 'app'` iken devrede; harness'te
+      aynı ebeveyn için uygulama reddedilirken Telegram yolunun modele gittiği doğrulandı. Haftalık rapor
+      `weekForChild()` tek kaynaktan (uç + sohbet bağlamı `thisWeek`, yalnız uygulama kanalında) — sohbetteki
+      sayı grafikle aynı. Testler: `inbound-gate.test.mjs`, `parent-week.test.mjs` (weekContext). Gerçek
+      Gemini ile uygulama kanalı denenmedi (anahtar yok): kapsam dışı soruya modelin cevabı görülmedi. Sekme çubuğu prototipin birebir tasarımı
       (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
       bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
       (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.

@@ -74,3 +74,17 @@ export function buildWeekReport({ dayOf, weekDays, prevDays, ledger, subs, maths
     previous: { gems: sum(previousDays, 'gems'), sessions: sum(previousDays, 'sessions') },
   }
 }
+
+// The week as the chat model reads it: the Reports screen's numbers in a few short fields.
+export function weekContext(w) {
+  if (!w) return 'unavailable right now'
+  const done = Object.entries(w.byType || {}).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join(', ') || 'nothing yet'
+  return {
+    week: `${w.range.start}..${w.range.end}`,
+    activities: `${w.totals.sessions} (${done})`,
+    gemsEarned: w.totals.gems,
+    daysOverDailyLimit: w.totals.capped,
+    lastWeek: `${w.previous.sessions} activities, ${w.previous.gems} gems`,
+    gemsByDay: w.days.map(d => `${d.date}: ${d.gems}${d.capped ? ` (+${d.capped} past limit)` : ''}`).join('; '),
+  }
+}
