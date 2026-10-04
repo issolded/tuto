@@ -114,7 +114,9 @@ export default function ParentReports() {
   return (
     <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       {/* Opened from a child's page now (the tab went to Tuto), so it has a way back to that child. */}
-      <TopBar title={s('rp_title')} sub={child?.name} onBack={() => nav(fromChild ? `/parent/child/${fromChild}` : '/parent/dashboard')} />
+      {/* Back to wherever it was opened from — the child page or the Children tab's row. A link
+          straight into the report (nothing to go back to) lands on the child. */}
+      <TopBar title={s('rp_title')} sub={child?.name} onBack={() => (window.history.state?.idx > 0 ? nav(-1) : nav(fromChild ? `/parent/child/${fromChild}` : '/parent/dashboard'))} />
 
       <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingInline: SPACE.s5 }}>
 

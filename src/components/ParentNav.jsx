@@ -15,6 +15,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { PC, FONT, SPACE, TAP } from '../lib/parentUI'
 import { useT } from '../lib/parentI18n'
+import { useAskUnseen } from '../lib/parentAsk'
 
 const PARENT_TABS = [
   { id: 'children', glyph: '👧', labelKey: 'nav_children', route: '/parent/dashboard' },
@@ -45,6 +46,8 @@ export default function ParentNav({ active }) {
   const loc = useLocation()
   const s = useT()
   const current = active || tabForPath(loc.pathname)
+  // An answer that landed while the parent was on another tab: a dot until they open Tuto.
+  const unseen = useAskUnseen()
 
   return (
     <nav className="tc-pnav" style={{
@@ -59,12 +62,18 @@ export default function ParentNav({ active }) {
         const on = current === id
         return (
           <button key={id} onClick={() => nav(route)} role="tab" aria-selected={on}
+            aria-label={id === 'tuto' && unseen > 0 ? `${s(labelKey)} · ${s('tt_new_answer')}` : undefined}
             style={{
               flex: 1, minHeight: TAP.min, background: 'none', border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 3, padding: '4px 1px', fontFamily: FONT,
             }}>
-            <span aria-hidden="true" style={{ fontSize: 19, lineHeight: 1, opacity: on ? 1 : 0.4 }}>{glyph}</span>
+            <span aria-hidden="true" style={{ fontSize: 19, lineHeight: 1, opacity: on ? 1 : 0.4, position: 'relative' }}>
+              {glyph}
+              {id === 'tuto' && unseen > 0 && !on && (
+                <span style={{ position: 'absolute', top: -2, right: -6, width: 9, height: 9, borderRadius: 999, background: PC.danger, border: `2px solid ${PC.card}` }} />
+              )}
+            </span>
             <span style={{
               fontSize: 10, fontWeight: 700, letterSpacing: '-.01em',
               color: on ? PC.tealInk : PC.inkFaint,
