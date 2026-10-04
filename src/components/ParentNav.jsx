@@ -1,8 +1,8 @@
 // The parent app's bottom tabs.
 //
-// Deliberately three, not four: screen control would be the obvious fourth, but it enforces
-// nothing on a device yet, and a tab is a claim that something is one of the app's main jobs.
-// It gets a tab when it is real; until then it lives on the child it belongs to.
+// Four. Screen time got its tab on 2026-10-04 by the user's call, ahead of the native app that
+// will enforce it; until then that tab carries its own "web trial" banner, because a tab is a
+// claim that something is one of the app's main jobs and this one is not doing it on a device yet.
 //
 // Drawn to match the prototype these were chosen from: a flat bar sitting on the content with
 // a single hairline above it, not a floating rounded card. The kids app's BottomNav is the
@@ -19,6 +19,7 @@ import { useT } from '../lib/parentI18n'
 const PARENT_TABS = [
   { id: 'children', glyph: '👧', labelKey: 'nav_children', route: '/parent/dashboard' },
   { id: 'reports',  glyph: '📊', labelKey: 'nav_reports',  route: '/parent/reports' },
+  { id: 'screen',   glyph: '⏱️', labelKey: 'nav_screen',   route: '/parent/screen-time' },
   { id: 'settings', glyph: '⚙️', labelKey: 'db_settings',  route: '/parent/settings' },
 ]
 
@@ -27,6 +28,8 @@ const PARENT_TABS = [
 // and nothing else, which is what React Fast Refresh needs.
 function tabForPath(pathname) {
   if (pathname.startsWith('/parent/reports')) return 'reports'
+  // Before /parent/settings: the child-view trial still lives under that path.
+  if (pathname.startsWith('/parent/screen-time') || pathname.startsWith('/parent/settings/screen-control')) return 'screen'
   if (pathname.startsWith('/parent/settings')) return 'settings'
   if (pathname.startsWith('/parent/child') || pathname.startsWith('/parent/dashboard')) return 'children'
   return null

@@ -35,6 +35,7 @@ import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 const ChildSettings = lazy(() => import('./screens/ChildSettings'))
 const ScreenControlSettings = lazy(() => import('./screens/ScreenControlSettings'))
+const ParentScreenTime = lazy(() => import('./screens/ParentScreenTime'))
 // Looks backwards, not at today, and nobody opens it on the way to something else.
 const ParentReports = lazy(() => import('./screens/ParentReports'))
 import HomeworkScreen from './screens/HomeworkScreen'
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/parent/dashboard"   element={session ? <ParentDashboard />   : <Navigate to="/parent/login" />} />
         <Route path="/parent/settings"    element={session ? <ParentDashboard view="settings" /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/reports" element={session ? <Suspense fallback={null}><ParentReports /></Suspense> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/screen-time" element={session ? <Suspense fallback={null}><ParentScreenTime /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/parent/settings/screen-control" element={session ? <Suspense fallback={null}><ScreenControlSettings /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />

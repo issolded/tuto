@@ -762,9 +762,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
       tamamını taşıyor; Georgia ve monospace sistem fontu.
 - [x] Ebeveyn uygulaması: alt sekmeler, Raporlar ve tek telefon kolonu (2026-10-04, Claude).
-      Üç sekme — **Çocuklar** (ana ekran), **Raporlar** (haftalık), **Ayarlar**. Ekran Kontrolü sekme
-      ALMADI: cihazda hiçbir şey engellemiyor ve sekme "bu uygulamanın ana işlerinden biri" demek;
-      çocuğun sayfasında duruyor, gerçek olunca sekme olur. Sekme çubuğu prototipin birebir tasarımı
+      Dört sekme — **Çocuklar** (ana ekran), **Raporlar** (haftalık), **Ekran süresi**, **Ayarlar**.
+      Ekran süresi sekmesi aynı gün kullanıcı kararıyla eklendi (önerim native'i beklemekti): kurallar
+      çocuk çipleriyle, her kontrol kendini kaydediyor (700ms debounce, compare-and-swap; çocuk
+      değişince ve sekmeden çıkınca bekleyen yazılıyor — sekme barının üstünde "Kaydet" düğmesi
+      düzenleme kaybettirir). Değerler girilirken sıkıştırılıyor (hafta içi ≤ tavan, ek süre ≤ tavan),
+      kaydedilemeyen tek şey başı = sonu olan program. Ekran KULLANIMI değil bugünün PLANINI gösteriyor
+      ve üstte web denemesi uyarısı duruyor (bkz. 2026-09-20 sınırı). Çocuk görünümü denemesi eski
+      `/parent/settings/screen-control?view=preview`'da. Sekme çubuğu prototipin birebir tasarımı
       (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
       bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
       (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.
