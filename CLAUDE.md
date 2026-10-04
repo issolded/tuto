@@ -57,6 +57,12 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Kitap okuma alanı** (2026-10-04): okuyucu telefon sütununa sabitlenmez; portal ile
+  tam ekran açılır, masaüstünde 680px sayfa ve 18px metin kullanır. Telefonlarda genişliğe
+  uyarlanır; sayfa taşarsa metin kaydırılır, sayfa değişince kaydırma sıfırlanır.
+  Arşiv sırtları raf genişliğinin 1/20'si; koltuk kapağı oda ile orantılı ölçeklenir.
+
+
 - **Kitap arşivi** (2026-10-04, kullanıcı kararı): devam eden okumalar ve taslaklar ana
   Library'de kompakt kartlar; tamamlanan kitap/hikâyeler ayrı oda görünümünde. Oda yalnızca
   gerçek tamamlanan kayıtlarla dolar, örnek kayıt yok. 36 kitap/sayfa, sabit sarı olmayan
