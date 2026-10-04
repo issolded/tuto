@@ -1,3 +1,4 @@
+import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
 import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './englishPlay.js'
@@ -3344,7 +3345,8 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
 
   const { data: children } = await supabase.from('children')
     .select('id, name, age, pin_hash, language, task_settings').eq('parent_id', parent.id)
-  const match = (children || []).find(c => c.pin_hash === hashPinServer(pin))
+  // PINs are checked only against the selected sibling; ambiguous legacy requests fail.
+  const match = matchFamilyChild(children, hashPinServer(pin), req.body?.child_id)
 
   if (!match) {
     state.fails += 1
@@ -3392,15 +3394,25 @@ app.post('/api/family/:code/forgot-pin', async (req, res) => {
   const code = req.params.code?.trim().toUpperCase()
   if (!code) return res.status(400).json({ error: 'code required' })
   try {
-    const last = forgotNotified.get(code) || 0
+    // The sign-in screen knows which child was picked; without one (a family with several children, none chosen yet)
+    // the message names them all.
+    const childId = String(req.body?.child_id ?? '').trim()
+    const key = `${code}:${childId || '-'}`
+    const last = forgotNotified.get(key) || 0
     if (Date.now() - last > FORGOT_GAP_MS) {
       const { data: parent } = await supabase.from('parents').select('id, prefs').eq('family_code', code).maybeSingle()
       if (parent) {
-        forgotNotified.set(code, Date.now())
-        const { data: kids } = await supabase.from('children').select('name').eq('parent_id', parent.id)
-        const names = (kids || []).map(k => k.name).join(', ')
+        forgotNotified.set(key, Date.now())
+        const { data: kids } = await supabase.from('children').select('id, name').eq('parent_id', parent.id)
+        const one = childId ? (kids || []).find(k => k.id === childId) : null
+        const names = one ? one.name : (kids || []).map(k => k.name).join(', ')
         const lang = parentLang(parent.prefs)
-        sendNotification(parent.id, say(lang,
+        sendNotification(parent.id, one
+          ? say(lang,
+            `${one.name} tapped "I forgot my PIN". Tell me and I'll make ${one.name} a new PIN, or tell me the one you'd like them to have. I won't change anything until you say so. 🔑`,
+            `${one.name} "PIN'imi unuttum" dedi. Söyleyin, ${one.name} için yeni bir PIN oluşturayım; ya da vermek istediğiniz PIN'i yazın. Siz söylemeden hiçbir şeyi değiştirmem. 🔑`,
+            `${one.name} ha tocado "He olvidado mi PIN". Dímelo y le haré un PIN nuevo a ${one.name}, o dime el que quieras darle. No cambiaré nada hasta que me lo digas. 🔑`)
+          : say(lang,
           `Someone tapped "I forgot my PIN" on your family's Tuto${names ? ` (${names})` : ''}. If it's one of your children, tell me which one and I'll make them a new PIN, or tell me the one you'd like them to have. I won't change anything until you say so. 🔑`,
           `Tuto'da biri "PIN'imi unuttum" dedi${names ? ` (${names})` : ''}. Çocuklarınızdan biriyse hangisi olduğunu yazın, yeni bir PIN oluşturayım; ya da vermek istediğiniz PIN'i söyleyin. Siz söylemeden hiçbir şeyi değiştirmem. 🔑`,
           `Alguien ha tocado "He olvidado mi PIN" en el Tuto de tu familia${names ? ` (${names})` : ''}. Si es uno de tus hijos, dime cuál y le haré un PIN nuevo, o dime el que quieras darle. No cambiaré nada hasta que me lo digas. 🔑`),
@@ -3433,7 +3445,7 @@ async function resetChildPinTool(childId, pin, parentId) {
   if (pin !== undefined && pin !== null && String(pin).trim() !== '') {
     const p = String(pin).trim()
     if (!/^\d{4}$/.test(p)) return { success: false, error: 'a PIN is exactly four digits' }
-    if (taken.has(hashPinServer(p))) return { success: false, error: 'that PIN already belongs to one of the other children — they would be signed in as each other. Ask for a different one.' }
+    if (taken.has(hashPinServer(p))) return { success: false, error: 'that PIN already belongs to one of the other children — a sibling could then open this profile by choosing it and typing their own PIN. Ask for a different one.' }
     chosen = p
   } else {
     for (let i = 0; i < 200 && !chosen; i++) {

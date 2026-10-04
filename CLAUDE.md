@@ -1030,3 +1030,5 @@ ekranlarını "Tuto Care" görünümüne (teal/peach, Plus Jakarta Sans) çevirm
 kullanılır. Kurallar `design_handoff_parent_reskin/README.md`'de. **Saf görsel re-skin:**
 mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. Değişiklikler
 `src/screens/`'e gider, bundle'a değil.
+
+- 2026-10-04: Aile kodu okuma hatasında yeniden üretilmez; ilk yazım yalnız NULL koşuluyla yapılır. Birden fazla çocukta giriş açık çocuk seçimi + o çocuğun PIN doğrulamasıdır. Aynı PIN ile belirsiz eski istemci isteği ilk kardeşi seçmez.

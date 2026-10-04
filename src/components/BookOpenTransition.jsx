@@ -84,8 +84,8 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
     setPageIndex(next)
   }
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, maxWidth: 'none', margin: '0 auto', background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, zIndex: 200 }}>
+  return createPortal(
+    <div className="story-reader" role="dialog" aria-modal="true" aria-label={story.title || t('story_untitled', lang)} style={{ position: 'fixed', inset: 0, maxWidth: 'none', margin: '0 auto', background: 'linear-gradient(180deg,#F4EFFF 0%,#E7DBFB 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, zIndex: 200 }}>
       <style>{`
         /* backface-visibility:hidden is the real fix for mirrored text past 90deg — a
            rotated flat div otherwise shows its (browser-rendered, mirrored) back face.
@@ -216,6 +216,6 @@ export default function BookOpenTransition({ story, childName, fallbackColor, on
           {t('story_edit', lang)}
         </button>
       </div>
-    </div>
+    </div>, document.body
   )
 }

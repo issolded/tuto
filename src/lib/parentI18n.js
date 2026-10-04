@@ -195,6 +195,7 @@ const P = {
   // the parent set when they linked this device, is the only honest source.
   cp_forgot:         { en: 'I forgot my PIN', tr: 'PIN’imi unuttum', es: 'He olvidado mi PIN' },
   cp_forgot_sent:    { en: 'I told your grown-up. They will give you a new PIN! 💌', tr: 'Büyüğüne haber verdim. Sana yeni bir PIN verecek! 💌', es: 'Se lo he dicho a tu persona mayor. ¡Te dará un PIN nuevo! 💌' },
+  cp_choose_child: { en: 'Who is signing in?', tr: 'Kim giriş yapıyor?', es: '¿Quién va a entrar?' },
   cp_hi:             { en: "Hi! I'm Tuto 👋", tr: 'Merhaba! Ben Tuto 👋', es: '¡Hola! Soy Tuto 👋' },
   cp_enter_pin:      { en: 'Enter your PIN to start!', tr: 'Başlamak için PIN’ini gir!', es: '¡Escribe tu PIN para empezar!' },
   cp_too_many:       { en: 'Too many tries! Ask a grown-up — try again in %n% minutes ⏳',
@@ -267,6 +268,10 @@ const P = {
                        tr: 'Fazladan turlar yine sayılır, sadece gem kazandırmaz.',
                        es: 'Las rondas de más cuentan igual, solo que ya no dan gems.' },
 
+  // ── Bottom tabs ─────────────────────────────────────────────────────────────
+  nav_children:      { en: 'Children', tr: 'Çocuklar', es: 'Niños' },
+  nav_reports:       { en: 'Reports', tr: 'Raporlar', es: 'Informes' },
+
   // ── Weekly report ───────────────────────────────────────────────────────────
   rp_title:          { en: 'Reports', tr: 'Raporlar', es: 'Informes' },
   rp_this_week:      { en: 'This week', tr: 'Bu hafta', es: 'Esta semana' },
@@ -294,9 +299,6 @@ const P = {
                        tr: '%n% kez günlük sınıra takıldı — çalıştı ama gem kazanamadı.',
                        es: 'Alcanzó el límite diario %n% veces: trabajó, pero no ganó gemas.' },
   rp_no_children:    { en: 'No children yet.', tr: 'Henüz çocuk yok.', es: 'Aún no hay niños.' },
-  rp_open:           { en: 'Weekly report', tr: 'Haftalık rapor', es: 'Informe semanal' },
-  rp_open_b:         { en: 'Activity, gems and how the week compares', tr: 'Etkinlik, gem ve haftanın karşılaştırması',
-                       es: 'Actividad, gemas y comparación de la semana' },
 
   ts_eng_variety:    { en: 'British or American English', tr: 'İngiliz mi Amerikan İngilizcesi mi',
                        es: 'Inglés británico o americano' },

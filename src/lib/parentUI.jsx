@@ -12,6 +12,13 @@ export { PC, FONT, SHADOW, SHADOW_SM, SPACE, RADIUS, TAP, ELEV, TEXT } from './p
 export const PCSS = `
 *{box-sizing:border-box;}
 .tc-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+/* The parent tab bar sits under the content column and shares its width, so it has to break
+   where .pd-wrap breaks. One definition here rather than a number passed in from each screen. */
+.tc-col{max-width:430px;margin:0 auto;width:100%;}
+.tc-pnav{max-width:430px;}
+@media (min-width:900px){ .tc-pnav{max-width:980px;} .tc-col{max-width:980px;} }
+/* Room for the fixed bar, plus the home indicator on a phone. */
+.tc-tabbed{padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));}
 .tc-scroll::-webkit-scrollbar{display:none;}
 .tc-press{transition:transform .12s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,opacity .18s ease;}
 .tc-press:active{transform:scale(.97);}

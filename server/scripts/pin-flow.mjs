@@ -12,7 +12,7 @@ const FAMILY = 'PINTEST1'
 await post('/__h/patch', { table: 'parents', id: fam.parent, patch: { family_code: FAMILY } })
 const sib = await post('/__h/insert/children', { parent_id: fam.parent, name: 'Sibling', age: 6, language: 'en', task_settings: {} })
 const R = (child, pin, parent = fam.parent) => post('/__h/reset-pin', { child, pin, parent })
-const V = (pin) => post(`/api/family/${FAMILY}/verify-pin`, { pin })
+const V = (pin, child = fam.child) => post(`/api/family/${FAMILY}/verify-pin`, { pin, child_id: child })
 
 const a = await R(fam.child, '4821'); ok(a.success && a.pin === '4821' && a.chosen_by_parent, `chosen pin ${JSON.stringify(a)}`)
 ok((await V('4821')).child?.id === fam.child, 'the new PIN signs the child in')
@@ -22,7 +22,8 @@ ok((await R(fam.child, '1234', 'someone-else')).error === 'forbidden', 'another 
 const b = await R(sib.id)
 ok(b.success && /^\d{4}$/.test(b.pin) && !b.chosen_by_parent, `made pin ${JSON.stringify(b)}`)
 ok(b.pin !== '4821' && !/^(\d)\1{3}$/.test(b.pin) && b.pin !== '1234', 'made PIN is neither taken nor trivial')
-ok((await V(b.pin)).child?.id === sib.id, 'the made PIN signs the sibling in')
+ok((await V(b.pin, sib.id)).child?.id === sib.id, 'the made PIN signs the sibling in')
+ok((await V(b.pin, fam.child)).child == null, 'a sibling\'s PIN does not open another profile')
 for (let i = 0; i < 40; i++) { const m = await R(sib.id); ok(m.success && m.pin !== '4821' && !/^(\d)\1{3}$/.test(m.pin) && !['0123', '1234', '2345', '3456', '4567', '5678', '6789', '9876', '4321'].includes(m.pin), `made PIN ${m.pin}`); }
 // lockout: five wrong, then a reset clears it at once
 for (let i = 0; i < 5; i++) await V('0000')
@@ -38,8 +39,12 @@ await new Promise(r => setTimeout(r, 300))
 const mid = (await get('/__h/notes')).filter(n => n[0] === 'telegram.sendTelegramMessage')
 ok(mid.length === before + 1, `parent told once (${mid.length - before})`)
 await post(`/api/family/${FAMILY}/forgot-pin`); await post(`/api/family/${FAMILY}/forgot-pin`)
+const named = await post(`/api/family/${FAMILY}/forgot-pin`, { child_id: sib.id })
 await new Promise(r => setTimeout(r, 300))
-ok((await get('/__h/notes')).filter(n => n[0] === 'telegram.sendTelegramMessage').length === before + 1, 'repeat taps do not spam the parent')
+const lastMsg = (await get('/__h/notes')).filter(n => n[0] === 'telegram.sendTelegramMessage').at(-1)[1][1]
+ok(named.ok && /^Sibling tapped/.test(lastMsg), `a chosen child is named: ${lastMsg.slice(0, 60)}`)
+await new Promise(r => setTimeout(r, 300))
+ok((await get('/__h/notes')).filter(n => n[0] === 'telegram.sendTelegramMessage').length === before + 2, 'repeat taps do not spam the parent (one general, one for the chosen child)')
 ok((await V('7351')).child?.id === fam.child, 'forgetting changes nothing')
 const unknown = await post('/api/family/NOSUCHFAM/forgot-pin'); ok(unknown.ok === true, 'unknown family answers the same')
 console.log(fails.length ? `${fails.length} FAILURES\n` + fails.join('\n') : 'all PIN checks passed')
