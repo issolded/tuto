@@ -1,4 +1,4 @@
-import BookNavigation from '../components/BookNavigation'
+import BookWorldPicker from '../components/BookWorldPicker'
 import { useEffect, useRef, useState } from 'react'
 import { mergeDrafts } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
@@ -77,6 +77,17 @@ export default function LibraryScreen({ onWrite, onUpload }) {
   const archiveOpen = params.get('view') === 'archive'
   const [writeError, setWriteError] = useState(false)
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const areaKey = 'tuto:book-area:' + (child?.id || 'guest')
+  const [area, setArea] = useState(() => {
+    try { return localStorage.getItem(areaKey) === 'reader' ? 'reader' : 'writer' }
+    catch { return 'writer' }
+  })
+  const chooseArea = value => {
+    setArea(value)
+    setJiggling(false)
+    try { localStorage.setItem(areaKey, value) } catch { /* Selection still works without storage. */ }
+    if (archiveOpen) setParams({})
+  }
   const [books, setBooks] = useState(null)
   const [stories, setStories] = useState(null)
   const [jiggling, setJiggling] = useState(false)
@@ -155,11 +166,11 @@ export default function LibraryScreen({ onWrite, onUpload }) {
       {/* Content */}
       <div style={{ padding: '20px 16px 80px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
 
-        <BookNavigation lang={lang} current={archiveOpen ? 'archive' : 'library'} />
+        <BookWorldPicker lang={lang} area={area} archiveOpen={archiveOpen} onChoose={chooseArea} onLibrary={() => setParams({ view: 'archive' })} />
         {writeError && <p role="alert">{t('la_write_error', lang)}</p>}
         {archiveOpen ? books === null || stories === null ? <p>{t('lib_loading', lang)}</p> : <LibraryArchive books={books} stories={stories} childName={child?.name} lang={lang} onStory={story => setOpening({ story, fallbackColor: STORY_BG_COLORS[0] })} onRemove={id => setConfirmDeleteId(id)} /> : <>
         {/* ── Books by child ── */}
-        <div style={{ marginBottom: 32 }}>
+        {area === 'writer' ? <section className="book-world-panel" aria-label={t('bw_studio', lang)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               {t('lib_my_books', lang)}
@@ -196,13 +207,7 @@ export default function LibraryScreen({ onWrite, onUpload }) {
               )}
             />
           )}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: '#E8E8EE', marginBottom: 28 }} />
-
-        {/* ── Books from other authors ── */}
-        <div>
+        </section> : <section className="book-world-panel" aria-label={t('bw_explorer', lang)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               {t('lib_other_authors', lang)}
@@ -250,7 +255,7 @@ export default function LibraryScreen({ onWrite, onUpload }) {
 
             </>
           )}
-        </div>
+        </section>}
         </>}
       </div>
 
