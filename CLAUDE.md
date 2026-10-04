@@ -57,6 +57,24 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Kitap arşivi** (2026-10-04, kullanıcı kararı): devam eden okumalar ve taslaklar ana
+  Library'de kompakt kartlar; tamamlanan kitap/hikâyeler ayrı oda görünümünde. Oda yalnızca
+  gerçek tamamlanan kayıtlarla dolar, örnek kayıt yok. 36 kitap/sayfa, sabit sarı olmayan
+  sırt renkleri ve küçük altın başlık; seçilen kitap koltukta. Arama, tür/yıl filtresi,
+  kapak görünümü. Eski kayıtta bitirme tarihi yoksa yıl uydurulmaz. DB migration gerekmez.
+  Prototipteki günlük/puanlama/ilham etkileşimleri bu yayının kapsamında değil.
+
+
+- **Hikâye yazma düğmeleri** (2026-10-04, kullanıcı kararı): Şimdi kaydet + Kaydet ve çık
+  yazı alanının altında yan yana; Hikâyemi bitirdim onların altında tam genişlikte.
+  Başlık etiketinde isteğe bağlı açıklaması yok; başlık zorunlu değil.
+
+
+- **Hikâye kitaplığı kompakt kapaklar** (2026-10-03, kullanıcı kararı): kapaklar en fazla 190px,
+  dar ekranda otomatik satırlanır. Görselsiz hikâyeler kitap sırtı/sayfa kenarı, büyük harfli başlık
+  ve by + çocuk adıyla görünür; uzun başlık kırpılır, tam adı erişilebilir etikette kalır.
+
+
 - **PIN kilidi 1 dakika** (2026-10-02, kullanıcı kararı). Aile başına 5 yanlış PIN sonrası 60 saniye; ebeveyn bildirimleri EN/TR/ES aynı süreyi söyler.
 
 - **Baileys / WhatsApp bırakıldı.** Test yalnızca Telegram, WhatsApp Business erişimi
@@ -90,6 +108,13 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       `src/components/EnglishHelpVisual.jsx`. Denetim: açık resim cevabı taşımıyor, dolu resim cevabı yazıyor (`english-help-audit`). Tarayıcıda 390px.
       **Sıradaki fikir (kullanıcı):** kapalı küme "ölçek kartı" (north→south için dört yön, "?" karşıda; günler, mevsimler, aylar, büyüklük/sıcaklık
       ölçekleri) — elle yazılmış küçük bir tablo ister (antonimlerin çoğu kapalı küme değil), kapsam tahminen %5-15.
+- [ ] Uygulamada hikâye yazma (2026-10-02, Codex): yerel geliştirme hazır. Otomatik kayıt,
+      cihazda kurtarma kopyası, birden fazla taslak, kütüphaneden devam, sürüm çakışması koruması.
+      Değerlendirme sunucuda; taslakta Gem yok, ilk tamamlamada mevcut ödül akışı.
+      **Önce migration:** server/migrations/2026-10-02_story_drafts.sql. Sonra backend/frontend yayın.
+      Gerçek Supabase/Gemini testi ve fiziksel iPad doğrulaması bekliyor. Ayrıntı: handoff/STORY-WRITER.md.
+
+
 - [x] Astra notları: denklem sistemi, saat sayacı, geçme dili, gem açıklaması (2026-10-03, Claude). **(1)** 13 yaş denklem sistemi yardımı artık gerçek eleme
       zinciri (`simultSteps`, `mathTemplates.js`): sorulmayan harf elenir, çarpanlar söylenir, çarpılan sayılar tek tek yazdırılır, topla/çıkar, böl;
       negatifler `stpS` ile (eksi tuşu yok). "O harfi" → "bu değişkeni". math:check (13 yaş × 3 dil × 400) temiz. **(2)** Saat "N saatte kaç dakika" yardımında

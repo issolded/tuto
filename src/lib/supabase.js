@@ -254,7 +254,7 @@ export async function getChildStories(childId) {
   try {
     const res = await fetch(`${SERVER}/api/children/${encodeURIComponent(childId)}/stories`)
     const data = await res.json()
-    return data.stories || []
+    return (data.stories || []).sort((a,b) => Date.parse(b.updated_at || b.created_at) - Date.parse(a.updated_at || a.created_at))
   } catch (err) {
     console.error('[getChildStories] error:', err.message)
     return []
