@@ -139,11 +139,11 @@ const FAMILY_REASON = {
   'glyph-analogy': L('This does not fit the link between the first two pictures.', 'Bu, ilk iki resim arasındaki bağa uymuyor.', 'Este no encaja con el vínculo de los dos primeros dibujos.'),
 }
 const MOVED = {
-  sequence: (A) => L(`Its ${A} does not continue the pattern.`, `Bunun ${A} örüntünün devamı değil.`, `En esta, ${A} no continúa el patrón.`),
-  identical: (A) => L(`Its ${A} is different from the picture above.`, `Bunun ${A} üstteki şekilden farklı.`, `En esta, ${A} no coincide con la figura de arriba.`),
-  analogy: (A) => L(`Its ${A} does not match the change from the first shape to the second.`, `Bunun ${A}, ilk şekilden ikinciye olan değişikliğe uymuyor.`, `En esta, ${A} no sigue el cambio de la primera figura a la segunda.`),
-  'grid-complete': (A) => L(`Its ${A} does not fit the grid.`, `Bunun ${A} tabloya uymuyor.`, `En esta, ${A} no encaja en la cuadrícula.`),
-  reflection: (A) => L(`Its ${A} is not what a mirror would show.`, `Bunun ${A} aynada görünecek gibi değil.`, `En esta, ${A} no es lo que mostraría un espejo.`),
+  sequence: (A, m) => L(`Its ${A} ${m ? 'do' : 'does'} not continue the pattern.`, `Bunun ${A} örüntünün devamı değil.`, `En esta, ${A} no ${m ? 'continúan' : 'continúa'} el patrón.`),
+  identical: (A, m) => L(`Its ${A} ${m ? 'are' : 'is'} different from the picture above.`, `Bunun ${A} üstteki şekilden farklı.`, `En esta, ${A} no ${m ? 'coinciden' : 'coincide'} con la figura de arriba.`),
+  analogy: (A, m) => L(`Its ${A} ${m ? 'do' : 'does'} not match the change from the first shape to the second.`, `Bunun ${A}, ilk şekilden ikinciye olan değişikliğe uymuyor.`, `En esta, ${A} no ${m ? 'siguen' : 'sigue'} el cambio de la primera figura a la segunda.`),
+  'grid-complete': (A, m) => L(`Its ${A} ${m ? 'do' : 'does'} not fit the grid.`, `Bunun ${A} tabloya uymuyor.`, `En esta, ${A} no ${m ? 'encajan' : 'encaja'} en la cuadrícula.`),
+  reflection: (A, m) => L(`Its ${A} ${m ? 'are' : 'is'} not what a mirror would show.`, `Bunun ${A} aynada görünecek gibi değil.`, `En esta, ${A} no ${m ? 'son' : 'es'} lo que mostraría un espejo.`),
   code: (A) => L(`Its ${A} do not both match the code letters.`, `Bunun ${A} kod harflerine birlikte uymuyor.`, `En esta, ${A} no coinciden a la vez con las letras del código.`),
 }
 function reasonFor(q, i, g) {
@@ -165,10 +165,11 @@ function reasonFor(q, i, g) {
   const A = joinAnd(names, g)
   if (!A) return null
   const kind = REASON_TYPES[q.type] || (String(q.type).startsWith('glyph') || String(q.type).startsWith('icon') ? (String(q.type).endsWith('odd') ? 'shares' : 'lacks') : 'moved')
+  const m = names.length > 1
   const T = {
-    shares: L(`Its ${A} is the same as the others, so it is not the odd one.`, `Bunun ${A} diğerleriyle aynı, farklı olan bu değil.`, `En esta, ${A} es igual que en las demás, así que no es la que sobra.`),
-    lacks: L(`Its ${A} is not the same as the pictures above.`, `Bunun ${A} üsttekilerle aynı değil.`, `En esta, ${A} no coincide con los dibujos de arriba.`),
-    moved: (MOVED[q.type] || ((x) => L(`Its ${x} is not what this puzzle needs.`, `Bunun ${x} bu bulmacanın istediği gibi değil.`, `En esta, ${x} no es lo que pide el acertijo.`)))(A),
+    shares: L(`Its ${A} ${m ? 'are' : 'is'} the same as the others, so it is not the odd one.`, `Bunun ${A} diğerleriyle aynı, farklı olan bu değil.`, `En esta, ${A} ${m ? 'son iguales' : 'es igual'} que en las demás, así que no es la que sobra.`),
+    lacks: L(`Its ${A} ${m ? 'are' : 'is'} not the same as the pictures above.`, `Bunun ${A} üsttekilerle aynı değil.`, `En esta, ${A} no ${m ? 'coinciden' : 'coincide'} con los dibujos de arriba.`),
+    moved: (MOVED[q.type] || ((x, mm) => L(`Its ${x} ${mm ? 'are' : 'is'} not what this puzzle needs.`, `Bunun ${x} bu bulmacanın istediği gibi değil.`, `En esta, ${x} no ${mm ? 'son' : 'es'} lo que pide el acertijo.`)))(A, m),
   }[kind]
   return pick(T, g)
 }

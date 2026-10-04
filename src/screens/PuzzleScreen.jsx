@@ -380,7 +380,7 @@ export default function PuzzleScreen() {
               </div>
               <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: result.review.max_gems > 0 ? ORANGE : INK_SOFT }}>
                 {result.review.max_gems > 0
-                  ? say(language, `⭐ Up to +${result.review.max_gems} gems`, `⭐ En fazla +${result.review.max_gems} gem`, `⭐ Hasta +${result.review.max_gems} gems`)
+                  ? say(language, `⭐ Up to +${result.review.max_gems} ${result.review.max_gems === 1 ? 'gem' : 'gems'}`, `⭐ En fazla +${result.review.max_gems} gem`, `⭐ Hasta +${result.review.max_gems} ${result.review.max_gems === 1 ? 'gem' : 'gems'}`)
                   : say(language, 'No gems this time, but it makes you stronger 💪', 'Bu sefer gem yok ama seni güçlendirir 💪', 'Esta vez sin gems, pero te hace más fuerte 💪')}
               </div>
               <button className="pz-press" onClick={startReview} style={{
