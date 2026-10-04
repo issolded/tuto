@@ -17,7 +17,7 @@ const STRINGS = {
   sw_write: {en:"Write in the app",tr:"Uygulamada yaz",es:"Escribir en la app"},
   sw_upload: {en:"Upload a photo / file",tr:"Fotoğraf / dosya yükle",es:"Subir una foto / archivo"},
   sw_exit: {en:"Save and leave",tr:"Kaydet ve çık",es:"Guardar y salir"},
-  sw_title: {en:"Title (optional)",tr:"Başlık (isteğe bağlı)",es:"Título (opcional)"},
+  sw_title: {en:"Title",tr:"Başlık",es:"Título"},
   sw_untitled: {en:"Untitled story",tr:"Başlıksız hikâye",es:"Historia sin título"},
   sw_text: {en:"Your story",tr:"Hikâyen",es:"Tu historia"},
   sw_placeholder: {en:"Once upon a time…",tr:"Bir varmış bir yokmuş…",es:"Érase una vez…"},
