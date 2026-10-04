@@ -1,0 +1,19 @@
+.book-worlds{margin-bottom:24px;font-family:'TrRound','Baloo 2',sans-serif}
+.book-worlds-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.book-world{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;min-width:0;padding:20px 18px 16px;border:2px solid transparent;border-radius:24px;cursor:pointer;font:inherit;transition:transform .15s,box-shadow .15s}
+.book-world-writer{background:linear-gradient(135deg,#f2e9ff,#e7ddfc);color:#53388a;--world-color:#7955b3}
+.book-world-reader{background:linear-gradient(135deg,#e4f5ef,#cff0e4);color:#205e4b;--world-color:#338369}
+.book-world[aria-pressed=true]{border-color:var(--world-color);box-shadow:0 5px 0 color-mix(in srgb,var(--world-color) 22%,transparent)}
+.book-world:hover{transform:translateY(-2px)}
+.book-world-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:18px;background:#ffffffaa;font-size:32px;margin-bottom:6px;transform:rotate(-6deg)}
+.book-world strong{font-size:21px;line-height:1.2}
+.book-world-hint{font-size:13px;line-height:1.4;max-width:25ch}
+.book-world-dot{position:absolute;right:16px;top:16px;font-size:18px}
+.book-world-library{display:flex;align-items:center;gap:14px;width:100%;margin-top:16px;padding:14px 18px;background:#fff8e9;color:#79562e;border:1px solid #efdfbd;border-radius:20px;text-align:left;font:inherit;cursor:pointer}
+.book-world-library>span:nth-child(2){flex:1}.book-world-library strong{display:block;font-size:18px}.book-world-library small{display:block;font-size:13px;margin-top:2px}.book-world-library-icon{font-size:30px}
+.book-world-library[aria-pressed=true]{border:2px solid #a57a38;background:#fff0d0}
+.book-worlds button:focus-visible{outline:3px solid #e68b36;outline-offset:4px}
+.book-world-panel{padding:4px 0 16px}
+@media(min-width:768px){.book-world{padding:24px;min-height:175px}.book-world strong{font-size:25px}.book-world-hint{font-size:15px}}
+@media(max-width:360px){.book-world{padding:16px 12px}.book-world strong{font-size:18px}.book-world-hint{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.book-world{transition:none}.book-world:hover{transform:none}}

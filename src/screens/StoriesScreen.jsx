@@ -1,17 +1,15 @@
+import LibraryScreen from './LibraryScreen'
 import StoryWriter from '../components/StoryWriter'
-import { mergeDrafts, draftKey } from '../lib/storyDrafts'
+import { draftKey } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
+import { useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
 import { readStory, checkTitleSpelling } from '../lib/gemini'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
 import { usePhotoCrop } from '../components/usePhotoCrop'
-import StoryCover from '../components/StoryCover'
-import BookShelfGrid from '../components/BookShelfGrid'
-import BookOpenTransition from '../components/BookOpenTransition'
 import FlippingBook from '../components/FlippingBook'
 import { useIsTablet } from '../components/Shell'
 
@@ -84,7 +82,6 @@ function buildSpellingHTML(text, errors, states, activeError) {
   }).join('')
 }
 
-const CARD_COLORS = ['#E8F5E9', '#E3F2FD', '#FFF8E1', '#FCE4EC']
 const BG = 'linear-gradient(180deg, #E8F5E9 0%, #F1F8E9 100%)'
 const BG_YOUNG = '#e3f3ea'
 const COVER_COLORS = ['#B5EAD7','#C5DFFF','#FFD4E8','#FFF3A3','#D9CCFF','#FFDFB5','#B5EEE8','#FFD4D4']
@@ -155,9 +152,7 @@ export default function StoriesScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const language = childLang(child)
 
-  const [loadingStories, setLoadingStories] = useState(true)
-  const [stories, setStories] = useState([])
-  const [step, setStep] = useState('idle') // 'idle' | 'title' | 'write'
+  const [step, setStep] = useState(() => location.state?.action === 'write' ? 'typed' : location.state?.action === 'upload' ? 'title' : 'idle') // 'idle' | 'title' | 'write'
   const [chosenIdea, setChosenIdea] = useState(null)
   const [storyTitle, setStoryTitle] = useState('')
   const [photos, setPhotos] = useState([])
@@ -194,11 +189,7 @@ export default function StoriesScreen() {
   const [confirmDeleteStory, setConfirmDeleteStory] = useState(false)
   const [deletingStory, setDeletingStory] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
-  const [opening, setOpening] = useState(null) // { story, fallbackColor } — book-open transition before entering the editor
   const [coverReturnStep, setCoverReturnStep] = useState(null) // editor step to go back to when cover was opened mid-edit
-
-  // where this whole screen was entered from (Home or Library) — drives the idle-screen back button
-  const listOrigin = location.state?.from || '/child/home'
 
   // cover composition
   const coverFileRef = useRef(null)
@@ -342,7 +333,6 @@ export default function StoriesScreen() {
               setTypedStory(saved.story)
               if (status === 'completed') localStorage.removeItem(draftKey(child.id, saved.story.id))
             }
-            setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
             if (!storyId) setStoryId(saved.story.id)
           }
           if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
@@ -382,7 +372,6 @@ export default function StoriesScreen() {
               setTypedStory(saved.story)
               if (status === 'completed') localStorage.removeItem(draftKey(child.id, saved.story.id))
             }
-          setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
           if (!storyId) setStoryId(saved.story.id)
         }
         if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
@@ -399,13 +388,6 @@ export default function StoriesScreen() {
     }
   }
 
-  useEffect(() => {
-    if (!child?.id) { setLoadingStories(false); return }
-    getChildStories(child.id).then(storiesData => {
-      setStories(mergeDrafts(storiesData, child.id))
-      setLoadingStories(false)
-    }).catch(() => setLoadingStories(false))
-  }, [])
 
   // Open an existing story for editing (navigated from LibraryScreen, or tapped in My Stories)
   const openStoryForEdit = (story, origin) => {
@@ -456,7 +438,6 @@ export default function StoriesScreen() {
     setDeleteError(null)
     try {
       await deleteChildStory(child.id, storyId)
-      setStories(prev => prev.filter(s => s.id !== storyId))
       setConfirmDeleteStory(false)
       exitEditMode()
     } catch (err) {
@@ -497,6 +478,8 @@ export default function StoriesScreen() {
     localStorage.removeItem(draftKey(child.id, draft.id))
     setStep('encourage')
   }
+
+  if (step !== 'idle' && !child?.id) return <Navigate to="/child" replace />
 
   if (step === 'typed') return <StoryWriter key={typedStory?.id || 'new'} child={child} story={typedStory}
     language={language} onExit={() => nav('/child/library')} onReview={reviewTyped} />
@@ -1069,7 +1052,6 @@ export default function StoriesScreen() {
           const saved = await saveChildStory(child.id, { storyId, ...(typedStory ? { expectedRevision: typedStory.revision } : {}), cover_url: coverImageUrl || null, cover_color: coverColor })
           if (saved.story) {
             if (typedStory) setTypedStory(saved.story)
-            setStories(prev => prev.map(s => s.id === storyId ? saved.story : s))
           }
         } catch (err) {
           console.error('[saveCover]', err.message)
@@ -1236,92 +1218,5 @@ export default function StoriesScreen() {
     )
   }
 
-  const inProgressStories = stories.filter(s => s.status === 'in_progress')
-  const completedStories = stories.filter(s => s.status !== 'in_progress')
-
-  // ── IDLE ───────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <style>{ANIM}</style>
-
-      <div style={{ padding: '56px 24px 20px' }}>
-        <BackBtn onClick={() => nav(listOrigin)} />
-        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
-          {child?.name ?? 'Friend'}, the Creative Writer ✏️
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', marginTop: 6 }}>
-          {loadingStories ? 'Loading your stories...' : 'Ready to write something new?'}
-        </div>
-      </div>
-
-      <div style={{ padding: '0 24px 40px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-
-        {/* In-progress story */}
-        {!loadingStories && inProgressStories.map(inProgressStory => (
-          <div key={inProgressStory.id} style={{ marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
-            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
-              {t('st_continue_writing', language)}
-            </div>
-            <button
-              onClick={() => openStoryForEdit(inProgressStory, '/child/stories')}
-              style={{ background: 'white', border: '3px solid #A5D6A7', borderRadius: 24, padding: '20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.12)', width: '100%', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 44 }}>🌳</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', marginBottom: 4 }}>
-                  {inProgressStory.title || t('sw_untitled', language)}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956' }}>{t('sw_continue', language)} →</div>
-              </div>
-            </button>
-          </div>
-        ))}
-
-        {/* Completed stories grid */}
-        {!loadingStories && completedStories.length > 0 && (
-          <div style={{ marginBottom: 24, animation: 'fadeUp 0.35s ease 0.07s both' }}>
-            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
-              My Stories 📚{' '}
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#6A9956' }}>{completedStories.length} written</span>
-            </div>
-            <BookShelfGrid
-              items={completedStories}
-              renderItem={(story, i) => (
-                <div key={story.id} style={{ animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
-                  <StoryCover story={story} fallbackColor={CARD_COLORS[i % CARD_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: CARD_COLORS[i % CARD_COLORS.length] })} />
-                </div>
-              )}
-            />
-          </div>
-        )}
-
-        <button onClick={() => { setTypedStory(null); setStep('typed') }}
-          style={{ width: '100%', padding: 18, marginBottom: 12, borderRadius: 20, border: 0,
-            background: '#19845D', color: 'white', fontSize: 18, fontWeight: 800, cursor: 'pointer' }}>
-          {t('sw_write', language)}
-        </button>
-
-        {/* Start a new story — straight to title, no idea-picking detour */}
-        {!loadingStories && (
-          <button
-            onClick={startNewStory}
-            style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', width: '100%', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.35s ease 0.14s both' }}
-          >
-            {t('sw_upload', language)}
-          </button>
-        )}
-      </div>
-
-      {opening && (
-        <BookOpenTransition
-          key={opening.story.id}
-          story={opening.story}
-          childName={child?.name}
-          fallbackColor={opening.fallbackColor}
-          onClose={() => setOpening(null)}
-          onEdit={() => { openStoryForEdit(opening.story, '/child/stories'); setOpening(null) }}
-        />
-      )}
-    </div>
-  )
+  return <LibraryScreen onWrite={() => { setTypedStory(null); setStep('typed') }} onUpload={startNewStory} />
 }

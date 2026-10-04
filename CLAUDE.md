@@ -768,10 +768,85 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       dönüyor. Üç kırılma senaryosuyla (bare Fredoka, eksik rescue, range'den İ'nin düşmesi)
       doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
       tamamını taşıyor; Georgia ve monospace sistem fontu.
+- [x] Ebeveyn uygulaması: alt sekmeler, Raporlar ve tek telefon kolonu (2026-10-04, Claude).
+      Dört sekme — **Çocuklar** (ana ekran), **Tuto'ya Sor** (aynı gün Raporlar'ın yerine), **Ekran süresi**, **Ayarlar**.
+      Ekran süresi sekmesi aynı gün kullanıcı kararıyla eklendi (önerim native'i beklemekti): kurallar
+      çocuk çipleriyle, her kontrol kendini kaydediyor (700ms debounce, compare-and-swap; çocuk
+      değişince ve sekmeden çıkınca bekleyen yazılıyor — sekme barının üstünde "Kaydet" düğmesi
+      düzenleme kaybettirir). Değerler girilirken sıkıştırılıyor (hafta içi ≤ tavan, ek süre ≤ tavan),
+      kaydedilemeyen tek şey başı = sonu olan program. Ekran KULLANIMI değil bugünün PLANINI gösteriyor
+      ve üstte web denemesi uyarısı duruyor (bkz. 2026-09-20 sınırı). Çocuk görünümü denemesi eski
+      `/parent/settings/screen-control?view=preview`'da.
+      **Aynı gün ikinci tur (kullanıcı onayı, piyasa karşılaştırmasından):** (1) **Önce öğren, sonra oyna**
+      (`learnFirst`, `learnNeed` 1-5): o günün BİTMİŞ görev sayısı (today-summary, gerçek veri) yetene kadar
+      süreli uygulamalar kapalı; sayı bilinmiyorsa kapatmaz; uyku/okul saati önceliği korur. (2) **Bugünlük
+      ek süre** (`extra: {date, minutes}`): kuralları değiştirmez, yalnız o gün; günlük tavanın ÜSTÜNE biner
+      (tavan Gem'le kazanılan süreyi yönetir, bu ebeveynin kendi kuralını bir günlüğüne aşması); kişi başı
+      günde en fazla 120 dk, kodda. Sohbette `give_screen_time` (5-120 dk, `clear`), sekmeyle aynı alanı
+      compare-and-swap ile yazar; "bugün" ebeveynin saat dilimi. Model "şimdi oynayabilir/cihaz açıldı"
+      diyemez — araç açıklaması ve sonuç web denemesi olduğunu söyler. (3) **Tatil modu** (`holiday`,
+      `holidayFrom..holidayTo` dahil): okul saati kapalı, her gün hafta sonu süresi. Eski kayıtlı kurallar
+      varsayılanların üstüne okunuyor (`readRules` birleştirir), sıfırlanmıyor. Sohbet bağlamında
+      `screenTime` cümlesi (plan, kullanım değil). Sunucu mantığı `server/screenTime.js`, test
+      `scripts/tests/screen-time.test.mjs`; model testi `src/lib/__tests__/screenControl.test.js` 10/10.
+      Gerçek Supabase ve gerçek sohbet modeliyle (`give_screen_time` çağrısı) denenmedi.
+      **Üçüncü tur: "Tuto'ya Sor" sekmesi (kullanıcı kararı).** Raporlar sekmesi gitti; rapor artık çocuğun
+      sayfasında ("📊 Bu hafta" kartı → `/parent/reports?child=`, geri çocuğa döner, çocuk çipleri yok).
+      Yerine 💬 **Tuto'ya Sor**: aynı beyin (`handleMessage`, `POST /api/parent/chat`, ebeveyn JWT, 1000
+      karakter), ama **yalnız soru-cevap ve yalnız üç konu: çocuğun gelişimi, ekran süresi, gem.** Tuto burada
+      kendiliğinden bir şey demez — bildirim/onay gösterilmez; ekran yalnız burada sorulanları gösterir
+      (cihazda, `tuto_ask_v1:<uid>`, son 60), beyin yine ortak transkripti hatırlar. Kapsam KODDA: bu kanalda
+      modele yalnız `give_screen_time`, `gift_gems`, `deduct_gems`, `update_task_reward`, `set_math_focus`
+      sunuluyor ve dispatch'in en başında başka araç reddediliyor; davranışı `APP_SCOPE_NOTE` anlatıyor
+      (kapsam dışını tek cümleyle Telegram/WhatsApp'a ya da ilgili ekrana yönlendirir). Fotoğraf yeniden
+      gönderen iki araç uygulamadan çağrılınca fotoğrafı Telegram'a değil cevaba koyar. **Giriş kapısı ilk kez
+      kuruldu ama YALNIZ bu sekme için** (`server/inboundGate.js`: dakikada 10, günde 150 ebeveyn mesajı;
+      sayım `messages`'tan, kanal sütunu olmadığı için bütün kanalların toplamı; sayım başarısızsa geçer;
+      model çağrılmadan sabit cevap). **Telegram ve WhatsApp davranışı DEĞİŞMEDİ** (kullanıcı: "o kısım tamamen
+      farklı"): kapı, haftalık rapor bağlamı ve kapsam yalnız `opts.scope === 'app'` iken devrede; harness'te
+      aynı ebeveyn için uygulama reddedilirken Telegram yolunun modele gittiği doğrulandı. Haftalık rapor
+      `weekForChild()` tek kaynaktan (uç + sohbet bağlamı `thisWeek`, yalnız uygulama kanalında) — sohbetteki
+      sayı grafikle aynı. Testler: `inbound-gate.test.mjs`, `parent-week.test.mjs` (weekContext). Gerçek
+      Gemini ile uygulama kanalı denenmedi (anahtar yok): kapsam dışı soruya modelin cevabı görülmedi.
+      **Dördüncü tur (kullanıcı bulgusu):** soru sorup başka sekmeye geçince cevap kayboluyordu (istek
+      ekranın içindeydi; sunucu cevabı üretip transkripte yazıyor ama ekrana dönemiyordu). İki katman:
+      (1) `src/lib/parentAsk.js` — sorular ekrandan bağımsız bir depoda; sekme değişse de cevap yerine
+      oturur, uzaktayken gelen cevap için Tuto sekmesinde kırmızı nokta (bildirim değil, uygulama içi).
+      (2) **Migration önce:** `server/migrations/2026-10-04_parent_app_chat.sql` (`parent_app_chat`): POST
+      soruyu yazar, 202 ile hemen döner, cevabı arka planda satıra yazar; ekran geçmişi sunucudan okur
+      (uygulama kapansa/cihaz değişse de cevap orada; sonraki bildirim işi bu satıra dayanacak). 3 dk'dan
+      eski "pending" satır "Cevap gelmedi" + "Tekrar sor" olarak görünür (arada sunucu yeniden başlarsa).
+      **Tablo yokken** eski davranış: cevap istek içinde, geçmiş cihazda — ama (1) sayesinde sekme
+      değiştirmek yine kaybettirmez. `server/appChat.js` + `scripts/tests/app-chat.test.mjs`. Harness'te
+      iki mod da gerçek `index.js` ile: tablo varken 202 (16 ms) ve 2 sn sonra GET'te cevap; yokken 200 +
+      cevap. Tarayıcıda iki modda: sor → hemen Çocuklar → nokta → geri → cevap orada, nokta gitti, yenileme sonrası da.
+      **Rapor her çocuğun altında:** Çocuklar sekmesinde her çocuk kartında "BU HAFTA 18 etkinlik · 255 ⭐"
+      satırı + yedi çubuk → o çocuğun raporu (çocuk sayfasındaki kartla aynı kanca, `src/lib/parentWeek.js`).
+      Raporun geri düğmesi geldiği yere döner (ana ekran ya da çocuk sayfası). Sekme çubuğu prototipin birebir tasarımı
+      (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
+      bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
+      (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.
+      **Raporlar:** `GET /api/parent/children/:childId/week` (ebeveyn JWT + sahiplik), Pazartesi
+      başlangıçlı hafta, gün gün gem + sınıra takılan gün + geçen haftayla karşılaştırma. Toplama
+      mantığı `server/week.js`'te — DB'siz ve saatsiz, `scripts/tests/parent-week.test.mjs` ile.
+      **Tek genişlik:** 980px tablet düzeni kaldırıldı (tarayıcıda vardı, cihazda yoktu); her ebeveyn
+      ekranı `.tc-col`, 430px, geniş ekranda arkası koyulaşıyor. Ekran Kontrolü 1100px'ti ve iki
+      sütunu VIEWPORT'a bakıyordu — laptopta telefon kolonunu ikiye bölüyordu.
+      **Yolda çıkan üç hata:** (1) `completedStoriesBetween` satır değil supabase sonucu döndürüyor,
+      `.map` her istekte patlıyordu — uç canlı DB olmadan çalıştırılamadığı için fark edilemiyordu;
+      `rowsOf()` iki şekli de okuyor. (2) `.tc-tabbed`'in 96px alt boşluğunu üç ekran satır içi
+      `padding` kısayoluyla 32px'e eziyordu — bar sayfanın son 37px'ini kapatıyor, raporun "sınıra
+      takıldı" uyarısı altında kalıyordu. (3) Rapor tarihleri ÇOCUĞUN diliyle yazılıyordu: görev
+      adları çocuğun sözlüğünden gelmeli ama hafta aralığı ve gün adları ebeveynin dili
+      (İspanyolca okuyan ebeveyn kendi raporunda "22–28 Eylül · Pzt Sal Çar" görüyordu).
+      Doğrulama: npm test 107/107, build, font:check; i18n:check 82'de, eslint 353'te değişmedi;
+      tarayıcıda 9 ebeveyn rotası × 320/390/1280 × 3 dil, yatay taşma ve runtime hatası 0.
+      Gerçek Supabase/Railway ile denenmedi.
 - [x] Parent dashboard keşfedilebilirliği (2026-09-20): panel "bugün" ekranı oldu — çocuk kartları bugünkü
       etkinlik, gem, Hezarfen ve "N onay bekliyor" rozetiyle (`/api/parent/overview`), "Bir süre meşgulüm" panelde,
       kanal bağlı değilse hatırlatma. Bütün ayarlar üstteki ⚙️ **Ayarlar** düğmesinden `/parent/settings`'e taşındı
-      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). Tablette iki sütun.
+      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). (Tabletteki iki sütun ve
+      ⚙️ düğmesi 2026-10-04'te kalktı: ayarlar alt sekme oldu, uygulama tek telefon kolonu.)
 - [ ] Drawings, Eylül 2026 partilerinden kalan tek şey: `cizims_sep2026/drawings/robot`
       yayınlanmadı — çizim Optimus Prime, omzunda Autobot arması ve elinde silahla. Marka
       korumalı bir karakter; jenerik bir robot çizdirip aynı boru hattından geçirmek gerek.
@@ -1039,3 +1114,15 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 `src/screens/`'e gider, bundle'a değil.
 
 - 2026-10-04: Aile kodu okuma hatasında yeniden üretilmez; ilk yazım yalnız NULL koşuluyla yapılır. Birden fazla çocukta giriş açık çocuk seçimi + o çocuğun PIN doğrulamasıdır. Aynı PIN ile belirsiz eski istemci isteği ilk kardeşi seçmez.
+
+- 2026-10-04 kullanıcı revizyonu: günlük çocuk seçimi kaldırıldı. /setup/assign yalnız ebeveyn oturumuyla cihazı çocuğa bağlar, bu tarayıcıdaki ebeveyn oturumunu local scope ile kapatır. Sunucunun amaç ayrımlı HMAC cihaz belgesi parent/child/device kimliğine bağlıdır ve 1 yıl geçerlidir; SUPABASE_SERVICE_ROLE_KEY yalnız sunucuda imza anahtarıdır. PIN girişinde belge zorunlu, child_id istemciden seçilmez. Eski cihazlar bir defa kurulur. DB migration yok; tekil cihaz iptali ve bütün API/DB erişiminin çocuk session auth ile korunması ayrı kalan iştir.
+
+- 2026-10-04: Ana ekranda Okuma / Hikâye yazma / Kitaplık / Arşiv kısa yolları; hikâye liste ekranında Okuma / Kitaplık / Arşiv bağlantıları görünür. Yazı düzenlerken gösterilmez; kapalı görevler kısa yollarda da gizlenir.
+
+- 2026-10-04 kullanıcı geri alma kararı: ebeveyn oturumuyla cihaz eşleştirme geri alındı. /setup yeniden aile kodu veya QR -> çocuk PIN akışı. /setup/assign eski bağlantısı /setup yönlendirmesidir. Cihaz belgesi zorunluluğu ve çocuk kurulumunda ebeveyn sign-out kaldırıldı. Aile kodunun sabit kalması düzeltmesi korunur. Yukarıdaki cihaz belgesi kararı artık geçerli değildir.
+
+- 2026-10-04: ReadingFlow kitap kayıt hatasında kapağa dönmez; başlık/kapak korunur, tekrar deneme aynı kitap ID ile yapılır. Sayfa alanları DB hatasında ilerlemez. QA hesabında doğrudan anon insert başarılı; kullanıcının asıl kayıt hatası henüz yeniden üretilemedi.
+
+- 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
+
+- 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.

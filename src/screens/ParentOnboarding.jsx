@@ -344,7 +344,7 @@ export default function ParentOnboarding() {
   const showBack = step > 1 && step < 9
 
   return (
-    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
 
       {step > 1 && <ProgressBar step={step} />}
 

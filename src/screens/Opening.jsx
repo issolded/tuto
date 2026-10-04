@@ -16,7 +16,7 @@ export default function Opening() {
   }, [])
 
   return (
-    <div style={{
+    <div className="tc-col" style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       minHeight: '100dvh', background: PC.bg, padding: '60px 26px 52px', gap: 0,
     }}>

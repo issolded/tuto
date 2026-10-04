@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
@@ -35,10 +35,17 @@ import FamilySetup from './screens/FamilySetup'
 import TaskSettings from './screens/TaskSettings'
 const ChildSettings = lazy(() => import('./screens/ChildSettings'))
 const ScreenControlSettings = lazy(() => import('./screens/ScreenControlSettings'))
+const ParentScreenTime = lazy(() => import('./screens/ParentScreenTime'))
+const ParentTuto = lazy(() => import('./screens/ParentTuto'))
 // Looks backwards, not at today, and nobody opens it on the way to something else.
 const ParentReports = lazy(() => import('./screens/ParentReports'))
 import HomeworkScreen from './screens/HomeworkScreen'
 import DrawingsScreen from './screens/DrawingsScreen'
+
+function StoriesEntry() {
+  const location = useLocation()
+  return <StoriesScreen key={location.key} />
+}
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -70,11 +77,14 @@ export default function App() {
         <Route path="/parent/dashboard"   element={session ? <ParentDashboard />   : <Navigate to="/parent/login" />} />
         <Route path="/parent/settings"    element={session ? <ParentDashboard view="settings" /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/reports" element={session ? <Suspense fallback={null}><ParentReports /></Suspense> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/tuto" element={session ? <Suspense fallback={null}><ParentTuto /></Suspense> : <Navigate to="/parent/login" />} />
+        <Route path="/parent/screen-time" element={session ? <Suspense fallback={null}><ParentScreenTime /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/parent/settings/screen-control" element={session ? <Suspense fallback={null}><ScreenControlSettings /></Suspense> : <Navigate to="/parent/login" />} />
         <Route path="/parent/onboarding" element={session ? <ParentOnboarding /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id" element={session ? <ParentChildDetail /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/settings" element={session ? <TaskSettings /> : <Navigate to="/parent/login" />} />
         <Route path="/parent/child/:id/review/:ledgerId" element={session ? <Suspense fallback={null}><ReviewScreen parent /></Suspense> : <Navigate to="/parent/login" />} />
+        <Route path="/setup/assign" element={<Navigate to="/setup" replace />} />
         <Route path="/setup" element={<FamilySetup />} />
         <Route path="/child" element={<ChildPin />} />
         <Route path="/child/settings" element={<Suspense fallback={null}><ChildSettings /></Suspense>} />
@@ -85,7 +95,7 @@ export default function App() {
         <Route path="/math-lab" element={<MathLab />} />
         <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
         <Route path="/english-lab" element={<Suspense fallback={null}><EnglishLab /></Suspense>} />
-        <Route path="/child/stories" element={<StoriesScreen />} />
+        <Route path="/child/stories" element={<StoriesEntry />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
         <Route path="/child/puzzle" element={<Suspense fallback={null}><PuzzleScreen /></Suspense>} />

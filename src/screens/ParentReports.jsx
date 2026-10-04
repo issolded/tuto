@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, TEXT, SPACE, RADIUS, PCSS, TopBar, Card, TaskIcon } from '../lib/parentUI'
-import { useT } from '../lib/parentI18n'
+import { useT, useUiLang } from '../lib/parentI18n'
 import { t as childT, childLang as childLangOf, localeFor } from '../lib/i18n'
 import ParentNav from '../components/ParentNav'
 
@@ -26,9 +26,13 @@ const BAR_MAX = 86
 export default function ParentReports() {
   const nav = useNavigate()
   const s = useT()
+  const uiLang = useUiLang()
   const [params, setParams] = useSearchParams()
   const [children, setChildren] = useState([])
   const [childId, setChildId] = useState(params.get('child') || '')
+  // Arrived from one child's page: the report is that child's, and switching children here would
+  // leave the back button pointing at the wrong one.
+  const fromChild = params.get('child') || ''
   const [offset, setOffset] = useState(0)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -84,8 +88,13 @@ export default function ParentReports() {
   }, [childId, offset])
 
   const child = children.find(c => c.id === childId)
+  // Two axes, and this screen reads both. Task names come from the CHILD's dictionary so the
+  // parent and the child call the same thing by the same word; everything the screen says in
+  // its own voice — the week's dates, the weekday under each bar — is the PARENT's language.
+  // It was one locale for both, so a Spanish-reading parent of a Turkish-reading child got
+  // "22–28 Eylül" and "Pzt Sal Çar" across their own report.
   const lang = childLangOf(child)
-  const locale = localeFor(lang)
+  const locale = localeFor(uiLang)
 
   const pickChild = (id) => { setChildId(id); setOffset(0); setParams({ child: id }) }
 
@@ -104,11 +113,14 @@ export default function ParentReports() {
 
   return (
     <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <TopBar title={s('rp_title')} sub={child?.name} />
+      {/* Opened from a child's page now (the tab went to Tuto), so it has a way back to that child. */}
+      {/* Back to wherever it was opened from — the child page or the Children tab's row. A link
+          straight into the report (nothing to go back to) lands on the child. */}
+      <TopBar title={s('rp_title')} sub={child?.name} onBack={() => (window.history.state?.idx > 0 ? nav(-1) : nav(fromChild ? `/parent/child/${fromChild}` : '/parent/dashboard'))} />
 
-      <div className="tc-scroll tc-tabbed" style={{ flex: 1, padding: `0 ${SPACE.s5}px ${SPACE.s8}px` }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingInline: SPACE.s5 }}>
 
-        {children.length > 1 && (
+        {children.length > 1 && !fromChild && (
           <div style={{ display: 'flex', gap: SPACE.s2, marginBottom: SPACE.s3 }}>
             {children.map(k => (
               <button key={k.id} className="tc-press tc-tap" onClick={() => pickChild(k.id)}
@@ -231,6 +243,14 @@ export default function ParentReports() {
               )}
             </Card>
 
+            {/* The question a chart raises is "why" — and the chat has these same numbers to answer it. */}
+            {child && offset === 0 && (
+              <button className="tc-press tc-tap" onClick={() => nav(`/parent/tuto?ask=${encodeURIComponent(s('tt_q_week', { name: child.name }))}`)}
+                style={{ width: '100%', marginTop: SPACE.s3, minHeight: 48, borderRadius: RADIUS.md, border: 'none', background: PC.tealBg, color: PC.tealInk, fontFamily: FONT, fontWeight: 800, fontSize: 14.5, cursor: 'pointer' }}>
+                💬 {s('rp_ask_tuto', { name: child.name })}
+              </button>
+            )}
+
             {/* The limit is reported, not hidden: these are sessions that happened and paid nothing. */}
             {totals.capped > 0 && (
               <Card pad={18} style={{ marginTop: SPACE.s3, background: PC.peachBg, boxShadow: 'none' }}>
@@ -242,7 +262,7 @@ export default function ParentReports() {
           </>
         )}
       </div>
-      <ParentNav active="reports" />
+      <ParentNav active="children" />
     </div>
   )
 }

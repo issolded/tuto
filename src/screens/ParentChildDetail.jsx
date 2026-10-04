@@ -11,6 +11,8 @@ import {
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot, BirthDateField,
 } from '../lib/parentUI'
 import { ageFromBirthDate } from '../lib/age'
+import ParentNav from '../components/ParentNav'
+import { useChildWeek } from '../lib/parentWeek'
 import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -851,6 +853,35 @@ function RemoveSheet({ child, onClose, onConfirm }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
+// The week's numbers from the same endpoint the report draws, as one line and seven small bars.
+function WeekCard({ childId, onOpen }) {
+  const s = useT()
+  const w = useChildWeek(childId)
+  const max = Math.max(0, ...(w?.days || []).map(d => d.gems))
+  const delta = w ? w.totals.gems - w.previous.gems : 0
+  return (
+    <Card pad={14} onClick={onOpen} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>📊 {s('cd_week')}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2 }}>
+          {w ? s('rp_summary', { n: w.totals.sessions, g: w.totals.gems }) : '…'}
+        </div>
+        {w && (w.previous.gems > 0 || w.totals.gems > 0) && (
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, marginTop: 3, color: delta > 0 ? PC.green : delta < 0 ? PC.peachDeep : PC.inkSoft }}>
+            {delta > 0 ? s('rp_vs_up', { n: delta }) : delta < 0 ? s('rp_vs_down', { n: -delta }) : s('rp_vs_same')}
+          </div>
+        )}
+      </div>
+      <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 34, flex: 'none' }}>
+        {(w?.days || Array.from({ length: 7 }, () => ({ gems: 0 }))).map((d, i) => (
+          <span key={i} style={{ width: 7, height: max ? Math.max(3, Math.round(d.gems / max * 34)) : 3, borderRadius: '3px 3px 0 0', background: d.gems ? PC.tealInk : PC.line }} />
+        ))}
+      </div>
+      <Icon name="chevron" size={18} color={PC.inkFaint} />
+    </Card>
+  )
+}
+
 export default function ParentChildDetail() {
   const s = useT()
   const lang = useUiLang()
@@ -1170,7 +1201,7 @@ export default function ParentChildDetail() {
   )
 
   return (
-    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
       {justApproved && <Confetti n={16} />}
       {lightbox && (
         <PhotoLightbox
@@ -1187,7 +1218,7 @@ export default function ParentChildDetail() {
         onBack={() => nav('/parent/dashboard', { state: { updatedChild: child } })}
       />
 
-      <div className="tc-scroll" style={{ flex: 1, padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingTop: 4, paddingInline: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
 
         {/* profile card */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '4px 2px 0' }}>
@@ -1207,6 +1238,10 @@ export default function ParentChildDetail() {
             </div>
           </div>
         </div>
+
+        {/* This week, at a glance — the door to the weekly report, which lives here now that the
+            Reports tab went to Tuto. A week is always one child's week. */}
+        <WeekCard childId={id} onOpen={() => nav(`/parent/reports?child=${id}`)} />
 
         {/* The language the child is taught in. It lived only at the top of Task settings, one
             screen down, and a parent looking for it here — on the child's own card — did not
@@ -1503,7 +1538,7 @@ export default function ParentChildDetail() {
           <SectionHead>{s('cd_settings')}</SectionHead>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { icon: 'clock', label: s('sc_title'), sub: s('sc_intro'), onClick: () => nav(`/parent/settings/screen-control?child=${id}`) },
+              { icon: 'clock', label: s('sc_title'), sub: s('sc_intro'), onClick: () => nav(`/parent/screen-time?child=${id}`) },
               { icon: 'gear',  label: s('cd_task_settings'), sub: s('cd_task_settings_b'), onClick: () => nav(`/parent/child/${id}/settings`) },
               { icon: 'edit',  label: s('cd_edit_child').replace(' ✏️', ''), sub: s('cd_edit_child_b'), onClick: () => setShowEditModal(true) },
               { icon: 'lock',  label: s('cd_change_pin'),     sub: s('cd_change_pin_b'),     onClick: () => setShowPinModal(true) },
@@ -1593,6 +1628,7 @@ export default function ParentChildDetail() {
           }}
         />
       )}
+      <ParentNav active="children" />
     </div>
   )
 }

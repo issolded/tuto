@@ -13,9 +13,14 @@
 // "ordenador"). Where English has a gendered address the Spanish avoids picking one — the app
 // does not know whether the child is a boy or a girl and must not guess at them by name.
 const STRINGS = {
+  bw_studio: { en: 'Story Studio', tr: 'Hikâye Atölyesi', es: 'Taller de Cuentos' },
+  bw_explorer: { en: 'Book Explorer', tr: 'Kitap Kaşifi', es: 'Explorador de Libros' },
+  bw_studio_hint: { en: 'Little ideas, amazing stories!', tr: 'Küçük fikirler, harika hikâyeler!', es: '¡Pequeñas ideas, grandes cuentos!' },
+  bw_explorer_hint: { en: 'A new adventure on every page!', tr: 'Her sayfada yeni bir macera!', es: '¡Una aventura en cada página!' },
+  bw_library_hint: { en: 'A home for books you’ve finished', tr: 'Bitirdiğin kitapların yuvası', es: 'Un hogar para los libros que terminaste' },
   la_no_drafts: { en: 'No stories in progress.', tr: 'Devam eden hikâye yok.', es: 'No hay cuentos en curso.' },
   la_no_reading: { en: 'Ready for your next book?', tr: 'Sıradaki kitabına hazır mısın?', es: '¿Listo para tu próximo libro?' },
-  la_title: {en: "My book archive",tr: "Kitap arşivim",es: "Mi archivo de libros"},
+  la_title: { en: 'My Library', tr: 'Kitaplığım', es: 'Mi Biblioteca' },
   la_search: {en: "Search books or authors",tr: "Kitap veya yazar ara",es: "Buscar libros o autores"},
   la_year: {en: "Completion year",tr: "Bitirme yılı",es: "Año de finalización"},
   la_kind: {en: "All books",tr: "Tüm kitaplar",es: "Todos los libros"},
@@ -74,6 +79,7 @@ const STRINGS = {
   sc_redeem: {en: "Get 5 min · %n% demo Gems", tr: "5 dk al · %n% deneme Gem’i", es: "Obtener 5 min · %n% Gems de prueba"},
   sc_request_hint: {en: "Requests need enough demo Gems and room in both daily limits. Protected hours and paused or blocked apps cannot be opened with Gems.", tr: "Talep için yeterli deneme Gem’i ve her iki günlük sınırda yer gerekir. Korunan saatler, duraklatılan veya engellenen uygulamalar Gem ile açılamaz.", es: "Se necesitan Gems de prueba y margen en ambos límites. Las horas protegidas y apps pausadas o bloqueadas no se abren con Gems."},
   sc_status_ready: {en: "Ready to play", tr: "Oyun için hazır", es: "Listo para jugar"},
+  sc_status_learn_first: {en: "Finish today's task first, then games open", tr: "Önce bugünkü görevini bitir, sonra oyunlar açılır", es: "Primero termina la tarea de hoy y luego se abren los juegos"},
   sc_status_allowed: {en: "Always available · no play time used", tr: "Her zaman açık · oyun süresi harcanmaz", es: "Siempre disponible · no consume tiempo"},
   sc_status_blocked: {en: "This app is blocked in the demo", tr: "Bu uygulama denemede engelli", es: "App bloqueada en la prueba"},
   sc_status_paused: {en: "Play is paused by your parent", tr: "Ebeveynin oyunları duraklattı", es: "Tu familia ha pausado los juegos"},
@@ -199,7 +205,7 @@ const STRINGS = {
   hw_yes_today:       { en: 'Yes, today',    tr: 'Evet, bugün',    es: 'Sí, hoy' },
 
   // ── Library ─────────────────────────────────────────────────────────────────
-  lib_title:          { en: 'My Library 📚', tr: 'Kitaplığım 📚', es: 'Mi Biblioteca 📚' },
+  lib_title: { en: 'My Books', tr: 'Kitaplarım', es: 'Mis libros' },
   lib_loading:        { en: 'Loading...',    tr: 'Yükleniyor…',   es: 'Cargando…' },
   lib_no_books:       { en: 'No books yet!',   tr: 'Henüz kitap yok!',   es: '¡Todavía no hay libros!' },
   lib_no_stories:     { en: 'No stories yet!', tr: 'Henüz hikâye yok!',  es: '¡Todavía no hay cuentos!' },
@@ -214,7 +220,7 @@ const STRINGS = {
   lib_remove:         { en: 'Remove', tr: 'Kaldır', es: 'Quitar' },
   lib_cancel:         { en: 'Cancel', tr: 'Vazgeç', es: 'Cancelar' },
 
-  lib_my_books:       { en: '✍️ Books I Wrote', tr: '✍️ Benim Yazdığım Kitaplar', es: '✍️ Libros que he escrito' },
+  lib_my_books: { en: 'Books I’m writing', tr: 'Yazdıklarım', es: 'Libros que escribo' },
   lib_write_first:    { en: 'Write your first story →', tr: 'İlk hikâyeni yaz →', es: 'Escribe tu primer cuento →' },
   lib_add_first:      { en: 'Add your first book →',    tr: 'İlk kitabını ekle →', es: 'Añade tu primer libro →' },
   lib_reading_now:    { en: 'Reading Now 📖',    tr: 'Şu An Okuduklarım 📖', es: 'Leyendo ahora 📖' },
@@ -225,7 +231,7 @@ const STRINGS = {
   story_untitled:     { en: 'Untitled Story', tr: 'Adsız Hikâye', es: 'Cuento sin título' },
   story_in_progress:  { en: 'In Progress',    tr: 'Devam ediyor', es: 'En marcha' },
 
-  lib_other_authors:  { en: '📚 Books from Other Authors', tr: '📚 Başka Yazarların Kitapları', es: '📚 Libros de otros autores' },
+  lib_other_authors: { en: 'Books I’m reading', tr: 'Okuduklarım', es: 'Libros que leo' },
   lib_write:          { en: '✏️ Write', tr: '✏️ Yaz',  es: '✏️ Escribir' },
   lib_add:            { en: '+ Add',    tr: '+ Ekle',  es: '+ Añadir' },
   lib_books_of:       { en: "📖 Books by",  tr: '📖 Kendi Kitapları:', es: '📖 Libros de' },
@@ -262,6 +268,7 @@ const STRINGS = {
   rd_low_confidence:  { en: 'Is this your book? Let me make sure I got it right!',
                         tr: 'Kitabın bu mu? Doğru anladığımdan emin olayım!',
                         es: '¿Es este tu libro? Quiero asegurarme de que lo he entendido bien.' },
+  rd_book_save_failed: { en: 'Could not save. Your information is still here. Check your connection and try again.', tr: 'Kaydedilemedi. Bilgilerin burada duruyor. Bağlantını kontrol edip yeniden dene.', es: 'No se pudo guardar. Tus datos siguen aquí. Comprueba la conexión e inténtalo de nuevo.' },
   rd_try_again:       { en: "I couldn't see the cover clearly... try better lighting? 📸",
                         tr: 'Kapağı net göremedim… Işık biraz daha iyi olabilir mi? 📸',
                         es: 'No he visto bien la portada… ¿Pruebas con más luz? 📸' },
@@ -550,7 +557,7 @@ const STRINGS = {
 
   // ── Navigation (rail on tablet, bar on phone) ───────────────────────────────
   nav_home:           { en: 'Home',     tr: 'Ana Sayfa', es: 'Inicio' },
-  nav_library:        { en: 'Library',  tr: 'Kitaplık',  es: 'Biblioteca' },
+  nav_library: { en: 'My Books', tr: 'Kitaplarım', es: 'Mis libros' },
   // "Gem" stays the currency word everywhere — parent messages, the ledger, the parent app —
   // so translating it here alone would split the name in two.
   nav_gems:           { en: 'Gems',     tr: 'Gem’lerim', es: 'Gems' },

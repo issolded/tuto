@@ -52,3 +52,33 @@ test('automatic approval grants budget but cannot spend during protected hours',
   const sleeping = { ...demo(), now: new Date(2026, 8, 21, 21).getTime() }
   assert.deepEqual(demoAction(r, sleeping, { type: 'request' }), sleeping)
 })
+test('rules saved before learn-first, holiday and extra existed still read as the same rules', () => {
+  const old = { weekday: 45, weekend: 90, cap: 150, gemsPerMinute: 3, earnedCap: 30, approval: false, bedtime: false, bedStart: '20:30', bedEnd: '07:00', school: true, schoolStart: '08:30', schoolEnd: '15:30', apps: { roblox: 'blocked', youtube: 'timed', minecraft: 'timed', tuto: 'allowed' } }
+  const r = readRules(old)
+  assert.equal(r.weekday, 45); assert.equal(r.apps.roblox, 'blocked'); assert.equal(r.learnFirst, false); assert.equal(r.extra, null)
+  for (const patch of [{ learnNeed: 0 }, { learnNeed: 6 }, { holiday: true, holidayFrom: '2026-10-10', holidayTo: '2026-10-01' }, { holiday: true, holidayFrom: '', holidayTo: '' }, { extra: { date: '2026-10-04', minutes: 121 } }, { extra: { date: 'today', minutes: 10 } }])
+    assert.equal(validRules({ ...r, ...patch }), false, JSON.stringify(patch))
+})
+test('learn first closes timed apps until the count is reached, and unknown never blocks', () => {
+  const r = { ...rules(), learnFirst: true, learnNeed: 2 }
+  assert.equal(status(r, { ...demo(), learned: 1 }).reason, 'learn_first')
+  assert.equal(canRedeem(r, { ...demo(), learned: 1 }), false)
+  assert.equal(status(r, { ...demo(), learned: 2 }).reason, 'ready')
+  assert.equal(status(r, demo()).reason, 'ready')
+  assert.equal(status(r, { ...demo(), learned: 0, app: 'tuto' }).reason, 'allowed')
+  // Protected hours still win: at bedtime the reason is bedtime, not "learn first".
+  assert.equal(status(r, { ...demo(), learned: 0, now: new Date(2026, 8, 21, 21).getTime() }).reason, 'bedtime')
+  assert.equal(demoAction(r, demo(), { type: 'learned', n: 2 }).learned, 2)
+})
+test('holiday turns school off and uses the weekend budget, only inside its dates', () => {
+  const r = { ...rules(), holiday: true, holidayFrom: '2026-09-21', holidayTo: '2026-09-25' }
+  const monday10 = { ...demo(), now: new Date(2026, 8, 21, 10).getTime() }
+  assert.equal(status(r, monday10).reason, 'ready')
+  assert.equal(status(r, monday10).remaining, 60 * 60)
+  assert.equal(status(r, { ...demo(), now: new Date(2026, 8, 28, 10).getTime() }).reason, 'school')
+})
+test("today's extra sits on top of the cap and only on its own day", () => {
+  const r = { ...rules(), cap: 30, extra: { date: '2026-09-21', minutes: 15 } }
+  assert.equal(status(r, demo()).remaining, 45 * 60)
+  assert.equal(status(r, { ...demo(), now: new Date(2026, 8, 22, 16).getTime() }).remaining, 30 * 60)
+})

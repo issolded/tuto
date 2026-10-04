@@ -10,7 +10,7 @@ function Cover({ item }) {
   </div>
 }
 
-export default function LibraryArchive({ books, stories, childName, lang, onBack, onStory, onRemove }) {
+export default function LibraryArchive({ books, stories, childName, lang, onStory, onRemove }) {
   const [query, setQuery] = useState('')
   const [year, setYear] = useState('')
   const [kind, setKind] = useState('')
@@ -28,8 +28,6 @@ export default function LibraryArchive({ books, stories, childName, lang, onBack
   const change = fn => value => { fn(value); setPage(0); setSelectedKey(null) }
   useEffect(() => { if (detail && !dialog.current?.open) dialog.current?.showModal() }, [detail])
   return <section className="la-archive">
-    <button className="la-soft" onClick={onBack}>← {s('lib_title')}</button>
-    <h1>{s('la_title')}</h1>
     <div className="la-filters">
       <input aria-label={s('la_search')} placeholder={s('la_search')} value={query} onChange={e => change(setQuery)(e.target.value)} />
       {years.length > 0 && <select aria-label={s('la_year')} value={year} onChange={e => change(setYear)(e.target.value)}><option value="">{s('la_year')}</option>{years.map(y => <option key={y}>{y}</option>)}</select>}

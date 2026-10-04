@@ -1,3 +1,4 @@
+import BookWorldPicker from '../components/BookWorldPicker'
 import { useEffect, useRef, useState } from 'react'
 import { mergeDrafts } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
@@ -69,13 +70,24 @@ function useLongPress(onLongPress, ms = 600) {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function LibraryScreen() {
+export default function LibraryScreen({ onWrite, onUpload }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
   const archiveOpen = params.get('view') === 'archive'
   const [writeError, setWriteError] = useState(false)
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const areaKey = 'tuto:book-area:' + (child?.id || 'guest')
+  const [area, setArea] = useState(() => {
+    try { return localStorage.getItem(areaKey) === 'reader' ? 'reader' : 'writer' }
+    catch { return 'writer' }
+  })
+  const chooseArea = value => {
+    setArea(value)
+    setJiggling(false)
+    try { localStorage.setItem(areaKey, value) } catch { /* Selection still works without storage. */ }
+    if (archiveOpen) setParams({})
+  }
   const [books, setBooks] = useState(null)
   const [stories, setStories] = useState(null)
   const [jiggling, setJiggling] = useState(false)
@@ -148,26 +160,30 @@ export default function LibraryScreen() {
           onClick={e => { e.stopPropagation(); if (archiveOpen) setParams({}); else nav('/child/home') }}
           style={{ width: 40, height: 40, borderRadius: 12, background: '#F5F5F5', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A2E' }}
         >←</button>
-        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>{t('lib_title', lang)}</span>
+        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>{t(archiveOpen ? 'la_title' : 'lib_title', lang)}</span>
       </div>
 
       {/* Content */}
       <div style={{ padding: '20px 16px 80px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
 
+        <BookWorldPicker lang={lang} area={area} archiveOpen={archiveOpen} onChoose={chooseArea} onLibrary={() => setParams({ view: 'archive' })} />
         {writeError && <p role="alert">{t('la_write_error', lang)}</p>}
-        {archiveOpen ? books === null || stories === null ? <p>{t('lib_loading', lang)}</p> : <LibraryArchive books={books} stories={stories} childName={child?.name} lang={lang} onBack={() => setParams({})} onStory={story => setOpening({ story, fallbackColor: STORY_BG_COLORS[0] })} onRemove={id => setConfirmDeleteId(id)} /> : <>
+        {archiveOpen ? books === null || stories === null ? <p>{t('lib_loading', lang)}</p> : <LibraryArchive books={books} stories={stories} childName={child?.name} lang={lang} onStory={story => setOpening({ story, fallbackColor: STORY_BG_COLORS[0] })} onRemove={id => setConfirmDeleteId(id)} /> : <>
         {/* ── Books by child ── */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        {area === 'writer' ? <section className="book-world-panel" aria-label={t('bw_studio', lang)}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               {t('lib_my_books', lang)}
             </div>
+            <div className="books-writing-actions">
             <button
-              onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
+              onClick={e => { e.stopPropagation(); onWrite ? onWrite() : nav('/child/stories', { state: { action: 'write', from: '/child/library' } }) }}
               style={{ background: '#E8E0FF', color: '#6C63FF', border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
               {t('lib_write', lang)}
             </button>
+              <button className="books-upload" onClick={() => onUpload ? onUpload() : nav('/child/stories', { state: { action: 'upload', from: '/child/library' } })}>{t('sw_upload', lang)}</button>
+            </div>
           </div>
 
           {stories === null ? (
@@ -177,7 +193,7 @@ export default function LibraryScreen() {
               <div style={{ fontSize: 36, marginBottom: 8 }}>✏️</div>
               <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t(completedStories.length ? 'la_no_drafts' : 'lib_no_stories', lang)}</div>
               <button
-                onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
+                onClick={e => { e.stopPropagation(); onWrite ? onWrite() : nav('/child/stories', { state: { action: 'write', from: '/child/library' } }) }}
                 style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
                 {t(completedStories.length ? 'lib_write' : 'lib_write_first', lang)}
@@ -191,13 +207,7 @@ export default function LibraryScreen() {
               )}
             />
           )}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: '#E8E8EE', marginBottom: 28 }} />
-
-        {/* ── Books from other authors ── */}
-        <div>
+        </section> : <section className="book-world-panel" aria-label={t('bw_explorer', lang)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               {t('lib_other_authors', lang)}
@@ -245,8 +255,7 @@ export default function LibraryScreen() {
 
             </>
           )}
-        </div>
-        <button className="library-archive-entry" onClick={() => setParams({ view: 'archive' })}>{t('la_title', lang)} · {books === null || stories === null ? '…' : completed.length + completedStories.length} →</button>
+        </section>}
         </>}
       </div>
 

@@ -1,3 +1,4 @@
+import BookNavigation from '../components/BookNavigation'
 import { useEffect, useState } from 'react'
 import { t, childLang, localeFor } from '../lib/i18n'
 import { TASK_DEFAULTS } from '../lib/taskDefaults'
@@ -787,6 +788,7 @@ export default function ChildHome() {
             <Icon name="gear" size={20} />{t('sc_settings', lang)}
           </button>
         </div>
+        <BookNavigation lang={lang} settings={ts} />
         {band === 'mid' ? <MidHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} />
           : band === 'mature' ? <TeenHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} />
             : <YoungHome child={child} lang={lang} gems={gems} today={today} ts={ts} nav={nav} greetingKey={greetingKey} />}

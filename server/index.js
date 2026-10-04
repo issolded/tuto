@@ -7,6 +7,10 @@ import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from '
 import { localTopicName } from './topicNames.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
+import { buildWeekReport, weekContext } from './week.js'
+import { inboundVerdict, inboundRefusal } from './inboundGate.js'
+import { appChatView, joinReplies, isMissingTable } from './appChat.js'
+import { applyScreenExtra, screenTimeContext, SCREEN_EXTRA_MAX } from './screenTime.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -187,7 +191,7 @@ function toLocalTimes(value, tz) {
   return value
 }
 
-async function getParentContext(parentId) {
+async function getParentContext(parentId, { withWeek = false } = {}) {
   const [{ data: parentRow }, { data: children }] = await Promise.all([
     supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
     // `*` so english_variety (a later migration) is read when it exists and never breaks the read.
@@ -235,6 +239,7 @@ async function getParentContext(parentId) {
       puzzleSkills,
       { data: englishSessions },
       englishSkills,
+      thisWeek,
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -293,6 +298,9 @@ async function getParentContext(parentId) {
         .eq('child_id', child.id).not('finished_at', 'is', null)
         .order('created_at', { ascending: false }).limit(10),
       englishStanding(child.id).catch(() => null),
+      // The Reports screen's own numbers, so chat and chart agree. A failure here must not cost
+      // the parent their answer about everything else.
+      withWeek ? weekForChild(child.id, tz, 0).catch(() => null) : null,
     ])
 
     // The questions of the latest English sitting and how each went: without them "what did she get wrong?"
@@ -430,6 +438,13 @@ async function getParentContext(parentId) {
           return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
+      // Screen time rules from the parent's Screen time tab. A web trial: rules only, nothing on
+      // a device is measured or enforced, so there is no usage figure to report — only the plan.
+      screenTime: screenTimeContext(prefsAll?.screen_control_web?.[child.id], userNow.toISODate()),
+      // The same figures the parent's Reports screen draws for this week (Monday first). Use these
+      // for "how was this week" questions rather than re-counting from the lists above, which are
+      // capped at 10-20 rows and would give a different number than the chart.
+      ...(withWeek ? { thisWeek: weekContext(thisWeek) } : {}),
       // The once-a-day bonus for doing every activity (Hezarfen / All-Rounder / Todoterreno).
       dailyBonus: (() => {
         const b = bonusSettings(child.task_settings, child.age)
@@ -1479,6 +1494,27 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'give_screen_time',
+      description:
+        'The parent wants to give a child EXTRA SCREEN / PLAY TIME for TODAY only ("Ada\'ya bugün 15 dk daha ver", ' +
+        '"give Ada 30 more minutes today", "dale a Ada 15 minutos más"). Minutes, not gems — this is NOT gift_gems. ' +
+        'It does not change the child\'s rules; it adds to today and is gone tomorrow. The server allows 5-120 ' +
+        'minutes and at most 120 extra minutes per child per day in total — if the parent asks for more, say ' +
+        'that is the most and ask, do not silently reduce. clear:true takes today\'s extra time away ("geri al", ' +
+        '"vazgeçtim"). HONESTY: screen time is still a web trial — nothing on the child\'s device is measured, ' +
+        'blocked or unlocked yet. After success say the extra time is saved to today\'s rules and will apply when ' +
+        'the Tuto phone app arrives; never say the child can play now or that a device was unlocked.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
+          minutes: { type: 'NUMBER', description: 'Extra minutes to ADD for today (whole number, 5-120). Omit when clear is true.' },
+          clear: { type: 'BOOLEAN', description: 'true to remove all of today\'s extra time instead of adding.' },
+        },
+        required: ['child_id'],
+      },
+    },
+    {
       name: 'deduct_gems',
       description:
         'The opposite of gift_gems — the parent wants to REMOVE gems from a child\'s balance with no reward or ' +
@@ -2191,7 +2227,7 @@ async function purgeHeldImages() {
   if (stale?.length) console.log(`[PURGE] removed ${stale.length} held image(s) past 7 days`)
 }
 
-async function sendDrawingPhotoTool(paintingId, parentId) {
+async function sendDrawingPhotoTool(paintingId, parentId, showPhotos) {
   const { data: row } = await supabase
     .from('paintings').select('id, child_id, photo_path, status').eq('id', paintingId).maybeSingle()
   if (!row) return { success: false, error: 'not found — held images are deleted after a week' }
@@ -2207,6 +2243,7 @@ async function sendDrawingPhotoTool(paintingId, parentId) {
   const url = await signedUrlFor(row.photo_path, 3600, PAINTING_BUCKET)
              || await signedUrlFor(row.photo_path, 3600, PHOTO_BUCKET)
   if (!url) return { success: false, error: 'image no longer available' }
+  if (showPhotos) { showPhotos([url]); return { success: true, child: child.name, shownInApp: true } }
   try {
     await sendNotificationWithPhoto(parentId,
       `${child.name} — bu görseli güvenlik taraması iletmemişti. / this is the image the safety screen held.`,
@@ -2310,7 +2347,7 @@ async function approveSubmissionTool(submissionId, parentId, gems) {
 
 // Re-sends a submission's photos into the chat on request. Ownership is checked
 // in code — a parent can only ever pull their own child's photos.
-async function sendSubmissionPhotosTool(submissionId, parentId) {
+async function sendSubmissionPhotosTool(submissionId, parentId, showPhotos) {
   const { data: sub } = await supabase
     .from('submissions')
     .select('id, child_id, task_type, photo_urls, media_url')
@@ -2327,6 +2364,12 @@ async function sendSubmissionPhotosTool(submissionId, parentId) {
   const urls = sub.photo_urls?.length ? sub.photo_urls : (sub.media_url ? [sub.media_url] : [])
   if (!urls.length) return { success: false, error: 'this submission genuinely has no photo' }
 
+  if (showPhotos) {
+    const signed = await signedUrlsFor(urls, 3600)
+    if (!signed.length) return { success: false, error: 'could not open the photos right now' }
+    showPhotos(signed)
+    return { success: true, id: sub.id, childName: child.name, photoCount: signed.length, alreadySent: true, shownInApp: true }
+  }
   try {
     await sendNotificationWithPhotos(parentId, '', urls)
   } catch (err) {
@@ -2412,6 +2455,41 @@ async function giftGemsTool(childId, amount, parentId, note) {
   if (error) return { success: false, error: error.message }
 
   return { success: true, childName: child.name, amount: n }
+}
+
+// Today's extra screen time, from chat. Writes the same field the parent's Screen time tab
+// writes (prefs.screen_control_web[childId].extra = { date, minutes }), with the same
+// compare-and-swap, so a tap in the app and a message in the same minute cannot overwrite each
+// other. The limits are here, not in the prompt: 5-120 per request, 120 per child per day.
+// "Today" is the parent's day (parents.timezone), the same day the tab shows them.
+async function giveScreenTimeTool(childId, minutes, parentId, clear = false) {
+  const n = Math.round(Number(minutes))
+  if (!clear && (!Number.isFinite(n) || n < 5 || n > SCREEN_EXTRA_MAX)) {
+    return { success: false, error: `minutes must be between 5 and ${SCREEN_EXTRA_MAX}` }
+  }
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: parent, error: readErr } = await supabase
+      .from('parents').select('prefs, timezone').eq('id', parentId).maybeSingle()
+    if (readErr || !parent) return { success: false, error: readErr?.message || 'parent not found' }
+    const today = DateTime.now().setZone(parent.timezone || 'UTC').toISODate()
+    const step = applyScreenExtra(parent.prefs, childId, today, n, clear)
+    if (!step.ok) return { success: false, ...step.refusal }
+    const { next, total } = step
+    let q = supabase.from('parents').update({ prefs: next }).eq('id', parentId)
+    q = parent.prefs == null ? q.is('prefs', null) : q.eq('prefs', JSON.stringify(parent.prefs))
+    const { data: saved, error } = await q.select('id')
+    if (error) return { success: false, error: error.message }
+    if (saved?.length) {
+      return { success: true, childName: child.name, extraMinutesToday: total, date: today,
+               webTrial: 'Saved to the rules only. Nothing on the device is blocked or unlocked yet; it applies when the Tuto phone app arrives.' }
+    }
+  }
+  return { success: false, error: 'the settings changed at the same moment — try again' }
 }
 
 // note is optional and free-text (e.g. "Toy purchase") — used as the
@@ -2670,18 +2748,52 @@ async function logMessage(parentId, role, content) {
   }
 }
 
-async function handleMessage(parentId, replyCb, text) {
+async function inboundCounts(parentId) {
+  const now = DateTime.utc()
+  const count = (since) => supabase.from('messages').select('id', { count: 'exact', head: true })
+    .eq('parent_id', parentId).eq('role', 'parent').gte('created_at', since)
+    .then(r => (r.error ? null : r.count)).catch(() => null)
+  const [lastMinute, lastDay, { data: parent }] = await Promise.all([
+    count(now.minus({ minutes: 1 }).toISO()),
+    count(now.minus({ hours: 24 }).toISO()),
+    supabase.from('parents').select('prefs').eq('id', parentId).maybeSingle().then(r => r).catch(() => ({ data: null })),
+  ])
+  const counts = { lastMinute, lastDay }
+  return { counts, verdict: inboundVerdict(counts), prefs: parent?.prefs }
+}
+
+// opts.showPhotos: set by the in-app channel. The two tools that resend a photo used to push it
+// to the parent's notification channel; asked from the app, the photo belongs in the app's
+// reply — not in a Telegram the parent may not even have connected.
+async function handleMessage(parentId, replyCb, text, opts = {}) {
   console.log(`[MSG] parent=${parentId} → "${text}"`)
   // Declared here (not inside try) so the catch block can still send a
   // localized fallback reply if we made it far enough to know the parent's
   // language before something failed.
   let language = DEFAULT_PARENT_LANG
   try {
+    // The entry gate, before anything costs a model call — for the app's Ask Tuto tab only.
+    // Telegram and WhatsApp behave exactly as they did (user decision, 2026-10-04: "o kısım tamamen
+    // farklı"). The count is the parent's messages on every channel, because the transcript has no
+    // channel column; the limits are generous enough that a busy Telegram day does not close the app.
+    // A failed count passes: going silent because a count query failed would be the worse failure.
+    const gate = opts.scope === 'app' ? await inboundCounts(parentId) : { verdict: { ok: true } }
+    if (!gate.verdict.ok) {
+      language = parentLang(gate.prefs)
+      const refusal = inboundRefusal(gate.verdict.reason, language)
+      console.warn(`[GATE] parent=${parentId} ${gate.verdict.reason} (minute=${gate.counts.lastMinute}, day=${gate.counts.lastDay})`)
+      await logMessage(parentId, 'parent', text)
+      await logMessage(parentId, 'tuto', refusal)
+      await replyCb(refusal)
+      return
+    }
+
     const historyContents = await fetchConversationHistory(parentId)
     await logMessage(parentId, 'parent', text)
 
     const [familyData, { data: parentRow }, { data: childrenRows }] = await Promise.all([
-      getParentContext(parentId),
+      // The weekly report rides along only in the app's tab; Telegram/WhatsApp context is unchanged.
+      getParentContext(parentId, { withWeek: opts.scope === 'app' }),
       supabase.from('parents').select('timezone, prefs').eq('id', parentId).single(),
       supabase.from('children').select('id, name').eq('parent_id', parentId),
     ])
@@ -2969,13 +3081,18 @@ async function handleMessage(parentId, replyCb, text) {
       )
     }
 
-    const systemPrompt = buildSystemPrompt(pendingList)
+    const inApp = opts.scope === 'app'
+    const scoped = (prompt) => inApp ? prompt + APP_SCOPE_NOTE : prompt
+    const chatTools = inApp
+      ? [{ functionDeclarations: CONTRIBUTION_TOOLS[0].functionDeclarations.filter(f => APP_CHAT_TOOLS.has(f.name)) }]
+      : CONTRIBUTION_TOOLS
+    const systemPrompt = scoped(buildSystemPrompt(pendingList))
     const contents = [...historyContents, { role: 'user', parts: [{ text }] }]
 
     const firstData = await callGeminiWithRetry(() => fetchGeminiOnce({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
-      tools: CONTRIBUTION_TOOLS,
+      tools: chatTools,
     }))
     const parts = firstData.candidates?.[0]?.content?.parts || []
     const fnCallParts = parts.filter(p => p.functionCall)
@@ -3048,7 +3165,11 @@ async function handleMessage(parentId, replyCb, text) {
     for (const part of fnCallParts) {
       const { name, args } = part.functionCall
       let toolResult
-      if (name === 'approve_contribution') {
+      // First in the chain: from the app's Ask Tuto tab only the in-scope tools may run, whatever
+      // the model asks for (it is not shown the others, but a refusal here does not depend on that).
+      if (inApp && !APP_CHAT_TOOLS.has(name)) {
+        toolResult = { success: false, error: 'not available in the app chat — done on Telegram/WhatsApp or its own screen' }
+      } else if (name === 'approve_contribution') {
         toolResult = await approveContributionTool(args.contribution_id, parentId)
       } else if (name === 'approve_all_pending') {
         toolResult = await approveAllPendingTool(args.child_id, parentId)
@@ -3061,7 +3182,7 @@ async function handleMessage(parentId, replyCb, text) {
       } else if (name === 'reject_submission') {
         toolResult = await rejectSubmissionTool(args.submission_id, parentId)
       } else if (name === 'send_submission_photos') {
-        toolResult = await sendSubmissionPhotosTool(args.submission_id, parentId)
+        toolResult = await sendSubmissionPhotosTool(args.submission_id, parentId, opts.showPhotos)
       } else if (name === 'approve_drawing') {
         toolResult = await approvePaintingById(args.painting_id, parentId)
       } else if (name === 'reject_drawing') {
@@ -3072,6 +3193,8 @@ async function handleMessage(parentId, replyCb, text) {
         toolResult = await rejectClaimById(args.claim_id, parentId)
       } else if (name === 'gift_gems') {
         toolResult = await giftGemsTool(args.child_id, args.amount, parentId, args.note)
+      } else if (name === 'give_screen_time') {
+        toolResult = await giveScreenTimeTool(args.child_id, args.minutes, parentId, args.clear === true)
       } else if (name === 'deduct_gems') {
         toolResult = await deductGemsTool(args.child_id, args.amount, parentId, args.note)
       } else if (name === 'reset_child_pin') {
@@ -3081,7 +3204,7 @@ async function handleMessage(parentId, replyCb, text) {
           ? await updateBonusTool(args.child_id, args.gems, args.active, parentId, args.bonus_types)
           : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety)
       } else if (name === 'send_drawing_photo') {
-        toolResult = await sendDrawingPhotoTool(args.painting_id, parentId)
+        toolResult = await sendDrawingPhotoTool(args.painting_id, parentId, opts.showPhotos)
       } else if (name === 'add_reward') {
         toolResult = await addRewardTool(args.child_id, args.name, args.gems, args.recurring, args.icon, parentId)
       } else if (name === 'approve_goal_request') {
@@ -3119,7 +3242,7 @@ async function handleMessage(parentId, replyCb, text) {
       toolResults.filter(t => t.result.success && t.submissionId).map(t => t.submissionId)
     )
     const refreshedPendingSubs = pendingSubsList.filter(s => !processedSubIds.has(s.id))
-    const refreshedSystemPrompt = buildSystemPrompt(refreshedPendingList, refreshedPendingSubs)
+    const refreshedSystemPrompt = scoped(buildSystemPrompt(refreshedPendingList, refreshedPendingSubs))
 
     const secondData = await callGeminiWithRetry(() => fetchGeminiOnce({
       system_instruction: { parts: [{ text: refreshedSystemPrompt }] },
@@ -3136,7 +3259,7 @@ async function handleMessage(parentId, replyCb, text) {
         // the functionCall parts above — required order is FC1(+sig),FC2,...,FR1,FR2,...
         { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
       ],
-      tools: CONTRIBUTION_TOOLS,
+      tools: chatTools,
     }))
     let finalText = textFromParts(secondData.candidates?.[0]?.content?.parts) || 'Tamamlandı.'
     // A tool has run, so this reply reports something real and is worth sending — just not
@@ -3152,7 +3275,7 @@ async function handleMessage(parentId, replyCb, text) {
           firstData.candidates[0].content,
           { role: 'user', parts: toolResults.map(t => ({ functionResponse: { name: t.name, response: t.result } })) },
         ],
-        tools: CONTRIBUTION_TOOLS,
+        tools: chatTools,
       })).catch(() => null)
       const again = textFromParts(retry?.candidates?.[0]?.content?.parts)
       finalText = again && !replyLeak(again) ? again : stripInternalIds(again || finalText)
@@ -7774,6 +7897,71 @@ app.get('/api/children/:childId/paintings', async (req, res) => {
 // WHO is asking — parent JWT plus ownership of that child.
 // What is waiting on the parent, per child, for the dashboard's child cards: one call instead of a
 // child page's worth of lists for every child. Counts only — the child page has the items.
+// One child's week — the Reports screen's numbers. Shared by the endpoint and the chat context,
+// so what Tuto says in chat and what the chart draws come from the same reads and the same
+// arithmetic (server/week.js); two copies would drift, and a parent who sees "12" in chat and
+// 18 on the chart trusts neither.
+async function weekForChild(childId, tz, offset = 0) {
+  // Luxon weeks start on Monday, which is how the range reads to a parent ("22–28 Eylül").
+  const now = DateTime.now().setZone(tz)
+  const start = now.startOf('week').minus({ weeks: offset })
+  const end = start.endOf('week')
+  const prevStart = start.minus({ weeks: 1 })
+
+  // One range covers both weeks; the split happens in memory rather than in a second
+  // round trip per table.
+  const since = prevStart.toUTC().toISO()
+  const until = end.toUTC().toISO()
+  const inRange = (t) => t.gte('created_at', since).lte('created_at', until)
+
+  const [
+    { data: ledger },
+    { data: subs },
+    { data: maths },
+    // Not destructured on purpose: completedStoriesBetween hands back the supabase result,
+    // not the rows. rowsOf() in server/week.js reads either shape — taking the raw value
+    // and calling .map on it is exactly what threw here on every request.
+    storyRows,
+    { data: paintings },
+    { data: puzzles },
+    { data: englishes },
+    { data: lastMath },
+  ] = await Promise.all([
+    // select('*') on purpose, the way every other ledger read here does it: naming `capped`
+    // drops the whole request where that migration has not been run, and this request
+    // carries the week. Absent column simply reads as undefined below.
+    inRange(supabase.from('bt_ledger').select('*').eq('child_id', childId)),
+    inRange(supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework'])),
+    inRange(supabase.from('math_progress').select('created_at').eq('child_id', childId)),
+    completedStoriesBetween(childId, since, until),
+    inRange(supabase.from('paintings').select('created_at').eq('child_id', childId).neq('status', 'blocked')),
+    inRange(supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null)),
+    inRange(supabase.from('english_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null)),
+    supabase.from('math_progress').select('level').eq('child_id', childId).order('created_at', { ascending: false }).limit(1),
+  ])
+
+  const dayOf = (iso) => DateTime.fromISO(iso, { zone: 'utc' }).setZone(tz).toISODate()
+  const sevenFrom = (d) => Array.from({ length: 7 }, (_, i) => d.plus({ days: i }).toISODate())
+
+  // Everything past the fetch lives in server/week.js, with no database and no clock in it,
+  // so `npm test` can hold it to the shapes these eight reads actually return.
+  const report = buildWeekReport({
+    dayOf,
+    weekDays: sevenFrom(start),
+    prevDays: sevenFrom(prevStart),
+    ledger, subs, maths, stories: storyRows, paintings, puzzles, englishes,
+  })
+
+  return {
+    range: { start: start.toISODate(), end: end.toISODate(), offset },
+    ...report,
+    mathLevel: lastMath?.[0]?.level ?? null,
+    // A week entirely in the future (offset 0 on a Monday morning) is not an error, but it
+    // is not a report either; the screen says so rather than drawing seven empty bars.
+    started: start <= now,
+  }
+}
+
 // A parent's week for one child.
 //
 // today-summary already groups a child's activity by local day for the child's own screen;
@@ -7800,107 +7988,107 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
       .from('children').select('id, name, parent_id').eq('id', childId).maybeSingle()
     if (!child || child.parent_id !== userId) return res.status(404).json({ error: 'not found' })
 
-    // 0 = the week that contains today. Luxon weeks start on Monday, which is how the
-    // range reads to a parent ("22–28 Eylül"). Capped so a stray query cannot walk back years.
+    // 0 = the week that contains today; capped so a stray query cannot walk back years.
     const offset = Math.max(0, Math.min(52, parseInt(req.query.offset, 10) || 0))
-    const tz = await tzForChild(childId)
-    const now = DateTime.now().setZone(tz)
-    const start = now.startOf('week').minus({ weeks: offset })
-    const end = start.endOf('week')
-    const prevStart = start.minus({ weeks: 1 })
-
-    // One range covers both weeks; the split happens in memory rather than in a second
-    // round trip per table.
-    const since = prevStart.toUTC().toISO()
-    const until = end.toUTC().toISO()
-    const inRange = (t) => t.gte('created_at', since).lte('created_at', until)
-
-    const [
-      { data: ledger },
-      { data: subs },
-      { data: maths },
-      storyRows,
-      { data: paintings },
-      { data: puzzles },
-      { data: englishes },
-      { data: lastMath },
-    ] = await Promise.all([
-      // select('*') on purpose, the way every other ledger read here does it: naming `capped`
-      // drops the whole request where that migration has not been run, and this request
-      // carries the week. Absent column simply reads as undefined below.
-      inRange(supabase.from('bt_ledger').select('*').eq('child_id', childId)),
-      inRange(supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework'])),
-      inRange(supabase.from('math_progress').select('created_at').eq('child_id', childId)),
-      completedStoriesBetween(childId, since, until),
-      inRange(supabase.from('paintings').select('created_at').eq('child_id', childId).neq('status', 'blocked')),
-      inRange(supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null)),
-      inRange(supabase.from('english_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null)),
-      supabase.from('math_progress').select('level').eq('child_id', childId).order('created_at', { ascending: false }).limit(1),
-    ])
-
-    const dayOf = (iso) => DateTime.fromISO(iso, { zone: 'utc' }).setZone(tz).toISODate()
-    const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
-    const blank = () => Object.fromEntries(TYPES.map(k => [k, 0]))
-
-    const done = [
-      ...(subs || []).map(r => [r.task_type, dayOf(r.created_at)]),
-      ...(maths || []).map(r => ['math', dayOf(r.created_at)]),
-      ...(storyRows || []).map(r => ['writing', dayOf(r.completed_at || r.created_at)]),
-      ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
-      ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
-      ...(englishes || []).map(r => ['english', dayOf(r.created_at)]),
-    ]
-    const byDay = new Map()
-    for (const [type, day] of done) {
-      if (!byDay.has(day)) byDay.set(day, blank())
-      byDay.get(day)[type]++
-    }
-    const countOn = (iso) => Object.values(byDay.get(iso) || {}).reduce((a, b) => a + b, 0)
-
-    const gemsByDay = new Map(), cappedByDay = new Map()
-    for (const r of (ledger || [])) {
-      const d = dayOf(r.created_at)
-      if (r.capped === true) cappedByDay.set(d, (cappedByDay.get(d) || 0) + 1)
-      else gemsByDay.set(d, (gemsByDay.get(d) || 0) + (r.amount || 0))
-    }
-
-    // Oldest first, Monday to Sunday — the order a bar chart reads in.
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const iso = start.plus({ days: i }).toISODate()
-      return {
-        date: iso,
-        gems: gemsByDay.get(iso) || 0,
-        capped: cappedByDay.get(iso) || 0,
-        sessions: countOn(iso),
-        byType: byDay.get(iso) || blank(),
-      }
-    })
-    const prevDays = Array.from({ length: 7 }, (_, i) => {
-      const iso = prevStart.plus({ days: i }).toISODate()
-      return { gems: gemsByDay.get(iso) || 0, sessions: countOn(iso) }
-    })
-
-    const sum = (rows, k) => rows.reduce((a, r) => a + r[k], 0)
-    const byType = blank()
-    for (const d of days) for (const k of TYPES) byType[k] += d.byType[k]
-
-    res.json({
-      childId, name: child.name,
-      range: { start: start.toISODate(), end: end.toISODate(), offset },
-      days,
-      byType,
-      totals: { gems: sum(days, 'gems'), sessions: sum(days, 'sessions'), capped: sum(days, 'capped') },
-      previous: { gems: sum(prevDays, 'gems'), sessions: sum(prevDays, 'sessions') },
-      mathLevel: lastMath?.[0]?.level ?? null,
-      // A week entirely in the future (offset 0 on a Monday morning) is not an error, but it
-      // is not a report either; the screen says so rather than drawing seven empty bars.
-      started: start <= now,
-    })
+    const week = await weekForChild(childId, await tzForChild(childId), offset)
+    res.json({ childId, name: child.name, ...week })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
+
+// The in-app chat: a third channel into the same brain. handleMessage does not know or care
+// which channel it is answering — Telegram and WhatsApp hand it a reply callback, this hands it
+// one that collects. Tuto never starts a conversation here: the screen shows only what was asked
+// in it, while the brain still remembers the whole shared transcript, so an answer here can build
+// on what was said on Telegram. The entry gate counts this channel too.
+//
+// The question is written to parent_app_chat and answered in the background, so leaving the
+// screen (or closing the app) does not lose the answer — it is in the row when the parent comes
+// back. Without that table (migration 2026-10-04_parent_app_chat.sql not run yet) the answer is
+// produced inside the request, as before.
+async function parentFromBearer(req) {
+  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+  if (!token) return null
+  const { data, error } = await supabase.auth.getUser(token)
+  return error ? null : (data?.user?.id || null)
+}
+const APP_CHAT_MAX = 1000
+// The app's "Ask Tuto" tab is for three things (user decision, 2026-10-04): the children's
+// progress, screen time and gems. Enforced in code by the tool list — the model is never shown
+// the approval, settings or PIN tools from this channel — and explained to it by APP_SCOPE_NOTE
+// so it can say where those things are done instead of pretending it cannot hear them.
+const APP_CHAT_TOOLS = new Set(['give_screen_time', 'gift_gems', 'deduct_gems', 'update_task_reward', 'set_math_focus'])
+const APP_SCOPE_NOTE =
+  '\n\nCHANNEL — the "Ask Tuto" tab inside the Tuto parent app. Here you talk ONLY about: the children\'s ' +
+  'progress and development (what they did, maths / English / reading / puzzles / writing, what they find hard, ' +
+  'this week against last — use thisWeek for weekly numbers), screen time (their rules, today\'s plan, extra time ' +
+  'today) and gems (balance, history, what each task pays, gifting or taking away). If the parent asks for anything ' +
+  'else here — approving or rejecting homework, drawings, chores or rewards, notification or quiet-hour settings, ' +
+  'the child\'s PIN, autopilot — say in one short sentence, in their language, that this tab is for questions ' +
+  'about their children, screen time and gems, and that the rest is done on Telegram/WhatsApp or the matching ' +
+  'screen in the app. Answer only what was asked: do not bring up pending approvals, news or reminders on your ' +
+  'own in this tab — the parent opened it to ask something, not to be told things.'
+
+async function answerInApp(parentId, text) {
+  const replies = [], photos = []
+  await handleMessage(parentId, async (msg) => { if (msg) replies.push(String(msg)) }, text,
+    { scope: 'app', showPhotos: (urls) => photos.push(...urls) })
+  return { replies, photos }
+}
+
+app.post('/api/parent/chat', async (req, res) => {
+  try {
+    const parentId = await parentFromBearer(req)
+    if (!parentId) return res.status(401).json({ error: 'unauthorized' })
+    const text = String(req.body?.text || '').trim()
+    if (!text) return res.status(400).json({ error: 'empty' })
+    if (text.length > APP_CHAT_MAX) return res.status(400).json({ error: 'too long', max: APP_CHAT_MAX })
+
+    const { data: row, error } = await supabase.from('parent_app_chat')
+      .insert({ parent_id: parentId, question: text }).select('*').single()
+    if (error) {
+      if (!isMissingTable(error)) console.error(`[APP-CHAT] insert failed for ${parentId}: ${error.message}`)
+      // No table (or it failed): answer inside the request, the way it worked before.
+      return res.json(await answerInApp(parentId, text))
+    }
+
+    res.status(202).json({ item: appChatView(row, Date.now()) })
+
+    // After the response: the parent may already be on another tab, or gone.
+    try {
+      const { replies, photos } = await answerInApp(parentId, text)
+      await supabase.from('parent_app_chat')
+        .update({ answer: joinReplies(replies), photos, status: 'answered', answered_at: new Date().toISOString() })
+        .eq('id', row.id)
+    } catch (err) {
+      console.error(`[APP-CHAT] answer failed for ${row.id}: ${err.message}`)
+      await supabase.from('parent_app_chat').update({ status: 'failed' }).eq('id', row.id).then(() => {}, () => {})
+    }
+  } catch (err) {
+    if (!res.headersSent) res.status(500).json({ error: err.message })
+  }
+})
+
+// The tab's history, newest last. `available: false` tells the app the table is not there yet,
+// so it keeps its history on the device instead.
+app.get('/api/parent/chat', async (req, res) => {
+  try {
+    const parentId = await parentFromBearer(req)
+    if (!parentId) return res.status(401).json({ error: 'unauthorized' })
+    const { data, error } = await supabase.from('parent_app_chat').select('*')
+      .eq('parent_id', parentId).order('created_at', { ascending: false }).limit(60)
+    if (error) {
+      if (isMissingTable(error)) return res.json({ available: false, items: [] })
+      throw error
+    }
+    const now = Date.now()
+    res.json({ available: true, items: (data || []).slice().reverse().map(r => appChatView(r, now)) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 app.get('/api/parent/overview', async (req, res) => {
   try {
