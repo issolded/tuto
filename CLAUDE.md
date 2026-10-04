@@ -57,6 +57,14 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Kitap arşivi** (2026-10-04, kullanıcı kararı): devam eden okumalar ve taslaklar ana
+  Library'de kompakt kartlar; tamamlanan kitap/hikâyeler ayrı oda görünümünde. Oda yalnızca
+  gerçek tamamlanan kayıtlarla dolar, örnek kayıt yok. 36 kitap/sayfa, sabit sarı olmayan
+  sırt renkleri ve küçük altın başlık; seçilen kitap koltukta. Arama, tür/yıl filtresi,
+  kapak görünümü. Eski kayıtta bitirme tarihi yoksa yıl uydurulmaz. DB migration gerekmez.
+  Prototipteki günlük/puanlama/ilham etkileşimleri bu yayının kapsamında değil.
+
+
 - **Hikâye yazma düğmeleri** (2026-10-04, kullanıcı kararı): Şimdi kaydet + Kaydet ve çık
   yazı alanının altında yan yana; Hikâyemi bitirdim onların altında tam genişlikte.
   Başlık etiketinde isteğe bağlı açıklaması yok; başlık zorunlu değil.
