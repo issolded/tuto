@@ -182,8 +182,8 @@ export default function StoryWriter({ child, story, language, onExit, onReview }
     <p style={{ fontSize: 13 }}>{draft.text.length.toLocaleString()} / 50,000</p>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-        <button style={{ ...button, background: 'white' }} disabled={working} onClick={leave}>{s('sw_exit')}</button>
         <button style={{ ...button, background: 'white' }} disabled={locked || state === 'conflict'} onClick={() => flush()}>{s('sw_retry_save')}</button>
+        <button style={{ ...button, background: 'white' }} disabled={working} onClick={leave}>{s('sw_exit')}</button>
       </div>
       <button style={{ ...button, background: '#19845D', color: 'white', opacity: locked || !draft.text.trim() || state === 'conflict' ? 0.55 : 1 }}
         disabled={locked || !draft.text.trim() || state === 'conflict'} onClick={finish}>{s(working ? 'sw_reviewing' : 'sw_finish')}</button>
