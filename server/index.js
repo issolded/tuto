@@ -7711,7 +7711,10 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
       { data: englishes },
       { data: lastMath },
     ] = await Promise.all([
-      inRange(supabase.from('bt_ledger').select('amount, capped, created_at').eq('child_id', childId)),
+      // select('*') on purpose, the way every other ledger read here does it: naming `capped`
+      // drops the whole request where that migration has not been run, and this request
+      // carries the week. Absent column simply reads as undefined below.
+      inRange(supabase.from('bt_ledger').select('*').eq('child_id', childId)),
       inRange(supabase.from('submissions').select('task_type, created_at').eq('child_id', childId).in('task_type', ['reading', 'homework'])),
       inRange(supabase.from('math_progress').select('created_at').eq('child_id', childId)),
       completedStoriesBetween(childId, since, until),
@@ -7743,7 +7746,7 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
     const gemsByDay = new Map(), cappedByDay = new Map()
     for (const r of (ledger || [])) {
       const d = dayOf(r.created_at)
-      if (r.capped) cappedByDay.set(d, (cappedByDay.get(d) || 0) + 1)
+      if (r.capped === true) cappedByDay.set(d, (cappedByDay.get(d) || 0) + 1)
       else gemsByDay.set(d, (gemsByDay.get(d) || 0) + (r.amount || 0))
     }
 
