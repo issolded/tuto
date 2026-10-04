@@ -1,3 +1,4 @@
+import { saveNewBook, updateBookPages } from '../lib/bookSave'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
@@ -319,6 +320,8 @@ export default function ReadingFlow() {
   const cover = usePhotoCrop({ translate: s, inputRef: coverRef, accent: ACCENT, onReady: blob => submitCover(blob) })
   const page = usePhotoCrop({ translate: s, inputRef: pageRef, accent: ACCENT, onReady: blob => addPhoto(blob) })
   const pendingFile = useRef(null)
+  const pendingBookId = useRef(null)
+  const savingBook = useRef(false)
   const fromLibrary = useRef(!!location.state?.book)
 
   useEffect(() => {
@@ -381,6 +384,7 @@ export default function ReadingFlow() {
           return
         }
       }
+      pendingBookId.current = crypto.randomUUID()
       pendingFile.current = file
       setPendingCoverPreview(URL.createObjectURL(file))
       setTitleInput(title)
@@ -394,26 +398,27 @@ export default function ReadingFlow() {
   async function confirmTitle() {
     const file = pendingFile.current
     const title = titleInput.trim()
-    if (!file || !title) return
+    if (!file || !title || savingBook.current) return
+    savingBook.current = true
+    setError('')
     setStep('cover-loading')
     try {
       let coverUrl = null
       try {
         const path = `${childId}/covers/${Date.now()}.jpg`
-        await storageClient.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
-        coverUrl = storageClient.storage.from('submissions').getPublicUrl(path).data.publicUrl
+        const { error: uploadError } = await storageClient.storage.from('submissions').upload(path, file, { contentType: file.type, upsert: false })
+        if (!uploadError) coverUrl = storageClient.storage.from('submissions').getPublicUrl(path).data.publicUrl
       } catch { /* storage optional */ }
-      const { data: newBook, error: insertError } = await storageClient
-        .from('books')
-        .insert({ child_id: childId, title, cover_url: coverUrl, current_page: 0, completed: false })
-        .select().single()
-      if (insertError) throw insertError
+      if (!childId) throw new Error('Missing child profile')
+      pendingBookId.current ||= crypto.randomUUID()
+      const newBook = await saveNewBook(storageClient, { id: pendingBookId.current, child_id: childId, title, cover_url: coverUrl, current_page: 0, completed: false })
       setBook(newBook)
       setStep('cover-success')
-    } catch {
-      setError(s('rd_try_again'))
-      setStep('new-book')
-    }
+    } catch (err) {
+      console.error('[ReadingFlow] book save failed', err.code || '', err.message)
+      setError(s('rd_book_save_failed'))
+      setStep('title-confirm')
+    } finally { savingBook.current = false }
   }
 
   function addPhoto(file) {
@@ -469,8 +474,10 @@ export default function ReadingFlow() {
     const total = skip ? null : Math.floor(Number(totalInput))
     if (!skip && book?.id && Number.isFinite(total) && total > 0) {
       const capped = Math.min(total, 10000)
-      await storageClient.from('books').update({ total_pages: capped }).eq('id', book.id)
-      setBook(b => (b ? { ...b, total_pages: capped } : b))
+      try {
+        setError('')
+        setBook(await updateBookPages(storageClient, book.id, childId, { total_pages: capped }))
+      } catch { setError(s('rd_book_save_failed')); return }
     }
     setPageInput('')
     setStep('page-number')
@@ -485,12 +492,15 @@ export default function ReadingFlow() {
     if (!book?.id || !Number.isFinite(page) || page < 1) return
     const capped = Math.min(page, book.total_pages ?? 10000)
     if (!allowBack && capped <= (book.current_page ?? 0)) return
-    await storageClient.from('books').update({ current_page: capped }).eq('id', book.id)
-    setBook(b => (b ? { ...b, current_page: capped } : b))
+    try {
+      setError('')
+      setBook(await updateBookPages(storageClient, book.id, childId, { current_page: capped }))
+      return true
+    } catch { setError(s('rd_book_save_failed')); return false }
   }
 
   async function savePageNumber(skip) {
-    if (!skip) await writePage(Math.floor(Number(pageInput)))
+    if (!skip && await writePage(Math.floor(Number(pageInput))) === false) return
     nav('/child/library')
   }
 
@@ -609,6 +619,7 @@ export default function ReadingFlow() {
 
   if (step === 'title-confirm') return (
     <Screen lang={lang} onBack={() => setStep('new-book')}>
+      {error && <p role="alert" style={{ color: "#a83225", fontWeight: 700 }}>{error}</p>}
       <TutoBubble message={s('rd_is_this')} tutoSize={80} />
       {pendingCoverPreview && (
         <img
@@ -726,6 +737,7 @@ export default function ReadingFlow() {
 
   if (step === 'total-pages') return (
     <Screen lang={lang} onBack={() => setStep('book-status')}>
+      {error && <p role="alert" style={{ color: "#a83225", fontWeight: 700 }}>{error}</p>}
       <TutoBubble message={s('rd_total_q')} tutoSize={100} />
       <NumberPrompt
         value={totalInput}
@@ -741,6 +753,7 @@ export default function ReadingFlow() {
 
   if (step === 'page-number') return (
     <Screen lang={lang} onBack={() => setStep('total-pages')}>
+      {error && <p role="alert" style={{ color: "#a83225", fontWeight: 700 }}>{error}</p>}
       <TutoBubble message={s('rd_page_q')} tutoSize={100} />
       <NumberPrompt
         value={pageInput}
@@ -874,13 +887,14 @@ export default function ReadingFlow() {
 
   if (step === 'set-page') return (
     <Screen lang={lang} onBack={() => setStep('existing-book')}>
+      {error && <p role="alert" style={{ color: "#a83225", fontWeight: 700 }}>{error}</p>}
       <TutoBubble message={s('rd_set_page')} tutoSize={100} />
       <NumberPrompt
         value={pageInput}
         onChange={setPageInput}
         placeholder={s('rd_page_ph')}
         onSave={async () => {
-          await writePage(Math.floor(Number(pageInput)), { allowBack: true })
+          if (await writePage(Math.floor(Number(pageInput)), { allowBack: true }) === false) return
           setStep('existing-book')
         }}
         onSkip={() => setStep('existing-book')}
@@ -894,6 +908,7 @@ export default function ReadingFlow() {
   // book the child is halfway through.
   if (step === 'confirm-complete') return (
     <Screen lang={lang} onBack={() => setStep('existing-book')}>
+      {error && <p role="alert" style={{ color: "#a83225", fontWeight: 700 }}>{error}</p>}
       <TutoBubble message={s('rd_finish_confirm', { title: book?.title ?? '' })} />
       <button
         onClick={markCompleted}
@@ -925,6 +940,7 @@ export default function ReadingFlow() {
 
   if (step === 'page-prompt') return (
     <Screen lang={lang} onBack={() => setStep('existing-book')}>
+      {error && <p role="alert" style={{ color: "#a83225", fontWeight: 700 }}>{error}</p>}
       <TutoBubble
         message={error || s('rd_pages_prompt')}
         tutoSize={80}
