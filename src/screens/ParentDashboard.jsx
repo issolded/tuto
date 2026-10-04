@@ -1,3 +1,4 @@
+import { ensureFamilyCode } from '../lib/familyCode'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
@@ -335,10 +336,12 @@ export default function ParentDashboard({ view = 'dashboard' }) {
       .eq('id', uid)
       .single()
 
-    let code = data?.family_code
+    // Never treat a failed read as an absent code (or reset loaded preferences).
+    if (!data) return
+    let code = data.family_code
     if (!code) {
-      code = Math.random().toString(36).substring(2, 10).toUpperCase()
-      await supabase.from('parents').update({ family_code: code }).eq('id', uid)
+      try { code = await ensureFamilyCode(supabase, uid) }
+      catch { return }
     }
     setFamilyCode(code)
     setNotifData({
