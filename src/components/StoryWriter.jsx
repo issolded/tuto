@@ -160,7 +160,6 @@ export default function StoryWriter({ child, story, language, onExit, onReview }
   const locked = working || state === 'loading' || state === 'load_error'
   const button = { border: 0, borderRadius: 16, padding: '14px 18px', font: 'inherit', fontWeight: 800, cursor: 'pointer' }
   return <main style={{ maxWidth: 800, margin: '0 auto', padding: '28px 20px 100px', minHeight: '100vh', background: '#E8F5E9', color: '#244631', boxSizing: 'border-box' }}>
-    <button style={{ ...button, background: 'white' }} disabled={working} onClick={leave}>{s('sw_exit')}</button>
     <h1 style={{ fontSize: 26 }}>{s('sw_heading')}</h1>
     <p role="status" aria-live="polite">{s(localOk ? statusKeys[state] : 'sw_storage_error')}</p>
     {state === 'conflict' && <div role="alert" style={{ padding: 16, background: '#fff3cd', borderRadius: 16 }}>
@@ -181,8 +180,11 @@ export default function StoryWriter({ child, story, language, onExit, onReview }
           resize: 'vertical', border: '2px solid #A5D6A7', borderRadius: 18, marginTop: 8 }} />
     </label>
     <p style={{ fontSize: 13 }}>{draft.text.length.toLocaleString()} / 50,000</p>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 20 }}>
-      <button style={{ ...button, background: 'white' }} disabled={locked || state === 'conflict'} onClick={() => flush()}>{s('sw_retry_save')}</button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+        <button style={{ ...button, background: 'white' }} disabled={working} onClick={leave}>{s('sw_exit')}</button>
+        <button style={{ ...button, background: 'white' }} disabled={locked || state === 'conflict'} onClick={() => flush()}>{s('sw_retry_save')}</button>
+      </div>
       <button style={{ ...button, background: '#19845D', color: 'white', opacity: locked || !draft.text.trim() || state === 'conflict' ? 0.55 : 1 }}
         disabled={locked || !draft.text.trim() || state === 'conflict'} onClick={finish}>{s(working ? 'sw_reviewing' : 'sw_finish')}</button>
     </div>
