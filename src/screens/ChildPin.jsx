@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
-import { supabase } from '../lib/supabase'
+import { supabase, getChildrenByFamilyCode } from '../lib/supabase'
 import { useT } from '../lib/parentI18n'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -24,7 +24,7 @@ export default function ChildPin() {
   const nav = useNavigate()
   const s = useT()
   const [pin, setPin] = useState('')
-  const [device] = useState(() => { try { return JSON.parse(localStorage.getItem('child_device') || 'null') } catch { return null } })
+  const [selectedChildId, setSelectedChildId] = useState('')
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
   const [expression, setExpression] = useState('default')
@@ -36,12 +36,14 @@ export default function ChildPin() {
 
   // Load children for this family on mount
   useEffect(() => {
-    if (!device?.device_token || !device?.child?.id) { nav('/setup/assign', { replace: true }); return }
-    setFamilyChildren([device.child])
+    if (!familyCode) { nav('/setup', { replace: true }); return }
+    getChildrenByFamilyCode(familyCode).then(children => {
+      setFamilyChildren(children === null ? 'unreachable' : children)
+    })
   }, [])
 
   const addPin = (d) => {
-    if (checking || pin.length >= 4 || !device?.device_token) return
+    if (checking || pin.length >= 4 || (familyChildren?.length > 1 && !selectedChildId)) return
     const next = pin + d
     setPin(next)
     if (next.length === 4) verifyPin(next)
@@ -53,7 +55,7 @@ export default function ChildPin() {
     try {
       await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/forgot-pin`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ child_id: device?.child?.id }),
+        body: JSON.stringify({ child_id: selectedChildId || (familyChildren?.length === 1 ? familyChildren[0].id : undefined) }),
       })
     } catch { /* the child still sees that they asked; the parent hears at the next try */ }
   }
@@ -76,7 +78,7 @@ export default function ChildPin() {
       const res = await fetch(`${SERVER}/api/family/${encodeURIComponent(familyCode)}/verify-pin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: entered, device_token: device?.device_token }),
+        body: JSON.stringify({ pin: entered, child_id: selectedChildId || familyChildren?.[0]?.id }),
       })
       const data = await res.json().catch(() => ({}))
 
@@ -87,8 +89,6 @@ export default function ChildPin() {
         await giveWelcomeBonus(data.child.id)
         setExpression('excited')
         setTimeout(() => nav('/child/home'), 350)
-      } else if (res.status === 403) {
-        nav('/setup/assign', { replace: true })
       } else if (res.status === 429) {
         const mins = Math.max(1, Math.ceil((data.retry_in_seconds ?? 60) / 60))
         fail(s('cp_too_many', { n: mins }))
@@ -155,7 +155,13 @@ export default function ChildPin() {
       <TutoMascot size={120} expression={expression} />
       <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 28, fontWeight: 800, color: 'white', textAlign: 'center', marginTop: 16 }}>{s('cp_hi')}</div>
       <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: 600, textAlign: 'center', marginBottom: 8, marginTop: 4 }}>{s('cp_enter_pin')}</div>
-      <p style={{ color: 'white', fontSize: 22, fontWeight: 800 }}>{s('ds_device_for', { name: device?.child?.name || '' })}</p>
+      {Array.isArray(familyChildren) && familyChildren.length > 1 && <div style={{ width: '100%', maxWidth: 320, margin: '12px 0 20px' }}>
+        <label htmlFor="child-profile" style={{ display: 'block', color: 'white', marginBottom: 8, fontWeight: 800 }}>{s('cp_choose_child')}</label>
+        <select id="child-profile" value={selectedChildId} disabled={checking} onChange={e => { setSelectedChildId(e.target.value); setPin(''); setError('') }} style={{ width: '100%', padding: 14, borderRadius: 14, font: 'inherit', background: 'white', color: '#1A1A2E' }}>
+          <option value="">{s('cp_choose_child')}</option>
+          {familyChildren.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         {[0,1,2,3].map(i => (
           <div key={i} style={{ width: 20, height: 20, borderRadius: '50%', background: pin.length > i ? 'white' : 'rgba(255,255,255,0.3)', transition: 'background 0.2s, transform 0.2s', transform: pin.length > i ? 'scale(1.1)' : 'scale(1)' }} />
@@ -170,13 +176,13 @@ export default function ChildPin() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, width: '100%', maxWidth: 280 }}>
         {[1,2,3,4,5,6,7,8,9].map(n => (
-          <button key={n} onClick={() => addPin(String(n))} disabled={checking || !device?.device_token} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 24, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer', transition: 'background 0.15s' }}>
+          <button key={n} onClick={() => addPin(String(n))} disabled={checking || (familyChildren?.length > 1 && !selectedChildId)} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 24, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer', transition: 'background 0.15s' }}>
             {n}
           </button>
         ))}
         <div />
-        <button onClick={() => addPin('0')} disabled={checking || !device?.device_token} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 24, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer' }}>0</button>
-        <button onClick={() => setPin(p => p.slice(0,-1))} disabled={checking || !device?.device_token} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 20, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer' }}>⌫</button>
+        <button onClick={() => addPin('0')} disabled={checking || (familyChildren?.length > 1 && !selectedChildId)} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 24, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer' }}>0</button>
+        <button onClick={() => setPin(p => p.slice(0,-1))} disabled={checking || (familyChildren?.length > 1 && !selectedChildId)} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 20, height: 72, fontSize: 20, fontWeight: 800, fontFamily: 'Nunito', color: 'white', cursor: 'pointer' }}>⌫</button>
       </div>
 
       {forgot ? (

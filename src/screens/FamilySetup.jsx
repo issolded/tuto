@@ -36,7 +36,7 @@ export default function FamilySetup() {
     if (codeFromUrl) {
       console.log('[FamilySetup] code from URL:', codeFromUrl)
       localStorage.setItem('family_code', codeFromUrl)
-      setTimeout(() => nav('/setup/assign'), 1400)
+      setTimeout(() => nav('/child'), 1400)
     }
   }, [])
 
@@ -89,7 +89,7 @@ export default function FamilySetup() {
 
           if (mountedRef.current) {
             setStatus('success')
-            setTimeout(() => nav('/setup/assign'), 1600)
+            setTimeout(() => nav('/child'), 1600)
           }
         },
         () => {} // frame errors — ignore
@@ -114,7 +114,7 @@ export default function FamilySetup() {
       if (json.children?.length > 0) {
         localStorage.setItem('family_code', code)
         setStatus('success')
-        setTimeout(() => nav('/setup/assign'), 1400)
+        setTimeout(() => nav('/child'), 1400)
       } else {
         setManualError(s('fs_not_found'))
         setManualLoading(false)
