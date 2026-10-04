@@ -57,6 +57,10 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Hikâye yazma düğmeleri** (2026-10-04, kullanıcı kararı): Kaydet ve çık + Şimdi kaydet
+  yazı alanının altında yan yana; Hikâyemi bitirdim onların altında tam genişlikte.
+
+
 - **Hikâye kitaplığı kompakt kapaklar** (2026-10-03, kullanıcı kararı): kapaklar en fazla 190px,
   dar ekranda otomatik satırlanır. Görselsiz hikâyeler kitap sırtı/sayfa kenarı, büyük harfli başlık
   ve by + çocuk adıyla görünür; uzun başlık kırpılır, tam adı erişilebilir etikette kalır.
