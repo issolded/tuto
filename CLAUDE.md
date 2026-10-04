@@ -1032,3 +1032,5 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 `src/screens/`'e gider, bundle'a değil.
 
 - 2026-10-04: Aile kodu okuma hatasında yeniden üretilmez; ilk yazım yalnız NULL koşuluyla yapılır. Birden fazla çocukta giriş açık çocuk seçimi + o çocuğun PIN doğrulamasıdır. Aynı PIN ile belirsiz eski istemci isteği ilk kardeşi seçmez.
+
+- 2026-10-04 kullanıcı revizyonu: günlük çocuk seçimi kaldırıldı. /setup/assign yalnız ebeveyn oturumuyla cihazı çocuğa bağlar, bu tarayıcıdaki ebeveyn oturumunu local scope ile kapatır. Sunucunun amaç ayrımlı HMAC cihaz belgesi parent/child/device kimliğine bağlıdır ve 1 yıl geçerlidir; SUPABASE_SERVICE_ROLE_KEY yalnız sunucuda imza anahtarıdır. PIN girişinde belge zorunlu, child_id istemciden seçilmez. Eski cihazlar bir defa kurulur. DB migration yok; tekil cihaz iptali ve bütün API/DB erişiminin çocuk session auth ile korunması ayrı kalan iştir.

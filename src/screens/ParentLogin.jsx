@@ -7,6 +7,7 @@ import { useT } from '../lib/parentI18n'
 export default function ParentLogin() {
   const nav = useNavigate()
   const s = useT()
+  const destination = new URLSearchParams(window.location.search).get('next') === 'device' ? '/setup/assign' : '/parent/dashboard'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -24,11 +25,11 @@ export default function ParentLogin() {
     setLoading(true); setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false) }
-    else nav('/parent/dashboard')
+    else nav(destination)
   }
 
   const googleLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/parent/dashboard' } })
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + destination } })
   }
 
   return (
