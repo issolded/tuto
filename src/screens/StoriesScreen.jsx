@@ -1,3 +1,4 @@
+import BookNavigation from '../components/BookNavigation'
 import StoryWriter from '../components/StoryWriter'
 import { mergeDrafts, draftKey } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
@@ -1255,6 +1256,8 @@ export default function StoriesScreen() {
       </div>
 
       <div style={{ padding: '0 24px 40px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+
+        <BookNavigation lang={language} current="writing" settings={child?.task_settings} />
 
         {/* In-progress story */}
         {!loadingStories && inProgressStories.map(inProgressStory => (
