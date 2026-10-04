@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT, adoptAccountLang } from '../lib/parentI18n'
 import { childLang, t } from '../lib/i18n'
@@ -85,12 +85,15 @@ function Demo({ rules, child }) {
 
 export default function ScreenControlSettings() {
   const s = useT(), nav = useNavigate()
+  // Opened from a child's page, so it starts on that child instead of asking which one.
+  const [params] = useSearchParams()
+  const fromChild = params.get('child') || ''
   const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState(false)
   const [children, setChildren] = useState([]), [childId, setChildId] = useState('')
   const [parentId, setParentId] = useState(''), [saved, setSaved] = useState({})
   const [rules, setRules] = useState(() => readRules()), [tab, setTab] = useState('rules')
   const [saving, setSaving] = useState(false), [message, setMessage] = useState('')
-  async function load() {
+  async function load(preferred) {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('auth')
@@ -103,13 +106,14 @@ export default function ScreenControlSettings() {
       const stored = parent.data.prefs?.screen_control_web || {}
       family.data.forEach(child => { if (stored[child.id]) cacheDemoRules(child.id, readRules(stored[child.id])) })
       setParentId(user.id); setChildren(family.data); setSaved(stored)
-      setChildId(family.data[0]?.id || ''); setRules(readRules(stored[family.data[0]?.id]))
+      const picked = family.data.some(c => c.id === preferred) ? preferred : (family.data[0]?.id || '')
+      setChildId(picked); setRules(readRules(stored[picked]))
     } catch { setLoadError(true) }
     finally { setLoading(false) }
   }
   // load() awaits auth and database reads before updating state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(fromChild) }, [fromChild])
   const child = children.find(c => c.id === childId)
   const dirty = JSON.stringify(rules) !== JSON.stringify(readRules(saved[childId]))
   const valid = validRules(rules)
@@ -125,7 +129,7 @@ export default function ScreenControlSettings() {
     finally { setSaving(false) }
   }
   return <div className="sc-page"><style>{CSS}</style>
-    <TopBar title={s('sc_title')} onBack={() => nav('/parent/settings')} />
+    <TopBar title={s('sc_title')} onBack={() => nav(fromChild ? `/parent/child/${fromChild}` : '/parent/dashboard')} />
     <main className="sc-body">
       <Card style={{ background: PC.tealBg }}><div className="sc-stack"><Pill>{s('sc_demo')}</Pill><p className="sc-help">{s('sc_notice')}</p></div></Card>
       {loading ? <p role="status">{s('loading')}</p> : loadError ? <Card><p role="alert">{s('sc_load_error')}</p><Btn onClick={() => { setLoading(true); setLoadError(false); load() }}>{s('sc_retry')}</Btn></Card> : !child ? <p>{s('sc_no_child')}</p> : <>

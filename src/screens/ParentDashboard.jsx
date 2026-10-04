@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
+import ParentNav from '../components/ParentNav'
 import { supabase, getTodaySummary } from '../lib/supabase'
 import { updateParentPrefs } from '../lib/parentPrefs'
 import { hashPin } from '../lib/hash'
@@ -473,8 +474,8 @@ export default function ParentDashboard({ view = 'dashboard' }) {
   if (view === 'settings') return (
     <div className="pd-wrap" style={{ background: PC.bg, minHeight: '100dvh', margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       <style>{PD_CSS}</style>
-      <TopBar title={s('db_settings')} onBack={() => nav('/parent/dashboard')} />
-      <div className="tc-scroll" style={{ flex: 1, padding: '0 22px 32px' }}>
+      <TopBar title={s('db_settings')} />
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, padding: '0 22px 32px' }}>
         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '6px 2px 12px' }}>{s('db_reach')}</div>
         <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
@@ -706,23 +707,16 @@ export default function ParentDashboard({ view = 'dashboard' }) {
           )}
         </Card>
 
-        <Card pad={18} style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <Icon name="clock" color={PC.tealDeep} />
-            <div><strong>{s('sc_title')}</strong><div style={{ fontSize: 13, color: PC.inkSoft, marginTop: 4 }}>{s('sc_intro')}</div></div>
-          </div>
-          <p style={{ fontSize: 12, color: PC.inkSoft }}>{s('sc_demo')}</p>
-          <Btn variant="soft" onClick={() => nav('/parent/settings/screen-control')}>{s('sc_title')} →</Btn>
-        </Card>
 
       </div>
+      <ParentNav active="settings" />
     </div>
   )
 
   return (
     <div className="pd-wrap" style={{ background: PC.bg, minHeight: '100dvh', margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       <style>{PD_CSS}</style>
-      <div className="tc-scroll" style={{ flex: 1, padding: '8px 22px 32px' }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, padding: '8px 22px 32px' }}>
 
         {/* greeting, with Settings named — the gear is where everything that is not today went */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 2px 0' }}>
@@ -731,10 +725,6 @@ export default function ParentDashboard({ view = 'dashboard' }) {
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 26, color: PC.ink, letterSpacing: '-.5px', marginTop: 2 }}>{displayName}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button className="tc-press tc-tap" onClick={() => nav('/parent/settings')}
-              style={{ height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', gap: 7, padding: '0 14px', cursor: 'pointer', boxShadow: SHADOW_SM, fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>
-              <span style={{ fontSize: 17 }}>⚙️</span>{s('db_settings')}
-            </button>
             <button className="tc-press tc-tap" onClick={logout} aria-label={s('db_signout')}
               style={{ width: 46, height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: SHADOW_SM }}>
               <Icon name="logout" size={21} color={PC.inkSoft} />
@@ -821,6 +811,7 @@ export default function ParentDashboard({ view = 'dashboard' }) {
           onSaved={handleSaved}
         />
       )}
+      <ParentNav active="children" />
     </div>
   )
 }
