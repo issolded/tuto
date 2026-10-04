@@ -193,6 +193,7 @@ const P = {
   // The child reads these, but nothing here knows WHICH child yet — the PIN is what
   // identifies them — so children.language is not available. The device language, which
   // the parent set when they linked this device, is the only honest source.
+  cp_choose_child: { en: 'Who is signing in?', tr: 'Kim giriş yapıyor?', es: '¿Quién va a entrar?' },
   cp_hi:             { en: "Hi! I'm Tuto 👋", tr: 'Merhaba! Ben Tuto 👋', es: '¡Hola! Soy Tuto 👋' },
   cp_enter_pin:      { en: 'Enter your PIN to start!', tr: 'Başlamak için PIN’ini gir!', es: '¡Escribe tu PIN para empezar!' },
   cp_too_many:       { en: 'Too many tries! Ask a grown-up — try again in %n% minutes ⏳',

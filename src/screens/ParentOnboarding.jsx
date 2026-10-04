@@ -1,3 +1,4 @@
+import { ensureFamilyCode } from '../lib/familyCode'
 import { LANGS, t as childT } from '../lib/i18n'
 import { useT, useUiLang, uiLang, pt } from '../lib/parentI18n'
 import { useState, useEffect } from 'react'
@@ -187,14 +188,8 @@ export default function ParentOnboarding() {
   useEffect(() => {
     if ((step !== 5 && step !== 10) || !user) return
     const load = async () => {
-      const { data } = await supabase.from('parents').select('family_code').eq('id', user.id).single()
-      if (data?.family_code) {
-        setFamilyCode(data.family_code)
-      } else {
-        const code = Math.random().toString(36).substring(2, 10).toUpperCase()
-        await supabase.from('parents').update({ family_code: code }).eq('id', user.id)
-        setFamilyCode(code)
-      }
+      try { setFamilyCode(await ensureFamilyCode(supabase, user.id)) }
+      catch { setSaveError(s('ob_went_wrong')) }
     }
     load()
   }, [step, user])

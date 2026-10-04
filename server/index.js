@@ -1,3 +1,4 @@
+import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
 import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './englishPlay.js'
@@ -3312,7 +3313,8 @@ app.post('/api/family/:code/verify-pin', async (req, res) => {
 
   const { data: children } = await supabase.from('children')
     .select('id, name, age, pin_hash, language, task_settings').eq('parent_id', parent.id)
-  const match = (children || []).find(c => c.pin_hash === hashPinServer(pin))
+  // PINs are checked only against the selected sibling; ambiguous legacy requests fail.
+  const match = matchFamilyChild(children, hashPinServer(pin), req.body?.child_id)
 
   if (!match) {
     state.fails += 1
