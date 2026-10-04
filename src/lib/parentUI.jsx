@@ -12,12 +12,26 @@ export { PC, FONT, SHADOW, SHADOW_SM, SPACE, RADIUS, TAP, ELEV, TEXT } from './p
 export const PCSS = `
 *{box-sizing:border-box;}
 .tc-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;}
-/* The parent tab bar sits under the content column and shares its width, so it has to break
-   where .pd-wrap breaks. One definition here rather than a number passed in from each screen. */
+/* The parent app is a phone app. It is used on a phone, and it is going native on a phone
+   (Compose / SwiftUI). The 980px two-column dashboard only ever existed in a browser: a
+   second layout to keep true, with no device behind it. It is gone — on a wide screen the
+   column keeps its phone width and the page behind it goes darker, so what a parent sees on
+   a laptop IS the phone screen rather than a near-miss of it.
+   Every parent screen wears .tc-col, including the fixed tab bar, so there is one width in
+   the app and nothing can line up against a different one. */
 .tc-col{max-width:430px;margin:0 auto;width:100%;}
 .tc-pnav{max-width:430px;}
-@media (min-width:900px){ .tc-pnav{max-width:980px;} .tc-col{max-width:980px;} }
-/* Room for the fixed bar, plus the home indicator on a phone. */
+/* Scoped by mount, not by selector: PCSS is injected by the parent screens and removed when
+   they unmount, so the kids app keeps its own cream page. */
+body{background:#E3E8EC;}
+@media (min-width:480px){
+  .tc-col{box-shadow:0 0 0 1px rgba(40,55,75,.07),0 26px 64px -34px rgba(25,40,55,.42);}
+}
+/* Room for the fixed bar (69px), the home indicator, and a card's worth of breathing room.
+   This is padding-bottom, so a screen that also sets the shorthand inline silently replaces
+   it: three screens did, with 32px, and the bar covered the last 37px of the page — the
+   capped-limit warning on the report sat under it with nothing left to scroll. Tabbed screens
+   set paddingInline / paddingTop only and leave the bottom to this rule. */
 .tc-tabbed{padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));}
 .tc-scroll::-webkit-scrollbar{display:none;}
 .tc-press{transition:transform .12s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,opacity .18s ease;}

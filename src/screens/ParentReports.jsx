@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PC, FONT, TEXT, SPACE, RADIUS, PCSS, TopBar, Card, TaskIcon } from '../lib/parentUI'
-import { useT } from '../lib/parentI18n'
+import { useT, useUiLang } from '../lib/parentI18n'
 import { t as childT, childLang as childLangOf, localeFor } from '../lib/i18n'
 import ParentNav from '../components/ParentNav'
 
@@ -26,6 +26,7 @@ const BAR_MAX = 86
 export default function ParentReports() {
   const nav = useNavigate()
   const s = useT()
+  const uiLang = useUiLang()
   const [params, setParams] = useSearchParams()
   const [children, setChildren] = useState([])
   const [childId, setChildId] = useState(params.get('child') || '')
@@ -84,8 +85,13 @@ export default function ParentReports() {
   }, [childId, offset])
 
   const child = children.find(c => c.id === childId)
+  // Two axes, and this screen reads both. Task names come from the CHILD's dictionary so the
+  // parent and the child call the same thing by the same word; everything the screen says in
+  // its own voice — the week's dates, the weekday under each bar — is the PARENT's language.
+  // It was one locale for both, so a Spanish-reading parent of a Turkish-reading child got
+  // "22–28 Eylül" and "Pzt Sal Çar" across their own report.
   const lang = childLangOf(child)
-  const locale = localeFor(lang)
+  const locale = localeFor(uiLang)
 
   const pickChild = (id) => { setChildId(id); setOffset(0); setParams({ child: id }) }
 
@@ -106,7 +112,7 @@ export default function ParentReports() {
     <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       <TopBar title={s('rp_title')} sub={child?.name} />
 
-      <div className="tc-scroll tc-tabbed" style={{ flex: 1, padding: `0 ${SPACE.s5}px ${SPACE.s8}px` }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingInline: SPACE.s5 }}>
 
         {children.length > 1 && (
           <div style={{ display: 'flex', gap: SPACE.s2, marginBottom: SPACE.s3 }}>
