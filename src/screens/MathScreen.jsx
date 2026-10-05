@@ -3413,6 +3413,79 @@ export default function MathScreen() {
     // is not lit up until the child asks for help.
     const questionPicto = qVisual?.kind === 'pictogram' ? qVisual : null
 
+    // The optional hint, in pieces: the pill and its nudge, and the panel of steps it opens. On a typed-answer question the
+    // pill sits in the keypad block (pinned to the bottom on a short phone, so it can never be scrolled out of sight behind
+    // it); the steps open above, under the question.
+    const renderHint = (part) => {
+      const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
+      if (!Array.isArray(all) || !all.length) return null
+      // Both spellings of a decimal answer: hints print "0,25" in Turkish and Spanish.
+      const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
+        .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
+      // Stop at the first step that names the answer rather than skipping it: steps build on
+      // each other, and dropping a middle one left "You took away 3 too many" with no
+      // mention of what was taken away.
+      const cut = all.findIndex((s, i) => i > 0 && names(s))
+      const steps = cut === -1 ? all : all.slice(0, cut)
+      const open = hintOpenFor === qIdx
+      if (part === 'panel' && !open) return null
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          {(part === 'all' || part === 'button') && (<>
+                    <button
+                      className="math-press"
+                      onClick={() => {
+                        if (open) { setHintOpenFor(null); return }
+                        setHintOpenFor(qIdx)
+                        // On a short screen the keypad is pinned over the bottom of the column, so
+                        // a hint that opens there opens out of sight. Bring it up above the keys.
+                        requestAnimationFrame(() => {
+                          const el = document.querySelector('.math-qscroll')
+                          if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+                        })
+                        // Same cost as being shown help after a wrong answer — the server docks
+                        // a third for either, so asking early is never the cheaper trick.
+                        setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
+                        setHintSeenQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
+                        setHelpUsed(true)
+                      }}
+                      key={firstWrongQs.has(qIdx) && !open ? `nudge-${nudge}` : 'hint'}
+                      style={{
+                        animation: firstWrongQs.has(qIdx) && !open && !hintSeenQs.has(qIdx) ? 'hintNudge .9s ease 2' : undefined,
+                        display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
+                        background: open ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
+                        color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                        boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
+                      }}
+                    >
+                      💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+                    </button>
+                    {nudgeNote === qIdx && !open && (
+                      <div style={{
+                        background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 300,
+                        fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
+                        lineHeight: 1.4, animation: 'scaleIn .22s ease both',
+                      }}>
+                        {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
+                      </div>
+                    )}
+          </>)}
+          {(part === 'all' || part === 'panel') && (<>
+                    {open && (
+                      <div style={{
+                        background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT,
+                        lineHeight: 1.5, textAlign: 'center', animation: 'scaleIn .22s ease both',
+                        display: 'flex', flexDirection: 'column', gap: 7,
+                      }}>{steps.map((s, i) => <div key={i}>{s}</div>)}</div>
+                    )}
+          </>)}
+        </div>
+      )
+    }
+
     return (
       <>
       {leaveSheet}
@@ -3549,70 +3622,7 @@ export default function MathScreen() {
                   deliberately short — "5966 - 3000 = 2966. Now take away the 100." — and holding
                   those back hid the actual method from exactly the older children who only ever
                   see this hint. So later steps are shown too, unless they name the answer. */}
-              {(() => {
-                const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
-                if (!Array.isArray(all) || !all.length) return null
-                // Both spellings of a decimal answer: hints print "0,25" in Turkish and Spanish.
-                const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
-                  .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
-                // Stop at the first step that names the answer rather than skipping it: steps build on
-                // each other, and dropping a middle one left "You took away 3 too many" with no
-                // mention of what was taken away.
-                const cut = all.findIndex((s, i) => i > 0 && names(s))
-                const steps = cut === -1 ? all : all.slice(0, cut)
-                const open = hintOpenFor === qIdx
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <button
-                      className="math-press"
-                      onClick={() => {
-                        if (open) { setHintOpenFor(null); return }
-                        setHintOpenFor(qIdx)
-                        // On a short screen the keypad is pinned over the bottom of the column, so
-                        // a hint that opens there opens out of sight. Bring it up above the keys.
-                        requestAnimationFrame(() => {
-                          const el = document.querySelector('.math-qscroll')
-                          if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-                        })
-                        // Same cost as being shown help after a wrong answer — the server docks
-                        // a third for either, so asking early is never the cheaper trick.
-                        setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
-                        setHintSeenQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
-                        setHelpUsed(true)
-                      }}
-                      key={firstWrongQs.has(qIdx) && !open ? `nudge-${nudge}` : 'hint'}
-                      style={{
-                        animation: firstWrongQs.has(qIdx) && !open && !hintSeenQs.has(qIdx) ? 'hintNudge .9s ease 2' : undefined,
-                        display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
-                        background: open ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
-                        color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
-                        fontFamily: FRED, fontWeight: 600, fontSize: 15,
-                        boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
-                      }}
-                    >
-                      💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
-                    </button>
-                    {nudgeNote === qIdx && !open && (
-                      <div style={{
-                        background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 300,
-                        fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
-                        lineHeight: 1.4, animation: 'scaleIn .22s ease both',
-                      }}>
-                        {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
-                      </div>
-                    )}
-                    {open && (
-                      <div style={{
-                        background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',
-                        fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT,
-                        lineHeight: 1.5, textAlign: 'center', animation: 'scaleIn .22s ease both',
-                        display: 'flex', flexDirection: 'column', gap: 7,
-                      }}>{steps.map((s, i) => <div key={i}>{s}</div>)}</div>
-                    )}
-                  </div>
-                )
-              })()}
+              {renderHint(answerFormats[qIdx] === 'choice' ? 'all' : 'panel')}
 
               {skippable.has(qIdx) && !flash && (
                 <button
@@ -3649,6 +3659,7 @@ export default function MathScreen() {
                 </div>
               ) : (
                 <div className="math-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {renderHint('button')}
                   {/* Answer display */}
                   <div className="math-answer" style={{
                     background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
