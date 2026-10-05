@@ -5676,11 +5676,25 @@ function missingSign(level, lang, lean) {
     options: ops.map(p => (p === o ? right : opt(p, why[p]))),
     correct_answer: o,
     operandKey: `sign:${a}:${b}:${r}`,
-    // Try each sign and see which one lands on the answer — the way the hint says to, done.
-    ...stepsHelp(ops.filter(p => !Number.isNaN(calc(a, p, b)) && calc(a, p, b) > 0).map(p => stp(lang, `${a} ${p} ${b}`, calc(a, p, b),
-      p === ops[0] ? `Try each sign and see which one gives ${r}. First ${p}:` : `Now try ${p}:`,
-      p === ops[0] ? `Her işareti dene, hangisi ${r} veriyor bak. Önce ${p}:` : `Şimdi ${p} dene:`,
-      p === ops[0] ? `Prueba cada signo y mira cuál da ${r}. Primero ${p}:` : `Ahora prueba ${p}:`)), null, true),
+    // The way the hint says to, done: decide by size which signs are possible, then try them in turn and STOP at the one that
+    // lands on the answer. A sign that gives nothing near it is only tried when it is easy to work out (25 × 59 is not a
+    // line a child should have to do to find out that × is wrong).
+    ...(() => {
+      const cands = (r > a ? ['+', '×'] : ['−', '÷']).filter(p => ops.includes(p))
+      const easy = p => (p === '×' ? a * b <= 150 : true) && Number.isFinite(calc(a, p, b)) && calc(a, p, b) > 0
+      const chain = []
+      for (const p of cands) {
+        if (p !== o && !easy(p)) continue
+        chain.push(p)
+        if (p === o) break
+      }
+      if (!chain.includes(o)) return {}
+      const big = r > a
+      return stepsHelp(chain.map((p, i) => stp(lang, `${a} ${p} ${b}`, calc(a, p, b),
+        i === 0 ? (big ? `The number on the right is bigger than ${a}, so the sign is + or ×. Try ${p}:` : `The number on the right is smaller than ${a}, so the sign is − or ÷. Try ${p}:`) : `Not that one. Try ${p}:`,
+        i === 0 ? (big ? `Sağdaki sayı ${a} sayısından büyük, o hâlde işaret + ya da ×. ${p} dene:` : `Sağdaki sayı ${a} sayısından küçük, o hâlde işaret − ya da ÷. ${p} dene:`) : `O değil. ${p} dene:`,
+        i === 0 ? (big ? `El número de la derecha es mayor que ${a}, así que el signo es + o ×. Prueba ${p}:` : `El número de la derecha es menor que ${a}, así que el signo es − o ÷. Prueba ${p}:`) : `Ese no. Prueba ${p}:`)), null, true)
+    })(),
     hint_steps: [
       say(lang, `Is ${r} bigger or smaller than ${a}?`, `${r}, ${a} sayısından büyük mü küçük mü?`, `¿${r} es mayor o menor que ${a}?`),
       say(lang, `Bigger means you added or multiplied; smaller means you took away or divided. Try each one.`,
