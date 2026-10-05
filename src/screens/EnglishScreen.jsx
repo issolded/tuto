@@ -518,27 +518,6 @@ export default function EnglishScreen() {
 
           {!answer && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              {rungs.length < 3 && (
-                <button className="pz-press" onClick={askHint} disabled={hintBusy || pending}
-                  key={nudge ? 'nudge' : 'hint'} style={{
-                    animation: nudge && rungs.length === 0 ? 'hintNudge .9s ease 2' : undefined,
-                    display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
-                    background: rungs.length ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
-                    color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
-                    fontFamily: FRED, fontWeight: 600, fontSize: 15, boxShadow: '0 3px 10px rgba(60,120,200,.08)',
-                  }}>
-                  💡 {rungs.length === 0 ? say(language, 'Hint', 'İpucu', 'Pista') : say(language, 'More help', 'Biraz daha', 'Más ayuda')}
-                </button>
-              )}
-              {nudge && rungs.length === 0 && (
-                <div style={{
-                  background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 320,
-                  fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
-                  lineHeight: 1.4, animation: 'scaleIn .22s ease both',
-                }}>
-                  {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
-                </div>
-              )}
               {rungs.length > 0 && (
                 <div style={{
                   background: 'rgba(255,255,255,.92)', borderRadius: 16, padding: isTablet ? '16px 22px' : '13px 17px', maxWidth: isTablet ? 620 : 440,
@@ -561,23 +540,53 @@ export default function EnglishScreen() {
             </div>
           )}
 
-          <button className="pz-press" onClick={send} disabled={picked.length !== need || pending || !!answer} style={{
-            ...primaryBtn, alignSelf: 'center', marginTop: 4,
-            opacity: picked.length !== need ? 0.4 : 1, cursor: picked.length !== need ? 'default' : 'pointer',
-            boxShadow: picked.length !== need ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
-          }}>{pending ? '…' : t('puzzle_send', language)}</button>
-
-          {/* An honest way out: the question counts as wrong and the right words are shown.
+          {/* The actions stay pinned to the bottom of the column: on a short phone the question, the options and an open hint
+              are taller than the screen, and Send used to be a scroll away. */}
+          <div style={{ position: 'sticky', bottom: -22, margin: '0 -20px -22px', padding: '10px 20px 22px', zIndex: 5,
+            background: 'linear-gradient(to top, rgba(250,219,227,.96) 72%, rgba(250,219,227,0))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {!answer && (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {rungs.length < 3 && (
+                <button className="pz-press" onClick={askHint} disabled={hintBusy || pending}
+                  key={nudge ? 'nudge' : 'hint'} style={{
+                    animation: nudge && rungs.length === 0 ? 'hintNudge .9s ease 2' : undefined,
+                    display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
+                    background: rungs.length ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
+                    color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15, boxShadow: '0 3px 10px rgba(60,120,200,.08)',
+                  }}>
+                  💡 {rungs.length === 0 ? say(language, 'Hint', 'İpucu', 'Pista') : say(language, 'More help', 'Biraz daha', 'Más ayuda')}
+                </button>
+              )}
+                {/* An honest way out: the question counts as wrong and the right words are shown.
               Only while nothing is chosen. It sat right under Send, and a child who had picked
               "far" for the opposite of "near" and reached for Send landed here — the right
               answer thrown away as "I don't know". Once something is picked they have an answer;
               Send is the button. */}
-          {!answer && picked.length === 0 && (
-            <button className="pz-press" onClick={skip} disabled={pending} style={{
-              alignSelf: 'center', border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
+                {picked.length === 0 && (
+                  <button className="pz-press" onClick={skip} disabled={pending} style={{
+              border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
               borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontFamily: FRED, fontWeight: 600, fontSize: 15,
             }}>{t('rd_skip', language)}</button>
-          )}
+                )}
+              </div>
+            )}
+              {nudge && rungs.length === 0 && (
+                <div style={{
+                  background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 320,
+                  fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
+                  lineHeight: 1.4, animation: 'scaleIn .22s ease both',
+                }}>
+                  {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
+                </div>
+              )}
+          <button className="pz-press" onClick={send} disabled={picked.length !== need || pending || !!answer} style={{
+            ...primaryBtn, alignSelf: 'center', padding: '13px 46px', fontSize: 19,
+            opacity: picked.length !== need ? 0.4 : 1, cursor: picked.length !== need ? 'default' : 'pointer',
+            boxShadow: picked.length !== need ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
+          }}>{pending ? '…' : t('puzzle_send', language)}</button>
+
+          </div>
 
           {answerFailed && (
             <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>
