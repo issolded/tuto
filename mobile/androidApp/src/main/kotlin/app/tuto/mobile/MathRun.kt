@@ -89,7 +89,7 @@ class MathRun(
                 val fresh = picks.map { engine.reviewQuestion(session!!.questions[it.getInt("idx")], child.language) }
                 api.call("POST", "/api/children/${child.id}/math-review/${offer.getString("id")}/start")
                 reviewId = offer.getString("id"); reviewPicks = picks
-                session = session!!.copy(questions = fresh); answers.clear(); helpUsed.clear(); wrongTries.clear(); attempted.clear()
+                session = session!!.copy(questions = fresh); answers.clear(); helpUsed.clear(); helpShown.clear(); wrongTries.clear(); attempted.clear()
                 index = 0; input = ""; hintsShown = 0; feedback = null; paper = false; saved = null; phase = Phase.Asking
             }.onFailure { operationError = true; phase = Phase.Result }
             saving = false
@@ -134,7 +134,7 @@ class MathRun(
             store.remember("topics", child.id, "curriculum", built.questions.mapNotNull { it.topicId })
             session = built
             index = 0; input = ""; feedback = null; hintsShown = 0
-            answers.clear(); attempted.clear(); helpUsed.clear()
+            answers.clear(); attempted.clear(); helpUsed.clear(); helpShown.clear(); wrongTries.clear()
             phase = Phase.Asking
         }
     }

@@ -59,7 +59,8 @@ jobs:
             mobile/shared/build/reports/
             mobile/androidApp/build/reports/
   tablet:
-    needs: android
+    # This job builds its own APKs. Run independently of the JVM/lint build;
+    # both remain required evidence, without serializing two isolated builds.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

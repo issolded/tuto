@@ -28,6 +28,7 @@ import app.tuto.mobile.data.Today
 import app.tuto.mobile.data.TutoApi
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -46,6 +47,7 @@ class TabletTest {
 
     private class FakeApi(val siblings: Boolean = false) : TutoApi {
         var saved: JSONObject? = null
+        var mathReviewResult: JSONObject? = null
         var verifiedChild: String? = null
         var forgotChild: String? = null
         override suspend fun forgotPin(code: String, childId: String) { forgotChild = childId }
@@ -62,7 +64,15 @@ class TabletTest {
         override suspend fun mathPlan(childId: String) = MathPlan(null, null, emptyList())
         override suspend fun saveMathSession(childId: String, body: JSONObject): MathSaved {
             saved = body
-            return MathSaved(gemsEarned = 20, capped = false, levelChange = "same")
+            return MathSaved(gemsEarned = 20, capped = false, levelChange = "same", review = JSONObject("""{"id":"math-review-test","picks":[{"idx":0}]}"""))
+        }
+        override suspend fun call(method:String,path:String,body:JSONObject?):JSONObject {
+            if(path.endsWith("/math-review/math-review-test/finish")) {
+                mathReviewResult=body
+                return JSONObject().put("gems_earned",2)
+            }
+            if(path.contains("/math-review/math-review-test/")) return JSONObject()
+            error("Unexpected test request: $path")
         }
 
         // A real sheet from server/puzzle (age 7, icons off), with each right answer's index kept
@@ -278,7 +288,10 @@ class TabletTest {
                 waitFor("question $i shown") { run.index == i && run.feedback == null }
                 val q = run.question!!
                 if (!shotFigure && (q.svg != null || q.nativeFigure != null)) { shot("03-question-with-figure"); shotFigure = true }
-                if (i == 0) shot("03-question-first")
+                if (i == 0) {
+                    shot("03-question-first")
+                    compose.onNodeWithText("Hint").performScrollTo().performClick()
+                }
                 if (q.format == "choice" && q.options.isNotEmpty()) {
                     tap("option_${q.answer}")
                 } else {
@@ -299,6 +312,24 @@ class TabletTest {
             waitFor("result text") { textExists("10 out of 10 right") }
             compose.onNodeWithText("+20 Gems").assertExists()
             shot("04-result")
+
+            // A fresh reinforcement must not inherit help flags from the original sitting:
+            // the server rejects helped results when deciding reinforcement rewards.
+            assertTrue(body.getJSONArray("attempts").getJSONObject(0).getBoolean("help_shown"))
+            compose.onNodeWithText("Practise these skills").performScrollTo().performClick()
+            waitFor("maths review ready",30_000) { run.phase==MathRun.Phase.Asking && run.reviewId!=null }
+            val reviewQuestion=run.question!!
+            if(reviewQuestion.format=="choice" && reviewQuestion.options.isNotEmpty()) tap("option_${reviewQuestion.answer}")
+            else {
+                reviewQuestion.answer.forEach { ch -> tap("key_$ch") }
+                compose.onNodeWithText("Check").performScrollTo().performClick()
+            }
+            waitFor("maths review recorded",20_000) { run.phase==MathRun.Phase.Result && api.mathReviewResult!=null }
+            val reviewAnswer=api.mathReviewResult!!.getJSONArray("results").getJSONObject(0)
+            assertTrue(reviewAnswer.getBoolean("correct"))
+            assertFalse(reviewAnswer.getBoolean("help_shown"))
+            assertFalse(reviewAnswer.getBoolean("help_used"))
+            assertEquals(0,reviewAnswer.getInt("wrong_tries"))
 
             compose.onNodeWithText("Home").performClick()
             waitFor("back home") { textExists("My Math") }
