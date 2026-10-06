@@ -1,12 +1,12 @@
 # Android native validation — 6 October 2026
 
-Branch: `codex/android-complete`. Tested source: `d6e6d1c20076db0364fcd45479ae528ea29af7bb`.
-CI: https://github.com/issolded/tuto/actions/runs/37502854810
+Branch: `codex/android-complete`. Tested source: `17382a5780f4732e82d6914dfa22bf3af562e804`.
+CI: https://github.com/issolded/tuto/actions/runs/37507713039
 
 ## Passed automated gates
 
 - Android APK build, lint and all 20 JVM tests.
-- All 14 Pixel Tablet API35 tests, zero failures/skips.
+- All 14 Pixel Tablet API35 tests in each of two environments (default and 16 KiB), zero failures/skips. The 16 KiB environment reported PAGE_SIZE=16384.
 - The Google callback test now passes including activity teardown. The callback is consumed directly while retaining the activity's original launch intent.
 - Maths reinforcement is checked after an originally hinted question: the new unaided answer sends clean help flags and wrong-try counts.
 - Shared maths generation covers 162 age/language sessions; same-skill review checks cover 27 questions. CI also checks puzzle rendering.
@@ -23,7 +23,7 @@ The installation blocker is resolved; the exact Google Play setting was not reco
 
 Source `17382a5780f4732e82d6914dfa22bf3af562e804`, CI https://github.com/issolded/tuto/actions/runs/37507713039 rebuilds the pinned QuickJS JNI sources with NDK r28. Build, lint, all 20 JVM tests, APK signature verification, ELF/RELRO and ZIP alignment checks passed. All four packaged 64-bit native libraries pass the 16 KiB gate.
 
-Both tablet jobs initially failed downloading the emulator archive before any tests. Only failed jobs were restarted; 4 KiB and 16 KiB tablet results are pending. Do not deliver this APK or claim runtime compatibility validated until both pass. The downloaded artifact ZIP matches the CI digest; APK SHA256 is `917a3e957547368d4b5fae3548ce7f0413fbec057391e25232a18935bcb56fd3`.
+Both tablet jobs initially failed downloading the emulator archive before any tests. Only failed jobs were restarted; both passed all 14 tests on unchanged source. The 16 KiB environment explicitly reported PAGE_SIZE=16384. Version 7 / 0.5.2-native-validation is available for device acceptance; live family/provider/WhatsApp acceptance remains open. The downloaded artifact ZIP matches the CI digest; APK SHA256 is `917a3e957547368d4b5fae3548ce7f0413fbec057391e25232a18935bcb56fd3`.
 
 ## Remaining live setup and verification
 
