@@ -151,7 +151,7 @@ private fun Asking(run: PuzzleRun, s: Strings, onClose: () -> Unit) {
                 Text(s(q.stemKey), fontFamily = Baloo, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 33.sp, modifier = Modifier.weight(1f))
                 ListenButton(s(q.stemKey), run.child.language, speaker, s.say("Listen", "Dinle", "Escuchar"), Color(0xFFD4F0EE))
             }
-            Prompt(q, drawn.prompt)
+            PuzzlePrompt(q, drawn.prompt)
             Options(run, q, drawn.options)
             run.hints.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth().card(Ink.lilacSoft).padding(16.dp)) }
             if (ans == null) {
@@ -182,7 +182,7 @@ private fun Asking(run: PuzzleRun, s: Strings, onClose: () -> Unit) {
 /** The question's figures, laid out as PuzzleView lays them out for each layout. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Prompt(q: PuzzleQuestion, svgs: List<String?>) {
+internal fun PuzzlePrompt(q: PuzzleQuestion, svgs: List<String?>) {
     if (q.layout == "options-only") return
     val gap = Arrangement.spacedBy(10.dp)
     when (q.layout) {

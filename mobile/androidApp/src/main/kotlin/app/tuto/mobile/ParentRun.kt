@@ -76,9 +76,11 @@ class ParentRun(val cloud: Cloud, val api: TutoApi, private val scope: Coroutine
         profile = JSONObject(profile.toString()).put("prefs", prefs)
     }
     suspend fun saveChild(name: String, birth: String, language: String, pin: String, id: String? = null) {
-        val birthday = LocalDate.parse(birth); val age = Period.between(birthday, LocalDate.now()).years
+        val birthday = birth.takeIf { it.isNotBlank() }?.let(LocalDate::parse)
+        val age = birthday?.let { Period.between(it, LocalDate.now()).years } ?: selected?.optInt("age") ?: 0
+        require(birthday != null || id != null)
         require(name.isNotBlank() && age in 1..18)
-        val body = JSONObject().put("name", name.trim()).put("birth_date", birth).put("age", age).put("language", language)
+        val body = JSONObject().put("name", name.trim()).put("age", age).put("language", language).apply { if (birthday != null) put("birth_date",birth) }
         if (pin.isNotBlank()) {
             require(pin.matches(Regex("[0-9]{4}")) && pin !in setOf("0000", "1111", "1234", "4321"))
             val hash = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -91,7 +93,7 @@ class ParentRun(val cloud: Cloud, val api: TutoApi, private val scope: Coroutine
     }
     suspend fun saveTasks(settings: JSONObject, variety: String) {
         val id = selected!!.getString("id")
-        selected = cloud.rows("children", "id=eq.${enc(id)}&parent_id=eq.${enc(cloud.parentId!!)}", "PATCH", JSONObject().put("task_settings", settings).put("english_variety", variety), true).single()
+        selected = cloud.rows("children", "id=eq.${enc(id)}&parent_id=eq.${enc(cloud.parentId!!)}", "PATCH", JSONObject().put("task_settings", settings).apply { if (selected!!.has("english_variety")) put("english_variety", if (variety == "auto") JSONObject.NULL else variety) }, true).single()
         page = "child"
     }
     suspend fun loadWeek(offset: Int = weekOffset) { weekOffset = offset; week = cloud.parentCall("GET", "/api/parent/children/${enc(selected!!.getString("id"))}/week?offset=$offset"); page = "week" }

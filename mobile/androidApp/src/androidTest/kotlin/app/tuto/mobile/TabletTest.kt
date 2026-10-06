@@ -1,6 +1,8 @@
 package app.tuto.mobile
 
 import android.graphics.Bitmap
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -36,6 +38,10 @@ import java.io.File
  * a full maths sitting answered correctly, and what the server is sent at the end.
  */
 class TabletTest {
+    @org.junit.Before fun isolateCloud() { Services.cloudFactory = { context -> object : app.tuto.mobile.data.Cloud(context) {
+        override suspend fun rows(table: String, query: String, method: String, body: Any?, parent: Boolean) = emptyList<JSONObject>()
+    } } }
+    @org.junit.After fun resetCloud() { Services.cloudFactory = null; Services.api = app.tuto.mobile.data.HttpTutoApi() }
     @get:Rule val compose = createEmptyComposeRule()
 
     private class FakeApi(val siblings: Boolean = false) : TutoApi {
@@ -106,6 +112,7 @@ class TabletTest {
         try {
             compose.waitUntil(timeoutMs) { condition() }
         } catch (e: Throwable) {
+            runCatching { shot("failure-" + step.replace(Regex("[^a-zA-Z0-9]+"), "-")) }
             val run = Services.currentMath
             val state = run?.let { "phase=${it.phase} index=${it.index} input='${it.input}' feedback=${it.feedback} answer=${it.question?.answer} format=${it.question?.format} options=${it.question?.options?.map { o -> o.value }}" } ?: "no sitting"
             val tree = runCatching { compose.onRoot(useUnmergedTree = false).printToString(maxDepth = 12) }.getOrDefault("?").take(3000)
@@ -116,7 +123,8 @@ class TabletTest {
     private fun tap(tag: String) {
         val node = compose.onNodeWithTag(tag)
         runCatching { node.performScrollTo() }
-        node.performClick()
+        compose.waitForIdle()
+        node.assertIsDisplayed().performClick()
     }
     private fun exists(tag: String) = compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
     private fun textExists(text: String, substring: Boolean = false) = compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
@@ -129,6 +137,7 @@ class TabletTest {
     private fun signIn() {
         compose.onNodeWithText("Family code").performTextInput("tuto42")
         compose.onNodeWithText("Family code").performImeAction()
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300, 5000)
         waitFor("pin screen") { textExists("Enter your PIN") }
         listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
         waitFor("home with gems") { textExists("Ada") && textExists("42") }
@@ -141,8 +150,10 @@ class TabletTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             compose.onNodeWithText("Family code").performTextInput("tuto42")
             compose.onNodeWithText("Family code").performImeAction()
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300, 5000)
             waitFor("sibling picker") { exists("child_child-2") }
             tap("child_child-2")
+            compose.onNodeWithTag("child_child-2").assertIsSelected()
             tap("forgot-pin")
             waitFor("forgot PIN request accepted") { textExists("Request received", substring = true) }
             assertEquals("child-2", api.forgotChild)
@@ -242,6 +253,7 @@ class TabletTest {
             compose.onNodeWithText("Family code").performTextInput("tuto42")
             shot("01-setup")
             compose.onNodeWithText("Family code").performImeAction()
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300, 5000)
 
             // PIN: a wrong one is refused, the right one signs Ada in.
             waitFor("pin screen") { textExists("Enter your PIN") }
@@ -270,8 +282,8 @@ class TabletTest {
                 if (q.format == "choice" && q.options.isNotEmpty()) {
                     tap("option_${q.answer}")
                 } else {
-                    q.answer.forEach { ch -> compose.onNodeWithTag("key_$ch").performClick() }
-                    compose.onNodeWithText("Check").performClick()
+                    q.answer.forEach { ch -> tap("key_$ch") }
+                    compose.onNodeWithText("Check").performScrollTo().assertIsDisplayed().performClick()
                 }
                 waitFor("question $i accepted") { run.feedback is MathRun.Feedback.Correct || run.phase != MathRun.Phase.Asking }
             }

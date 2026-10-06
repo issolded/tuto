@@ -109,6 +109,9 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.todaySummary(c.id) }
                 .onSuccess { if (child?.id == c.id) { today = it; todayLoaded = true; todayError = false } }
                 .onFailure { if (child?.id == c.id) todayError = true }
+            // Like ChildHome on the web: remote parent changes must reach a signed-in child.
+            runCatching { cloud.rows("children", "id=eq.${app.tuto.mobile.data.enc(c.id)}&select=id,name,age,task_settings,language,avatar_url").firstOrNull()?.let(Child::from) }
+                .onSuccess { fresh -> if (fresh != null && child?.id == c.id) { child = fresh; session.child = fresh } }
         }
     }
 
@@ -154,7 +157,7 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
 
     fun home() {
         if (screen == Screen.Math) { math?.close { screen = Screen.Home; refreshToday() }; return }
-        if (screen == Screen.Parent) { parent.lock(); screen = if (child != null) Screen.Home else if (session.familyCode != null) Screen.Pin else Screen.Setup; return }
+        if (screen == Screen.Parent) { if(parent.busy) return; parent.lock(); screen = if (child != null) Screen.Home else if (session.familyCode != null) Screen.Pin else Screen.Setup; refreshToday(); return }
         if (screen == Screen.English) { english?.close { screen = Screen.Home; refreshToday() }; return }
         if (screen is Screen.Content && feature?.busy == true) return
         if (screen == Screen.Puzzle && puzzle?.reviewToClose != null) {

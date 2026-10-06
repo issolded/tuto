@@ -63,6 +63,8 @@ import kotlinx.coroutines.launch
 fun SetupScreen(vm: TutoViewModel) {
     val s = LocalStrings.current
     val scope = rememberCoroutineScope()
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var code by rememberSaveable { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -70,6 +72,7 @@ fun SetupScreen(vm: TutoViewModel) {
     fun submit() {
         val c = code.trim().uppercase()
         if (c.isEmpty() || busy) return
+        keyboard?.hide(); focus.clearFocus(force = true)
         busy = true; error = null
         scope.launch {
             error = runCatching { vm.api.familyChildren(c) }.fold(

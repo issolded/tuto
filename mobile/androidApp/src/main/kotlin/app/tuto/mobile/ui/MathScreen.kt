@@ -88,7 +88,6 @@ private fun Asking(run: MathRun, s: Strings, onClose: () -> Unit) {
         val wide = maxWidth / LocalDensity.current.fontScale.coerceAtLeast(1f) >= 960.dp
         Column(Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             TopBar(run, s, onClose)
-            if (run.index == 0 && run.reviewId == null) TextButton(onClick = { run.usePaper() }) { Text(s.say("Work on paper", "Kâğıtta çöz", "Resolver en papel")) }
             if (wide) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
                     QuestionPanel(run, q, s, Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()))
@@ -118,6 +117,7 @@ private fun TopBar(run: MathRun, s: Strings, onClose: () -> Unit) {
                 Box(Modifier.weight(1f).height(14.dp).clip(RoundedCornerShape(999.dp)).background(c))
             }
         }
+        if (run.index == 0 && run.reviewId == null) TextButton(onClick = { run.usePaper() }) { Text(s.say("Work on paper", "Kâğıtta çöz", "Resolver en papel")) }
         Text("${run.index + 1} / ${run.total}", fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
     }
 }
@@ -201,7 +201,6 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
             )
         }
         if (run.hintsShown > 0) MathHelp(q)
-        Scratchpad()
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val canHint = run.hintsShown < maxOf(1,q.hints.size) && !locked
@@ -215,6 +214,7 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
                 BigButton(s.say("Check", "Kontrol et", "Comprobar"), Modifier.weight(1f), enabled = run.input.isNotEmpty() && !locked) { run.submit() }
             }
         }
+        Scratchpad()
     }
 }
 

@@ -20,6 +20,8 @@ import java.time.Instant
     val p = vm.parent
     val s = vm.strings.withLang(if (p.unlocked) p.language else java.util.Locale.getDefault().language)
     val context = LocalContext.current
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var draft by remember { mutableStateOf(JSONObject()) }
@@ -35,7 +37,7 @@ import java.time.Instant
             if (!p.unlocked) {
                 OutlinedTextField(email, { email = it }, label = { Text(s.say("Email", "E-posta", "Correo")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(password, { password = it }, label = { Text(s.say("Password", "Şifre", "Contraseña")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-                Button(onClick = { p.work { p.signIn(email, password); password = "" } }, enabled = !p.busy && email.isNotBlank() && password.isNotBlank()) { Text(s.say("Sign in", "Giriş yap", "Entrar")) }
+                Button(onClick = { keyboard?.hide(); focus.clearFocus(force=true); p.work { p.signIn(email, password); password = "" } }, enabled = !p.busy && email.isNotBlank() && password.isNotBlank()) { Text(s.say("Sign in", "Giriş yap", "Entrar")) }
                 TextButton(onClick = { p.work { p.cloud.resetPassword(email); p.notice = s.say("Check your email for the reset link.", "Şifre yenileme bağlantısı için e-postanı kontrol et.", "Revisa tu correo para restablecer la contraseña.") } }, enabled = !p.busy && email.isNotBlank()) { Text(s.say("Forgot password", "Şifremi unuttum", "Olvidé mi contraseña")) }
                 TextButton(onClick = { p.work {
                     if (p.cloud.signUp(email, password)) { p.load(); p.unlocked = true; password = "" }
@@ -92,7 +94,7 @@ import java.time.Instant
                     var pin by remember { mutableStateOf("") }
                     OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(4) }, label = { Text(s.say("New 4-digit PIN", "Yeni 4 haneli PIN", "Nuevo PIN de 4 dígitos")) }, visualTransformation = PasswordVisualTransformation())
                     Text(s.say("Leave PIN empty to keep the existing PIN.", "Mevcut PIN'i korumak için boş bırak.", "Deja el PIN vacío para conservarlo."))
-                    Button(onClick = { p.work { p.saveChild(draft.optString("name"), draft.optString("birth_date"), draft.optString("language", "en"), pin, p.selected?.optString("id")) } }, enabled = !p.busy && draft.optString("name").isNotBlank() && draft.optString("birth_date").length == 10) { Text(s.say("Save", "Kaydet", "Guardar")) }
+                    Button(onClick = { p.work { p.saveChild(draft.optString("name"), draft.optString("birth_date").takeUnless { it == "null" }.orEmpty(), draft.optString("language", "en"), pin, p.selected?.optString("id")) } }, enabled = !p.busy && draft.optString("name").isNotBlank() && (draft.optString("birth_date").length == 10 || (p.selected != null && draft.optString("birth_date").let { it.isBlank() || it == "null" }))) { Text(s.say("Save", "Kaydet", "Guardar")) }
                 }
                 "tasks" -> {
                     val defaults = mapOf("math" to 30, "puzzle" to 30, "english" to 30, "reading" to 30, "writing" to 30, "homework" to 25, "drawing" to 20)
@@ -110,8 +112,8 @@ import java.time.Instant
                         val types = bonus.optJSONArray("types").strings()
                         Toggle(s("task_$type"), type in types) { checked -> val next = if(checked) (types + type).distinct() else types - type; if(next.size >= 2) edit("bonus", JSONObject(bonus.toString()).put("types",org.json.JSONArray(next))) }
                     }
-                    var variety by remember { mutableStateOf(p.selected!!.optString("english_variety", "uk")) }
-                    FlowRow { listOf("uk", "us").forEach { value -> FilterChip(selected = variety == value, onClick = { variety = value }, label = { Text(value) }) } }
+                    var variety by remember { mutableStateOf(p.selected!!.optString("english_variety", "auto").takeUnless { it == "null" } ?: "auto") }
+                    FlowRow { listOf("auto", "uk", "us").forEach { value -> FilterChip(selected = variety == value, onClick = { variety = value }, label = { Text(value) }) } }
                     Button(onClick = { p.work { p.saveTasks(draft, variety) } }, enabled = !p.busy) { Text(s.say("Save", "Kaydet", "Guardar")) }
                 }
                 "week" -> {

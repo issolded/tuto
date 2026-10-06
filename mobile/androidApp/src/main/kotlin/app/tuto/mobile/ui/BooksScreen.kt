@@ -118,7 +118,7 @@ private suspend fun FeatureRun.saveDraft() {
                     val cover = f.cover()
                     val existing = f.cloud.rows("books", "id=eq.${enc(id)}&child_id=eq.${enc(f.child.id)}")
                     f.selected = existing.firstOrNull() ?: f.cloud.rows("books", "", "POST", JSONObject().put("id", id).put("child_id", f.child.id).put("title", f.title.trim()).put("current_page", 0).put("cover_url",cover ?: JSONObject.NULL).put("completed", false)).single()
-                    f.page = "reading"; f.photos = emptyList(); currentPage = "0"
+                    f.page = "reading"; f.photos = emptyList(); currentPage = "0"; totalPages = ""
                 } }, enabled = !f.busy && f.title.isNotBlank()) { Text(s.say("Save book", "Kitabı kaydet", "Guardar libro")) }
             }
             "reading" -> {
@@ -169,7 +169,8 @@ private suspend fun FeatureRun.saveDraft() {
                     Button(onClick = { f.work { f.saveDraft(); f.notice = s.say("Saved", "Kaydedildi", "Guardado") } }, enabled = !f.busy && f.text.isNotBlank()) { Text(s.say("Save now", "Şimdi kaydet", "Guardar ahora")) }
                     Button(onClick = { f.work { f.saveDraft(); f.library(); f.page = "list" } }, enabled = !f.busy && f.text.isNotBlank()) { Text(s.say("Save and leave", "Kaydet ve çık", "Guardar y salir")) }
                 }
-                BigButton(s.say("I've finished my story", "Hikâyemi bitirdim", "He terminado mi cuento"), enabled = !f.busy && f.text.isNotBlank()) { f.work {
+                Text(s.say("A finished story needs at least 15 words. Shorter drafts can always be saved.", "Hikâyeyi tamamlamak için en az 15 kelime gerekiyor. Kısa taslakları her zaman kaydedebilirsin.", "El cuento terminado necesita al menos 15 palabras. Puedes guardar borradores más cortos."))
+                BigButton(s.say("I've finished my story", "Hikâyemi bitirdim", "He terminado mi cuento"), enabled = !f.busy && f.text.trim().split(Regex("\\s+")).size >= 15) { f.work {
                     f.saveDraft(); val r = f.api.call("POST", "${f.path}/story-assessment", JSONObject().put("id", f.selected!!.getString("id")).put("revision", f.selected!!.optInt("revision")))
                     f.selected = r.getJSONObject("story"); f.evaluation = r.getJSONObject("evaluation"); f.page = "story-review"
                 } }

@@ -125,6 +125,9 @@ import java.util.UUID
                     Text("${i+1}. ${q.optString("question")}")
                     Text(s.say("Your answer", "Cevabın", "Tu respuesta") + ": " + q.optString("child_answer").takeUnless { it == "null" }.orEmpty())
                     Text("✓ " + q.optString("correct_answer"))
+                } else if (r.optString("kind") == "puzzle") {
+                    if (r.isNull("questions")) Text(s.say("The original questions are no longer available; this is the recorded score.", "İlk sorular artık görüntülenemiyor; bu kaydedilmiş sonuç.", "Las preguntas originales ya no están disponibles; esta es la puntuación guardada."))
+                    r.optJSONArray("questions").objects().forEachIndexed { i, q -> PuzzleHistory(vm, q, r.optJSONArray("answers")?.optJSONObject(i)) }
                 } else r.optJSONArray("questions").objects().forEachIndexed { i, q ->
                     Text("${i + 1}. ${s(q.optString("stem_key"))}")
                     if (r.optString("kind") == "english") Text(englishPrompt(q, s))
@@ -150,4 +153,23 @@ internal fun statusText(status: String, s: Strings) = when (status) {
     "rejected" -> s.say("Needs another look", "Tekrar gözden geçir", "Revisar de nuevo")
     "pending" -> s.say("Waiting for your grown-up", "Ebeveyn onayı bekleniyor", "Esperando a tu familia")
     else -> status
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun PuzzleHistory(vm: TutoViewModel, raw: JSONObject, answer: JSONObject?) {
+    val q = remember(raw) { PuzzleQuestion.from(raw) }
+    val s = LocalStrings.current
+    var pictures by remember(raw) { mutableStateOf<List<String?>>(emptyList()) }
+    LaunchedEffect(raw) { pictures = vm.engine.drawPuzzle(q.prompt + q.options.map { it.spec }, 200) }
+    Text(s(q.stemKey),style=MaterialTheme.typography.titleLarge)
+    PuzzlePrompt(q,pictures.take(q.prompt.size))
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) { q.options.forEachIndexed { i, option ->
+        Card(Modifier.width(150.dp)) { Column(Modifier.padding(8.dp)) {
+            pictures.getOrNull(q.prompt.size+i)?.let { SvgFigure(it,Modifier.size(130.dp)) }
+            Text(option.code ?: "${i+1}")
+            if(answer?.optInt("chosen_index",-1)==i) Text(s.say("Your choice","Senin seçimin","Tu elección"))
+            if(answer?.optInt("correct_index",-1)==i) Text("✓")
+        } }
+    } }
+    answer?.optStringOrNull("why")?.let { Text(it) }
 }
