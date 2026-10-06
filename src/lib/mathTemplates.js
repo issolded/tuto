@@ -497,6 +497,37 @@ export function addJumpsHelp(from, add) {
   return { help: { kind: 'jumps', mode: 'add', from, to: from + add, stops } }
 }
 
+// Round-and-adjust applies to the hint and to the help alike: one rule, so the two never teach
+// different methods for the same question (760 − ? = 353: the hint said "take 350 away, then 3 more"
+// while the help walked four jumps). Returns the round number to use, or null.
+function roundAdjustPoint(from, to) {
+  const r = roundNear(from)
+  return r !== null && r < to && to > 100 && noExchange(to, r) ? r : null
+}
+
+// The same two steps the hint names, typed: the easy subtraction from the round number, then the
+// small correction.
+function gapRoundChain(from, to, lang) {
+  const r = roundAdjustPoint(from, to)
+  if (r === null) return {}
+  const N = x => num(x, lang)
+  const d = Math.abs(from - r)
+  const mid = to - r
+  return stepsHelp([
+    stp(lang, `${N(to)} − ${N(r)}`, mid,
+      `${N(from)} is just ${d} ${from < r ? 'less' : 'more'} than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy:`,
+      `${N(from)}, ${N(r)} sayısından sadece ${d} ${from < r ? 'eksik' : 'fazla'}. Önce ${N(to)} sayısından ${N(r)} çıkar — bu kolay:`,
+      `${N(from)} es solo ${d} ${from < r ? 'menos' : 'más'} que ${N(r)}. Primero resta ${N(r)} de ${N(to)}: esa es fácil:`),
+    from < r
+      ? stp(lang, `${N(mid)} + ${d}`, to - from,
+          `You took away ${d} too many, so add ${d} back on:`,
+          `${d} fazla çıkardın, o yüzden ${d} geri ekle:`,
+          `Has quitado ${d} de más, así que vuelve a sumar ${d}:`)
+      : stp(lang, `${N(mid)} − ${d}`, to - from,
+          `Then take away ${d} more:`, `Sonra ${d} daha çıkar:`, `Luego quita ${d} más:`),
+  ])
+}
+
 // The gap between two numbers as the jumps between round numbers, each one typed, then added.
 // The picture tool takes up to seven stops; this covers the ones it does not.
 function gapChain(from, to, lang) {
@@ -522,10 +553,10 @@ function gapSteps(from, to, lang) {
                       `${N(from)} sayısından ${N(to)} sayısına parmaklarınla say: ${run}. Kaç tane saydın?`,
                       `Cuenta con los dedos desde ${N(from)} hasta ${N(to)}: ${run}. ¿Cuántos has contado?`)]
   }
-  const r = roundNear(from)
-  // Taking the round number away and putting the difference back is a Year 4+ strategy and the help here
-  // counts on through round numbers: for a two-digit gap (28 → 50) the hint says the same thing the help does.
-  if (r !== null && r < to && to > 100 && noExchange(to, r)) {
+  // Taking the round number away and putting the difference back is a Year 4+ strategy; for a two-digit
+  // gap (28 → 50) the help counts on through round numbers and the hint says the same thing.
+  const r = roundAdjustPoint(from, to)
+  if (r !== null) {
     const d = Math.abs(from - r)
     return from < r
       ? [say(lang, `${N(from)} is just ${d} less than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy.`,
@@ -1788,7 +1819,7 @@ function addSubShort(level, lang, columnar) {
       `Para un concierto se preparan ${made} comidas, pero llegan ${came} personas. ¿Cuántas se quedan sin comida?`),
     answer: came - made,
     key: `asw:short:${made}:${came}`,
-    ...firstHelp(jumpsHelp(made, came), gapChain(made, came, lang)),
+    ...firstHelp(gapRoundChain(made, came, lang), jumpsHelp(made, came), gapChain(made, came, lang)),
     hints: [
       say(lang, `The people without a meal are the gap between the people and the meals.`,
                 `Yemeksiz kalanlar, gelen kişi sayısı ile yemek sayısı arasındaki farktır.`,
@@ -4713,7 +4744,7 @@ function moneyChange(level, lang) {
     format: 'numeric',
     correct_answer: paid - cost,
     operandKey: `money:chg:${paid}:${cost}`,
-    ...firstHelp(jumpsHelp(cost, paid), gapChain(cost, paid, lang)),
+    ...firstHelp(gapRoundChain(cost, paid, lang), jumpsHelp(cost, paid), gapChain(cost, paid, lang)),
     hint_steps: [
       say(lang, `Change is what is left of what you handed over.`,
                 `Para üstü, verdiğin paradan geriye kalandır.`,
@@ -4872,7 +4903,7 @@ function measureDifference(level, lang) {
     format: 'numeric',
     correct_answer: large - small,
     operandKey: `meas:diff:${set.unit}:${small}:${large}`,
-    ...firstHelp(jumpsHelp(small, large), gapChain(small, large, lang)),
+    ...firstHelp(gapRoundChain(small, large, lang), jumpsHelp(small, large), gapChain(small, large, lang)),
     hint_steps: [
       say(lang, `"How much more" asks for the gap between the two, not for either one.`,
                 `"Kaç fazla" sorusu ikisinin arasındaki farkı ister, sayılardan birini değil.`,
@@ -5588,7 +5619,7 @@ function missingNumber(level, lang, add) {
     return {
       topic: 'addition', level, question_text: q, format: 'numeric', correct_answer: total - known,
       operandKey: `miss:add:${known}:${total}`,
-      ...firstHelp(jumpsHelp(known, total), gapChain(known, total, lang)),
+      ...firstHelp(gapRoundChain(known, total, lang), jumpsHelp(known, total), gapChain(known, total, lang)),
       hint_steps: [
         say(lang, `The missing number and ${num(known, lang)} make ${num(total, lang)} together.`,
                   `Eksik sayı ile ${num(known, lang)} birlikte ${num(total, lang)} eder.`,
@@ -5623,7 +5654,7 @@ function missingNumber(level, lang, add) {
     topic: 'subtraction', level,
     question_text: `${num(start, lang)} − ? = ${num(left, lang)}`, format: 'numeric', correct_answer: takeAway,
     operandKey: `miss:subB:${start}:${left}`,
-    ...firstHelp(jumpsHelp(left, start), gapChain(left, start, lang)),
+    ...firstHelp(gapRoundChain(left, start, lang), jumpsHelp(left, start), gapChain(left, start, lang)),
     hint_steps: [
       say(lang, `How much do you take from ${num(start, lang)} to get down to ${num(left, lang)}?`,
                 `${num(start, lang)} sayısından ne kadar çıkarırsan ${num(left, lang)} kalır?`,
@@ -5809,7 +5840,7 @@ function youngStory(level, lang, add) {
     operandKey: `story:${s.key}:${s.a}:${s.b}`,
     ...(add
       ? firstHelp(addJumpsHelp(Math.max(s.a, s.b), Math.min(s.a, s.b)), partitionChain(Math.max(s.a, s.b), Math.min(s.a, s.b), true, lang))
-      : firstHelp(jumpsHelp(s.b, s.a), gapChain(s.b, s.a, lang), partitionChain(s.a, s.b, false, lang))),
+      : firstHelp(gapRoundChain(s.b, s.a, lang), jumpsHelp(s.b, s.a), gapChain(s.b, s.a, lang), partitionChain(s.a, s.b, false, lang))),
     hint_steps: add
       ? [say(lang, `Both amounts go together, so this is an adding question.`, `İki miktar bir araya geliyor, yani bu bir toplama sorusu.`, `Las dos cantidades se juntan: es una suma.`),
          say(lang, `Add ${N(s.a)} and ${N(s.b)} — split the smaller one into its parts if it helps.`,
