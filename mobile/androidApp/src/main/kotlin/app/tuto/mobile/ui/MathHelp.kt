@@ -55,5 +55,6 @@ import kotlin.math.*
             Slider(minutes,{minutes=it},valueRange=0f..1440f,steps=287)
             val m=minutes.roundToInt();Text("${(m/60)%24}:${(m%60).toString().padStart(2,'0')}")
         }
+        else -> ExtendedMathHelp(v)
     }
 }

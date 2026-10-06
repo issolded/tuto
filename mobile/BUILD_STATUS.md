@@ -1,6 +1,6 @@
-# New module validation pending
+# Current module validation
 
-Version 0.5.0 adds the modules documented in [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md). The confirmed CI run below is historical and does not validate those additions. New results will be recorded separately.
+Version 0.5.0 adds the modules documented in [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md). Source c9df357 passed Android build/lint/JVM and all 7 Pixel Tablet tests in https://github.com/issolded/tuto/actions/runs/37473978404. Later maths-helper, signed-input and photo-order improvements require a final run. The older baseline below is historical. Live-account auth/storage/model/WhatsApp E2E remains unverified.
 
 # Android validation — 2026-10-06
 

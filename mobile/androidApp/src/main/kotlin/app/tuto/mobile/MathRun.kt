@@ -114,6 +114,8 @@ class MathRun(
             session = MathSession.from(pending.getJSONObject("session"))
             answers.clear(); pending.getJSONArray("answers").let { a -> for(i in 0 until a.length()) answers.add(if(a.isNull(i)) null else a.optString(i)) }
             helpUsed.clear(); pending.optJSONArray("help").let { a -> if(a!=null) for(i in 0 until a.length()) helpUsed.add(a.getInt(i)) }
+            helpShown.clear(); pending.optJSONArray("shown")?.let { a -> for(i in 0 until a.length()) helpShown.add(a.getInt(i)) }
+            wrongTries.clear(); pending.optJSONObject("wrong")?.let { o -> o.keys().forEach { k -> wrongTries[k.toInt()] = o.getInt(k) } }
             reviewId = pending.optString("review_id").takeUnless { it.isBlank() || it=="null" }
             reviewPicks = pending.optJSONArray("picks").let { a -> if(a==null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) } }
             paper = pending.optBoolean("paper"); saveFailed = true; phase = Phase.Result
@@ -140,11 +142,7 @@ class MathRun(
     fun type(key: String) {
         if (feedback is Feedback.Correct || feedback is Feedback.Revealed) return
         if (feedback is Feedback.Wrong) feedback = null
-        input = when (key) {
-            "⌫" -> input.dropLast(1)
-            "." -> if (input.contains('.') || input.isEmpty()) input else "$input."
-            else -> (input + key).take(7)
-        }
+        input = app.tuto.mobile.data.MathInput.next(input, key)
     }
 
     fun hint() {
@@ -204,7 +202,7 @@ class MathRun(
     fun save() {
         val s = session ?: return
         if (saving) return
-        store.pendingMath(child.id, JSONObject().put("session", JSONObject().put("level",s.level).put("school_year",s.schoolYear).put("questions",JSONArray(s.questions.map { it.raw }))).put("answers",JSONArray(answers)).put("help",JSONArray(helpUsed.toList())).put("review_id",reviewId ?: JSONObject.NULL).put("picks",JSONArray(reviewPicks)).put("paper",paper))
+        store.pendingMath(child.id, JSONObject().put("session", JSONObject().put("level",s.level).put("school_year",s.schoolYear).put("questions",JSONArray(s.questions.map { it.raw }))).put("answers",JSONArray(answers)).put("help",JSONArray(helpUsed.toList())).put("shown",JSONArray(helpShown.toList())).put("wrong",JSONObject(wrongTries.mapKeys { it.key.toString() })).put("review_id",reviewId ?: JSONObject.NULL).put("picks",JSONArray(reviewPicks)).put("paper",paper))
         saving = true; phase = Phase.Saving; saveFailed = false
         scope.launch {
             val qs = s.questions

@@ -191,7 +191,7 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
                 contentAlignment = Alignment.Center,
             ) { Text(shown, fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 56.sp) }
             // Decimal questions get the decimal key; it types "." whatever the language shows.
-            val bottomLeft = if (q.format == "decimal") "." else ""
+            val bottomLeft = if (q.format == "decimal") "." else "±"
             Keypad(
                 keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", bottomLeft, "0", "⌫"),
                 labels = mapOf("." to if (run.child.language == "en") "." else ","),
@@ -200,7 +200,6 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
                 onKey = { run.type(it) },
             )
         }
-        if (run.hintsShown > 0) MathHelp(q)
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val canHint = run.hintsShown < maxOf(1,q.hints.size) && !locked
@@ -210,10 +209,12 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
             if (canHint) {
                 SoftButton(s.say("Hint", "İpucu", "Pista")) { run.hint() }
             }
+            if (q.format == "decimal") SoftButton("±") { run.type("±") }
             if (q.format != "choice") {
-                BigButton(s.say("Check", "Kontrol et", "Comprobar"), Modifier.weight(1f), enabled = run.input.isNotEmpty() && !locked) { run.submit() }
+                BigButton(s.say("Check", "Kontrol et", "Comprobar"), Modifier.weight(1f), enabled = MathInput.valid(run.input) && !locked) { run.submit() }
             }
         }
+        if (run.hintsShown > 0) key(q.question) { MathHelp(q) }
         Scratchpad()
     }
 }

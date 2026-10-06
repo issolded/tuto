@@ -149,13 +149,13 @@ import java.time.Instant
                 }
                 "screen" -> {
                     Text(s.say("This manages the family screen-time plan. It does not block Android apps or measure device usage.", "Bu alan aile ekran süresi planını yönetir. Android uygulamalarını engellemez veya cihaz kullanımını ölçmez.", "Gestiona el plan familiar. No bloquea aplicaciones Android ni mide su uso."))
-                    listOf("weekday" to 30, "weekend" to 60, "cap" to 120, "earnedCap" to 30, "gemsPerMinute" to 2).forEach { (key, default) -> NumberField(key, draft.optInt(key, default), if (key == "gemsPerMinute") 1..100 else 0..480) { edit(key, it) } }
-                    listOf("approval", "bedtime", "school", "learnFirst").forEach { key -> Toggle(key, draft.optBoolean(key, key != "learnFirst")) { edit(key, it) } }
-                    listOf("bedStart" to "20:30", "bedEnd" to "07:00", "schoolStart" to "08:00", "schoolEnd" to "15:00").forEach { (key, default) -> Field(key, draft.optString(key, default)) { edit(key, it) } }
+                    listOf("weekday" to 30, "weekend" to 60, "cap" to 120, "earnedCap" to 30, "gemsPerMinute" to 2).forEach { (key, default) -> NumberField(planLabel(key), draft.optInt(key, default), if (key == "gemsPerMinute") 1..100 else 0..480) { edit(key, it) } }
+                    listOf("approval", "bedtime", "school", "learnFirst").forEach { key -> Toggle(planLabel(key), draft.optBoolean(key, key != "learnFirst")) { edit(key, it) } }
+                    listOf("bedStart" to "20:30", "bedEnd" to "07:00", "schoolStart" to "08:00", "schoolEnd" to "15:00").forEach { (key, default) -> Field(planLabel(key), draft.optString(key, default)) { edit(key, it) } }
                     NumberField(s.say("Learning activities first", "Önce tamamlanacak etkinlik", "Actividades antes de jugar"), draft.optInt("learnNeed",1),1..5) { edit("learnNeed",it) }
                     listOf("roblox","youtube","minecraft").forEach { app ->
                         Text(app)
-                        FlowRow { listOf("timed","allowed","blocked").forEach { mode -> FilterChip(selected=draft.getJSONObject("apps").optString(app)==mode,onClick={edit("apps",JSONObject(draft.getJSONObject("apps").toString()).put(app,mode))},label={Text(mode)}) } }
+                        FlowRow { listOf("timed","allowed","blocked").forEach { mode -> FilterChip(selected=draft.getJSONObject("apps").optString(app)==mode,onClick={edit("apps",JSONObject(draft.getJSONObject("apps").toString()).put(app,mode))},label={Text(planLabel(mode))}) } }
                     }
                     Toggle(s.say("Holiday", "Tatil", "Vacaciones"),draft.optBoolean("holiday")) { edit("holiday",it) }
                     Field(s.say("From (YYYY-MM-DD)", "Başlangıç (YYYY-AA-GG)", "Desde (AAAA-MM-DD)"),draft.optString("holidayFrom")) { edit("holidayFrom",it) }
@@ -176,3 +176,26 @@ import java.time.Instant
 @Composable private fun NumberField(label: String, value: Int, range: IntRange, change: (Int) -> Unit) { var text by remember(value) { mutableStateOf(value.toString()) }; OutlinedTextField(text, { text = it.filter(Char::isDigit).take(6); text.toIntOrNull()?.takeIf { it in range }?.let(change) }, label = { Text("$label (${range.first}–${range.last})") }, isError = text.toIntOrNull() !in range) }
 @Composable private fun Toggle(label: String, checked: Boolean, change: (Boolean) -> Unit) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, Modifier.weight(1f)); Switch(checked, change) } }
 @OptIn(ExperimentalLayoutApi::class) @Composable private fun LanguagePicker(value: String, change: (String) -> Unit) { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("en" to "English", "tr" to "Türkçe", "es" to "Español").forEach { (code, label) -> FilterChip(selected = code == value, onClick = { change(code) }, label = { Text(label) }) } } }
+
+@Composable private fun planLabel(key:String):String {
+ val s=LocalStrings.current
+ return when(key) {
+  "weekday" -> s.say("Weekday minutes","Hafta içi dakika","Minutos entre semana")
+  "weekend" -> s.say("Weekend minutes","Hafta sonu dakika","Minutos de fin de semana")
+  "cap" -> s.say("Daily limit (minutes)","Günlük sınır (dakika)","Límite diario (minutos)")
+  "earnedCap" -> s.say("Maximum earned minutes","Kazanılabilecek en fazla dakika","Máximo de minutos ganados")
+  "gemsPerMinute" -> s.say("Gems per minute","Dakika başına Gem","Gemas por minuto")
+  "approval" -> s.say("Parent approval","Ebeveyn onayı","Aprobación parental")
+  "bedtime" -> s.say("Bedtime schedule","Uyku saatleri","Horario de sueño")
+  "school" -> s.say("School schedule","Okul saatleri","Horario escolar")
+  "learnFirst" -> s.say("Complete learning first","Önce öğrenme görevlerini tamamla","Completar actividades primero")
+  "bedStart" -> s.say("Bedtime starts (HH:MM)","Uyku başlangıcı (SS:DD)","Inicio del descanso (HH:MM)")
+  "bedEnd" -> s.say("Bedtime ends (HH:MM)","Uyku bitişi (SS:DD)","Fin del descanso (HH:MM)")
+  "schoolStart" -> s.say("School starts (HH:MM)","Okul başlangıcı (SS:DD)","Inicio de clases (HH:MM)")
+  "schoolEnd" -> s.say("School ends (HH:MM)","Okul bitişi (SS:DD)","Fin de clases (HH:MM)")
+  "timed" -> s.say("Timed","Süreli","Con límite")
+  "allowed" -> s.say("Allowed","İzinli","Permitido")
+  "blocked" -> s.say("Blocked in plan","Planda engelli","Bloqueado en el plan")
+  else -> key
+ }
+}

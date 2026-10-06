@@ -45,6 +45,10 @@ import java.util.UUID
     val s = LocalStrings.current
     var camera by rememberSaveable { mutableStateOf<String?>(null) }
     var cropping by remember { mutableStateOf<LocalPhoto?>(null) }
+    fun keep(original: LocalPhoto, replacement: LocalPhoto = original) {
+        val index = run.photos.indexOf(original)
+        run.photos = if(index < 0) run.photos + replacement else run.photos.toMutableList().apply { set(index,replacement) }
+    }
     fun import(uris: List<Uri>) { run.work {
         val room = maximum - run.photos.size
         val incoming = uris.take(room.coerceAtLeast(0)).map { importPhoto(context, it) }
@@ -65,14 +69,14 @@ import java.util.UUID
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             bitmap?.let { Image(it.asImageBitmap(), s.say("Photo ${i + 1}", "Fotoğraf ${i + 1}", "Foto ${i + 1}"), Modifier.size(100.dp), contentScale = ContentScale.Fit) }
             TextButton(onClick = { run.photos = run.photos - photo }, enabled = !run.busy) { Text(s.say("Remove", "Kaldır", "Quitar")) }
-            TextButton(onClick = { run.photos = run.photos - photo; cropping = photo }, enabled = !run.busy) { Text(s.say("Crop", "Kırp", "Recortar")) }
+            TextButton(onClick = { cropping = photo }, enabled = !run.busy) { Text(s.say("Crop", "Kırp", "Recortar")) }
         }
     }
     cropping?.let { photo ->
         var l by remember(photo.path) { mutableFloatStateOf(0f) }; var r by remember(photo.path) { mutableFloatStateOf(1f) }
         var t by remember(photo.path) { mutableFloatStateOf(0f) }; var b by remember(photo.path) { mutableFloatStateOf(1f) }
         val bitmap = remember(photo.path) { runCatching { photoBitmap(photo) }.getOrNull() }
-        AlertDialog(onDismissRequest = { run.photos = run.photos + photo; cropping = null }, title = { Text(s.say("Crop photo", "Fotoğrafı kırp", "Recortar foto")) }, text = {
+        AlertDialog(onDismissRequest = { keep(photo); cropping = null }, title = { Text(s.say("Crop photo", "Fotoğrafı kırp", "Recortar foto")) }, text = {
             Column {
                 bitmap?.let { image ->
                     Box(Modifier.fillMaxWidth().aspectRatio(image.width.toFloat()/image.height)) {
@@ -83,6 +87,6 @@ import java.util.UUID
                 Text(s.say("Left / right", "Sol / sağ", "Izquierda / derecha")); RangeSlider(value = l..r, onValueChange = { if (it.endInclusive - it.start > .08f) { l = it.start; r = it.endInclusive } })
                 Text(s.say("Top / bottom", "Üst / alt", "Arriba / abajo")); RangeSlider(value = t..b, onValueChange = { if (it.endInclusive - it.start > .08f) { t = it.start; b = it.endInclusive } })
             }
-        }, confirmButton = { TextButton(onClick = { run.work { run.photos = run.photos + cropPhoto(context, photo, l, t, r, b); cropping = null } }, enabled = !run.busy) { Text(s.say("Use photo", "Fotoğrafı kullan", "Usar foto")) } }, dismissButton = { TextButton(onClick = { run.photos = run.photos + photo; cropping = null }) { Text(s.say("Keep original", "Orijinali koru", "Conservar original")) } })
+        }, confirmButton = { TextButton(onClick = { run.work { keep(photo, cropPhoto(context, photo, l, t, r, b)); cropping = null } }, enabled = !run.busy) { Text(s.say("Use photo", "Fotoğrafı kullan", "Usar foto")) } }, dismissButton = { TextButton(onClick = { keep(photo); cropping = null }) { Text(s.say("Keep original", "Orijinali koru", "Conservar original")) } })
     }
 }
