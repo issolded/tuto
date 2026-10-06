@@ -119,6 +119,12 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     var math by mutableStateOf<MathRun?>(null)
         private set
 
+    fun parentOAuthCallback(url:String) {
+        if(!app.tuto.mobile.data.OAuthPkce.isCallback(url) || !cloud.hasPendingOAuth) return
+        screen=Screen.Parent
+        parent.work { cloud.completeGoogleOAuth(url);parent.load();parent.unlocked=true;parent.page="children" }
+    }
+
     fun open(type: String) {
         if (type == "math") {
             math = newMathRun()

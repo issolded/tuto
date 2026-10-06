@@ -1,6 +1,8 @@
 package app.tuto.mobile
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
@@ -38,7 +40,16 @@ class ModulesTest {
             }
         }
     }
+    private lateinit var activeCloud:TestCloud
     private class TestCloud(context:Context):Cloud(context) {
+        @Volatile var pendingOAuth=false
+        @Volatile var exchanged=false
+        override val hasPendingOAuth get()=pendingOAuth
+        override fun cancelOAuth() {pendingOAuth=false}
+        override suspend fun completeGoogleOAuth(url:String) {
+            require(pendingOAuth && OAuthPkce.code(url,1000,2000)=="test-code")
+            pendingOAuth=false;exchanged=true
+        }
         override val parentId get()="parent-test"
         override suspend fun signIn(email:String,password:String) { require(password=="test-password") }
         override suspend fun rows(table:String,query:String,method:String,body:Any?,parent:Boolean):List<JSONObject> = when(table) {
@@ -53,7 +64,7 @@ class ModulesTest {
         val c=InstrumentationRegistry.getInstrumentation().targetContext
         c.getSharedPreferences("tuto",Context.MODE_PRIVATE).edit().clear().commit()
         c.getSharedPreferences("tuto-work-module-test",Context.MODE_PRIVATE).edit().clear().commit()
-        Services.api=api;Services.cloudFactory={TestCloud(it)}
+        Services.api=api;Services.cloudFactory={TestCloud(it).also { c -> activeCloud=c }}
         return ActivityScenario.launch(MainActivity::class.java).also { a -> a.onActivity { ViewModelProvider(it)[TutoViewModel::class.java].signedIn(child) } }
     }
     private fun open(a:ActivityScenario<MainActivity>,type:String) { a.onActivity { ViewModelProvider(it)[TutoViewModel::class.java].open(type) };compose.waitForIdle() }
@@ -79,6 +90,19 @@ class ModulesTest {
             compose.waitForIdle();assertTrue(api.calls.any { it.endsWith("story-draft") })
             open(a,"homework");compose.onNodeWithText("2026-10-06").assertExists()
             open(a,"drawing");compose.onNodeWithText("Free drawing").assertExists()
+        }
+    }
+    @Test fun oauthDeepLinkRequiresInitiatedFlowAndUnlocksAfterExchange() {
+        launch(Api()).use { a ->
+            val url=OAuthPkce.REDIRECT+"?code=test-code"
+            a.onActivity { ViewModelProvider(it)[TutoViewModel::class.java].parentOAuthCallback(url) }
+            compose.onNodeWithText("Family code: TESTONLY").assertDoesNotExist()
+            a.onActivity {
+                activeCloud.pendingOAuth=true
+                it.startActivity(Intent(it,MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP))
+            }
+            compose.waitUntil(15000) {activeCloud.exchanged}
+            compose.onNodeWithText("Family code: TESTONLY").assertExists()
         }
     }
     @Test fun parentRequiresLoginAndLoadsOwnFamily() {

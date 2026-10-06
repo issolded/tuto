@@ -1,48 +1,21 @@
-# Current module validation
+# Android native validation — 6 October 2026
 
-Version 0.5.0 adds the modules documented in [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md). Source c9df357 passed Android build/lint/JVM and all 7 Pixel Tablet tests in https://github.com/issolded/tuto/actions/runs/37473978404. Later maths-helper, signed-input and photo-order improvements require a final run. The older baseline below is historical. Live-account auth/storage/model/WhatsApp E2E remains unverified.
+Branch: `codex/android-complete`. Android only; production web/backend was not deployed.
 
-# Android validation — 2026-10-06
+## Confirmed baseline
 
-Branch: `codex/android-complete`.
-Tested source: `3217f87af424684394284cc025679ccef95cf35c`.
-Version: `0.4.0-native-validation` (version code 4).
-CI: https://github.com/issolded/tuto/actions/runs/37461523253
+Source `126694a3af80f71d5ba6d5bae6261b8b6d1a4542` passed both jobs in https://github.com/issolded/tuto/actions/runs/37481528885:
+- 18 JVM tests, APK build and lint.
+- 10 Pixel Tablet API35 tests, including the full maths sitting followed by unaided reinforcement, sibling/PIN, puzzle, English, draft recreation, homework/drawing routes, parent lock, half pictograms and place-value borrowing.
 
-The former offline preview is withdrawn. Its older Android/iOS CI results do not
-validate this app. This branch uses the live web backend by default, with native
-Compose screens, the web maths/puzzle rendering engines and the animated Tuto avatar.
+The Google OAuth follow-up adds two JVM tests and one Android callback test. Its CI outcome must be recorded separately; a compiled or added test is not a passed device test.
 
-## Confirmed
+## Live verification limits
 
-- Source published through the connected GitHub account with the user's approval.
-- Published tree matches the locally tested source (before the version-only bump).
-- Local version 4 APK and instrumentation APK build successfully.
-- GitHub Android job passed: APK build, 5 shared tests, 4 puzzle state tests and lint.
-- CI lint: 0 errors, 11 warnings (dependency/API notices, icon/backup configuration,
-  and SharedPreferences style suggestions).
-- Engine checks passed; validation APK and test reports are available as CI artifacts.
+Native modules are documented in [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md). Device tests use isolated transports, not real family records. A disposable family/account and an approved WhatsApp recipient are needed to verify live auth/RLS, private photo upload, model evaluation, rewards/approvals and message delivery. Google OAuth also requires the redirect configuration in [ANDROID_AUTH_SETUP.md](ANDROID_AUTH_SETUP.md).
 
-## Device validation
+Native presentation and some interaction sequences differ from the browser. Legacy photographed drafts become a typed copy. Full process-death/offline photo-session recovery is not implemented. Debug signatures can differ between machines/runs; no production signing key was configured. Do not describe this as a fully verified E2E release.
 
-Pixel Tablet (API 35) instrumentation passed: 4 tests, 0 failures, 0 ignored.
-Coverage: selected sibling/PIN recovery, a full maths sitting, puzzle retry/hint/skip
-and review decline, completed puzzle review and bottom navigation.
-Seven captured images were inspected (setup, home, maths/question/result, puzzle
-welcome/feedback/result); the inspected landscape views show usable controls.
-Some captures lag a state transition, so screenshot filenames alone are not proof
-of the named question state. Portrait, split screen, large font and physical-device
-coverage remain pending.
-Device tests use an injected fake API with real Compose screens and bundled engines;
-they are not production account or WhatsApp delivery tests.
+## Obsolete preview
 
-## Release scope
-
-This is **not a complete web-parity release**. See `WEB_PARITY_AUDIT_2026-10-06.md`
-for the route inventory and missing English, reading/library, stories/drawings,
-homework, tree, history, parent and newer maths flows. No incomplete APK is being
-presented as the requested finished native app. iOS is outside this task.
-
-Real-account E2E and WhatsApp delivery still require a disposable test family and
-an explicitly approved test recipient. No real family records or messages were
-used by the validation above.
+The obsolete android-preview release397715776 and APK593265107 were deleted in https://github.com/issolded/tuto/actions/runs/37477802302; the subsequent release listing was empty. Source history/tags are retained. No new rolling preview is published.

@@ -35,6 +35,7 @@ import java.time.Instant
             p.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             p.notice?.let { Text(it) }
             if (!p.unlocked) {
+                Button(onClick={keyboard?.hide();focus.clearFocus(force=true);p.work { try {context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(p.cloud.beginGoogleOAuth())))} catch(e:Exception) {p.cloud.cancelOAuth();throw e} }},enabled=!p.busy) {Text(s.say("Continue with Google","Google ile devam et","Continuar con Google"))}
                 OutlinedTextField(email, { email = it }, label = { Text(s.say("Email", "E-posta", "Correo")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(password, { password = it }, label = { Text(s.say("Password", "Şifre", "Contraseña")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
                 Button(onClick = { keyboard?.hide(); focus.clearFocus(force=true); p.work { p.signIn(email, password); password = "" } }, enabled = !p.busy && email.isNotBlank() && password.isNotBlank()) { Text(s.say("Sign in", "Giriş yap", "Entrar")) }

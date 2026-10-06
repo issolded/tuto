@@ -37,7 +37,7 @@ The validation workflow builds both APKs, runs engine checks and JVM/lint gates,
 
 The obsolete `android-preview` release and its APK were deleted on 6 October 2026 (cleanup run `37477802302`); source history is retained. The development workflow does not publish a rolling preview release. The target is one verified Android build, not another dummy app.
 
-Live auth/RLS, private uploads, model evaluation and actual parent WhatsApp delivery still need a disposable test family and an approved test recipient. OAuth/deep-link login is not implemented: password login and email reset are available. Some native presentation and helper interaction details differ from the web. No production backend deploy or database migration was performed.
+Live auth/RLS, private uploads, model evaluation and actual parent WhatsApp delivery still need a disposable test family and an approved test recipient. Native Google OAuth with PKCE and an Android callback is implemented; the Supabase redirect allowlist and a real Google sign-in still need verification. Password login and email reset remain available. See ANDROID_AUTH_SETUP.md. Some native presentation and helper interaction details differ from the web. No production backend deploy or database migration was performed.
 
 Do not describe a validation artifact as a complete E2E release. Debug APK signatures may differ between CI runs; an installed older preview may not accept an in-place update. Do not remove a real installed app without preserving its local unsynced work. A production signing key is not configured.
 

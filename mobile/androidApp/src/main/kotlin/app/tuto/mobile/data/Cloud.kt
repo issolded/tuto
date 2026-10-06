@@ -43,7 +43,7 @@ internal suspend fun http(url: String, method: String = "GET", body: ByteArray? 
 }
 
 /** Refresh tokens are encrypted by a non-exportable Android Keystore key. */
-class ParentCredentials(context: Context) {
+class ParentCredentials(context: Context, private val slot:String = "session") {
     private val prefs = context.getSharedPreferences("tuto-parent", Context.MODE_PRIVATE)
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -53,16 +53,16 @@ class ParentCredentials(context: Context) {
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
         }.generateKey()
     }
-    fun read(): JSONObject? = prefs.getString("session", null)?.let { stored -> runCatching {
+    fun read(): JSONObject? = prefs.getString(slot, null)?.let { stored -> runCatching {
         val parts = stored.split(':'); val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)))
         JSONObject(String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8))
     }.getOrNull() }
     fun write(value: JSONObject?) {
-        if (value == null) { prefs.edit().clear().apply(); return }
+        if (value == null) { prefs.edit().remove(slot).apply(); return }
         val c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE, key())
         val bytes = c.doFinal(value.toString().toByteArray())
-        prefs.edit().putString("session", Base64.encodeToString(c.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
+        prefs.edit().putString(slot, Base64.encodeToString(c.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
     }
 }
 
@@ -71,12 +71,14 @@ open class Cloud(context: Context) {
     val base: String = config.getString("url")
     private val anon = config.getString("anon") // Public anon/publishable key, never service_role.
     private val credentials = ParentCredentials(context)
+    private val oauth = ParentCredentials(context,"oauth-pkce")
     private var auth = credentials.read()
     private val refreshLock = Mutex()
     open val parentId get() = auth?.optJSONObject("user")?.optString("id")
     val parentSignedIn get() = parentId?.isNotBlank() == true
     private fun acceptSession(j: JSONObject) { j.put("expires_at", System.currentTimeMillis() / 1000 + j.optLong("expires_in", 3600)); credentials.write(j); auth = j }
     open suspend fun signIn(email: String, password: String) {
+        cancelOAuth()
         val j = JSONObject(http("$base/auth/v1/token?grant_type=password", "POST", JSONObject().put("email", email.trim()).put("password", password).toString().toByteArray(), mapOf("apikey" to anon)))
         require(j.has("access_token") && j.has("refresh_token")); acceptSession(j)
     }
@@ -85,6 +87,21 @@ open class Cloud(context: Context) {
         if (j.has("access_token") && !j.isNull("access_token")) { acceptSession(j); return true }; return false
     }
     open suspend fun resetPassword(email: String) { http("$base/auth/v1/recover", "POST", JSONObject().put("email", email.trim()).toString().toByteArray(), mapOf("apikey" to anon)) }
+    open fun beginGoogleOAuth():String {
+        val verifier=OAuthPkce.verifier()
+        oauth.write(JSONObject().put("verifier",verifier).put("started",System.currentTimeMillis()))
+        return "$base/auth/v1/authorize?provider=google&redirect_to=${enc(OAuthPkce.REDIRECT)}&code_challenge=${enc(OAuthPkce.challenge(verifier))}&code_challenge_method=s256&prompt=select_account"
+    }
+    open val hasPendingOAuth get()=oauth.read()?.let { System.currentTimeMillis()-it.optLong("started") in 0..OAuthPkce.MAX_AGE_MS } ?: false
+    open fun cancelOAuth() {oauth.write(null)}
+    open suspend fun completeGoogleOAuth(url:String) {
+        val pending=oauth.read() ?: throw IOException("Sign in required")
+        try {
+            val code=OAuthPkce.code(url,pending.getLong("started"),System.currentTimeMillis())
+            val j=JSONObject(http("$base/auth/v1/token?grant_type=pkce","POST",JSONObject().put("auth_code",code).put("code_verifier",pending.getString("verifier")).toString().toByteArray(),mapOf("apikey" to anon)))
+            require(j.has("access_token") && j.has("refresh_token"));acceptSession(j)
+        } finally {cancelOAuth()}
+    }
     open suspend fun token(): String = refreshLock.withLock {
         val current = auth ?: throw IOException("Sign in required")
         if (current.optLong("expires_at") < System.currentTimeMillis() / 1000 + 60) {
@@ -93,7 +110,7 @@ open class Cloud(context: Context) {
         }
         auth!!.getString("access_token")
     }
-    open suspend fun signOut() { try { http("$base/auth/v1/logout?scope=local", "POST", headers = mapOf("apikey" to anon, "Authorization" to "Bearer ${token()}")) } finally { auth = null; credentials.write(null) } }
+    open suspend fun signOut() { try { http("$base/auth/v1/logout?scope=local", "POST", headers = mapOf("apikey" to anon, "Authorization" to "Bearer ${token()}")) } finally { auth = null; credentials.write(null); cancelOAuth() } }
     open suspend fun rows(table: String, query: String, method: String = "GET", body: Any? = null, parent: Boolean = false): List<JSONObject> {
         require(table.matches(Regex("[a-z_]+")))
         val t = if (parent) token() else anon // Child never inherits a parent session.

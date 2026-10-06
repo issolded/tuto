@@ -36,7 +36,7 @@ class ParentRun(val cloud: Cloud, val api: TutoApi, private val scope: Coroutine
         busy = true; error = null; notice = null
         scope.launch { try { block() } catch (e: Exception) { error = if (e is ApiFailure && e.status == 401) "Please sign in again." else "The request failed. Nothing is shown as saved until the server confirms it." } finally { busy = false } }
     }
-    fun lock() { unlocked = false; messages = emptyList(); polling?.cancel() }
+    fun lock() { unlocked = false; messages = emptyList(); polling?.cancel(); cloud.cancelOAuth() }
     suspend fun signIn(email: String, password: String) { cloud.signIn(email, password); load(); unlocked = true; page = "children" }
     suspend fun load() {
         val id = cloud.parentId ?: error("Sign in required")

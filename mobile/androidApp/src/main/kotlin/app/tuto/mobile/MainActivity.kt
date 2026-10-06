@@ -1,6 +1,8 @@
 package app.tuto.mobile
 
 import android.os.Bundle
+import android.content.Intent
+import androidx.lifecycle.ViewModelProvider
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -36,8 +38,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        acceptOAuth(intent)
         setContent { TutoTheme { TutoApp() } }
     }
+    override fun onNewIntent(intent:Intent) {super.onNewIntent(intent);setIntent(intent);acceptOAuth(intent)}
+    private fun acceptOAuth(source:Intent?) {source?.data?.toString()?.let { ViewModelProvider(this)[TutoViewModel::class.java].parentOAuthCallback(it) };source?.data=null}
 }
 
 @Composable

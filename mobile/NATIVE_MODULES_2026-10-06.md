@@ -20,7 +20,7 @@ This is implementation and validation evidence, **not a claim of live-account E2
 ## Deliberate boundaries and remaining differences
 
 - No fake scores, photos, balances, rewards, preview data or simulated Android app blocking are used in production flows. Screen controls edit the same family plan as the browser and explicitly describe their limits.
-- Parent OAuth/deep-link login is not implemented; password sign-in and email reset are available. A Google-only account may need password setup.
+- Google OAuth now uses PKCE and the Android callback. The redirect must be allowed in Supabase and a real Google flow must be checked before calling it verified; see ANDROID_AUTH_SETUP.md. Password sign-in and email reset remain available.
 - The browser's complete topic-specific interactive maths helper suite is not yet reproduced: native has template hint steps, shared question figures and the manipulatives listed above. All six guided place-value modes and shape/arithmetic counters are now implemented. Some exact web guess-driven interaction sequences still differ. This is a remaining parity task, not an access blocker.
 - Library uses a native list/reader instead of the web's illustrated room/page-turn presentation. Older photographed story drafts open as a new typed copy so the original is retained; this differs from editing the old photo workflow in place.
 - Parent detail/history layouts are simplified. Puzzle history now reuses the native SVG question renderer. Screen-plan labels are translated into English, Turkish and Spanish.
