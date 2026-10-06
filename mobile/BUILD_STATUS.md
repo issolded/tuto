@@ -1,17 +1,23 @@
 # Android native validation — 6 October 2026
 
-Branch: `codex/android-complete`. Tested source: `7c9cb3a6dcbd0c0a8d8eff79445323f163254baa`.
-CI: https://github.com/issolded/tuto/actions/runs/37486144183
+Branch: `codex/android-complete`. Tested source: `d6e6d1c20076db0364fcd45479ae528ea29af7bb`.
+CI: https://github.com/issolded/tuto/actions/runs/37502854810
 
 ## Passed automated gates
 
 - Android APK build, lint and all 20 JVM tests.
-- All 11 Pixel Tablet API35 tests, zero failures/skips.
+- All 14 Pixel Tablet API35 tests, zero failures/skips.
 - The Google callback test now passes including activity teardown. The callback is consumed directly while retaining the activity's original launch intent.
 - Maths reinforcement is checked after an originally hinted question: the new unaided answer sends clean help flags and wrong-try counts.
 - Shared maths generation covers 162 age/language sessions; same-skill review checks cover 27 questions. CI also checks puzzle rendering.
 
 Tablet coverage includes family/sibling PIN, maths completion/reinforcement, puzzle retry/hint/skip/review, English completion, library draft recreation/save, homework/drawing navigation, parent lock/re-entry, worked steps, half pictograms, place-value borrowing and guarded OAuth intent routing. These tests use isolated API transports; they are not live Google/Storage/model/WhatsApp E2E tests.
+
+## Photo follow-up and user device test
+
+Version 6 / 0.5.1-native-validation bounds inline photos to oriented JPEG derivatives (max 1600px and 640 KiB per photo). Reading, handwriting/paper maths, drawings and covers use these derivatives. Private Storage originals and homework EXIF remain unchanged. Three Android media tests cover the 15-page JSON budget, EXIF rotation/original preservation, and invalid photos. The first tablet job failed downloading the emulator before any tests; the failed job was rerun and all 14 tests passed.
+
+The user explicitly requested the tested native APK for their own tablet while live acceptance remains open; 0.5.0 was delivered. Play Protect showed an unknown-developer warning, followed by generic App not installed after the user chose Install anyway. User confirms Tuto is absent from the Apps list and is updating Android before retrying. Root cause remains unconfirmed; do not claim the photo fix resolves installation. APK contains arm64-v8a, armeabi-v7a, x86 and x86_64 libraries.
 
 ## Remaining live setup and verification
 
