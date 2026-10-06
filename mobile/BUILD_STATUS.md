@@ -1,3 +1,7 @@
+# New module validation pending
+
+Version 0.5.0 adds the modules documented in [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md). The confirmed CI run below is historical and does not validate those additions. New results will be recorded separately.
+
 # Android validation — 2026-10-06
 
 Branch: `codex/android-complete`.

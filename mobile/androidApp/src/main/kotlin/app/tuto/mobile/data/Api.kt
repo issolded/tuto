@@ -18,6 +18,7 @@ import java.net.URLEncoder
  * An interface so the device test can put a fake server in front of the real screens.
  */
 interface TutoApi {
+    suspend fun call(method: String, path: String, body: JSONObject? = null): JSONObject = throw IOException("not supported")
     suspend fun familyChildren(code: String): List<ChildSummary>
     suspend fun verifyPin(code: String, pin: String, childId: String? = null): PinResult
     suspend fun forgotPin(code: String, childId: String): Unit = throw IOException("not supported")
@@ -47,7 +48,7 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
             val conn = (URL(base + path).openConnection() as HttpURLConnection).apply {
                 requestMethod = method
                 connectTimeout = 15_000
-                readTimeout = 20_000
+                readTimeout = 120_000
                 setRequestProperty("Accept", "application/json")
                 if (body != null) {
                     doOutput = true
@@ -64,6 +65,13 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
                 conn.disconnect()
             }
         }
+
+    override suspend fun call(method: String, path: String, body: JSONObject?): JSONObject {
+        require(path.startsWith("/api/"))
+        val (status, json) = request(method, path, body)
+        if (status !in 200..299) throw ApiFailure(status, json)
+        return json
+    }
 
     override suspend fun familyChildren(code: String): List<ChildSummary> {
         val (status, json) = request("GET", "/api/family/${enc(code)}/children")
@@ -106,6 +114,7 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
             gemsEarned = if (json.has("gems_earned") && !json.isNull("gems_earned")) json.optInt("gems_earned") else null,
             capped = json.optBoolean("capped", false),
             levelChange = json.optString("level_change", "same"),
+            review = json.optJSONObject("review"),
         )
     }
 
@@ -200,10 +209,12 @@ sealed interface PinResult {
     data class Locked(val retrySeconds: Int) : PinResult
 }
 
-data class MathSaved(val gemsEarned: Int?, val capped: Boolean, val levelChange: String)
+data class MathSaved(val gemsEarned: Int?, val capped: Boolean, val levelChange: String, val review: JSONObject? = null)
 
 internal fun JSONArray?.objects(): List<JSONObject> =
     if (this == null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it) }
 
 internal fun JSONObject.optStringOrNull(key: String): String? =
     if (has(key) && !isNull(key)) optString(key) else null
+
+class ApiFailure(val status: Int, val body: JSONObject): IOException(body.optString("error", "Request failed ($status)"))

@@ -1,3 +1,11 @@
+# Tuto native — Android
+
+Current module implementation and remaining parity differences: [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md).
+
+English, reading/library, stories, homework, drawing, parent flows and newer maths flows now have native implementations on this branch. Validation is in progress; this is not a complete-release claim.
+
+## Previous baseline (superseded implementation scope)
+
 # Tuto native — Android child app
 
 The child side of Tuto as a native Android (Jetpack Compose) tablet app, talking to the same
@@ -12,7 +20,7 @@ npm ci --ignore-scripts                 # the web app's dependencies (React, for
 npm ci --prefix mobile/engine            # esbuild + quickjs-emscripten
 node mobile/engine/build.mjs             # engine, dictionary and animations -> androidApp/src/main/assets
 node mobile/engine/qjs-test.mjs          # the engine in real QuickJS: every age, 3 languages
-node mobile/prepare-assets.mjs           # drawing guides (not used by a native screen yet)
+node mobile/prepare-assets.mjs           # drawing guides and public client configuration
 cd mobile && gradle :androidApp:assembleDebug
 ```
 

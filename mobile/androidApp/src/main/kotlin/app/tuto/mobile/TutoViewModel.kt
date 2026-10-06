@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import app.tuto.mobile.data.Cloud
 import app.tuto.mobile.data.Child
 import app.tuto.mobile.data.HttpTutoApi
 import app.tuto.mobile.data.MathEngine
@@ -19,6 +20,7 @@ import java.util.Locale
 /** Where the device test swaps in a fake server. Production always uses the real one. */
 object Services {
     var api: TutoApi = HttpTutoApi()
+    var cloudFactory: ((android.content.Context) -> Cloud)? = null
     /** The sitting on screen, for the device test to read the expected answers from. */
     @Volatile var currentMath: MathRun? = null
     @Volatile var currentPuzzle: PuzzleRun? = null
@@ -32,12 +34,19 @@ sealed interface Screen {
     data object Goals : Screen
     data object Settings : Screen
     data object Puzzle : Screen
+    data object English : Screen
+    data class Content(val type: String) : Screen
+    data object Parent : Screen
     /** An activity the tablet does not do natively yet; says so rather than pretending. */
     data class Soon(val type: String) : Screen
 }
 
 class TutoViewModel(app: Application) : AndroidViewModel(app) {
     val session = Session(app)
+    val cloud by lazy { Services.cloudFactory?.invoke(getApplication()) ?: Cloud(getApplication()) }
+    val parent by lazy { ParentRun(cloud, api, viewModelScope, getApplication()) }
+    var english by mutableStateOf<EnglishRun?>(null)
+    var feature by mutableStateOf<FeatureRun?>(null)
     val engine = MathEngine(app)
     val api: TutoApi get() = Services.api
 
@@ -110,11 +119,19 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     fun open(type: String) {
         if (type == "math") {
             math = newMathRun()
+            feature = FeatureRun(child ?: return, api, cloud, viewModelScope, getApplication())
             screen = Screen.Math
         } else if (type == "puzzle") {
             puzzle = newPuzzleRun()
             screen = Screen.Puzzle
-        } else if (type == "goals" || type == "gems") {
+        } else if (type == "english") {
+            english = EnglishRun(viewModelScope, api, child ?: return); screen = Screen.English
+        } else if (type in setOf("reading", "writing", "library", "drawing", "homework", "tree", "gems")) {
+            feature = FeatureRun(child ?: return, api, cloud, viewModelScope, getApplication())
+            screen = Screen.Content(type)
+        } else if (type == "parent") {
+            parent.lock(); screen = Screen.Parent
+        } else if (type == "goals") {
             screen = Screen.Goals
         } else if (type == "settings") {
             screen = Screen.Settings
@@ -136,6 +153,10 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     private fun newMathRun() = child?.let { MathRun(viewModelScope, api, engine, session, it) }?.also { Services.currentMath = it }
 
     fun home() {
+        if (screen == Screen.Math) { math?.close { screen = Screen.Home; refreshToday() }; return }
+        if (screen == Screen.Parent) { parent.lock(); screen = if (child != null) Screen.Home else if (session.familyCode != null) Screen.Pin else Screen.Setup; return }
+        if (screen == Screen.English) { english?.close { screen = Screen.Home; refreshToday() }; return }
+        if (screen is Screen.Content && feature?.busy == true) return
         if (screen == Screen.Puzzle && puzzle?.reviewToClose != null) {
             puzzle?.declineThen { home() }
             return

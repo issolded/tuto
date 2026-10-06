@@ -67,6 +67,13 @@ class MathEngine(private val context: Context) : PuzzleRenderer {
             }
         }
 
+    suspend fun reviewQuestion(question: MathQuestion, language: String): MathQuestion = withContext(thread) {
+        lock.withLock {
+            val out = runtime().evaluate<String>("TutoMath.review(${JSONObject.quote(question.raw.toString())}, ${JSONObject.quote(language)})", "review.js")
+            MathSession.from(JSONObject().put("questions", JSONArray().put(JSONObject(out)))).questions.single()
+        }
+    }
+
     companion object {
         /** MathScreen's sameAnswer, in Kotlin because it runs on every key press. Kept identical. */
         fun sameAnswer(given: String?, expected: String): Boolean {
@@ -96,6 +103,7 @@ data class MathQuestion(
     val svg: String?,
     /** A figure the tablet draws itself (count, pictogram, shapes, prices, digital). */
     val nativeFigure: String?,
+    val raw: JSONObject = JSONObject(),
 )
 
 data class MathSession(val level: Int, val schoolYear: String, val questions: List<MathQuestion>) {
@@ -118,6 +126,7 @@ data class MathSession(val level: Int, val schoolYear: String, val questions: Li
                     visual = q.optJSONObject("visual"),
                     svg = fig?.optStringOrNull("svg"),
                     nativeFigure = fig?.optStringOrNull("native"),
+                    raw = q,
                 )
             },
         )

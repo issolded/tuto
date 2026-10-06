@@ -13,6 +13,7 @@ import MathGeometry from '../../src/components/MathGeometry'
 import MathChart from '../../src/components/MathChart'
 import MathFigure from '../../src/components/MathFigure'
 import ClockFace from '../../src/components/ClockFace'
+import { sameKindProblem } from '../../src/lib/reviewQuestions'
 import { generateProblem } from '../../src/lib/mathTemplates'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../../src/lib/mathCurriculum'
 import { maxQuestionChars } from '../../src/lib/gemini'
@@ -119,7 +120,8 @@ export function buildSession(opts) {
     return {
       topic_id: s.curriculum?.id ?? null,
       topic_name: s.curriculum?.name ?? null,
-      template: p.topic,
+      template: s.templateTopic,
+      source: { ...p, level, templateTopic: s.templateTopic },
       question: p.question_text,
       answer: p.correct_answer,
       format: p.format === 'choice' ? 'choice' : p.format === 'decimal' ? 'decimal' : 'integer',
@@ -136,6 +138,15 @@ export function buildSession(opts) {
 // The Kotlin side only ever calls these three, with and for JSON strings.
 globalThis.TutoMath = {
   buildSession: (json) => JSON.stringify(buildSession(JSON.parse(json))),
+  review: (json, lang) => {
+    const old = JSON.parse(json)
+    const src = old.source
+    const p = sameKindProblem(src, { topic: src.templateTopic, language: lang, usedOperands: new Set([src.operandKey]), maxChars: 0 })
+    if (!p) throw new Error('No matching practice question')
+    const d = drawable(p, lang)
+    if (!d.ok) throw new Error('Practice figure could not render')
+    return JSON.stringify({ ...old, source: p, question: p.question_text, answer: p.correct_answer, format: p.format || 'integer', options: p.options?.map(o => ({value:String(o.value),label:String(o.label ?? o.value),why:o.why})), hints: p.hint_steps || [], operand_key: p.operandKey, visual: p.visual, figure: d.fig })
+  },
   sameAnswer: (given, expected) => sameAnswer(given, expected),
   // For tests and debugging: what the tablet would draw for one visual.
   figure: (json, lang) => JSON.stringify(figure(JSON.parse(json), lang || 'en')),

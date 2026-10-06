@@ -1154,3 +1154,10 @@ lint (0 errors, 11 warnings), and all 4 Pixel Tablet API 35 UI tests. Captured
 landscape screens inspected. Test API is injected: no live WhatsApp or real family
 E2E verified. Missing native modules remain; do not describe this as full parity
 or deliver the withdrawn offline preview. See mobile/BUILD_STATUS.md.
+
+
+### 2026-10-06 Android missing-module implementation
+
+User explicitly requested implementation of English, reading/library, homework, stories/drawing, parent and newer maths features, not another placeholder preview. Native implementations now exist in `EnglishRun`, `FeatureRun`, `ParentRun`, `Cloud`, `Media`, and their Compose screens. Only mobile code/CI/docs changed; web/backend production was not deployed. Public Supabase anon config is packaged from the deployed frontend (never a service-role key). Parent tokens are Keystore encrypted, child requests never inherit the parent token. New photo originals use private Storage; parent previews request ownership-checked signed URLs. Native device and state tests use isolated fake transports and never write a real family. Full scope and remaining differences are in `mobile/NATIVE_MODULES_2026-10-06.md`.
+
+Still not a full-parity release: complete specialised maths helpers, OAuth, some parent/history/library presentation, cross-process in-flight sessions, and live auth/storage/model/WhatsApp E2E remain. The earlier offline preview stays withdrawn; do not call a successful compile or fake-server device run a live E2E pass. Version 0.5.0 is validation only. Existing user authorization to publish this work to public `issolded/tuto`, `codex/android-complete`, remains valid.

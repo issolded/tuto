@@ -1,5 +1,7 @@
 package app.tuto.mobile.ui
 
+import androidx.compose.material3.TextButton
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +98,7 @@ fun SetupScreen(vm: TutoViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 error?.let { Text(it, color = Color(0xFFB3261E), style = MaterialTheme.typography.bodyMedium) }
+                TextButton(onClick = { vm.open("parent") }) { Text(s.say("Parent sign in", "Ebeveyn girişi", "Acceso familiar")) }
                 BigButton(if (busy) "…" else s.say("Continue", "Devam", "Continuar"), Modifier.fillMaxWidth(), enabled = code.isNotBlank() && !busy) { submit() }
             }
     })

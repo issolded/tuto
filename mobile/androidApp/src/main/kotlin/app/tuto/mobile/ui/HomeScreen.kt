@@ -53,7 +53,7 @@ import java.util.Calendar
 
 // The web home's order: the scored, paying activities first (ChildHome QUEST_ORDER). Today's
 // three cards are the first three the parent has switched on; the rest sit in the row below.
-private val QUEST_ORDER = listOf("math", "reading", "puzzle", "writing", "drawing", "homework")
+private val QUEST_ORDER = listOf("math", "reading", "puzzle", "english", "writing", "drawing", "homework")
 private const val QUEST_TARGET = 3
 
 private fun colorFor(type: String) = when (type) {
@@ -111,6 +111,8 @@ fun HomeScreen(vm: TutoViewModel) {
                 Text(s.say("What else would you like to do?", "Başka ne yapmak istersin?", "¿Qué más quieres hacer?"), style = MaterialTheme.typography.titleLarge)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                     (active.drop(3) + "tree").forEach { t -> SmallCard(t, child, today, s) { vm.open(t) } }
+                    SmallCard("library", child, today, s) { vm.open("library") }
+                    SmallCard("gems", child, today, s) { vm.open("gems") }
                     GoalCard(today, s) { vm.open("goals") }
                 }
             }
@@ -190,7 +192,7 @@ private fun QuestCard(type: String, child: Child, today: Today, isNext: Boolean,
             if (done && file == null) Box(Modifier.align(Alignment.TopEnd).padding(14.dp).size(40.dp).clip(CircleShape).background(Ink.green), contentAlignment = Alignment.Center) { CheckIcon(Modifier.size(18.dp)) }
         }
         Column(Modifier.padding(16.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(s("task_$type"), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(s(when(type) { "library" -> "lib_title"; "gems" -> "gems_history"; else -> "task_$type" }), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (gems != null) Text("+$gems Gem", style = MaterialTheme.typography.bodySmall, color = Ink.soft)
             Spacer(Modifier.weight(1f))
             when {
@@ -216,7 +218,7 @@ private fun SmallCard(type: String, child: Child, today: Today, s: Strings, onCl
             if (file != null) TaskIcon(file, if (today.done(type)) IconState.Done else IconState.Idle, Modifier.fillMaxSize().padding(8.dp))
             else ActivityGlyph(type, Modifier.size(64.dp))
         }
-        Text(s("task_$type"), style = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
+        Text(s(when(type) { "library" -> "lib_title"; "gems" -> "gems_history"; else -> "task_$type" }), style = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
         Text(sub, style = MaterialTheme.typography.bodySmall, color = Ink.soft, modifier = Modifier.padding(horizontal = 16.dp))
     }
 }

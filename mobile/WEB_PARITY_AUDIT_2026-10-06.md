@@ -1,3 +1,7 @@
+# Current update
+
+The route inventory below describes the earlier baseline. Native modules have since been implemented; see [NATIVE_MODULES_2026-10-06.md](NATIVE_MODULES_2026-10-06.md) for the current scope, remaining differences and validation boundaries.
+
 # Web → Android native denetimi — 6 Ekim 2026
 
 Kaynak web: `origin/main` `11869e7`. Gerçek Android başlangıcı: `claude/practical-franklin-xigneu` `6468f58`. Çalışma: `codex/android-complete`.

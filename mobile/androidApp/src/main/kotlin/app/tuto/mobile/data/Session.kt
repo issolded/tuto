@@ -20,6 +20,9 @@ class Session(context: Context) {
         get() = prefs.getString("child", null)?.let { runCatching { Child.from(JSONObject(it)) }.getOrNull() }
         set(v) = prefs.edit().putString("child", v?.raw?.toString()).apply()
 
+    fun pendingMath(childId: String): JSONObject? = prefs.getString("pending-math-$childId", null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+    fun pendingMath(childId: String, value: JSONObject?) { prefs.edit().putString("pending-math-$childId", value?.toString()).apply() }
+
     fun signOut() { child = null }
 
     // Same caps as the web (SEEN_CAP): long enough to span a few sessions, short enough that a

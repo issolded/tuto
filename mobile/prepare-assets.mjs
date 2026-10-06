@@ -9,3 +9,5 @@ cpSync(fileURLToPath(new URL('../drawings/', import.meta.url)), assets+'drawings
 rmSync(assets+'drawings/robot', {recursive:true,force:true});
 rmSync(assets+'drawings/master', {recursive:true,force:true});
 writeFileSync(assets+'drawing_steps.json', JSON.stringify(DRAWING_STEPS));
+
+cpSync(fileURLToPath(new URL("./public-config.json", import.meta.url)), assets + "public-config.json");

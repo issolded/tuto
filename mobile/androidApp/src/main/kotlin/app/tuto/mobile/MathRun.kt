@@ -22,8 +22,8 @@ import kotlin.math.roundToInt
  * One maths sitting, with MathScreen's rules:
  *  - the level and the topic weighting come from /math-plan (the server is the one authority);
  *  - the questions come from the web engine;
- *  - eight and under: a wrong answer opens help and the child may try again, or skip once helped;
- *  - nine and over: one attempt, then the answer and why;
+ *  - retry/help at every age, with the first unhinted miss at seven+ returned for another try;
+ *  - paper transcription is checked by the child and scored by the shared answer comparator;
  *  - the server records the sitting and decides the Gems, so the result shows what was banked.
  */
 class MathRun(
@@ -40,7 +40,7 @@ class MathRun(
         data class Revealed(val answer: String, val why: String?) : Feedback
     }
 
-    val young = child.age <= 8
+    val young = true // All ages can retry with help, matching the current web flow.
 
     var phase by mutableStateOf(Phase.Loading)
         private set
@@ -65,6 +65,43 @@ class MathRun(
     private val answers = mutableListOf<String?>()
     private val attempted = mutableMapOf<Int, String>()
     private val helpUsed = mutableSetOf<Int>()
+    private val helpShown = mutableSetOf<Int>()
+    private val wrongTries = mutableMapOf<Int, Int>()
+    var reviewId by mutableStateOf<String?>(null); private set
+    private var reviewPicks = emptyList<JSONObject>()
+    var operationError by mutableStateOf(false); private set
+    var paper by mutableStateOf(false); private set
+    private var saving = false
+    fun usePaper() { if (index == 0 && answers.isEmpty()) paper = true }
+    fun acceptPaper(results: List<JSONObject>) {
+        if (phase != Phase.Asking || !paper || results.size != total) return
+        answers.clear()
+        results.forEach { answers += if (it.isNull("child_answer")) null else it.optString("child_answer") }
+        finish()
+    }
+    fun practise() {
+        val offer = saved?.review ?: return
+        if (phase != Phase.Result || saving) return
+        saving = true; operationError = false; phase = Phase.Loading
+        scope.launch {
+            runCatching {
+                val picks = offer.getJSONArray("picks").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+                val fresh = picks.map { engine.reviewQuestion(session!!.questions[it.getInt("idx")], child.language) }
+                api.call("POST", "/api/children/${child.id}/math-review/${offer.getString("id")}/start")
+                reviewId = offer.getString("id"); reviewPicks = picks
+                session = session!!.copy(questions = fresh); answers.clear(); helpUsed.clear(); wrongTries.clear(); attempted.clear()
+                index = 0; input = ""; hintsShown = 0; feedback = null; paper = false; saved = null; phase = Phase.Asking
+            }.onFailure { operationError = true; phase = Phase.Result }
+            saving = false
+        }
+    }
+    fun close(done: () -> Unit) {
+        if (saving) return
+        val id = saved?.review?.optString("id") ?: if (phase != Phase.Result) reviewId else null
+        if (id == null) { done(); return }
+        saving = true
+        scope.launch { runCatching { api.call("POST", "/api/children/${child.id}/math-review/$id/decline") }.onSuccess { done() }.onFailure { operationError = true }; saving = false }
+    }
 
     val question: MathQuestion? get() = session?.questions?.getOrNull(index)
     val total get() = session?.questions?.size ?: 0
@@ -72,6 +109,16 @@ class MathRun(
     fun answerAt(i: Int) = answers.getOrNull(i)
 
     fun start() {
+        val pending = store.pendingMath(child.id)
+        if (pending != null) {
+            session = MathSession.from(pending.getJSONObject("session"))
+            answers.clear(); pending.getJSONArray("answers").let { a -> for(i in 0 until a.length()) answers.add(if(a.isNull(i)) null else a.optString(i)) }
+            helpUsed.clear(); pending.optJSONArray("help").let { a -> if(a!=null) for(i in 0 until a.length()) helpUsed.add(a.getInt(i)) }
+            reviewId = pending.optString("review_id").takeUnless { it.isBlank() || it=="null" }
+            reviewPicks = pending.optJSONArray("picks").let { a -> if(a==null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) } }
+            paper = pending.optBoolean("paper"); saveFailed = true; phase = Phase.Result
+            return
+        }
         phase = Phase.Loading
         scope.launch {
             // A session with no weighting is still a good session; one that will not start is not.
@@ -102,7 +149,7 @@ class MathRun(
 
     fun hint() {
         val q = question ?: return
-        if (hintsShown < q.hints.size) { hintsShown++; helpUsed += index }
+        if (hintsShown < maxOf(1,q.hints.size)) { hintsShown++; helpUsed += index; helpShown += index }
     }
 
     fun submit(value: String = input) {
@@ -116,11 +163,12 @@ class MathRun(
             return
         }
         attempted[index] = value
+        wrongTries[index] = (wrongTries[index] ?: 0) + 1
         val why = q.options.firstOrNull { it.value == value }?.why
         if (young) {
             // Help opens with the first wrong try; each further wrong try shows one more step.
             helpUsed += index
-            if (hintsShown < q.hints.size) hintsShown++
+            if ((child.age < 7 || wrongTries[index]!! >= 2 || hintsShown > 0) && hintsShown < maxOf(1,q.hints.size)) { hintsShown++; helpShown += index }
             feedback = Feedback.Wrong(why, canRetry = true)
             input = ""
         } else {
@@ -133,6 +181,7 @@ class MathRun(
     /** Eight and under, after help: move on, and the question counts as not answered. */
     fun skip() {
         val q = question ?: return
+        if (feedback is Feedback.Correct || feedback is Feedback.Revealed || phase != Phase.Asking) return
         answers.add(null)
         feedback = Feedback.Revealed(q.answer, null)
         advanceSoon(1600)
@@ -154,17 +203,24 @@ class MathRun(
 
     fun save() {
         val s = session ?: return
-        saveFailed = false
+        if (saving) return
+        store.pendingMath(child.id, JSONObject().put("session", JSONObject().put("level",s.level).put("school_year",s.schoolYear).put("questions",JSONArray(s.questions.map { it.raw }))).put("answers",JSONArray(answers)).put("help",JSONArray(helpUsed.toList())).put("review_id",reviewId ?: JSONObject.NULL).put("picks",JSONArray(reviewPicks)).put("paper",paper))
+        saving = true; phase = Phase.Saving; saveFailed = false
         scope.launch {
             val qs = s.questions
             val correct = correctCount
             val body = JSONObject()
+                .put("mode", if (paper) "paper" else "screen")
+                .put("review_ok", reviewId == null)
                 .put("level", s.level)
                 .put("topics", JSONArray(qs.mapNotNull { it.topicName }.distinct()))
                 .put("school_year", s.schoolYear)
                 .put("attempts", JSONArray(qs.mapIndexedNotNull { i, q ->
                     val id = q.topicId ?: return@mapIndexedNotNull null
                     JSONObject()
+                        .put("idx", i)
+                        .put("wrong_tries", wrongTries[i] ?: 0)
+                        .put("help_shown", i in helpShown)
                         .put("topic_id", id)
                         .put("topic_name", q.topicName ?: JSONObject.NULL)
                         .put("source", "template")
@@ -178,9 +234,18 @@ class MathRun(
                 .put("questions_correct", correct)
                 .put("accuracy", if (qs.isEmpty()) 0 else (correct * 100.0 / qs.size).roundToInt())
                 .put("help_used", helpUsed.size)
-            runCatching { api.saveMathSession(child.id, body) }
-                .onSuccess { saved = it; phase = Phase.Result }
+            runCatching {
+                if (reviewId == null) api.saveMathSession(child.id, body)
+                else {
+                    val results = body.getJSONArray("attempts")
+                    for (i in 0 until results.length()) results.getJSONObject(i).put("idx", reviewPicks[i].getInt("idx"))
+                    val r = api.call("POST", "/api/children/${child.id}/math-review/$reviewId/finish", JSONObject().put("results", results))
+                    MathSaved(r.optInt("gems_earned"), false, "same")
+                }
+            }
+                .onSuccess { store.pendingMath(child.id, null); saved = it; phase = Phase.Result }
                 .onFailure { saveFailed = true; phase = Phase.Result }
+            saving = false
         }
     }
 }

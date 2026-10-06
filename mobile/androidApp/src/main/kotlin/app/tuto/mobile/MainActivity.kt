@@ -28,6 +28,9 @@ import app.tuto.mobile.ui.Sunlight
 import app.tuto.mobile.ui.TutoTheme
 import app.tuto.mobile.ui.BottomNavigation
 import app.tuto.mobile.ui.SettingsScreen
+import app.tuto.mobile.ui.EnglishScreen
+import app.tuto.mobile.ui.BooksScreen
+import app.tuto.mobile.ui.ActivitiesScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,11 +56,14 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
                 Screen.Goals -> GoalsScreen(vm)
                 Screen.Settings -> SettingsScreen(vm)
                 Screen.Puzzle -> PuzzleScreen(vm)
+                Screen.English -> EnglishScreen(vm)
+                Screen.Parent -> app.tuto.mobile.ui.ParentScreen(vm)
+                is Screen.Content -> if (s.type in setOf("reading", "writing", "library")) BooksScreen(vm) else ActivitiesScreen(vm, s.type)
                 is Screen.Soon -> SoonScreen(vm, s.type)
             }
             } }
         }
         // Back always leads home from an activity; from home it leaves the app as usual.
-        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle || vm.screen == Screen.Settings) { vm.home() }
+        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle || vm.screen == Screen.Settings || vm.screen == Screen.English || vm.screen is Screen.Content || vm.screen == Screen.Parent) { vm.home() }
     }
 }
