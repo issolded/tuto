@@ -14,19 +14,19 @@ This is implementation and validation evidence, **not a claim of live-account E2
 | Drawing | Age-specific live catalogue, step images and instructions, free/guided upload, server review/gems, personal gallery and deletion confirmation |
 | Tree | Real cards, diary contributions, private photo upload, server tree totals and forest archive |
 | Parent | Password sign-in/signup/reset, encrypted session, parent lock on re-entry, family code, child/PIN/language setup, task rewards/caps/bonus, pending decisions and private photos, rewards/gifts/deductions, weekly reports, chat, notifications/quiet hours/autopilot, WhatsApp/Telegram connection, screen-plan settings |
-| Maths | Current bundled web engine, retry/help at every age, same-kind review questions, paper transcription with child confirmation, scratchpad, count/group/share/clock manipulatives, pending final-save recovery; follow-up adds steps/jumps/fractions/coins/tally/pictogram/fill/sorting and a place-value block board |
+| Maths | Current bundled web engine, retry/help at every age, same-kind review questions, paper transcription with child confirmation, scratchpad, count/group/share/clock manipulatives, pending final-save recovery; follow-up adds steps/jumps/fractions/coins/tally/pictogram/fill/sorting and six guided place-value modes, shape counting and literal arithmetic counters |
 | Tablet | Native Compose, bottom home navigation, adaptive existing home/math layouts, constrained/scrollable feature pages, rotation-owned state |
 
 ## Deliberate boundaries and remaining differences
 
 - No fake scores, photos, balances, rewards, preview data or simulated Android app blocking are used in production flows. Screen controls edit the same family plan as the browser and explicitly describe their limits.
 - Parent OAuth/deep-link login is not implemented; password sign-in and email reset are available. A Google-only account may need password setup.
-- The browser's complete topic-specific interactive maths helper suite is not yet reproduced: native has template hint steps, shared question figures and the manipulatives listed above. The place-value board is free-form rather than all six guided web exercises; shape-count/guess feedback and some exact web interaction sequences still differ. This is a remaining parity task, not an access blocker.
+- The browser's complete topic-specific interactive maths helper suite is not yet reproduced: native has template hint steps, shared question figures and the manipulatives listed above. All six guided place-value modes and shape/arithmetic counters are now implemented. Some exact web guess-driven interaction sequences still differ. This is a remaining parity task, not an access blocker.
 - Library uses a native list/reader instead of the web's illustrated room/page-turn presentation. Older photographed story drafts open as a new typed copy so the original is retained; this differs from editing the old photo workflow in place.
 - Parent detail/history layouts are simplified. Puzzle history now reuses the native SVG question renderer. Screen-plan labels are translated into English, Turkish and Spanish.
 - Draft text is recovered on process restart. Other in-flight photo/session state survives rotation via ViewModel but is not a complete cross-process offline queue. Math/reading server endpoints lack a request idempotency key, so a lost successful response remains an existing backend retry risk.
 - No real family record was written and no parent message was sent during tests. A disposable family and an approved test messaging recipient are required to verify real auth/RLS, storage, model calls, deployed migrations and WhatsApp delivery together.
-- No production backend deployment or database migration was performed.
+- No production backend deployment or database migration was performed. Stable production APK signing is not configured; CI debug certificates may differ between runs.
 
 ## Validation
 
@@ -40,3 +40,5 @@ This is implementation and validation evidence, **not a claim of live-account E2
 The earlier offline preview remains withdrawn. Version 0.5.0 is a validation build; it must not be described as the requested fully verified replacement until the remaining parity and live E2E gates are closed.
 
 Final follow-up local validation: APK + instrumentation APK + lint succeeded; 16 JVM tests, zero failures/errors. New tablet run will include 9 tests (the prior 7 plus worked-help and fractional pictogram checks).
+
+Source 9b6957f: CI 37476924186 passed both jobs, including all 9 Pixel Tablet tests (worked steps and half pictograms). Final guided place-value/counter follow-up adds two JVM tests and one tablet borrowing test; local APK/instrumentation/lint and all 18 JVM tests passed; its final device CI is pending.

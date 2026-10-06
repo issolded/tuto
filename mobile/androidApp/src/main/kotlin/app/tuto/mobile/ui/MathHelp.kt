@@ -16,7 +16,8 @@ import kotlin.math.*
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun MathHelp(q: MathQuestion) {
     val s=LocalStrings.current
-    val v=q.raw.optJSONObject("source")?.optJSONObject("help") ?: q.visual ?: return
+    val v=q.raw.optJSONObject("source")?.optJSONObject("help") ?: q.visual
+    if(v==null) { ArithmeticCounters(q); return }
     var touched by remember(q.question) { mutableStateOf<Set<Int>>(emptySet()) }
     var dealt by remember(q.question) { mutableIntStateOf(0) }
     when(v.optString("kind")) {
@@ -55,6 +56,7 @@ import kotlin.math.*
             Slider(minutes,{minutes=it},valueRange=0f..1440f,steps=287)
             val m=minutes.roundToInt();Text("${(m/60)%24}:${(m%60).toString().padStart(2,'0')}")
         }
+        "shapes" -> ShapeCounters(v)
         else -> ExtendedMathHelp(v)
     }
 }

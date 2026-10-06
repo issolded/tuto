@@ -34,4 +34,14 @@ class MathHelpTest {
         compose.onNodeWithText("½ star").performClick()
         compose.onNodeWithText("6").assertIsDisplayed()
     }
+    @Test fun placeValueRequiresBorrowBeforeTakingFromAnEmptyColumn() {
+        show("""{"kind":"pv","mode":"shift","start":100,"amount":1,"up":false,"places":[100,10,1]}""")
+        compose.onNodeWithTag("pv-shift").performClick()
+        compose.onNodeWithText("Read the digits and answer the question.").assertDoesNotExist()
+        compose.onNodeWithTag("pv-column-100").performClick()
+        compose.onNodeWithTag("pv-column-10").performClick()
+        compose.onNodeWithTag("pv-shift").performClick()
+        compose.onNodeWithText("Read the digits and answer the question.").assertIsDisplayed()
+        compose.onNodeWithTag("pv-shift").assertIsNotEnabled()
+    }
 }

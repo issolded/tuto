@@ -118,7 +118,7 @@ import org.json.JSONArray
                 }
             }
         }
-        "pv" -> PlaceValueBoard(v)
+        "pv" -> PlaceValueHelp(v)
     }
 }
 
@@ -138,24 +138,4 @@ private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString() else n.toString
     Button({
         if(MathEngine.sameAnswer(input,step.optString("a")) || misses>=1) {solved++;input="";misses=0} else misses++
     },Modifier.testTag("help-step-check"),enabled=input.isNotBlank()) { Text(s.say("Check step","Adımı kontrol et","Comprobar paso")) }
-}
-
-/** Free block board: totals reflect only the blocks the learner placed. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable private fun PlaceValueBoard(v:JSONObject) {
-    val s=LocalStrings.current
-    val places=v.optJSONArray("places")?.let { a -> (0 until a.length()).map { a.optInt(it) }.filter { it in listOf(1,10,100,1000) } } ?: return
-    val initial=if(v.optString("mode") in listOf("shift","missing","digit")) v.optInt("start",v.optInt("n")) else 0
-    var value by remember { mutableIntStateOf(initial) }
-    Text(s.say("Build the number with blocks. Ten blocks exchange for the next place.","Sayıyı bloklarla kur. On blok, bir üst basamağa dönüşür.","Construye el número con bloques. Diez bloques se cambian por uno de la siguiente posición."))
-    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) { places.forEach { place ->
-        Card(Modifier.width(128.dp)) { Column(Modifier.padding(8.dp)) {
-            Text(when(place) {1000->s.say("Thousands","Binler","Millares");100->s.say("Hundreds","Yüzler","Centenas");10->s.say("Tens","Onlar","Decenas");else->s.say("Ones","Birler","Unidades")})
-            Text(List(value/place%10){"▣"}.joinToString(" "),Modifier.heightIn(min=64.dp))
-            Text("${value/place%10}")
-            Row { TextButton({value-=place},enabled=value>=place) {Text("−")};TextButton({value+=place},enabled=value+place<places.max()*10) {Text("+")} }
-        } }
-    } }
-    Text("$value",style=MaterialTheme.typography.titleLarge)
-    TextButton({value=initial}) {Text(s.say("Start again","Baştan başla","Empezar de nuevo"))}
 }

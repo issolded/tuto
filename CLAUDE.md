@@ -113,7 +113,7 @@ uçtan uca çalışan Android native uygulama istiyor. iOS bu işin dışında. 
 özelliklerin kaynağı değildir. `codex/android-complete` dalına main `11869e7` birleştirildi.
 Bu birleştirme web ekranlarının native taşındığı anlamına gelmez. Eksikler `mobile/README.md`.
 Tam özellik ve cihaz doğrulaması bitmeden yeni önizleme APK'sı teslim edilmez. Eski otomatik
-preview release adımı bu geliştirme dalında kaldırıldı; henüz uzak repoya gönderilmedi.
+preview release adımı bu geliştirme dalında kaldırıldı. 6 Ekim 2026: değişiklikler uzak dalda; eski android-preview yayını ve APK gerçekten silindi (CI 37477802302); etiket/kaynak geçmişi tutuldu.
 
 Android takip (2026-10-06): 34 web rotası / 30 ekran dosyası envanteri
 `mobile/WEB_PARITY_AUDIT_2026-10-06.md`. Kullanıcının tercihi **alt menü**, sol menü değil;
@@ -1165,3 +1165,7 @@ Still not a full-parity release: complete specialised maths helpers, OAuth, some
 Android module follow-up: local full build + lint + 14 JVM tests passed; public source `980d085`, CI `37471192968` Android job passed. Its tablet result was 5/7: all three new ModulesTest cases passed, existing sibling PIN and maths tests failed. Maths Check was below the viewport after extra controls; paper action moved into the top bar and scratchpad after primary actions. Login now dismisses IME; tests verify visible/selected controls and wait for platform UI settling. Follow-up also refreshes signed-in child language/task settings from anon RLS, adds full puzzle history figures, preserves automatic English variety and legacy age-only profiles, and explains the story completion word minimum. Follow-up device re-run required; no live E2E claim.
 
 Android follow-up c9df357: CI 37473978404 passed both jobs and all 7 Pixel Tablet tests; the two prior failures are resolved. Next changes: signed numeric answers, ordered in-place photo crop replacement, pending-save help metadata, additional descriptor-driven maths manipulatives (including half pictograms) and translated screen-plan labels. New helper tests exercise signed-decimal worked steps and half-key counting. These need their own final CI; live family/WhatsApp remains unverified. No source/backend production deployment.
+
+Android retirement verified: release 397715776 / asset 593265107 were the obsolete android-preview APK. User-authorized scoped cleanup workflow 37477802302 succeeded; subsequent GitHub release listing is empty. Native validation source remains 9b6957f while final six-mode place-value guidance and shape/arithmetic counters are being validated. CI debug signing is not a stable production update certificate; no production signing key is configured.
+
+Final maths follow-up: six guided place-value modes (build/missing/shift/compare/arrange/digit), explicit borrow/carry exchange, counted shape marks and literal sum counters. Local full APK/instrumentation/lint build passed; 18 JVM tests passed. Added tablet 100−1 borrowing path; final device CI pending. Previous source 9b6957f passed all 9 tablet tests in CI 37476924186.
