@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
         acceptOAuth(intent)
         setContent { TutoTheme { TutoApp() } }
     }
-    override fun onNewIntent(intent:Intent) {super.onNewIntent(intent);setIntent(intent);acceptOAuth(intent)}
+    // Consume callback data directly; preserve the original activity launch intent.
+    override fun onNewIntent(intent:Intent) {super.onNewIntent(intent);acceptOAuth(intent)}
     private fun acceptOAuth(source:Intent?) {source?.data?.toString()?.let { ViewModelProvider(this)[TutoViewModel::class.java].parentOAuthCallback(it) };source?.data=null}
 }
 
