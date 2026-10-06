@@ -1144,3 +1144,13 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 - 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
 
 - 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.
+
+### 2026-10-06 Android publication and device validation
+User explicitly approved publishing `codex/android-complete` to public `issolded/tuto`.
+Shell push had no credentials; connected GitHub API published an identical tree as
+`ea40ddc`, then version-only bump `3217f87` (4 / 0.4.0-native-validation).
+CI https://github.com/issolded/tuto/actions/runs/37461523253 passed build, 9 JVM tests,
+lint (0 errors, 11 warnings), and all 4 Pixel Tablet API 35 UI tests. Captured
+landscape screens inspected. Test API is injected: no live WhatsApp or real family
+E2E verified. Missing native modules remain; do not describe this as full parity
+or deliver the withdrawn offline preview. See mobile/BUILD_STATUS.md.

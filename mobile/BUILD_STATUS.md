@@ -1,21 +1,44 @@
-# Verified preview builds
+# Android validation — 2026-10-06
 
-Branch: mobile/native-tablet-preview. Production web/backend files unchanged.
+Branch: `codex/android-complete`.
+Tested source: `3217f87af424684394284cc025679ccef95cf35c`.
+Version: `0.4.0-native-validation` (version code 4).
+CI: https://github.com/issolded/tuto/actions/runs/37461523253
 
-iOS source commit: 5ec7e1187c28d880b312d4ab49e948e70e2cc9a3
-Successful CI: https://github.com/issolded/tuto/actions/runs/35076488854
-- SwiftUI simulator app compiled for arm64.
-- iPhone 17 Pro and iPad Pro 13-inch (M5), iOS 26.2 simulators.
-- Two state/reward integration tests and one UI test passed on each device.
-- UI test covers theme selection, device rotation, five answers, completion and restart persistence.
-- Captured Morph home/settings/result screenshots inspected; no blocking overlap in these views.
-- This is limited preview validation, not complete device/accessibility coverage.
-- Artifact: tuto-ios-simulator (simulator .app, not a signed device IPA).
+The former offline preview is withdrawn. Its older Android/iOS CI results do not
+validate this app. This branch uses the live web backend by default, with native
+Compose screens, the web maths/puzzle rendering engines and the animated Tuto avatar.
 
-Android successful regression CI:
-https://github.com/issolded/tuto/actions/runs/35075460410
-Build, shared tests, lint and Pixel Tablet theme test passed.
+## Confirmed
 
-Scope: offline child preview, Classic/Morph themes, sample practice, local Gem ledger.
-No live accounts, native parent app, AI assistant, parent approval delivery or app blocking.
-Physical iOS distribution needs signing and provisioning; TestFlight is not configured.
+- Source published through the connected GitHub account with the user's approval.
+- Published tree matches the locally tested source (before the version-only bump).
+- Local version 4 APK and instrumentation APK build successfully.
+- GitHub Android job passed: APK build, 5 shared tests, 4 puzzle state tests and lint.
+- CI lint: 0 errors, 11 warnings (dependency/API notices, icon/backup configuration,
+  and SharedPreferences style suggestions).
+- Engine checks passed; validation APK and test reports are available as CI artifacts.
+
+## Device validation
+
+Pixel Tablet (API 35) instrumentation passed: 4 tests, 0 failures, 0 ignored.
+Coverage: selected sibling/PIN recovery, a full maths sitting, puzzle retry/hint/skip
+and review decline, completed puzzle review and bottom navigation.
+Seven captured images were inspected (setup, home, maths/question/result, puzzle
+welcome/feedback/result); the inspected landscape views show usable controls.
+Some captures lag a state transition, so screenshot filenames alone are not proof
+of the named question state. Portrait, split screen, large font and physical-device
+coverage remain pending.
+Device tests use an injected fake API with real Compose screens and bundled engines;
+they are not production account or WhatsApp delivery tests.
+
+## Release scope
+
+This is **not a complete web-parity release**. See `WEB_PARITY_AUDIT_2026-10-06.md`
+for the route inventory and missing English, reading/library, stories/drawings,
+homework, tree, history, parent and newer maths flows. No incomplete APK is being
+presented as the requested finished native app. iOS is outside this task.
+
+Real-account E2E and WhatsApp delivery still require a disposable test family and
+an explicitly approved test recipient. No real family records or messages were
+used by the validation above.

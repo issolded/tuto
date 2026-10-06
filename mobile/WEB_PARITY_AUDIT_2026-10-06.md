@@ -84,3 +84,12 @@ Her gerçek çocuk akışında: aile/PIN → etkinlik → sunucuda kayıt → su
 - `:shared:jvmTest`, Android debug APK, instrumentation APK ve lint geçti: 0 hata, 6 uyarı. Cihaz senaryoları derlendi, çalıştırılmadı.
 - Gerçek `server/index.js` kodunun mevcut izole harness’i ile 8 yaş × EN/TR/ES bulmaca matrisi geçti: yardım payları, retry, pekiştirme/erteleme, günlük Gem tavanı, tek veli bildirimi ve veli dili. DB bellekte; Telegram/WhatsApp taşıyıcıları stub. Bu canlı WhatsApp teslim kanıtı değildir.
 - Cihazda ve gerçek WhatsApp alıcısıyla çalıştırılmayan testler başarılı sayılmaz.
+
+## Published Android CI follow-up
+
+Source `3217f87` is published on `codex/android-complete`. GitHub run
+https://github.com/issolded/tuto/actions/runs/37461523253 passed Android build,
+9 JVM tests, lint (0 errors), and 4 Pixel Tablet API 35 instrumentation tests.
+The tablet tests inject a fake API; they do not verify production WhatsApp delivery
+or replace the missing native features listed above. Landscape screenshots were
+reviewed; portrait, split screen, large fonts and real-device checks remain pending.

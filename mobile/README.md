@@ -43,7 +43,7 @@ it builds, lints, and runs `TabletTest` on a Pixel Tablet emulator.
 
 The real-server native source was recovered from `claude/practical-franklin-xigneu` at
 `6468f58`, not the older offline `mobile/native-tablet-preview` branch. The current web
-`main` at `11869e7` has been merged into `codex/android-complete` locally.
+`main` at `11869e7` has been merged into `codex/android-complete` and published to GitHub.
 
 Implemented native routes: family setup, selected child/PIN, home, maths, puzzles,
 Gems/reward goals and account switching/settings. The selected child now accompanies the PIN request; the current
@@ -58,7 +58,7 @@ are also missing. Merging web sources does not port React screens to Compose.
 
 The user's offline dummy APK was withdrawn. No replacement incomplete APK is being
 delivered. The CI publishes validation artifacts only; the old automatic rolling preview
-release job has been removed locally. A complete Android build is the sole delivery target.
+release job has been removed. A complete Android build is the sole delivery target.
 
 Backend WhatsApp Business integration exists. End-to-end delivery to a verified test
 recipient has not been exercised here. The source-level inventory of every web route is in `WEB_PARITY_AUDIT_2026-10-06.md`.
@@ -72,11 +72,12 @@ an accelerated emulator; this local environment has no KVM.
 - Family selection/code and answer retry server rules: 16 tests passed.
 - Shared Kotlin tests: 5 passed.
 - Android debug app and instrumentation APK compile; lint: zero errors, six warnings.
-- Instrumentation tests were **compiled, not executed**. No physical-device layout or
-  production parent-notification claim is made.
+- Pixel Tablet API 35 instrumentation: 4 tests passed in GitHub CI. These use an
+  injected test API, not production accounts. Physical-device testing remains pending.
 
 2026-10-06 follow-up: four Android JVM puzzle state tests pass. The isolated real-server
 puzzle matrix (age 8, EN/TR/ES) also passes, including review decisions, caps and captured
 parent notifications. Home/goals/settings now use bottom navigation, never a left rail.
 The selected-child forgot-PIN action and reward-request failure feedback are implemented.
-No live WhatsApp delivery or Android device test has been completed.
+Pixel Tablet emulator tests have now passed; live WhatsApp delivery remains untested.
+See `BUILD_STATUS.md` for the exact tested commit, CI link and validation limits.
