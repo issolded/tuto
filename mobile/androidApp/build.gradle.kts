@@ -1,14 +1,24 @@
 plugins { id("com.android.application"); kotlin("android"); id("org.jetbrains.kotlin.plugin.compose") }
+// Keep the alpha13 Kotlin/JNI API; rebuild its native library with a modern NDK.
+// Only classes.jar is imported, so the old 4 KiB .so cannot enter the APK.
+val quickJsAar by configurations.creating { isTransitive = false }
+val quickJsClasses = tasks.register<Copy>("prepareQuickJsClasses") {
+    from({ zipTree(quickJsAar.singleFile) }) { include("classes.jar"); rename { "quickjs.jar" } }
+    into(layout.buildDirectory.dir("quickjs-classes"))
+}
 android {
     namespace = "app.tuto.mobile"
     compileSdk = 35
+    ndkVersion = "28.0.13004108"
     defaultConfig {
         applicationId = "app.tuto.mobile.preview"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.5.1-native-validation"
+        versionCode = 7
+        versionName = "0.5.2-native-validation"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
+        externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=MinSizeRel" } }
         // The same Express server the web app talks to. Override with -PtutoServer=... for staging.
         val server = (project.findProperty("tutoServer") as String?) ?: "https://tuto-production-d1db.up.railway.app"
         buildConfigField("String", "SERVER_URL", "\"$server\"")
@@ -18,6 +28,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     // The maths engine is a JavaScript file; keep it readable in the APK rather than compressed.
     androidResources { noCompress += listOf("js") }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
 }
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -30,9 +41,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     // Tuto and the task icons (design/native-icons).
     implementation("com.airbnb.android:lottie-compose:6.7.1")
-    // Runs the web app's own maths engine (mobile/engine). alpha13 is the last build made with a
-    // Kotlin this project's compiler can read; later ones need Kotlin 2.3.
-    implementation("io.github.dokar3:quickjs-kt-android:1.0.0-alpha13")
+    quickJsAar("io.github.dokar3:quickjs-kt-android:1.0.0-alpha13@aar")
+    implementation(files(layout.buildDirectory.file("quickjs-classes/quickjs.jar")).builtBy(quickJsClasses))
     // Draws the maths figures the engine renders as SVG.
     implementation("com.caverock:androidsvg-aar:1.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
