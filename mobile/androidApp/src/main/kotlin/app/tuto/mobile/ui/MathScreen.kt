@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -76,13 +77,13 @@ private fun Loading(text: String) {
 private fun Asking(run: MathRun, s: Strings, onClose: () -> Unit) {
     val q = run.question ?: return
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val wide = maxWidth >= 900.dp
+        val wide = maxWidth / LocalDensity.current.fontScale.coerceAtLeast(1f) >= 960.dp
         Column(Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             TopBar(run, s, onClose)
             if (wide) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-                    QuestionPanel(run, q, s, Modifier.weight(1f).fillMaxHeight())
-                    AnswerPanel(run, q, s, Modifier.width(440.dp).fillMaxHeight())
+                    QuestionPanel(run, q, s, Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()))
+                    AnswerPanel(run, q, s, Modifier.weight(0.85f).fillMaxHeight().verticalScroll(rememberScrollState()))
                 }
             } else {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -208,9 +209,10 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
 @Composable
 private fun Result(run: MathRun, s: Strings, onHome: () -> Unit, onAgain: () -> Unit) {
     val correct = run.correctCount
-    Row(Modifier.fillMaxSize().padding(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(40.dp)) {
-        Tuto(Modifier.size(width = 300.dp, height = 380.dp), cheerKey = 1)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    AdaptivePair(first = {
+        Tuto(Modifier.size(width = 260.dp, height = 300.dp), cheerKey = 1)
+    }, second = {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Text(s.say("MATHS DONE", "MATEMATİK BİTTİ", "MATES TERMINADAS"), style = MaterialTheme.typography.labelLarge, color = Color(0xFFC2561F))
             Text(s.say("$correct out of ${run.total} right", "${run.total} sorudan $correct tanesi doğru", "$correct de ${run.total} correctas"), style = MaterialTheme.typography.headlineLarge)
             val saved = run.saved
@@ -231,5 +233,5 @@ private fun Result(run: MathRun, s: Strings, onHome: () -> Unit, onAgain: () -> 
                 BigButton(s.say("Play again", "Tekrar oyna", "Jugar otra vez"), onClick = onAgain)
             }
         }
-    }
+    })
 }

@@ -10,30 +10,30 @@
 // suffix has to agree with a word chosen at run time. Spanish carries its article in the table and
 // avoids adjectives that would have to agree with it ("es diferente", never "distinta").
 
-const ATTR = {
+export const ATTR = {
   tr: {
     shape: 'şekli', fill: 'içinin deseni', rotation: 'yönü', size: 'büyüklüğü', stretch: 'genişliği',
-    half: 'boyalı yarısı', dots: 'nokta sayısı', corner: 'köşedeki işareti', inner: 'içindeki şekil',
+    half: 'boyalı yarısı', dots: 'nokta sayısı', corner: 'küçük noktası', inner: 'içindeki şekil',
     position: 'dolu küçük dairesinin yeri', flip: 'baktığı yön',
   },
   en: {
     shape: 'shape', fill: 'shading', rotation: 'direction', size: 'size', stretch: 'width',
-    half: 'shaded half', dots: 'number of dots', corner: 'corner mark', inner: 'shape inside',
+    half: 'shaded half', dots: 'number of dots', corner: 'little dot', inner: 'shape inside',
     position: 'filled little circle', flip: 'way it faces',
   },
   es: {
     shape: 'la forma', fill: 'el relleno', rotation: 'la dirección', size: 'el tamaño', stretch: 'la anchura',
-    half: 'la mitad pintada', dots: 'el número de puntos', corner: 'la marca de la esquina', inner: 'la figura de dentro',
+    half: 'la mitad pintada', dots: 'el número de puntos', corner: 'el puntito', inner: 'la figura de dentro',
     position: 'el sitio del circulito relleno', flip: 'el lado al que mira',
   },
 }
 
 // The same, standing alone — "the shape changes" rather than "its shape". Turkish needs both:
 // "Hepsinin yönü aynı" but "Bir yönde şekil, öbür yönde desen değişiyor". English does not.
-const NOM = {
+export const NOM = {
   tr: {
     shape: 'şekil', fill: 'desen', rotation: 'yön', size: 'büyüklük', stretch: 'genişlik',
-    half: 'boyalı yarı', dots: 'nokta sayısı', corner: 'köşedeki işaret', inner: 'içteki şekil',
+    half: 'boyalı yarı', dots: 'nokta sayısı', corner: 'küçük nokta', inner: 'içteki şekil',
     position: 'dolu küçük dairenin yeri', flip: 'yön',
   },
 }

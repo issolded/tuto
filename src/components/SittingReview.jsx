@@ -1,4 +1,5 @@
 import { t } from '../lib/i18n'
+import { dnum } from '../lib/mathTemplates'
 import { Figure, Prompt, CodeChip } from './PuzzleView'
 import { EnglishStem, EnglishOptions, englishWhyLines } from './EnglishView'
 
@@ -73,11 +74,11 @@ export function MathReviewList({ items, lang }) {
         <div key={i} style={card(i)}>
           {heading(r.correct, `${i + 1}. ${r.question || '—'}`)}
           <div style={{ fontWeight: 700, fontSize: 13, color: r.correct ? GREEN : '#8d83ad', marginLeft: 27 }}>
-            {t('math_your_answer', lang)} {r.child_answer ?? '—'}
+            {t('math_your_answer', lang)} {r.child_answer == null ? '—' : dnum(r.child_answer, lang)}
           </div>
           {!r.correct && r.correct_answer != null && (
             <div style={{ fontWeight: 700, fontSize: 13, color: ORANGE, marginTop: 2, marginLeft: 27 }}>
-              {t('math_answer_was', lang)} {r.correct_answer} 💡
+              {t('math_answer_was', lang)} {dnum(r.correct_answer, lang)} 💡
             </div>
           )}
         </div>

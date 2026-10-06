@@ -35,6 +35,7 @@ const ANIM = `
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes flashIn { 0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes hintNudge { 0%, 100% { transform: scale(1) rotate(0); } 20% { transform: scale(1.12) rotate(-5deg); } 40% { transform: scale(1.12) rotate(5deg); } 60% { transform: scale(1.08) rotate(-3deg); } 80% { transform: scale(1.04) rotate(2deg); } }
 @keyframes flashHold { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -95,6 +96,12 @@ export default function PuzzleScreen() {
   const [flash, setFlash] = useState(null)        // { correct, correct_index } while the overlay is up
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [result, setResult] = useState(null)
+  // Help for the question on screen: the hints asked for so far (built by the server when asked, never sent with
+  // the question) and the options out of play, by a hint or by a first wrong try.
+  const [rungs, setRungs] = useState([])
+  const [struck, setStruck] = useState([])
+  const [hintBusy, setHintBusy] = useState(false)
+  const [nudge, setNudge] = useState(false)
   const advanceTimer = useRef(null)
 
   const wrap = {
@@ -114,6 +121,7 @@ export default function PuzzleScreen() {
     setStep('welcome')
   }
   function retry() {
+    if (session?.review) { nav('/child/home'); return }
     setStep('loading')
     fetchSession().then(begin, () => setStep('error'))
   }
@@ -129,25 +137,87 @@ export default function PuzzleScreen() {
   async function finish() {
     setStep('finishing')
     try {
-      setResult(await post(`/api/puzzle-sessions/${session.session_id}/finish`))
+      if (session.review) {
+        const r = await post(`/api/children/${child.id}/puzzle-review/${session.session_id}/finish`)
+        setResult({ review_done: true, correct: r.correct ?? 0, total: r.asked ?? total, gems_earned: r.gems_earned ?? 0 })
+      } else {
+        setResult(await post(`/api/puzzle-sessions/${session.session_id}/finish`))
+      }
       setStep('result')
     } catch {
       setStep('error')
     }
   }
 
+  // The review round: fresh puzzles of the kinds that went wrong, dealt by the server. "Not now" lets the parent's
+  // message go and the kinds carry into the next sitting.
+  async function startReview() {
+    const offer = result.review
+    setStep('loading')
+    try {
+      const r = await iconFontWithin(4000).then(() => post(`/api/children/${child.id}/puzzle-review/${offer.id}/start`))
+      begin({ ...r, review: true, will_pay: offer.gems_possible, gems: null })
+    } catch { setStep('error') }
+  }
+  async function declineReview() {
+    try { await post(`/api/children/${child.id}/puzzle-review/${result.review.id}/decline`) } catch { /* the sweep settles it */ }
+    nav('/child/home')
+  }
+
   function advance() {
     clearTimeout(advanceTimer.current)
     setFlash(null)
     setPicked(null)
+    setRungs([])
+    setStruck([])
+    setNudge(false)
     if (qIdx >= total - 1) finish()
     else setQIdx(qIdx + 1)
   }
 
   function select(i) {
-    if (pending || answers[qIdx]) return
+    if (pending || answers[qIdx] || struck.includes(i)) return
     setPicked(i)
     setAnswerFailed(false)
+  }
+
+  async function askHint() {
+    if (hintBusy || pending || answers[qIdx] || rungs.length >= 3) return
+    setHintBusy(true)
+    setNudge(false)
+    try {
+      const h = await post(`/api/puzzle-sessions/${session.session_id}/hint`, { question_index: qIdx, lang: language })
+      setRungs(prev => [...prev, h])
+      if (h.eliminate != null) {
+        setStruck(prev => (prev.includes(h.eliminate) ? prev : [...prev, h.eliminate]))
+        setPicked(prev => (prev === h.eliminate ? null : prev))
+      }
+      requestAnimationFrame(() => {
+        const el = document.querySelector('.pz-scroll')
+        if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      })
+    } catch {
+      setAnswerFailed(true)
+    } finally {
+      setHintBusy(false)
+    }
+  }
+
+  // An honest way out of a puzzle the child cannot see: it counts as wrong, pays nothing, and shows the answer and why, as in
+  // English. Only while nothing is chosen, so it cannot be hit instead of Send.
+  async function skip() {
+    if (pending || answers[qIdx]) return
+    setPending(true)
+    setAnswerFailed(false)
+    try {
+      const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, skip: true, lang: language })
+      setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
+      setFlash({ correct: false, correct_index: r.correct_index, why: r.why, skipped: true })
+    } catch {
+      setAnswerFailed(true)
+    } finally {
+      setPending(false)
+    }
   }
 
   async function send() {
@@ -157,6 +227,13 @@ export default function PuzzleScreen() {
     setAnswerFailed(false)
     try {
       const r = await post(`/api/puzzle-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen_index: i, lang: language })
+      // The first wrong answer gives the puzzle back and reveals nothing: the wrong picture greys out, 💡 shakes.
+      if (r.retry) {
+        setStruck(prev => [...new Set([...prev, i])])
+        setPicked(null)
+        setNudge(true)
+        return
+      }
       setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
       setFlash({ correct: r.correct, correct_index: r.correct_index, why: r.why })
       // A right answer flashes and moves on, as maths does. A wrong one stays until the child
@@ -225,16 +302,20 @@ export default function PuzzleScreen() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 26px 40px', gap: 20, textAlign: 'center' }}>
         <TutoMascot size={150} expression="excited" color={TEAL} style={{ animation: 'float 3s ease-in-out infinite' }} />
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-          {t('puzzle_welcome', language)}
+          {session.review
+            ? say(language, 'New puzzles like the tricky ones!\nYou can ask for a 💡 hint any time.', 'Zorlandıklarına benzer yeni bulmacalar!\nİstediğin zaman 💡 ipucu isteyebilirsin.', '¡Acertijos nuevos como los difíciles!\nPuedes pedir una pista 💡 cuando quieras.')
+            : t('puzzle_welcome', language)}
         </div>
-        <div style={{
-          background: session.will_pay ? TEAL : 'rgba(255,255,255,.8)', color: session.will_pay ? '#fff' : INK_SOFT,
-          borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-        }}>
-          {session.will_pay
-            ? <>⭐ {t('math_up_to_gems', language)} {session.gems} {t('math_gems_word', language)}</>
-            : <>🌙 {t('puzzle_no_gems', language)}</>}
-        </div>
+        {(session.review ? session.will_pay : true) && (
+          <div style={{
+            background: session.will_pay ? TEAL : 'rgba(255,255,255,.8)', color: session.will_pay ? '#fff' : INK_SOFT,
+            borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+          }}>
+            {session.will_pay
+              ? (session.review ? <>⭐ {say(language, 'A few bonus gems', 'Biraz bonus gem', 'Unos gems extra')}</> : <>⭐ {t('math_up_to_gems', language)} {session.gems} {t('math_gems_word', language)}</>)
+              : <>🌙 {t('puzzle_no_gems', language)}</>}
+          </div>
+        )}
         <button className="pz-press" onClick={() => setStep('questions')} style={{ ...primaryBtn, marginTop: 4 }}>
           {t('math_lets_go', language)}
         </button>
@@ -279,6 +360,40 @@ export default function PuzzleScreen() {
             </div>
           </div>
 
+          {!result.review_done && (() => {
+            const own = answers.filter(a => a?.correct && !a.helped).length
+            const helped = answers.filter(a => a?.correct && a.helped).length
+            const missed = answers.filter(a => a && !a.correct).length
+            if (helped === 0 && missed === 0) return null
+            const parts = [
+              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} sin ayuda`),
+              helped > 0 && say(language, `${helped} right with a hint`, `${helped} ipucuyla doğru`, `${helped} bien con una pista`),
+              missed > 0 && say(language, `${missed} to practise`, `${missed} geliştirilecek`, `${missed} por repasar`),
+            ].filter(Boolean)
+            return <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK_SOFT, lineHeight: 1.5 }}>{parts.join(' · ')}</div>
+          })()}
+
+          {result.review && !result.review_done && (
+            <div style={{ background: 'white', borderRadius: 22, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease 0.12s both' }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16.5, color: INK, lineHeight: 1.4, textAlign: 'center' }}>
+                {say(language, `Let's practise the tricky ones — ${result.review.count} new puzzles.`, `Zorlandıklarını pekiştirelim — ${result.review.count} yeni bulmaca.`, `Repasemos las difíciles: ${result.review.count} acertijos nuevos.`)}
+              </div>
+              <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: result.review.max_gems > 0 ? ORANGE : INK_SOFT }}>
+                {result.review.max_gems > 0
+                  ? say(language, `⭐ Up to +${result.review.max_gems} ${result.review.max_gems === 1 ? 'gem' : 'gems'}`, `⭐ En fazla +${result.review.max_gems} gem`, `⭐ Hasta +${result.review.max_gems} ${result.review.max_gems === 1 ? 'gem' : 'gems'}`)
+                  : say(language, 'No gems this time, but it makes you stronger 💪', 'Bu sefer gem yok ama seni güçlendirir 💪', 'Esta vez sin gems, pero te hace más fuerte 💪')}
+              </div>
+              <button className="pz-press" onClick={startReview} style={{
+                background: TEAL, color: 'white', border: 'none', borderRadius: 16, padding: '14px 20px',
+                fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer', boxShadow: '0 8px 20px rgba(31,122,114,.3)',
+                alignSelf: 'center', width: '100%', maxWidth: 420,
+              }}>{say(language, 'Practise', 'Pekiştirelim', 'Repasemos')} ({result.review.count})</button>
+              <button className="pz-press" onClick={declineReview} style={{
+                background: 'none', border: 'none', color: INK_SOFT, fontFamily: FRED, fontWeight: 600, fontSize: 15, padding: 8, cursor: 'pointer',
+              }}>{say(language, 'Not now', 'Şimdi değil', 'Ahora no')}</button>
+            </div>
+          )}
+
           {/* One card per puzzle, as maths lists its sums — but a puzzle is its pictures, so the
               card is the question again: the prompt, every option, the child's pick and the right
               one marked, and for a miss the sentence that says what the rule was. A row of ticks,
@@ -288,11 +403,13 @@ export default function PuzzleScreen() {
             <PuzzleReviewList questions={session.questions} answers={answers} lang={language} px={isTablet ? 56 : 40} />
           </div>
 
-          <button className="pz-press" onClick={() => nav('/child/home')} style={{
-            background: TEAL, color: 'white', border: 'none', borderRadius: 18, padding: '16px 22px',
-            fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer',
-            boxShadow: '0 8px 20px rgba(31,122,114,.34)', marginTop: 4,
-          }}>{t('math_done', language)}! 🏠</button>
+          {!(result.review && !result.review_done) && (
+            <button className="pz-press" onClick={() => nav('/child/home')} style={{
+              background: TEAL, color: 'white', border: 'none', borderRadius: 18, padding: '16px 22px',
+              fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer',
+              boxShadow: '0 8px 20px rgba(31,122,114,.34)', marginTop: 4,
+            }}>{t('math_done', language)}! 🏠</button>
+          )}
         </div>
       </div>
     )
@@ -348,7 +465,7 @@ export default function PuzzleScreen() {
             <div className="pz-feedback" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
               <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
-                {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
+                {flash.correct ? t('math_yes', language) : flash.skipped ? say(language, 'No problem!', 'Olsun!', '¡No pasa nada!') : t('math_not_this', language)}
               </div>
               {!flash.correct && rightOption && (
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>{t('math_answer_is', language)}</div>
@@ -413,9 +530,11 @@ export default function PuzzleScreen() {
                   ...(dice ? { gridRow: DICE_CELLS[i][0], gridColumn: DICE_CELLS[i][1] } : {}),
                   background: 'none', border: 0, padding: 0, cursor: answer ? 'default' : 'pointer', borderRadius: 14,
                   transition: 'transform .12s ease, opacity .12s ease, box-shadow .12s ease',
-                  ...(picked === i
-                    ? { transform: 'scale(1.08)', boxShadow: `0 0 0 4px ${TEAL}, 0 8px 20px rgba(31,122,114,.3)` }
-                    : { opacity: pending ? 0.45 : 1, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }),
+                  ...(struck.includes(i)
+                    ? { opacity: 0.28, filter: 'grayscale(1)', transform: 'scale(.94)', boxShadow: 'none' }
+                    : picked === i
+                      ? { transform: 'scale(1.08)', boxShadow: `0 0 0 4px ${TEAL}, 0 8px 20px rgba(31,122,114,.3)` }
+                      : { opacity: pending ? 0.45 : 1, boxShadow: '0 4px 14px rgba(31,122,114,.12)' }),
                 }}>
                 {o.spec ? <Figure spec={o.spec} px={px} colors={COLORS} />
                   : <CodeChip code={o.code} px={px} colors={COLORS} />}
@@ -423,11 +542,63 @@ export default function PuzzleScreen() {
             ))}
           </div>
 
+          {!answer && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              {rungs.some(h => h.text) && (
+                <div style={{
+                  background: 'rgba(255,255,255,.92)', borderRadius: 16, padding: isTablet ? '16px 22px' : '13px 17px', maxWidth: isTablet ? 620 : 440,
+                  fontFamily: FRED, fontWeight: 600, fontSize: isTablet ? 19 : 15.5, color: INK_SOFT, lineHeight: 1.5,
+                  textAlign: 'center', animation: 'scaleIn .22s ease both', display: 'flex', flexDirection: 'column', gap: 9,
+                }}>
+                  {rungs.filter(h => h.text).map((h, k) => <div key={k}>{h.text}</div>)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* The actions stay pinned to the bottom of the column: on a short phone the question, the choices and an open hint
+              are taller than the screen, and Send used to be a scroll away. */}
+          <div style={{ position: 'sticky', bottom: -22, margin: '0 -20px -22px', padding: '10px 20px 22px', zIndex: 5,
+            background: 'linear-gradient(to top, rgba(205,238,234,.96) 72%, rgba(205,238,234,0))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {!answer && (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {rungs.length < 3 && (
+                <button className="pz-press" onClick={askHint} disabled={hintBusy || pending}
+                  key={nudge ? 'nudge' : 'hint'} style={{
+                    animation: nudge && rungs.length === 0 ? 'hintNudge .9s ease 2' : undefined,
+                    display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
+                    background: rungs.length ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
+                    color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15, boxShadow: '0 3px 10px rgba(60,120,200,.08)',
+                  }}>
+                  💡 {rungs.length === 0 ? say(language, 'Hint', 'İpucu', 'Pista') : say(language, 'More help', 'Biraz daha', 'Más ayuda')}
+                </button>
+              )}
+                {picked === null && (
+                  <button className="pz-press" onClick={skip} disabled={pending} style={{
+              border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
+              borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontFamily: FRED, fontWeight: 600, fontSize: 15,
+            }}>{t('rd_skip', language)}</button>
+                )}
+              </div>
+            )}
+              {nudge && rungs.length === 0 && (
+                <div style={{
+                  background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 320,
+                  fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
+                  lineHeight: 1.4, animation: 'scaleIn .22s ease both',
+                }}>
+                  {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
+                </div>
+              )}
           <button className="pz-press" onClick={send} disabled={picked === null || pending || !!answer} style={{
-            ...primaryBtn, alignSelf: 'center', marginTop: 4,
+            ...primaryBtn, alignSelf: 'center', padding: '13px 46px', fontSize: 19,
             opacity: picked === null ? 0.4 : 1, cursor: picked === null ? 'default' : 'pointer',
             boxShadow: picked === null ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
           }}>{pending ? '…' : t('puzzle_send', language)}</button>
+
+
+          </div>
 
           {answerFailed && (
             <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>

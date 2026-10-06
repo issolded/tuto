@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -24,6 +26,8 @@ import app.tuto.mobile.ui.SetupScreen
 import app.tuto.mobile.ui.SoonScreen
 import app.tuto.mobile.ui.Sunlight
 import app.tuto.mobile.ui.TutoTheme
+import app.tuto.mobile.ui.BottomNavigation
+import app.tuto.mobile.ui.SettingsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,17 +42,22 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
     val palette = Sunlight
     CompositionLocalProvider(LocalStrings provides vm.strings, LocalPalette provides palette) {
         Box(Modifier.fillMaxSize().background(palette.bg).safeDrawingPadding()) {
+            Scaffold(containerColor = palette.bg, bottomBar = {
+                if (vm.screen == Screen.Home || vm.screen == Screen.Goals || vm.screen == Screen.Settings) BottomNavigation(vm)
+            }) { padding -> Box(Modifier.fillMaxSize().padding(padding)) {
             when (val s = vm.screen) {
                 Screen.Setup -> SetupScreen(vm)
                 Screen.Pin -> PinScreen(vm)
                 Screen.Home -> HomeScreen(vm)
                 Screen.Math -> MathScreen(vm)
                 Screen.Goals -> GoalsScreen(vm)
+                Screen.Settings -> SettingsScreen(vm)
                 Screen.Puzzle -> PuzzleScreen(vm)
                 is Screen.Soon -> SoonScreen(vm, s.type)
             }
+            } }
         }
         // Back always leads home from an activity; from home it leaves the app as usual.
-        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle) { vm.home() }
+        BackHandler(enabled = vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle || vm.screen == Screen.Settings) { vm.home() }
     }
 }

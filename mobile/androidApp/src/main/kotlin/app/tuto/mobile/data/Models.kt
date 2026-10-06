@@ -108,7 +108,7 @@ data class Suggestion(val id: String, val name: String, val icon: String, val ge
 }
 
 /** A puzzle sitting as the server sends it: the questions, never the answers. */
-data class PuzzleSession(val sessionId: String, val band: String, val questions: List<PuzzleQuestion>, val gems: Int, val willPay: Boolean) {
+data class PuzzleSession(val sessionId: String, val band: String, val questions: List<PuzzleQuestion>, val gems: Int, val willPay: Boolean, val review: Boolean = false) {
     companion object {
         fun from(j: JSONObject) = PuzzleSession(
             sessionId = j.optString("session_id"),
@@ -116,6 +116,7 @@ data class PuzzleSession(val sessionId: String, val band: String, val questions:
             questions = j.optJSONArray("questions").objects().map(PuzzleQuestion::from),
             gems = j.optInt("gems"),
             willPay = j.optBoolean("will_pay"),
+            review = j.optBoolean("review"),
         )
     }
 }
@@ -146,5 +147,5 @@ data class PuzzleQuestion(
     }
 }
 
-data class PuzzleAnswer(val correct: Boolean, val correctIndex: Int, val why: String?)
-data class PuzzleResult(val correct: Int, val total: Int, val gemsEarned: Int, val capped: Boolean)
+data class PuzzleAnswer(val correct: Boolean, val correctIndex: Int, val why: String?, val retry: Boolean = false)
+data class PuzzleResult(val correct: Int, val total: Int, val gemsEarned: Int, val capped: Boolean, val review: JSONObject? = null)

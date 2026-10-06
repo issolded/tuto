@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -77,16 +78,18 @@ fun HomeScreen(vm: TutoViewModel) {
     val doneCount = today.activities.values.sum().coerceAtMost(QUEST_TARGET)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val wide = maxWidth >= 900.dp
+        val scale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+        val wide = maxWidth / scale >= 1320.dp
+        val contentWidth = maxWidth - 40.dp
+        val columns = (contentWidth.value / (220f * scale)).toInt().coerceIn(1, 3)
         Row(Modifier.fillMaxSize()) {
-            Rail(vm, s)
             Column(
-                Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 30.dp, vertical = 26.dp),
+                Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 26.dp),
                 verticalArrangement = Arrangement.spacedBy(22.dp),
             ) {
                 Header(child, today, s, vm.todayLoaded)
-                if (vm.todayError && !vm.todayLoaded) {
-                    Text(s.say("Can't reach Tuto right now. Your activities still work.", "Şu an Tuto'ya ulaşamıyorum. Etkinliklerin yine de çalışır.", "Ahora no puedo conectar con Tuto. Tus actividades siguen funcionando."),
+                if (vm.todayError) {
+                    Text(s.say("Can't refresh your progress. Check your connection.", "İlerlemen yenilenemedi. Bağlantını kontrol et.", "No se puede actualizar tu progreso. Revisa la conexión."),
                         style = MaterialTheme.typography.bodyMedium, color = Ink.soft)
                 }
                 if (wide) {
@@ -98,8 +101,11 @@ fun HomeScreen(vm: TutoViewModel) {
                     }
                 } else {
                     BuddyCard(s, child, doneCount, nextType, Modifier.fillMaxWidth().height(340.dp))
-                    Row(Modifier.fillMaxWidth().height(330.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        questTypes.forEach { t -> QuestCard(t, child, today, t == nextType, s, Modifier.weight(1f).fillMaxHeight()) { vm.open(t) } }
+                    questTypes.chunked(columns).forEach { cards ->
+                        Row(Modifier.fillMaxWidth().height((330 * scale).dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            cards.forEach { t -> QuestCard(t, child, today, t == nextType, s, Modifier.weight(1f).fillMaxHeight()) { vm.open(t) } }
+                            repeat(columns - cards.size) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
                 Text(s.say("What else would you like to do?", "Başka ne yapmak istersin?", "¿Qué más quieres hacer?"), style = MaterialTheme.typography.titleLarge)
@@ -110,29 +116,6 @@ fun HomeScreen(vm: TutoViewModel) {
             }
         }
     }
-}
-
-@Composable
-private fun Rail(vm: TutoViewModel, s: Strings) {
-    val pal = LocalPalette.current
-    Column(
-        Modifier.width(104.dp).fillMaxHeight().background(Color.White).padding(horizontal = 12.dp, vertical = 26.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        RailItem(s("nav_home"), true, pal.soft) {}
-        RailItem(s("nav_gems"), false, pal.soft) { vm.open("gems") }
-        Spacer(Modifier.weight(1f))
-        RailItem(s.say("Switch", "Değiştir", "Cambiar"), false, pal.soft) { vm.signOut() }
-    }
-}
-
-@Composable
-private fun RailItem(label: String, selected: Boolean, soft: Color, onClick: () -> Unit) {
-    Box(
-        Modifier.fillMaxWidth().height(74.dp).clip(RoundedCornerShape(22.dp)).background(if (selected) soft else Color.Transparent)
-            .clickable(role = Role.Tab, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (selected) Ink.main else Ink.soft, textAlign = TextAlign.Center, maxLines = 2) }
 }
 
 @Composable

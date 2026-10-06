@@ -1,7 +1,10 @@
+import { ensureFamilyCode } from '../lib/familyCode'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
+import ParentNav from '../components/ParentNav'
 import { supabase, getTodaySummary } from '../lib/supabase'
+import { useChildWeek } from '../lib/parentWeek'
 import { updateParentPrefs } from '../lib/parentPrefs'
 import { hashPin } from '../lib/hash'
 import { LangPicker, BirthDateField } from '../lib/parentUI'
@@ -149,8 +152,10 @@ function AddChildSheet({ parentId, siblings = [], onClose, onSaved }) {
 // same summary the child's home reads, so the two never disagree.
 const ACT_EMOJI = { math: '🔢', reading: '📚', writing: '✏️', drawing: '🎨', puzzle: '🧩', english: '🔤', homework: '📸' }
 
-function ChildCard({ child, pending, onClick }) {
+function ChildCard({ child, pending, onClick, onReport }) {
   const s = useT()
+  const week = useChildWeek(child.id)
+  const wmax = Math.max(0, ...(week?.days || []).map(d => d.gems))
   const [today, setToday] = useState(null)
   useEffect(() => { getTodaySummary(child.id).then(setToday) }, [child.id])
   const acts = Object.entries(today?.activities || {}).filter(([, n]) => n > 0)
@@ -185,6 +190,21 @@ function ChildCard({ child, pending, onClick }) {
           </span>
         )}
       </div>
+      {/* This week, under each child — the report's door from the Children tab, one per child. A
+          button of its own, so it opens the report rather than the child page the card opens. */}
+      <button className="tc-tap" onClick={e => { e.stopPropagation(); onReport() }}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderTop: `1px solid ${PC.line}`, padding: '11px 0 0', cursor: 'pointer', fontFamily: FONT, textAlign: 'left', width: '100%' }}>
+        <span style={{ fontWeight: 800, fontSize: 12, color: PC.inkFaint, textTransform: 'uppercase', letterSpacing: '.5px', whiteSpace: 'nowrap' }}>{s('cd_week')}</span>
+        <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 13, color: PC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {week ? s('cd_week_short', { n: week.totals.sessions, g: week.totals.gems }) : '…'}
+        </span>
+        <span aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 18, flex: 'none' }}>
+          {(week?.days || Array.from({ length: 7 }, () => ({ gems: 0 }))).map((d, i) => (
+            <span key={i} style={{ width: 4, height: wmax ? Math.max(2, Math.round(d.gems / wmax * 18)) : 2, borderRadius: '2px 2px 0 0', background: d.gems ? PC.tealInk : PC.line }} />
+          ))}
+        </span>
+        <Icon name="chevron" size={16} color={PC.inkFaint} />
+      </button>
     </Card>
   )
 }
@@ -263,15 +283,9 @@ function TimeInput({ value, onChange }) {
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
-// On a tablet the dashboard uses the width: children on the left, "busy for a while" beside them.
-const PD_CSS = `
-.pd-wrap{ max-width:430px; }
-.pd-grid{ display:flex; flex-direction:column; }
-@media (min-width:900px){
-  .pd-wrap{ max-width:980px; }
-  .pd-grid{ display:grid; grid-template-columns:1.5fr 1fr; gap:26px; align-items:start; }
-}
-`
+// No tablet layout. The dashboard used to spread into two columns past 900px — children on
+// the left, "busy for a while" beside them — which was a second design with no device behind
+// it. The parent app is a phone app, so the width is .tc-col's and there is only one of it.
 
 export default function ParentDashboard({ view = 'dashboard' }) {
   const s = useT()
@@ -334,10 +348,12 @@ export default function ParentDashboard({ view = 'dashboard' }) {
       .eq('id', uid)
       .single()
 
-    let code = data?.family_code
+    // Never treat a failed read as an absent code (or reset loaded preferences).
+    if (!data) return
+    let code = data.family_code
     if (!code) {
-      code = Math.random().toString(36).substring(2, 10).toUpperCase()
-      await supabase.from('parents').update({ family_code: code }).eq('id', uid)
+      try { code = await ensureFamilyCode(supabase, uid) }
+      catch { return }
     }
     setFamilyCode(code)
     setNotifData({
@@ -471,10 +487,9 @@ export default function ParentDashboard({ view = 'dashboard' }) {
   // three quarters of the dashboard under "How much I write", and a parent looking for
   // "settings" did not find them.
   if (view === 'settings') return (
-    <div className="pd-wrap" style={{ background: PC.bg, minHeight: '100dvh', margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <style>{PD_CSS}</style>
-      <TopBar title={s('db_settings')} onBack={() => nav('/parent/dashboard')} />
-      <div className="tc-scroll" style={{ flex: 1, padding: '0 22px 32px' }}>
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <TopBar title={s('db_settings')} />
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingInline: 22 }}>
         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '6px 2px 12px' }}>{s('db_reach')}</div>
         <Card pad={18} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
@@ -673,11 +688,14 @@ export default function ParentDashboard({ view = 'dashboard' }) {
         )}
         <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 18, color: PC.ink, margin: '26px 2px 12px' }}>{s('db_setup_device')}</div>
         <Card pad={18}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+          {/* Wraps rather than squeezes: the subtitle here is a sentence, not the one word the
+              channel rows above carry, and without minWidth:0 a flex item will not shrink below
+              its longest word — "Çocuk cihazı" came out three lines tall beside the button. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13, flexWrap: 'wrap' }}>
             <div style={{ width: 44, height: 44, borderRadius: 14, background: PC.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon name="qr" size={23} color={PC.tealDeep} />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>{s('db_child_device')}</div>
               <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 1 }}>{s('db_scan_qr')}</div>
             </div>
@@ -706,23 +724,15 @@ export default function ParentDashboard({ view = 'dashboard' }) {
           )}
         </Card>
 
-        <Card pad={18} style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <Icon name="clock" color={PC.tealDeep} />
-            <div><strong>{s('sc_title')}</strong><div style={{ fontSize: 13, color: PC.inkSoft, marginTop: 4 }}>{s('sc_intro')}</div></div>
-          </div>
-          <p style={{ fontSize: 12, color: PC.inkSoft }}>{s('sc_demo')}</p>
-          <Btn variant="soft" onClick={() => nav('/parent/settings/screen-control')}>{s('sc_title')} →</Btn>
-        </Card>
 
       </div>
+      <ParentNav active="settings" />
     </div>
   )
 
   return (
-    <div className="pd-wrap" style={{ background: PC.bg, minHeight: '100dvh', margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <style>{PD_CSS}</style>
-      <div className="tc-scroll" style={{ flex: 1, padding: '8px 22px 32px' }}>
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingTop: 8, paddingInline: 22 }}>
 
         {/* greeting, with Settings named — the gear is where everything that is not today went */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 2px 0' }}>
@@ -731,10 +741,6 @@ export default function ParentDashboard({ view = 'dashboard' }) {
             <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 26, color: PC.ink, letterSpacing: '-.5px', marginTop: 2 }}>{displayName}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button className="tc-press tc-tap" onClick={() => nav('/parent/settings')}
-              style={{ height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', gap: 7, padding: '0 14px', cursor: 'pointer', boxShadow: SHADOW_SM, fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>
-              <span style={{ fontSize: 17 }}>⚙️</span>{s('db_settings')}
-            </button>
             <button className="tc-press tc-tap" onClick={logout} aria-label={s('db_signout')}
               style={{ width: 46, height: 46, borderRadius: 15, background: '#fff', border: `1.5px solid ${PC.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: SHADOW_SM }}>
               <Icon name="logout" size={21} color={PC.inkSoft} />
@@ -751,7 +757,7 @@ export default function ParentDashboard({ view = 'dashboard' }) {
           </Card>
         )}
 
-        <div className="pd-grid">
+        <div>
           <div>
             {/* children — each card says what the parent opens the app to find out */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '22px 2px 12px' }}>
@@ -769,7 +775,7 @@ export default function ParentDashboard({ view = 'dashboard' }) {
               </Card>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                {children.map(child => <ChildCard key={child.id} child={child} pending={pendingFor[child.id]} onClick={() => nav(`/parent/child/${child.id}`)} />)}
+                {children.map(child => <ChildCard key={child.id} child={child} pending={pendingFor[child.id]} onClick={() => nav(`/parent/child/${child.id}`)} onReport={() => nav(`/parent/reports?child=${child.id}`)} />)}
               </div>
             )}
           </div>
@@ -821,6 +827,7 @@ export default function ParentDashboard({ view = 'dashboard' }) {
           onSaved={handleSaved}
         />
       )}
+      <ParentNav active="children" />
     </div>
   )
 }

@@ -17,7 +17,7 @@ cd mobile && gradle :androidApp:assembleDebug
 ```
 
 `-PtutoServer=https://…` points the app at another server (default: production Railway).
-CI: `.github/workflows/tuto-mobile-preview.yml` (push to `mobile/native-tablet-preview`, or run by hand);
+CI: `.github/workflows/tuto-mobile-preview.yml` (native development branches, or run by hand);
 it builds, lints, and runs `TabletTest` on a Pixel Tablet emulator.
 
 ## How it fits together
@@ -39,9 +39,44 @@ it builds, lints, and runs `TabletTest` on a Pixel Tablet emulator.
   once helped; 9 and over get one attempt and the answer with its reason. Recently asked topics and
   operands are remembered so questions do not repeat.
 
-## Status
+## Status — 2026-10-06
 
-Native and working against the real server: family code, PIN, home (today, streak, Gems, goal),
-maths. Every other activity (reading, stories, drawings, puzzles, homework, tree, Gems/goals
-screens) shows "coming to the tablet soon" until it is ported. Not yet: the welcome bonus the web's
-PIN screen writes, refreshing the child's language and settings without signing in again.
+The real-server native source was recovered from `claude/practical-franklin-xigneu` at
+`6468f58`, not the older offline `mobile/native-tablet-preview` branch. The current web
+`main` at `11869e7` has been merged into `codex/android-complete` locally.
+
+Implemented native routes: family setup, selected child/PIN, home, maths, puzzles,
+Gems/reward goals and account switching/settings. The selected child now accompanies the PIN request; the current
+server's puzzle retry response no longer advances to the next question. Failed home
+refreshes preserve the last known balance and show an error instead of inventing zero.
+Setup, PIN, home cards and maths adapt to the actual window and font scale.
+
+**Not a complete release.** English, reading, library/archive, stories/cloud drafts,
+drawings, homework, tree/contributions, settings, activity history and the latest
+maths/English help and reinforcement flows still need native implementation. Puzzle hints, skip and reinforcement start/finish/decline are now connected. Maths paper mode and scratchpad
+are also missing. Merging web sources does not port React screens to Compose.
+
+The user's offline dummy APK was withdrawn. No replacement incomplete APK is being
+delivered. The CI publishes validation artifacts only; the old automatic rolling preview
+release job has been removed locally. A complete Android build is the sole delivery target.
+
+Backend WhatsApp Business integration exists. End-to-end delivery to a verified test
+recipient has not been exercised here. The source-level inventory of every web route is in `WEB_PARITY_AUDIT_2026-10-06.md`.
+Native device tests require an Android device or
+an accelerated emulator; this local environment has no KVM.
+
+## Validation in this workspace
+
+- Web engine in real QuickJS: 162 maths sessions, no short sessions or skipped questions.
+- Puzzle SVG rendering: 11,492 figures, zero missing.
+- Family selection/code and answer retry server rules: 16 tests passed.
+- Shared Kotlin tests: 5 passed.
+- Android debug app and instrumentation APK compile; lint: zero errors, six warnings.
+- Instrumentation tests were **compiled, not executed**. No physical-device layout or
+  production parent-notification claim is made.
+
+2026-10-06 follow-up: four Android JVM puzzle state tests pass. The isolated real-server
+puzzle matrix (age 8, EN/TR/ES) also passes, including review decisions, caps and captured
+parent notifications. Home/goals/settings now use bottom navigation, never a left rail.
+The selected-child forgot-PIN action and reward-request failure feedback are implemented.
+No live WhatsApp delivery or Android device test has been completed.

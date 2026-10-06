@@ -19,7 +19,8 @@ import java.net.URLEncoder
  */
 interface TutoApi {
     suspend fun familyChildren(code: String): List<ChildSummary>
-    suspend fun verifyPin(code: String, pin: String): PinResult
+    suspend fun verifyPin(code: String, pin: String, childId: String? = null): PinResult
+    suspend fun forgotPin(code: String, childId: String): Unit = throw IOException("not supported")
     suspend fun todaySummary(childId: String): Today
     suspend fun mathPlan(childId: String): MathPlan
     suspend fun saveMathSession(childId: String, body: JSONObject): MathSaved
@@ -30,8 +31,12 @@ interface TutoApi {
     suspend fun rewardSuggestions(childId: String): List<Suggestion> = emptyList()
     suspend fun suggestReward(childId: String, name: String, icon: String, gems: Int): Suggestion = throw IOException("not supported")
     suspend fun startPuzzle(childId: String): PuzzleSession = throw IOException("not supported")
-    suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String): PuzzleAnswer = throw IOException("not supported")
+    suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String, skip: Boolean = false): PuzzleAnswer = throw IOException("not supported")
     suspend fun finishPuzzle(sessionId: String): PuzzleResult = throw IOException("not supported")
+    suspend fun puzzleHint(sessionId: String, index: Int, lang: String): JSONObject = throw IOException("not supported")
+    suspend fun startPuzzleReview(childId: String, reviewId: String): PuzzleSession = throw IOException("not supported")
+    suspend fun finishPuzzleReview(childId: String, reviewId: String): PuzzleResult = throw IOException("not supported")
+    suspend fun declinePuzzleReview(childId: String, reviewId: String): Unit = throw IOException("not supported")
 }
 
 class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
@@ -54,7 +59,7 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
                 val code = conn.responseCode
                 val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                 val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                code to (if (text.isBlank()) JSONObject() else runCatching { JSONObject(text) }.getOrElse { JSONObject() })
+                code to (if (text.isBlank()) JSONObject() else runCatching { JSONObject(text) }.getOrElse { throw IOException("Invalid JSON response", it) })
             } finally {
                 conn.disconnect()
             }
@@ -66,21 +71,25 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
         return json.optJSONArray("children").objects().map(ChildSummary::from)
     }
 
-    override suspend fun verifyPin(code: String, pin: String): PinResult {
-        val (status, json) = request("POST", "/api/family/${enc(code)}/verify-pin", JSONObject().put("pin", pin))
+    override suspend fun verifyPin(code: String, pin: String, childId: String?): PinResult {
+        val (status, json) = request("POST", "/api/family/${enc(code)}/verify-pin", JSONObject().put("pin", pin).apply { childId?.let { put("child_id", it) } })
         return when {
             status in 200..299 && json.optJSONObject("child") != null -> PinResult.Ok(Child.from(json.getJSONObject("child")))
             status == 401 -> PinResult.Wrong(json.optInt("attempts_left", -1))
-            status == 429 -> PinResult.Locked(json.optInt("retry_in_seconds", 600))
+            status == 429 -> PinResult.Locked(json.optInt("retry_in_seconds", 60))
             else -> throw IOException("server $status")
         }
     }
 
+    override suspend fun forgotPin(code: String, childId: String) {
+        val (status, json) = request("POST", "/api/family/${enc(code)}/forgot-pin", JSONObject().put("child_id", childId))
+        if (status !in 200..299 || !json.optBoolean("ok")) throw IOException("server $status")
+    }
+
     override suspend fun todaySummary(childId: String): Today {
         val (status, json) = request("GET", "/api/children/${enc(childId)}/today-summary")
-        // The server answers 500 with a zeroed summary rather than nothing; that is still a
-        // usable home screen, so only a missing body counts as a failure.
-        if (status !in 200..299 && !json.has("activities")) throw IOException("server $status")
+        // A fallback zero balance on a 500 is not the child's actual balance.
+        if (status !in 200..299) throw IOException("server $status")
         return Today.from(json)
     }
 
@@ -145,17 +154,40 @@ class HttpTutoApi(private val base: String = BuildConfig.SERVER_URL) : TutoApi {
         return PuzzleSession.from(json)
     }
 
-    override suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String): PuzzleAnswer {
-        val body = JSONObject().put("question_index", index).put("chosen_index", chosen).put("lang", lang)
+    override suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String, skip: Boolean): PuzzleAnswer {
+        val body = JSONObject().put("question_index", index).put("chosen_index", chosen).put("lang", lang).put("skip", skip)
         val (status, json) = request("POST", "/api/puzzle-sessions/${enc(sessionId)}/answer", body)
         if (status !in 200..299) throw IOException("server $status")
-        return PuzzleAnswer(json.optBoolean("correct"), json.optInt("correct_index", -1), json.optStringOrNull("why"))
+        return PuzzleAnswer(json.optBoolean("correct"), json.optInt("correct_index", -1), json.optStringOrNull("why"), json.optBoolean("retry"))
     }
 
     override suspend fun finishPuzzle(sessionId: String): PuzzleResult {
         val (status, json) = request("POST", "/api/puzzle-sessions/${enc(sessionId)}/finish")
         if (status !in 200..299) throw IOException("server $status")
-        return PuzzleResult(json.optInt("correct"), json.optInt("total"), json.optInt("gems_earned"), json.optBoolean("capped"))
+        return PuzzleResult(json.optInt("correct"), json.optInt("total"), json.optInt("gems_earned"), json.optBoolean("capped"), json.optJSONObject("review"))
+    }
+
+    override suspend fun puzzleHint(sessionId: String, index: Int, lang: String): JSONObject {
+        val (status, json) = request("POST", "/api/puzzle-sessions/${enc(sessionId)}/hint", JSONObject().put("question_index", index).put("lang", lang))
+        if (status !in 200..299) throw IOException("server $status")
+        return json
+    }
+
+    override suspend fun startPuzzleReview(childId: String, reviewId: String): PuzzleSession {
+        val (status, json) = request("POST", "/api/children/${enc(childId)}/puzzle-review/${enc(reviewId)}/start")
+        if (status !in 200..299) throw IOException("server $status")
+        return PuzzleSession.from(json)
+    }
+
+    override suspend fun finishPuzzleReview(childId: String, reviewId: String): PuzzleResult {
+        val (status, json) = request("POST", "/api/children/${enc(childId)}/puzzle-review/${enc(reviewId)}/finish")
+        if (status !in 200..299) throw IOException("server $status")
+        return PuzzleResult(json.optInt("correct"), json.optInt("asked"), json.optInt("gems_earned"), false)
+    }
+
+    override suspend fun declinePuzzleReview(childId: String, reviewId: String) {
+        val (status, json) = request("POST", "/api/children/${enc(childId)}/puzzle-review/${enc(reviewId)}/decline")
+        if (status !in 200..299 || !json.optBoolean("ok")) throw IOException("server $status")
     }
 }
 

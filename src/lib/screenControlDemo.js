@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { getTodaySummary } from './supabase'
 import { newDemo, demoAction, readRules } from './screenControl'
 
 const memory = new Map()
@@ -48,4 +49,22 @@ export function useScreenDemo(childId, rules, ticking = false) {
     return () => clearInterval(timer)
   }, [key, rules, ticking])
   return [demo, act]
+}
+
+// Today's finished tasks, from the same summary the child's home reads — the one real number in
+// this trial. It goes into the demo state so status() can apply "learn first"; until it arrives
+// (or if the read fails) the count is unknown, and unknown never closes anything.
+// `act` is rebuilt every render, so it is read through a ref: depending on it would refetch the
+// summary on every render the write itself causes.
+export function useLearnedToday(childId, act) {
+  const actRef = useRef(act)
+  useEffect(() => { actRef.current = act })
+  useEffect(() => {
+    if (!childId) return
+    let alive = true
+    getTodaySummary(childId).then(t => {
+      if (alive) actRef.current({ type: 'learned', n: Object.values(t?.activities || {}).reduce((a, n) => a + (Number(n) || 0), 0) })
+    })
+    return () => { alive = false }
+  }, [childId])
 }

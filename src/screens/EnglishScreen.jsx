@@ -5,6 +5,8 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { EnglishStem, EnglishOptions, englishWhyLines } from '../components/EnglishView'
 import { EnglishReviewList } from '../components/SittingReview'
+import Scratchpad from '../components/Scratchpad'
+import EnglishHelpVisual from '../components/EnglishHelpVisual'
 
 // The child's English: verbal reasoning, spelling and grammar in the Bond 11+ English books'
 // formats. Ten questions from the child's age band, one at a time, each marked when it is sent.
@@ -29,6 +31,7 @@ const ANIM = `
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes flashIn { 0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes hintNudge { 0%, 100% { transform: scale(1) rotate(0); } 20% { transform: scale(1.12) rotate(-5deg); } 40% { transform: scale(1.12) rotate(5deg); } 60% { transform: scale(1.08) rotate(-3deg); } 80% { transform: scale(1.04) rotate(2deg); } }
 @keyframes flashHold { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -72,6 +75,13 @@ export default function EnglishScreen() {
   const [flash, setFlash] = useState(null)        // the answer response while the overlay is up
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [result, setResult] = useState(null)
+  // Help for the question on screen. `rungs` are the hints asked for so far (the server builds each
+  // one when it is asked, so nothing that gives the answer is ever sent with the question);
+  // `struck` the options out of play, by a hint or by a first wrong try (single-answer only).
+  const [rungs, setRungs] = useState([])
+  const [struck, setStruck] = useState([])
+  const [hintBusy, setHintBusy] = useState(false)
+  const [nudge, setNudge] = useState(false)
   const advanceTimer = useRef(null)
 
   const wrap = {
@@ -91,6 +101,7 @@ export default function EnglishScreen() {
     setStep('welcome')
   }
   function retry() {
+    if (session?.review) { nav('/child/home'); return }
     setStep('loading')
     fetchSession().then(begin, () => setStep('error'))
   }
@@ -106,28 +117,88 @@ export default function EnglishScreen() {
   async function finish() {
     setStep('finishing')
     try {
-      setResult(await post(`/api/english-sessions/${session.session_id}/finish`))
+      if (session.review) {
+        const r = await post(`/api/children/${child.id}/english-review/${session.session_id}/finish`)
+        setResult({ review_done: true, correct: r.correct ?? 0, total: r.asked ?? total, gems_earned: r.gems_earned ?? 0 })
+      } else {
+        setResult(await post(`/api/english-sessions/${session.session_id}/finish`))
+      }
       setStep('result')
     } catch {
       setStep('error')
     }
   }
 
+  // The review round: fresh questions of the kinds that went wrong, dealt by the server. "Not now" lets
+  // the parent's message go and the kinds carry into the next sitting.
+  async function startReview() {
+    const offer = result.review
+    setStep('loading')
+    try {
+      const r = await post(`/api/children/${child.id}/english-review/${offer.id}/start`)
+      begin({ ...r, review: true, will_pay: offer.gems_possible, gems: null })
+    } catch { setStep('error') }
+  }
+  async function declineReview() {
+    try { await post(`/api/children/${child.id}/english-review/${result.review.id}/decline`) } catch { /* the sweep settles it */ }
+    nav('/child/home')
+  }
+
   function advance() {
     clearTimeout(advanceTimer.current)
     setFlash(null)
     setPicked([])
+    setRungs([])
+    setStruck([])
+    setNudge(false)
     if (qIdx >= total - 1) finish()
     else setQIdx(qIdx + 1)
   }
 
   function select(i) {
-    if (pending || answers[qIdx]) return
+    if (pending || answers[qIdx] || struck.includes(i)) return
     const need = session.questions[qIdx].pick || 1
     setPicked(prev => (need === 1 ? [i]
       : prev.includes(i) ? prev.filter(x => x !== i)
         : prev.length >= need ? [...prev.slice(1), i] : [...prev, i]))
     setAnswerFailed(false)
+  }
+
+  async function skip() {
+    if (pending || answers[qIdx]) return
+    setPending(true)
+    setAnswerFailed(false)
+    try {
+      const r = await post(`/api/english-sessions/${session.session_id}/answer`, { question_index: qIdx, skip: true })
+      setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
+      setFlash({ ...r, skipped: true })
+    } catch {
+      setAnswerFailed(true)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function askHint() {
+    if (hintBusy || pending || answers[qIdx] || rungs.length >= 3) return
+    setHintBusy(true)
+    setNudge(false)
+    try {
+      const h = await post(`/api/english-sessions/${session.session_id}/hint`, { question_index: qIdx, chosen: picked })
+      setRungs(prev => [...prev, h])
+      if (h.eliminate != null) {
+        setStruck(prev => (prev.includes(h.eliminate) ? prev : [...prev, h.eliminate]))
+        setPicked(prev => prev.filter(x => x !== h.eliminate))
+      }
+      requestAnimationFrame(() => {
+        const el = document.querySelector('.pz-scroll')
+        if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      })
+    } catch {
+      setAnswerFailed(true)
+    } finally {
+      setHintBusy(false)
+    }
   }
 
   async function send() {
@@ -137,6 +208,14 @@ export default function EnglishScreen() {
     setAnswerFailed(false)
     try {
       const r = await post(`/api/english-sessions/${session.session_id}/answer`, { question_index: qIdx, chosen: picked })
+      // The first wrong answer gives the question back and reveals nothing: the card greys the wrong
+      // pick (when only one was asked for) and the 💡 shakes. Seven and over, as in maths.
+      if (r.retry) {
+        if ((session.questions[qIdx].pick || 1) === 1) setStruck(prev => [...new Set([...prev, ...picked])])
+        setPicked([])
+        setNudge(true)
+        return
+      }
       setAnswers(prev => { const next = prev.slice(); next[qIdx] = r; return next })
       setFlash(r)
       // A right answer flashes and moves on, as maths does. A wrong one stays until the child
@@ -205,16 +284,20 @@ export default function EnglishScreen() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 26px 40px', gap: 20, textAlign: 'center' }}>
         <TutoMascot size={150} expression="excited" color={ROSE} style={{ animation: 'float 3s ease-in-out infinite' }} />
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-          {t('english_welcome', language)}
+          {session.review
+            ? say(language, 'New questions like the tricky ones!\nYou can ask for a 💡 hint any time.', 'Zorlandıklarına benzer yeni sorular!\nİstediğin zaman 💡 ipucu isteyebilirsin.', '¡Preguntas nuevas como las difíciles!\nPuedes pedir una pista 💡 cuando quieras.')
+            : t('english_welcome', language)}
         </div>
-        <div style={{
-          background: session.will_pay ? ROSE : 'rgba(255,255,255,.8)', color: session.will_pay ? '#fff' : INK_SOFT,
-          borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-        }}>
-          {session.will_pay
-            ? <>⭐ {t('math_up_to_gems', language)} {session.gems} {t('math_gems_word', language)}</>
-            : <>🌙 {t('puzzle_no_gems', language)}</>}
-        </div>
+        {(session.review ? session.will_pay : true) && (
+          <div style={{
+            background: session.will_pay ? ROSE : 'rgba(255,255,255,.8)', color: session.will_pay ? '#fff' : INK_SOFT,
+            borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+          }}>
+            {session.will_pay
+              ? (session.review ? <>⭐ {say(language, 'A few bonus gems', 'Biraz bonus gem', 'Unos gems extra')}</> : <>⭐ {t('math_up_to_gems', language)} {session.gems} {t('math_gems_word', language)}</>)
+              : <>🌙 {t('puzzle_no_gems', language)}</>}
+          </div>
+        )}
         <button className="pz-press" onClick={() => setStep('questions')} style={{ ...primaryBtn, marginTop: 4 }}>
           {t('math_lets_go', language)}
         </button>
@@ -259,6 +342,40 @@ export default function EnglishScreen() {
             </div>
           </div>
 
+          {!result.review_done && (() => {
+            const own = answers.filter(a => a?.correct && !a.helped).length
+            const helped = answers.filter(a => a?.correct && a.helped).length
+            const missed = answers.filter(a => a && !a.correct).length
+            if (helped === 0 && missed === 0) return null
+            const parts = [
+              own > 0 && say(language, `${own} on your own`, `${own} yardımsız doğru`, `${own} sin ayuda`),
+              helped > 0 && say(language, `${helped} right with a hint`, `${helped} ipucuyla doğru`, `${helped} bien con una pista`),
+              missed > 0 && say(language, `${missed} to practise`, `${missed} geliştirilecek`, `${missed} por repasar`),
+            ].filter(Boolean)
+            return <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK_SOFT, lineHeight: 1.5 }}>{parts.join(' · ')}</div>
+          })()}
+
+          {result.review && !result.review_done && (
+            <div style={{ background: 'white', borderRadius: 22, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease 0.12s both' }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16.5, color: INK, lineHeight: 1.4, textAlign: 'center' }}>
+                {say(language, `Let's practise the tricky ones — ${result.review.count} new questions.`, `Zorlandıklarını pekiştirelim — ${result.review.count} yeni soru.`, `Repasemos las difíciles: ${result.review.count} preguntas nuevas.`)}
+              </div>
+              <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: result.review.max_gems > 0 ? ORANGE : INK_SOFT }}>
+                {result.review.max_gems > 0
+                  ? say(language, `⭐ Up to +${result.review.max_gems} ${result.review.max_gems === 1 ? 'gem' : 'gems'}`, `⭐ En fazla +${result.review.max_gems} gem`, `⭐ Hasta +${result.review.max_gems} ${result.review.max_gems === 1 ? 'gem' : 'gems'}`)
+                  : say(language, 'No gems this time, but it makes you stronger 💪', 'Bu sefer gem yok ama seni güçlendirir 💪', 'Esta vez sin gems, pero te hace más fuerte 💪')}
+              </div>
+              <button className="pz-press" onClick={startReview} style={{
+                background: ROSE, color: 'white', border: 'none', borderRadius: 16, padding: '14px 20px',
+                fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer', boxShadow: '0 8px 20px rgba(170,50,85,.3)',
+                alignSelf: 'center', width: '100%', maxWidth: 420,
+              }}>{say(language, 'Practise', 'Pekiştirelim', 'Repasemos')} ({result.review.count})</button>
+              <button className="pz-press" onClick={declineReview} style={{
+                background: 'none', border: 'none', color: INK_SOFT, fontFamily: FRED, fontWeight: 600, fontSize: 15, padding: 8, cursor: 'pointer',
+              }}>{say(language, 'Not now', 'Şimdi değil', 'Ahora no')}</button>
+            </div>
+          )}
+
           {/* One card per question: the question again, every option, the child's picks and the
               right ones marked, and for a miss why the chosen option was not it. */}
           <div style={{ animation: 'fadeUp 0.4s ease 0.08s both' }}>
@@ -266,11 +383,13 @@ export default function EnglishScreen() {
             <EnglishReviewList questions={session.questions} answers={answers} lang={language} />
           </div>
 
-          <button className="pz-press" onClick={() => nav('/child/home')} style={{
-            background: ROSE, color: 'white', border: 'none', borderRadius: 18, padding: '16px 22px',
-            fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer',
-            boxShadow: '0 8px 20px rgba(170,50,85,.34)', marginTop: 4,
-          }}>{t('math_done', language)}! 🏠</button>
+          {!(result.review && !result.review_done) && (
+            <button className="pz-press" onClick={() => nav('/child/home')} style={{
+              background: ROSE, color: 'white', border: 'none', borderRadius: 18, padding: '16px 22px',
+              fontFamily: FRED, fontSize: 18, fontWeight: 600, cursor: 'pointer',
+              boxShadow: '0 8px 20px rgba(170,50,85,.34)', marginTop: 4,
+            }}>{t('math_done', language)}! 🏠</button>
+          )}
         </div>
       </div>
     )
@@ -282,6 +401,7 @@ export default function EnglishScreen() {
   const answer = answers[qIdx]
   const need = q.pick || 1
   const pct = ((qIdx + (answer ? 1 : 0)) / total) * 100
+  // A skipped question has nothing chosen and so no "why not" lines — only the right words.
   const rightWords = flash ? (flash.correct_indices || []).map(i => q.options[i]?.text).filter(Boolean) : []
   const whys = flash && !flash.correct ? englishWhyLines(q, flash.why, language) : []
 
@@ -327,7 +447,7 @@ export default function EnglishScreen() {
             <div className="pz-feedback" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
               <div style={{ fontSize: 78, animation: 'pop .35s ease both' }}>{flash.correct ? '⭐' : '💪'}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: flash.correct ? 30 : 22, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>
-                {flash.correct ? t('math_yes', language) : t('math_not_this', language)}
+                {flash.correct ? t('math_yes', language) : flash.skipped ? say(language, 'No problem!', 'Olsun!', '¡No pasa nada!') : t('math_not_this', language)}
               </div>
               {!flash.correct && rightWords.length > 0 && (
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: 'white', opacity: .92, marginTop: -6 }}>
@@ -341,6 +461,14 @@ export default function EnglishScreen() {
                       <span key={k} style={{ background: '#fff', color: INK, borderRadius: 16, padding: '12px 20px', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 24 }}>{w}</span>
                     ))}
                   </div>
+                  {(flash.explain || []).length > 0 && (
+                    <div style={{ background: 'rgba(255,255,255,.2)', borderRadius: 16, padding: '12px 16px', maxWidth: 440, display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                      {flash.explain.map((line, k) => (
+                        <div key={k} style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: 'white', textAlign: 'center', lineHeight: 1.45 }}>{line}</div>
+                      ))}
+                    </div>
+                  )}
+                  {flash.explain_visual && <EnglishHelpVisual visual={flash.explain_visual} scale={isTablet ? 1.3 : 1} lang={language} />}
                   {whys.map((w, k) => (
                     <div key={k} style={{ fontFamily: FRED, fontWeight: 600, fontSize: 17, color: 'white', textAlign: 'center', lineHeight: 1.45, maxWidth: 420, marginTop: 6 }}>
                       {w}
@@ -385,14 +513,80 @@ export default function EnglishScreen() {
           </div>
 
           {/* The options are the keypad: under the question card, each one a button. */}
-          <EnglishOptions item={q} states={q.options.map((_, i) => (picked.includes(i) ? 'picked' : null))}
+          <EnglishOptions item={q} states={q.options.map((_, i) => (struck.includes(i) ? 'struck' : picked.includes(i) ? 'picked' : null))}
             onPick={select} disabled={pending || !!answer} />
 
+          {!answer && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              {rungs.length > 0 && (
+                <div style={{
+                  background: 'rgba(255,255,255,.92)', borderRadius: 16, padding: isTablet ? '16px 22px' : '13px 17px', maxWidth: isTablet ? 620 : 440,
+                  fontFamily: FRED, fontWeight: 600, fontSize: isTablet ? 19 : 15.5, color: INK_SOFT, lineHeight: 1.5,
+                  textAlign: 'center', animation: 'scaleIn .22s ease both', display: 'flex', flexDirection: 'column', gap: 9,
+                }}>
+                  {rungs.map((h, k) => (
+                    <div key={k}>
+                      {h.level === 1 && h.text}
+                      {h.level === 2 && (h.eliminate == null
+                        ? say(language, 'Look at the words again, one by one.', 'Kelimelere tekrar, tek tek bak.', 'Mira las palabras otra vez, una a una.')
+                        : (englishWhyLines(q, [{ index: h.eliminate, key: h.why }], language)[0]
+                          || `${q.options[h.eliminate]?.text}: ${say(language, 'not this one', 'bu değil', 'esta no')}`))}
+                      {h.level === 3 && (h.steps || []).map((line, j) => <div key={j} style={{ marginTop: j ? 6 : 0 }}>{line}</div>)}
+                      {h.level === 3 && h.visual && <div style={{ marginTop: 10 }}><EnglishHelpVisual visual={h.visual} scale={isTablet ? 1.3 : 1} lang={language} /></div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* The actions stay pinned to the bottom of the column: on a short phone the question, the options and an open hint
+              are taller than the screen, and Send used to be a scroll away. */}
+          <div style={{ position: 'sticky', bottom: -22, margin: '0 -20px -22px', padding: '10px 20px 22px', zIndex: 5,
+            background: 'linear-gradient(to top, rgba(250,219,227,.96) 72%, rgba(250,219,227,0))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {!answer && (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {rungs.length < 3 && (
+                <button className="pz-press" onClick={askHint} disabled={hintBusy || pending}
+                  key={nudge ? 'nudge' : 'hint'} style={{
+                    animation: nudge && rungs.length === 0 ? 'hintNudge .9s ease 2' : undefined,
+                    display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
+                    background: rungs.length ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
+                    color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15, boxShadow: '0 3px 10px rgba(60,120,200,.08)',
+                  }}>
+                  💡 {rungs.length === 0 ? say(language, 'Hint', 'İpucu', 'Pista') : say(language, 'More help', 'Biraz daha', 'Más ayuda')}
+                </button>
+              )}
+                {/* An honest way out: the question counts as wrong and the right words are shown.
+              Only while nothing is chosen. It sat right under Send, and a child who had picked
+              "far" for the opposite of "near" and reached for Send landed here — the right
+              answer thrown away as "I don't know". Once something is picked they have an answer;
+              Send is the button. */}
+                {picked.length === 0 && (
+                  <button className="pz-press" onClick={skip} disabled={pending} style={{
+              border: 'none', background: 'rgba(255,255,255,.72)', color: INK_SOFT,
+              borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontFamily: FRED, fontWeight: 600, fontSize: 15,
+            }}>{t('rd_skip', language)}</button>
+                )}
+              </div>
+            )}
+              {nudge && rungs.length === 0 && (
+                <div style={{
+                  background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 320,
+                  fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
+                  lineHeight: 1.4, animation: 'scaleIn .22s ease both',
+                }}>
+                  {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
+                </div>
+              )}
           <button className="pz-press" onClick={send} disabled={picked.length !== need || pending || !!answer} style={{
-            ...primaryBtn, alignSelf: 'center', marginTop: 4,
+            ...primaryBtn, alignSelf: 'center', padding: '13px 46px', fontSize: 19,
             opacity: picked.length !== need ? 0.4 : 1, cursor: picked.length !== need ? 'default' : 'pointer',
             boxShadow: picked.length !== need ? 'none' : primaryBtn.boxShadow, transition: 'opacity .15s ease',
           }}>{pending ? '…' : t('puzzle_send', language)}</button>
+
+          </div>
 
           {answerFailed && (
             <div style={{ background: '#FFF3E0', borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11 }}>
@@ -402,6 +596,7 @@ export default function EnglishScreen() {
           )}
         </div>
       </div>
+      <Scratchpad key={qIdx} selector=".pz-scroll" language={language} accent={ROSE} />
     </>
   )
 }

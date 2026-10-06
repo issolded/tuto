@@ -1,7 +1,7 @@
-name: Tuto Android preview
+name: Tuto Android validation
 on:
   push:
-    branches: [mobile/native-tablet-preview]
+    branches: [main, 'codex/android-*']
     paths: ['mobile/**', 'src/lib/**', 'src/components/**', 'design/native-icons/**', 'server/puzzle/**', '.github/workflows/tuto-mobile-preview.yml']
   workflow_dispatch:
 permissions:
@@ -44,10 +44,10 @@ jobs:
           node mobile/engine/qjs-test.mjs
           node mobile/engine/puzzle-test.mjs
       - run: node prepare-assets.mjs
-      - run: gradle :shared:jvmTest :androidApp:assembleDebug :androidApp:lintDebug --stacktrace
+      - run: gradle :shared:jvmTest :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: tuto-android-preview-apk
+          name: tuto-android-validation-apk
           path: mobile/androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
@@ -104,27 +104,3 @@ jobs:
             mobile/androidApp/build/reports/androidTests/
             mobile-screenshots/
             mobile/mobile-screenshots/
-
-  # The tested APK as a plain download: one rolling pre-release, replaced by every green run, so
-  # the link never changes and it can be opened straight from an emulator's browser.
-  release:
-    needs: [android, tablet]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: tuto-android-preview-apk
-          path: apk
-      - name: Publish the android-preview release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          cp apk/*.apk tuto-android-preview.apk
-          gh release delete android-preview --cleanup-tag --yes || true
-          gh release create android-preview tuto-android-preview.apk \
-            --prerelease --target "$GITHUB_SHA" \
-            --title "Tuto Android preview" \
-            --notes "Debug build from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}, after the tablet tests passed. Talks to the production server."

@@ -68,8 +68,11 @@ fun GoalsScreen(vm: TutoViewModel) {
     var failed by remember { mutableStateOf(false) }
     var claiming by remember { mutableStateOf<String?>(null) }
     var asking by remember { mutableStateOf(false) }
+    var reload by remember { mutableStateOf(0) }
+    var actionFailed by remember { mutableStateOf(false) }
 
-    LaunchedEffect(child.id) {
+    LaunchedEffect(child.id, reload) {
+        failed = false
         runCatching {
             val r = async { vm.api.rewards(child.id) }
             val g = async { vm.api.gems(child.id) }
@@ -85,6 +88,8 @@ fun GoalsScreen(vm: TutoViewModel) {
             Text(s("goals_title"), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
             GemPill(gems)
         }
+        if (failed) SoftButton(s.say("Try again", "Tekrar dene", "Reintentar")) { reload++ }
+        if (actionFailed) Text(s.say("Your request couldn't be sent. Check the connection and try again.", "İsteğin gönderilemedi. Bağlantını kontrol edip tekrar dene.", "No se pudo enviar tu solicitud. Revisa la conexión e inténtalo otra vez."), style = MaterialTheme.typography.bodyLarge)
         when {
             failed -> Text(s.say("Can't reach Tuto right now. Try again in a moment.", "Şu an Tuto'ya ulaşamıyorum. Birazdan tekrar dene.", "Ahora no puedo conectar con Tuto. Inténtalo en un momento."), style = MaterialTheme.typography.bodyLarge, color = Ink.soft)
             rewards == null -> Text(s("dr_loading_short"), style = MaterialTheme.typography.bodyLarge, color = Ink.soft)
@@ -98,9 +103,16 @@ fun GoalsScreen(vm: TutoViewModel) {
                     RewardCard(r, gems ?: 0, pending.containsKey(r.id), claiming == r.id, s) {
                         if (claiming != null) return@RewardCard
                         claiming = r.id
+                        actionFailed = false
                         scope.launch {
                             runCatching { vm.api.claimReward(child.id, r.id) }
-                                .onSuccess { c -> claims = listOf(c) + claims.filter { it.id != c.id }; gems = (gems ?: 0) - r.cost }
+                                .onSuccess { c ->
+                                    claims = listOf(c) + claims.filter { it.id != c.id }
+                                    // A pending claim is server-owned. Re-read the balance instead
+                                    // of guessing it by subtracting the card's cached price.
+                                    gems = runCatching { vm.api.gems(child.id) }.getOrNull()
+                                }
+                                .onFailure { actionFailed = true }
                             claiming = null
                         }
                     }

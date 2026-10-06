@@ -3,7 +3,7 @@ import { t, childLang } from '../lib/i18n'
 import Shell from '../components/Shell'
 import { Icon } from '../lib/parentUI'
 import { SAMPLE_APPS, status, canRedeem } from '../lib/screenControl'
-import { useCachedDemoRules, useScreenDemo } from '../lib/screenControlDemo'
+import { useCachedDemoRules, useScreenDemo, useLearnedToday } from '../lib/screenControlDemo'
 
 const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
 const NAMES = { roblox: 'Roblox', youtube: 'YouTube', minecraft: 'Minecraft', tuto: 'Tuto' }
@@ -11,6 +11,7 @@ function ChildDemo({ child, theme }) {
   const lang = childLang(child), c = key => t(key, lang)
   const { rules, configured } = useCachedDemoRules(child.id)
   const [demo, act] = useScreenDemo(child.id, rules, true)
+  useLearnedToday(child.id, act)
   const info = status(rules, demo)
   const button = { ...theme.card, padding: '15px 18px', font: 'inherit', fontWeight: 700, cursor: 'pointer', color: theme.ink, width: '100%' }
   return <div style={{ display: 'grid', gap: 16 }}>

@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,7 +61,7 @@ import kotlinx.coroutines.launch
 fun SetupScreen(vm: TutoViewModel) {
     val s = LocalStrings.current
     val scope = rememberCoroutineScope()
-    var code by remember { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -78,9 +79,9 @@ fun SetupScreen(vm: TutoViewModel) {
     }
 
     // With the keyboard up a landscape tablet has little height left: scroll rather than hide Continue.
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        Row(Modifier.verticalScroll(rememberScrollState()).fillMaxWidth().heightIn(min = maxHeight).padding(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
-            Tuto(Modifier.size(width = 320.dp, height = 406.dp))
+    AdaptivePair(first = {
+        Tuto(Modifier.widthIn(max = 280.dp).fillMaxWidth().height(260.dp))
+    }, second = {
             Column(Modifier.widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Text(s.say("Hi! I'm Tuto.", "Merhaba! Ben Tuto.", "¡Hola! Soy Tuto."), style = MaterialTheme.typography.headlineLarge)
                 Text(s.say("Ask your grown-up for the family code on their Tuto dashboard.", "Aile kodunu annenden ya da babandan iste. Tuto panellerinde yazıyor.", "Pide a tu madre o a tu padre el código de familia de su panel de Tuto."), style = MaterialTheme.typography.bodyLarge, color = Ink.soft)
@@ -97,13 +98,12 @@ fun SetupScreen(vm: TutoViewModel) {
                 error?.let { Text(it, color = Color(0xFFB3261E), style = MaterialTheme.typography.bodyMedium) }
                 BigButton(if (busy) "…" else s.say("Continue", "Devam", "Continuar"), Modifier.fillMaxWidth(), enabled = code.isNotBlank() && !busy) { submit() }
             }
-        }
-    }
+    })
 }
 
 /**
  * A four-digit PIN, checked on the server (it identifies which child is signing in). Five wrong
- * tries lock the family for ten minutes there; this only relays what the server says.
+ * tries lock the family for one minute there; this only relays what the server says.
  */
 @Composable
 fun PinScreen(vm: TutoViewModel) {
@@ -111,33 +111,51 @@ fun PinScreen(vm: TutoViewModel) {
     val scope = rememberCoroutineScope()
     val code = vm.session.familyCode ?: return
     var kids by remember { mutableStateOf<List<ChildSummary>?>(null) }
-    var pin by remember { mutableStateOf("") }
+    var pin by rememberSaveable { mutableStateOf("") }
+    var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    var loadFailed by remember { mutableStateOf(false) }
+    var loadKey by remember { mutableStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
+    var requestingPin by remember { mutableStateOf(false) }
+    var pinRequested by remember { mutableStateOf(false) }
     var shakeKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(code) { kids = runCatching { vm.api.familyChildren(code) }.getOrNull() }
+    LaunchedEffect(code, loadKey) {
+        loadFailed = false
+        runCatching { vm.api.familyChildren(code) }
+            .onSuccess { kids = it; if (it.size == 1) selected = it[0].id }
+            .onFailure { loadFailed = true }
+    }
 
     fun check(entered: String) {
         checking = true
         scope.launch {
-            val result = runCatching { vm.api.verifyPin(code, entered) }.getOrNull()
+            val result = runCatching { vm.api.verifyPin(code, entered, selected) }.getOrNull()
             checking = false
             when (result) {
                 is PinResult.Ok -> vm.signedIn(result.child)
                 is PinResult.Wrong -> { pin = ""; shakeKey++; message = s.say("That's not the right PIN. Try again!", "PIN yanlış. Tekrar dene!", "Ese PIN no es. ¡Prueba otra vez!") }
-                is PinResult.Locked -> { pin = ""; message = s.say("Too many tries. Wait ${result.retrySeconds / 60} minutes.", "Çok fazla deneme oldu. ${result.retrySeconds / 60} dakika bekle.", "Demasiados intentos. Espera ${result.retrySeconds / 60} minutos.") }
+                is PinResult.Locked -> { pin = ""; message = s.say("Too many tries. Wait ${((result.retrySeconds + 59) / 60).coerceAtLeast(1)} minutes.", "Çok fazla deneme oldu. ${((result.retrySeconds + 59) / 60).coerceAtLeast(1)} dakika bekle.", "Demasiados intentos. Espera ${((result.retrySeconds + 59) / 60).coerceAtLeast(1)} minutos.") }
                 null -> { pin = ""; message = s.say("No connection. Try again.", "Bağlantı yok. Tekrar dene.", "No hay conexión. Inténtalo otra vez.") }
             }
         }
     }
 
-    Row(Modifier.fillMaxSize().padding(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Tuto(Modifier.size(width = 260.dp, height = 330.dp))
+    AdaptivePair(first = {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Tuto(Modifier.widthIn(max = 260.dp).fillMaxWidth().height(220.dp))
             Text(s.say("Who's learning today?", "Bugün kim öğreniyor?", "¿Quién aprende hoy?"), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
             kids?.takeIf { it.isNotEmpty() }?.let { list ->
-                Text(list.joinToString(" · ") { it.name }, style = MaterialTheme.typography.bodyLarge, color = Ink.soft, textAlign = TextAlign.Center)
+                list.forEach { kid ->
+                    androidx.compose.material3.FilterChip(
+                        selected = selected == kid.id,
+                        onClick = { if (!checking && !requestingPin) { selected = kid.id; pin = ""; message = null; pinRequested = false } },
+                        label = { Text(kid.name) },
+                        enabled = !checking && !requestingPin,
+                        modifier = Modifier.testTag("child_${kid.id}"),
+                    )
+                }
             }
             Text(
                 s.say("Not your family?", "Senin ailen değil mi?", "¿No es tu familia?"),
@@ -145,15 +163,22 @@ fun PinScreen(vm: TutoViewModel) {
                 modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { vm.leaveFamily() }.padding(10.dp),
             )
         }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    }, second = {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            if (loadFailed) {
+                Text(s.say("Couldn't load your family. Check your connection.", "Ailen yüklenemedi. Bağlantını kontrol et.", "No se pudo cargar tu familia. Revisa la conexión."))
+                SoftButton(s.say("Try again", "Tekrar dene", "Reintentar")) { loadKey++ }
+            } else if (kids?.isEmpty() == true) {
+                Text(s.say("No children found. Ask your grown-up to check the family code.", "Çocuk bulunamadı. Aile kodunu ebeveyninle kontrol et.", "No se encontraron niños. Revisa el código con tu familia."))
+            }
             Text(s.say("Enter your PIN", "PIN'ini gir", "Escribe tu PIN"), style = MaterialTheme.typography.headlineMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.semantics { contentDescription = "${pin.length}/4" }) {
                 repeat(4) { i -> Box(Modifier.size(26.dp).clip(CircleShape).background(if (i < pin.length) Ink.main else Ink.main.copy(alpha = .15f))) }
             }
-            Box(Modifier.height(28.dp)) { message?.let { Text(it, color = Color(0xFFB3261E), style = MaterialTheme.typography.bodyMedium) } }
+            Box(Modifier.heightIn(min = 28.dp)) { message?.let { Text(it, color = Color(0xFFB3261E), style = MaterialTheme.typography.bodyMedium) } }
             Keypad(
                 keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"),
-                enabled = !checking,
+                enabled = !checking && !requestingPin && !loadFailed && selected != null && !kids.isNullOrEmpty(),
                 onKey = { k ->
                     message = null
                     when {
@@ -161,10 +186,24 @@ fun PinScreen(vm: TutoViewModel) {
                         pin.length < 4 -> { pin += k; if (pin.length == 4) check(pin) }
                     }
                 },
-                modifier = Modifier.width(360.dp),
+                modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth(),
             )
+            androidx.compose.material3.TextButton(
+                enabled = selected != null && !checking && !requestingPin && !pinRequested && !loadFailed,
+                modifier = Modifier.testTag("forgot-pin"),
+                onClick = {
+                    val id = selected ?: return@TextButton
+                    requestingPin = true
+                    scope.launch {
+                        runCatching { vm.api.forgotPin(code, id) }
+                            .onSuccess { pinRequested = true; message = s.say("Request received. Ask your grown-up for a new PIN.", "İstek alındı. Yeni PIN için ebeveynine sor.", "Solicitud recibida. Pide un PIN nuevo a tu familia.") }
+                            .onFailure { message = s.say("Couldn't send the request. Try again.", "İstek gönderilemedi. Tekrar dene.", "No se pudo enviar. Inténtalo otra vez.") }
+                        requestingPin = false
+                    }
+                },
+            ) { Text(s.say("I forgot my PIN", "PIN'imi unuttum", "He olvidado mi PIN")) }
         }
-    }
+    })
 }
 
 /** Big number keys, shared by the PIN pad and the maths answer pad. An empty label is a gap. */

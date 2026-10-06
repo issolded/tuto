@@ -1027,17 +1027,31 @@ function genOddTwo(r, band, seed) {
   // and `laguna` on the line — real words, and nothing a child can group. At 3.4 all four go
   // and 39 groups remain against 21 at the next step up.
   const floor = Math.max(band.answer, 34)
+  // Members whose place in the group rests on a sense a child does not have: `produce` is a food
+  // only in a grocer's sense (to a child it is a verb), `leftovers` is a meal, not a food kind.
+  // A 2026-09-27 test sheet put `produce` beside butter and cheese and the adult reading it
+  // picked it as the odd one.
+  const notMember = new Set(['produce', 'leftovers', 'female', 'male', 'young', 'giant'])
   const inGroup = (c) => c[2].filter(
-    w => z(w) >= floor && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
+    w => !notMember.has(w) && z(w) >= floor && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
   // WordNet categories may overlap in ordinary language. `container / vessel`, `body part /
   // external body part`, and the botanical `herb` category (which includes bananas and
-  // pineapples) made questions with four or five defensible answers.
-  const excluded = new Set(['herb.n.01'])
+  // pineapples) made questions with four or five defensible answers. `animal.n.01` holds
+  // `critter, female, giant, male` — not a group anyone would name.
+  const excluded = new Set(['herb.n.01', 'animal.n.01'])
   const overlappingPairs = new Set([
     'body_part.n.01|external_body_part.n.01',
     'container.n.01|vessel.n.03',
   ])
+  // Every food category overlaps every other: butter is "food" and "dairy product", and "butter,
+  // cheese, milk" against "meat, seafood" has meat as food too. And a young farm animal is also
+  // what is eaten — "seafood, yogurt, butter | pup, lamb" was two groups a child could not tell
+  // apart. So no food group is set against another, or against the young animals.
+  const FOODS = new Set(['food.n.01', 'food.n.02', 'dairy_product.n.01', 'dish.n.02', 'edible_fruit.n.01',
+    'fish.n.02', 'foodstuff.n.02', 'meat.n.01', 'seafood.n.01', 'fruit_tree.n.01', 'meal.n.01', 'beverage.n.01'])
+  const foodish = (k) => FOODS.has(k) || k === 'young_mammal.n.01'
   const overlaps = (a, b) => overlappingPairs.has([a[0], b[0]].sort().join('|'))
+    || (foodish(a[0]) && foodish(b[0]) && (FOODS.has(a[0]) || FOODS.has(b[0])))
   const usable = CATEGORIES
     .map((c, i) => [i, c])
     .filter(([, c]) => !excluded.has(c[0]) && inGroup(c).length >= 3)
@@ -3503,6 +3517,22 @@ export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {
   const seen = new Set()
   const topics = new Set()
   const perType = {}
+  // Kinds the child owes from the last review: one question of each (at most three) comes first,
+  // so the sitting leans on them without becoming only them.
+  for (const type of (Array.isArray(opts.focus) ? opts.focus : []).filter(t => band.types.includes(t)).slice(0, 3)) {
+    for (let i = 0; i < 60; i++) {
+      const item = generateItem(bandKey, type, (seed + 7 + i * 15485863) | 0, opts)
+      if (!item) continue
+      const sig = itemSignature(item)
+      if (seen.has(sig)) continue
+      seen.add(sig)
+      const topic = topicKey(item)
+      if (topic) topics.add(topic)
+      perType[item.type] = (perType[item.type] || 0) + 1
+      out.push(item)
+      break
+    }
+  }
   // Two passes, as the puzzle engine does: the first holds the per-type and per-topic caps so a
   // sitting is varied, the second drops them rather than return a short sitting.
   for (const capped of [true, false]) {

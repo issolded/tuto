@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MathGeometry from '../components/MathGeometry'
 import MathChart from '../components/MathChart'
+import PlaceValueHelp from '../components/PlaceValueHelp'
 import MathFigure from '../components/MathFigure'
 import TutoMascot from '../components/TutoMascot'
-import ClockFace, { DraggableClock } from '../components/ClockFace'
+import ClockFace, { DraggableClock, DayPartChip } from '../components/ClockFace'
+import { sameKindProblem } from '../lib/reviewQuestions'
+import Scratchpad from '../components/Scratchpad'
 import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
@@ -20,6 +23,8 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 // generated once and cannot be regenerated identically, so the child lost the work and the
 // answers already given. sessionStorage, not localStorage: this should survive a reload of the
 // same tab and nothing more. A half-finished session found a day later is not worth resuming.
+// Paper pays a fifth more; server/mathGems.js holds the same number and pays it.
+const PAPER_BONUS = 1.2
 const SESSION_KEY = 'tuto_math_session_v1'
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000
 const ANSWERING_STEPS = ['paper_questions', 'screen_questions']
@@ -38,6 +43,21 @@ function readSavedSession(childId, age) {
     // Every question already answered means the snapshot was taken as the evaluation started.
     // Resuming there would re-ask a finished session, so let it go rather than guess.
     if ((s.userAnswers?.length ?? 0) >= s.questions.length) return null
+    return s
+  } catch { return null }
+}
+
+// The result screen with a review offer waiting (or a review result that did not reach the server) is
+// kept too: it is the one screen a reload used to lose, and with it the offer. The server holds the
+// parent's message for 30 minutes, so the offer is only brought back inside that window.
+const RESULT_KEY = 'tuto_math_result_v1'
+const RESULT_TTL_MS = 25 * 60 * 1000
+function readSavedResult(childId, age) {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(RESULT_KEY) || 'null')
+    if (!s || s.childId !== (childId ?? null) || Number(s.age) !== Number(age)) return null
+    if (!s.savedAt || Date.now() - s.savedAt > RESULT_TTL_MS) return null
+    if (!s.evalResult || !Array.isArray(s.questions)) return null
     return s
   } catch { return null }
 }
@@ -85,6 +105,14 @@ const ANIM = `
   0%   { transform: translateY(-14px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(640px) rotate(560deg); opacity: 0; }
 }
+@keyframes hintNudge {
+  0%, 100% { transform: translateX(0) rotate(0); box-shadow: 0 3px 10px rgba(60,120,200,.08); }
+  15% { transform: translateX(-5px) rotate(-3deg); box-shadow: 0 0 0 4px rgba(247,148,51,.35); }
+  30% { transform: translateX(5px) rotate(3deg); box-shadow: 0 0 0 6px rgba(247,148,51,.25); }
+  45% { transform: translateX(-4px) rotate(-2deg); box-shadow: 0 0 0 4px rgba(247,148,51,.35); }
+  60% { transform: translateX(4px) rotate(2deg); box-shadow: 0 0 0 6px rgba(247,148,51,.25); }
+  75% { transform: translateX(-2px) rotate(-1deg); }
+}
 @keyframes scaleIn {
   from { transform: scale(0.85); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
@@ -99,6 +127,24 @@ const ANIM = `
    viewport instead of scrolling inside itself — and the wrapper's overflow:hidden then
    put the bottom of the panel somewhere no scroll could reach on desktop. */
 .math-scroll { overflow-y: auto; min-height: 0; }
+/* A short phone (390×664 with the browser's bars) could not hold picture + question + answer +
+   four rows of 70px keys, so the child scrolled between the question and the keypad on every
+   question. Below 740px of height the card, the picture and the keys give some back; keys stay
+   at 54px, above the 44px touch-target floor. Inline sizes win over a stylesheet, hence !important. */
+@media (max-height: 740px) {
+  .math-qscroll { padding: 10px 16px 14px !important; gap: 9px !important; }
+  .math-qcard { padding: 14px 16px !important; gap: 8px !important; min-height: 0 !important; }
+  .math-qcard svg[role="img"] { max-height: 140px !important; }
+  .math-answer { min-height: 46px !important; padding: 6px !important; }
+  .math-answer span { font-size: 30px !important; }
+  .math-keys { gap: 8px !important; }
+  .math-key { width: 54px !important; height: 54px !important; font-size: 23px !important; }
+  /* Even compact, a picture plus an open hint is taller than the screen. The answer and the keys
+     stay pinned to the bottom and the question scrolls above them, so the child never scrolls
+     away from the keypad to reread the question — or away from the question to reach ✓. */
+  .math-pad { position: sticky; bottom: -14px; gap: 9px !important; padding: 10px 16px 14px; margin: 0 -16px -14px;
+              background: linear-gradient(to bottom, rgba(210, 233, 251, 0), rgb(210, 233, 251) 10px); z-index: 2; }
+}
 .math-scroll::-webkit-scrollbar { display: none; }
 `
 
@@ -313,9 +359,9 @@ function getScoreMsg(pct, age, language) {
 function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false, language = 'en' }) {
   const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], allowDecimal ? ['⌫','0','.','✓'] : ['⌫','0','✓']]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+    <div className="math-keys" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
       {ROWS.map((row, ri) => (
-        <div key={ri} style={{ display: 'flex', gap: 10 }}>
+        <div key={ri} className="math-keys" style={{ display: 'flex', gap: 10 }}>
           {row.map(key => {
             const isSubmit = key === '✓'
             const isBack   = key === '⌫'
@@ -329,7 +375,7 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
               <button
                 key={key}
                 disabled={disabled}
-                className="math-press"
+                className="math-press math-key"
                 onClick={() => {
                   if (disabled) return
                   if (isSubmit) onSubmit()
@@ -649,7 +695,7 @@ const CLOCK_GUIDE = {
     to:    'Önce soruya benzet. Sonra yelkovanı ileri çevirip 12\'ye getir — kaç dakika sürdü?',
     span:  'Yelkovanı bir tam tur çevir: akrep tam bir saat ilerliyor. Demek ki bir saat 60 dakika.',
     later: 'Akrebi birer saat ilerlet, kaç saat ilerlediğini sayarak git.',
-    h24:   'Önce soruya benzet. Öğleden sonra saymaya baştan başlamayız, devam ederiz — akrebin saatine 12 ekle.',
+    h24:   'Saat öğlen 12\'de başlıyor. Kolları sorudaki saate benzeyene kadar ileri çevir; 24 saatlik saat ve günün hangi vakti olduğu seninle değişir.',
   },
   es: {
     hour:  'Gira el reloj de abajo hasta que se parezca al de la pregunta. El número donde para la aguja corta es la hora.',
@@ -658,7 +704,7 @@ const CLOCK_GUIDE = {
     to:    'Primero cópialo. Luego gira la aguja larga hacia adelante hasta el 12: ¿cuántos minutos han sido?',
     span:  'Dale una vuelta entera a la aguja larga: la corta avanza una hora justa. Así que una hora son 60 minutos.',
     later: 'Mueve la aguja corta de hora en hora y ve contando.',
-    h24:   'Primero cópialo. Después del mediodía seguimos contando en vez de empezar de nuevo: suma 12 a la hora que marca la aguja corta.',
+    h24:   'El reloj empieza a mediodía. Gira las agujas hacia adelante hasta que se parezca al de la pregunta; la hora de 24 horas y la parte del día cambian contigo.',
   },
   en: {
     hour:  'Turn the clock below until it looks like the one in the question. The number the short hand stops at is the hour.',
@@ -667,7 +713,7 @@ const CLOCK_GUIDE = {
     to:    'Match the question first. Then turn the long hand forwards until it reaches 12 — how many minutes was that?',
     span:  'Spin the long hand right round once: the short hand moves a whole hour. So an hour is 60 minutes.',
     later: 'Move the short hand on one hour at a time, counting as you go.',
-    h24:   'Match the question first. After midday we keep counting instead of starting again — add 12 to the hour the short hand shows.',
+    h24:   'The clock starts at midday. Turn the hands forward until it looks like the one in the question; the 24-hour time and the part of the day change with you.',
   },
 }
 
@@ -695,6 +741,13 @@ const HELP_WORDS = {
     timesDone:      'Bak, hepsi eşit! Toplam kaç eder?',
     fillTap:        'Kutuları sırayla doldur — noktalara dokun! 📦',
     jumpsTap:       'Yuvarlak sayılara zıplayarak gidelim! Bir oka dokun, zıplamayı yaz 🦘',
+    addJumpsTap:    'Önce büyük parçayı ekle, sonra küçüğü. Nereye vardın? Yaz! 🦘',
+    tallyTap:       'Turuncu satıra dokun: her dokunuş bir beşli ya da bir tek çizgi sayar 👆',
+    fracCountAll:   'Önce bütün parçaları say — çubuğa dokun 👆',
+    coinsTap:       'Paralara sırayla dokun, toplam büyüsün 🪙',
+    stepsIntro:     'Adım adım gidelim: her kutuya sonucu yaz 👇',
+    sortTap:        'Her kutuya dokun: bu sayı o etikete uyuyor mu? ✓ ya da ✗',
+    fracCompare:    'Hepsi aynı uzunlukta. Boyalı parçalardan hangisi en uzun? 👀',
     fillExact:      'Hepsi kutulara girdi! Kaç kutu oldu?',
     fillRem:        'Bazıları dolu bir kutuya sığmadı — onlar kalan. Kaç tane?',
     fillUp:         'Son kutu dolmadı — ama onlara da yer lazım! Onu da say.',
@@ -725,6 +778,13 @@ const HELP_WORDS = {
     timesDone:      '¡Mira, todos los grupos son iguales! ¿Cuántos hay en total?',
     fillTap:        'Llena las cajas una a una: ¡toca los puntos! 📦',
     jumpsTap:       '¡Vamos a saltos hasta números redondos! Toca una flecha y escribe el salto 🦘',
+    addJumpsTap:    'Suma primero la parte grande y luego la pequeña. ¿Dónde caes? ¡Escríbelo! 🦘',
+    tallyTap:       'Toca la fila naranja: cada toque cuenta un grupo de cinco o una raya suelta 👆',
+    fracCountAll:   'Primero cuenta todas las partes: toca la barra 👆',
+    coinsTap:       'Toca las monedas una a una y mira cómo sube el total 🪙',
+    stepsIntro:     'Vamos paso a paso: escribe el resultado de cada uno 👇',
+    sortTap:        'Toca cada casilla: ¿este número cumple esa etiqueta? ✓ o ✗',
+    fracCompare:    'Todas miden lo mismo. ¿Cuál de las partes coloreadas es la más larga? 👀',
     fillExact:      '¡Todos están en cajas! ¿Cuántas cajas hay?',
     fillRem:        'Algunos no caben en una caja llena: son el resto. ¿Cuántos son?',
     fillUp:         'La última caja no está llena, ¡pero esos también necesitan sitio! Cuéntala.',
@@ -755,6 +815,13 @@ const HELP_WORDS = {
     timesDone:      'See — every group is the same! How many altogether?',
     fillTap:        'Fill the boxes one by one — tap the dots! 📦',
     jumpsTap:       'Let\'s jump to round numbers! Tap an arrow and type the jump 🦘',
+    addJumpsTap:    'Add the big part first, then the small one. Where do you land? Type it! 🦘',
+    tallyTap:       'Tap the orange row: each tap counts a five or a single line 👆',
+    fracCountAll:   'First count all the parts — tap the bar 👆',
+    coinsTap:       'Tap the coins one by one and watch the total grow 🪙',
+    stepsIntro:     'Step by step: type the answer to each one 👇',
+    sortTap:        'Tap each box: does this number fit that label? ✓ or ✗',
+    fracCompare:    'They are all the same length. Which coloured piece is the longest? 👀',
     fillExact:      'They all fit in boxes! How many boxes?',
     fillRem:        'Some did not fit in a full box — they are the remainder. How many?',
     fillUp:         'The last box is not full — but those still need a place! Count it too.',
@@ -800,7 +867,7 @@ function QuestionPicture({ visual, language, description }) {
 // Exported for the /math-lab sandbox, which is the only place every visual kind can be put on
 // screen on demand — in a real session a given one turns up once in ten questions and only
 // after a wrong answer.
-export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound }) {
+export function HelpPanel({ question, questionType, templateTopic, hintSteps, visual, onDone, onHelpUsed, language, guess, guessRound, mistake = null }) {
   const t = HELP_WORDS[language] ?? HELP_WORDS.en
 
   const nums    = numbersIn(question)
@@ -854,6 +921,23 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // The gap between two numbers, walked in jumps to round numbers (198 → 200 → 600 → 604). The
   // child types each jump and adds them — the method the 💡 hint names, done rather than read.
   const jumps = visual?.kind === 'jumps' ? visual : null
+  // A tally chart read the way the hint says to: tap each gate of five, then each single line,
+  // and the row's count climbs 5, 10, 15, 16… — only the rows the question is about.
+  const tallyHelp = visual?.kind === 'tally' && visual.use ? visual : null
+  // Fractions on a bar: count all the parts, then the coloured ones (shade); colour the second
+  // fraction onto the first (add); equal bars cut into different numbers of pieces (cmp).
+  const fracBar = visual?.kind === 'fracbar' ? visual : null
+  // Coins counted by touch: tap each one and the purse's total climbs (sum), or keep adding the
+  // same coin until the amount is reached and count the coins (make).
+  const coins = visual?.kind === 'coins' ? visual : null
+  // Venn and Carroll: each number tested against each label, one tap per cell, so "belongs in
+  // the shaded part" becomes two yes/no questions the child answers for every option.
+  const sortTest = visual?.kind === 'sorttest' ? visual : null
+  // A worked example the child does: a short chain of sums, each typed and checked before the
+  // next appears, with the question's picture (a scale, a rectangle) kept above it.
+  const stepsHelp = visual?.kind === 'steps' ? visual : null
+  // Place value on a hundreds / tens / ones chart the child fills with blocks (PlaceValueHelp).
+  const pvHelp = visual?.kind === 'pv' ? visual : null
   const fillBoxes = fill ? Math.ceil(fill.total / fill.size) : 0
   const clock = visual?.kind === 'clock' ? visual : null
   const picto = visual?.kind === 'pictogram' ? visual : null
@@ -862,11 +946,11 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const times = (visual?.kind === 'groups' || visual?.kind === 'array') ? visual : null
   const timesRows = times ? (times.kind === 'array' ? times.rows : times.groups) : 0
   const timesPer  = times ? (times.kind === 'array' ? times.cols : times.per) : 0
-  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
+  const hasStepHints = !isPlus && !isMinus && !usesArrowUI && !share && !fill && !jumps && !tallyHelp && !fracBar && !coins && !sortTest && !stepsHelp && !pvHelp && !shapes && !times && !counting && !clock && !picto && hintSteps?.length > 0
   // Count/Show is a real choice only where the two tabs draw different things. A clock has one
   // picture and the point is to turn it, so a second tab holding a still one is a downgrade —
   // and a chart is the same: there is one of it, already counted along.
-  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || (!!shapes && !shapeReveal)
+  const onePanel = hasStepHints || !!clock || !!picto || !!fill || !!jumps || !!tallyHelp || !!fracBar || !!coins || !!sortTest || !!stepsHelp || !!pvHelp || (!!shapes && !shapeReveal)
 
   const bigNums = (n0 > 15 || n1 > 15) || (questionType === 'word' && !isPlus && !isMinus)
 
@@ -876,6 +960,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   const [arrowInput,   setArrowInput]   = useState('')
   const [solvedArrows, setSolvedArrows] = useState({})
   const [tutoBubble,   setTutoBubble]   = useState(null)
+  const [stepMiss,     setStepMiss]     = useState({})   // wrong tries per step of a worked chain, so a stuck child is shown the step
   const [hintsRevealed, setHintsRevealed] = useState(0) // gradual reveal: nudge → half → full
   const [dealt,         setDealt]         = useState(0) // items handed out in the sharing visual
 
@@ -891,7 +976,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
   // Count/Show (dot-counting, bar, number-line) is the help itself — just opening the
   // panel already showed it, no extra click needed, so it counts as "used" on mount.
   // StepHints counts separately, only once "Show help" is actually tapped (see onReveal).
-  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isPlus || isMinus || usesArrowUI || share || fill || jumps || tallyHelp || fracBar || coins || sortTest || stepsHelp || pvHelp || shapes || times || counting || clock) onHelpUsed?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const allTouched  = isPlus  && (n0 + n1) > 0 && touched.size === (n0 + n1)
   const doneRemoval = isMinus && n1 > 0 && touched.size === n1
@@ -961,6 +1046,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
               {say(language, 'The clock in the question', 'Sorudaki saat', 'El reloj de la pregunta')}
             </div>
             <ClockFace hour={clock.hour} minute={clock.minute} size={104} zoomable language={language} />
+            {clock.part && <DayPartChip part={clock.part} language={language} />}
           </div>
         )}
         <DraggableClock
@@ -969,6 +1055,8 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           size={228}
           language={language}
           readout={READOUT_SAFE.has(clock.ask)}
+          h24={clock.ask === 'h24'}
+          turnCounter={clock.ask === 'span'}
         />
         {hintSteps?.length > 0 && (
           <StepHints
@@ -1116,24 +1204,406 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         </div>
       </div>
     )
+  } else if (stepsHelp) {
+    const steps = stepsHelp.steps
+    const doneCount = steps.findIndex((_, i) => solvedArrows[i] === undefined)
+    const active = doneCount === -1 ? null : doneCount
+    const decimal = steps.some(st => !Number.isInteger(st.a))
+    const show = (x) => dnum(x, language)
+    const confirm = () => {
+      if (active === null || !arrowInput) return
+      if (Math.abs(Number(arrowInput) - steps[active].a) < 1e-9) {
+        setSolvedArrows({ ...solvedArrows, [active]: steps[active].a })
+        setTutoBubble(active === steps.length - 1
+          ? (stepsHelp.pick
+            ? say(language, 'All done! Now pick your answer 💪', 'Bitti! Şimdi cevabını seç 💪', '¡Listo! Ahora elige tu respuesta 💪')
+            : say(language, 'All done! Now type that in as your answer 💪', 'Bitti! Şimdi bunu cevap olarak yaz 💪', '¡Listo! Ahora escríbelo como respuesta 💪'))
+          : say(language, 'Yes! Next one 👇', 'Evet! Sıradaki 👇', '¡Sí! La siguiente 👇'))
+      } else {
+        // A child who is stuck on a step of the HELP has nowhere further to go: the same line, again. After
+        // two wrong tries the step is shown, worked, and the next one is theirs.
+        const misses = (stepMiss[active] || 0) + 1
+        setStepMiss(m => ({ ...m, [active]: misses }))
+        if (misses >= 2) {
+          const st = steps[active]
+          const line = `${st.q ? `${st.q} = ` : ''}${show(st.a)}`
+          const last = active === steps.length - 1
+          setSolvedArrows({ ...solvedArrows, [active]: st.a })
+          setTutoBubble(say(language,
+            `Let's do this one together: ${line}. ${last ? (stepsHelp.pick ? 'Now pick your answer 💪' : 'Now type that in as your answer 💪') : 'Now the next one 👇'}`,
+            `Bunu birlikte yapalım: ${line}. ${last ? (stepsHelp.pick ? 'Şimdi cevabını seç 💪' : 'Şimdi bunu cevap olarak yaz 💪') : 'Şimdi sıradaki sende 👇'}`,
+            `Hagamos esta juntos: ${line}. ${last ? (stepsHelp.pick ? 'Ahora elige tu respuesta 💪' : 'Ahora escríbelo como respuesta 💪') : 'Ahora la siguiente es tuya 👇'}`))
+        } else {
+          setTutoBubble(say(language, 'Not quite — try that one again 🔢', 'Tam değil — bunu bir daha dene 🔢', 'Casi — prueba esa otra vez 🔢'))
+        }
+      }
+      setArrowInput('')
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        {/* The question stays on screen: a chain that says "divide by 10" is only a chain of sums
+            until the child can see what it is dividing. */}
+        {question && (
+          <div style={{
+            fontFamily: FRED, fontWeight: 600, fontSize: 15, color: INK, textAlign: 'center', lineHeight: 1.4,
+            background: 'rgba(90,169,230,.08)', borderRadius: 14, padding: '8px 14px', width: '100%', maxWidth: 340,
+          }}><MathText text={question} /></div>
+        )}
+        {stepsHelp.picture && (
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <MathGeometry visual={stepsHelp.picture} language={language} description={question} />
+            <MathFigure visual={stepsHelp.picture} language={language} description={question} />
+            <MathChart visual={stepsHelp.picture} language={language} description={question} />
+          </div>
+        )}
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 300,
+        }}>{tutoBubble || t.stepsIntro}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 320 }}>
+          {steps.slice(0, active === null ? steps.length : active + 1).map((st, i) => {
+            const solved = solvedArrows[i] !== undefined
+            return (
+              <div key={i} style={{
+                background: solved ? `${GREEN}12` : '#fff7ef', border: `2px ${solved ? 'solid' : 'dashed'} ${solved ? GREEN : ORANGE}`,
+                borderRadius: 14, padding: '9px 12px', animation: 'pop .25s ease both',
+              }}>
+                {st.say && <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.35, marginBottom: 4 }}>{st.say}</div>}
+                <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 21, color: INK, textAlign: 'center' }}>
+                  {st.q ? `${st.q} = ` : ''}<span style={{ color: solved ? GREEN : ORANGE }}>{solved ? show(st.a) : (i === active && arrowInput ? arrowInput.replace('.', language === 'en' ? '.' : ',') : '?')}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        {active !== null && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
+            {['1','2','3','4','5','6','7','8','9','0', ...(decimal ? ['.'] : []), '⌫','✓'].map(k => (
+              <button key={k} className="math-press"
+                onClick={() => {
+                  if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
+                  if (k === '✓') { confirm(); return }
+                  if (k === '.' && arrowInput.includes('.')) return
+                  if (arrowInput.length < 9) setArrowInput(v => v + k)
+                }}
+                style={{
+                  width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                  background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
+                  color: k === '✓' || k === '⌫' ? 'white' : INK,
+                }}>{k === '.' && language !== 'en' ? ',' : k}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  } else if (sortTest) {
+    const open = (k) => !!solvedArrows[k]
+    const mark = (ok) => <span style={{ fontSize: 20, fontWeight: 800, color: ok ? GREEN : '#E2586A' }}>{ok ? '✓' : '✗'}</span>
+    const allOpen = sortTest.rows.every((_, r) => open(`${r}:0`) && open(`${r}:1`))
+    const pattern = sortTest.want.map((w, c) => `${sortTest.labels[c]} ${w ? '✓' : '✗'}`).join(' · ')
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 300,
+        }}>
+          {allOpen ? say(language, `Which number has ${pattern}?`, `Hangi sayı: ${pattern}?`, `¿Qué número tiene ${pattern}?`) : t.sortTap}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr', gap: 4, width: '100%', maxWidth: 320 }}>
+          <span />
+          {sortTest.labels.map((l, c) => (
+            <span key={c} style={{ fontFamily: FRED, fontWeight: 600, fontSize: 12.5, color: INK, textAlign: 'center', lineHeight: 1.2 }}>
+              {l} <span style={{ color: sortTest.want[c] ? GREEN : '#E2586A' }}>{sortTest.want[c] ? '✓' : '✗'}</span>
+            </span>
+          ))}
+          {sortTest.rows.map((row, r) => [
+            <span key={`n${r}`} style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, color: MATH_DEEP, alignSelf: 'center', textAlign: 'center' }}>{row.n}</span>,
+            ...[0, 1].map(c => (
+              <button key={`${r}:${c}`} className="math-press" onClick={() => setSolvedArrows(s => ({ ...s, [`${r}:${c}`]: true }))} style={{
+                height: 40, borderRadius: 10, cursor: open(`${r}:${c}`) ? 'default' : 'pointer',
+                border: `2px ${open(`${r}:${c}`) ? 'solid #e6e1f3' : `dashed ${ORANGE}`}`, background: open(`${r}:${c}`) ? '#fff' : '#fff7ef',
+                fontFamily: FRED, fontWeight: 700, fontSize: 15, color: ORANGE,
+              }}>{open(`${r}:${c}`) ? mark(row.fits[c]) : '?'}</button>
+            )),
+          ])}
+        </div>
+      </div>
+    )
+  } else if (pvHelp) {
+    sayalim = <PlaceValueHelp key={JSON.stringify(pvHelp)} help={pvHelp} language={language} />
+  } else if (coins) {
+    const coin = (v, lit, key) => (
+      <div key={key} style={{
+        width: v >= 25 ? 50 : v >= 10 ? 44 : 38, height: v >= 25 ? 50 : v >= 10 ? 44 : 38, borderRadius: '50%',
+        background: lit ? (v >= 10 ? '#e8e3f7' : '#f7d88a') : '#f3f1f8', border: `3px solid ${lit ? (v >= 10 ? '#a9a2c4' : '#d4a53a') : '#dcd7ea'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: FRED, fontWeight: 700, fontSize: 15, color: lit ? INK : INK_SOFT, flexShrink: 0,
+      }}>{v}</div>
+    )
+    let bubble, row, total
+    if (coins.mode === 'sum') {
+      const done = Math.min(dealt, coins.coins.length)
+      total = coins.coins.slice(0, done).reduce((a, b) => a + b, 0)
+      bubble = done < coins.coins.length ? t.coinsTap
+        : say(language, `That is all of them: ${total} ${coins.unit}. Type it in! 💪`, `Hepsi bu kadar: ${total} ${coins.unit}. Şimdi cevabı yaz! 💪`, `Ya están todas: ${total} ${coins.unit}. ¡Escríbelo! 💪`)
+      row = (
+        <div onClick={done < coins.coins.length ? () => setDealt(d => d + 1) : undefined}
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 300, cursor: done < coins.coins.length ? 'pointer' : 'default' }}>
+          {coins.coins.map((v, i) => coin(v, i < done, i))}
+        </div>
+      )
+    } else {
+      const have = Math.min(dealt, Math.ceil(coins.target / coins.coin))
+      total = have * coins.coin
+      const reached = total >= coins.target
+      bubble = !reached ? say(language, `Tap to add a ${coins.coin} — stop when you reach ${coins.target}!`, `Dokunarak bir ${coins.coin} ekle — ${coins.target} olunca dur!`, `Toca para añadir una de ${coins.coin}: ¡para al llegar a ${coins.target}!`)
+        : say(language, `${coins.target}! Now count the coins 💪`, `${coins.target} oldu! Şimdi paraları say 💪`, `¡${coins.target}! Ahora cuenta las monedas 💪`)
+      row = (
+        <div onClick={!reached ? () => setDealt(d => d + 1) : undefined}
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 300, minHeight: 56, padding: 8,
+            borderRadius: 16, border: `2px dashed ${reached ? '#ded8f0' : ORANGE}`, background: reached ? 'transparent' : '#fff7ef', cursor: reached ? 'default' : 'pointer' }}>
+          {have ? Array.from({ length: have }, (_, i) => coin(coins.coin, true, i)) : coin(coins.coin, false, 0)}
+        </div>
+      )
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 290,
+        }}>{bubble}</div>
+        {row}
+        <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 24, color: MATH_DEEP }}>{total} {coins.unit}</div>
+      </div>
+    )
+  } else if (fracBar) {
+    const f = fracBar
+    // Called as a function, not mounted as <Bar>: a component defined inside the render is a new
+    // type every render, so each tap remounted the bar and a quick second tap landed on a node
+    // that was already gone.
+    const bar = ({ parts, colour, onTap, numbered = 0, width = 290 }) => (
+      <div onClick={onTap} style={{ display: 'flex', width, height: 46, border: `2.5px solid ${INK}`, borderRadius: 10, overflow: 'hidden', cursor: onTap ? 'pointer' : 'default' }}>
+        {Array.from({ length: parts }, (_, i) => (
+          <div key={i} style={{
+            flex: 1, borderLeft: i ? `2px solid ${INK}` : 'none', background: colour(i) || '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FRED, fontWeight: 700, fontSize: 14, color: INK,
+          }}>{i < numbered ? i + 1 : ''}</div>
+        ))}
+      </div>
+    )
+    let bubble, body
+    if (f.mode === 'shade') {
+      // Tap 1..parts numbers every part; the next taps number only the parts asked about.
+      const want = f.white ? [...Array(f.parts).keys()].filter(i => !f.shaded.includes(i)) : f.shaded
+      const all = Math.min(dealt, f.parts)
+      const top = Math.max(0, Math.min(dealt - f.parts, want.length))
+      const isShaded = (i) => f.shaded.includes(i)
+      bubble = all < f.parts ? t.fracCountAll
+        : top < want.length ? say(language, `${f.parts} parts in all — that is the bottom number. Now tap the ${f.white ? 'white' : 'coloured'} ones.`,
+            `Toplam ${f.parts} parça — bu alttaki sayı. Şimdi ${f.white ? 'boyasız' : 'boyalı'} olanlara dokun.`,
+            `${f.parts} partes en total: ese es el número de abajo. Ahora toca las ${f.white ? 'blancas' : 'coloreadas'}.`)
+          : say(language, `${want.length} of the ${f.parts} parts. Which fraction says that? 💪`,
+            `${f.parts} parçanın ${want.length} tanesi. Bunu hangi kesir söylüyor? 💪`,
+            `${want.length} de las ${f.parts} partes. ¿Qué fracción lo dice? 💪`)
+      body = (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          {bar({ parts: f.parts, numbered: all < f.parts ? all : 0,
+            colour: (i) => (all >= f.parts && want.slice(0, top).includes(i) ? ORANGE : isShaded(i) ? MATH : null),
+            onTap: all < f.parts || top < want.length ? () => setDealt(d => d + 1) : undefined })}
+          <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 26, color: MATH_DEEP, lineHeight: 1.1, textAlign: 'center' }}>
+            <div style={{ borderBottom: `3px solid ${MATH_DEEP}`, minWidth: 40 }}>{all >= f.parts ? top : '?'}</div>
+            <div>{all >= f.parts ? f.parts : all || '?'}</div>
+          </div>
+        </div>
+      )
+    } else if (f.mode === 'add') {
+      const added = Math.min(dealt, f.b)
+      bubble = added < f.b
+        ? say(language, `${f.a} parts are coloured. Tap to colour ${f.b} more!`, `${f.a} parça boyalı. Dokunarak ${f.b} parça daha boya!`, `Hay ${f.a} partes coloreadas. ¡Toca para colorear ${f.b} más!`)
+        : say(language, `How many parts are coloured now? The pieces are still ${f.parts}ths — the bottom number stays ${f.parts}.`,
+            `Şimdi kaç parça boyalı? Parçalar hâlâ aynı büyüklükte — alttaki sayı ${f.parts} kalır.`,
+            `¿Cuántas partes hay coloreadas ahora? Los trozos siguen siendo iguales: abajo se queda ${f.parts}.`)
+      body = bar({ parts: f.parts, colour: (i) => (i < f.a ? MATH : i < f.a + added ? ORANGE : null),
+        onTap: added < f.b ? () => setDealt(d => d + 1) : undefined })
+    } else {
+      bubble = t.fracCompare
+      body = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+          {f.denoms.map(d => (
+            <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 15, color: INK, width: 34, textAlign: 'right' }}>1/{d}</span>
+              {bar({ parts: d, width: 240, colour: (i) => (i === 0 ? MATH : null) })}
+            </div>
+          ))}
+        </div>
+      )
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 290,
+        }}>{bubble}</div>
+        {body}
+      </div>
+    )
+  } else if (tallyHelp) {
+    // solvedArrows holds, per row, how many marks (gates and singles) have been tapped.
+    const marksOf = (n) => [...Array(Math.floor(n / 5)).fill(5), ...Array(n % 5).fill(1)]
+    const tapped = (r) => solvedArrows[r] || 0
+    const countOf = (r) => marksOf(tallyHelp.rows[r].count).slice(0, tapped(r)).reduce((a, b) => a + b, 0)
+    const rowDone = (r) => tapped(r) >= marksOf(tallyHelp.rows[r].count).length
+    const allDone = tallyHelp.use.every(rowDone)
+    const tap = (r) => { if (!rowDone(r)) setSolvedArrows({ ...solvedArrows, [r]: tapped(r) + 1 }) }
+    const [a, b] = tallyHelp.use
+    const nums2 = tallyHelp.use.map(r => tallyHelp.rows[r].count)
+    const lastStep = !allDone ? t.tallyTap
+      : tallyHelp.ask === 'read' ? say(language, `That row is ${nums2[0]}. Type it in! 💪`, `O satır ${nums2[0]} ediyor. Şimdi cevabı yaz! 💪`, `Esa fila son ${nums2[0]}. ¡Escríbelo! 💪`)
+        : tallyHelp.ask === 'more' ? say(language, `Now the difference: ${nums2[0]} − ${nums2[1]} = ?`, `Şimdi farkı bul: ${nums2[0]} − ${nums2[1]} = ?`, `Ahora la diferencia: ${nums2[0]} − ${nums2[1]} = ?`)
+          : say(language, `Now add them all: ${nums2.join(' + ')} = ?`, `Şimdi hepsini topla: ${nums2.join(' + ')} = ?`, `Ahora súmalas todas: ${nums2.join(' + ')} = ?`)
+    const gate = ({ lit, five, key }) => (
+      <svg key={key} width={five ? 34 : 10} height={28} viewBox={`0 0 ${five ? 34 : 10} 28`}>
+        {(five ? [4, 11, 18, 25] : [5]).map(x => <line key={x} x1={x} y1={4} x2={x} y2={24} stroke={lit ? MATH : INK} strokeWidth="2.4" strokeLinecap="round" />)}
+        {five && <line x1={1} y1={22} x2={31} y2={6} stroke={lit ? MATH : INK} strokeWidth="2.4" strokeLinecap="round" />}
+      </svg>
+    )
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: '100%' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px', textAlign: 'center', maxWidth: 290,
+        }}>{lastStep}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 330 }}>
+          {tallyHelp.rows.map((row, r) => {
+            const inUse = tallyHelp.use.includes(r)
+            const marks = marksOf(row.count)
+            return (
+              <div key={r} onClick={inUse ? () => tap(r) : undefined} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 12,
+                background: inUse ? (rowDone(r) ? `${GREEN}12` : '#fff7ef') : 'transparent',
+                border: `2px ${inUse && !rowDone(r) ? 'dashed' : 'solid'} ${inUse ? (rowDone(r) ? GREEN : ORANGE) : '#eee9f7'}`,
+                opacity: inUse ? 1 : 0.35, cursor: inUse && !rowDone(r) ? 'pointer' : 'default',
+              }}>
+                <span style={{ width: 78, fontFamily: FRED, fontWeight: 600, fontSize: 13, color: INK, flexShrink: 0 }}>{row.label}</span>
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, flex: 1, alignItems: 'center' }}>
+                  {marks.map((m, k) => gate({ key: k, five: m === 5, lit: inUse && k < tapped(r) }))}
+                </span>
+                {inUse && <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 18, color: rowDone(r) ? GREEN : MATH_DEEP, minWidth: 26, textAlign: 'right' }}>{countOf(r)}</span>}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  } else if (jumps && jumps.mode === 'add') {
+    // Adding on: the jumps are given (+10, +3) and the child writes where each one lands. The
+    // next stop to find is always the first unfound one, so there is nothing to tap but keys.
+    const stops = jumps.stops
+    const count = stops.length - 1
+    const N = (n) => num(n, language)
+    const found = (i) => solvedArrows[i] !== undefined
+    const nextI = [...Array(count).keys()].map(k => k + 1).find(k => !found(k))
+    const confirm = (input) => {
+      if (Number(input) !== stops[nextI]) {
+        setTutoBubble(say(language, `Not quite — ${N(stops[nextI - 1])} + ${N(stops[nextI] - stops[nextI - 1])}?`,
+          `Tam değil — ${N(stops[nextI - 1])} + ${N(stops[nextI] - stops[nextI - 1])} kaç eder?`,
+          `Casi — ¿${N(stops[nextI - 1])} + ${N(stops[nextI] - stops[nextI - 1])}?`))
+        setArrowInput('')
+        return
+      }
+      setSolvedArrows({ ...solvedArrows, [nextI]: stops[nextI] })
+      setArrowInput('')
+      setTutoBubble(nextI === count
+        ? say(language, `You landed! Now type that in as your answer 💪`, `Vardın! Şimdi bunu cevap olarak yaz 💪`, `¡Has llegado! Ahora escríbelo como respuesta 💪`)
+        : say(language, `Yes! Now jump +${N(stops[nextI + 1] - stops[nextI])}.`, `Evet! Şimdi +${N(stops[nextI + 1] - stops[nextI])} zıpla.`, `¡Sí! Ahora salta +${N(stops[nextI + 1] - stops[nextI])}.`))
+    }
+    sayalim = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+        <div style={{
+          fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK,
+          background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
+          textAlign: 'center', maxWidth: 290,
+        }}>
+          {tutoBubble || t.addJumpsTap}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
+          {stops.map((n, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{
+                minWidth: 44, height: 44, padding: '0 9px', borderRadius: 13, boxSizing: 'border-box',
+                background: i === 0 || found(i) ? MATH : 'transparent', color: i === 0 || found(i) ? 'white' : ORANGE,
+                border: i === 0 || found(i) ? 'none' : `3px dashed ${i === nextI ? ORANGE : '#d9d2ee'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FRED, fontWeight: 600, fontSize: 17,
+              }}>{i === 0 || found(i) ? N(n) : '?'}</div>
+              {i < count && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38 }}>
+                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1, color: found(i + 1) ? GREEN : ORANGE }}>
+                    +{N(stops[i + 1] - n)}
+                  </span>
+                  <span style={{ fontSize: 24, lineHeight: 1, color: found(i + 1) ? GREEN : INK_SOFT }}>⤻</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {nextI !== undefined && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
+            <div style={{
+              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
+              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
+            }}>{arrowInput || '?'}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
+              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
+                <button key={k} className="math-press"
+                  onClick={() => {
+                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
+                    if (k === '✓') { if (arrowInput) confirm(arrowInput); return }
+                    if (arrowInput.length < 5) setArrowInput(v => v + k)
+                  }}
+                  style={{
+                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
+                    color: k === '✓' || k === '⌫' ? 'white' : INK,
+                  }}>{k}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
   } else if (jumps) {
     const stops = jumps.stops
     const count = stops.length - 1
     const allSolved = Object.keys(solvedArrows).length === count
+    // Between two times the stops are minutes since midnight and `labels` say them as clock times; the
+    // jump is how many minutes lie between two of them.
+    const timed = Array.isArray(jumps.labels)
     const N = (n) => num(n, language)
+    const L = (i) => (timed ? jumps.labels[i] : N(stops[i]))
+    const minWord = say(language, 'min', 'dk', 'min')
     const ask = (i) => {
       if (solvedArrows[i] !== undefined) return
       setActiveArrow(i)
       setArrowInput('')
-      setTutoBubble(say(language, `${N(stops[i])} to ${N(stops[i + 1])} — how big is the jump?`,
-        `${N(stops[i])} ile ${N(stops[i + 1])} arası kaç?`, `De ${N(stops[i])} a ${N(stops[i + 1])}: ¿cuánto mide el salto?`))
+      setTutoBubble(timed
+        ? say(language, `${L(i)} to ${L(i + 1)} — how many minutes?`, `${L(i)} ile ${L(i + 1)} arası kaç dakika?`, `De ${L(i)} a ${L(i + 1)}: ¿cuántos minutos?`)
+        : say(language, `${N(stops[i])} to ${N(stops[i + 1])} — how big is the jump?`,
+            `${N(stops[i])} ile ${N(stops[i + 1])} arası kaç?`, `De ${N(stops[i])} a ${N(stops[i + 1])}: ¿cuánto mide el salto?`))
     }
     const confirm = (i, input) => {
       const size = stops[i + 1] - stops[i]
       if (Number(input) !== size) {
-        setTutoBubble(say(language, `Not quite — count on from ${N(stops[i])} to ${N(stops[i + 1])} 🔢`,
-          `Tam değil — ${N(stops[i])} sayısından ${N(stops[i + 1])} sayısına kadar say 🔢`,
-          `Casi — cuenta desde ${N(stops[i])} hasta ${N(stops[i + 1])} 🔢`))
+        setTutoBubble(timed
+          ? say(language, `Not quite — count the minutes on from ${L(i)} to ${L(i + 1)} 🔢`,
+              `Tam değil — ${L(i)} saatinden ${L(i + 1)} saatine kadar dakikaları say 🔢`,
+              `Casi — cuenta los minutos desde ${L(i)} hasta ${L(i + 1)} 🔢`)
+          : say(language, `Not quite — count on from ${N(stops[i])} to ${N(stops[i + 1])} 🔢`,
+              `Tam değil — ${N(stops[i])} sayısından ${N(stops[i + 1])} sayısına kadar say 🔢`,
+              `Casi — cuenta desde ${N(stops[i])} hasta ${N(stops[i + 1])} 🔢`))
         setArrowInput('')
         return
       }
@@ -1144,9 +1614,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
       const next = [...Array(count).keys()].find(k => solved[k] === undefined)
       if (next === undefined) {
         const parts = stops.slice(1).map((x, k) => N(x - stops[k])).join(' + ')
-        setTutoBubble(say(language, `Now add the jumps: ${parts} = ? Type it in! 💪`,
-          `Şimdi zıplamaları topla: ${parts} = ? Sonra cevabını yaz! 💪`,
-          `Ahora suma los saltos: ${parts} = ? ¡Escríbelo! 💪`))
+        setTutoBubble(say(language, `Now add the ${timed ? 'minutes' : 'jumps'}: ${parts} = ? Type it in! 💪`,
+          `Şimdi ${timed ? 'dakikaları' : 'zıplamaları'} topla: ${parts} = ? Sonra cevabını yaz! 💪`,
+          `Ahora suma ${timed ? 'los minutos' : 'los saltos'}: ${parts} = ? ¡Escríbelo! 💪`))
       } else ask(next)
     }
     sayalim = (
@@ -1156,7 +1626,9 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
           textAlign: 'center', maxWidth: 290,
         }}>
-          {tutoBubble || t.jumpsTap}
+          {tutoBubble || (timed
+            ? say(language, 'Let\'s jump to the o\'clock! Tap an arrow and type the minutes 🕐', 'Tam saate zıplayarak gidelim! Bir oka dokun, dakikayı yaz 🕐', '¡Saltemos hasta la hora en punto! Toca una flecha y escribe los minutos 🕐')
+            : t.jumpsTap)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
           {stops.map((n, i) => (
@@ -1167,7 +1639,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 border: i === 0 || i === count ? 'none' : `2px solid ${MATH}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: FRED, fontWeight: 600, fontSize: 17, boxSizing: 'border-box',
-              }}>{N(n)}</div>
+              }}>{L(i)}</div>
               {i < count && (
                 <div onClick={() => ask(i)} style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, padding: '4px 2px',
@@ -1175,7 +1647,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                 }}>
                   <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1,
                     color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE }}>
-                    {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}` : '?'}
+                    {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}${timed ? ` ${minWord}` : ''}` : '?'}
                   </span>
                   <span style={{ fontSize: 24, lineHeight: 1,
                     color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : INK_SOFT }}>⤻</span>
@@ -1712,6 +2184,12 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         </div>
       )}
 
+      {/* Why the chosen option was wrong. Written steps already open with it (it is their first
+          step); a hands-on help has no steps, so without this the child lost the one sentence
+          about their own answer the moment the picture appeared. */}
+      {mistake && !hasStepHints && !guessMode && (
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 14, color: '#b85b10', background: '#fff3e6', borderRadius: 14, padding: '8px 14px', textAlign: 'center' }}>{mistake}</div>
+      )}
       <div style={{ minHeight: 140 }}>
         {guessMode ? guessPanel : onePanel ? sayalim : (
           <>
@@ -1750,11 +2228,13 @@ export default function MathScreen() {
 
   // Read once, before any state is created: a reload lands here with the session it lost.
   const saved = useMemo(() => readSavedSession(child?.id, age), [])
+  const savedResult = useMemo(() => (saved ? null : readSavedResult(child?.id, age)), [])
+  const resultSavedAt = useRef(savedResult?.savedAt ?? Date.now())
 
-  const [step,          setStep]         = useState(saved?.step ?? 'welcome')
+  const [step,          setStep]         = useState(saved?.step ?? (savedResult ? 'result' : 'welcome'))
   const [mode,          setMode]         = useState(saved?.mode ?? null)        // 'paper' | 'screen'
   const [level,         setLevel]        = useState(saved?.level ?? null)
-  const [questions,     setQuestions]    = useState(saved?.questions ?? [])
+  const [questions,     setQuestions]    = useState(saved?.questions ?? savedResult?.questions ?? [])
   const [correctAns,    setCorrectAns]   = useState(saved?.correctAns ?? [])
   const [qTypes,        setQTypes]       = useState(saved?.qTypes ?? [])
   const [topic,         setTopic]        = useState(saved?.topic ?? '')
@@ -1762,7 +2242,8 @@ export default function MathScreen() {
   const [userAnswers,   setUserAnswers]  = useState(saved?.userAnswers ?? [])
   const [input,         setInput]        = useState('')
   const [flash,         setFlash]        = useState(null)        // { correct, answer }
-  const [evalResult,    setEvalResult]   = useState(null)
+  const [evalResult,    setEvalResult]   = useState(savedResult?.evalResult ?? null)
+  const [retrying,      setRetrying]     = useState(false)
   const [leveledUp,     setLeveledUp]    = useState(false)
   const [helpUsed,      setHelpUsed]     = useState(saved?.helpUsed ?? false)
   const [helpVisible,   setHelpVisible]  = useState(false)
@@ -1771,15 +2252,36 @@ export default function MathScreen() {
   const [confirmLeave,  setConfirmLeave] = useState(false)  // asked before a half-finished session is thrown away
   const [skippable,     setSkippable]    = useState(() => new Set(saved?.skippable ?? [])) // questions where help has been shown, so moving on is allowed
   const [helpUsedQs,    setHelpUsedQs]   = useState(() => new Set(saved?.helpUsedQs ?? [])) // distinct question indices where help was actually shown/used this session
+  // Seven and over get one try before help. `hintSeenQs` is the questions whose 💡 was opened, so a
+  // wrong answer after looking at it goes straight to help; `firstWrongQs` the ones already given
+  // their free retry. `struckOpts` are the choice cards a wrong tap has greyed out, and
+  // `nudge` counts up to restart the hint button's shake — the same question can need it twice.
+  const [hintSeenQs,    setHintSeenQs]   = useState(() => new Set(saved?.hintSeenQs ?? []))
+  const [firstWrongQs,  setFirstWrongQs] = useState(() => new Set(saved?.firstWrongQs ?? []))
+  const [struckOpts,    setStruckOpts]   = useState(() => saved?.struckOpts ?? {})
+  const [nudge,         setNudge]        = useState(0)
+  // The line shown after a first wrong answer, with the question it belongs to. The shaking 💡 alone said
+  // nothing: the typed number vanished and a seven-year-old was left to guess whether anything had happened.
+  const [nudgeNote,     setNudgeNote]    = useState(null)
+  const nudgeTimer = useRef(null)
+  // Wrong answers given per question, so the review round can tell "two wrong tries, then right"
+  // from "one slip, then right". `review` is set while a review round is on screen —
+  // { id, picks } — and `reviewBusy` while it is being set up or turned down.
+  const [wrongCounts,   setWrongCounts]  = useState(() => saved?.wrongCounts ?? {})
+  // Questions whose help panel was actually shown (a nudge back to the question does not count): the
+  // review round takes these, because the answer was found with a worked solution in front of the child.
+  const [helpShownQs,   setHelpShownQs]   = useState(() => new Set(saved?.helpShownQs ?? []))
+  const [review,        setReview]       = useState(() => saved?.review ?? null)
+  const [reviewBusy,    setReviewBusy]   = useState(false)
   const [wrongGuess,    setWrongGuess]   = useState(null)  // the answer the child tried; numeric sharing help can stage it and Skip can record it
   const [choiceMistake, setChoiceMistake] = useState(null) // why the selected option was wrong; becomes the first teaching step
   const attempted       = useRef([])                       // what was typed before a question was skipped, for the results list only
   const [buildFailed,   setBuildFailed] = useState(false)  // a session that could not be built, so the mode screen can say why
   const [guessRound,    setGuessRound]   = useState(0)     // wrong attempts on the current question; past GUESS_ROUNDS help stops questioning and just shows
-  const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
+  const [templateProblems, setTemplateProblems] = useState(saved?.templateProblems ?? savedResult?.templateProblems ?? []) // per-question { topic, hint_steps } when sourced from mathTemplates.js; empty = old LLM path
   const [llmHints,      setLlmHints]     = useState(saved?.llmHints ?? [])         // per-question hint_steps for the LLM path, where there is no template to read them from
   const [answerFormats, setAnswerFormats] = useState(saved?.answerFormats ?? [])       // 'integer' | 'decimal' per question — decides whether the keypad offers a point
-  const [curriculumTopics, setCurriculumTopics] = useState(saved?.curriculumTopics ?? []) // the curriculum entry each question came from
+  const [curriculumTopics, setCurriculumTopics] = useState(saved?.curriculumTopics ?? savedResult?.curriculumTopics ?? []) // the curriculum entry each question came from
 
   // Keyed on the question rather than cleared at each of the several places that advance one,
   // so a new route to the next question cannot forget to reset and carry a stale guess in.
@@ -2084,7 +2586,12 @@ export default function MathScreen() {
         const lvl = clampLevelToAge(plan?.level, age)
         const w = {
           focusTopicId: plan?.focus?.topic_id ?? null,
-          weakTopicIds: Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : [],
+          // Skills left over from a review the child did not take come first: they were just shown to
+          // have gone wrong, and the weak list is the longer memory behind them.
+          weakTopicIds: [...new Set([
+            ...(Array.isArray(plan?.review_topic_ids) ? plan.review_topic_ids : []),
+            ...(Array.isArray(plan?.weak_topic_ids) ? plan.weak_topic_ids : []),
+          ])],
         }
         // Only adopted while the built session is still sitting unclaimed. Once the child has
         // started, `startLoading` has taken the entry and `prefetch.current` is null — and the
@@ -2121,10 +2628,12 @@ export default function MathScreen() {
         step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
         answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed,
         skippable: [...skippable], helpUsedQs: [...helpUsedQs],
+        hintSeenQs: [...hintSeenQs], firstWrongQs: [...firstWrongQs], struckOpts, wrongCounts, helpShownQs: [...helpShownQs], review,
       }))
     } catch { /* private mode or quota — the session simply will not survive a reload */ }
   }, [step, mode, level, questions, correctAns, qTypes, topic, qIdx, userAnswers,
-      answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs])
+      answerFormats, curriculumTopics, templateProblems, llmHints, helpUsed, skippable, helpUsedQs,
+      hintSeenQs, firstWrongQs, struckOpts, wrongCounts, helpShownQs, review])
 
   // Reaching any of these means the session is over or was never started, and a snapshot left
   // behind would resume a session the child has already finished.
@@ -2133,6 +2642,19 @@ export default function MathScreen() {
       try { sessionStorage.removeItem(SESSION_KEY) } catch { /* nothing to clean up */ }
     }
   }, [step])
+
+  // Keep the result screen while an offer or an unsaved review result is waiting on it; drop it the moment
+  // there is nothing left to come back for.
+  useEffect(() => {
+    const pending = step === 'result' && evalResult && ((evalResult.review && !evalResult.isReview) || evalResult.retry)
+    try {
+      if (pending) {
+        sessionStorage.setItem(RESULT_KEY, JSON.stringify({
+          savedAt: resultSavedAt.current, childId: child?.id ?? null, age, questions, templateProblems, curriculumTopics, evalResult,
+        }))
+      } else if (step !== 'welcome') sessionStorage.removeItem(RESULT_KEY)
+    } catch { /* private mode or quota — the offer simply will not survive a reload */ }
+  }, [step, evalResult, questions, templateProblems, curriculumTopics]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // What this session can actually pay. The two mode cards promised "+30 Gems" and
   // "+20 Gems", which stopped being true when the amount moved to the server: it pays the
@@ -2173,10 +2695,31 @@ export default function MathScreen() {
   }
 
   // ── Screen mode: submit one multiple-choice answer ───────────────────────
-  // Older children get one attempt, with the selected option's specific explanation. At eight
-  // and under a wrong option opens the same scaffolded help as a typed answer: the explanation
-  // becomes the first hint and the child gets another try. Help still reduces the reward, and
-  // Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
+  // A wrong option opens the same scaffolded help as a typed answer: the explanation becomes the
+  // first hint and the child gets another try. Six and under get it at once; seven and over get
+  // the card greyed out and the 💡 shaking first (see helpOpensNow). Help still reduces the reward,
+  // and Skip records the first choice as wrong, so the retry is useful without becoming free Gems.
+  // Where a wrong answer leads. Six and under go straight to help, as they always have. Seven
+  // and over get the question back once, with the 💡 shaking and nothing revealed; help opens
+  // when the hint had already been looked at, when the retry was also wrong, or when there is no
+  // hint to point at. Either way the question stays in `helpUsedQs`, so the retry costs the same
+  // half a question that the hint does: asking early, or being wrong on purpose to reach help, is
+  // never the cheaper way in.
+  const hasHintFor = (i) => { const all = templateProblems[i]?.hint_steps ?? llmHints[i]; return Array.isArray(all) && all.length > 0 }
+  const helpOpensNow = (i) => Number(age) <= 6 || !hasHintFor(i) || hintSeenQs.has(i) || firstWrongQs.has(i)
+  const noteWrong = (i) => setWrongCounts(prev => ({ ...prev, [i]: (prev[i] ?? 0) + 1 }))
+  const nudgeToHint = (i, struck = null) => {
+    noteWrong(i)
+    setFirstWrongQs(prev => { const next = new Set(prev); next.add(i); return next })
+    setHelpUsedQs(prev => { const next = new Set(prev); next.add(i); return next })
+    if (struck != null) setStruckOpts(prev => ({ ...prev, [i]: [...(prev[i] ?? []), struck] }))
+    setInput('')
+    setNudge(n => n + 1)
+    setNudgeNote(i)
+    clearTimeout(nudgeTimer.current)
+    nudgeTimer.current = setTimeout(() => setNudgeNote(null), 7000)
+  }
+
   const submitChoiceAnswer = (value) => {
     if (flash) return
     const isCorrect = sameAnswer(value, correctAns[qIdx])
@@ -2190,12 +2733,15 @@ export default function MathScreen() {
       tProblem?.help ?? tProblem?.visual,
     )
 
-    if (!isCorrect && Number(age) <= 8 && canHelp) {
+    if (!isCorrect && canHelp && !helpOpensNow(qIdx)) { nudgeToHint(qIdx, value); return }
+    if (!isCorrect && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
+      setHelpShownQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
       setChoiceMistake(why)
       setWrongGuess(value)
       setGuessRound(r => r + 1)
+      noteWrong(qIdx)
       setSkippable(prev => { const next = new Set(prev); next.add(qIdx); return next })
       return
     }
@@ -2217,9 +2763,11 @@ export default function MathScreen() {
 
     const tProblem = templateProblems[qIdx]
     const canHelp = hasRealHelp(questions[qIdx] || '', qTypes[qIdx], tProblem?.topic, tProblem?.hint_steps ?? llmHints[qIdx], tProblem?.help ?? tProblem?.visual)
-    if (!isCorrect && Number(age) <= 8 && canHelp) {
+    if (!isCorrect && canHelp && !helpOpensNow(qIdx)) { nudgeToHint(qIdx); return }
+    if (!isCorrect && canHelp) {
       setHelpVisible(true)
       setHelpUsed(true)
+      setHelpShownQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
       // The number the child typed is the most useful thing on the screen and it used to be
       // thrown away here. Help that deals out the correct answer teaches counting, not
       // dividing: the child can reach it by tapping without ever holding the question in
@@ -2227,6 +2775,7 @@ export default function MathScreen() {
       // was too much or too little.
       setWrongGuess(Number(String(input).trim()))
       setGuessRound(r => r + 1)
+      noteWrong(qIdx)
       // Help does not end the question — the child tries again — so under nine a wrong answer
       // was unreachable: the same question came back until it was right, and every session
       // finished at 100%. That is a loop for the child and a broken signal for everything
@@ -2257,11 +2806,12 @@ export default function MathScreen() {
     attempted.current[qIdx] = wrongGuess
     const newAnswers = [...userAnswers, null]
     setFlash({ correct: false, answer: correctAns[qIdx], skipped: true })
-    flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 900)
+    flashTimer.current = setTimeout(() => advanceAfterFlash(newAnswers), 1300)
   }
 
   // ── Screen mode: evaluate locally ────────────────────────────────────────
   const doScreenEval = async (finalAnswers) => {
+    if (review) return finishReview(finalAnswers)
     setStep('evaluating')
     const numCorrect = finalAnswers.filter((a, i) => sameAnswer(a, correctAns[i])).length
     const accuracy   = Math.round((numCorrect / questions.length) * 100)
@@ -2272,8 +2822,15 @@ export default function MathScreen() {
       attempted: finalAnswers[i] == null ? attempted.current[i] ?? null : null,
       correct: sameAnswer(finalAnswers[i], correctAns[i]),
     }))
+    // How the right answers were reached, so the gems below read as what they are: a question found alone pays in full,
+    // one found with a hint or a second try pays half, one missed or skipped nothing.
+    const breakdown = {
+      unaided: results.filter((r, i) => r.correct && !helpUsedQs.has(i)).length,
+      helped: results.filter((r, i) => r.correct && helpUsedQs.has(i)).length,
+      missed: results.filter(r => !r.correct).length,
+    }
     const evalData = {
-      results, score: accuracy, accuracy, topic,
+      results, score: accuracy, accuracy, topic, breakdown,
       encouragement: getScoreMsg(accuracy, age, language),
     }
     // Both the reward and the level come back from the server, so the screen shows what was
@@ -2281,7 +2838,120 @@ export default function MathScreen() {
     // child never got — and only celebrates a level the child actually moved to.
     const saved = await saveResults(evalData)
     if (saved?.level_change === 'up') setLeveledUp(true)
-    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped, level_change: saved?.level_change ?? 'same' })
+    setEvalResult({ ...evalData, gems_earned: saved ? saved.gems_earned : null, capped: !!saved?.capped, level_change: saved?.level_change ?? 'same', review: saved?.review ?? null })
+    setStep('result')
+  }
+
+  // ── Review round ───────────────────────────────────────────────────────────
+  // After a screen session the server may offer up to five fresh questions on what went wrong. The
+  // questions are made here, from the same templates and rung as the ones missed (the server only
+  // says which ones, and what the first round paid), and are played on the same screen with the
+  // same rules; the answers go back to the server, which does the marking of gems.
+  const startReview = async () => {
+    const offer = evalResult?.review
+    if (!offer || reviewBusy) return
+    setReviewBusy(true)
+    const cap = maxQuestionChars(age)
+    // Never the same sums or the same sentences as the session just played.
+    const usedOperands = new Set(templateProblems.map(p => p?.operandKey).filter(Boolean))
+    const built = []
+    for (const pk of offer.picks) {
+      const src = templateProblems[pk.idx]
+      if (!src?.topic) continue
+      try {
+        // The same kind of question, not just the same topic (see reviewQuestions.js). When the kind cannot
+        // be drawn at all the question is left out rather than swapped for a different one.
+        const p = sameKindProblem(src, { topic: templateTopicFor(curriculumTopics[pk.idx]) || src.topic, usedOperands, language, maxChars: cap })
+        if (!p) continue
+        usedOperands.add(p.operandKey)
+        built.push({ pk, p, curriculum: curriculumTopics[pk.idx] ?? null })
+      } catch (e) { console.error('review question:', e) }
+    }
+    if (!built.length) { await declineReview(); return }
+    fetch(`${SERVER}/api/children/${child.id}/math-review/${offer.id}/start`, { method: 'POST' }).catch(() => {})
+
+    setQuestions(built.map(b => b.p.question_text))
+    setCorrectAns(built.map(b => b.p.topic === 'area-grid'
+      ? measureGridCells(b.p.visual?.cells)[b.p.operandKey.startsWith('grid:a:') ? 'area' : 'perimeter']
+      : b.p.correct_answer))
+    setAnswerFormats(built.map(b => b.p.format === 'choice' ? 'choice' : b.p.format === 'decimal' ? 'decimal' : 'integer'))
+    setQTypes(built.map(() => null))
+    setCurriculumTopics(built.map(b => b.curriculum))
+    setTemplateProblems(built.map(b => b.p))
+    setLlmHints(built.map(() => null))
+    setTopic(built[0].curriculum?.name || 'math')
+    setQIdx(0); setUserAnswers([]); setInput(''); setFlash(null)
+    setHelpVisible(false); setHintOpenFor(null); setHelpUsed(false)
+    setHelpUsedQs(new Set()); setSkippable(new Set()); setHintSeenQs(new Set()); setFirstWrongQs(new Set())
+    setStruckOpts({}); setWrongCounts({}); setHelpShownQs(new Set()); setWrongGuess(null); setChoiceMistake(null); setGuessRound(0)
+    attempted.current = []
+    setLeveledUp(false)
+    setReview({ id: offer.id, picks: built.map(b => b.pk) })
+    setEvalResult(null)
+    setReviewBusy(false)
+    setStep('screen_questions')
+  }
+
+  // "Not now": the server sends the parent's message and weights these skills into the next session.
+  const declineReview = async () => {
+    const offer = evalResult?.review
+    setReviewBusy(true)
+    try { sessionStorage.removeItem(RESULT_KEY) } catch { /* nothing to clean up */ }
+    if (offer && child?.id) {
+      try { await fetch(`${SERVER}/api/children/${child.id}/math-review/${offer.id}/decline`, { method: 'POST' }) }
+      catch (e) { console.error('math-review decline:', e) }
+    }
+    nav('/child/home')
+  }
+
+  const postReviewFinish = async (id, body) => {
+    try {
+      const res = await fetch(`${SERVER}/api/children/${child.id}/math-review/${id}/finish`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      return res.ok ? await res.json() : null
+    } catch (e) { console.error('math-review finish:', e); return null }
+  }
+
+  // "Save again" after a review result did not reach the server.
+  const retrySave = async () => {
+    const r = evalResult?.retry
+    if (!r || retrying) return
+    setRetrying(true)
+    const data = await postReviewFinish(r.id, r.body)
+    setRetrying(false)
+    if (data) setEvalResult(prev => ({ ...prev, gems_earned: data.already ? 0 : data.gems_earned, savedAlready: !!data.already, retry: null }))
+  }
+
+  const finishReview = async (finalAnswers) => {
+    setStep('evaluating')
+    const results = questions.map((q, i) => ({
+      question: q, correct_answer: correctAns[i], child_answer: finalAnswers[i],
+      attempted: finalAnswers[i] == null ? attempted.current[i] ?? null : null,
+      correct: sameAnswer(finalAnswers[i], correctAns[i]),
+    }))
+    const numCorrect = results.filter(r => r.correct).length
+    // The marks and questions are kept with the result: if the request does not get through, the screen can
+    // send exactly the same thing again (the server pays a review once, whatever happens to the answer).
+    const finishBody = {
+      // The questions go with the marks: they are made on this screen and exist nowhere else, and
+      // the gem history opens the practice from what is stored here.
+      results: results.map((r, i) => ({
+        idx: review.picks[i].idx, correct: r.correct, help_used: helpUsedQs.has(i), help_shown: helpShownQs.has(i),
+        question: r.question, child_answer: r.child_answer, correct_answer: r.correct_answer,
+        topic_name: curriculumTopics[i]?.name ?? null,
+      })),
+    }
+    const data = await postReviewFinish(review.id, finishBody)
+    setReview(null)
+    setEvalResult({
+      results, isReview: true, topic,
+      accuracy: Math.round((numCorrect / questions.length) * 100),
+      encouragement: t(numCorrect === questions.length ? 'math_review_win' : 'math_review_some', language),
+      gems_earned: data ? (data.already ? 0 : data.gems_earned) : null, capped: false,
+      savedAlready: !!data?.already,
+      retry: data ? null : { id: review.id, body: finishBody },
+    })
     setStep('result')
   }
 
@@ -2356,6 +3026,11 @@ export default function MathScreen() {
             const topic = curriculumTopics[i]
             if (!topic?.id) return null
             return {
+              // Where the question sat in the session, and how many wrong answers it took: the
+              // server picks the review round from these.
+              idx: i,
+              wrong_tries: wrongCounts[i] ?? 0,
+              help_shown: helpShownQs.has(i),
               topic_id: topic.id,
               topic_name: topic.name ?? null,
               source: templateProblems[i] ? 'template' : 'llm',
@@ -2374,6 +3049,11 @@ export default function MathScreen() {
           questions_correct: numCorrect,
           accuracy: derivedAccuracy,
           help_used: helpUsedQs.size,
+          // Only a screen session can be followed by a review: it is the one whose questions can be
+          // asked again, fresh, from the same templates.
+          review_ok: mode === 'screen',
+          // The server pays a fifth more for paper; it is told which it was.
+          mode,
           // Paper mode only — the model's read on how the work went, and what to try next.
           gemini_notes: evalData.gemini_notes || null,
           next_session: evalData.next_session || null,
@@ -2490,10 +3170,17 @@ export default function MathScreen() {
         >
           <span style={{ fontSize: 42 }}>✏️</span>
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>{t('math_on_paper', language)}</div>
-          <div style={{
-            alignSelf: 'flex-start', background: MATH, color: '#fff',
-            borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
-          }}>⭐ {t('math_up_to_gems', language)} {maxGems} {t('math_gems_word', language)}</div>
+          {/* The figure is what the server pays at most for paper: the same maximum plus the bonus, rounded the same way. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{
+              background: MATH, color: '#fff',
+              borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13,
+            }}>⭐ {t('math_up_to_gems', language)} {Math.round(maxGems * PAPER_BONUS)} {t('math_gems_word', language)}</div>
+            <div style={{
+              background: '#fff1d6', color: '#b7720f', border: '2px solid #f7c76a',
+              borderRadius: 11, padding: '2px 11px', fontFamily: FRED, fontWeight: 700, fontSize: 13,
+            }}>🎁 {t('math_paper_bonus', language)}</div>
+          </div>
           <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5, marginTop: 2 }}>
             {t('math_paper_desc', language)}
           </div>
@@ -2578,7 +3265,13 @@ export default function MathScreen() {
           marginTop: 8, background: MATH, color: '#fff', border: 'none', borderRadius: 16,
           padding: '15px', fontFamily: FRED, fontSize: 17, fontWeight: 600, cursor: 'pointer',
         }}>{t('math_leave_stay', language)}</button>
-        <button className="math-press" onClick={() => nav('/child/home')} style={{
+        {/* The sheet says the answers so far will not be saved, so leaving throws the session away. The saved
+            copy is only for a reload or an accidental exit (pull-to-refresh, the back gesture): left behind by
+            "Leave" it brought the same half-finished question back every time maths was opened. */}
+        <button className="math-press" onClick={() => {
+          try { sessionStorage.removeItem(SESSION_KEY) } catch { /* nothing to clean up */ }
+          nav('/child/home')
+        }} style={{
           background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
           padding: '11px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
         }}>{t('math_leave_go', language)}</button>
@@ -2720,6 +3413,79 @@ export default function MathScreen() {
     // is not lit up until the child asks for help.
     const questionPicto = qVisual?.kind === 'pictogram' ? qVisual : null
 
+    // The optional hint, in pieces: the pill and its nudge, and the panel of steps it opens. On a typed-answer question the
+    // pill sits in the keypad block (pinned to the bottom on a short phone, so it can never be scrolled out of sight behind
+    // it); the steps open above, under the question.
+    const renderHint = (part) => {
+      const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
+      if (!Array.isArray(all) || !all.length) return null
+      // Both spellings of a decimal answer: hints print "0,25" in Turkish and Spanish.
+      const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
+        .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
+      // Stop at the first step that names the answer rather than skipping it: steps build on
+      // each other, and dropping a middle one left "You took away 3 too many" with no
+      // mention of what was taken away.
+      const cut = all.findIndex((s, i) => i > 0 && names(s))
+      const steps = cut === -1 ? all : all.slice(0, cut)
+      const open = hintOpenFor === qIdx
+      if (part === 'panel' && !open) return null
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          {(part === 'all' || part === 'button') && (<>
+                    <button
+                      className="math-press"
+                      onClick={() => {
+                        if (open) { setHintOpenFor(null); return }
+                        setHintOpenFor(qIdx)
+                        // On a short screen the keypad is pinned over the bottom of the column, so
+                        // a hint that opens there opens out of sight. Bring it up above the keys.
+                        requestAnimationFrame(() => {
+                          const el = document.querySelector('.math-qscroll')
+                          if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+                        })
+                        // Same cost as being shown help after a wrong answer — the server docks
+                        // a third for either, so asking early is never the cheaper trick.
+                        setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
+                        setHintSeenQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
+                        setHelpUsed(true)
+                      }}
+                      key={firstWrongQs.has(qIdx) && !open ? `nudge-${nudge}` : 'hint'}
+                      style={{
+                        animation: firstWrongQs.has(qIdx) && !open && !hintSeenQs.has(qIdx) ? 'hintNudge .9s ease 2' : undefined,
+                        display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
+                        background: open ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
+                        color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 15,
+                        boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
+                      }}
+                    >
+                      💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+                    </button>
+                    {nudgeNote === qIdx && !open && (
+                      <div style={{
+                        background: '#fff4e0', borderRadius: 14, padding: '9px 15px', maxWidth: 300,
+                        fontFamily: FRED, fontWeight: 600, fontSize: 14.5, color: '#b7720f', textAlign: 'center',
+                        lineHeight: 1.4, animation: 'scaleIn .22s ease both',
+                      }}>
+                        {say(language, 'Hmm, not quite. Tap 💡 for a hint!', 'Hmm, tam değil. 💡\'ya dokunup ipucuna bak!', 'Mmm, casi. ¡Toca 💡 para ver una pista!')}
+                      </div>
+                    )}
+          </>)}
+          {(part === 'all' || part === 'panel') && (<>
+                    {open && (
+                      <div style={{
+                        background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',
+                        fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT,
+                        lineHeight: 1.5, textAlign: 'center', animation: 'scaleIn .22s ease both',
+                        display: 'flex', flexDirection: 'column', gap: 7,
+                      }}>{steps.map((s, i) => <div key={i}>{s}</div>)}</div>
+                    )}
+          </>)}
+        </div>
+      )
+    }
+
     return (
       <>
       {leaveSheet}
@@ -2751,8 +3517,9 @@ export default function MathScreen() {
                       </div>
                     </>
                   : <>
-                      {t('math_not_this', language)}
-                      <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{t('math_answer_is', language)}</div>
+                      {/* Chosen on purpose, so no "not this one": it says what happened and shows the answer. */}
+                      {flash.skipped ? say(language, 'You skipped this one.', 'Bu soruyu geçtin.', 'Te saltaste esta.') : t('math_not_this', language)}
+                      <div style={{ marginTop: 10, fontSize: 19, opacity: .92 }}>{flash.skipped ? say(language, 'The answer was:', 'Doğru cevap:', 'La respuesta era:') : t('math_answer_is', language)}</div>
                       <div style={{ fontSize: 34 }}>{dnum(flash.answer, language)}</div>
                     </>}
             </div>
@@ -2773,6 +3540,12 @@ export default function MathScreen() {
             <div style={{ flex: 1, background: 'rgba(255,255,255,.32)', borderRadius: 8, height: 10, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'white', borderRadius: 8, transition: 'width 0.5s ease' }} />
             </div>
+            {review && (
+              <div style={{
+                fontFamily: FRED, fontWeight: 600, fontSize: 12.5, color: MATH, background: '#fff',
+                borderRadius: 10, padding: '3px 10px', flexShrink: 0,
+              }}>🔁 {t('math_review_tag', language)}</div>
+            )}
             <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,.95)', flexShrink: 0 }}>
               {qIdx + 1} / {questions.length}
             </div>
@@ -2780,7 +3553,7 @@ export default function MathScreen() {
         </div>
 
         {/* Question + keyboard */}
-        <div className="math-scroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="math-scroll math-qscroll" style={{ flex: 1, padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {helpVisible ? (
             <HelpPanel
               question={q}
@@ -2793,6 +3566,7 @@ export default function MathScreen() {
               // (a price list, a chart) is for reading the question; the help picture is for
               // working it out, and a story problem has only the second.
               visual={templateProblems[qIdx]?.help ?? templateProblems[qIdx]?.visual}
+              mistake={choiceMistake}
               onDone={() => { setHelpVisible(false); setChoiceMistake(null); setInput('') }}
               onHelpUsed={() => setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })}
               language={language}
@@ -2806,7 +3580,7 @@ export default function MathScreen() {
               {/* flexShrink: 0 is load-bearing — the column is a flex parent, so on a short
                   phone it crushed the card and its picture (a clock came out 26px across,
                   unreadable) rather than letting the column scroll. */}
-              <div key={qIdx} style={{
+              <div key={qIdx} className="math-qcard" style={{
                 background: 'white', borderRadius: 22, padding: '26px 24px', textAlign: 'center',
                 boxShadow: '0 8px 28px rgba(60,120,200,.14)', animation: 'scaleIn 0.3s ease both',
                 minHeight: isWord ? 120 : 84, display: 'flex', flexDirection: 'column',
@@ -2831,6 +3605,7 @@ export default function MathScreen() {
                   <ClockFace hour={questionClock.hour} minute={questionClock.minute} size={168}
                     zoomable language={language} />
                 )}
+                {questionClock?.part && <DayPartChip part={questionClock.part} language={language} />}
                 {questionPicto && (
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
                 )}
@@ -2840,55 +3615,14 @@ export default function MathScreen() {
               </div>
 
               {/* Optional hint — the child can ask BEFORE answering, which is the only way an
-                  older child could get one at all: the help panel opens on a wrong answer and
-                  only under nine.
+                  older child could get one before their first try: the help panel comes on a wrong
+                  answer, for seven and over only once the hint has been looked at or the retry failed.
                   This used to show the first step and nothing else, because a counting step ends
                   "…, 19, 20" with the answer sitting at the end of it. The partition steps stop
                   deliberately short — "5966 - 3000 = 2966. Now take away the 100." — and holding
                   those back hid the actual method from exactly the older children who only ever
                   see this hint. So later steps are shown too, unless they name the answer. */}
-              {(() => {
-                const all = templateProblems[qIdx]?.hint_steps ?? llmHints[qIdx]
-                if (!Array.isArray(all) || !all.length) return null
-                // Both spellings of a decimal answer: hints print "0,25" in Turkish and Spanish.
-                const esc = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                const names = s => [correctAns[qIdx], dnum(correctAns[qIdx], language)]
-                  .some(v => new RegExp(`(?<!\\d)${esc(v)}(?!\\d)`).test(String(s)))
-                const steps = [all[0], ...all.slice(1).filter(s => !names(s))]
-                const open = hintOpenFor === qIdx
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <button
-                      className="math-press"
-                      onClick={() => {
-                        if (open) { setHintOpenFor(null); return }
-                        setHintOpenFor(qIdx)
-                        // Same cost as being shown help after a wrong answer — the server docks
-                        // a third for either, so asking early is never the cheaper trick.
-                        setHelpUsedQs(prev => { const next = new Set(prev); next.add(qIdx); return next })
-                        setHelpUsed(true)
-                      }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none',
-                        background: open ? 'rgba(247,148,51,.16)' : 'rgba(255,255,255,.72)',
-                        color: ORANGE, borderRadius: 999, padding: '8px 16px', cursor: 'pointer',
-                        fontFamily: FRED, fontWeight: 600, fontSize: 15,
-                        boxShadow: '0 3px 10px rgba(60,120,200,.08)', transition: 'background .16s',
-                      }}
-                    >
-                      💡 {say(language, 'Hint', 'İpucu', 'Pista')} <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
-                    </button>
-                    {open && (
-                      <div style={{
-                        background: 'rgba(255,255,255,.9)', borderRadius: 16, padding: '13px 17px',
-                        fontFamily: FRED, fontWeight: 600, fontSize: 15.5, color: INK_SOFT,
-                        lineHeight: 1.5, textAlign: 'center', animation: 'scaleIn .22s ease both',
-                        display: 'flex', flexDirection: 'column', gap: 7,
-                      }}>{steps.map((s, i) => <div key={i}>{s}</div>)}</div>
-                    )}
-                  </div>
-                )
-              })()}
+              {renderHint(answerFormats[qIdx] === 'choice' ? 'all' : 'panel')}
 
               {skippable.has(qIdx) && !flash && (
                 <button
@@ -2913,8 +3647,9 @@ export default function MathScreen() {
                       key={opt.value}
                       className="math-press"
                       onClick={() => submitChoiceAnswer(opt.value)}
-                      disabled={!!flash}
+                      disabled={!!flash || (struckOpts[qIdx] ?? []).includes(opt.value)}
                       style={{
+                        opacity: (struckOpts[qIdx] ?? []).includes(opt.value) ? 0.3 : 1,
                         border: 'none', background: 'white', borderRadius: 18, padding: '20px 12px',
                         boxShadow: '0 6px 18px rgba(60,120,200,.12)', cursor: flash ? 'default' : 'pointer',
                         fontFamily: FRED, fontWeight: 600, fontSize: 27, color: MATH, lineHeight: 1.2,
@@ -2923,9 +3658,10 @@ export default function MathScreen() {
                   ))}
                 </div>
               ) : (
-                <>
+                <div className="math-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {renderHint('button')}
                   {/* Answer display */}
-                  <div style={{
+                  <div className="math-answer" style={{
                     background: 'white', borderRadius: 16, padding: '14px', textAlign: 'center',
                     boxShadow: '0 4px 14px rgba(0,0,0,.05)', minHeight: 62,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2944,12 +3680,14 @@ export default function MathScreen() {
                     allowDecimal={answerFormats[qIdx] === 'decimal'}
                     language={language}
                   />
-                </>
+                </div>
               )}
             </>
           )}
         </div>
       </div>
+      {/* Paper over the question: a pencil for notes next to the answers. Not saved, cleared with each question. */}
+      <Scratchpad key={`${qIdx}:${review ? 'r' : 'q'}`} selector=".math-qscroll" language={language} accent={MATH} />
       </>
     )
   }
@@ -3000,7 +3738,7 @@ export default function MathScreen() {
             boxShadow: '0 4px 16px rgba(0,0,0,.05)', animation: 'fadeUp 0.4s ease both',
           }}>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t('math_score', language)}</div>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 11, color: INK_SOFT, textTransform: 'uppercase', letterSpacing: '.6px' }}>{t(evalResult.isReview ? 'math_review_tag' : 'math_score', language)}</div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: accuracy >= 80 ? GREEN : ORANGE, lineHeight: 1.05 }}>
                 {accuracy}%
               </div>
@@ -3018,15 +3756,42 @@ export default function MathScreen() {
                 {evalResult.capped ? t('math_capped', language) : t('math_earned', language)}
               </div>
               <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 40, color: ORANGE, lineHeight: 1.05 }}>
-                {evalResult.gems_earned == null ? '—' : evalResult.capped ? '🌙' : `+${evalResult.gems_earned}`}
+                {evalResult.gems_earned == null ? '—' : evalResult.savedAlready ? '✓' : evalResult.capped ? '🌙' : `+${evalResult.gems_earned}`}
               </div>
               <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT, marginTop: 2 }}>
                 {evalResult.gems_earned == null ? t('math_save_failed', language)
+                  : evalResult.savedAlready ? t('math_saved', language)
                   : evalResult.capped ? t('math_come_back', language)
                   : `${t('math_gems_word', language)} ⭐`}
               </div>
             </div>
           </div>
+
+          {!evalResult.isReview && evalResult.breakdown && (evalResult.breakdown.helped > 0 || evalResult.breakdown.missed > 0) && (() => {
+            const b = evalResult.breakdown
+            const parts = [
+              b.unaided > 0 && say(language, `${b.unaided} on your own`, `${b.unaided} yardımsız doğru`, `${b.unaided} sin ayuda`),
+              b.helped > 0 && say(language, `${b.helped} right with a hint`, `${b.helped} ipucuyla doğru`, `${b.helped} bien con una pista`),
+              b.missed > 0 && say(language, `${b.missed} to practise`, `${b.missed} geliştirilecek`, `${b.missed} por repasar`),
+            ].filter(Boolean)
+            return (
+              <div style={{ textAlign: 'center', fontFamily: FRED, fontWeight: 600, fontSize: 14, color: INK_SOFT, lineHeight: 1.5, padding: '0 6px', animation: 'fadeUp 0.4s ease 0.05s both' }}>
+                {parts.join(' · ')}
+              </div>
+            )
+          })()}
+
+          {evalResult.retry && (
+            <button
+              className="math-press"
+              disabled={retrying}
+              onClick={retrySave}
+              style={{
+                background: '#fff', color: MATH, border: `2px solid ${MATH}`, borderRadius: 16, padding: '12px 18px',
+                fontFamily: FRED, fontSize: 16, fontWeight: 600, cursor: 'pointer', opacity: retrying ? .6 : 1,
+              }}
+            >↻ {t('math_retry_save', language)}</button>
+          )}
 
           {/* Level up banner */}
           {leveledUp && (
@@ -3092,17 +3857,60 @@ export default function MathScreen() {
             </div>
           )}
 
-          <button
-            className="math-press"
-            onClick={() => nav('/child/home')}
-            style={{
-              background: MATH, color: 'white', border: 'none', borderRadius: 18,
-              padding: '16px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
-              cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', marginTop: 4,
-            }}
-          >
-            {t('math_done', language)}! 🏠
-          </button>
+          {/* After a session with something to practise: the review is offered here, where the
+              child has just seen what went wrong. "Done" stays, quieter, as "not now" — the
+              parent's message waits for whichever they choose. */}
+          {evalResult.review && !evalResult.isReview ? (
+            <div style={{
+              background: 'white', borderRadius: 22, padding: '18px 20px', marginTop: 4,
+              display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'center',
+              boxShadow: '0 4px 16px rgba(0,0,0,.06)', border: `2px solid ${MATH}`,
+            }}>
+              <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 18, color: INK, lineHeight: 1.35 }}>
+                🔁 {t('math_review_title', language)}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: INK_SOFT, lineHeight: 1.5 }}>
+                {t('math_review_body', language)}{' '}
+                {t(evalResult.review.gems_possible ? 'math_review_gems' : 'math_review_nogems', language)}
+              </div>
+              <button
+                className="math-press"
+                disabled={reviewBusy}
+                onClick={startReview}
+                style={{
+                  background: MATH, color: 'white', border: 'none', borderRadius: 18,
+                  padding: '15px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
+                  cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', opacity: reviewBusy ? .6 : 1,
+                }}
+              >
+                {t('math_review_go', language)} ({evalResult.review.picks.length})
+              </button>
+              <button
+                className="math-press"
+                disabled={reviewBusy}
+                onClick={declineReview}
+                style={{
+                  background: 'none', color: INK_SOFT, border: 'none', borderRadius: 16,
+                  padding: '10px', fontFamily: FRED, fontSize: 15.5, fontWeight: 600, cursor: 'pointer',
+                  opacity: reviewBusy ? .6 : 1,
+                }}
+              >
+                {t('math_review_later', language)}
+              </button>
+            </div>
+          ) : (
+            <button
+              className="math-press"
+              onClick={() => nav('/child/home')}
+              style={{
+                background: MATH, color: 'white', border: 'none', borderRadius: 18,
+                padding: '16px 22px', fontFamily: FRED, fontSize: 18, fontWeight: 600,
+                cursor: 'pointer', boxShadow: '0 8px 20px rgba(61,143,207,.34)', marginTop: 4,
+              }}
+            >
+              {t('math_done', language)}! 🏠
+            </button>
+          )}
         </div>
       </div>
     )

@@ -38,13 +38,18 @@ import java.io.File
 class TabletTest {
     @get:Rule val compose = createEmptyComposeRule()
 
-    private class FakeApi : TutoApi {
+    private class FakeApi(val siblings: Boolean = false) : TutoApi {
         var saved: JSONObject? = null
+        var verifiedChild: String? = null
+        var forgotChild: String? = null
+        override suspend fun forgotPin(code: String, childId: String) { forgotChild = childId }
         override suspend fun familyChildren(code: String) =
-            if (code == "TUTO42") listOf(ChildSummary("child-1", "Ada", 7)) else emptyList()
-        override suspend fun verifyPin(code: String, pin: String): PinResult =
-            if (pin == "1234") PinResult.Ok(Child.from(JSONObject("""{"id":"child-1","name":"Ada","age":7,"language":"en","task_settings":{"math":{"gems":20}}}""")))
+            if (code == "TUTO42") listOf(ChildSummary("child-1", "Ada", 7)) + (if (siblings) listOf(ChildSummary("child-2", "Test sibling", 9)) else emptyList()) else emptyList()
+        override suspend fun verifyPin(code: String, pin: String, childId: String?): PinResult {
+            verifiedChild = childId
+            return if (pin == "1234" && childId == "child-1") PinResult.Ok(Child.from(JSONObject("""{"id":"child-1","name":"Ada","age":7,"language":"en","task_settings":{"math":{"gems":20}}}""")))
             else PinResult.Wrong(4)
+        }
         override suspend fun todaySummary(childId: String) = Today.from(JSONObject(
             """{"today":2,"activities":{"reading":0,"math":0,"puzzle":0},"streak":4,"gems":42,"nearestGoal":{"id":"g","name":"Roblox 15 min","icon":"🎮","bt_cost":60},"hasAnyGoals":true}""",
         ))
@@ -62,14 +67,27 @@ class TabletTest {
         private val key = sheet.getJSONArray("questions").let { a -> (0 until a.length()).map { a.getJSONObject(it).getInt("answer") } }
         var right = 0
         var answered = 0
-        override suspend fun startPuzzle(childId: String) = PuzzleSession.from(sheet)
-        override suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String): PuzzleAnswer {
+        private val retried = mutableSetOf<Int>()
+        var offerReview = false
+        var shortPuzzle = false
+        var declinedReview: String? = null
+        var finishedReview: String? = null
+        override suspend fun puzzleHint(sessionId: String, index: Int, lang: String) = JSONObject().put("text", "Look at the pattern.")
+        override suspend fun declinePuzzleReview(childId: String, reviewId: String) { declinedReview = reviewId }
+        override suspend fun startPuzzleReview(childId: String, reviewId: String) = PuzzleSession.from(sheet).copy(sessionId = reviewId, questions = PuzzleSession.from(sheet).questions.take(1), review = true)
+        override suspend fun finishPuzzleReview(childId: String, reviewId: String): PuzzleResult {
+            finishedReview = reviewId
+            return PuzzleResult(1, 1, 1, false)
+        }
+        override suspend fun startPuzzle(childId: String) = PuzzleSession.from(sheet).let { if (shortPuzzle) it.copy(questions = it.questions.take(1)) else it }
+        override suspend fun answerPuzzle(sessionId: String, index: Int, chosen: Int, lang: String, skip: Boolean): PuzzleAnswer {
+            val ok = !skip && chosen == key[index]
+            if (!skip && !ok && retried.add(index)) return PuzzleAnswer(false, -1, null, retry = true)
             answered++
-            val ok = chosen == key[index]
             if (ok) right++
             return PuzzleAnswer(ok, key[index], if (ok) null else "That one is different.")
         }
-        override suspend fun finishPuzzle(sessionId: String) = PuzzleResult(right, key.size, 30, false)
+        override suspend fun finishPuzzle(sessionId: String) = PuzzleResult(right, if (shortPuzzle) 1 else key.size, 30, false, if (offerReview) JSONObject().put("id", "review-1").put("count", 1).put("max_gems", 1) else null)
         fun answerFor(index: Int) = key[index]
     }
 
@@ -116,11 +134,33 @@ class TabletTest {
         waitFor("home with gems") { textExists("Ada") && textExists("42") }
     }
 
+    @Test fun siblingsRequireAnExplicitSelection() {
+        InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("tuto", 0).edit().clear().commit()
+        val api = FakeApi(siblings = true)
+        Services.api = api
+        ActivityScenario.launch(MainActivity::class.java).use {
+            compose.onNodeWithText("Family code").performTextInput("tuto42")
+            compose.onNodeWithText("Family code").performImeAction()
+            waitFor("sibling picker") { exists("child_child-2") }
+            tap("child_child-2")
+            tap("forgot-pin")
+            waitFor("forgot PIN request accepted") { textExists("Request received", substring = true) }
+            assertEquals("child-2", api.forgotChild)
+            listOf("1", "2", "3", "4").forEach { tap("key_$it") }
+            waitFor("selected sibling rejected") { textExists("That's not the right PIN", substring = true) }
+            assertEquals("child-2", api.verifiedChild)
+            tap("child_child-1")
+            listOf("1", "2", "3", "4").forEach { tap("key_$it") }
+            waitFor("selected child signed in") { textExists("42") }
+            assertEquals("child-1", api.verifiedChild)
+        }
+    }
+
     @Test fun aFullPuzzleSitting() {
-        val api = freshApi()
+        val api = freshApi().also { it.offerReview = true }
         ActivityScenario.launch(MainActivity::class.java).use {
             signIn()
-            compose.onNodeWithTag("quest_puzzle").performClick()
+            tap("quest_puzzle")
             waitFor("puzzle welcome", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Welcome }
             val run = Services.currentPuzzle!!
             assertEquals(10, run.total)
@@ -142,6 +182,14 @@ class TabletTest {
                 val pick = if (i == 0) (right + 1) % run.question!!.options.size else right
                 tap("puzzle_option_$pick")
                 compose.onNodeWithText("Send", substring = true).performClick()
+                if (i == 0) {
+                    waitFor("puzzle first wrong stays on same question") { run.retryNeeded && !run.sending }
+                    assertEquals(0, run.index)
+                    assertEquals(null, run.answer)
+                    compose.onNodeWithText("Hint").performScrollTo().performClick()
+                    waitFor("hint loaded") { run.hintCount == 1 && !run.sending }
+                    compose.onNodeWithText("I don’t know").performScrollTo().performClick()
+                }
                 waitFor("puzzle $i answered") { run.answer != null || run.index != i || run.phase != PuzzleRun.Phase.Asking }
                 if (i == 0) {
                     assertTrue(run.answer?.correct == false)
@@ -153,8 +201,36 @@ class TabletTest {
             assertEquals(10, api.answered)
             assertEquals(9, run.result!!.correct)
             shot("08-puzzle-result")
-            compose.onNodeWithText("Home").performClick()
+            compose.onNodeWithText("Not now").performScrollTo().performClick()
             waitFor("back home") { textExists("My Math") }
+            assertEquals("review-1", api.declinedReview)
+        }
+    }
+
+    @Test fun completePuzzleReviewAndBottomNavigation() {
+        val api = freshApi().also { it.offerReview = true; it.shortPuzzle = true }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            signIn()
+            tap("nav-settings")
+            waitFor("settings via bottom navigation") { textExists("Switch child") }
+            tap("nav-home")
+            tap("quest_puzzle")
+            waitFor("short puzzle ready", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Welcome }
+            val run = Services.currentPuzzle!!
+            compose.onNodeWithText("Let's go", substring = true).performScrollTo().performClick()
+            compose.onNodeWithText("I don’t know").performScrollTo().performClick()
+            waitFor("skip settled") { run.answer != null }
+            compose.onNodeWithText("Next").performClick()
+            waitFor("review offered") { run.phase == PuzzleRun.Phase.Result }
+            compose.onNodeWithText("Practise").performScrollTo().performClick()
+            waitFor("review ready") { run.phase == PuzzleRun.Phase.Welcome && run.session?.review == true }
+            compose.onNodeWithText("Let's go", substring = true).performScrollTo().performClick()
+            tap("puzzle_option_${api.answerFor(0)}")
+            compose.onNodeWithText("Send", substring = true).performClick()
+            waitFor("review finished") { run.phase == PuzzleRun.Phase.Result && api.finishedReview != null }
+            assertEquals("review-1", api.finishedReview)
+            assertEquals(null, api.declinedReview)
+            assertEquals(1, run.result!!.gemsEarned)
         }
     }
 
@@ -180,7 +256,7 @@ class TabletTest {
             shot("02-home")
 
             // A full sitting, every answer taken from the engine's own answer key.
-            compose.onNodeWithText("Start").performClick()
+            tap("quest_math")
             waitFor("maths sitting ready", 30_000) { Services.currentMath?.phase == MathRun.Phase.Asking }
             val run = Services.currentMath!!
             val total = run.total

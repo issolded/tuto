@@ -1,12 +1,16 @@
+import BookWorldPicker from '../components/BookWorldPicker'
 import { useEffect, useRef, useState } from 'react'
+import { mergeDrafts } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import TutoMascot from '../components/TutoMascot'
 import StoryCover from '../components/StoryCover'
 import BookShelfGrid from '../components/BookShelfGrid'
 import Shell from '../components/Shell'
 import BookOpenTransition from '../components/BookOpenTransition'
 import { storageClient, getChildStories } from '../lib/supabase'
+
+import LibraryArchive from '../components/LibraryArchive'
 
 const ACCENT = '#FF6B35'
 
@@ -66,10 +70,24 @@ function useLongPress(onLongPress, ms = 600) {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function LibraryScreen() {
+export default function LibraryScreen({ onWrite, onUpload }) {
   const lang = childLang(JSON.parse(localStorage.getItem('child') || 'null'))
   const nav = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const archiveOpen = params.get('view') === 'archive'
+  const [writeError, setWriteError] = useState(false)
   const child = JSON.parse(localStorage.getItem('child') || 'null')
+  const areaKey = 'tuto:book-area:' + (child?.id || 'guest')
+  const [area, setArea] = useState(() => {
+    try { return localStorage.getItem(areaKey) === 'reader' ? 'reader' : 'writer' }
+    catch { return 'writer' }
+  })
+  const chooseArea = value => {
+    setArea(value)
+    setJiggling(false)
+    try { localStorage.setItem(areaKey, value) } catch { /* Selection still works without storage. */ }
+    if (archiveOpen) setParams({})
+  }
   const [books, setBooks] = useState(null)
   const [stories, setStories] = useState(null)
   const [jiggling, setJiggling] = useState(false)
@@ -90,8 +108,8 @@ export default function LibraryScreen() {
       .then(({ data }) => setBooks(data ?? []))
       .catch(() => setBooks([]))
     getChildStories(child.id)
-      .then(data => setStories(data))
-      .catch(() => setStories([]))
+      .then(data => setStories(mergeDrafts(data, child.id)))
+      .catch(() => setStories(mergeDrafts([], child.id)))
   }, [])
 
   async function handleDeleteConfirm() {
@@ -101,8 +119,9 @@ export default function LibraryScreen() {
     setDeletingId(id)
     setTimeout(async () => {
       setDeletingId(null)
+      const { error } = await storageClient.from('books').delete().eq('id', id).eq('child_id', child.id)
+      if (error) { setWriteError(true); return }
       setBooks(prev => prev.filter(b => b.id !== id))
-      await storageClient.from('books').delete().eq('id', id)
     }, 320)
   }
 
@@ -114,14 +133,17 @@ export default function LibraryScreen() {
     setCompletingId(id)
     setTimeout(async () => {
       setCompletingId(null)
+      const { error } = await storageClient.from('books').update({ completed: true }).eq('id', id).eq('child_id', child.id)
+      if (error) { setWriteError(true); return }
       setBooks(prev => prev.map(b => b.id === id ? { ...b, completed: true } : b))
       setCelebrationTitle(title)
-      await storageClient.from('books').update({ completed: true }).eq('id', id)
     }, 430)
   }
 
   const lp = useLongPress(() => setJiggling(true))
   const inProgress = (books ?? []).filter(b => !b.completed)
+  const drafts = (stories ?? []).filter(story => story.status !== 'completed')
+  const completedStories = (stories ?? []).filter(story => story.status === 'completed')
   const completed  = (books ?? []).filter(b =>  b.completed)
 
   return (
@@ -135,57 +157,57 @@ export default function LibraryScreen() {
       {/* Header */}
       <div style={{ background: 'white', padding: '52px 20px 18px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 1px 0 #EBEBEB' }}>
         <button
-          onClick={e => { e.stopPropagation(); nav('/child/home') }}
+          onClick={e => { e.stopPropagation(); if (archiveOpen) setParams({}); else nav('/child/home') }}
           style={{ width: 40, height: 40, borderRadius: 12, background: '#F5F5F5', border: 'none', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A2E' }}
         >←</button>
-        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>{t('lib_title', lang)}</span>
+        <span style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 22, fontWeight: 800, color: '#1A1A2E' }}>{t(archiveOpen ? 'la_title' : 'lib_title', lang)}</span>
       </div>
 
       {/* Content */}
       <div style={{ padding: '20px 16px 80px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
 
+        <BookWorldPicker lang={lang} area={area} archiveOpen={archiveOpen} onChoose={chooseArea} onLibrary={() => setParams({ view: 'archive' })} />
+        {writeError && <p role="alert">{t('la_write_error', lang)}</p>}
+        {archiveOpen ? books === null || stories === null ? <p>{t('lib_loading', lang)}</p> : <LibraryArchive books={books} stories={stories} childName={child?.name} lang={lang} onStory={story => setOpening({ story, fallbackColor: STORY_BG_COLORS[0] })} onRemove={id => setConfirmDeleteId(id)} /> : <>
         {/* ── Books by child ── */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        {area === 'writer' ? <section className="book-world-panel" aria-label={t('bw_studio', lang)}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               {t('lib_my_books', lang)}
             </div>
+            <div className="books-writing-actions">
             <button
-              onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
+              onClick={e => { e.stopPropagation(); onWrite ? onWrite() : nav('/child/stories', { state: { action: 'write', from: '/child/library' } }) }}
               style={{ background: '#E8E0FF', color: '#6C63FF', border: 'none', borderRadius: 12, padding: '6px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'TrRound', 'Baloo 2', cursive" }}
             >
               {t('lib_write', lang)}
             </button>
+              <button className="books-upload" onClick={() => onUpload ? onUpload() : nav('/child/stories', { state: { action: 'upload', from: '/child/library' } })}>{t('sw_upload', lang)}</button>
+            </div>
           </div>
 
           {stories === null ? (
             <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0A0BC', fontSize: 14 }}>{t('lib_loading', lang)}</div>
-          ) : stories.length === 0 ? (
+          ) : drafts.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>✏️</div>
-              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t('lib_no_stories', lang)}</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t(completedStories.length ? 'la_no_drafts' : 'lib_no_stories', lang)}</div>
               <button
-                onClick={e => { e.stopPropagation(); nav('/child/stories', { state: { from: '/child/library' } }) }}
+                onClick={e => { e.stopPropagation(); onWrite ? onWrite() : nav('/child/stories', { state: { action: 'write', from: '/child/library' } }) }}
                 style={{ background: '#6C63FF', color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
-                {t('lib_write_first', lang)}
+                {t(completedStories.length ? 'lib_write' : 'lib_write_first', lang)}
               </button>
             </div>
           ) : (
             <BookShelfGrid
-              items={stories}
+              items={drafts}
               renderItem={(story, i) => (
-                <StoryCover key={story.id} story={story} fallbackColor={STORY_BG_COLORS[i % STORY_BG_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: STORY_BG_COLORS[i % STORY_BG_COLORS.length] })} />
+                <div key={story.id}><StoryCover story={story} fallbackColor={STORY_BG_COLORS[i % STORY_BG_COLORS.length]} childName={child?.name} onTap={() => story.writing_source === 'typed' && story.status === 'in_progress' ? nav('/child/stories', { state: { story, from: '/child/library' } }) : setOpening({ story, fallbackColor: STORY_BG_COLORS[i % STORY_BG_COLORS.length] })} />{story.status === 'in_progress' && <button onClick={() => nav('/child/stories', { state: { story, from: '/child/library' } })} style={{ border: 0, background: 'transparent', color: '#246644', padding: '8px 0', width: '100%', fontWeight: 800 }}>{t('sw_continue', lang)}</button>}</div>
               )}
             />
           )}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: '#E8E8EE', marginBottom: 28 }} />
-
-        {/* ── Books from other authors ── */}
-        <div>
+        </section> : <section className="book-world-panel" aria-label={t('bw_explorer', lang)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#1A1A2E' }}>
               {t('lib_other_authors', lang)}
@@ -200,15 +222,15 @@ export default function LibraryScreen() {
 
           {books === null ? (
             <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0A0BC', fontSize: 14 }}>{t('lib_loading', lang)}</div>
-          ) : books.length === 0 ? (
+          ) : inProgress.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📚</div>
-              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t('lib_no_books', lang)}</div>
+              <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 700, color: '#1A1A2E', marginBottom: 12 }}>{t(completed.length ? 'la_no_reading' : 'lib_no_books', lang)}</div>
               <button
                 onClick={e => { e.stopPropagation(); nav('/child/reading', { state: { newBook: true } }) }}
                 style={{ background: ACCENT, color: 'white', border: 'none', borderRadius: 14, padding: '11px 22px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
               >
-                {t('lib_add_first', lang)}
+                {t(completed.length ? 'lib_add' : 'lib_add_first', lang)}
               </button>
             </div>
           ) : (
@@ -231,31 +253,10 @@ export default function LibraryScreen() {
                 </div>
               )}
 
-              {completed.length > 0 && (
-                <div>
-                  <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#1A1A2E', marginBottom: 10 }}>
-                    {t('lib_finished', lang)}
-                  </div>
-                  <div style={{ background: 'linear-gradient(135deg, #2EC486 0%, #22A876 100%)', borderRadius: 16, padding: '14px 18px', marginBottom: 14, boxShadow: '0 4px 16px rgba(46,196,134,0.25)' }}>
-                    <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: 'white' }}>
-                      You've read {completed.length} book{completed.length > 1 ? 's' : ''}! Keep it up! 🌟
-                    </div>
-                  </div>
-                  <BookGrid
-                    books={completed}
-                    jiggling={jiggling}
-                    longPress={lp}
-                    deletingId={deletingId}
-                    completingId={null}
-                    onDeleteRequest={id => setConfirmDeleteId(id)}
-                    onCompleteRequest={null}
-                    onTap={() => {}}
-                  />
-                </div>
-              )}
             </>
           )}
-        </div>
+        </section>}
+        </>}
       </div>
 
       {/* Modals */}
@@ -299,7 +300,7 @@ export default function LibraryScreen() {
 
 function BookGrid({ books, jiggling, longPress, deletingId, completingId, onDeleteRequest, onCompleteRequest, onTap }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div className="library-shelf">
       {books.map(book => (
         <BookCard
           key={book.id}
@@ -357,7 +358,7 @@ function BookCard({ book, jiggling, longPress, isDeleting, isCompleting, onDelet
       )}
       <div style={{ position: 'relative', borderRadius: '20px 20px 0 0', overflow: 'hidden', aspectRatio: '2/3', background: '#F0EBE3' }}>
         {book.cover_url ? (
-          <img src={book.cover_url} alt={book.title} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img loading="lazy" decoding="async" src={book.cover_url} alt={book.title} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>📖</div>
         )}

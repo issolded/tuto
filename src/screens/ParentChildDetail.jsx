@@ -11,6 +11,8 @@ import {
   TopBar, Btn, Card, Field, Pill, Avatar, BottomSheet, Icon, TaskIcon, SectionHead, PinPad, Confetti, TutoMascot, BirthDateField,
 } from '../lib/parentUI'
 import { ageFromBirthDate } from '../lib/age'
+import ParentNav from '../components/ParentNav'
+import { useChildWeek } from '../lib/parentWeek'
 import { TreeArt } from '../components/TreeArt'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -20,6 +22,9 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 // row with no tile behind it, so it carries a parent key instead.
 const TASK_LABELS = {
   math:     { key: 'task_math',     type: 'math' },
+  math_review: { key: 'gem_math_review', type: 'math' },
+  english_review: { key: 'gem_english_review', type: 'english' },
+  puzzle_review: { key: 'gem_puzzle_review', type: 'puzzle' },
   reading:  { key: 'task_reading',  type: 'reading' },
   writing:  { key: 'task_writing',  type: 'writing' },
   story:    { key: 'task_writing',  type: 'writing' },
@@ -327,6 +332,23 @@ function ChangePinSheet({ childId, parentId, onClose }) {
   const [confirm, setConfirm] = useState('')
   const [errMsg, setErrMsg]   = useState('')
   const [done, setDone]       = useState(false)
+  // A PIN the app makes for the parent to pass on, so nobody has to think of one: four digits, none a sibling already
+  // has (the PIN is how the app tells the children apart), and not 0000 or 1234.
+  const [made, setMade]       = useState(null)
+
+  const makeOne = async () => {
+    const { data: siblings } = parentId
+      ? await supabase.from('children').select('pin_hash').eq('parent_id', parentId).neq('id', childId)
+      : { data: [] }
+    const taken = new Set((siblings || []).map(x => x.pin_hash))
+    for (let i = 0; i < 200; i++) {
+      const p = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+      if (/^(\d)\1{3}$/.test(p) || ['0123', '1234', '2345', '3456', '4567', '5678', '6789', '9876', '4321'].includes(p)) continue
+      if (taken.has(await hashPin(p))) continue
+      setMade(p)
+      return
+    }
+  }
 
   const handleInput = (val) => {
     if (phase === 'enter') {
@@ -367,6 +389,16 @@ function ChangePinSheet({ childId, parentId, onClose }) {
         <div style={{ textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.green, padding: '16px 0' }}>
           {s('cd_pin_updated')}
         </div>
+      ) : made ? (
+        <>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16, color: PC.inkSoft }}>{s('cd_pin_made')}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 52, letterSpacing: 10, color: PC.ink, margin: '6px 0' }}>{made}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PC.inkSoft, lineHeight: 1.45 }}>{s('cd_pin_made_b')}</div>
+          </div>
+          <Btn onClick={() => savePin(made)}>{s('cd_pin_save')}</Btn>
+          <Btn variant="ghost" onClick={() => setMade(null)}>{s('cancel')}</Btn>
+        </>
       ) : (
         <>
           <div style={{ textAlign: 'center' }}>
@@ -381,6 +413,7 @@ function ChangePinSheet({ childId, parentId, onClose }) {
             <div style={{ background: PC.dangerBg, color: PC.danger, borderRadius: 12, padding: '10px 16px', fontFamily: FONT, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{errMsg}</div>
           )}
           <PinPad value={phase === 'enter' ? pin : confirm} onChange={handleInput} />
+          {phase === 'enter' && pin.length === 0 && <Btn variant="ghost" onClick={makeOne}>{s('cd_pin_random')}</Btn>}
           <Btn variant="ghost" onClick={onClose}>{s('cancel')}</Btn>
         </>
       )}
@@ -820,6 +853,35 @@ function RemoveSheet({ child, onClose, onConfirm }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
+// The week's numbers from the same endpoint the report draws, as one line and seven small bars.
+function WeekCard({ childId, onOpen }) {
+  const s = useT()
+  const w = useChildWeek(childId)
+  const max = Math.max(0, ...(w?.days || []).map(d => d.gems))
+  const delta = w ? w.totals.gems - w.previous.gems : 0
+  return (
+    <Card pad={14} onClick={onOpen} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>📊 {s('cd_week')}</div>
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft, marginTop: 2 }}>
+          {w ? s('rp_summary', { n: w.totals.sessions, g: w.totals.gems }) : '…'}
+        </div>
+        {w && (w.previous.gems > 0 || w.totals.gems > 0) && (
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, marginTop: 3, color: delta > 0 ? PC.green : delta < 0 ? PC.peachDeep : PC.inkSoft }}>
+            {delta > 0 ? s('rp_vs_up', { n: delta }) : delta < 0 ? s('rp_vs_down', { n: -delta }) : s('rp_vs_same')}
+          </div>
+        )}
+      </div>
+      <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 34, flex: 'none' }}>
+        {(w?.days || Array.from({ length: 7 }, () => ({ gems: 0 }))).map((d, i) => (
+          <span key={i} style={{ width: 7, height: max ? Math.max(3, Math.round(d.gems / max * 34)) : 3, borderRadius: '3px 3px 0 0', background: d.gems ? PC.tealInk : PC.line }} />
+        ))}
+      </div>
+      <Icon name="chevron" size={18} color={PC.inkFaint} />
+    </Card>
+  )
+}
+
 export default function ParentChildDetail() {
   const s = useT()
   const lang = useUiLang()
@@ -986,10 +1048,10 @@ export default function ParentChildDetail() {
   // A session that hit the day's limit belongs here too. It earned nothing, and filtering on
   // the amount alone hid it — so a parent whose child did four maths sessions was told about
   // three, which is the one number here they could be misled by.
-  const reviewable = (sub) => ['math', 'puzzle', 'english'].includes(sub.task_type) && !!sub.ledgerId
+  const reviewable = (sub) => (['math', 'puzzle', 'english'].includes(sub.task_type) || sub.task_type === 'math_review' || sub.task_type === 'english_review' || sub.task_type === 'puzzle_review') && !!sub.ledgerId
   const todayDone = (ledger || [])
     .filter(e => (e.amount > 0 || e.capped) && isToday(e.created_at) && e.reason !== 'Welcome bonus')
-    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, ledgerId: e.id, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))
+    .map((e, i) => ({ id: `${e.reason}-${e.created_at}-${i}`, ledgerId: e.id, refId: e.ref_id, task_type: e.reason, gems_earned: e.amount, at: e.created_at, capped: !!e.capped }))
 
   // Reading is the one activity that stores what actually happened — the questions it asked,
   // what the child answered, and the pages they photographed. That record was written from
@@ -1139,7 +1201,7 @@ export default function ParentChildDetail() {
   )
 
   return (
-    <div style={{ background: PC.bg, minHeight: '100dvh', maxWidth: 430, margin: '0 auto', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
+    <div className="tc-col" style={{ background: PC.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: FONT, position: 'relative' }}>
       {justApproved && <Confetti n={16} />}
       {lightbox && (
         <PhotoLightbox
@@ -1156,7 +1218,7 @@ export default function ParentChildDetail() {
         onBack={() => nav('/parent/dashboard', { state: { updatedChild: child } })}
       />
 
-      <div className="tc-scroll" style={{ flex: 1, padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="tc-scroll tc-tabbed" style={{ flex: 1, paddingTop: 4, paddingInline: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
 
         {/* profile card */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '4px 2px 0' }}>
@@ -1176,6 +1238,10 @@ export default function ParentChildDetail() {
             </div>
           </div>
         </div>
+
+        {/* This week, at a glance — the door to the weekly report, which lives here now that the
+            Reports tab went to Tuto. A week is always one child's week. */}
+        <WeekCard childId={id} onOpen={() => nav(`/parent/reports?child=${id}`)} />
 
         {/* The language the child is taught in. It lived only at the top of Task settings, one
             screen down, and a parent looking for it here — on the child's own card — did not
@@ -1472,6 +1538,7 @@ export default function ParentChildDetail() {
           <SectionHead>{s('cd_settings')}</SectionHead>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
+              { icon: 'clock', label: s('sc_title'), sub: s('sc_intro'), onClick: () => nav(`/parent/screen-time?child=${id}`) },
               { icon: 'gear',  label: s('cd_task_settings'), sub: s('cd_task_settings_b'), onClick: () => nav(`/parent/child/${id}/settings`) },
               { icon: 'edit',  label: s('cd_edit_child').replace(' ✏️', ''), sub: s('cd_edit_child_b'), onClick: () => setShowEditModal(true) },
               { icon: 'lock',  label: s('cd_change_pin'),     sub: s('cd_change_pin_b'),     onClick: () => setShowPinModal(true) },
@@ -1561,6 +1628,7 @@ export default function ParentChildDetail() {
           }}
         />
       )}
+      <ParentNav active="children" />
     </div>
   )
 }

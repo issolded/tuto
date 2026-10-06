@@ -57,6 +57,32 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Kitap okuma alanı** (2026-10-04): okuyucu telefon sütununa sabitlenmez; portal ile
+  tam ekran açılır, masaüstünde 680px sayfa ve 18px metin kullanır. Telefonlarda genişliğe
+  uyarlanır; sayfa taşarsa metin kaydırılır, sayfa değişince kaydırma sıfırlanır.
+  Arşiv sırtları raf genişliğinin 1/20'si; koltuk kapağı oda ile orantılı ölçeklenir.
+
+
+- **Kitap arşivi** (2026-10-04, kullanıcı kararı): devam eden okumalar ve taslaklar ana
+  Library'de kompakt kartlar; tamamlanan kitap/hikâyeler ayrı oda görünümünde. Oda yalnızca
+  gerçek tamamlanan kayıtlarla dolar, örnek kayıt yok. 36 kitap/sayfa, sabit sarı olmayan
+  sırt renkleri ve küçük altın başlık; seçilen kitap koltukta. Arama, tür/yıl filtresi,
+  kapak görünümü. Eski kayıtta bitirme tarihi yoksa yıl uydurulmaz. DB migration gerekmez.
+  Prototipteki günlük/puanlama/ilham etkileşimleri bu yayının kapsamında değil.
+
+
+- **Hikâye yazma düğmeleri** (2026-10-04, kullanıcı kararı): Şimdi kaydet + Kaydet ve çık
+  yazı alanının altında yan yana; Hikâyemi bitirdim onların altında tam genişlikte.
+  Başlık etiketinde isteğe bağlı açıklaması yok; başlık zorunlu değil.
+
+
+- **Hikâye kitaplığı kompakt kapaklar** (2026-10-03, kullanıcı kararı): kapaklar en fazla 190px,
+  dar ekranda otomatik satırlanır. Görselsiz hikâyeler kitap sırtı/sayfa kenarı, büyük harfli başlık
+  ve by + çocuk adıyla görünür; uzun başlık kırpılır, tam adı erişilebilir etikette kalır.
+
+
+- **PIN kilidi 1 dakika** (2026-10-02, kullanıcı kararı). Aile başına 5 yanlış PIN sonrası 60 saniye; ebeveyn bildirimleri EN/TR/ES aynı süreyi söyler.
+
 - **Baileys / WhatsApp bırakıldı.** Test yalnızca Telegram, WhatsApp Business erişimi
   alınana kadar. Tekrar Baileys önerme.
 - Persona parametreleri (`bot_name`, `tone`) typing promptuna değil, `prefs` şemasına bağlı.
@@ -79,8 +105,200 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - **Mantık UI metnine bakmaz.** Onboarding'de oyun ödülü `label.includes('video game')` ile
   bulunuyordu; etiket çevrilir çevrilmez o adım sessizce atlanırdı. Artık `kind: 'game'`.
 
+## Android teslimat kararı — 2026-10-06
+
+Kullanıcı dummy/çevrimdışı Android önizlemesini istemiyor; tek, gerçek backend'e bağlı,
+uçtan uca çalışan Android native uygulama istiyor. iOS bu işin dışında. Gerçek native kaynak
+`claude/practical-franklin-xigneu` (`6468f58`); eski `mobile/native-tablet-preview` canlı
+özelliklerin kaynağı değildir. `codex/android-complete` dalına main `11869e7` birleştirildi.
+Bu birleştirme web ekranlarının native taşındığı anlamına gelmez. Eksikler `mobile/README.md`.
+Tam özellik ve cihaz doğrulaması bitmeden yeni önizleme APK'sı teslim edilmez. Eski otomatik
+preview release adımı bu geliştirme dalında kaldırıldı; henüz uzak repoya gönderilmedi.
+
+Android takip (2026-10-06): 34 web rotası / 30 ekran dosyası envanteri
+`mobile/WEB_PARITY_AUDIT_2026-10-06.md`. Kullanıcının tercihi **alt menü**, sol menü değil;
+Home/Goals/Settings native alt gezinmeye geçirildi. PIN unutma, hedef hataları ve sunucudan
+bakiye yenileme; bulmaca ipucu/skip/pekiştirme başlat-bitir-ertele eklendi. Native bulmaca
+JVM testleri 4/4; izole backend matrisi 8 yaş × EN/TR/ES geçti. Bunlar cihaz veya gerçek
+WhatsApp teslim testi değildir. Eksik native modüller dosyada ayrı; CI/yayın izni beklemek
+bunların tamamlandığı anlamına gelmez.
+
 ## Açık işler / yol haritası
 
+- [x] Astra'nın İngilizce/NVR/PIN incelemesi (2026-10-04, Claude; `e15821e` üzerinde). Düzeltilenler: **NVR'a "Bilmiyorum"** (sıfır gem, cevap + açıklama; İngilizcedeki gibi, yalnız hiçbir şık seçili değilken);
+      **NVR ipucu 2'de çizilen şıkkın sebebi** (`reasonFor`: şıkın `why`'ı + türün anlamı — "farklı olan"da şık özelliği paylaşır, "ait olan"da paylaşmaz; glyph/icon aileleri için tür bazlı sebep);
+      glyph-odd 3. basamak "ne işe yarar/nerede yaşar" kalktı (meyve/bitki sorusunu yanlış eksene götürüyordu); TR "farklı bak" dilbilgisi; kelime merdiveni "↓ 1 letter" etiketi çevrildi;
+      İngilizce 2. ve 3. basamak aynı yanlış şıkkı tekrarlıyordu → örnek artık İKİNCİ yanlış şık; TR "Yalnızca bu kelimeyle kafiyeli", ES "No forman dos palabras reales", "tú solo" → "sin ayuda",
+      ES ebeveyn mesajında "solos/puzzles" → "sin ayuda/acertijos", "+1 gems" → "+1 gem" (matematik dahil); pekiştirme teklif kartı kesin üst sınırı gösteriyor ("En fazla +3 gem", ya da "Bu sefer gem yok",
+      `review.max_gems`). Odak sırasında nadir bir nitelik çifti ("inner+size") bulunamazsa aynı türden soru araya girer. Astra'nın önerisi uygulanmadı: ipucunu geciktirme (sabır ölçer, takılan çocuğu cezalandırır) — kabul.
+      Açık: gerçek iPad WebKit çizimi doğrulanmadı; ES ebeveyn mesajında "gems" kelimesi uygulamanın geri kalanıyla tutarlı olsun diye bırakıldı.
+- [x] Çocuk PIN'ini unutursa (2026-10-04, Claude). **Çocuk kendi kendine sıfırlayamaz** (PIN çocukları ayırır ve gem/ekran süresini kardeşten korur); ebeveyn yeni PIN verir ve çocuğa
+      KENDİ söyler. Akış: PIN ekranında "PIN'imi unuttum" → `POST /api/family/:code/forgot-pin` ebeveyne `attention` mesajı (10 dk'da bir, aile kodu yoksa da aynı cevap, hiçbir şey
+      değişmez) → ebeveyn sohbette "Ada'nın PIN'ini sıfırla" / "Ada'nın PIN'i 4821 olsun" → `reset_child_pin` aracı (`resetChildPinTool`: kendi seçtiği ya da sunucunun ürettiği 4 hane,
+      kardeşte olanı ve 0000/1234 gibileri reddeder, ailenin kilidini açar, PIN'i bir kez döner, yalnız hash saklanır). Panelde de: çocuk sayfası → PIN'i değiştir → "🎲 Benim için oluştur".
+      **Eski PIN gösterilmez** (hash). Sohbet modeli "unuttu" deyince önce "yapamıyorum, ayarlara git" diyordu: sistem istemine ve araç açıklamasına açık kural eklendi, `chat-probe` ile
+      TR/ES/EN'de 2'şer koşuda doğrulandı (sorar, evet deyince çağırır; yazma duvarı açıkken gerçek PIN değişmedi). Test: `server/scripts/pin-flow.mjs`. **Açık:** PIN ekranındaki düğme
+      küçük telefonlarda tuş takımının altında kalıyor (kaydırınca görünür); yeni PIN sohbet geçmişinde kalır (4 haneli çocuk PIN'i için kabul edildi).
+- [x] İngilizce yardımda resimli üçüncü basamak (2026-10-04, Claude; kullanıcı fikri). Yapıya dair sorularda metin yerine çizim: alfabe şeridi
+      (`alpha-order` ilk harfler, `letter-analogy` kaydırma okları + sayı kısmı), anahtar tablosu (`letter-code` ilk harf çözülü gerisi "?", `letter-sum`),
+      iki kelime alt alta değişen harf yanık (`change-pattern`), kelime merdiveni (`word-ladder`; `?` ortada, uçlarda farklı harfler yanık), mantık tablosu
+      (`logic-grid`, yalnız cevap bildirilince). Veri sunucuda (`visualFor` in `englishHelp.js`, cevap açıkken `?`, kapanınca dolu `explain_visual`), çizim
+      `src/components/EnglishHelpVisual.jsx`. Denetim: açık resim cevabı taşımıyor, dolu resim cevabı yazıyor (`english-help-audit`). Tarayıcıda 390px.
+      **Sıradaki fikir (kullanıcı):** kapalı küme "ölçek kartı" (north→south için dört yön, "?" karşıda; günler, mevsimler, aylar, büyüklük/sıcaklık
+      ölçekleri) — elle yazılmış küçük bir tablo ister (antonimlerin çoğu kapalı küme değil), kapsam tahminen %5-15.
+- [ ] Uygulamada hikâye yazma (2026-10-02, Codex): yerel geliştirme hazır. Otomatik kayıt,
+      cihazda kurtarma kopyası, birden fazla taslak, kütüphaneden devam, sürüm çakışması koruması.
+      Değerlendirme sunucuda; taslakta Gem yok, ilk tamamlamada mevcut ödül akışı.
+      **Önce migration:** server/migrations/2026-10-02_story_drafts.sql. Sonra backend/frontend yayın.
+      Gerçek Supabase/Gemini testi ve fiziksel iPad doğrulaması bekliyor. Ayrıntı: handoff/STORY-WRITER.md.
+
+
+- [x] Astra notları: denklem sistemi, saat sayacı, geçme dili, gem açıklaması (2026-10-03, Claude). **(1)** 13 yaş denklem sistemi yardımı artık gerçek eleme
+      zinciri (`simultSteps`, `mathTemplates.js`): sorulmayan harf elenir, çarpanlar söylenir, çarpılan sayılar tek tek yazdırılır, topla/çıkar, böl;
+      negatifler `stpS` ile (eksi tuşu yok). "O harfi" → "bu değişkeni". math:check (13 yaş × 3 dil × 400) temiz. **(2)** Saat "N saatte kaç dakika" yardımında
+      sayaç: "🔄 2 tam tur = 120 dakika (+24)" (`DraggableClock turnCounter`, yalnız `ask: 'span'`), tarayıcıda 2,4 tur çevrilerek denendi. **(3)** "Bunu geç":
+      "Bu soruyu geçtin. Doğru cevap:", 1,3 sn (eskiden 0,9 sn ve "Hmm, bu değil!"). **(4)** Sonuç ekranında gem altında küçük satır: "6 yardımsız doğru · 3 ipucuyla
+      doğru · 1 geliştirilecek" (matematik, İngilizce, NVR; hepsi yardımsız ve hatasızsa görünmez). Gerçek MathScreen oturumunda uçtan uca oynanmadı.
+- [ ] NVR (şekil ve örüntü bulmacaları): ipucu, yardım ve pekiştirme (2026-10-03, Claude). İngilizcenin aynı yapısı, aynı sunucu çekirdeği
+      (`server/englishPlay.js`: bir deneme sonra yardım, soru başı pay; `mathReview.js`'in seçimi). **Migration önce:**
+      `server/migrations/2026-10-03_puzzle_help_and_review.sql` (`puzzle_attempts.wrong_tries/hints_used`, `puzzle_reviews`); yokken eski davranış
+      (kayıt yok, gem doğruluk ölçeğiyle, teklif yok, mesaj hemen). İpucu 3 basamak, sunucudan istenince (`src/lib/puzzleHelp.js`, 23 tür EN/TR/ES):
+      (1) bu tür bulmacaya nasıl bakılır, (2) yanlış bir resim soluklaşır, (3) neye bakılacağı (kuralın niteliği adıyla, cevap değil);
+      cevap bildirilince mevcut `explainQuestion` cümlesi. Pekiştirme: aynı TÜR + aynı nitelikten ("sequence|dots") taze bulmaca, sunucu işaretler;
+      ebeveyn mesajı pekiştirme bitene kadar bekler (`puzzleSessionNotice`); kalan türler sonraki oturumun başına (`generateSession` `focus`).
+      Doğrulama: harness'te yaş 5-12 × EN/TR/ES (`server/scripts/puzzle-matrix.mjs`), uç durumlar (`puzzle-edge.mjs`), migration yokken
+      (`puzzle-premigration.mjs`), ekranda 390px; `npm run english:check` artık `puzzle-help-audit`'i de çalıştırıyor. **Açık:** canlıda
+      denenmedi (migration bekliyor); ipuçlarının çocuğa öğrettiği ölçülmedi; görsel bulmacalarda (matris, küp açınımı) üçüncü basamak
+      genel kalıyor; TR/ES metinleri anadili konuşan biri okumadı.
+- [ ] İngilizce: ipucu, yardım ve pekiştirme (2026-10-02, Claude; `claude/math-hint-quality`). Matematiğin yapısı İngilizceye
+      taşındı. **Migration önce:** `server/migrations/2026-10-03_english_help_and_review.sql` (`english_attempts.wrong_tries/hints_used`,
+      `english_reviews`). Tablo yokken sunucu eski davranışa düşer: tur/ipucu kaydı yok, gem doğruluk ölçeğiyle, pekiştirme teklifi yok,
+      ebeveyne mesaj hemen gider. **Akış (7+ yaş = tüm İngilizce bantları, "bir deneme sonra yardım"):** ilk yanlışta soru geri gelir
+      (yanlış şık soluklaşır, tek cevaplıda; 💡 titrer, hiçbir şey açıklanmaz); ipucuna bakıp yanlış ya da ikinci yanlış → doğru kelimeler
+      + adım adım açıklama. Gem soru başı: yardımsız doğru 1, ipucu/ilk yanlış denemeden sonra doğru 0,5, yanlış/"bilmiyorum" 0
+      (`server/englishPlay.js`, test `english-play.test.mjs`). **İpucu 3 basamak, sunucudan istenince** (cevap anahtarı tarayıcıya hiç
+      gitmez): (1) o soru türüne nasıl bakılır, (2) yanlış bir şık çizilir + sebebi (`why`), (3) cevaptan bir adım önce biten zincir.
+      Cevap bildirilince aynı zincir cevabıyla tam gösterilir. 49 türün tamamı EN/TR/ES, `src/lib/englishHelp.js` (motorla birlikte
+      `server/english`'e senkronlanır); kapı: `scripts/english-help-audit.mjs` (`english:check` içinde: cevap ipucunda sızıyor mu,
+      eksik dil, "undefined", cevap açıklamada adı geçiyor mu, 2. basamak doğru şıkkı çiziyor mu). **Pekiştirme:** mathReview.js'in seçimi
+      ve payları aynen (tür = matematikteki konu): yanlış/geçilen + ipucu görülenlerden en çok 5; soruları sunucu aynı türden, çocuğun
+      görmediği taze üretir (`server/englishReview.js`), cevapları sunucu işaretler (matematikte istemciye güvenilir, burada değil);
+      ilk turda hiç gem almayanlar 0,5 pay geri kazandırır, ipucu görülenler yalnız pratik; ebeveyn mesajı tek ve pekiştirme bitene
+      kadar bekler (`englishSessionNotice`); "Şimdi değil"/30 dk sonra kalan türler bir sonraki oturumun başına (7 gün, bir kez,
+      `generateSession` `focus`). Gem geçmişi `english_review` satırı (✓ ya da +n), oturumu açar. Doğrulama: gerçek `server/index.js`
+      bellek içi sahte Supabase'le (`server/scripts/english-harness.mjs`) uçtan uca, ve gerçek ekranda 390px'te oynandı (yanlış→nudge→
+      ipucu 3 basamak→açıklama, pekiştirme teklifi/oynama/gem). **Açık:** gerçek Supabase/Railway ile denenmedi (migration bekliyor);
+      ipuçlarının çocuğa gerçekten öğrettiği ölçülmedi (audit sızıntıyı ve tutarlılığı ölçer, pedagojiyi değil), TR/ES metinler anadili
+      konuşan biri tarafından okunmadı; ipucu "ayrı çizilmiş yanlış örnek" adımı (join-letter, hidden-word, front-letter…) açıklamada da
+      çıkıyor; pekiştirme teklifi sonuç ekranı yenilenince geri gelmez (30 dk içinde ebeveyne "yapılmadı" gider); sohbet bağlamı
+      (`englishSessions`) yardım sayısını henüz taşımıyor; iPad/Ada'nın cihazında denenmedi.
+- [x] Sohbet bağlamına son İngilizce oturumun soruları (2026-10-02, Claude). Ebeveyn "neyi yanlış yapmış?" diye sorunca model yalnızca
+      beceri yüzdelerini görüyordu, "birebir detayları göremiyorum" deyip tahmin yürütüyordu. `recentEnglishQuestions`: son bitmiş
+      oturumun yanlış/geçilen soruları (ne soruldu, çocuk ne seçti, doğru neydi) bağlamda; not: bunun ötesinde tahmin yok, bu
+      listeden yüzde söyleme. Matematikte `recentMathQuestions` zaten vardı. Gerçek `handleMessage` ile (chat-probe) tekrar
+      oynatıldı: iki koşuda da dört yanlış soru doğru listelendi.
+- [x] Karalama defteri (2026-10-02, Claude). `src/components/Scratchpad.jsx`: soru ekranının sağ altında ✏️, açılınca parmakla/kalemle/fareyle
+      sorunun ve şıkların üstüne yazılır; mürekkep 3 renk, silgi, hepsini sil. Kalem seçilince ekranın tüm çalışma alanını kaplayan yarı saydam, düz (çizgisiz) "aydınger" kâğıt gelir (telefonda şıkların yanında
+      yazacak yer yoktu): soru ve şıklar altında görünür, kalem bırakılınca kâğıt kalkar ama mürekkep soru bitene kadar ekranda kalır
+      (not okunarak cevap verilir). Kâğıt `position: fixed`, sütunun ekrandaki dikdörtgeni kadar (`selector` ile bulunur; ResizeObserver);
+      mürekkep sütunla birlikte KAYMAZ (kaydırma kalemle zaten kapalı). Kapalıyken dokunuşları geçirir (ekran aynen
+      eskisi); açıkken sayfa parmak altında kaymaz (bilinçli ödünleşme). Yeni soruda defter boşalır ve kalem bırakılır; hiçbir
+      şey kaydedilmez/gönderilmez. Matematik (`.math-qscroll`) ve İngilizce (`.pz-scroll`) soru ekranlarında; bulmaca ekranı henüz yok.
+      Tarayıcıda matematik ekranında denendi (çizim, silgi, temizleme, yeni soruda boşalma); İngilizce ekranı derlemede doğrulandı,
+      uçtan uca oynanmadı; iPad/Apple Pencil gerçek cihazda denenmedi (avuç içi reddi pointerType'a göre eklenebilir).
+- [x] Kâğıtta matematik %20 fazla gem verir (2026-10-02, Claude; kullanıcı kararı). Mod seçim ekranında kâğıt kartı "En fazla 54 Gem
+      🎁 %20 bonus" (45 × 1,2 yuvarlanmış), istemci `mode` gönderir, sunucu `sessionGems` (`server/mathGems.js`, `PAPER_BONUS`)
+      ile çarpar; günlük sınır ve gem tavanı aynı. Ebeveyn mesajına "Kâğıtta çalıştığı için %20 bonus" eklenir. Kâğıtta
+      pekiştirme turu yok (soru başı kayıt/şablon yok) ve fotoğraf okumasına güveniyor: okuma hatası bonusu da götürür.
+- [x] Ebeveyn geri bildirimi + 6-8 yıldızları (2026-10-02, Claude). Ebeveyn sohbette uygulamadan
+      memnuniyetsizlik/öneri/hata söylerse `submit_feedback` aracı `parent_feedback`'e yazar (migration
+      `2026-10-02_parent_feedback.sql`): ebeveynin kendi sözü + modelin İngilizce özeti, aynı ebeveyn/alan/tür
+      günde tek satır (`repeats`), günde en çok 5. Model "kaydettim" demeyi yalnız success:true'dan sonra,
+      söz (düzeltilecek/güncellemede) vermeden yapabilir; kaydedilemediyse "kaydedemedim" der (probe ile
+      doğrulandı). Satırlar şimdilik Supabase'de okunur. Tetik: WhatsApp'ta model "ekibe iletiyorum" demişti, aracı yoktu.
+      Ana sayfa göstergesi her yaşta BUGÜNÜN seansı / günlük gem sınırı (`dailyFor`): 6-8'de noktalar ●●○ (en çok 5,
+      sınır 10 ise ölçekli, dolunca ✓, "bugün"), 9-11'de halka "2/3 bugün" (artık seviye değil), 12+'da "bugün 2/3" ve
+      günlük dolgu. Yıldız değil nokta: ⭐ uygulamada gem'in simgesi. Eskiden `weekByType` idi ve ebeveyn seviye diye
+      okudu; sohbet modeli de bunu "günlük kota" diye yanlış açıklamıştı.
+- [ ] Pekiştirme turu (2026-10-02, Claude; `claude/math-hint-quality`). **Migration önce:**
+      `server/migrations/2026-10-02_math_reviews.sql` (`math_reviews`). Tablo yokken sunucu eski
+      davranışa düşer: teklif yok, ebeveyne mesaj hemen gider (güvenli). Ekran oturumu bitince hatalı/
+      geçilen ya da iki yanlış denemeden sonra bulunan sorulardan (tek yanlış deneme dahil değil) en çok 5
+      soruluk tur teklif edilir (`server/mathReview.js`, test `scripts/tests/math-review.test.mjs`):
+      önce hatalı/geçilenler, beceri başına bir soru, sonra kalanlar; yalnız şablon soruları (LLM sorusu
+      yeniden üretilemez); soruları sunucu seçer, **metni istemci aynı şablondan üretir** (`startReview`).
+      Sonuç ekranında Done yerine "Pekiştirelim (n)" + "Şimdi değil"; hepsi doğruysa Done aynen kalır.
+      **Gem (Astra incelemesi sonrası, 2026-10-02):** yalnız ilk turda HİÇ gem almamış (yanlış/geçilen) sorular
+      0,5 soru payı kazandırır (pekiştirmede yardımla bulunursa 0,25) — tek yanlışla doğru bulanın aldığını geçmez;
+      yardım ekranıyla bulunan sorular pekiştirmeye girer ama gem vermez (aksi hâlde iki yanlış, bir yanlıştan çok
+      kazandırıyordu). Havuz: yanlış/geçilen + yardım ekranı gösterilmiş sorular (`help_shown`); pekiştirmede yeniden
+      yardım ekranı açılırsa beceri taşınmaya devam eder. Yeni soru aynı BİÇİMDEN üretilir (`src/lib/reviewQuestions.js`: operandKey'in rakamsız
+      bölümleri; başka biçime asla düşmez, çekilemezse o soru pekiştirmeden çıkar; soru metni yasağı yok, çünkü metni hiç
+      değişmeyen biçimler yalnız resimle ayrışır; şablon konusu `templateTopicFor`'dan, `problem.topic`'ten değil).
+      Pekiştirmede ipucu da kullanılmışsa beceri taşınmaya devam eder (bağımsız ilk geçiş sayılır).
+      Biçim = anahtarın rakamsız bölümleri + anahtardaki işlem işaretleri + EKRANDAKİ işlem işaretleri (`operationSigns`):
+      kesirlerde çarpma yerine bölme gelmesi ve (−6) − (−16) yerine (−2)² gelmesi (Astra bulgusu) kapandı. Kalıcı çözüm
+      üreticinin açık bir `skillKey` vermesi (şu an biçim anahtar+metinden tahmin ediliyor). Adım adım yardımda aynı adımda iki yanlış → adım açıklanıp gösterilir.
+      7 yaş çocuk gözüyle uçtan uca oynama (2026-10-02): ilk yanlışta artık söz de var ("Hmm, tam değil. 💡'ya dokunup ipucuna
+      bak!", 7 sn, ipucu açılınca kalkar); iki basamaklı aralıkta (28 → 50) ipucu da yardım gibi yuvarlak sayılara sayarak
+      gidiyor (telafi yöntemi yalnız 100'ün üstünde); çetelede satır önce bulunur sonra sayılır; 5-8 yaş sayı doğrusu ipucu yalın.
+      8 yaş (TR) oynama: "bitirme/başlama saati" soruları (tafter/tbefore) artık adım adım dakika zincirli yardıma sahip (saat
+      sınırını geçerse tam saate kadar, sonra kalan; cevap tam saatse zincir yok); bölme hikâyesi ipucu "hangi sayı × b = a" der
+      (÷'yı yinelemek yöntem değildi); dizi ipucundaki "ikisinin arasındaki fark" belirsizliği düzeltildi.
+      9-13 yaş oynama (2026-10-02; 9 EN, 10 TR, 11 EN, 12 TR, 13 EN, 50 soru): tek satırlık uzun bölme zinciri (216 ÷ 12,
+      195 ÷ 15) onluk+birlik parçalarına açılır (`expandHardDivision`, `stepsHelp` içinde; tam bölünen, bölüm ≥ 10, bölen ≥ 11);
+      "N'in 1/d'si" ipucu 12'ye kadar çarpım tablosuna bağlanır; Türkçe olasılık sorusu cümle başında küçük harfle ve
+      bozuk ("mavi birini çekme") çıkıyordu; katı cisim "üstteki yüz = 4" çoğul; "7'nin çarpım tablosu" eki. 11-13 yaşta tek
+      satırda karışık işlem (a + b × c) bilinçli bırakıldı.
+      Eksik çarpan sorusu ("8 × ? = 80", çarpan ≥ 6): ipucu ve yardım "bildiğin bir işlemle başla (5 × 8 = 40), kalan kaç tane daha" zinciri
+      (80 noktalı doldurma yardımı ve "10'la çarparken sıfır ekle" yok; ×10/×100 sorularında zaten "rakamlar sola kayar" dili var,
+      ondalıkta çöken "sıfır ekle" kuralı kullanılmıyor). Sürahi ipucu: su ilk numaranın altındaysa "alttan 0'dan başla" (olmayan
+      "hemen alttaki numaralı çizgi"ye yönlendirmiyor).
+      "Çık" (yarım oturumdan çıkma) artık yarım oturum kaydını siler: sayfa açıklaması "cevapların kaydedilmeyecek" diyordu ama kayıt kalıyor ve matematiğe her girişte aynı soru geri geliyordu. Yenileme/kazara çıkış için kayıt hâlâ 2 saat saklanır. Ana oturum kaydı ağ koparsa yeniden gönderilemez (idempotency anahtarı yok, çift ödeme olur) — açık iş. Matematikte soruyu tarayıcı
+      üretir, sunucu `correct` bayrağına güvenir (ana oturum da): bilinen sınır, pekiştirme payı günde ≤3×5×yarım pay.
+      Eski kural: ilk turda ödenmeyenin yarısı geri kazanılır (hata 0,5 / iki-yanlış 0,25 soru payı;
+      pekiştirmede yardımla bulmak yarıya iner), toplam asla 1'i geçmez, günlük sınır dolduysa 0; ledger
+      sebebi `math_review` (günlük matematik sayacına girmez). Seviyeyi/ilk skoru etkilemez, pekiştirme
+      cevapları `math_attempts`'e değil `math_reviews.result`'a yazılır (merdiven son oturumu yanlış okumasın).
+      **Ebeveyn mesajı tek:** ilk tur mesajı teklif varsa bekler; pekiştirme bitince, "Şimdi değil"de ya da
+      30 dk sonra (başlatıldıysa başlatmadan 30 dk; `expireMathReviews`, 2 dk'da bir) tek mesajla gider.
+      Yapılmayan/yarıda kalan pekiştirmede kalan beceriler `carry_topics` olur ve bir sonraki oturumda
+      `math-plan.review_topic_ids` ile planın başına ağırlık alır (bir kez, 7 gün).
+      Doğrulama: sahte API ile gerçek MathScreen'de 9 yaş TR: kabul + 3/3 + gem payı, "Şimdi değil", hepsi
+      doğru (teklif yok), yenileyince pekiştirmenin sürmesi, telefon ve geniş ekran. **Açık:** gerçek
+      Supabase/Railway ile uçtan uca denenmedi (migration bekliyor); kağıt modunda yok; sonuç ekranı
+      yenilenirse teklif 25 dk içinde geri gelir (`tuto_math_result_v1`; pekiştirme sonucu sunucuya ulaşmadıysa "Tekrar kaydet" de saklanır, sunucu pekiştirmeyi bir kez öder); konu adları ebeveyn mesajında İngilizce
+      müfredat adı.
+- [ ] Matematik yardımı 9-12 yaş, içerik hazır, ekrana bağlı değil (2026-09-30, Claude; `claude/math-hint-quality`).
+      Yeni araç yok: ekranda hazır olan `stepsHelp` (çocuğun her satırdaki küçük işlemi yazdığı, üstünde
+      "neden bu adım" cümlesi olan zincir) 9-12 yaşın sayısal ve seçmeli soru tiplerine yazıldı, EN/TR/ES.
+      Audit "öğretici yardım" payı (`npm run math:check`): 9 yaş %38 → 97, 10 %67 → 99, 11 %57 → 99,
+      12 %48 → 99 (grafik okuma, koordinat/öteleme, fonksiyon makinesi, karekök, olasılık, cebir şıkları,
+      katı cisimler, Roma rakamı, dört nokta adı dahil); **13 yaş (Year 8) %3 → 97** (asal çarpanlar, EBOB/EKOK,
+      negatiflerle işlem, kesir dört işlem, yüzde, denklem, açılım/çarpanlara ayırma, dizi/nth terim, doğrular,
+      oran, Pisagor, daire, hacim/yüzey, istatistik/olasılık; negatif ara sonuçlar eksi tuşu olmadığı için
+      büyüklük + işaret kodu olarak yazdırılıyor; panelde cevap sınırı 7 → 9 karakter). 7 ve 8 yaş da
+      yükseldi (%78/70 → 89/84). Kalite kapısı: `scripts/math-help-audit.mjs` (sızıntı, yazılamayan cevap,
+      dil karışması, tür uyuşmazlığı; math:check içinde) ve `scripts/tests/math-help-oracles.test.mjs`
+      (etiketli adımlar soru metninden/görselden bağımsız yeniden türetiliyor). Gerçek MathScreen'de 9/10/11/12 yaş
+      × TR/ES/EN × telefon/yatay oturumları sahte ağla uçtan uca oynandı.
+      **Seçmeli sorular:** `stepsHelp(steps, picture, true)` ("pick"): zincir bir şey hesaplatır, son satır cevap
+      değil, kapanış "cevabını seç". Panelde `MathChart` de çiziliyor (ızgara/grafik/pasta resmi).
+      **Audit:** her adımın aritmetik satırı kendi cevabına eşit mi kontrol ediliyor (dile göre sayı yazımı:
+      "2,144" İspanyolcada iki tam bir kaçtır). Bir belirsizlik yakaladı: kalanlı bölmede "292 ÷ 30 =" 9 istiyordu.
+      **Yolda düzeltilenler:** ortanca sorularında %46 ortanca = mod (üreteç tekrarı üç kopya yapıyordu);
+      pre-answer 💡 ipucu, cevabı söyleyen adımı atlayınca ortadan adım düşüp yetim cümle kalıyordu (17 + ? = 34).
+      **Açık:** yardım 9+ için ekrana bağlı değil (panel yalnız ≤8 yaş, yanlıştan sonra); ölçülmedi: bu zincirlerin
+      gerçekten öğrettiği, Ada/Batu'yla denenmedi. Zincirsiz kalan: yer değeri/karşılaştırma gibi birkaç
+      küçük şekil ve 13 yaşın tamamı.
+      **Bağlandı (aynı gün):** 7+ yaş artık "bir deneme, sonra yardım" (başta 9+ idi; 2026-10-02'de 7-8 de alındı, 5-6 eski): ilk yanlışta soruya dönülür, 💡 titrer,
+      seçmelide yanlış kart soluklaşır, sebep gösterilmez; ipucuna bakıp yanlış ya da ikinci yanlış → yardım
+      (`helpOpensNow`, `MathScreen.jsx`). ≤6 yaş aynı (hemen yardım). Yeniden deneme de ipucu gibi yarım pay
+      (`helpUsedQs`). **Gem artık soru başı** (tam / yarım / yok; `server/mathGems.js`, test
+      `scripts/tests/math-gem-share.test.mjs`): eski `0,33 + 0,67 × doğruluk` tabanı ve oturum düzeyi ×0,67 yalnız
+      soru kaydı eksikse yedek. Kağıt modu da aynı formülden geçiyor (etkisi ölçülmedi). Sahte ağla gerçek
+      MathScreen'de 9 yaş oturumu uçtan uca oynandı; Ada'nın iPad'inde teyit edilmedi. **Yardım kapatma ayarı
+      bilerek yok** (kullanıcı kararı): ebeveyn "iyi mi kötü mü" sorusunun cevabı yardımsız/yardımlı/yanlış dökümü.
 - [ ] İngilizce çocuk ekranı ve bütün bağlantıları (2026-09-26, Claude). **Migration önce:**
       `server/migrations/2026-09-26_english_sessions.sql` (`english_sessions`, `english_attempts`,
       `children.english_variety`) çalışmadan deploy edilirse kart herkese görünür ama oturum açılmaz,
@@ -568,10 +786,85 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
       dönüyor. Üç kırılma senaryosuyla (bare Fredoka, eksik rescue, range'den İ'nin düşmesi)
       doğrulandı. Kapsam tablosu: Baloo 2 / Nunito / Lexend / Plus Jakarta Sans Türkçenin
       tamamını taşıyor; Georgia ve monospace sistem fontu.
+- [x] Ebeveyn uygulaması: alt sekmeler, Raporlar ve tek telefon kolonu (2026-10-04, Claude).
+      Dört sekme — **Çocuklar** (ana ekran), **Tuto'ya Sor** (aynı gün Raporlar'ın yerine), **Ekran süresi**, **Ayarlar**.
+      Ekran süresi sekmesi aynı gün kullanıcı kararıyla eklendi (önerim native'i beklemekti): kurallar
+      çocuk çipleriyle, her kontrol kendini kaydediyor (700ms debounce, compare-and-swap; çocuk
+      değişince ve sekmeden çıkınca bekleyen yazılıyor — sekme barının üstünde "Kaydet" düğmesi
+      düzenleme kaybettirir). Değerler girilirken sıkıştırılıyor (hafta içi ≤ tavan, ek süre ≤ tavan),
+      kaydedilemeyen tek şey başı = sonu olan program. Ekran KULLANIMI değil bugünün PLANINI gösteriyor
+      ve üstte web denemesi uyarısı duruyor (bkz. 2026-09-20 sınırı). Çocuk görünümü denemesi eski
+      `/parent/settings/screen-control?view=preview`'da.
+      **Aynı gün ikinci tur (kullanıcı onayı, piyasa karşılaştırmasından):** (1) **Önce öğren, sonra oyna**
+      (`learnFirst`, `learnNeed` 1-5): o günün BİTMİŞ görev sayısı (today-summary, gerçek veri) yetene kadar
+      süreli uygulamalar kapalı; sayı bilinmiyorsa kapatmaz; uyku/okul saati önceliği korur. (2) **Bugünlük
+      ek süre** (`extra: {date, minutes}`): kuralları değiştirmez, yalnız o gün; günlük tavanın ÜSTÜNE biner
+      (tavan Gem'le kazanılan süreyi yönetir, bu ebeveynin kendi kuralını bir günlüğüne aşması); kişi başı
+      günde en fazla 120 dk, kodda. Sohbette `give_screen_time` (5-120 dk, `clear`), sekmeyle aynı alanı
+      compare-and-swap ile yazar; "bugün" ebeveynin saat dilimi. Model "şimdi oynayabilir/cihaz açıldı"
+      diyemez — araç açıklaması ve sonuç web denemesi olduğunu söyler. (3) **Tatil modu** (`holiday`,
+      `holidayFrom..holidayTo` dahil): okul saati kapalı, her gün hafta sonu süresi. Eski kayıtlı kurallar
+      varsayılanların üstüne okunuyor (`readRules` birleştirir), sıfırlanmıyor. Sohbet bağlamında
+      `screenTime` cümlesi (plan, kullanım değil). Sunucu mantığı `server/screenTime.js`, test
+      `scripts/tests/screen-time.test.mjs`; model testi `src/lib/__tests__/screenControl.test.js` 10/10.
+      Gerçek Supabase ve gerçek sohbet modeliyle (`give_screen_time` çağrısı) denenmedi.
+      **Üçüncü tur: "Tuto'ya Sor" sekmesi (kullanıcı kararı).** Raporlar sekmesi gitti; rapor artık çocuğun
+      sayfasında ("📊 Bu hafta" kartı → `/parent/reports?child=`, geri çocuğa döner, çocuk çipleri yok).
+      Yerine 💬 **Tuto'ya Sor**: aynı beyin (`handleMessage`, `POST /api/parent/chat`, ebeveyn JWT, 1000
+      karakter), ama **yalnız soru-cevap ve yalnız üç konu: çocuğun gelişimi, ekran süresi, gem.** Tuto burada
+      kendiliğinden bir şey demez — bildirim/onay gösterilmez; ekran yalnız burada sorulanları gösterir
+      (cihazda, `tuto_ask_v1:<uid>`, son 60), beyin yine ortak transkripti hatırlar. Kapsam KODDA: bu kanalda
+      modele yalnız `give_screen_time`, `gift_gems`, `deduct_gems`, `update_task_reward`, `set_math_focus`
+      sunuluyor ve dispatch'in en başında başka araç reddediliyor; davranışı `APP_SCOPE_NOTE` anlatıyor
+      (kapsam dışını tek cümleyle Telegram/WhatsApp'a ya da ilgili ekrana yönlendirir). Fotoğraf yeniden
+      gönderen iki araç uygulamadan çağrılınca fotoğrafı Telegram'a değil cevaba koyar. **Giriş kapısı ilk kez
+      kuruldu ama YALNIZ bu sekme için** (`server/inboundGate.js`: dakikada 10, günde 150 ebeveyn mesajı;
+      sayım `messages`'tan, kanal sütunu olmadığı için bütün kanalların toplamı; sayım başarısızsa geçer;
+      model çağrılmadan sabit cevap). **Telegram ve WhatsApp davranışı DEĞİŞMEDİ** (kullanıcı: "o kısım tamamen
+      farklı"): kapı, haftalık rapor bağlamı ve kapsam yalnız `opts.scope === 'app'` iken devrede; harness'te
+      aynı ebeveyn için uygulama reddedilirken Telegram yolunun modele gittiği doğrulandı. Haftalık rapor
+      `weekForChild()` tek kaynaktan (uç + sohbet bağlamı `thisWeek`, yalnız uygulama kanalında) — sohbetteki
+      sayı grafikle aynı. Testler: `inbound-gate.test.mjs`, `parent-week.test.mjs` (weekContext). Gerçek
+      Gemini ile uygulama kanalı denenmedi (anahtar yok): kapsam dışı soruya modelin cevabı görülmedi.
+      **Dördüncü tur (kullanıcı bulgusu):** soru sorup başka sekmeye geçince cevap kayboluyordu (istek
+      ekranın içindeydi; sunucu cevabı üretip transkripte yazıyor ama ekrana dönemiyordu). İki katman:
+      (1) `src/lib/parentAsk.js` — sorular ekrandan bağımsız bir depoda; sekme değişse de cevap yerine
+      oturur, uzaktayken gelen cevap için Tuto sekmesinde kırmızı nokta (bildirim değil, uygulama içi).
+      (2) **Migration önce:** `server/migrations/2026-10-04_parent_app_chat.sql` (`parent_app_chat`): POST
+      soruyu yazar, 202 ile hemen döner, cevabı arka planda satıra yazar; ekran geçmişi sunucudan okur
+      (uygulama kapansa/cihaz değişse de cevap orada; sonraki bildirim işi bu satıra dayanacak). 3 dk'dan
+      eski "pending" satır "Cevap gelmedi" + "Tekrar sor" olarak görünür (arada sunucu yeniden başlarsa).
+      **Tablo yokken** eski davranış: cevap istek içinde, geçmiş cihazda — ama (1) sayesinde sekme
+      değiştirmek yine kaybettirmez. `server/appChat.js` + `scripts/tests/app-chat.test.mjs`. Harness'te
+      iki mod da gerçek `index.js` ile: tablo varken 202 (16 ms) ve 2 sn sonra GET'te cevap; yokken 200 +
+      cevap. Tarayıcıda iki modda: sor → hemen Çocuklar → nokta → geri → cevap orada, nokta gitti, yenileme sonrası da.
+      **Rapor her çocuğun altında:** Çocuklar sekmesinde her çocuk kartında "BU HAFTA 18 etkinlik · 255 ⭐"
+      satırı + yedi çubuk → o çocuğun raporu (çocuk sayfasındaki kartla aynı kanca, `src/lib/parentWeek.js`).
+      Raporun geri düğmesi geldiği yere döner (ana ekran ya da çocuk sayfası). Sekme çubuğu prototipin birebir tasarımı
+      (düz bar + tek saç teli çizgi, emoji 👧 📊 ⚙️, pasifken %40) — çocuk uygulamasının yuvarlak barı
+      bilerek farklı. Çocuk sayfası sekmenin üstüne biniyor, bar açık kalıyor; derin düzenleyiciler
+      (görev ayarları, ekran kontrolü, PIN) barı kaldırıyor.
+      **Raporlar:** `GET /api/parent/children/:childId/week` (ebeveyn JWT + sahiplik), Pazartesi
+      başlangıçlı hafta, gün gün gem + sınıra takılan gün + geçen haftayla karşılaştırma. Toplama
+      mantığı `server/week.js`'te — DB'siz ve saatsiz, `scripts/tests/parent-week.test.mjs` ile.
+      **Tek genişlik:** 980px tablet düzeni kaldırıldı (tarayıcıda vardı, cihazda yoktu); her ebeveyn
+      ekranı `.tc-col`, 430px, geniş ekranda arkası koyulaşıyor. Ekran Kontrolü 1100px'ti ve iki
+      sütunu VIEWPORT'a bakıyordu — laptopta telefon kolonunu ikiye bölüyordu.
+      **Yolda çıkan üç hata:** (1) `completedStoriesBetween` satır değil supabase sonucu döndürüyor,
+      `.map` her istekte patlıyordu — uç canlı DB olmadan çalıştırılamadığı için fark edilemiyordu;
+      `rowsOf()` iki şekli de okuyor. (2) `.tc-tabbed`'in 96px alt boşluğunu üç ekran satır içi
+      `padding` kısayoluyla 32px'e eziyordu — bar sayfanın son 37px'ini kapatıyor, raporun "sınıra
+      takıldı" uyarısı altında kalıyordu. (3) Rapor tarihleri ÇOCUĞUN diliyle yazılıyordu: görev
+      adları çocuğun sözlüğünden gelmeli ama hafta aralığı ve gün adları ebeveynin dili
+      (İspanyolca okuyan ebeveyn kendi raporunda "22–28 Eylül · Pzt Sal Çar" görüyordu).
+      Doğrulama: npm test 107/107, build, font:check; i18n:check 82'de, eslint 353'te değişmedi;
+      tarayıcıda 9 ebeveyn rotası × 320/390/1280 × 3 dil, yatay taşma ve runtime hatası 0.
+      Gerçek Supabase/Railway ile denenmedi.
 - [x] Parent dashboard keşfedilebilirliği (2026-09-20): panel "bugün" ekranı oldu — çocuk kartları bugünkü
       etkinlik, gem, Hezarfen ve "N onay bekliyor" rozetiyle (`/api/parent/overview`), "Bir süre meşgulüm" panelde,
       kanal bağlı değilse hatırlatma. Bütün ayarlar üstteki ⚙️ **Ayarlar** düğmesinden `/parent/settings`'e taşındı
-      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). Tablette iki sütun.
+      (Tuto sana nasıl ulaşır / Ne zaman yazarım / Önce bana sor / Cihaz). (Tabletteki iki sütun ve
+      ⚙️ düğmesi 2026-10-04'te kalktı: ayarlar alt sekme oldu, uygulama tek telefon kolonu.)
 - [ ] Drawings, Eylül 2026 partilerinden kalan tek şey: `cizims_sep2026/drawings/robot`
       yayınlanmadı — çizim Optimus Prime, omzunda Autobot arması ve elinde silahla. Marka
       korumalı bir karakter; jenerik bir robot çizdirip aynı boru hattından geçirmek gerek.
@@ -837,3 +1130,17 @@ ekranlarını "Tuto Care" görünümüne (teal/peach, Plus Jakarta Sans) çevirm
 kullanılır. Kurallar `design_handoff_parent_reskin/README.md`'de. **Saf görsel re-skin:**
 mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. Değişiklikler
 `src/screens/`'e gider, bundle'a değil.
+
+- 2026-10-04: Aile kodu okuma hatasında yeniden üretilmez; ilk yazım yalnız NULL koşuluyla yapılır. Birden fazla çocukta giriş açık çocuk seçimi + o çocuğun PIN doğrulamasıdır. Aynı PIN ile belirsiz eski istemci isteği ilk kardeşi seçmez.
+
+- 2026-10-04 kullanıcı revizyonu: günlük çocuk seçimi kaldırıldı. /setup/assign yalnız ebeveyn oturumuyla cihazı çocuğa bağlar, bu tarayıcıdaki ebeveyn oturumunu local scope ile kapatır. Sunucunun amaç ayrımlı HMAC cihaz belgesi parent/child/device kimliğine bağlıdır ve 1 yıl geçerlidir; SUPABASE_SERVICE_ROLE_KEY yalnız sunucuda imza anahtarıdır. PIN girişinde belge zorunlu, child_id istemciden seçilmez. Eski cihazlar bir defa kurulur. DB migration yok; tekil cihaz iptali ve bütün API/DB erişiminin çocuk session auth ile korunması ayrı kalan iştir.
+
+- 2026-10-04: Ana ekranda Okuma / Hikâye yazma / Kitaplık / Arşiv kısa yolları; hikâye liste ekranında Okuma / Kitaplık / Arşiv bağlantıları görünür. Yazı düzenlerken gösterilmez; kapalı görevler kısa yollarda da gizlenir.
+
+- 2026-10-04 kullanıcı geri alma kararı: ebeveyn oturumuyla cihaz eşleştirme geri alındı. /setup yeniden aile kodu veya QR -> çocuk PIN akışı. /setup/assign eski bağlantısı /setup yönlendirmesidir. Cihaz belgesi zorunluluğu ve çocuk kurulumunda ebeveyn sign-out kaldırıldı. Aile kodunun sabit kalması düzeltmesi korunur. Yukarıdaki cihaz belgesi kararı artık geçerli değildir.
+
+- 2026-10-04: ReadingFlow kitap kayıt hatasında kapağa dönmez; başlık/kapak korunur, tekrar deneme aynı kitap ID ile yapılır. Sayfa alanları DB hatasında ilerlemez. QA hesabında doğrudan anon insert başarılı; kullanıcının asıl kayıt hatası henüz yeniden üretilemedi.
+
+- 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
+
+- 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.

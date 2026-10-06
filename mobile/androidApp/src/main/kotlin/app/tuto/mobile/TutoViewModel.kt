@@ -30,6 +30,7 @@ sealed interface Screen {
     data object Home : Screen
     data object Math : Screen
     data object Goals : Screen
+    data object Settings : Screen
     data object Puzzle : Screen
     /** An activity the tablet does not do natively yet; says so rather than pretending. */
     data class Soon(val type: String) : Screen
@@ -80,6 +81,9 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     fun signOut() {
         session.signOut()
         child = null
+        today = Today.EMPTY
+        todayLoaded = false
+        todayError = false
         screen = Screen.Pin
     }
 
@@ -94,8 +98,8 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
         val c = child ?: return
         viewModelScope.launch {
             runCatching { api.todaySummary(c.id) }
-                .onSuccess { today = it; todayLoaded = true; todayError = false }
-                .onFailure { todayError = true }
+                .onSuccess { if (child?.id == c.id) { today = it; todayLoaded = true; todayError = false } }
+                .onFailure { if (child?.id == c.id) todayError = true }
         }
     }
 
@@ -112,6 +116,8 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
             screen = Screen.Puzzle
         } else if (type == "goals" || type == "gems") {
             screen = Screen.Goals
+        } else if (type == "settings") {
+            screen = Screen.Settings
         } else {
             screen = Screen.Soon(type)
         }
@@ -130,6 +136,10 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     private fun newMathRun() = child?.let { MathRun(viewModelScope, api, engine, session, it) }?.also { Services.currentMath = it }
 
     fun home() {
+        if (screen == Screen.Puzzle && puzzle?.reviewToClose != null) {
+            puzzle?.declineThen { home() }
+            return
+        }
         screen = Screen.Home
         refreshToday()
     }

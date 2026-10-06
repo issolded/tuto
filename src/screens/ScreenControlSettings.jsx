@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT, adoptAccountLang } from '../lib/parentI18n'
 import { childLang, t } from '../lib/i18n'
-import { cacheDemoRules, useScreenDemo } from '../lib/screenControlDemo'
+import { cacheDemoRules, useScreenDemo, useLearnedToday } from '../lib/screenControlDemo'
 import { updateParentPrefs } from '../lib/parentPrefs'
 import { SAMPLE_APPS, readRules, validRules, status, canRedeem } from '../lib/screenControl'
 import { PC, PCSS, FONT, TopBar, Card, Btn, Pill } from '../lib/parentUI'
 
 const APP_NAMES = { roblox: 'Roblox', youtube: 'YouTube', minecraft: 'Minecraft', tuto: 'Tuto' }
 const CSS = `${PCSS}
-.sc-page{max-width:1100px;margin:auto;min-height:100dvh;background:${PC.bg};font-family:${FONT};color:${PC.ink};padding-bottom:40px}
-.sc-body{padding:0 22px;display:grid;gap:18px}.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+/* Was 1100px: a desktop-wide page two levels inside a phone app. .tc-col carries
+   the width and the wide-screen phone treatment now; this keeps the rest. */
+.sc-page{min-height:100dvh;background:${PC.bg};font-family:${FONT};color:${PC.ink};padding-bottom:40px}
+.sc-body{padding:0 22px;display:grid;gap:18px}/* One column, always: the page is 430px wide on every screen now, and the old
+   two-column rule keyed off the VIEWPORT — on a laptop it split a phone column in half. */
+.sc-grid{display:grid;grid-template-columns:1fr;gap:18px;align-items:start}
 .sc-stack{display:grid;gap:16px}.sc-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.sc-row>*{min-width:0}
 .sc-field{display:grid;gap:8px;font-size:13px;font-weight:700}.sc-field input,.sc-field select{min-width:0}
 .sc-help{font-size:13px;line-height:1.65;color:${PC.inkSoft};margin:0}.sc-title{font-size:18px;margin:0;font-weight:800}
@@ -19,7 +23,7 @@ const CSS = `${PCSS}
 .sc-page button:focus-visible,.sc-page input:focus-visible,.sc-page select:focus-visible{outline:3px solid ${PC.teal};outline-offset:3px}
 .sc-check{display:flex;gap:12px;align-items:center;font-size:14px;font-weight:700}.sc-check input{width:22px;height:22px;accent-color:${PC.tealDeep}}
 .sc-stat{padding:20px;border-radius:20px;background:${PC.tealBg};flex:1;text-align:center}.sc-stat strong{display:block;font-size:36px;font-variant-numeric:tabular-nums;margin-top:8px}
-@media(max-width:700px){.sc-grid{grid-template-columns:1fr}.sc-body{padding:0 14px}.sc-stat strong{font-size:30px}}
+@media(max-width:700px){.sc-body{padding:0 14px}.sc-stat strong{font-size:30px}}
 `
 function NumberField({ label, value, onChange, max = 480, min = 0 }) {
   return <label className="sc-field">{label}<input className="tc-input" type="number" min={min} max={max} step="1" value={value} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} /></label>
@@ -42,6 +46,7 @@ function Demo({ rules, child }) {
   const s = useT()
   const c = key => t(key, childLang(child))
   const [demo, act] = useScreenDemo(child.id, rules, true)
+  useLearnedToday(child.id, act)
   const info = status(rules, demo)
   const remaining = `${Math.floor(info.remaining / 60)}:${String(info.remaining % 60).padStart(2, '0')}`
   const base = [0, 6].includes(new Date(demo.now).getDay()) ? rules.weekend : rules.weekday
@@ -85,12 +90,17 @@ function Demo({ rules, child }) {
 
 export default function ScreenControlSettings() {
   const s = useT(), nav = useNavigate()
+  // Opened from a child's page, so it starts on that child instead of asking which one.
+  const [params] = useSearchParams()
+  const fromChild = params.get('child') || ''
+  // The Screen time tab owns the rules now; it sends parents here only for the child-view trial.
+  const startView = params.get('view') === 'preview' ? 'preview' : 'rules'
   const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState(false)
   const [children, setChildren] = useState([]), [childId, setChildId] = useState('')
   const [parentId, setParentId] = useState(''), [saved, setSaved] = useState({})
-  const [rules, setRules] = useState(() => readRules()), [tab, setTab] = useState('rules')
+  const [rules, setRules] = useState(() => readRules()), [tab, setTab] = useState(startView)
   const [saving, setSaving] = useState(false), [message, setMessage] = useState('')
-  async function load() {
+  async function load(preferred) {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('auth')
@@ -103,13 +113,14 @@ export default function ScreenControlSettings() {
       const stored = parent.data.prefs?.screen_control_web || {}
       family.data.forEach(child => { if (stored[child.id]) cacheDemoRules(child.id, readRules(stored[child.id])) })
       setParentId(user.id); setChildren(family.data); setSaved(stored)
-      setChildId(family.data[0]?.id || ''); setRules(readRules(stored[family.data[0]?.id]))
+      const picked = family.data.some(c => c.id === preferred) ? preferred : (family.data[0]?.id || '')
+      setChildId(picked); setRules(readRules(stored[picked]))
     } catch { setLoadError(true) }
     finally { setLoading(false) }
   }
   // load() awaits auth and database reads before updating state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(fromChild) }, [fromChild])
   const child = children.find(c => c.id === childId)
   const dirty = JSON.stringify(rules) !== JSON.stringify(readRules(saved[childId]))
   const valid = validRules(rules)
@@ -124,8 +135,8 @@ export default function ScreenControlSettings() {
     } catch { setMessage('sc_save_error') }
     finally { setSaving(false) }
   }
-  return <div className="sc-page"><style>{CSS}</style>
-    <TopBar title={s('sc_title')} onBack={() => nav('/parent/settings')} />
+  return <div className="sc-page tc-col"><style>{CSS}</style>
+    <TopBar title={s('sc_title')} onBack={() => nav(fromChild ? `/parent/screen-time?child=${fromChild}` : '/parent/screen-time')} />
     <main className="sc-body">
       <Card style={{ background: PC.tealBg }}><div className="sc-stack"><Pill>{s('sc_demo')}</Pill><p className="sc-help">{s('sc_notice')}</p></div></Card>
       {loading ? <p role="status">{s('loading')}</p> : loadError ? <Card><p role="alert">{s('sc_load_error')}</p><Btn onClick={() => { setLoading(true); setLoadError(false); load() }}>{s('sc_retry')}</Btn></Card> : !child ? <p>{s('sc_no_child')}</p> : <>

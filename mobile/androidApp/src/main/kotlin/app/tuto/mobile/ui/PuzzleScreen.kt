@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -71,14 +72,16 @@ fun PuzzleScreen(vm: TutoViewModel) {
             Text(s("puzzle_failed"), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 SoftButton(s("nav_home")) { vm.home() }
-                BigButton(s("puzzle_retry"), color = TEAL) { vm.openPuzzleAgain() }
+                BigButton(s("puzzle_retry"), color = TEAL) { run.retry() }
             }
         }
-        PuzzleRun.Phase.Welcome -> Row(Modifier.fillMaxSize().padding(48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally)) {
-            Tuto(Modifier.size(width = 280.dp, height = 356.dp))
+        PuzzleRun.Phase.Welcome -> AdaptivePair(first = {
+            Tuto(Modifier.size(width = 260.dp, height = 280.dp))
+        }, second = {
             Column(Modifier.widthIn(max = 540.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text(s("puzzle_welcome"), style = MaterialTheme.typography.headlineMedium)
+                Text(if (run.session?.review == true) s.say("Let’s practise the tricky ones.", "Zorlandıklarını pekiştirelim.", "Repasemos las difíciles.") else s("puzzle_welcome"), style = MaterialTheme.typography.headlineMedium)
                 val sess = run.session
+                if (run.sendFailed) Text(s.say("Couldn't save your choice. Try again.", "Seçimin kaydedilemedi. Tekrar dene.", "No se pudo guardar tu elección. Inténtalo otra vez."))
                 Text(
                     if (sess?.willPay == true) "${s("math_up_to_gems")} ${sess.gems} ${s("math_gems_word")}" else s("puzzle_no_gems"),
                     style = MaterialTheme.typography.labelLarge, color = if (sess?.willPay == true) Color.White else Ink.soft,
@@ -89,7 +92,7 @@ fun PuzzleScreen(vm: TutoViewModel) {
                     BigButton(s("math_lets_go"), color = TEAL) { run.begin() }
                 }
             }
-        }
+        })
         PuzzleRun.Phase.Asking -> Asking(run, s) { vm.home() }
         PuzzleRun.Phase.Result -> {
             val r = run.result ?: return
@@ -99,9 +102,10 @@ fun PuzzleScreen(vm: TutoViewModel) {
                 r.total > 0 && r.correct * 2 >= r.total -> "puzzle_enc_mid"
                 else -> "puzzle_enc_low"
             }
-            Row(Modifier.fillMaxSize().padding(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(40.dp)) {
-                Tuto(Modifier.size(width = 300.dp, height = 380.dp), cheerKey = 1)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            AdaptivePair(first = {
+                Tuto(Modifier.size(width = 260.dp, height = 300.dp), cheerKey = 1)
+            }, second = {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     Text(s(key), style = MaterialTheme.typography.headlineMedium)
                     Text(s.say("${r.correct} out of ${r.total} right", "${r.total} bulmacadan ${r.correct} tanesi doğru", "${r.correct} de ${r.total} correctas"), style = MaterialTheme.typography.headlineLarge)
                     when {
@@ -111,12 +115,17 @@ fun PuzzleScreen(vm: TutoViewModel) {
                         }
                         r.capped -> Text(s("puzzle_no_gems"), style = MaterialTheme.typography.bodyLarge)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (run.sendFailed) Text(s.say("Couldn't save your choice. Try again.", "Seçimin kaydedilemedi. Tekrar dene.", "No se pudo guardar tu elección. Inténtalo otra vez."))
+                    if (r.review != null) {
+                        Text(s.say("${r.review.optInt("count")} new questions · up to +${r.review.optInt("max_gems")} Gems", "${r.review.optInt("count")} yeni soru · en fazla +${r.review.optInt("max_gems")} Gem", "${r.review.optInt("count")} preguntas nuevas · hasta +${r.review.optInt("max_gems")} gems"), style = MaterialTheme.typography.bodyLarge)
+                        BigButton(s.say("Practise", "Pekiştirelim", "Repasar"), color = TEAL, enabled = !run.sending) { run.startReview() }
+                        SoftButton(s.say("Not now", "Şimdi değil", "Ahora no")) { vm.home() }
+                    } else {
                         SoftButton(s("nav_home")) { vm.home() }
                         BigButton(s.say("Play again", "Tekrar oyna", "Jugar otra vez"), color = TEAL) { vm.openPuzzleAgain() }
                     }
                 }
-            }
+            })
         }
     }
 }
@@ -144,6 +153,12 @@ private fun Asking(run: PuzzleRun, s: Strings, onClose: () -> Unit) {
             }
             Prompt(q, drawn.prompt)
             Options(run, q, drawn.options)
+            run.hints.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth().card(Ink.lilacSoft).padding(16.dp)) }
+            if (ans == null) {
+                BigButton(s.say("Hint", "İpucu", "Pista"), color = TEAL, enabled = !run.sending && run.hintCount < 3) { run.hint() }
+                if (run.picked == null) SoftButton(s.say("I don’t know", "Bilmiyorum", "No lo sé")) { run.send(skip = true) }
+            }
+            if (run.retryNeeded) Text(s.say("Not quite. Try another answer.", "Tam değil. Başka bir cevap dene.", "No es esa. Prueba otra respuesta."), style = MaterialTheme.typography.bodyLarge)
             ans?.let { a ->
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Tuto(Modifier.size(width = 100.dp, height = 127.dp), cheerKey = run.cheerKey)
@@ -222,7 +237,8 @@ private fun Options(run: PuzzleRun, q: PuzzleQuestion, svgs: List<String?>) {
             }
             Box(
                 Modifier.clip(RoundedCornerShape(18.dp)).border(if (border == Color(0xFFDCD9EA)) 3.dp else 5.dp, border, RoundedCornerShape(18.dp))
-                    .clickable(enabled = ans == null, role = Role.Button) { run.pick(i) }
+                    .alpha(if (i in run.struck && ans == null) .45f else 1f)
+                    .clickable(enabled = ans == null && !run.sending && i !in run.struck, role = Role.Button) { run.pick(i) }
                     .testTag("puzzle_option_$i")
                     .padding(6.dp),
                 contentAlignment = Alignment.Center,

@@ -1,45 +1,38 @@
-// Tuto Care — parent-side design kit (shared tokens + primitives)
+// Tuto Care — parent-side primitives. Tokens live in parentTokens.js and are re-exported below.
 import TutoMascotComponent from '../components/TutoMascot'
 import { LANGS } from './i18n'
 import { useUiLang, setUiLang, useT } from './parentI18n'
 import { ageFromBirthDate, birthDateBounds } from './age'
 
-export const PC = {
-  bg:       '#F4F6F7',
-  card:     '#FFFFFF',
-  ink:      '#21262E',
-  inkSoft:  '#79808C',
-  inkFaint: '#A9AFB9',
-  line:     '#ECEEF1',
-  field:    '#F3F5F7',
-  teal:     '#3FB7AC',
-  tealDeep: '#2EA298',
-  tealBg:   '#E4F4F2',
-  peach:    '#F0A368',
-  peachDeep:'#E08B49',
-  peachBg:  '#FCEEE1',
-  amber:    '#E9A23B',
-  amberBg:  '#FBF0D9',
-  green:    '#56BD8C',
-  greenBg:  '#E6F5EC',
-  danger:   '#E8695C',
-  dangerBg: '#FCEAE8',
-  reading:  '#a98ce6', readingBg: '#EFE9FB',
-  math:     '#5aa9e6', mathBg:    '#E2F0FB',
-  writing:  '#6cc28a', writingBg: '#E4F4EA',
-  homework: '#e0a93b', homeworkBg: '#FBF1D6',
-  drawing:  '#d97ab0', drawingBg: '#FBE6F1',
-  puzzle:   '#2BA59A', puzzleBg:  '#D9F3F1',
-  english:  '#D9577A', englishBg: '#FBDDE5',
-}
+import { PC, FONT, SHADOW, SHADOW_SM, SPACE, RADIUS, TAP, ELEV, TEXT } from './parentTokens'
 
-export const FONT = "'Plus Jakarta Sans', sans-serif"
-export const SHADOW    = '0 14px 34px -16px rgba(40,55,75,.18), 0 3px 10px -4px rgba(40,55,75,.06)'
-export const SHADOW_SM = '0 6px 18px -8px rgba(40,55,75,.16), 0 1px 4px rgba(40,55,75,.04)'
+/* Re-exported so every screen keeps one import site for the kit. */
+export { PC, FONT, SHADOW, SHADOW_SM, SPACE, RADIUS, TAP, ELEV, TEXT } from './parentTokens'
 
 export const PCSS = `
 *{box-sizing:border-box;}
 .tc-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+/* The parent app is a phone app. It is used on a phone, and it is going native on a phone
+   (Compose / SwiftUI). The 980px two-column dashboard only ever existed in a browser: a
+   second layout to keep true, with no device behind it. It is gone — on a wide screen the
+   column keeps its phone width and the page behind it goes darker, so what a parent sees on
+   a laptop IS the phone screen rather than a near-miss of it.
+   Every parent screen wears .tc-col, including the fixed tab bar, so there is one width in
+   the app and nothing can line up against a different one. */
+.tc-col{max-width:430px;margin:0 auto;width:100%;}
+.tc-pnav{max-width:430px;}
+/* Scoped by mount, not by selector: PCSS is injected by the parent screens and removed when
+   they unmount, so the kids app keeps its own cream page. */
+body{background:#E3E8EC;}
+@media (min-width:480px){
+  .tc-col{box-shadow:0 0 0 1px rgba(40,55,75,.07),0 26px 64px -34px rgba(25,40,55,.42);}
+}
+/* Room for the fixed bar (69px), the home indicator, and a card's worth of breathing room.
+   This is padding-bottom, so a screen that also sets the shorthand inline silently replaces
+   it: three screens did, with 32px, and the bar covered the last 37px of the page — the
+   capped-limit warning on the report sat under it with nothing left to scroll. Tabbed screens
+   set paddingInline / paddingTop only and leave the bottom to this rule. */
+.tc-tabbed{padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));}
 .tc-scroll::-webkit-scrollbar{display:none;}
 .tc-press{transition:transform .12s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,opacity .18s ease;}
 .tc-press:active{transform:scale(.97);}
@@ -83,6 +76,8 @@ export function Icon({ name, size = 24, color = 'currentColor', sw = 2 }) {
   const M = {
     back:    <path d="M15 5l-7 7 7 7" {...p} />,
     chevron: <path d="M9 6l6 6-6 6" {...p} />,
+    // Three bars on a baseline — the weekly report, drawn at the same 2px weight as the rest.
+    chart:   <g {...p}><path d="M4 20h16" /><path d="M7 20v-6" /><path d="M12 20V7" /><path d="M17 20v-9" /></g>,
     plus:    <path d="M12 5v14M5 12h14" {...p} />,
     close:   <path d="M6 6l12 12M18 6L6 18" {...p} />,
     check:   <path d="M5 12.5l4.5 4.5L19 7" {...p} />,
@@ -146,16 +141,20 @@ export function TopBar({ title, onBack, right, sub }) {
 // ── Button ────────────────────────────────────────────────────────────────────
 export function Btn({ children, onClick, variant = 'primary', disabled, full = true, color, style: extStyle = {} }) {
   const base = {
-    fontFamily: FONT, fontWeight: 700, fontSize: 16, borderRadius: 16, padding: '15px 22px',
+    fontFamily: FONT, ...TEXT.body, fontWeight: 700,
+    borderRadius: RADIUS.md, padding: `0 ${SPACE.s5}px`, minHeight: TAP.controlH,
     cursor: disabled ? 'not-allowed' : 'pointer', width: full ? '100%' : 'auto',
-    border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s2,
     ...extStyle,
   }
-  const c = color || PC.teal
+  /* White on teal measures 2.45:1 — below the 4.5:1 bar, on the app's most-tapped control.
+     tealInk is the same hue darkened until white clears it at 4.80:1. A caller that passes
+     its own colour still gets that colour. */
+  const c = color || PC.tealInk
   let v = {}
   if (variant === 'primary') v = { background: disabled ? '#C5CDD3' : c, color: '#fff', boxShadow: disabled ? 'none' : `0 10px 22px -8px ${c}cc` }
   else if (variant === 'soft')    v = { background: PC.tealBg, color: PC.tealDeep }
-  else if (variant === 'outline') v = { background: '#fff', color: PC.ink, border: `1.5px solid ${PC.line}`, boxShadow: SHADOW_SM }
+  else if (variant === 'outline') v = { background: '#fff', color: PC.ink, border: `1.5px solid ${PC.line}`, boxShadow: ELEV.e1 }
   else if (variant === 'ghost')   v = { background: 'transparent', color: PC.inkSoft, fontWeight: 700 }
   else if (variant === 'danger')  v = { background: PC.dangerBg, color: PC.danger }
   return (

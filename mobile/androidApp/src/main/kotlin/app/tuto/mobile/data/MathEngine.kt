@@ -19,7 +19,7 @@ import java.util.concurrent.Executors
  * One runtime for the life of the app, used from one thread: QuickJS is not thread-safe, and
  * loading the bundle costs about a tenth of a second, which is worth paying once.
  */
-class MathEngine(private val context: Context) {
+class MathEngine(private val context: Context) : PuzzleRenderer {
     private val thread: CoroutineDispatcher = Executors.newSingleThreadExecutor { r -> Thread(r, "tuto-math") }.asCoroutineDispatcher()
     private val lock = Mutex()
     private var js: QuickJs? = null
@@ -37,7 +37,7 @@ class MathEngine(private val context: Context) {
     private var puzzleLoaded = false
 
     /** The puzzle drawings (assets/engine/puzzle.js), loaded into the same runtime on first use. */
-    suspend fun drawPuzzle(specs: List<JSONObject?>, px: Int): List<String?> = withContext(thread) {
+    override suspend fun drawPuzzle(specs: List<JSONObject?>, px: Int): List<String?> = withContext(thread) {
         lock.withLock {
             val q = runtime()
             if (!puzzleLoaded) {

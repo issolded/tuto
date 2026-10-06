@@ -39,6 +39,9 @@ import { generateProblem, TOPICS, num, measureGridCells } from '../src/lib/mathT
 import { templateTopicFor, startingLevelForAge, clampLevelToAge } from '../src/lib/mathCurriculum.js'
 import { BRITISH_CURRICULUM, ageToSchoolYear, maxQuestionChars } from '../src/lib/gemini.js'
 
+// Numbers a child reads in a question, thousands separators (1,000 / 1.000) removed.
+const numsInText = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
+
 // "−0.05", "0,4", "40%", "4/10" → a number; the choices print numbers the way the reader reads them.
 function asNumber(v) {
   const t = String(v).replace('−', '-').replace(',', '.').trim()
@@ -147,7 +150,7 @@ function checkOlderFigure(p) {
     const h = v.h === '?' ? Number(p.correct_answer) : v.h
     const want = key.includes(':v:') ? v.l * v.w * h : key.includes(':sa:') ? 2 * (v.l * v.w + v.l * h + v.w * h) : Number(key.split(':').pop())
     if (Math.abs(Number(p.correct_answer) - want) > 1e-9) return `prizma ${want}`
-    if (v.h === '?' && Math.abs(v.l * v.w * h - asNumber(p.question_text.match(/[\d.,]+(?= cm³)/)[0])) > 1e-6) return 'hacim tutmuyor'
+    if (v.h === '?' && Math.abs(v.l * v.w * h - Number(p.question_text.match(/[\d.,]+(?= cm³)/)[0].replace(/[.,](?=\d{3}(\D|$))/g, "")) /* whole cm³, grouped by dnum */) > 1e-6) return 'hacim tutmuyor'
   }
   if (v.kind === 'circle') {
     const form = key.split(':')[2], r = v.r
@@ -324,6 +327,84 @@ for (const age of AGES) {
           if (want !== Number(p.correct_answer)) fail(where, `yardım resmi ${want} veriyor, cevap ${p.correct_answer}`, p.question_text)
           if (h.mode === 'exact' && h.total % h.size) fail(where, 'tam bölünmeyen "exact" kutu resmi', p.question_text)
         }
+        if (p.help?.kind === 'jumps') {
+          const st = p.help.stops
+          const got = p.help.mode === 'add' ? st[st.length - 1] : st[st.length - 1] - st[0]
+          if (got !== Number(p.correct_answer)) fail(where, `zıplama yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          if (st.some((x, i) => i && x <= st[i - 1])) fail(where, 'zıplama durakları artmıyor', JSON.stringify(st))
+        }
+        if (p.help?.kind === 'tally') {
+          const c = p.help.use.map(r => p.help.rows[r].count)
+          const got = p.help.ask === 'read' ? c[0] : p.help.ask === 'more' ? c[0] - c[1] : c.reduce((x, y) => x + y, 0)
+          if (got !== Number(p.correct_answer)) fail(where, `çetele yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
+        if (p.help?.kind === 'fracbar') {
+          const h = p.help
+          const got = h.mode === 'shade' ? `${h.white ? h.parts - h.shaded.length : h.shaded.length}/${h.parts}`
+            : h.mode === 'add' ? `${h.a + h.b}/${h.parts}` : `1/${Math.min(...h.denoms)}`
+          if (got !== String(p.correct_answer)) fail(where, `kesir yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
+        if (p.help?.kind === 'steps') {
+          const last = p.help.steps[p.help.steps.length - 1]
+          if (!p.help.pick && Math.abs(last.a - Number(p.correct_answer)) > 1e-9) fail(where, `adım yardımı ${last.a} veriyor, cevap ${p.correct_answer}`, p.question_text)
+          for (const st of p.help.steps) if (!Number.isFinite(st.a) || /undefined|NaN/.test(`${st.q} ${st.say ?? ''}`)) fail(where, 'bozuk yardım adımı', JSON.stringify(st))
+          // Every line that is plain arithmetic ("17 × 8", "360 − 204 + 5") has to come to the
+          // number the child is asked to type. The last step is checked against the answer key
+          // above; this catches a wrong figure in the middle of a chain, which the key never sees.
+          for (const st of p.help.steps) {
+            // Numbers are written the language's own way: English groups with commas and marks decimals
+            // with a point, Turkish and Spanish the other way round. A single rule for all three read
+            // "2,144" as two thousand in Spanish, where it is two and a bit.
+            const raw = String(st.q ?? '')
+            const plain = lang === 'en' ? raw.replace(/,/g, '') : raw.replace(/\./g, '').replace(/,/g, '.')
+            const expr = plain.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\s+/g, ' ')
+            if (!/^[\d\s+\-*/().]+$/.test(expr)) continue
+            let v; try { v = Function(`"use strict"; return (${expr})`)() } catch { continue }
+            if (Math.abs(Math.abs(v) - Math.abs(st.a)) > 1e-9) fail(where, `adım "${st.q}" = ${v}, çocuktan ${st.a} isteniyor`, p.question_text)
+          }
+        }
+        if (p.help?.kind === 'sorttest') {
+          const hit = p.help.rows.filter(r => r.fits[0] === p.help.want[0] && r.fits[1] === p.help.want[1])
+          if (hit.length !== 1 || String(hit[0].n) !== String(p.correct_answer)) fail(where, `Venn yardımında ${hit.length} sayı uyuyor`, p.question_text)
+        }
+        if (p.help?.kind === 'coins') {
+          const h = p.help
+          const got = h.mode === 'sum' ? h.coins.reduce((x, y) => x + y, 0) : h.target / h.coin
+          if (got !== Number(p.correct_answer)) fail(where, `para yardımı ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
+        // Place-value chart: the answer is recomputed from what the chart holds, by a different
+        // road than the template took — digit arrangements by trying every permutation — and the
+        // chart's numbers have to be the ones the question prints.
+        if (p.help?.kind === 'pv') {
+          const h = p.help, ans = Number(p.correct_answer)
+          const qNums = numsInText(p.question_text)
+          const cols = h.places.join(',')
+          if (cols !== '10,1' && cols !== '100,10,1') fail(where, `basamak tablosu sütunları ${cols}`, p.question_text)
+          let got = null
+          if (h.mode === 'build') {
+            got = h.parts.reduce((x, q) => x + q.place * q.count, 0)
+            if (h.parts.some(q => q.count < 1 || q.count > 9 || !h.places.includes(q.place))) fail(where, 'basamak parçası sütuna sığmıyor', p.question_text)
+          } else if (h.mode === 'missing') {
+            got = h.n - h.given.reduce((x, y) => x + y, 0)
+            if (!qNums.includes(h.n) || h.given.some(g => !qNums.includes(g))) fail(where, 'eksik parça yardımı sorudaki sayılarla uyuşmuyor', p.question_text)
+          } else if (h.mode === 'shift') {
+            got = h.up ? h.start + h.amount : h.start - h.amount
+            if (!qNums.includes(h.start) || !qNums.includes(h.amount)) fail(where, 'kaydırma yardımı sorudaki sayılarla uyuşmuyor', p.question_text)
+          } else if (h.mode === 'compare') {
+            got = h.want === 'max' ? Math.max(...h.numbers) : Math.min(...h.numbers)
+            const opts = (p.options || []).map(o => Number(o.value)).sort((x, y) => x - y).join(',')
+            if (opts !== [...h.numbers].sort((x, y) => x - y).join(',')) fail(where, 'karşılaştırma yardımı şıklarla uyuşmuyor', p.question_text)
+          } else if (h.mode === 'arrange') {
+            const perms = xs => xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map(r => [x, ...r]))
+            const made = perms(h.digits).filter(r => r[0] !== 0).map(r => Number(r.join('')))
+            got = h.want === 'max' ? Math.max(...made) : Math.min(...made)
+            if ([...h.digits].sort().join('') !== (p.question_text.match(/\d(?:, \d)+/)?.[0] ?? '').split(', ').sort().join('')) fail(where, 'dizme yardımının rakamları soruda yok', `${p.question_text} ${h.digits}`)
+          } else if (h.mode === 'digit') {
+            got = (Math.floor(h.n / h.place) % 10) * h.place
+            if (!qNums.includes(h.n)) fail(where, 'rakam değeri yardımı sorudaki sayıyla uyuşmuyor', p.question_text)
+          }
+          if (got !== ans) fail(where, `basamak yardımı (${h.mode}) ${got} veriyor, cevap ${p.correct_answer}`, p.question_text)
+        }
         if (p.help?.kind === 'groups' && p.help.groups * p.help.per !== Number(p.correct_answer)) {
           fail(where, `yardım grupları ${p.help.groups}×${p.help.per}, cevap ${p.correct_answer}`, p.question_text)
         }
@@ -374,6 +455,16 @@ for (const age of AGES) {
             fail(where, 'ızgara görseli ile cevap anahtarı uyuşmuyor', `${p.question_text} → ${p.correct_answer}, görsel ${expected}`)
           }
         }
+        // A pie is read by counting its dashed equal parts, so every slice has to cover a whole
+        // number of them and together they have to fill the circle — otherwise "count the parts"
+        // is back to guessing an angle.
+        if (p.visual?.shape === 'pie') {
+          const parts = p.visual.parts
+          const covered = p.visual.slices.map(s => (s.n * parts) / s.d)
+          if (!parts || covered.some(c => !Number.isInteger(c) || c < 1) || covered.reduce((x, y) => x + y, 0) !== parts) {
+            fail(where, 'daire grafiği dilimleri eşit parçalara oturmuyor', `${p.question_text} → parts ${parts}, ${covered.join('+')}`)
+          }
+        }
         // A two-way table is answered from the cells the child sees: what is printed plus the
         // answer has to make the total the question states, or the "?" has no right answer.
         if (p.visual?.shape === 'table' && p.operandKey.startsWith('chart:t:')) {
@@ -398,6 +489,18 @@ for (const age of AGES) {
           const decimalMark = lang === 'en' ? '.' : ','
           const bad = tok.includes(grouping) && !new RegExp(`^\\d{1,3}(\\${grouping}\\d{3})+(\\${decimalMark}\\d+)?$`).test(tok)
           if (bad) { fail(where, 'ondalık işareti dile uymuyor', `${tok} — ${p.question_text}`); break }
+        }
+        // "÷ 1,000" on a Turkish screen: a decimal never ends in three zeros, so a comma followed
+        // by exactly ",000" is an English thousands group that slipped through.
+        if (lang !== 'en') for (const tok of read.match(/\d[\d.,]*\d/g) || []) {
+          if (/^\d{1,3}(,000)+$/.test(tok)) { fail(where, 'İngilizce binlik ayırıcı', `${tok} — ${p.question_text}`); break }
+        }
+        // Values stay plain — the screen groups them in the reader's language (`dnum`). A value
+        // that arrives grouped cannot be told from a decimal: "30.000" became "30,000" in Turkish.
+        for (const v of [...(p.options || []).map(o => o.value), p.correct_answer]) {
+          if (/^-?\d{1,3}([.,]\d{3})+$/.test(String(v)) && Number.isInteger(Number(String(v).replace(/[.,]/g, ''))) && lang === 'en' && String(v).includes(',')) {
+            fail(where, 'şık değeri önceden gruplanmış', `${v} — ${p.question_text}`); break
+          }
         }
         // The scale and the shaded shape are answered from what is drawn, so the key is recomputed
         // from the drawing: the scale's reading, the shaded (or white) parts over all the parts.
@@ -529,11 +632,31 @@ console.log(`  ── toplam ${templated}/${total} (%${Math.round(templated / to
 // the same text twice. Reported rather than failed: the number is a direction, and each tool
 // added moves it (2026-09-27: 7 yaş %31, 8 yaş %20 before the first two).
 {
-  const TAUGHT = new Set(['share', 'fill', 'jumps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
+  const TAUGHT = new Set(['pv', 'share', 'fill', 'jumps', 'tally', 'fracbar', 'coins', 'sorttest', 'steps', 'shapes', 'count', 'clock', 'pictogram', 'groups', 'array'])
   const numsIn = t => (String(t ?? '').replace(/(\d)[,.](?=\d{3}(?!\d))/g, '$1').match(/\d+/g) || []).map(Number)
   const bareSeq = q => /^\d+(?:\s*,\s*\d+)+$/.test(String(q).trim().replace(/[?_…\s]+$/, '').replace(/,$/, ''))
-  console.log('Öğretici yardım (8 yaş ve altı, yanlıştan sonra):')
+  // Under 9 a wrong option's "why" is shown and the child tries again, so it must not name the
+  // answer ("compare it with 696", "1/2 cuts it into only 2"). Numbers and fractions only — a
+  // label such as "multiple of 5" or a compass word is part of the question, not a give-away —
+  // and not when the question or its picture already prints the answer.
   for (const age of [5, 6, 7, 8]) {
+    const year = ageToSchoolYear(age)
+    const level = clampLevelToAge(startingLevelForAge(age), age)
+    for (const tt of BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)) {
+      for (let i = 0; i < 300; i++) {
+        const p = generateProblem(tt, level, null, 'en')
+        if (p.format !== 'choice' || !/^[\d/.]+$/.test(String(p.correct_answer))) continue
+        const ans = String(p.correct_answer)
+        if (p.question_text.includes(ans) || JSON.stringify(p.visual ?? {}).includes(ans)) continue
+        const esc = ans.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+        const re = new RegExp(`(^|[^\\w/.])${esc}($|[^\\w/])`)
+        const leak = (p.options || []).find(o => String(o.value) !== ans && o.why && re.test(o.why))
+        if (leak) { fail(`${age} yaş/${tt}`, 'yanlış şık açıklaması cevabı söylüyor', `${p.question_text} → ${leak.why}`); break }
+      }
+    }
+  }
+  console.log('Öğretici yardım (yanlıştan sonra; 9+ için yardım henüz ekrana bağlı değil, içerik payı):')
+  for (const age of [5, 6, 7, 8, 9, 10, 11, 12, 13]) {
     const year = ageToSchoolYear(age)
     const level = clampLevelToAge(startingLevelForAge(age), age)
     const tts = BRITISH_CURRICULUM[year].topics.map(t => templateTopicFor(t)).filter(Boolean)

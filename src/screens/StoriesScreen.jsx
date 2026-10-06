@@ -1,15 +1,15 @@
+import LibraryScreen from './LibraryScreen'
+import StoryWriter from '../components/StoryWriter'
+import { draftKey } from '../lib/storyDrafts'
 import { t, childLang } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { getChildStories, saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
+import { useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { saveChildStory, saveSpellingErrors, uploadStoryCover, deleteChildStory } from '../lib/supabase'
 import { readStory, checkTitleSpelling } from '../lib/gemini'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 import TutoMascot from '../components/TutoMascot'
 import { usePhotoCrop } from '../components/usePhotoCrop'
-import StoryCover from '../components/StoryCover'
-import BookShelfGrid from '../components/BookShelfGrid'
-import BookOpenTransition from '../components/BookOpenTransition'
 import FlippingBook from '../components/FlippingBook'
 import { useIsTablet } from '../components/Shell'
 
@@ -82,7 +82,6 @@ function buildSpellingHTML(text, errors, states, activeError) {
   }).join('')
 }
 
-const CARD_COLORS = ['#E8F5E9', '#E3F2FD', '#FFF8E1', '#FCE4EC']
 const BG = 'linear-gradient(180deg, #E8F5E9 0%, #F1F8E9 100%)'
 const BG_YOUNG = '#e3f3ea'
 const COVER_COLORS = ['#B5EAD7','#C5DFFF','#FFD4E8','#FFF3A3','#D9CCFF','#FFDFB5','#B5EEE8','#FFD4D4']
@@ -153,9 +152,7 @@ export default function StoriesScreen() {
   const child = JSON.parse(localStorage.getItem('child') || 'null')
   const language = childLang(child)
 
-  const [loadingStories, setLoadingStories] = useState(true)
-  const [stories, setStories] = useState([])
-  const [step, setStep] = useState('idle') // 'idle' | 'title' | 'write'
+  const [step, setStep] = useState(() => location.state?.action === 'write' ? 'typed' : location.state?.action === 'upload' ? 'title' : 'idle') // 'idle' | 'title' | 'write'
   const [chosenIdea, setChosenIdea] = useState(null)
   const [storyTitle, setStoryTitle] = useState('')
   const [photos, setPhotos] = useState([])
@@ -183,6 +180,7 @@ export default function StoriesScreen() {
 
   // editing an existing story (from LibraryScreen / My Stories)
   const [storyId, setStoryId] = useState(null)
+  const [typedStory, setTypedStory] = useState(null)
   const [editingCompleted, setEditingCompleted] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -191,11 +189,7 @@ export default function StoriesScreen() {
   const [confirmDeleteStory, setConfirmDeleteStory] = useState(false)
   const [deletingStory, setDeletingStory] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
-  const [opening, setOpening] = useState(null) // { story, fallbackColor } — book-open transition before entering the editor
   const [coverReturnStep, setCoverReturnStep] = useState(null) // editor step to go back to when cover was opened mid-edit
-
-  // where this whole screen was entered from (Home or Library) — drives the idle-screen back button
-  const listOrigin = location.state?.from || '/child/home'
 
   // cover composition
   const coverFileRef = useRef(null)
@@ -223,10 +217,10 @@ export default function StoriesScreen() {
       if (result.has_errors && result.corrected && result.corrected !== storyTitle.trim()) {
         setTitleSuggestion(result.corrected)
       } else {
-        setStep('write')
+        setStep(typedStory ? 'typed' : 'write')
       }
     } catch {
-      setStep('write')
+      setStep(typedStory ? 'typed' : 'write')
     }
     setCheckingTitle(false)
   }
@@ -276,7 +270,7 @@ export default function StoriesScreen() {
       setSpellingState((result.spelling_errors || []).map(() => 'pending'))
       setStep('encourage')
     } catch {
-      setStep('write')
+      setStep(typedStory ? 'typed' : 'write')
     }
   }
 
@@ -329,12 +323,16 @@ export default function StoriesScreen() {
         try {
           const saved = await saveChildStory(child.id, {
             storyId,
+            ...(typedStory ? { expectedRevision: typedStory.revision } : {}),
             title: displayTitle, topic: chosenIdea?.topic || '',
             transcribed_text: editorText, corrected_text: savedText,
             status, quality: evalResult?.quality ?? 0,
           })
           if (saved.story) {
-            setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+            if (typedStory) {
+              setTypedStory(saved.story)
+              if (status === 'completed') localStorage.removeItem(draftKey(child.id, saved.story.id))
+            }
             if (!storyId) setStoryId(saved.story.id)
           }
           if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
@@ -364,12 +362,16 @@ export default function StoriesScreen() {
       try {
         const saved = await saveChildStory(child.id, {
           storyId,
+            ...(typedStory ? { expectedRevision: typedStory.revision } : {}),
           title: displayTitle, topic: chosenIdea?.topic || '',
           transcribed_text: baseText, corrected_text: corrected,
           status, quality: evalResult?.quality ?? 0,
         })
         if (saved.story) {
-          setStories(prev => storyId ? prev.map(s => s.id === storyId ? saved.story : s) : [saved.story, ...prev])
+            if (typedStory) {
+              setTypedStory(saved.story)
+              if (status === 'completed') localStorage.removeItem(draftKey(child.id, saved.story.id))
+            }
           if (!storyId) setStoryId(saved.story.id)
         }
         if (saved.gems_awarded != null) setEvalResult(prev => ({ ...prev, gems_earned: saved.gems_awarded }))
@@ -386,17 +388,14 @@ export default function StoriesScreen() {
     }
   }
 
-  useEffect(() => {
-    if (!child?.id) { setLoadingStories(false); return }
-    getChildStories(child.id).then(storiesData => {
-      setStories(storiesData)
-      setLoadingStories(false)
-    }).catch(() => setLoadingStories(false))
-  }, [])
 
   // Open an existing story for editing (navigated from LibraryScreen, or tapped in My Stories)
   const openStoryForEdit = (story, origin) => {
     if (!story) return
+    if (story.writing_source === 'typed' && story.status === 'in_progress') {
+      setTypedStory(story); setStep('typed'); return
+    }
+    setTypedStory(story.writing_source === 'typed' ? story : null)
     setIsEditMode(true)
     setEditOrigin(origin || '/child/library')
     const text = story.corrected_text || story.transcribed_text || ''
@@ -439,7 +438,6 @@ export default function StoriesScreen() {
     setDeleteError(null)
     try {
       await deleteChildStory(child.id, storyId)
-      setStories(prev => prev.filter(s => s.id !== storyId))
       setConfirmDeleteStory(false)
       exitEditMode()
     } catch (err) {
@@ -449,12 +447,42 @@ export default function StoriesScreen() {
   }
 
   const startNewStory = () => {
+    setTypedStory(null)
+    setStoryId(null)
+    setEditingCompleted(false)
+    setIsEditMode(false)
+    setPhotos([])
+    setEvalResult(null)
     setChosenIdea(null)
     setStoryTitle('')
     setStep('title')
   }
 
   const displayTitle = storyTitle.trim() || `${child?.name ?? 'Your'}'s Untitled Story ✨`
+
+  const reviewTyped = async draft => {
+    const response = await fetch(SERVER + '/api/children/' + encodeURIComponent(child.id) + '/story-assessment', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: draft.id, revision: draft.revision }), signal: AbortSignal.timeout(60000)
+    })
+    const data = await response.json()
+    if (!response.ok) { const error = new Error(data.error); error.status = response.status; throw error }
+    fetch(SERVER + '/api/screen-story-draft', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ child_id: child.id, transcribed_text: draft.transcribed_text })
+    }).catch(() => {})
+    setTypedStory(data.story); setStoryId(data.story.id); setStoryTitle(data.story.title || '')
+    setEditingCompleted(false); setIsEditMode(false); setChosenIdea(null)
+    setEvalResult(data.evaluation); editableTextRef.current = draft.transcribed_text
+    setSpellingState(data.evaluation.spelling_errors.map(() => 'pending')); setYoungErrors([])
+    localStorage.removeItem(draftKey(child.id, draft.id))
+    setStep('encourage')
+  }
+
+  if (step !== 'idle' && !child?.id) return <Navigate to="/child" replace />
+
+  if (step === 'typed') return <StoryWriter key={typedStory?.id || 'new'} child={child} story={typedStory}
+    language={language} onExit={() => nav('/child/library')} onReview={reviewTyped} />
 
   // ── STEP: TITLE ────────────────────────────────────────────────────────────
   if (step === 'title') {
@@ -489,13 +517,13 @@ export default function StoriesScreen() {
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
-                  onClick={() => { setStoryTitle(titleSuggestion); setTitleSuggestion(null); setStep('write') }}
+                  onClick={() => { setStoryTitle(titleSuggestion); setTitleSuggestion(null); setStep(typedStory ? 'typed' : 'write') }}
                   style={{ flex: 1, background: '#2EC486', border: 'none', borderRadius: 14, padding: '12px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 800, color: 'white', cursor: 'pointer' }}
                 >
                   {t('st_yes_fix', language)}
                 </button>
                 <button
-                  onClick={() => { setTitleSuggestion(null); setStep('write') }}
+                  onClick={() => { setTitleSuggestion(null); setStep(typedStory ? 'typed' : 'write') }}
                   style={{ flex: 1, background: '#F0FFF4', border: '2px solid #A5D6A7', borderRadius: 14, padding: '12px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 14, fontWeight: 700, color: '#6A9956', cursor: 'pointer' }}
                 >
                   {t('st_no_keep', language)}
@@ -512,7 +540,7 @@ export default function StoriesScreen() {
             </button>
           )}
           <button
-            onClick={() => { setStoryTitle(''); setTitleSuggestion(null); setStep('write') }}
+            onClick={() => { setStoryTitle(''); setTitleSuggestion(null); setStep(typedStory ? 'typed' : 'write') }}
             style={{ background: 'none', border: 'none', color: '#6A9956', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 14, textDecoration: 'underline', animation: 'fadeUp 0.4s ease 0.25s both' }}
           >
             {t('st_title_later', language)}
@@ -635,7 +663,7 @@ export default function StoriesScreen() {
       <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <style>{ANIM}</style>
         <div style={{ padding: '56px 24px 0' }}>
-          <BackBtn onClick={() => setStep('write')} />
+          <BackBtn onClick={() => setStep(typedStory ? 'typed' : 'write')} />
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 28px 48px' }}>
           <TutoMascot size={160} expression={isBlocked ? 'default' : 'excited'} style={{ animation: 'fadeUp 0.4s ease both' }} />
@@ -655,7 +683,7 @@ export default function StoriesScreen() {
             )}
           </div>
           {isBlocked ? (
-            <button onClick={() => setStep('write')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
+            <button onClick={() => setStep(typedStory ? 'typed' : 'write')} style={{ width: '100%', marginTop: 24, background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.30)', animation: 'fadeUp 0.4s ease 0.2s both' }}>
               {t('st_go_back', language)}
             </button>
           ) : (
@@ -1021,8 +1049,10 @@ export default function StoriesScreen() {
     const saveCover = async () => {
       if (child?.id && storyId) {
         try {
-          const saved = await saveChildStory(child.id, { storyId, cover_url: coverImageUrl || null, cover_color: coverColor })
-          if (saved.story) setStories(prev => prev.map(s => s.id === storyId ? saved.story : s))
+          const saved = await saveChildStory(child.id, { storyId, ...(typedStory ? { expectedRevision: typedStory.revision } : {}), cover_url: coverImageUrl || null, cover_color: coverColor })
+          if (saved.story) {
+            if (typedStory) setTypedStory(saved.story)
+          }
         } catch (err) {
           console.error('[saveCover]', err.message)
         }
@@ -1188,86 +1218,5 @@ export default function StoriesScreen() {
     )
   }
 
-  const inProgressStory = stories.find(s => s.status === 'in_progress')
-  const completedStories = stories.filter(s => s.status !== 'in_progress')
-
-  // ── IDLE ───────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ background: BG, minHeight: '100vh', maxWidth: isTablet ? 1180 : 430, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <style>{ANIM}</style>
-
-      <div style={{ padding: '56px 24px 20px' }}>
-        <BackBtn onClick={() => nav(listOrigin)} />
-        <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 26, fontWeight: 800, color: '#2D5016', lineHeight: 1.2 }}>
-          {child?.name ?? 'Friend'}, the Creative Writer ✏️
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#6A9956', marginTop: 6 }}>
-          {loadingStories ? 'Loading your stories...' : 'Ready to write something new?'}
-        </div>
-      </div>
-
-      <div style={{ padding: '0 24px 40px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-
-        {/* In-progress story */}
-        {!loadingStories && inProgressStory && (
-          <div style={{ marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
-            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
-              {t('st_continue_writing', language)}
-            </div>
-            <button
-              onClick={() => openStoryForEdit(inProgressStory, '/child/stories')}
-              style={{ background: 'white', border: '3px solid #A5D6A7', borderRadius: 24, padding: '20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.12)', width: '100%', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 44 }}>🌳</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: '#2D5016', marginBottom: 4 }}>
-                  {inProgressStory.title || 'Untitled Story'}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#6A9956' }}>Pick up where you left off →</div>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* Completed stories grid */}
-        {!loadingStories && completedStories.length > 0 && (
-          <div style={{ marginBottom: 24, animation: 'fadeUp 0.35s ease 0.07s both' }}>
-            <div style={{ fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 15, fontWeight: 800, color: '#2D5016', marginBottom: 10 }}>
-              My Stories 📚{' '}
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#6A9956' }}>{completedStories.length} written</span>
-            </div>
-            <BookShelfGrid
-              items={completedStories}
-              renderItem={(story, i) => (
-                <div key={story.id} style={{ animation: `fadeUp 0.35s ease ${i * 0.06}s both` }}>
-                  <StoryCover story={story} fallbackColor={CARD_COLORS[i % CARD_COLORS.length]} childName={child?.name} onTap={() => setOpening({ story, fallbackColor: CARD_COLORS[i % CARD_COLORS.length] })} />
-                </div>
-              )}
-            />
-          </div>
-        )}
-
-        {/* Start a new story — straight to title, no idea-picking detour */}
-        {!loadingStories && (
-          <button
-            onClick={startNewStory}
-            style={{ background: '#2EC486', border: 'none', borderRadius: 20, padding: '18px', width: '100%', fontFamily: "'TrRound', 'Baloo 2', cursive", fontSize: 17, fontWeight: 800, color: 'white', cursor: 'pointer', boxShadow: '0 4px 16px rgba(46,196,134,0.35)', animation: 'fadeUp 0.35s ease 0.14s both' }}
-          >
-            {t('st_write_new', language)}
-          </button>
-        )}
-      </div>
-
-      {opening && (
-        <BookOpenTransition
-          key={opening.story.id}
-          story={opening.story}
-          childName={child?.name}
-          fallbackColor={opening.fallbackColor}
-          onClose={() => setOpening(null)}
-          onEdit={() => { openStoryForEdit(opening.story, '/child/stories'); setOpening(null) }}
-        />
-      )}
-    </div>
-  )
+  return <LibraryScreen onWrite={() => { setTypedStory(null); setStep('typed') }} onUpload={startNewStory} />
 }

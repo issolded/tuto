@@ -2251,6 +2251,26 @@ export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {
   const seen = new Set()
   const topics = new Set()
   const perType = {}
+  // Kinds the child owes from the last review (`type` or `type|attr`): one question of each, at most three, leads the sitting.
+  for (const kind of (Array.isArray(opts.focus) ? opts.focus : []).slice(0, 3)) {
+    const [type, attr] = String(kind).split('|')
+    if (!(BANDS[bandKey]?.types || []).includes(type) && !String(type).startsWith('glyph') && !String(type).startsWith('icon')) continue
+    // The exact attribute first; some pairs ("inner+size") are rare, so after a long search any question of the same type
+    // stands in rather than the owed kind being dropped.
+    let placed = false
+    for (let i = 0; i < 360 && !placed; i++) {
+      const q = generateQuestion(bandKey, type, seed + 7 + i * 15485863, opts)
+      if (!q || (attr && i < 300 && String(q.rule?.attr ?? '') !== attr)) continue
+      const sig = questionSignature(q)
+      if (seen.has(sig)) continue
+      seen.add(sig)
+      const topic = topicKey(q)
+      if (topic) topics.add(topic)
+      perType[q.type] = (perType[q.type] || 0) + 1
+      out.push(q)
+      placed = true
+    }
+  }
   for (const capped of [true, false]) {
     for (let i = 0; out.length < count && i < count * 40; i++) {
       const q = generateQuestion(bandKey, null, seed + i * 104729, opts)

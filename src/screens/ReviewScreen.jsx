@@ -42,7 +42,7 @@ export default function ReviewScreen({ parent = false }) {
 
   const back = () => (parent ? nav(`/parent/child/${id}`) : nav('/child/gems'))
   const title = data?.kind === 'puzzle' ? t('task_puzzle', lang) : data?.kind === 'english' ? t('task_english', lang)
-    : data?.kind === 'math' ? t('task_math', lang) : ''
+    : data?.kind === 'math' ? t(data.practice ? 'gem_math_review' : 'task_math', lang) : ''
   const score = data?.kind === 'puzzle' || data?.kind === 'english' ? `${data.correct ?? 0}/${data.total ?? 0}`
     : data?.kind === 'math' ? `${data.items.filter(r => r.correct).length}/${data.items.length}` : ''
 
