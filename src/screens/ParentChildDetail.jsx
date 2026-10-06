@@ -854,6 +854,114 @@ function RemoveSheet({ child, onClose, onConfirm }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 // The week's numbers from the same endpoint the report draws, as one line and seven small bars.
+// Topics the parent has asked Tuto to leave out of the maths sessions (the school has not covered them
+// yet). Tuto assesses; this is the parent's knowledge of what was taught. The rules (4 weeks, at most 3,
+// it ends by itself) live on the server — this only shows them and sends the choice.
+const SKIP_WEEK_CHOICES = [2, 4, 8, 12]
+
+function MathSkipCard({ childId, childName }) {
+  const s = useT()
+  const lang = useUiLang()
+  const [state, setState] = useState(null)   // { active, available, max, default_weeks }
+  const [open, setOpen] = useState(false)
+  const [pick, setPick] = useState(null)
+  const [weeks, setWeeks] = useState(4)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const call = async (method, body) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) throw new Error('session')
+    const res = await fetch(`${SERVER}/api/parent/children/${childId}/math-skip`, {
+      method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data?.error || `server ${res.status}`)
+    return data
+  }
+
+  useEffect(() => {
+    let live = true
+    call('GET').then(d => { if (live) { setState(d); setWeeks(d.default_weeks || 4) } }).catch(() => {})
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `call` only closes over childId
+  }, [childId])
+
+  if (!state) return null
+
+  const apply = async body => {
+    setBusy(true); setError('')
+    try {
+      const d = await call('POST', body)
+      setState(prev => ({ ...prev, active: d.active, available: d.available }))
+      setOpen(false); setPick(null)
+    } catch { setError(s('ms_error')) }
+    setBusy(false)
+  }
+
+  const taken = new Set(state.active.map(a => a.topic_id))
+  const choices = state.available.filter(t => !taken.has(t.topic_id))
+  const full = state.active.length >= state.max
+  const when = d => {
+    const [y, m, day] = d.split('-').map(Number)
+    return new Date(y, m - 1, day).toLocaleDateString(localeFor(lang), { day: 'numeric', month: 'long' })
+  }
+
+  return (
+    <Card pad={14} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15, color: PC.ink }}>📐 {s('ms_title')}</div>
+      {state.active.length === 0 && (
+        <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft }}>{s('ms_none')}</div>
+      )}
+      {state.active.map(a => (
+        <div key={a.topic_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: PC.ink }}>{a.name}</div>
+            <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12, color: PC.inkSoft }}>{s('ms_until', { date: when(a.until) })}</div>
+          </div>
+          <Btn variant="ghost" full={false} disabled={busy} onClick={() => apply({ topic_id: a.topic_id, resume: true })}>{s('ms_bring_back')}</Btn>
+        </div>
+      ))}
+      {error && !open && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+      {full
+        ? <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: PC.inkSoft }}>{s('ms_full')}</div>
+        : choices.length > 0 && <Btn variant="ghost" onClick={() => { setOpen(true); setError('') }}>{s('ms_add')}</Btn>}
+
+      {open && (
+        <BottomSheet onClose={() => setOpen(false)}>
+          <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 20, color: PC.ink }}>{s('ms_sheet_title')}</div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: PC.inkSoft, marginTop: -8 }}>{s('ms_sheet_b', { name: childName })}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {choices.map(t => (
+              <button key={t.topic_id} type="button" onClick={() => setPick(t.topic_id)} aria-pressed={pick === t.topic_id}
+                style={{ textAlign: 'left', fontFamily: FONT, fontWeight: 700, fontSize: 14, padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
+                  border: `2px solid ${pick === t.topic_id ? PC.teal : PC.line}`, background: pick === t.topic_id ? PC.tealBg : PC.card, color: PC.ink }}>
+                {t.name}
+              </button>
+            ))}
+          </div>
+          <Field label={s('ms_how_long')}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {SKIP_WEEK_CHOICES.filter(w => w <= (state.max_weeks || 12)).map(w => (
+                <button key={w} type="button" onClick={() => setWeeks(w)} aria-pressed={weeks === w}
+                  style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, padding: '9px 14px', borderRadius: 999, cursor: 'pointer',
+                    border: `2px solid ${weeks === w ? PC.teal : PC.line}`, background: weeks === w ? PC.tealBg : PC.card, color: PC.ink }}>
+                  {s('ms_weeks', { n: w })}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {error && <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13, color: PC.danger }}>{error}</div>}
+          <Btn disabled={!pick || busy} onClick={() => apply({ topic_id: pick, weeks })}>{s('ms_confirm', { n: weeks })}</Btn>
+          <Btn variant="ghost" onClick={() => setOpen(false)}>{s('cancel')}</Btn>
+        </BottomSheet>
+      )}
+    </Card>
+  )
+}
+
 function WeekCard({ childId, onOpen }) {
   const s = useT()
   const w = useChildWeek(childId)
@@ -1242,6 +1350,8 @@ export default function ParentChildDetail() {
         {/* This week, at a glance — the door to the weekly report, which lives here now that the
             Reports tab went to Tuto. A week is always one child's week. */}
         <WeekCard childId={id} onOpen={() => nav(`/parent/reports?child=${id}`)} />
+
+        <MathSkipCard childId={id} childName={child.name} />
 
         {/* The language the child is taught in. It lived only at the top of Task settings, one
             screen down, and a parent looking for it here — on the child's own card — did not

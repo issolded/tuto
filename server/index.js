@@ -5,6 +5,7 @@ import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './engli
 import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
 import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from './puzzleReview.js'
 import { localTopicName } from './topicNames.js'
+import { activeSkips, skipIds, addSkip, removeSkip, yearTopicIds, describeSkips, SKIP_DEFAULT_WEEKS, SKIP_MAX_WEEKS, SKIP_MAX_TOPICS } from './mathSkip.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
 import { buildWeekReport, weekContext } from './week.js'
@@ -218,6 +219,7 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
         notify_per_task: prefsAll.notify_per_task !== false }
     : null
 
+  const ctxLang = parentLang(prefsAll)
   return Promise.all(children.map(async child => {
     const [
       { data: submissions },
@@ -404,6 +406,14 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
       englishVariety: child.english_variety
         ? `${child.english_variety === 'us' ? 'American' : 'British'} English — chosen by the parent`
         : `${englishVarietyForZone(tz) === 'us' ? 'American' : 'British'} English — from the family's time zone (the parent has not chosen)`,
+      // Topics the parent asked to leave out. Not "weak" and not a gap: they are outside what the child is
+      // being assessed on until the date, and any "what is the level" answer should say so.
+      mathSkipped: activeSkips(child.math_skip).length
+        ? { topics: describeSkips(child.math_skip, ctxLang),
+            note: 'a parent asked for these to be left out of the maths sessions until the date shown; they come back by themselves' }
+        : 'no topic is being left out for ' + child.name,
+      // What set_math_skip can be about: this child's year, whether or not a session has asked it yet.
+      mathCurriculumTopics: yearTopicsFor(child.age, ctxLang),
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,
@@ -1682,6 +1692,34 @@ const CONTRIBUTION_TOOLS = [{
       },
     },
     {
+      name: 'set_math_skip',
+      description:
+        'Leaves one maths curriculum topic OUT of the child\'s sessions for a few weeks, because the parent says ' +
+        'it has not been taught yet or they want a break from it ("henüz kesirleri görmediler, bir süre sorma", ' +
+        '"leave out time for now", "no division yet"). Tuto assesses; the parent knows what school has covered, ' +
+        'and this is how that knowledge reaches the sessions. It does NOT change the difficulty level, the accuracy ' +
+        'figures or any other topic.\n' +
+        'The topic must be one of this child\'s year: the exact topic_id values are in mathCurriculumTopics in ' +
+        'context. Match the parent\'s words to one of THOSE ids — never invent one. If their words fit none or ' +
+        'fit two, ASK which they mean and list the names; do not guess.\n' +
+        'It lasts 4 weeks unless the parent names another length (weeks, 1–12), then the topic comes back by ' +
+        'itself — say so plainly, with the end date from the result, and that they can extend or end it any time. ' +
+        'At most 3 topics can be skipped at once; if the result says too_many, tell them which are already ' +
+        'skipped and ask which to bring back. To bring a topic back early set resume true (topic_id "all" for ' +
+        'every one). Do NOT use this for "she is struggling" — that is a topic to weight (set_math_focus) or ' +
+        'simply to wait on; ask whether the topic has actually not been taught yet.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
+          topic_id: { type: 'STRING', description: 'A topic_id copied exactly from that child\'s mathCurriculumTopics in context, or "all" together with resume.' },
+          weeks: { type: 'NUMBER', description: 'How many weeks to leave it out, 1 to 12. Leave out for the default of 4.' },
+          resume: { type: 'BOOLEAN', description: 'true to bring the topic back into the sessions now.' },
+        },
+        required: ['child_id', 'topic_id'],
+      },
+    },
+    {
       name: 'submit_feedback',
       description:
         'Records what the parent said about the app so the people who build it read it: something they are ' +
@@ -1906,6 +1944,70 @@ async function submitFeedbackTool(parentId, args) {
   return { success: true, recorded: true }
 }
 
+// math_skip is its own read and swallows errors: the column arrives with a migration, and naming a
+// missing column in the main child select would drop the whole request (math-plan carries the gem
+// level, the context carries everything). Missing column = nothing skipped.
+async function readMathSkip(childId) {
+  const { data, error } = await supabase.from('children').select('math_skip').eq('id', childId).maybeSingle()
+  return error ? [] : (Array.isArray(data?.math_skip) ? data.math_skip : [])
+}
+
+// The topics of this child's year, named in the parent's language — what a skip can be about.
+function yearTopicsFor(age, lang) {
+  return yearTopicIds(mathLevelBand(age)[1]).map(id => ({ topic_id: id, name: localTopicName(id, id, lang) }))
+}
+
+// Leaves a topic out of the child's maths sessions for a few weeks (the parent knows it has not been
+// taught yet), or brings it back. Both the chat tool and the panel come through here.
+async function setMathSkipTool(childId, topicId, parentId, { weeks, resume } = {}) {
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id, age, math_focus').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'not your child' }
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', parentId).maybeSingle()
+  const lang = parentLang(parentRow?.prefs)
+  const available = yearTopicsFor(child.age, lang)
+  const current = await readMathSkip(childId)
+
+  const write = async (list, extra = {}) => {
+    const { error } = await supabase.from('children').update({ math_skip: list, ...extra }).eq('id', childId)
+    if (error) {
+      console.error(`[MATH-SKIP] write failed for ${childId}: ${error.message}`)
+      return { success: false, error: 'could not be saved right now' }
+    }
+    return null
+  }
+
+  if (resume) {
+    if (topicId !== 'all' && !available.some(t => t.topic_id === topicId)) {
+      return { success: false, error: `"${topicId}" is not one of ${child.name}'s topics`, available }
+    }
+    const { list, removed } = removeSkip(current, topicId)
+    if (!removed) return { success: true, child: child.name, nothing_to_bring_back: true, skipped_now: describeSkips(current, lang) }
+    const failed = await write(list)
+    if (failed) return failed
+    return { success: true, child: child.name, brought_back: topicId === 'all' ? 'all' : localTopicName(topicId, topicId, lang), skipped_now: describeSkips(list, lang) }
+  }
+
+  if (!available.some(t => t.topic_id === topicId)) {
+    return { success: false, error: `"${topicId}" is not one of ${child.name}'s topics`, available }
+  }
+  const added = addSkip(current, topicId, weeks)
+  if (added.error === 'too_many') {
+    return { success: false, error: 'too_many', max: SKIP_MAX_TOPICS,
+             detail: `at most ${SKIP_MAX_TOPICS} topics can be skipped at once so a session still covers the year`,
+             skipped_now: describeSkips(current, lang) }
+  }
+  if (added.error) return { success: false, error: added.error, available }
+  // A topic cannot be leaned on and left out at once: a skip ends the focus on it.
+  const clearsFocus = child.math_focus?.topic_id === topicId
+  const failed = await write(added.list, clearsFocus ? { math_focus: null } : {})
+  if (failed) return failed
+  return { success: true, child: child.name, topic_name: localTopicName(topicId, topicId, lang),
+           until: added.entry.until.slice(0, 10), weeks: added.entry.weeks,
+           focus_cleared: clearsFocus, skipped_now: describeSkips(added.list, lang) }
+}
+
 async function setMathFocusTool(childId, topicId, parentId) {
   const { data: child } = await supabase
     .from('children').select('id, name, parent_id, age').eq('id', childId).maybeSingle()
@@ -1923,6 +2025,10 @@ async function setMathFocusTool(childId, topicId, parentId) {
   // separately, so a second copy would drift — and it is unnecessary: a session covers every
   // topic of the child's year, so one sitting is enough for all of them to be known. A topic
   // the child has never met cannot be weighted, which is the right answer anyway.
+  if (skipIds(await readMathSkip(childId)).includes(topicId)) {
+    return { success: false, error: 'topic_is_skipped', child: child.name,
+             detail: 'that topic is being left out of the sessions; bring it back with set_math_skip (resume) before weighting it' }
+  }
   const standing = await topicStanding(childId)
   if (!standing?.length) {
     return { success: false, error: 'no maths answered yet', child: child.name,
@@ -2984,6 +3090,15 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
         `Çalışma konusunu, odağını veya zorluğunu ebeveynin ayarlayabileceği bir yer HENÜZ YOK. Akışı ` +
         `bozmamak ya da kibar görünmek için sahte bir başarı mesajı vermek — para/gem/ayar etkilenmese bile — ` +
         `ebeveynin sana güvenini kalıcı olarak kırar; hiçbir zaman kabul edilebilir bir kısayol değildir.\n\n` +
+        `- MATEMATİK SEVİYESİ VE KONULAR: Tuto seviyeyi ebeveynin elle ayarladığı bir şey değil, çocuğun ` +
+        `performansından ÖLÇEN bir araçtır; seviyeyi elle düşürme ya da yükseltme aracın YOK ve varmış gibi davranma. ` +
+        `Ebeveyn "zorlanıyor", "seviyeyi düşürelim", "çok zor geliyor" derse sırayla: (1) context'ten (mathTopics, ` +
+        `recentMathQuestions, used_hint) en çok nerede takıldığını söyle, rakamı yalnız yeterli veri varsa; (2) o ` +
+        `konunun okulda HENÜZ İŞLENİP İŞLENMEDİĞİNİ sor — işlenmediyse set_math_skip ile bir süre (varsayılan 4 hafta) ` +
+        `sorulmamasını öner; (3) işlendiyse ama zor geliyorsa set_math_focus'u öner; (4) "matematiğe ara verin" ` +
+        `deme — ebeveyn kendisi isterse saygı göster ama ilk öneri olarak tek oturum verisiyle çocuğu konudan ` +
+        `uzaklaştırma. mathSkipped içindeki konuları "zayıf" ya da "boşluk" diye okuma: tarihe kadar ölçüm ` +
+        `dışındalar. set_math_skip'te bitiş tarihini sonuçtan oku ve söyle; konu kendiliğinden geri gelir.\n\n` +
         `- GERİ BİLDİRİM: ebeveyn uygulamadan, bir ekrandan, bildirimlerden ya da senin cevaplarından ` +
         `memnuniyetsizliğini, kafa karışıklığını, bir hatayı ya da bir isteğini söylerse submit_feedback'i ` +
         `çağır (kendi sözünü olduğu gibi parent_words'e koy). "Ekibe iletiyorum", "not aldım", "geliştiricilere ` +
@@ -3215,6 +3330,8 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
         toolResult = await rejectSuggestionById(args.request_id, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
+      } else if (name === 'set_math_skip') {
+        toolResult = await setMathSkipTool(args.child_id, args.topic_id, parentId, { weeks: args.weeks, resume: args.resume === true })
       } else if (name === 'submit_feedback') {
         toolResult = await submitFeedbackTool(parentId, args)
       } else if (name === 'update_preferences') {
@@ -5775,7 +5892,7 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
     // waiting for the other two first bought nothing and cost a whole round trip — and this
     // call is the only thing standing between tapping Maths and seeing a question, now that
     // the questions themselves take 0.04 ms to build.
-    const [{ data: child }, { data: prevRows }, standing, owed] = await Promise.all([
+    const [{ data: child }, { data: prevRows }, standing, owed, skipList] = await Promise.all([
       supabase.from('children').select('id, age, math_focus').eq('id', childId).maybeSingle(),
       supabase.from('math_progress').select('level').eq('child_id', childId)
         .order('created_at', { ascending: false }).limit(1),
@@ -5787,18 +5904,23 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false }).limit(3)
         .then(r => (r.error ? [] : (r.data || [])), () => []),
+      readMathSkip(childId),
     ])
     if (!child) return res.status(404).json({ error: 'child not found' })
+    // Topics a parent left out: removed from every list that would put them back in a session.
+    const skip = skipIds(skipList)
+    const unskipped = ids => ids.filter(id => !skip.includes(id))
     res.json({
       level: prevRows?.[0]?.level ?? null,   // null = the client falls back to the age footing
-      focus: child.math_focus ?? null,
+      focus: child.math_focus && !skip.includes(child.math_focus.topic_id) ? child.math_focus : null,
+      skip_topic_ids: skip,
       standing: standing ?? [],
       // Named so the client never has to know the thresholds, and so there is one place to
       // change what "weak" means.
-      weak_topic_ids: (standing ?? []).filter(t => t.standing === 'weak').map(t => t.topic_id),
+      weak_topic_ids: unskipped((standing ?? []).filter(t => t.standing === 'weak').map(t => t.topic_id)),
       // What the child owes from a review they did not take or did not finish; the screen puts these
       // ahead of the weak ones, since the child was just shown they went wrong.
-      review_topic_ids: [...new Set(owed.flatMap(r => (r.carry_topics || []).map(t => t.topic_id)))],
+      review_topic_ids: unskipped([...new Set(owed.flatMap(r => (r.carry_topics || []).map(t => t.topic_id)))]),
     })
   } catch (err) {
     console.error('[MATH-PLAN]', err.message)
@@ -7998,6 +8120,39 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
 })
 
 
+// The parent panel's side of set_math_skip: same function, same rules, behind the parent's token.
+async function mathSkipPanel(req, childId) {
+  const userId = await parentFromBearer(req)
+  if (!userId) return { status: 401, body: { error: 'unauthorized' } }
+  const { data: child } = await supabase.from('children').select('id, age, parent_id').eq('id', childId).maybeSingle()
+  if (!child || child.parent_id !== userId) return { status: 404, body: { error: 'not found' } }
+  return { userId, child }
+}
+async function mathSkipState(child, userId) {
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', userId).maybeSingle()
+  const lang = parentLang(parentRow?.prefs)
+  return { active: describeSkips(await readMathSkip(child.id), lang), available: yearTopicsFor(child.age, lang),
+           max: SKIP_MAX_TOPICS, default_weeks: SKIP_DEFAULT_WEEKS, max_weeks: SKIP_MAX_WEEKS }
+}
+app.get('/api/parent/children/:childId/math-skip', async (req, res) => {
+  try {
+    const a = await mathSkipPanel(req, req.params.childId)
+    if (a.status) return res.status(a.status).json(a.body)
+    res.json(await mathSkipState(a.child, a.userId))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+app.post('/api/parent/children/:childId/math-skip', async (req, res) => {
+  try {
+    const a = await mathSkipPanel(req, req.params.childId)
+    if (a.status) return res.status(a.status).json(a.body)
+    const { topic_id, weeks, resume } = req.body || {}
+    const r = await setMathSkipTool(req.params.childId, String(topic_id || ''), a.userId, { weeks, resume: resume === true })
+    if (!r.success) return res.status(400).json(r)
+    res.json({ ...r, ...(await mathSkipState(a.child, a.userId)) })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+
 // The in-app chat: a third channel into the same brain. handleMessage does not know or care
 // which channel it is answering — Telegram and WhatsApp hand it a reply callback, this hands it
 // one that collects. Tuto never starts a conversation here: the screen shows only what was asked
@@ -8019,7 +8174,7 @@ const APP_CHAT_MAX = 1000
 // progress, screen time and gems. Enforced in code by the tool list — the model is never shown
 // the approval, settings or PIN tools from this channel — and explained to it by APP_SCOPE_NOTE
 // so it can say where those things are done instead of pretending it cannot hear them.
-const APP_CHAT_TOOLS = new Set(['give_screen_time', 'gift_gems', 'deduct_gems', 'update_task_reward', 'set_math_focus'])
+const APP_CHAT_TOOLS = new Set(['give_screen_time', 'gift_gems', 'deduct_gems', 'update_task_reward', 'set_math_focus', 'set_math_skip'])
 const APP_SCOPE_NOTE =
   '\n\nCHANNEL — the "Ask Tuto" tab inside the Tuto parent app. Here you talk ONLY about: the children\'s ' +
   'progress and development (what they did, maths / English / reading / puzzles / writing, what they find hard, ' +

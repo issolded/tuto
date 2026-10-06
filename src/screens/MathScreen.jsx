@@ -2586,6 +2586,8 @@ export default function MathScreen() {
         const lvl = clampLevelToAge(plan?.level, age)
         const w = {
           focusTopicId: plan?.focus?.topic_id ?? null,
+          // Topics the parent left out for now; the server has already taken them out of the other lists.
+          skipTopicIds: Array.isArray(plan?.skip_topic_ids) ? plan.skip_topic_ids : [],
           // Skills left over from a review the child did not take come first: they were just shown to
           // have gone wrong, and the weak list is the longer memory behind them.
           weakTopicIds: [...new Set([
@@ -2602,9 +2604,9 @@ export default function MathScreen() {
         setLevel(lvl)
         setWeighting(w)
         // Replaced only if the plan says something the guess did not: another rung, a focus
-        // topic, or a weakness to lean towards. Usually it does not, and the session already
+        // topic, a topic to leave out, or a weakness to lean towards. Usually it does not, and the session already
         // waiting is the one that gets played.
-        const sameAsGuess = lvl === guess && !w.focusTopicId && w.weakTopicIds.length === 0
+        const sameAsGuess = lvl === guess && !w.focusTopicId && w.weakTopicIds.length === 0 && w.skipTopicIds.length === 0
         if (!resuming && !sameAsGuess) startPrefetch(lvl, w, true)
       } catch (e) {
         // A session with no weighting is still a good session; one that will not start is not.

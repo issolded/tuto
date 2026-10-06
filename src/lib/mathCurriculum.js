@@ -195,9 +195,18 @@ export function yearLabelForAge(age) {
 const FOCUS_SLOTS = 3
 const MAX_WEIGHTED_SLOTS = 5
 
+// A parent can leave topics out for a few weeks (the child has not been taught them yet). Every list
+// below is built from what is left, so a skipped topic cannot come back through the focus, the weak
+// list or the rotation. The server caps skips at three; this floor is the second lock, so a session
+// still spans the year even if a list ever arrives with more.
+const MIN_TOPICS_AFTER_SKIP = 3
+
 export function planSession(age, count, recentTopicIds = [], weighting = {}) {
-  const topics = BRITISH_CURRICULUM[ageToSchoolYear(age)]?.topics ?? []
-  if (!topics.length) return []
+  const allTopics = BRITISH_CURRICULUM[ageToSchoolYear(age)]?.topics ?? []
+  if (!allTopics.length) return []
+  const skip = new Set(weighting.skipTopicIds || [])
+  const kept = allTopics.filter(t => !skip.has(t.id))
+  const topics = kept.length >= MIN_TOPICS_AFTER_SKIP ? kept : allTopics
 
   const byId = new Map(topics.map(t => [t.id, t]))
   const weighted = []

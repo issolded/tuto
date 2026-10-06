@@ -55,6 +55,17 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - Gem/submission yazan endpoint'ler **sunucu tarafı doğrulama** yapmadan yazmasın.
 - `.env` ve auth dosyaları repoya girmesin; sırları repoya sokma.
 
+## Native (Android) ile ilişki — backend/web değişikliği native'i nasıl etkiler
+
+Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, karıştırma:**
+- **Sunucuda yaşayan her şey kendiliğinden native'e de geçer:** endpoint'ler, kurallar/kapılar, sohbet araçları, DB. Yeni *alan eklemek* native'i kırmaz (okunmazsa yok sayılır),
+  ama okunmadığı sürece **o alanın istemci tarafı etkisi native'de yoktur**.
+- **`src/lib` altındaki istemci mantığı native'e kendiliğinden GEÇMEZ:** native matematik motorunu Kotlin'de yazmıyor, `mobile/engine` ile web'in `src/lib` motorunu
+  (şablonlar, ipuçları/yardım, `planSession`, bulmaca çizimi) QuickJS içinde paketlenmiş bir kopya olarak çalıştırıyor (`assets/engine/math.js`). Paket yeniden derlenene kadar
+  eski mantık çalışır. Kotlin tarafında `MathPlan`/`weighting` gibi sözleşme modelleri de elle eşleniyor.
+- Bu yüzden `src/lib` mantığına ya da `/math-plan`, `/english-*`, `/puzzle-*` gibi istemcinin okuduğu yanıtların şekline dokunan iş, CLAUDE.md kaydına **"Native etkisi"** satırı yazar:
+  paket yeniden derlenmeli mi, Kotlin modeline alan eklenmeli mi.
+
 ## Sabit kararlar (tekrar önerme)
 
 - **Kitap okuma alanı** (2026-10-04): okuyucu telefon sütununa sabitlenmez; portal ile
@@ -106,6 +117,24 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
   bulunuyordu; etiket çevrilir çevrilmez o adım sessizce atlanırdı. Artık `kind: 'game'`.
 
 ## Açık işler / yol haritası
+
+- [ ] Matematikte atlanan konular (2026-10-06, Claude; kullanıcı kararı). **Tuto öğretici değil asesör:** ebeveyn seviyeyi elle düşüremez/çıkaramaz
+      (ölçümü bozar); ama "okulda henüz işlenmedi, bir süre sorma" diyebilir (kapsamı tanımlar). `children.math_skip` (jsonb), **4 hafta varsayılan, en çok 12,
+      aynı anda en çok 3 konu**, kendiliğinden biter (`server/mathSkip.js`). Seviye ve doğruluk hesabına dokunmaz. Süzme tek yerde: `/math-plan` `skip_topic_ids`
+      döner ve zayıf/pekiştirme/odak listelerinden de çıkarır; `planSession` kalan <3 konu olacaksa yoksayar. `set_math_skip` sohbet aracı (uygulama "Tuto'ya Sor"
+      kanalı dahil; konu id'leri `mathCurriculumTopics`, atlananlar `mathSkipped` bağlamda), çocuk sayfasında "Matematikte atlanan konular" kartı
+      (`GET/POST /api/parent/children/:id/math-skip`, ebeveyn JWT). Sistem istemine kural: "zorlanıyor/seviyeyi düşür" denince önce "bu konu işlendi mi?" sorulur,
+      "ara ver" ilk öneri olmaz. Odak ile atlama çakışmaz (atlama odağı temizler, atlanan konuya odak verilmez). **Migration önce:** `server/migrations/2026-10-06_math_skip.sql`;
+      yokken hiçbir şey atlanmaz (`readMathSkip` hatayı yutar), yazma "şu an kaydedilemedi" der. Test: `scripts/tests/math-skip.test.mjs`; harness'te (gerçek `index.js`,
+      sahte Supabase) panel uçları + `math-plan` + sohbet bağlamı uçtan uca. **Açık:** gerçek Gemini ile `set_math_skip` çağrısı ve ebeveyn panelinin tarayıcıda görünüşü
+      denenmedi (panel derlemede ve lint'te temiz; gerçek giriş gerektiriyor); atlanan konu İngilizce/NVR için yok; 12 haftadan uzunu bilerek yok.
+      **Native etkisi (Android, `codex/android-complete`):** sunucu tarafı (kurallar, uçlar, sohbet aracı, `/math-plan` filtreleri) native'e kendiliğinden ulaşır; ama native
+      oturumu `src/lib` motoruyla kendisi kurar (aşağıya bak) ve `MathPlan`/`weighting` yalnız `focus` + `weak_topic_ids` taşıyor, `skip_topic_ids`'i bilmiyor →
+      **native'de atlanan konu rotasyonda hâlâ çıkar** (zayıf/odak/pekiştirme listeleri sunucuda süzüldüğü için onlardan çıkmaz). Yapılacak: `Models.kt` `MathPlan`'a
+      `skipTopicIds`, `MathEngine.kt` `weighting`'e `skipTopicIds` (ve `mobile/engine` paketinin yeniden derlenmesi, çünkü `planSession` filtresi paketin içinde).
+- [x] Boşluk sorularında yardım ile ipucu aynı yöntemi öğretir (2026-10-06, Claude). 760 − ? = 353: ipucu "350'yi çıkar, sonra 3" derken yardım 4 zıplama
+      gösteriyordu. `roundAdjustPoint` koşulu ikisinde ortak, yardım `gapRoundChain` (iki adım) kullanıyor; yuvarlağa yakın değilse zıplama ikisinde de kalır.
+      **Native etkisi:** `mathTemplates.js` native pakette (`assets/engine/math.js`) olduğu için bu düzeltme native'e ancak `mobile/engine` yeniden derlenince girer.
 
 - [x] Astra'nın İngilizce/NVR/PIN incelemesi (2026-10-04, Claude; `e15821e` üzerinde). Düzeltilenler: **NVR'a "Bilmiyorum"** (sıfır gem, cevap + açıklama; İngilizcedeki gibi, yalnız hiçbir şık seçili değilken);
       **NVR ipucu 2'de çizilen şıkkın sebebi** (`reasonFor`: şıkın `why`'ı + türün anlamı — "farklı olan"da şık özelliği paylaşır, "ait olan"da paylaşmaz; glyph/icon aileleri için tür bazlı sebep);
