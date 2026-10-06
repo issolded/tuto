@@ -17,7 +17,13 @@ Tablet coverage includes family/sibling PIN, maths completion/reinforcement, puz
 
 Version 6 / 0.5.1-native-validation bounds inline photos to oriented JPEG derivatives (max 1600px and 640 KiB per photo). Reading, handwriting/paper maths, drawings and covers use these derivatives. Private Storage originals and homework EXIF remain unchanged. Three Android media tests cover the 15-page JSON budget, EXIF rotation/original preservation, and invalid photos. The first tablet job failed downloading the emulator before any tests; the failed job was rerun and all 14 tests passed.
 
-The user explicitly requested the tested native APK for their own tablet while live acceptance remains open; 0.5.0 was delivered. Play Protect showed an unknown-developer warning, followed by generic App not installed after the user chose Install anyway. User confirms Tuto is absent from the Apps list and is updating Android before retrying. Root cause remains unconfirmed; do not claim the photo fix resolves installation. APK contains arm64-v8a, armeabi-v7a, x86 and x86_64 libraries.
+The installation blocker is resolved; the exact Google Play setting was not recorded. This does not validate the later 16 KiB rebuild as an installation fix.
+
+## 16 KiB compatibility follow-up (0.5.2)
+
+Source `17382a5780f4732e82d6914dfa22bf3af562e804`, CI https://github.com/issolded/tuto/actions/runs/37507713039 rebuilds the pinned QuickJS JNI sources with NDK r28. Build, lint, all 20 JVM tests, APK signature verification, ELF/RELRO and ZIP alignment checks passed. All four packaged 64-bit native libraries pass the 16 KiB gate.
+
+Both tablet jobs initially failed downloading the emulator archive before any tests. Only failed jobs were restarted; 4 KiB and 16 KiB tablet results are pending. Do not deliver this APK or claim runtime compatibility validated until both pass. The downloaded artifact ZIP matches the CI digest; APK SHA256 is `917a3e957547368d4b5fae3548ce7f0413fbec057391e25232a18935bcb56fd3`.
 
 ## Remaining live setup and verification
 
