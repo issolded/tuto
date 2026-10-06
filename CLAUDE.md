@@ -112,7 +112,10 @@ uçtan uca çalışan Android native uygulama istiyor. iOS bu işin dışında. 
 `claude/practical-franklin-xigneu` (`6468f58`); eski `mobile/native-tablet-preview` canlı
 özelliklerin kaynağı değildir. `codex/android-complete` dalına main `11869e7` birleştirildi.
 Bu birleştirme web ekranlarının native taşındığı anlamına gelmez. Eksikler `mobile/README.md`.
-Tam özellik ve cihaz doğrulaması bitmeden yeni önizleme APK'sı teslim edilmez. Eski otomatik
+6 Ekim 21:11 Dubai kullanıcı güncellemesi: canlı doğrulama sürerken testleri geçen gerçek
+native APK'yı kendi tabletinde denemek için açıkça istedi. 0.5.0 (kaynak 7c9cb3a,
+20 JVM + 11 tablet testi) teslim edildi; bu canlı E2E kabulü değildir. Eski dummy
+önizleme geri getirilmez. Eski otomatik
 preview release adımı bu geliştirme dalında kaldırıldı. 6 Ekim 2026: değişiklikler uzak dalda; eski android-preview yayını ve APK gerçekten silindi (CI 37477802302); etiket/kaynak geçmişi tutuldu.
 
 Android takip (2026-10-06): 34 web rotası / 30 ekran dosyası envanteri
@@ -1177,3 +1180,5 @@ Android source126694a passed both CI jobs in37481528885:18 JVM and10 tablet test
 OAuth source ec5c86d: Android build/JVM/lint passed; tablet10/11. The new callback test reached its assertions but ActivityScenario teardown timed out at PAUSED. Follow-up retains the original activity launch intent instead of replacing it with the callback intent; callback data is still consumed directly and cleared. Re-run the same callback test and all tablet gates; do not suppress the failure or claim it passed before re-run.
 
 Android automated closure (6 October 2026): source7c9cb3a passed CI37486144183:APK/lint,20 JVM tests and11/11 Pixel Tablet tests including guarded OAuth callback plus teardown. Native Google PKCE code is implemented; Supabase redirect allowlist app.tuto.mobile://auth/callback and real provider/family/Storage/model/WhatsApp E2E still require external setup/test access. No real family writes, messages, backend deploy or migration occurred. Obsolete preview release/APK deletion was verified. Canonical current evidence is mobile/BUILD_STATUS.md. Local environment disconnected with older uncommitted OAuth edits; tested GitHub source is authoritative and those local edits must be reconciled rather than blindly pushed.
+
+Android photo follow-up (6 October evening): raw inline camera photos could exceed Express's 15 MiB JSON body limit. LocalPhoto.modelImage now uses an EXIF-oriented JPEG derivative, max edge 1600 and max 640 KiB, off the UI thread; 15 base64 pages fit within the limit. Reading/story transcription, drawing review and cover uploads use it. Private Storage originals and homework EXIF/date processing remain unchanged. Added three real Android decoder/encoder tests for noisy 15-page payload budget, orientation/date/original-byte preservation and invalid-photo rejection. Version 6 / 0.5.1-native-validation; CI result pending. User is testing the previously delivered 0.5.0; do not imply these changes are already in that APK. Backend/web not deployed.

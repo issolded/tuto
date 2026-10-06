@@ -1,6 +1,5 @@
 package app.tuto.mobile.ui
 
-import android.util.Base64
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -84,8 +83,8 @@ import java.util.UUID
                 "upload" -> {
                     PhotoInput(f, 1)
                     BigButton(s.say("I've drawn it", "Çizdim", "Ya lo he dibujado"), enabled = !f.busy && f.photos.size == 1) { f.work {
-                        val photo = f.photos.single()
-                        val r = f.api.call("POST", "${f.path}/paintings", JSONObject().put("photo_base64", Base64.encodeToString(photo.bytes(), Base64.NO_WRAP)).put("mime_type", photo.mime).put("drawing_id", f.selected?.optString("id") ?: JSONObject.NULL).put("age_group", if (f.selected == null) JSONObject.NULL else ageGroup))
+                        val image = f.photos.single().modelImage()
+                        val r = f.api.call("POST", "${f.path}/paintings", JSONObject().put("photo_base64", image.base64).put("mime_type", image.mime).put("drawing_id", f.selected?.optString("id") ?: JSONObject.NULL).put("age_group", if (f.selected == null) JSONObject.NULL else ageGroup))
                         f.evaluation = r; f.page = "drawing-sent"; f.photos = emptyList()
                     } }
                 }

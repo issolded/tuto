@@ -6,8 +6,8 @@ android {
         applicationId = "app.tuto.mobile.preview"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5.0-native-validation"
+        versionCode = 6
+        versionName = "0.5.1-native-validation"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The same Express server the web app talks to. Override with -PtutoServer=... for staging.
         val server = (project.findProperty("tutoServer") as String?) ?: "https://tuto-production-d1db.up.railway.app"

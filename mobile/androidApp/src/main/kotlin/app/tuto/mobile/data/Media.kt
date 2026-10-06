@@ -17,7 +17,38 @@ import kotlin.math.min
 /** Private cache file: screen rotation does not retain large photos in saved-state bundles. */
 data class LocalPhoto(val path: String, val mime: String, val modified: Long? = null) {
     fun bytes() = File(path).readBytes()
-    fun part() = JSONObject().put("inline_data", JSONObject().put("mime_type", mime).put("data", Base64.encodeToString(bytes(), Base64.NO_WRAP)))
+    suspend fun part() = modelImage().let { image -> JSONObject().put("inline_data", JSONObject().put("mime_type", image.mime).put("data", image.base64)) }
+}
+
+internal const val MODEL_PHOTO_MAX_BYTES = 640 * 1024
+data class ModelImage(val base64: String, val mime: String = "image/jpeg")
+
+/** Bound inline JSON photos, not private originals: homework needs the original EXIF date.
+ * Fifteen 640 KiB photos, even after base64 expansion, fit below Express's 15 MiB limit.
+ * Decode/rotate/encode off the UI thread and release intermediate bitmaps between pages.
+ */
+suspend fun LocalPhoto.modelImage(): ModelImage = withContext(Dispatchers.IO) {
+    var bitmap = photoBitmap(this@modelImage)
+    try {
+        val scale = min(1.0, 1600.0 / maxOf(bitmap.width, bitmap.height))
+        if (scale < 1) {
+            val resized = Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt().coerceAtLeast(1), (bitmap.height * scale).toInt().coerceAtLeast(1), true)
+            if (resized !== bitmap) bitmap.recycle()
+            bitmap = resized
+        }
+        var encoded: ByteArray
+        while (true) {
+            encoded = java.io.ByteArrayOutputStream().use { out ->
+                check(bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out))
+                out.toByteArray()
+            }
+            if (encoded.size <= MODEL_PHOTO_MAX_BYTES) break
+            val resized = Bitmap.createScaledBitmap(bitmap, (bitmap.width * .85).toInt().coerceAtLeast(1), (bitmap.height * .85).toInt().coerceAtLeast(1), true)
+            check(resized !== bitmap) { "Could not prepare photo" }
+            bitmap.recycle(); bitmap = resized
+        }
+        ModelImage(Base64.encodeToString(encoded, Base64.NO_WRAP))
+    } finally { bitmap.recycle() }
 }
 suspend fun importPhoto(context: Context, uri: Uri): LocalPhoto = withContext(Dispatchers.IO) {
     val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
@@ -34,7 +65,7 @@ fun photoBitmap(photo: LocalPhoto): Bitmap {
     val raw = requireNotNull(BitmapFactory.decodeFile(photo.path, opt))
     val orientation = runCatching { ExifInterface(photo.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1) }.getOrDefault(1)
     val matrix = Matrix().apply { when (orientation) { 2 -> setScale(-1f, 1f); 3 -> postRotate(180f); 4 -> setScale(1f, -1f); 5 -> { postRotate(90f); postScale(-1f, 1f) }; 6 -> postRotate(90f); 7 -> { postRotate(270f); postScale(-1f, 1f) }; 8 -> postRotate(270f) } }
-    return Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
+    return Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true).also { if (it !== raw) raw.recycle() }
 }
 suspend fun cropPhoto(context: Context, photo: LocalPhoto, left: Float, top: Float, right: Float, bottom: Float): LocalPhoto = withContext(Dispatchers.IO) {
     if (left == 0f && top == 0f && right == 1f && bottom == 1f) return@withContext photo

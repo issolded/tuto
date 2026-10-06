@@ -1,6 +1,5 @@
 package app.tuto.mobile.ui
 
-import android.util.Base64
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +15,8 @@ import org.json.JSONObject
 import java.util.UUID
 
 private suspend fun FeatureRun.cover(): String? = photos.firstOrNull()?.let { photo ->
-    api.call("POST", "$path/stories/cover", JSONObject().put("imageBase64", Base64.encodeToString(photo.bytes(),Base64.NO_WRAP)).put("mimeType",photo.mime)).getString("cover_url")
+    val image = photo.modelImage()
+    api.call("POST", "$path/stories/cover", JSONObject().put("imageBase64", image.base64).put("mimeType",image.mime)).getString("cover_url")
 }
 private suspend fun FeatureRun.library() {
     val books = cloud.rows("books", "child_id=eq.${enc(child.id)}&select=*&order=created_at.desc")
