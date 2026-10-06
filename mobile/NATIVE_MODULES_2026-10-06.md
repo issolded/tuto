@@ -13,7 +13,7 @@ This is implementation and validation evidence, **not a claim of live-account E2
 | Homework | Camera/gallery/crop, original private uploads, date confirmation, real weekly submissions and parent review state |
 | Drawing | Age-specific live catalogue, step images and instructions, free/guided upload, server review/gems, personal gallery and deletion confirmation |
 | Tree | Real cards, diary contributions, private photo upload, server tree totals and forest archive |
-| Parent | Password sign-in/signup/reset, encrypted session, parent lock on re-entry, family code, child/PIN/language setup, task rewards/caps/bonus, pending decisions and private photos, rewards/gifts/deductions, weekly reports, chat, notifications/quiet hours/autopilot, WhatsApp/Telegram connection, screen-plan settings |
+| Parent | Password sign-in/signup/reset, Google PKCE/callback, encrypted session, parent lock on re-entry, family code, child/PIN/language setup, task rewards/caps/bonus, pending decisions and private photos, rewards/gifts/deductions, weekly reports, chat, notifications/quiet hours/autopilot, WhatsApp/Telegram connection, screen-plan settings |
 | Maths | Current bundled web engine, retry/help at every age, same-kind review questions, paper transcription with child confirmation, scratchpad, count/group/share/clock manipulatives, pending final-save recovery; follow-up adds steps/jumps/fractions/coins/tally/pictogram/fill/sorting and six guided place-value modes, shape counting and literal arithmetic counters |
 | Tablet | Native Compose, bottom home navigation, adaptive existing home/math layouts, constrained/scrollable feature pages, rotation-owned state |
 
@@ -30,15 +30,13 @@ This is implementation and validation evidence, **not a claim of live-account E2
 
 ## Validation
 
-- Shared engine: 162 sessions (9 ages × 3 languages × 6 runs), no short sessions or missing required figures; real QuickJS check passed.
-- Review generator: 27 fresh same-skill questions; topic, operand kind and visible operation signs preserved.
-- New JVM tests cover English selection/duplicate-send/retry/finish/decline and screen-rule/prefs merge contracts.
-- New tablet instrumentation covers English controls, library/draft rotation/save, homework/drawing routes and parent re-authentication. Results must be recorded after CI; adding or compiling a test is not a passed device test.
-- Local 0.5.0 build, instrumentation compilation and lint passed (0 errors); all 14 JVM tests passed. New CI run: https://github.com/issolded/tuto/actions/runs/37471192968 (source 980d085); its Android job passed. Tablet: 5/7 passed (all 3 new module tests passed); two existing-flow failures exposed a clipped maths action and an IME/selection timing issue. Follow-up moves paper/scratch controls away from the primary maths action, dismisses the IME at login, and checks visible/selected controls before continuing. Re-run c9df357 passed all 7 tablet tests: https://github.com/issolded/tuto/actions/runs/37473978404. That result precedes the additional maths helpers, signed-input and photo-order fixes; their final validation is pending.
-- Existing baseline device run `37461523253` remains evidence only for the older four tests/source `3217f87`, not these new modules.
+Tested source `7c9cb3a6dcbd0c0a8d8eff79445323f163254baa`: https://github.com/issolded/tuto/actions/runs/37486144183
 
-The earlier offline preview remains withdrawn. Version 0.5.0 is a validation build; it must not be described as the requested fully verified replacement until the remaining parity and live E2E gates are closed.
+- Android APK build/lint and all 20 JVM tests passed.
+- All 11 Pixel Tablet API35 tests passed, with no failures/skips.
+- Coverage includes sibling/PIN, full maths plus unaided reinforcement, puzzle flows, English completion, draft recreation/save, homework/drawing navigation, parent re-entry, signed-decimal worked steps, half pictograms, borrowing and guarded OAuth callback routing.
+- Shared engine: 162 sessions across ages/languages, no short sessions or skipped required figures. Same-skill review: 27 questions.
+- Earlier clipped-action, keyboard/selection and OAuth activity-teardown failures were reproduced and resolved by successful subsequent runs. Exact current scope/limits are recorded in BUILD_STATUS.md.
+- All device/API tests use isolated test transports. Real auth/RLS, uploads, model evaluation and WhatsApp delivery are still unverified.
 
-Final follow-up local validation: APK + instrumentation APK + lint succeeded; 16 JVM tests, zero failures/errors. New tablet run will include 9 tests (the prior 7 plus worked-help and fractional pictogram checks).
-
-Source 9b6957f: CI 37476924186 passed both jobs, including all 9 Pixel Tablet tests (worked steps and half pictograms). Final guided place-value/counter follow-up adds two JVM tests and one tablet borrowing test; local APK/instrumentation/lint and all 18 JVM tests passed; its final device CI is pending.
+The obsolete dummy release and APK were actually deleted. No new rolling preview is published; do not label the validation artifact a fully verified live E2E release.
