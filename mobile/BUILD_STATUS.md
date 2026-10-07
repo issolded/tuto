@@ -51,3 +51,8 @@ Native-only redesign: white high-resolution fox clips (greeting, thinking, runni
 Local Kotlin and instrumentation compilation passed. Local ARM64 APK, lint, 15 Android JVM tests and 5 shared JVM tests passed. QuickJS engine checks and 27 same-skill review questions passed; 11,492 puzzle SVG markup outputs were nonempty (this is NOT a pixel-render pass). New Android pixel tests are compiled but not executed: this environment has no KVM and the software API 35 emulator segfaulted during boot. No real family E2E or final tablet screenshots verified.
 
 Public GitHub upload of the generated mascot assets was rejected by automatic approval review, including after checking prior native-branch publishing authorization. No new remote commit, CI run or production backend/web deploy was made. User confirmation for publication to public issolded/tuto, codex/android-complete is required by that review. The APK is a local test build connected to the existing backend, not a production-signed release; signing certificate continuity with the previously installed APK is not established.
+
+
+## 7 October — publication and device follow-up
+
+User explicitly approved public code/mascot publication. Commit 735f82a was published to codex/android-complete. CI run 37627113002 passed build/lint/JVM/APK integrity gates. The default tablet failed downloading the emulator. The 16 KiB tablet ran 19 tests: 17 passed; pixel rendering of embedded SVG data images and HEVC mascot frame decoding failed. Follow-up in this revision embeds SVG vectors as nested viewports and transcodes mascot video to H.264 Baseline. Device gates are being rerun; prior 0.7.0 APK is superseded for acceptance. No production web/backend changes.

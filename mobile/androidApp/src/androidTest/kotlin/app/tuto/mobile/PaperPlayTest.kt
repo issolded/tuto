@@ -1,6 +1,7 @@
 package app.tuto.mobile
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import androidx.compose.ui.test.*
 import androidx.compose.runtime.Composable
@@ -55,12 +56,13 @@ class PaperPlayTest {
     @Test fun allMascotClipsAreBundledPlayableAndSilent() {
         val ctx=InstrumentationRegistry.getInstrumentation().targetContext
         FoxPose.entries.forEach { pose ->
+            assertNotNull("Missing fallback poster for $pose", BitmapFactory.decodeResource(ctx.resources, pose.poster))
             MediaMetadataRetriever().use { reader ->
                 ctx.resources.openRawResourceFd(pose.clip).use { reader.setDataSource(it.fileDescriptor,it.startOffset,it.length) }
                 assertTrue(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)!!.toLong() in 3900..5200)
                 assertEquals("yes",reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO))
                 assertNull(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO))
-                assertNotNull(reader.getFrameAtTime(1000000))
+                assertNotNull("Cannot decode $pose", reader.getFrameAtTime(1000000))
             }
         }
     }
