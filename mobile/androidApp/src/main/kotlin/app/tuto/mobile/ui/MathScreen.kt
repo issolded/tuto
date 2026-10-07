@@ -75,7 +75,7 @@ fun MathScreen(vm: TutoViewModel) {
 @Composable
 private fun Loading(text: String) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
-        Fox(Modifier.size(200.dp), FoxPose.Thinking)
+        Fox(Modifier.size(300.dp), FoxPose.Thinking)
         CircularProgressIndicator(color = LocalPalette.current.accent)
         Text(text, style = MaterialTheme.typography.titleLarge)
     }
@@ -131,13 +131,15 @@ private fun QuestionPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: M
             Text(q.question, fontFamily = Baloo, fontWeight = FontWeight.Bold, fontSize = 30.sp, lineHeight = 36.sp, modifier = Modifier.weight(1f))
             ListenButton(q.question, run.child.language, speaker, s.say("Listen", "Dinle", "Escuchar"), pal.soft)
         }
-        Box(Modifier.fillMaxWidth().weight(1f, fill = false), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             QuestionFigure(q, Modifier.fillMaxWidth())
         }
         Spacer(Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Fox(Modifier.size(88.dp), if (run.hintsShown > 0) FoxPose.Hint else FoxPose.Thinking, event = run.hintsShown, animate = run.hintsShown > 0)
-            Bubble(run, q, s, Modifier.weight(1f).padding(bottom = 12.dp))
+        if (run.hintsShown > 0 || run.feedback != null) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (run.hintsShown > 0) Fox(Modifier.size(156.dp).testTag("hint-fox"), FoxPose.Hint, event = q.question)
+                Bubble(run, q, s, Modifier.weight(1f))
+            }
         }
     }
 }

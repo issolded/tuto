@@ -33,6 +33,7 @@ class PaperPlayTest {
         } } }
         compose.onNodeWithText("My unfinished story").assertDoesNotExist()
         compose.onNodeWithText("The woodland adventure").performScrollTo().performClick()
+        shot("bookshelf-detail")
         compose.onNodeWithText("Open").performClick()
         assertEquals("b",opened)
         shot("paper-library")

@@ -47,7 +47,7 @@ private suspend fun FeatureRun.saveDraft() {
 @Composable fun BooksScreen(vm: TutoViewModel) {
     val f = vm.feature ?: return
     val s = LocalStrings.current
-    var archive by rememberSaveable { mutableStateOf(false) }
+    var archive by rememberSaveable { mutableStateOf(true) }
     var search by rememberSaveable { mutableStateOf("") }
     var currentPage by rememberSaveable { mutableStateOf("") }
     var totalPages by rememberSaveable { mutableStateOf("") }
@@ -64,7 +64,7 @@ private suspend fun FeatureRun.saveDraft() {
         }
     }
     fun back() { if (f.busy) return; if (f.page == "list") vm.home() else { f.page = "list"; f.photos = emptyList(); f.work { f.library() } } }
-    FeaturePage(s(if (archive) "la_title" else "lib_title"), ::back) {
+    FeaturePage(s(if (archive) "la_title" else "lib_title"), ::back, showHeader = f.page != "list") {
         if (f.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (f.error != null) { Text(f.error!!, color = MaterialTheme.colorScheme.error);
             if (f.page == "writer") Row {
@@ -79,8 +79,8 @@ private suspend fun FeatureRun.saveDraft() {
                     books = f.data.optJSONArray("books").objects(), stories = f.data.optJSONArray("stories").objects(),
                     archive = archive, onArchive = { archive = it }, busy = f.busy,
                     allowReading = f.child.active("reading"), allowWriting = f.child.active("writing"),
-                    onNewBook = { f.selected = JSONObject().put("id", UUID.randomUUID().toString()); f.title = ""; f.photos = emptyList(); f.page = "new-book" },
-                    onNewStory = { f.editStory() },
+                    onNewBook = { archive = false; f.selected = JSONObject().put("id", UUID.randomUUID().toString()); f.title = ""; f.photos = emptyList(); f.page = "new-book" },
+                    onNewStory = { archive = false; f.editStory() },
                     onOpen = { book, story ->
                         if (story) { if (book.optString("status") == "completed") { f.selected = book; f.page = "story-reader" } else f.editStory(book) }
                         else { f.selected = book; currentPage = book.optString("current_page", "0"); totalPages = book.optString("total_pages").takeUnless { it == "null" }.orEmpty(); f.photos = emptyList(); f.page = "reading" }

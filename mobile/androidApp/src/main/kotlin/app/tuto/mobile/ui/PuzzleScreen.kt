@@ -68,7 +68,7 @@ fun PuzzleScreen(vm: TutoViewModel) {
     LaunchedEffect(run) { if (run.session == null && run.phase == PuzzleRun.Phase.Loading) run.start() }
     when (run.phase) {
         PuzzleRun.Phase.Loading, PuzzleRun.Phase.Finishing -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
-            Tuto(Modifier.size(width = 220.dp, height = 280.dp))
+            Fox(Modifier.size(300.dp), FoxPose.Thinking)
             CircularProgressIndicator(color = TEAL)
             Text(s(if (run.phase == PuzzleRun.Phase.Loading) "puzzle_preparing" else "math_checking"), style = MaterialTheme.typography.titleLarge)
         }
@@ -158,7 +158,12 @@ private fun Asking(run: PuzzleRun, s: Strings, onClose: () -> Unit) {
             }
             PuzzlePrompt(q, drawn.prompt)
             Options(run, q, drawn.options)
-            run.hints.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth().card(Ink.lilacSoft).padding(16.dp)) }
+            if (run.hints.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+                Fox(Modifier.size(156.dp), FoxPose.Hint, event = run.index)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    run.hints.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth().card(Ink.lilacSoft).padding(16.dp)) }
+                }
+            }
             if (ans == null) {
                 BigButton(s.say("Hint", "İpucu", "Pista"), color = TEAL, enabled = !run.sending && run.hintCount < 3) { run.hint() }
                 if (run.picked == null) SoftButton(s.say("I don’t know", "Bilmiyorum", "No lo sé")) { run.send(skip = true) }
@@ -292,9 +297,6 @@ private fun Blank() {
 /** A figure the web's own puzzle code drew, at a fixed size so every figure on a card matches. */
 @Composable
 private fun Svg(markup: String?, side: Dp) {
-    val svg = remember(markup) { markup?.let { runCatching { SVG.getFromString(it).apply { setDocumentWidth("100%"); setDocumentHeight("100%") } }.getOrNull() } }
-    Canvas(Modifier.size(side)) {
-        val w = size.width.toInt(); val h = size.height.toInt()
-        if (svg != null && w > 0 && h > 0) drawIntoCanvas { it.nativeCanvas.drawPicture(svg.renderToPicture(w, h)) }
-    }
+    if (markup != null) SvgFigure(markup, Modifier.size(side))
+    else Box(Modifier.size(side), contentAlignment = Alignment.Center) { Text("…", color = Ink.soft) }
 }

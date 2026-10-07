@@ -48,7 +48,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
     val scale = remember { Animatable(1f) }
     val still = reduceMotion()
     LaunchedEffect(selected) {
-        if(selected && !still) { scale.snapTo(.9f); scale.animateTo(1f, tween(200)) }
+        if(selected && !still) { scale.snapTo(.9f); scale.animateTo(1.16f, tween(150)); scale.animateTo(1f, tween(230)) }
     }
-    PaperIcon(type, modifier.graphicsLayer { scaleX=scale.value; scaleY=scale.value })
+    PaperIcon(type, modifier.graphicsLayer { scaleX=scale.value; scaleY=scale.value; rotationZ=if(type=="puzzle") (scale.value-1f)*100f else if(type=="english") (scale.value-1f)*-40f else 0f })
 }

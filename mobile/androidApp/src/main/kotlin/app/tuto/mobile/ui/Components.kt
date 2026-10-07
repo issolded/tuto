@@ -79,11 +79,11 @@ fun CircleButton(label: String, modifier: Modifier = Modifier, color: Color = Co
 @Composable
 fun GemPill(gems: Int?, modifier: Modifier = Modifier) {
     Row(
-        modifier.height(52.dp).clip(RoundedCornerShape(999.dp)).background(Ink.main).padding(start = 14.dp, end = 18.dp),
+        modifier.height(60.dp).clip(RoundedCornerShape(999.dp)).background(Ink.main).padding(start = 14.dp, end = 18.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        GemIcon(Modifier.size(20.dp), stroke = Color.White)
-        Text(gems?.toString() ?: "…", fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, color = Color.White)
+        GemIcon(Modifier.size(28.dp), stroke = Color.White)
+        Text(gems?.toString() ?: "…", fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 27.sp, color = Color.White)
     }
 }
 

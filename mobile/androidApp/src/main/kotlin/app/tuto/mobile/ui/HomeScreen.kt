@@ -27,7 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -63,28 +64,41 @@ fun HomeScreen(vm: TutoViewModel) {
         val scale = LocalDensity.current.fontScale.coerceAtLeast(1f)
         val cols = if (maxWidth / scale >= 640.dp) 3 else 1
         Column(Modifier.widthIn(max = 1280.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(if (maxWidth < 600.dp) 18.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("tuto", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-                GemPill(if (vm.todayLoaded) today.gems else null, Modifier.clickable { vm.open("gems") })
-            }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Fox(Modifier.size(if (cols == 3) 180.dp else 104.dp), event = child.id)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(s.say("Hello, ${child.name}!", "Merhaba, ${child.name}!", "¡Hola, ${child.name}!"), style = MaterialTheme.typography.headlineMedium)
-                    Text(s.say("Ready for a little challenge?", "Küçük bir maceraya hazır mısın?", "¿Listo para un pequeño reto?"), style = MaterialTheme.typography.titleLarge)
-                    Text(s.say("Pick something to explore.", "Keşfetmek için bir şey seç.", "Elige algo para explorar."), color = Ink.soft)
+                    Text(s.say("What will you discover today?", "Bugün ne keşfedeceksin?", "¿Qué descubrirás hoy?"), color = Ink.soft)
+                    GemPill(if (vm.todayLoaded) today.gems else null, Modifier.clickable { vm.open("gems") })
                 }
-                Fox(Modifier.size(if (cols == 3) 144.dp else 112.dp))
+            }
+            val goal = today.nearestGoal
+            Row(Modifier.fillMaxWidth().card(Ink.lilacSoft).clickable(role = Role.Button) { vm.open("goals") }.testTag("home-goal").padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                PaperIcon("goals", Modifier.size(56.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(s.say("YOUR NEXT GOAL", "SIRADAKİ HEDEFİN", "TU PRÓXIMA META"), style = MaterialTheme.typography.labelLarge, color = Ink.soft)
+                    if (vm.todayLoaded && goal != null) {
+                        Text(goal.name, style = MaterialTheme.typography.titleLarge)
+                        val left = (goal.cost - today.gems).coerceAtLeast(0)
+                        Text(if (left > 0) s.say("$left Gems to go", "$left Gem kaldı", "Faltan $left gems") else s.say("Ready to claim!", "Ödülünü isteyebilirsin!", "¡Ya puedes pedirlo!"), color = Ink.green)
+                        androidx.compose.material3.LinearProgressIndicator(progress = { if(goal.cost > 0) (today.gems.toFloat()/goal.cost).coerceIn(0f,1f) else 1f }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape))
+                    } else Text(if (!vm.todayLoaded) s.say("Loading your goal…", "Hedefin yükleniyor…", "Cargando tu meta…") else s.say("Choose something to work towards", "Ulaşmak istediğin bir hedef seç", "Elige tu próxima meta"), style = MaterialTheme.typography.titleMedium)
+                }
+                Text("›", style = MaterialTheme.typography.headlineMedium)
             }
             if (vm.todayError) Text(s.say("Couldn't refresh progress. Try again when you're connected.", "İlerleme yenilenemedi. Bağlanınca tekrar dene.", "No se pudo actualizar el progreso. Inténtalo al conectarte."), color = Ink.soft)
             val primary = listOf("math", "english", "puzzle").filter { child.active(it) }
             primary.chunked(cols).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     row.forEach { type ->
-                        Column(Modifier.weight(1f).card().clickable(role = Role.Button) { vm.open(type) }.testTag("quest_$type").padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            PaperIcon(type, Modifier.size(if (cols == 3) 80.dp else 72.dp))
+                        var launching by remember { mutableStateOf(false) }
+                        val still = reduceMotion()
+                        LaunchedEffect(launching) { if (launching) { if (!still) delay(420); vm.open(type) } }
+                        Column(Modifier.weight(1f).card().clickable(enabled = !launching, role = Role.Button) { launching = true }.testTag("quest_$type").padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            AnimatedPaperIcon(type, launching, Modifier.size(if (cols == 3) 112.dp else 88.dp))
                             Text(s.say(when(type) { "math" -> "Math"; "english" -> "English"; else -> "Puzzles" }, s("task_$type"), s("task_$type")), style = MaterialTheme.typography.titleLarge)
                             Text(s.say(when(type) { "math" -> "Solve a challenge"; "english" -> "Play with words"; else -> "Find the pattern" }, "Keşfet ve öğren", "Explora y aprende"), color = Ink.soft, textAlign = TextAlign.Center)
-                            BigButton(s.say("Start", "Başla", "Empezar"), Modifier.fillMaxWidth()) { vm.open(type) }
+                            BigButton(s.say("Start", "Başla", "Empezar"), Modifier.fillMaxWidth(), enabled = !launching) { launching = true }
                             if (today.done(type)) Text(s.say("Done today", "Bugün tamamlandı", "Hecho hoy"), color = Ink.green, style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -92,12 +106,12 @@ fun HomeScreen(vm: TutoViewModel) {
                 }
             }
             Text(s.say("More to explore", "Keşfedecek daha çok şey var", "Más por descubrir"), style = MaterialTheme.typography.titleLarge)
-            listOf("reading", "writing", "drawing").filter { child.active(it) }.chunked(cols).forEach { row ->
+            listOf("drawing", "homework", "tree").filter { child.active(it) }.chunked(cols).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     row.forEach { type ->
                         Row(Modifier.weight(1f).heightIn(min = 80.dp).card().clickable(role = Role.Button) { vm.open(type) }.testTag("quest_$type").padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             PaperIcon(type, Modifier.size(44.dp))
-                            Text(s.say(when(type) { "reading" -> "Reading"; "writing" -> "Stories"; else -> "Drawing" }, s("task_$type"), s("task_$type")), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                            Text(s.say(when(type) { "drawing" -> "Drawing"; "homework" -> "Homework"; else -> "My Tree" }, s("task_$type"), s("task_$type")), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                             Text("›", color = Ink.soft)
                         }
                     }

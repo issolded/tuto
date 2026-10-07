@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -67,16 +68,26 @@ fun QuestionFigure(q: MathQuestion, modifier: Modifier = Modifier) {
 /** An SVG rendered by the web's own figure components inside the engine. */
 @Composable
 fun SvgFigure(markup: String, modifier: Modifier = Modifier) {
-    val svg = remember(markup) { runCatching { SVG.getFromString(markup) }.getOrNull() } ?: return
-    val box = svg.documentViewBox
-    val ratio = if (box != null && box.height() > 0f) box.width() / box.height() else {
-        val w = svg.documentWidth; val h = svg.documentHeight
-        if (w > 0f && h > 0f) w / h else 1.6f
+    val prepared = remember(markup) { app.tuto.mobile.data.SvgMarkup.prepare(markup) }
+    val svg = remember(prepared) { runCatching { SVG.getFromString(prepared) }.getOrNull() }
+    if (svg == null) {
+        Text(app.tuto.mobile.data.LocalStrings.current.say("Picture could not load", "Görsel yüklenemedi", "No se pudo cargar la imagen"), modifier = modifier)
+        return
     }
-    remember(svg) { svg.setDocumentWidth("100%"); svg.setDocumentHeight("100%"); svg }
-    Canvas(modifier.fillMaxWidth().heightIn(max = 560.dp).aspectRatio(ratio, matchHeightConstraintsFirst = true)) {
-        val w = size.width.toInt(); val h = size.height.toInt()
-        if (w > 0 && h > 0) drawIntoCanvas { it.nativeCanvas.drawPicture(svg.renderToPicture(w, h)) }
+    val box = svg.documentViewBox
+    val ratio = if (box != null && box.height() > 0f) box.width() / box.height() else 1.6f
+    // Render to a software bitmap at the measured physical pixel size. Root CSS dimensions
+    // and Picture playback on hardware canvases must not shrink or blank the web SVG.
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().heightIn(max = 480.dp).aspectRatio(ratio)) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val width = with(density) { maxWidth.roundToPx() }.coerceIn(1, 2400)
+        val height = with(density) { maxHeight.roundToPx() }.coerceIn(1, 2400)
+        val bitmap = remember(prepared, width, height) {
+            android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888).also {
+                svg.renderToCanvas(android.graphics.Canvas(it), android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat()))
+            }
+        }
+        androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
     }
 }
 

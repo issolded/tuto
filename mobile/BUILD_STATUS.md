@@ -42,3 +42,12 @@ The obsolete android-preview release397715776 and APK593265107 were deleted in h
 ## Source persistence
 
 The local execution environment disconnected during the OAuth work. The complete follow-up was reconstructed against the published source, committed to GitHub and validated there. The tested GitHub source above is authoritative; reconcile any older uncommitted local OAuth edits before resuming local work.
+
+
+## 7 October 2026 — 0.7.0 Bookshelf (local revision, not published)
+
+Native-only redesign: white high-resolution fox clips (greeting, thinking, running hint entrance, success, reading); goal remainder and larger Gem balance; task-selection motion; a single Library destination with book-shaped covers on shelves, actual completed-record milestones and reading nook; hints reveal the companion on demand. SVG roots no longer inherit browser sizing; native rendering uses explicit ink and a measured software bitmap.
+
+Local Kotlin and instrumentation compilation passed. Local ARM64 APK, lint, 15 Android JVM tests and 5 shared JVM tests passed. QuickJS engine checks and 27 same-skill review questions passed; 11,492 puzzle SVG markup outputs were nonempty (this is NOT a pixel-render pass). New Android pixel tests are compiled but not executed: this environment has no KVM and the software API 35 emulator segfaulted during boot. No real family E2E or final tablet screenshots verified.
+
+Public GitHub upload of the generated mascot assets was rejected by automatic approval review, including after checking prior native-branch publishing authorization. No new remote commit, CI run or production backend/web deploy was made. User confirmation for publication to public issolded/tuto, codex/android-complete is required by that review. The APK is a local test build connected to the existing backend, not a production-signed release; signing certificate continuity with the previously installed APK is not established.

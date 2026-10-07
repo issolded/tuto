@@ -81,7 +81,7 @@ class ModulesTest {
     }
     @Test fun libraryDraftAndHomeworkUseRealRoutesAcrossRotation() {
         val api=Api();launch(api).use { a ->
-            open(a,"library");compose.onNodeWithText("Test library book").assertExists()
+            open(a,"library");compose.onNodeWithText("Continue reading").performScrollTo().performClick();compose.onNodeWithText("Test library book").assertExists()
             compose.onNodeWithTag("new-story").performScrollTo().performClick()
             compose.onNodeWithText("Title").performTextInput("Tablet story")
             compose.onNodeWithText("Your story").performTextInput("Today a little fox found a new book and read it with all of her friends.")

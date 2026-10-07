@@ -35,7 +35,7 @@ object Ink {
 /** The three simple themes from the design's Tweaks panel. Only the ground and accent change. */
 data class TutoPalette(val name: String, val bg: Color, val soft: Color, val accent: Color)
 
-val Sunlight = TutoPalette("sun", Color(0xFFFAF8F3), Color(0xFFE5EDFA), Color(0xFF426FC4))
+val Sunlight = TutoPalette("sun", Color.White, Color(0xFFE5EDFA), Color(0xFF426FC4))
 val Forest = TutoPalette("forest", Color(0xFFEAF6EC), Color(0xFFCFEBD6), Color(0xFF46C07A))
 val Sea = TutoPalette("sea", Color(0xFFE8F3FF), Color(0xFFCFE4FF), Color(0xFF62B0FF))
 
