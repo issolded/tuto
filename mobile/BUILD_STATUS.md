@@ -56,3 +56,12 @@ Public GitHub upload of the generated mascot assets was rejected by automatic ap
 ## 7 October — publication and device follow-up
 
 User explicitly approved public code/mascot publication. Commit 735f82a was published to codex/android-complete. CI run 37627113002 passed build/lint/JVM/APK integrity gates. The default tablet failed downloading the emulator. The 16 KiB tablet ran 19 tests: 17 passed; pixel rendering of embedded SVG data images and HEVC mascot frame decoding failed. Follow-up in this revision embeds SVG vectors as nested viewports and transcodes mascot video to H.264 Baseline. Device gates are being rerun; prior 0.7.0 APK is superseded for acceptance. No production web/backend changes.
+
+The 0.7.1 follow-up passed local compile, lint and JVM tests. After the user requested continuation, publication succeeded: source da3e60329ebe2e9549bc60014d761788f5216bdd, CI run 37649661317. Device validation is running. Do not distribute the prior locally repackaged 0.7.1 artifact: ZIP integrity verification failed; the retained downloadable artifact was restored to the earlier integrity-verified 0.7.0 CI APK until replacement by the new CI build.
+
+
+## 0.7.1 final automated validation — 7 October 2026
+
+Source da3e60329ebe2e9549bc60014d761788f5216bdd, CI https://github.com/issolded/tuto/actions/runs/37649661317: build/lint and 20 JVM tests passed; both API 35 tablet jobs passed 19/19 tests each. The 16 KiB job reported PAGE_SIZE=16384. Embedded SVG pixel tests and all five video-frame/poster decode tests passed. Library and book-detail screenshots were inspected; screenshot capture timing is not evidence of every transient animation. No live family E2E or physical Samsung acceptance is claimed.
+
+The delivered 0.7.1 APK is the CI artifact, not the unsuccessful local repack. Downloaded archive SHA256 matches CI: 929d22b8cf280bbc4cb63b8076eabfb88b28a25fb16fd12c9fb2104994b8c9c4. APK signature and all four native library 16 KiB alignment checks passed again after download. APK is a debug validation build connected to the existing backend; installed-certificate continuity is not established.

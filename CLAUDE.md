@@ -1189,3 +1189,6 @@ Android install investigation (6 October night): user tablet is Galaxy Tab S10 F
 
 ### 2026-10-07 Android design revision
 Native-only: white seamless mascot assets; left greeting avatar, enlarged Gem balance and nearest-goal remainder; animated task selection. Library has one bottom-nav entry, a reading room with completed-book shelves, selectable uniform covers, real collection milestones and animated reading companion. Active books/stories remain in Continue reading; new-book and new-story actions stay available. Maths helper appears only on hint/help, with running entrance. SVG layout is native-owned and pixel-render validation is required, because nonempty SVG strings alone did not establish visible Android artwork. Web/backend remain unchanged. Version 9 / 0.7.0-bookshelf; validation pending until BUILD_STATUS records final results.
+
+
+Android Bookshelf follow-up 0.7.1 (7 October): source da3e603, CI37649661317 passed build/lint/20 JVM tests and 19/19 tests on each standard and 16 KiB tablet. Native embedded SVG data images now retain vector drawing via nested SVG viewports; five mascot clips are 1080p H.264 Baseline, fixing HEVC Main 10 decoding failure. Downloaded CI APK digest/signature/alignment verified; prior local repack must not be delivered. Details and remaining live-family/device acceptance limits are in mobile/BUILD_STATUS.md.
