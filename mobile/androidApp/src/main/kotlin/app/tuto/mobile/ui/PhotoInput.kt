@@ -23,20 +23,32 @@ import java.io.File
 import java.net.URL
 import java.util.UUID
 
-@Composable fun RemotePhoto(url: String?, modifier: Modifier = Modifier) {
+private val photoCache = object : android.util.LruCache<String, android.graphics.Bitmap>(24 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: android.graphics.Bitmap) = value.allocationByteCount
+}
+
+@Composable fun RemotePhoto(url: String?, modifier: Modifier = Modifier, maxHeight: androidx.compose.ui.unit.Dp = 340.dp) {
     if (url.isNullOrBlank() || !url.startsWith("https://")) return
-    var image by remember(url) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var failed by remember(url) { mutableStateOf(false) }
-    LaunchedEffect(url) { image = withContext(Dispatchers.IO) { runCatching {
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val targetPixels = (maxHeight.value * density).toInt().coerceIn(256, 1600)
+    val cacheKey = "$url@$targetPixels"
+    var image by remember(cacheKey) { mutableStateOf<android.graphics.Bitmap?>(photoCache.get(cacheKey)) }
+    var failed by remember(cacheKey) { mutableStateOf(false) }
+    LaunchedEffect(cacheKey) { if (image != null) return@LaunchedEffect
+        image = withContext(Dispatchers.IO) { runCatching {
         val c = URL(url).openConnection().apply { connectTimeout = 15000; readTimeout = 20000 }
         c.getInputStream().use { stream ->
             val bytes = stream.readLimited(12 * 1024 * 1024 + 1); require(bytes.size <= 12 * 1024 * 1024)
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }; BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
-            val options = BitmapFactory.Options().apply { inSampleSize = (maxOf(bounds.outWidth,bounds.outHeight)/1600).coerceAtLeast(1) }
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = 1
+                while (maxOf(bounds.outWidth, bounds.outHeight) / inSampleSize > targetPixels) inSampleSize *= 2
+            }
             BitmapFactory.decodeByteArray(bytes,0,bytes.size,options)
         }
-    }.getOrNull() }; failed = image == null }
-    image?.let { Image(it.asImageBitmap(), null, modifier.fillMaxWidth().heightIn(max = 340.dp), contentScale = ContentScale.Fit) }
+    }.getOrNull() }; image?.let { photoCache.put(cacheKey,it) }; failed = image == null }
+    image?.let { Image(it.asImageBitmap(), null, modifier.fillMaxWidth().heightIn(max = maxHeight), contentScale = ContentScale.Fit) }
+    if (image == null && !failed) Box(modifier.fillMaxWidth().heightIn(min = 80.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
     if (failed) Text(LocalStrings.current.say("Image couldn't load", "Görsel yüklenemedi", "No se pudo cargar la imagen"))
 }
 

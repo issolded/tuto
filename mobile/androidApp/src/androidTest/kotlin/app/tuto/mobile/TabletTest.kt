@@ -150,7 +150,7 @@ class TabletTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300, 5000)
         waitFor("pin screen") { textExists("Enter your PIN") }
         listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
-        waitFor("home with gems") { textExists("Ada") && textExists("42") }
+        waitFor("home with gems") { textExists("Hello, Ada!") && textExists("42") }
     }
 
     @Test fun siblingsRequireAnExplicitSelection() {
@@ -223,7 +223,7 @@ class TabletTest {
             assertEquals(9, run.result!!.correct)
             shot("08-puzzle-result")
             compose.onNodeWithText("Not now").performScrollTo().performClick()
-            waitFor("back home") { textExists("My Math") }
+            waitFor("back home") { textExists("Math") }
             assertEquals("review-1", api.declinedReview)
         }
     }
@@ -272,9 +272,9 @@ class TabletTest {
             listOf("1", "2", "3", "4").forEach { compose.onNodeWithTag("key_$it").performClick() }
 
             // Home, with the server's figures.
-            waitFor("home with gems") { textExists("Ada") && textExists("42") }
-            compose.onNodeWithText("My Math").assertExists()
-            compose.onNodeWithText("4 days").assertExists()
+            waitFor("home with gems") { textExists("Hello, Ada!") && textExists("42") }
+            compose.onNodeWithText("Math").assertExists()
+            compose.onNodeWithTag("nav-library").assertIsDisplayed()
             shot("02-home")
 
             // A full sitting, every answer taken from the engine's own answer key.
@@ -332,7 +332,7 @@ class TabletTest {
             assertEquals(0,reviewAnswer.getInt("wrong_tries"))
 
             compose.onNodeWithText("Home").performClick()
-            waitFor("back home") { textExists("My Math") }
+            waitFor("back home") { textExists("Math") }
         }
     }
 }

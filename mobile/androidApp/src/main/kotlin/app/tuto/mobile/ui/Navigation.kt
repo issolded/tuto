@@ -23,13 +23,26 @@ import kotlin.math.sin
 @Composable
 fun BottomNavigation(vm: TutoViewModel) {
     val s = LocalStrings.current
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, modifier = Modifier.testTag("bottom-navigation")) {
-        NavigationBarItem(selected = vm.screen == Screen.Home, onClick = { vm.home() },
-            icon = { NavigationIcon(false) }, label = { Text(s("nav_home")) }, modifier = Modifier.testTag("nav-home"))
-        NavigationBarItem(selected = vm.screen == Screen.Goals, onClick = { vm.open("goals") },
-            icon = { GemIcon(Modifier.size(28.dp)) }, label = { Text(s.say("Goals", "Hedefler", "Metas")) }, modifier = Modifier.testTag("nav-goals"))
-        NavigationBarItem(selected = vm.screen == Screen.Settings, onClick = { vm.open("settings") },
-            icon = { NavigationIcon(true) }, label = { Text(s.say("Settings", "Ayarlar", "Ajustes")) }, modifier = Modifier.testTag("nav-settings"))
+    val destinations = listOf("home", "library", "goals", "settings")
+    NavigationBar(containerColor = LocalPalette.current.bg, tonalElevation = 0.dp, modifier = Modifier.testTag("bottom-navigation")) {
+        destinations.forEach { route ->
+            val selected = when(route) {
+                "home" -> vm.screen == Screen.Home
+                "library" -> (vm.screen as? Screen.Content)?.type in setOf("reading", "writing", "library")
+                "goals" -> vm.screen == Screen.Goals
+                else -> vm.screen == Screen.Settings
+            }
+            val label = when(route) {
+                "home" -> s("nav_home")
+                "library" -> s.say("Library", "Kitaplık", "Biblioteca")
+                "goals" -> s.say("Rewards", "Ödüller", "Premios")
+                else -> s.say("Settings", "Ayarlar", "Ajustes")
+            }
+            NavigationBarItem(selected = selected, onClick = { if(route == "home") vm.home() else vm.open(route) },
+                icon = { AnimatedPaperIcon(route, selected, Modifier.size(30.dp)) }, label = { Text(label) },
+                colors = NavigationBarItemDefaults.colors(indicatorColor = LocalPalette.current.soft, selectedTextColor = Ink.main, unselectedTextColor = Ink.soft),
+                modifier = Modifier.testTag("nav-$route"))
+        }
     }
 }
 

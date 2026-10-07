@@ -31,6 +31,19 @@ import java.util.UUID
     }
     LaunchedEffect(f, type) { load() }
     fun back() { if (f.busy) return; if (f.page == "list") vm.home() else { f.page = "list"; f.photos = emptyList(); load() } }
+    if (type == "drawing" && f.page == "steps" && f.selected != null) {
+        val drawing = f.selected!!
+        val steps = instructions.optJSONObject(drawing.optString("id"))?.let { it.optJSONArray(f.child.language) ?: it.optJSONArray("en") }
+        DrawingStudio(
+            title = drawing.optString("name_${f.child.language}").ifBlank { drawing.optString("name_en") },
+            url = drawingUrl(f, drawing, ageGroup, f.index, false),
+            step = f.index, count = drawing.optInt("step_count"),
+            instruction = steps?.optString(f.index - 1).orEmpty(),
+            onBack = ::back, onPrevious = { f.index-- },
+            onNext = { if (f.index < drawing.optInt("step_count")) f.index++ else { f.photos = emptyList(); f.page = "upload" } }
+        )
+        return
+    }
     FeaturePage(s(if (type == "gems") "gems_history" else "task_$type"), ::back) {
         if (f.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (f.error != null) { Text(f.error!!, color = MaterialTheme.colorScheme.error); if (f.page == "list") TextButton(onClick = ::load) { Text(s.say("Retry", "Tekrar dene", "Reintentar")) } }
@@ -61,11 +74,24 @@ import java.util.UUID
                         Button(onClick = { f.selected = null; f.photos = emptyList(); f.page = "upload" }) { Text(s.say("Free drawing", "Serbest çizim", "Dibujo libre")) }
                         TextButton(onClick = { f.page = "gallery" }) { Text(s.say("My drawings", "Çizimlerim", "Mis dibujos")) }
                     }
-                    f.data.optJSONArray("drawings").objects().forEach { drawing ->
-                        Card(onClick = { f.selected = drawing; f.index = 1; f.page = "steps" }, modifier = Modifier.fillMaxWidth()) { Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                            RemotePhoto(drawingUrl(f, drawing, ageGroup, drawing.optInt("step_count"), true), Modifier.width(140.dp).height(120.dp))
-                            Column { Text(drawing.optString("name_${f.child.language}").ifBlank { drawing.optString("name_en") }, style = MaterialTheme.typography.titleLarge); Text("${drawing.optInt("step_count")} " + s.say("steps", "adım", "pasos")) }
-                        } }
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val cols = (maxWidth.value / 260).toInt().coerceIn(1, 4)
+                        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                            f.data.optJSONArray("drawings").objects().chunked(cols).forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                                    row.forEach { drawing ->
+                                        Card(onClick = { f.selected = drawing; f.index = 1; f.page = "steps" }, modifier = Modifier.weight(1f)) {
+                                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                RemotePhoto(drawingUrl(f, drawing, ageGroup, drawing.optInt("step_count"), true), Modifier.fillMaxWidth().height(200.dp))
+                                                Text(drawing.optString("name_${f.child.language}").ifBlank { drawing.optString("name_en") }, style = MaterialTheme.typography.titleLarge)
+                                                Text("${drawing.optInt("step_count")} " + s.say("steps", "adım", "pasos"))
+                                            }
+                                        }
+                                    }
+                                    repeat(cols-row.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
                     }
                 }
                 "steps" -> {

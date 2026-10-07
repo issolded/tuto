@@ -21,7 +21,7 @@ internal fun JSONArray?.ints(): List<Int> = if (this == null) emptyList() else (
 @Composable
 fun FeaturePage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = 1100.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(if (maxWidth < 600.dp) 18.dp else 32.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Column(Modifier.widthIn(max = 1240.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(if (maxWidth < 600.dp) 18.dp else 32.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 TextButton(onClick = onBack) { Text(LocalStrings.current.say("Back", "Geri", "Atrás")) }
                 Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))

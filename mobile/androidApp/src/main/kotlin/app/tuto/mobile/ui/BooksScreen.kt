@@ -75,29 +75,21 @@ private suspend fun FeatureRun.saveDraft() {
         f.notice?.let { Text(it) }
         when (f.page) {
             "list" -> {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (f.child.active("reading")) Button(onClick = { f.selected = JSONObject().put("id", UUID.randomUUID().toString()); f.title = ""; f.photos = emptyList(); f.page = "new-book" }, enabled = !f.busy) { Text(s.say("Book Explorer", "Kitap keşfi", "Explorar libros")) }
-                    if (f.child.active("writing")) Button(onClick = { f.editStory() }, enabled = !f.busy, modifier = Modifier.testTag("new-story")) { Text(s.say("Write a story", "Hikâye yaz", "Escribir cuento")) }
-                    TextButton(onClick = { archive = !archive }) { Text(s(if (archive) "lib_title" else "la_title")) }
-                }
+                LibraryBrowser(
+                    books = f.data.optJSONArray("books").objects(), stories = f.data.optJSONArray("stories").objects(),
+                    archive = archive, onArchive = { archive = it }, busy = f.busy,
+                    allowReading = f.child.active("reading"), allowWriting = f.child.active("writing"),
+                    onNewBook = { f.selected = JSONObject().put("id", UUID.randomUUID().toString()); f.title = ""; f.photos = emptyList(); f.page = "new-book" },
+                    onNewStory = { f.editStory() },
+                    onOpen = { book, story ->
+                        if (story) { if (book.optString("status") == "completed") { f.selected = book; f.page = "story-reader" } else f.editStory(book) }
+                        else { f.selected = book; currentPage = book.optString("current_page", "0"); totalPages = book.optString("total_pages").takeUnless { it == "null" }.orEmpty(); f.photos = emptyList(); f.page = "reading" }
+                    },
+                    onFinish = { book -> f.work { f.cloud.rows("books", "id=eq.${enc(book.getString("id"))}&child_id=eq.${enc(f.child.id)}", "PATCH", JSONObject().put("completed", true)); f.library() } },
+                    onDelete = { book, story -> delete = JSONObject(book.toString()).put("_story", story) }
+                )
                 f.local.getString("last-draft", null)?.let { id ->
                     if (f.local.contains("draft-$id")) TextButton(onClick = { f.editStory(f.data.optJSONArray("stories").objects().find { it.optString("id") == id } ?: JSONObject().put("id", id).put("revision", 0).put("writing_source", "typed")) }) { Text(s.say("Recover writing on this device", "Bu cihazdaki yazıyı kurtar", "Recuperar texto de este dispositivo")) }
-                }
-                OutlinedTextField(search, { search = it }, label = { Text(s.say("Search books and stories", "Kitap ve hikâye ara", "Buscar libros y cuentos")) }, modifier = Modifier.fillMaxWidth())
-                val books = f.data.optJSONArray("books").objects().filter { it.optBoolean("completed") == archive && it.optString("title").contains(search, true) }
-                val stories = f.data.optJSONArray("stories").objects().filter { (it.optString("status") == "completed") == archive && it.optString("title").contains(search, true) }
-                if (!f.busy && f.error == null && books.isEmpty() && stories.isEmpty()) Text(s.say("Nothing here yet.", "Henüz bir kayıt yok.", "Todavía no hay nada."))
-                (books.map { it to false } + stories.map { it to true }).forEach { (book, story) ->
-                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(book.optString("title").ifBlank { s.say("My story", "Hikâyem", "Mi cuento") }, style = MaterialTheme.typography.titleLarge)
-                        RemotePhoto(book.optStringOrNull("cover_url"), Modifier.heightIn(max = 160.dp))
-                        if (!story) Text("${book.optInt("current_page")} / ${if (book.isNull("total_pages")) "?" else book.optInt("total_pages")} " + s.say("pages", "sayfa", "páginas"))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            TextButton(onClick = { if (story) { if (archive) { f.selected = book; f.page = "story-reader" } else f.editStory(book) } else { f.selected = book; currentPage = book.optString("current_page", "0"); totalPages = book.optString("total_pages").takeUnless { it == "null" }.orEmpty(); f.photos = emptyList(); f.page = "reading" } }) { Text(s.say("Open", "Aç", "Abrir")) }
-                            if (!story && !archive) TextButton(onClick = { f.work { f.cloud.rows("books", "id=eq.${enc(book.getString("id"))}&child_id=eq.${enc(f.child.id)}", "PATCH", JSONObject().put("completed", true)); f.library() } }, enabled = !f.busy) { Text(s.say("Finished reading", "Okumayı bitirdim", "Lectura terminada")) }
-                            TextButton(onClick = { delete = JSONObject(book.toString()).put("_story", story) }, enabled = !f.busy) { Text(s.say("Delete", "Sil", "Eliminar")) }
-                        }
-                    } }
                 }
             }
             "story-reader" -> {
@@ -122,6 +114,7 @@ private suspend fun FeatureRun.saveDraft() {
                 } }, enabled = !f.busy && f.title.isNotBlank()) { Text(s.say("Save book", "Kitabı kaydet", "Guardar libro")) }
             }
             "reading" -> {
+                Fox(Modifier.size(160.dp), FoxPose.Reading)
                 Text(f.selected?.optString("title").orEmpty(), style = MaterialTheme.typography.headlineSmall)
                 OutlinedTextField(currentPage, { currentPage = it.filter(Char::isDigit).take(5) }, label = { Text(s.say("Last page read", "Son okunan sayfa", "Última página leída")) })
                 OutlinedTextField(totalPages, { totalPages = it.filter(Char::isDigit).take(5) }, label = { Text(s.say("Total pages (optional)", "Toplam sayfa (isteğe bağlı)", "Páginas totales (opcional)")) })

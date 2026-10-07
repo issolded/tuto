@@ -6,3 +6,6 @@ local.properties
 *.keystore
 androidApp/src/main/assets/
 engine/node_modules/
+
+# Local Android native build intermediates
+.cxx/

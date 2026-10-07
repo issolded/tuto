@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,193 +53,56 @@ import app.tuto.mobile.data.Strings
 import app.tuto.mobile.data.Today
 import java.util.Calendar
 
-// The web home's order: the scored, paying activities first (ChildHome QUEST_ORDER). Today's
-// three cards are the first three the parent has switched on; the rest sit in the row below.
-private val QUEST_ORDER = listOf("math", "reading", "puzzle", "english", "writing", "drawing", "homework")
-private const val QUEST_TARGET = 3
-
-private fun colorFor(type: String) = when (type) {
-    "math" -> TaskColor.math; "reading" -> TaskColor.reading; "puzzle" -> TaskColor.puzzle
-    "writing" -> TaskColor.writing; "drawing" -> TaskColor.drawing; "homework" -> TaskColor.homework
-    else -> TaskColor.tree
-}
-
-/** Which animated icon a card uses; the rest have a still drawing until they get their own. */
-private fun lottieFor(type: String) = when (type) { "math" -> "math"; "reading" -> "book"; "puzzle" -> "puzzle"; else -> null }
-
 @Composable
 fun HomeScreen(vm: TutoViewModel) {
     val s = LocalStrings.current
     val child = vm.child ?: return
     val today = vm.today
     LaunchedEffect(child.id) { vm.refreshToday() }
-
-    val active = QUEST_ORDER.filter { child.active(it) }
-    val questTypes = active.take(3)
-    val nextType = questTypes.firstOrNull { !today.done(it) }
-    val doneCount = today.activities.values.sum().coerceAtMost(QUEST_TARGET)
-
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         val scale = LocalDensity.current.fontScale.coerceAtLeast(1f)
-        val wide = maxWidth / scale >= 1320.dp
-        val contentWidth = maxWidth - 40.dp
-        val columns = (contentWidth.value / (220f * scale)).toInt().coerceIn(1, 3)
-        Row(Modifier.fillMaxSize()) {
-            Column(
-                Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 26.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
-            ) {
-                Header(child, today, s, vm.todayLoaded)
-                if (vm.todayError) {
-                    Text(s.say("Can't refresh your progress. Check your connection.", "İlerlemen yenilenemedi. Bağlantını kontrol et.", "No se puede actualizar tu progreso. Revisa la conexión."),
-                        style = MaterialTheme.typography.bodyMedium, color = Ink.soft)
+        val cols = if (maxWidth / scale >= 640.dp) 3 else 1
+        Column(Modifier.widthIn(max = 1280.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(if (maxWidth < 600.dp) 18.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("tuto", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                GemPill(if (vm.todayLoaded) today.gems else null, Modifier.clickable { vm.open("gems") })
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(s.say("Hello, ${child.name}!", "Merhaba, ${child.name}!", "¡Hola, ${child.name}!"), style = MaterialTheme.typography.headlineMedium)
+                    Text(s.say("Ready for a little challenge?", "Küçük bir maceraya hazır mısın?", "¿Listo para un pequeño reto?"), style = MaterialTheme.typography.titleLarge)
+                    Text(s.say("Pick something to explore.", "Keşfetmek için bir şey seç.", "Elige algo para explorar."), color = Ink.soft)
                 }
-                if (wide) {
-                    Row(Modifier.fillMaxWidth().height(380.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        BuddyCard(s, child, doneCount, nextType, Modifier.width(400.dp).fillMaxHeight())
-                        Row(Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                            questTypes.forEach { t -> QuestCard(t, child, today, t == nextType, s, Modifier.weight(1f).fillMaxHeight()) { vm.open(t) } }
+                Fox(Modifier.size(if (cols == 3) 144.dp else 112.dp))
+            }
+            if (vm.todayError) Text(s.say("Couldn't refresh progress. Try again when you're connected.", "İlerleme yenilenemedi. Bağlanınca tekrar dene.", "No se pudo actualizar el progreso. Inténtalo al conectarte."), color = Ink.soft)
+            val primary = listOf("math", "english", "puzzle").filter { child.active(it) }
+            primary.chunked(cols).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    row.forEach { type ->
+                        Column(Modifier.weight(1f).card().clickable(role = Role.Button) { vm.open(type) }.testTag("quest_$type").padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            PaperIcon(type, Modifier.size(if (cols == 3) 80.dp else 72.dp))
+                            Text(s.say(when(type) { "math" -> "Math"; "english" -> "English"; else -> "Puzzles" }, s("task_$type"), s("task_$type")), style = MaterialTheme.typography.titleLarge)
+                            Text(s.say(when(type) { "math" -> "Solve a challenge"; "english" -> "Play with words"; else -> "Find the pattern" }, "Keşfet ve öğren", "Explora y aprende"), color = Ink.soft, textAlign = TextAlign.Center)
+                            BigButton(s.say("Start", "Başla", "Empezar"), Modifier.fillMaxWidth()) { vm.open(type) }
+                            if (today.done(type)) Text(s.say("Done today", "Bugün tamamlandı", "Hecho hoy"), color = Ink.green, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                } else {
-                    BuddyCard(s, child, doneCount, nextType, Modifier.fillMaxWidth().height(340.dp))
-                    questTypes.chunked(columns).forEach { cards ->
-                        Row(Modifier.fillMaxWidth().height((330 * scale).dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            cards.forEach { t -> QuestCard(t, child, today, t == nextType, s, Modifier.weight(1f).fillMaxHeight()) { vm.open(t) } }
-                            repeat(columns - cards.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(cols-row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            Text(s.say("More to explore", "Keşfedecek daha çok şey var", "Más por descubrir"), style = MaterialTheme.typography.titleLarge)
+            listOf("reading", "writing", "drawing").filter { child.active(it) }.chunked(cols).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    row.forEach { type ->
+                        Row(Modifier.weight(1f).heightIn(min = 80.dp).card().clickable(role = Role.Button) { vm.open(type) }.testTag("quest_$type").padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PaperIcon(type, Modifier.size(44.dp))
+                            Text(s.say(when(type) { "reading" -> "Reading"; "writing" -> "Stories"; else -> "Drawing" }, s("task_$type"), s("task_$type")), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                            Text("›", color = Ink.soft)
                         }
                     }
+                    repeat(cols-row.size) { Spacer(Modifier.weight(1f)) }
                 }
-                Text(s.say("What else would you like to do?", "Başka ne yapmak istersin?", "¿Qué más quieres hacer?"), style = MaterialTheme.typography.titleLarge)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    (active.drop(3) + "tree").forEach { t -> SmallCard(t, child, today, s) { vm.open(t) } }
-                    SmallCard("library", child, today, s) { vm.open("library") }
-                    SmallCard("gems", child, today, s) { vm.open("gems") }
-                    GoalCard(today, s) { vm.open("goals") }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Header(child: Child, today: Today, s: Strings, loaded: Boolean) {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    // The greeting follows the device's clock, as on the web.
-    val greeting = s(if (hour < 12) "greeting_morning" else if (hour < 18) "greeting_afternoon" else "greeting_evening")
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text(greeting, style = MaterialTheme.typography.bodyLarge, color = Ink.soft)
-            Text(child.name, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (today.streak > 0) {
-            Row(
-                Modifier.height(52.dp).clip(RoundedCornerShape(999.dp)).background(Color.White).padding(horizontal = 18.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FlameIcon(Modifier.size(width = 20.dp, height = 22.dp))
-                Text(s.fill("streak_days", "n" to today.streak), fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-            }
-        }
-        GemPill(if (loaded) today.gems else null)
-    }
-}
-
-@Composable
-private fun BuddyCard(s: Strings, child: Child, doneCount: Int, nextType: String?, modifier: Modifier) {
-    val pal = LocalPalette.current
-    val speaker = rememberSpeaker()
-    val line = when {
-        doneCount >= QUEST_TARGET -> s("home_quest_done")
-        nextType != null -> s.fill("home_quest_next", "task" to s("task_$nextType"))
-        else -> s("home_quest_title")
-    }
-    Box(modifier.clip(RoundedCornerShape(32.dp)).background(pal.soft)) {
-        Row(
-            Modifier.align(Alignment.TopStart).padding(22.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(start = 18.dp, top = 12.dp, bottom = 12.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(line, fontFamily = Baloo, fontWeight = FontWeight.Bold, fontSize = 21.sp, lineHeight = 25.sp, modifier = Modifier.weight(1f))
-            ListenButton(line, child.language, speaker, s.say("Listen", "Dinle", "Escuchar"), pal.soft)
-        }
-        Tuto(Modifier.align(Alignment.BottomStart).padding(start = 6.dp).size(width = 200.dp, height = 254.dp))
-        Column(Modifier.align(Alignment.BottomEnd).padding(22.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(s("home_quest_tag"), style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(QUEST_TARGET) { i ->
-                    val done = i < doneCount
-                    Box(
-                        Modifier.size(42.dp).clip(CircleShape).background(if (done) Ink.green else Color.White)
-                            .border(3.dp, if (done) Color.White else Ink.main.copy(alpha = .5f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) { if (done) CheckIcon(Modifier.size(18.dp)) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuestCard(type: String, child: Child, today: Today, isNext: Boolean, s: Strings, modifier: Modifier, onClick: () -> Unit) {
-    val pal = LocalPalette.current
-    val done = today.done(type)
-    val gems = child.gemsFor(type)
-    Column(
-        modifier.let { if (isNext) it.border(4.dp, pal.accent, Card) else it }.card().clickable(role = Role.Button, onClick = onClick).testTag("quest_$type"),
-    ) {
-        Box(Modifier.fillMaxWidth().height(180.dp).background(colorFor(type)), contentAlignment = Alignment.Center) {
-            val file = lottieFor(type)
-            if (file != null) TaskIcon(file, if (done) IconState.Done else if (isNext) IconState.Next else IconState.Idle, Modifier.fillMaxSize().padding(12.dp))
-            else ActivityGlyph(type, Modifier.size(84.dp))
-            if (done && file == null) Box(Modifier.align(Alignment.TopEnd).padding(14.dp).size(40.dp).clip(CircleShape).background(Ink.green), contentAlignment = Alignment.Center) { CheckIcon(Modifier.size(18.dp)) }
-        }
-        Column(Modifier.padding(16.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(s(when(type) { "library" -> "lib_title"; "gems" -> "gems_history"; else -> "task_$type" }), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (gems != null) Text("+$gems Gem", style = MaterialTheme.typography.bodySmall, color = Ink.soft)
-            Spacer(Modifier.weight(1f))
-            when {
-                done -> Text(s.say("Done today", "Bugün bitti", "Hecho hoy"), style = MaterialTheme.typography.bodyMedium, color = Color(0xFF2F8F55))
-                isNext -> Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(18.dp)).background(pal.accent), contentAlignment = Alignment.Center) {
-                    Text(s.say("Start", "Başla", "Empezar"), fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-                }
-                else -> Text(s.say("Later", "Sonra", "Después"), style = MaterialTheme.typography.bodyMedium, color = Ink.soft)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SmallCard(type: String, child: Child, today: Today, s: Strings, onClick: () -> Unit) {
-    val sub = when (type) {
-        "tree" -> "${today.treeToday} ${s("tree_leaves_today")}"
-        else -> child.gemsFor(type)?.let { "+$it Gem" } ?: ""
-    }
-    Column(Modifier.width(172.dp).height(196.dp).card().clickable(role = Role.Button, onClick = onClick)) {
-        Box(Modifier.fillMaxWidth().height(118.dp).background(colorFor(type)), contentAlignment = Alignment.Center) {
-            val file = lottieFor(type)
-            if (file != null) TaskIcon(file, if (today.done(type)) IconState.Done else IconState.Idle, Modifier.fillMaxSize().padding(8.dp))
-            else ActivityGlyph(type, Modifier.size(64.dp))
-        }
-        Text(s(when(type) { "library" -> "lib_title"; "gems" -> "gems_history"; else -> "task_$type" }), style = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
-        Text(sub, style = MaterialTheme.typography.bodySmall, color = Ink.soft, modifier = Modifier.padding(horizontal = 16.dp))
-    }
-}
-
-@Composable
-private fun GoalCard(today: Today, s: Strings, onClick: () -> Unit) {
-    val goal = today.nearestGoal
-    Row(
-        Modifier.width(300.dp).height(196.dp).card(Ink.main).clickable(role = Role.Button, onClick = onClick).padding(20.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Jar(fill = if (goal != null && goal.cost > 0) (today.gems.toFloat() / goal.cost).coerceIn(0f, 1f) else 0f, modifier = Modifier.size(width = 70.dp, height = 96.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(s("home_goal").uppercase(), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD9CDE8))
-            if (goal != null) {
-                Text("${goal.icon} ${goal.name}", fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, lineHeight = 24.sp, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${today.gems} / ${goal.cost} Gem", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD9CDE8))
-            } else {
-                Text(s(if (today.hasAnyGoals) "home_goals_all_done" else "home_no_goals"), fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }

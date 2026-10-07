@@ -52,7 +52,7 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
     CompositionLocalProvider(LocalStrings provides vm.strings, LocalPalette provides palette) {
         Box(Modifier.fillMaxSize().background(palette.bg).safeDrawingPadding()) {
             Scaffold(containerColor = palette.bg, bottomBar = {
-                if (vm.screen == Screen.Home || vm.screen == Screen.Goals || vm.screen == Screen.Settings) BottomNavigation(vm)
+                if (vm.screen == Screen.Home || vm.screen == Screen.Goals || vm.screen == Screen.Settings || (vm.screen is Screen.Content && vm.feature?.page == "list")) BottomNavigation(vm)
             }) { padding -> Box(Modifier.fillMaxSize().padding(padding)) {
             when (val s = vm.screen) {
                 Screen.Setup -> SetupScreen(vm)

@@ -24,6 +24,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -50,11 +54,12 @@ import app.tuto.mobile.data.PuzzleQuestion
 import app.tuto.mobile.data.Strings
 import com.caverock.androidsvg.SVG
 
-private val TEAL = Color(0xFF22C3A6)
+private val TEAL = TaskColor.puzzle
 private val OK = Color(0xFF3FBF7F)
 private val BAD = Color(0xFFE2586A)
-private val DIM = Color(0xFF8D83AD)
-private val FIG: Dp = 96.dp
+private val DIM = Ink.soft
+private val LocalFigureSize = staticCompositionLocalOf { 144.dp }
+private val FIG: Dp @Composable get() = LocalFigureSize.current
 
 @Composable
 fun PuzzleScreen(vm: TutoViewModel) {
@@ -183,6 +188,25 @@ private fun Asking(run: PuzzleRun, s: Strings, onClose: () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PuzzlePrompt(q: PuzzleQuestion, svgs: List<String?>) {
+    var expanded by remember(q) { mutableStateOf(false) }
+    val s = LocalStrings.current
+    if(q.layout == "options-only") return
+    Column {
+        TextButton(onClick={expanded=true}) { Text(s.say("Enlarge picture", "Görseli büyüt", "Ampliar imagen")) }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val side = ((maxWidth - 90.dp) / 3).coerceIn(56.dp, 160.dp)
+            CompositionLocalProvider(LocalFigureSize provides side) { PuzzlePromptContent(q,svgs) }
+        }
+    }
+    if(expanded) PictureDialog({expanded=false}) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            CompositionLocalProvider(LocalFigureSize provides ((maxWidth - 100.dp)/3).coerceIn(56.dp,220.dp)) { PuzzlePromptContent(q,svgs) }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun PuzzlePromptContent(q: PuzzleQuestion, svgs: List<String?>) {
     if (q.layout == "options-only") return
     val gap = Arrangement.spacedBy(10.dp)
     when (q.layout) {
@@ -227,6 +251,7 @@ internal fun PuzzlePrompt(q: PuzzleQuestion, svgs: List<String?>) {
 @Composable
 private fun Options(run: PuzzleRun, q: PuzzleQuestion, svgs: List<String?>) {
     val ans = run.answer
+    val optionSize = if (LocalConfiguration.current.screenWidthDp >= 600) 144.dp else 100.dp
     FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         q.options.forEachIndexed { i, o ->
             val border = when {
@@ -243,8 +268,8 @@ private fun Options(run: PuzzleRun, q: PuzzleQuestion, svgs: List<String?>) {
                     .padding(6.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                if (o.code != null) Box(Modifier.size(FIG), contentAlignment = Alignment.Center) { Text(o.code, fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 34.sp) }
-                else Svg(svgs.getOrNull(i), FIG)
+                if (o.code != null) Box(Modifier.size(optionSize), contentAlignment = Alignment.Center) { Text(o.code, fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 34.sp) }
+                else Svg(svgs.getOrNull(i), optionSize)
             }
         }
     }

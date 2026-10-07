@@ -75,7 +75,7 @@ fun MathScreen(vm: TutoViewModel) {
 @Composable
 private fun Loading(text: String) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
-        Tuto(Modifier.size(width = 220.dp, height = 280.dp))
+        Fox(Modifier.size(200.dp), FoxPose.Thinking)
         CircularProgressIndicator(color = LocalPalette.current.accent)
         Text(text, style = MaterialTheme.typography.titleLarge)
     }
@@ -91,7 +91,7 @@ private fun Asking(run: MathRun, s: Strings, onClose: () -> Unit) {
             if (wide) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
                     QuestionPanel(run, q, s, Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()))
-                    AnswerPanel(run, q, s, Modifier.weight(0.85f).fillMaxHeight().verticalScroll(rememberScrollState()))
+                    AnswerPanel(run, q, s, Modifier.weight(0.65f).fillMaxHeight().verticalScroll(rememberScrollState()))
                 }
             } else {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -126,7 +126,7 @@ private fun TopBar(run: MathRun, s: Strings, onClose: () -> Unit) {
 private fun QuestionPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Modifier) {
     val speaker = rememberSpeaker()
     val pal = LocalPalette.current
-    Column(modifier.card(shape = RoundedCornerShape(32.dp)).padding(horizontal = 32.dp, vertical = 28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(modifier.card(shape = RoundedCornerShape(32.dp)).padding(horizontal = 22.dp, vertical = 22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(q.question, fontFamily = Baloo, fontWeight = FontWeight.Bold, fontSize = 30.sp, lineHeight = 36.sp, modifier = Modifier.weight(1f))
             ListenButton(q.question, run.child.language, speaker, s.say("Listen", "Dinle", "Escuchar"), pal.soft)
@@ -136,7 +136,7 @@ private fun QuestionPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: M
         }
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Tuto(Modifier.size(width = 110.dp, height = 140.dp), cheerKey = run.cheerKey)
+            Fox(Modifier.size(88.dp), if (run.hintsShown > 0) FoxPose.Hint else FoxPose.Thinking, event = run.hintsShown, animate = run.hintsShown > 0)
             Bubble(run, q, s, Modifier.weight(1f).padding(bottom = 12.dp))
         }
     }

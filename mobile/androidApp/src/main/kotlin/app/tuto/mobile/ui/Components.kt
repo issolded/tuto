@@ -38,9 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 
-val Card = RoundedCornerShape(28.dp)
+val Card = RoundedCornerShape(22.dp)
 
-fun Modifier.card(color: Color = Color.White, shape: RoundedCornerShape = Card, elevation: Dp = 10.dp) =
+fun Modifier.card(color: Color = Color.White, shape: RoundedCornerShape = Card, elevation: Dp = 2.dp) =
     this.shadow(elevation, shape, ambientColor = Ink.main.copy(alpha = .12f), spotColor = Ink.main.copy(alpha = .12f))
         .clip(shape).background(color)
 
@@ -55,7 +55,7 @@ fun BigButton(text: String, modifier: Modifier = Modifier, color: Color = Materi
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 23.sp, color = Ink.main) }
+    ) { Text(text, fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, color = if (color == MaterialTheme.colorScheme.primary) Color.White else Ink.main) }
 }
 
 @Composable

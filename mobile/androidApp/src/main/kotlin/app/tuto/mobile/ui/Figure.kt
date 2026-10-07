@@ -2,6 +2,8 @@ package app.tuto.mobile.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +48,16 @@ import kotlin.math.sin
 /** The picture a question comes with, or nothing. Same pictures as the browser. */
 @Composable
 fun QuestionFigure(q: MathQuestion, modifier: Modifier = Modifier) {
+    var expanded by androidx.compose.runtime.remember(q) { androidx.compose.runtime.mutableStateOf(false) }
+    if (q.svg == null && q.nativeFigure == null) return
+    Column(modifier) {
+        androidx.compose.material3.TextButton(onClick = { expanded = true }) { Text(app.tuto.mobile.data.LocalStrings.current.say("Enlarge picture", "Görseli büyüt", "Ampliar imagen")) }
+        FigureContent(q, Modifier.fillMaxWidth())
+    }
+    if (expanded) PictureDialog({ expanded = false }) { FigureContent(q, Modifier.fillMaxSize()) }
+}
+
+@Composable private fun FigureContent(q: MathQuestion, modifier: Modifier) {
     when {
         q.svg != null -> SvgFigure(q.svg, modifier)
         q.nativeFigure != null && q.visual != null -> NativeFigure(q.nativeFigure, q.visual, modifier)
@@ -59,7 +74,7 @@ fun SvgFigure(markup: String, modifier: Modifier = Modifier) {
         if (w > 0f && h > 0f) w / h else 1.6f
     }
     remember(svg) { svg.setDocumentWidth("100%"); svg.setDocumentHeight("100%"); svg }
-    Canvas(modifier.fillMaxWidth().heightIn(max = 300.dp).aspectRatio(ratio, matchHeightConstraintsFirst = true)) {
+    Canvas(modifier.fillMaxWidth().heightIn(max = 560.dp).aspectRatio(ratio, matchHeightConstraintsFirst = true)) {
         val w = size.width.toInt(); val h = size.height.toInt()
         if (w > 0 && h > 0) drawIntoCanvas { it.nativeCanvas.drawPicture(svg.renderToPicture(w, h)) }
     }
@@ -71,21 +86,21 @@ fun SvgFigure(markup: String, modifier: Modifier = Modifier) {
 fun NativeFigure(kind: String, v: JSONObject, modifier: Modifier = Modifier) {
     when (kind) {
         "count" -> FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(v.optInt("n")) { Text(v.optString("item"), fontSize = 34.sp) }
+            repeat(v.optInt("n")) { Text(v.optString("item"), fontSize = 42.sp) }
         }
         "shapes" -> FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)) {
             val a = v.optJSONArray("shapes")
-            for (i in 0 until (a?.length() ?: 0)) ShapeDrawing(a!!.optString(i), Modifier.size(96.dp))
+            for (i in 0 until (a?.length() ?: 0)) ShapeDrawing(a!!.optString(i), Modifier.size(120.dp))
         }
         "pictogram" -> Pictogram(v, modifier)
         "prices" -> FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val a = v.optJSONArray("items")
             for (i in 0 until (a?.length() ?: 0)) {
                 val it = a!!.optJSONObject(i) ?: continue
-                Column(Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFF6E5)).padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(it.optString("icon"), fontSize = 30.sp)
-                    Text(it.optString("name"), fontSize = 13.sp, color = Ink.soft)
-                    Text(it.optString("price"), fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFFE8701A))
+                Column(Modifier.clip(RoundedCornerShape(16.dp)).background(LocalPalette.current.soft).padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(it.optString("icon"), fontSize = 36.sp)
+                    Text(it.optString("name"), fontSize = 18.sp, color = Ink.soft)
+                    Text(it.optString("price"), fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = Ink.main)
                 }
             }
         }
@@ -94,9 +109,9 @@ fun NativeFigure(kind: String, v: JSONObject, modifier: Modifier = Modifier) {
             for (i in 0 until (times?.length() ?: 0)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.clip(RoundedCornerShape(14.dp)).background(Ink.main).padding(horizontal = 18.dp, vertical = 10.dp)) {
-                        Text(times!!.optString(i), fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, color = Color(0xFF7CFFB2))
+                        Text(times!!.optString(i), fontFamily = Baloo, fontWeight = FontWeight.ExtraBold, fontSize = 36.sp, color = Color(0xFF7CFFB2))
                     }
-                    labels?.optString(i)?.takeIf { it.isNotEmpty() }?.let { Text(it, fontSize = 13.sp, color = Ink.soft) }
+                    labels?.optString(i)?.takeIf { it.isNotEmpty() }?.let { Text(it, fontSize = 18.sp, color = Ink.soft) }
                 }
             }
         }
@@ -106,20 +121,20 @@ fun NativeFigure(kind: String, v: JSONObject, modifier: Modifier = Modifier) {
 @Composable
 private fun Pictogram(v: JSONObject, modifier: Modifier) {
     val unit = v.optString("unit"); val each = v.optInt("each")
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("$unit = $each", fontFamily = Baloo, fontSize = 15.sp, color = Ink.soft,
-            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0xFFF4F1FB)).padding(horizontal = 12.dp, vertical = 4.dp))
+    Column(modifier.horizontalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("$unit = $each", fontFamily = Baloo, fontSize = 20.sp, color = Ink.soft,
+            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(LocalPalette.current.soft).padding(horizontal = 12.dp, vertical = 4.dp))
         val rows = v.optJSONArray("rows")
         for (r in 0 until (rows?.length() ?: 0)) {
             val row = rows!!.optJSONObject(r) ?: continue
             val count = row.optDouble("count", 0.0)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(row.optString("label"), fontFamily = Baloo, fontSize = 15.sp, textAlign = TextAlign.End, modifier = Modifier.widthIn(min = 64.dp))
+                Text(row.optString("label"), fontFamily = Baloo, fontSize = 20.sp, textAlign = TextAlign.End, modifier = Modifier.widthIn(min = 90.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     // A half symbol is the left half of one, clipped, as in a printed pictogram.
                     for (i in 0 until ceil(count).toInt()) {
                         val half = i + 1 > count
-                        Box(Modifier.width(if (half) 18.dp else 30.dp).clip(RoundedCornerShape(0.dp))) { Text(unit, fontSize = 26.sp, softWrap = false) }
+                        Box(Modifier.width(if (half) 23.dp else 38.dp).clip(RoundedCornerShape(0.dp))) { Text(unit, fontSize = 34.sp, softWrap = false) }
                     }
                 }
             }

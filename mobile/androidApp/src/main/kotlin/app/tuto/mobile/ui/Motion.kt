@@ -23,25 +23,11 @@ fun reduceMotion(): Boolean {
     return remember { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
 }
 
-/**
- * Tuto, the fox. lottie/fox.json (design/native-icons/fox.py): frames 0-120 are the idle loop,
- * 120-168 the cheer. Bump [cheerKey] to cheer once; it ends on the idle pose and loops idle again.
- */
+/** Compatibility entry point for the approved Paper & Play mascot. */
 @Composable
 fun Tuto(modifier: Modifier = Modifier, cheerKey: Int = 0) {
-    val still = reduceMotion()
-    val composition by rememberLottieComposition(LottieCompositionSpec.Asset("lottie/fox.json"))
-    var cheering by remember { mutableStateOf(false) }
-    LaunchedEffect(cheerKey) { if (cheerKey > 0 && !still) cheering = true }
-    val state = animateLottieCompositionAsState(
-        composition,
-        isPlaying = !still,
-        clipSpec = if (cheering) LottieClipSpec.Frame(120, 168) else LottieClipSpec.Frame(0, 120),
-        iterations = if (cheering) 1 else LottieConstants.IterateForever,
-        restartOnPlay = true,
-    )
-    LaunchedEffect(state.isAtEnd, cheering) { if (cheering && state.isAtEnd) cheering = false }
-    LottieAnimation(composition, progress = { if (still) 0f else state.progress }, modifier = modifier)
+    Fox(modifier, if (cheerKey > 0) FoxPose.Success else FoxPose.Welcome, event = cheerKey)
+
 }
 
 enum class IconState { Idle, Next, Done }
@@ -59,7 +45,7 @@ fun TaskIcon(file: String, state: IconState, modifier: Modifier = Modifier) {
         composition,
         isPlaying = playing,
         clipSpec = if (state == IconState.Done) LottieClipSpec.Frame(90, 120) else LottieClipSpec.Frame(0, 90),
-        iterations = if (state == IconState.Next) LottieConstants.IterateForever else 1,
+        iterations = 1,
         restartOnPlay = true,
     )
     val rest = when (state) { IconState.Done -> 1f; else -> 0f }
