@@ -1,5 +1,6 @@
 package app.tuto.mobile
 
+import androidx.compose.ui.graphics.asAndroidBitmap
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -23,15 +24,17 @@ class PaperPlayTest {
         val inst=InstrumentationRegistry.getInstrumentation()
         val dir=File(inst.targetContext.getExternalFilesDir(null),"screenshots").apply { mkdirs() }
         compose.waitForIdle()
-        inst.uiAutomation.takeScreenshot()?.let { bitmap -> File(dir,"$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle() }
+        compose.onRoot().captureToImage().asAndroidBitmap().let { bitmap -> File(dir,"$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) } }
     }
     @Test fun shelfFiltersRealRecordsAndOpensSelectedBook() {
         val book=JSONObject("""{"id":"b","title":"The woodland adventure","completed":true,"completed_at":"2026-09-01"}""")
         val draft=JSONObject("""{"id":"s","title":"My unfinished story","status":"in_progress"}""")
         var opened:String?=null
-        compose.setContent { TestTheme { FeaturePage("Library",{}) {
+        compose.setContent { TestTheme { FeaturePage("Library",{}, showHeader=false) {
             LibraryBrowser(listOf(book),listOf(draft),true,{},false,true,true,{}, {},{b,_->opened=b.getString("id")},{},{_,_->})
         } } }
+        compose.onNodeWithTag("reading-room").performScrollTo()
+        shot("paper-room")
         compose.onNodeWithText("My unfinished story").assertDoesNotExist()
         compose.onNodeWithText("The woodland adventure").performScrollTo().performClick()
         shot("bookshelf-detail")

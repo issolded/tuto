@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -23,6 +24,7 @@ import org.json.JSONObject
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun LibraryBrowser(books: List<JSONObject>, stories: List<JSONObject>, archive: Boolean, onArchive: (Boolean)->Unit, busy: Boolean, allowReading: Boolean, allowWriting: Boolean, onNewBook:()->Unit, onNewStory:()->Unit, onOpen:(JSONObject,Boolean)->Unit, onFinish:(JSONObject)->Unit, onDelete:(JSONObject,Boolean)->Unit) {
     val s=LocalStrings.current
+    val roomHeightLimit = (LocalConfiguration.current.screenHeightDp.dp - 240.dp).coerceIn(300.dp, 600.dp)
     var filters by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf("all") }
@@ -61,7 +63,8 @@ import org.json.JSONObject
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = maxWidth >= 840.dp
-        val pageSize = if (archive) 18 else 36
+        val roomWidth = minOf(maxWidth, roomHeightLimit * 1.6f).coerceAtLeast(480.dp)
+        val pageSize = if (archive) (roomWidth.value * .43f / 56f).toInt().coerceIn(3, 6) * 3 else 36
         val pages=((items.size+pageSize-1)/pageSize).coerceAtLeast(1)
         val current=page.coerceAtMost(pages-1)
         val shown=items.drop(current*pageSize).take(pageSize)

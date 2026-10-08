@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,6 +39,7 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
     val s = LocalStrings.current
     var award by remember { mutableStateOf<Int?>(null) }
     var reading by remember { mutableStateOf(false) }
+    val roomHeightLimit = (LocalConfiguration.current.screenHeightDp.dp - 240.dp).coerceIn(300.dp, 600.dp)
     val still = reduceMotion()
     val transition = rememberInfiniteTransition(label = "reading-idle")
     val idle by transition.animateFloat(0f, if (still) 0f else 1f,
@@ -46,8 +48,9 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
     LaunchedEffect(still) { entrance.animateTo(1f, tween(if (still) 0 else 700)) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // A narrow device pans the room rather than shrinking book targets below 48 dp.
-        BoxWithConstraints(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))) {
-            val roomWidth = maxOf(maxWidth, 840.dp)
+        BoxWithConstraints(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)), contentAlignment = Alignment.TopCenter) {
+            val roomWidth = minOf(maxWidth, roomHeightLimit * 1.6f).coerceAtLeast(480.dp)
+            val columns = (roomWidth.value * .43f / 56f).toInt().coerceIn(3, 6)
             val roomHeight = roomWidth / 1.6f
             Box(Modifier.horizontalScroll(rememberScrollState())) {
                 Box(Modifier.requiredSize(roomWidth, roomHeight).graphicsLayer {
@@ -56,15 +59,15 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
                     Image(painterResource(R.drawable.library_room_warm), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
                     Image(painterResource(R.drawable.fox_reading_cutout),
                         s.say("Tuto reading in his chair. Tap to read together.", "Tuto koltuğunda okuyor. Birlikte okumak için dokun.", "Tuto lee en su sillón. Toca para leer juntos."),
-                        Modifier.offset(roomWidth * .035f, roomHeight * .36f)
-                            .size(roomWidth * .37f, roomHeight * .55f)
+                        Modifier.offset(roomWidth * .01f, roomHeight * .40f)
+                            .size(roomWidth * .31f, roomHeight * .52f)
                             .graphicsLayer { scaleY = 1f + idle * .006f; rotationZ = idle * .25f }
                             .clickable(role = Role.Button) { reading = true }, contentScale = ContentScale.Fit)
                     // Two by two frames in the clear wall strip. The state comes from real books.
                     ReadingMilestones.forEachIndexed { index, target ->
                         val earned = count >= target
-                        Column(Modifier.offset(roomWidth * (.335f + (index % 2) * .06f), roomHeight * (.34f + (index / 2) * .17f))
-                            .size(roomWidth * .058f, roomHeight * .145f)
+                        Column(Modifier.offset(roomWidth * .335f + (index % 2) * (roomWidth * .06f).coerceAtLeast(50.dp), roomHeight * (.34f + (index / 2) * .17f))
+                            .size((roomWidth * .058f).coerceAtLeast(48.dp), roomHeight * .145f)
                             .shadow(3.dp, RoundedCornerShape(3.dp))
                             .background(Color(0xFFB18C58), RoundedCornerShape(3.dp))
                             .clickable(role = Role.Button) { award = target }
@@ -81,10 +84,10 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
                         Row(Modifier.offset(roomWidth * .495f, roomHeight * (shelfBottoms[row] - .158f))
                             .width(roomWidth * .43f).height(roomHeight * .158f),
                             verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items.drop(row * 6).take(6).forEach { item ->
+                            items.drop(row * columns).take(columns).forEach { item ->
                                 RoomBook(item.first, Modifier.weight(1f).fillMaxHeight().clickable(role = Role.Button) { onSelect(item) }.testTag("shelf-${item.first.optString("id")}"))
                             }
-                            repeat((6 - items.drop(row * 6).take(6).size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
+                            repeat((columns - items.drop(row * columns).take(columns).size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                     if (items.isEmpty()) Text(
