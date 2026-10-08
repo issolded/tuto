@@ -24,7 +24,7 @@ class PaperPlayTest {
         val inst=InstrumentationRegistry.getInstrumentation()
         val dir=File(inst.targetContext.getExternalFilesDir(null),"screenshots").apply { mkdirs() }
         compose.waitForIdle()
-        compose.onRoot().captureToImage().asAndroidBitmap().let { bitmap -> File(dir,"$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) } }
+        compose.onAllNodes(isRoot()).let { roots -> roots[roots.fetchSemanticsNodes().lastIndex] }.captureToImage().asAndroidBitmap().let { bitmap -> File(dir,"$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) } }
     }
     @Test fun shelfFiltersRealRecordsAndOpensSelectedBook() {
         val book=JSONObject("""{"id":"b","title":"The woodland adventure","completed":true,"completed_at":"2026-09-01"}""")
