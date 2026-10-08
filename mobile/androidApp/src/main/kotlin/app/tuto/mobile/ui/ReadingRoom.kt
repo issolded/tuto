@@ -39,7 +39,7 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
 ) {
     val s = LocalStrings.current
     var award by remember { mutableStateOf<Int?>(null) }
-    val heightLimit=(LocalConfiguration.current.screenHeightDp.dp-260.dp).coerceIn(400.dp,620.dp)
+    val heightLimit=(LocalConfiguration.current.screenHeightDp.dp-290.dp).coerceIn(400.dp,620.dp)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Keep labels and cover targets readable; narrow screens can pan the illustrated room.
         BoxWithConstraints(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)), contentAlignment = Alignment.TopCenter) {
@@ -75,7 +75,7 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
                         }
                         Button(onClick=onChooseBook, enabled=!busy,
                             modifier=Modifier.offset(roomWidth * .35f, roomHeight * .88f).width(roomWidth * .24f).heightIn(min=48.dp).testTag("choose-book")) {
-                            Text(s.say("Choose a book", "Kitap seç", "Elegir un libro"))
+                            Text(s.say("Choose a book", "Kitap seç", "Elegir un libro"), color=Color.White)
                         }
                     }
                     if (allowWriting) Button(onClick=onNewStory, enabled=!busy,
@@ -107,7 +107,7 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
             }
         }
         val next = ReadingMilestones.firstOrNull { it > count }
-        Text(s.say("$count books finished", "$count kitap tamamlandı", "$count libros terminados") +
+        Text(s.say(if(count==1) "1 book finished" else "$count books finished", "$count kitap tamamlandı", if(count==1) "1 libro terminado" else "$count libros terminados") +
             (next?.let { s.say(" · ${it-count} to your next award", " · sonraki ödüle ${it-count} kitap", " · ${it-count} para tu próximo premio") } ?: ""),
             style=MaterialTheme.typography.labelLarge, color=Ink.green)
     }
