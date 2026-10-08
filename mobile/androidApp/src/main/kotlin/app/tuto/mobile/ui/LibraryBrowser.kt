@@ -23,6 +23,7 @@ import org.json.JSONObject
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun LibraryBrowser(books: List<JSONObject>, stories: List<JSONObject>, archive: Boolean, onArchive: (Boolean)->Unit, busy: Boolean, allowReading: Boolean, allowWriting: Boolean, onNewBook:()->Unit, onNewStory:()->Unit, onOpen:(JSONObject,Boolean)->Unit, onFinish:(JSONObject)->Unit, onDelete:(JSONObject,Boolean)->Unit) {
     val s=LocalStrings.current
+    var filters by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf("all") }
     var year by rememberSaveable { mutableStateOf("") }
@@ -35,7 +36,7 @@ import org.json.JSONObject
     val years=all.filter(::completed).map { finishedYear(it.first) }.filter { it.isNotBlank() }.distinct().sortedDescending()
     Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Text(s.say("Your reading room", "Okuma odan", "Tu rincón de lectura"), style=MaterialTheme.typography.headlineLarge)
+            Text(s.say("Your reading room", "Okuma odan", "Tu rincón de lectura"), style=MaterialTheme.typography.headlineMedium)
             Text(s.say("Every book is a new world. Make this room yours.", "Her kitap yeni bir dünya. Bu oda senin.", "Cada libro es un mundo. Este rincón es tuyo."), color=Ink.soft)
         }
     }
@@ -47,6 +48,8 @@ import org.json.JSONObject
             if(allowWriting) Button(onClick=onNewStory,enabled=!busy,modifier=Modifier.testTag("new-story")) { Text(s.say("Write a story", "Hikâye yaz", "Escribir cuento")) }
         }
     }
+    TextButton(onClick={filters=!filters}) { Text(s.say("Search and filters", "Arama ve filtreler", "Buscar y filtrar")) }
+    if (filters) {
     OutlinedTextField(query,{query=it;page=0},label={Text(s.say("Search books and stories", "Kitap ve hikâye ara", "Buscar libros y cuentos"))},modifier=Modifier.fillMaxWidth())
     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         listOf("all" to s.say("All", "Tümü", "Todos"),"books" to s.say("Books", "Kitaplar", "Libros"),"stories" to s.say("Stories", "Hikâyeler", "Cuentos")).forEach { (value,label) -> FilterChip(selected=kind==value,onClick={kind=value;page=0},label={Text(label)}) }
@@ -55,17 +58,20 @@ import org.json.JSONObject
             years.forEach { y -> FilterChip(selected=year==y,onClick={year=y;page=0},label={Text(y)}) }
         }
     }
+    }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = maxWidth >= 840.dp
-        val pages=((items.size+35)/36).coerceAtLeast(1)
+        val pageSize = if (archive) 18 else 36
+        val pages=((items.size+pageSize-1)/pageSize).coerceAtLeast(1)
         val current=page.coerceAtMost(pages-1)
-        val shown=items.drop(current*36).take(36)
-        val completedCount=all.count(::completed)
+        val shown=items.drop(current*pageSize).take(pageSize)
+        val completedCount=completedBookCount(books)
         val shelves: @Composable () -> Unit = {
             ShelfRoom(shown, archive, busy, onSelect={selected=it})
         }
         Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            if(wide) Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(24.dp), verticalAlignment=Alignment.Top) {
+            if (archive) ReadingRoom(shown, completedCount, busy) { selected = it }
+            else if(wide) Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(24.dp), verticalAlignment=Alignment.Top) {
                 Box(Modifier.weight(1f)) { shelves() }
                 ReadingNook(completedCount, Modifier.width(260.dp))
             } else {

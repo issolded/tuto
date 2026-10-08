@@ -14,8 +14,8 @@ android {
         applicationId = "app.tuto.mobile.preview"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.8.0-interactive-hints"
+        versionCode = 12
+        versionName = "0.9.0-reading-room"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
         externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=MinSizeRel" } }

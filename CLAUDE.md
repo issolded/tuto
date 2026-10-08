@@ -1198,3 +1198,18 @@ Android Bookshelf follow-up 0.7.1 (7 October): source da3e603, CI37649661317 pas
 User approved the interactive hint preview for native Android, reusing browser help features. Question, right-facing fox, hint copy and descriptor-driven manipulatives now share the question column; answer controls stay in their own column. Hint poster and video are mirrored together to point toward the text. Fraction helpers respect the web contract (shaded index arrays, white-part questions, capped addition and equal-whole unit-fraction comparison). No new model calls or score/Gem rules; no web/backend changes. Version 11 / 0.8.0-interactive-hints. CI and device validation required before delivery; see mobile/BUILD_STATUS.md.
 
 Android interactive hints 0.8.0 verified: source b2016a3, CI37733468246 passed APK/JVM/lint/signature/alignment and 23/23 tests on both standard and 16 KiB tablets. Visual inspection of the first run caught oversized square SVGs; final source uses explicit viewports (320 dp question, 180 dp with hint), with a regression test. APK artifact11531180497 was integrity-checked. Live physical-tablet/family acceptance remains; web/backend unchanged.
+
+### 2026-10-08 Warm 2.5D reading room
+User rejected the geometric 3D fox and approved a soft, textured interior at eye level,
+using the existing paper-cut Tuto identity. Native-only ReadingRoom layers a generated
+empty warm room plate, a transparent reference-preserving fox cutout and real book targets.
+18 records/page keeps shelf targets usable; narrow screens pan instead of shrinking.
+Search/filters collapse to give the room priority. Milestones 10/50/100/200 count unique
+completed books, excluding authored stories and duplicate rows. These frames currently
+reflect the loaded records; permanent cross-device earned-award history still needs an
+explicit backend contract/migration (not silently written). No new Gems are issued.
+The room fox has a subtle idle transform; tapping opens the existing genuine reading video.
+Transparent page-turn animation in the room is NOT implemented. Sources: supplied room
+reference and existing fox_reading.webp, edited with built-in image generation (background
+removal preserves the paper-cut identity; no new 3D mascot). Version 12/0.9.0-reading-room.
+Build/device checks pending; do not describe this as deployed or device-validated yet.

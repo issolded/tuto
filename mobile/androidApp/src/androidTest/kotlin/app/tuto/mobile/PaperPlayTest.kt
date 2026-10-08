@@ -38,6 +38,7 @@ class PaperPlayTest {
         compose.onNodeWithText("Open").performClick()
         assertEquals("b",opened)
         shot("paper-library")
+        compose.onNodeWithText("Search and filters").performScrollTo().performClick()
         compose.onNodeWithText("Search books and stories").performScrollTo().performTextInput("missing")
         compose.onNodeWithText("The woodland adventure").assertDoesNotExist()
     }
