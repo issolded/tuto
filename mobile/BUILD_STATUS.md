@@ -1,3 +1,23 @@
+# Current Android delivery — 0.9.0 Reading Room (8 October 2026)
+
+Branch: `codex/android-complete`. Tested source: `c1c6fc2d29cdd25d4b4d05eed0bd5e2997debb5a`.
+CI: https://github.com/issolded/tuto/actions/runs/37749108413
+
+- Build/lint/signature/alignment passed; 22 JVM tests (17 Android + 5 shared).
+- Standard and 16 KiB tablets: 23/23 tests each, no failures. PAGE_SIZE=16384 confirmed.
+- Native screenshot `paper-room.png` visually inspected. Earlier oversized room and avatar/frame overlap were corrected before this source.
+- APK ZIP SHA256: `0ead20f1a50f7bab18b1a939d842dc50b46d07e0040428cc428e2b6df440a052`.
+- APK SHA256: `56fffd0c74e37b1a59e52b5a48868ed86707c1b21e933f5ed7b27130eb51898d`.
+- APK artifact: 11537199618; standard tablet report: 11537805740.
+
+The native library now uses a warm 2.5D room plate, transparent paper-cut fox, real selectable book records and 10/50/100/200 book milestones. Adaptive shelf capacity keeps book targets usable. Images total 186,202 bytes. The app retains its live backend wiring; automated tests use isolated transports, not real family data.
+
+Explicit remaining scope: the room avatar has a subtle idle transform; tapping opens the existing page-turn video. Transparent page-turn animation within the room and durable cross-device earned-award history are not implemented. Current milestones reflect current completed book records, so removing a book can lower progress. No new Gems are granted. No browser/backend deploy or DB migration occurred. This is a debug-signed validation APK, not production signing or physical-device acceptance.
+
+Separate pre-existing finding: native random same-skill review can throw `No matching practice question`. The first 0.9.0 run failed before tablet tests in this check; the final run passed all three jobs without disabling it. A local deterministic reproduction uses LCG initial seed 100 (`seed=(imul(seed,1664525)+1013904223)>>>0`, random=seed/4294967296), 20 rounds of EN/TR/ES × ages7/9/12, first3 questions per 10-question session with a review after each. It fails at round8, age12, EN, averages spinner key `spin:redredredgreengreengreengreengreengreenred:green`. This is recorded, not fixed or treated as an infrastructure failure.
+
+---
+
 # Android native validation — 6 October 2026
 
 Branch: `codex/android-complete`. Tested source: `17382a5780f4732e82d6914dfa22bf3af562e804`.

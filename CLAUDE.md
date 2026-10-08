@@ -1213,3 +1213,5 @@ Transparent page-turn animation in the room is NOT implemented. Sources: supplie
 reference and existing fox_reading.webp, edited with built-in image generation (background
 removal preserves the paper-cut identity; no new 3D mascot). Version 12/0.9.0-reading-room.
 Build/device checks pending; do not describe this as deployed or device-validated yet.
+
+Reading room final validation: source c1c6fc2, CI37749108413 passed APK/lint/22 JVM tests and 23/23 on both standard and 16 KiB tablets. Inspected clean native screenshot after reducing room height and separating the avatar/frames. Adaptive shelves now show 9–18 real records/page. 0.9.0 APK saved for physical-device testing; no live-family E2E claim. The pre-existing random spinner reinforcement failure is reproducible and documented in BUILD_STATUS; final CI passing does not resolve it.
