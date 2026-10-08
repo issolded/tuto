@@ -64,10 +64,12 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
                             .graphicsLayer { scaleY = 1f + idle * .006f; rotationZ = idle * .25f }
                             .clickable(role = Role.Button) { reading = true }, contentScale = ContentScale.Fit)
                     // Two by two frames in the clear wall strip. The state comes from real books.
+                    val twoColumns = roomWidth >= 800.dp
                     ReadingMilestones.forEachIndexed { index, target ->
                         val earned = count >= target
-                        Column(Modifier.offset(roomWidth * .335f + (index % 2) * (roomWidth * .06f).coerceAtLeast(50.dp), roomHeight * (.34f + (index / 2) * .17f))
-                            .size((roomWidth * .058f).coerceAtLeast(48.dp), roomHeight * .145f)
+                        Column(Modifier.offset(if (twoColumns) roomWidth * (.335f + (index % 2) * .06f) else roomWidth * .36f,
+                            if (twoColumns) roomHeight * (.34f + (index / 2) * .17f) else roomHeight * (.16f + index * .17f))
+                            .size((roomWidth * .058f).coerceAtLeast(48.dp), (roomHeight * .145f).coerceAtLeast(48.dp))
                             .shadow(3.dp, RoundedCornerShape(3.dp))
                             .background(Color(0xFFB18C58), RoundedCornerShape(3.dp))
                             .clickable(role = Role.Button) { award = target }
