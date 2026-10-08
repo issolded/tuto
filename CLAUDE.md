@@ -1192,3 +1192,7 @@ Native-only: white seamless mascot assets; left greeting avatar, enlarged Gem ba
 
 
 Android Bookshelf follow-up 0.7.1 (7 October): source da3e603, CI37649661317 passed build/lint/20 JVM tests and 19/19 tests on each standard and 16 KiB tablet. Native embedded SVG data images now retain vector drawing via nested SVG viewports; five mascot clips are 1080p H.264 Baseline, fixing HEVC Main 10 decoding failure. Downloaded CI APK digest/signature/alignment verified; prior local repack must not be delivered. Details and remaining live-family/device acceptance limits are in mobile/BUILD_STATUS.md.
+
+
+### 2026-10-08 Android interactive hint design
+User approved the interactive hint preview for native Android, reusing browser help features. Question, right-facing fox, hint copy and descriptor-driven manipulatives now share the question column; answer controls stay in their own column. Hint poster and video are mirrored together to point toward the text. Fraction helpers respect the web contract (shaded index arrays, white-part questions, capped addition and equal-whole unit-fraction comparison). No new model calls or score/Gem rules; no web/backend changes. Version 11 / 0.8.0-interactive-hints. CI and device validation required before delivery; see mobile/BUILD_STATUS.md.

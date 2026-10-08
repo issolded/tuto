@@ -44,4 +44,33 @@ class MathHelpTest {
         compose.onNodeWithText("Read the digits and answer the question.").assertIsDisplayed()
         compose.onNodeWithTag("pv-shift").assertIsNotEnabled()
     }
+    @Test fun fractionAdditionStopsAtTheRequestedAmountAndResets() {
+        show("""{"kind":"fracbar","mode":"add","parts":4,"a":2,"b":1}""")
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("2 / 4")
+        compose.onNodeWithTag("fraction-0-0").assertIsNotEnabled()
+        compose.onNodeWithTag("fraction-0-2").performClick()
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("3 / 4")
+        compose.onNodeWithTag("fraction-0-3").assertIsNotEnabled()
+        compose.onNodeWithTag("fraction-0-2").performClick()
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("2 / 4")
+        compose.onNodeWithText("Start again").performClick()
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("2 / 4")
+    }
+    @Test fun fractionShadeReadsIndexArrayAndCountsWhitePartsInTwoStages() {
+        show("""{"kind":"fracbar","mode":"shade","parts":4,"shaded":[0,2,3],"white":true}""")
+        (0..3).forEach { compose.onNodeWithTag("fraction-0-$it").performClick() }
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("0 / 4")
+        compose.onNodeWithTag("fraction-0-0").assertIsNotEnabled()
+        compose.onNodeWithTag("fraction-0-1").performClick()
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("1 / 4")
+        compose.onNodeWithText("Start again").performClick()
+        compose.onNodeWithTag("fraction-progress").assertTextEquals("0 / ?")
+    }
+    @Test fun comparisonShowsUnitFractionsWithoutChangingTheWhole() {
+        show("""{"kind":"fracbar","mode":"cmp","denoms":[2,4]}""")
+        compose.onNodeWithText("1 / 2").assertIsDisplayed()
+        compose.onNodeWithText("1 / 4").assertIsDisplayed()
+        compose.onNodeWithTag("fraction-0-0").assertIsNotEnabled()
+        compose.onNodeWithTag("fraction-1-3").assertIsNotEnabled()
+    }
 }

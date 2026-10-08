@@ -65,3 +65,10 @@ The 0.7.1 follow-up passed local compile, lint and JVM tests. After the user req
 Source da3e60329ebe2e9549bc60014d761788f5216bdd, CI https://github.com/issolded/tuto/actions/runs/37649661317: build/lint and 20 JVM tests passed; both API 35 tablet jobs passed 19/19 tests each. The 16 KiB job reported PAGE_SIZE=16384. Embedded SVG pixel tests and all five video-frame/poster decode tests passed. Library and book-detail screenshots were inspected; screenshot capture timing is not evidence of every transient animation. No live family E2E or physical Samsung acceptance is claimed.
 
 The delivered 0.7.1 APK is the CI artifact, not the unsuccessful local repack. Downloaded archive SHA256 matches CI: 929d22b8cf280bbc4cb63b8076eabfb88b28a25fb16fd12c9fb2104994b8c9c4. APK signature and all four native library 16 KiB alignment checks passed again after download. APK is a debug validation build connected to the existing backend; installed-certificate continuity is not established.
+
+
+## 8 October — 0.8.0 interactive hints (validation pending)
+
+Native-only implementation of the approved interactive screen: hint and manipulative live together under the question; the companion points right toward the copy in both video and reduced-motion poster. Existing descriptor-driven steps, counters, clocks and place-value controls remain connected to real generated questions. Fraction help now handles the browser's shaded-index array, two-stage whole/asked-part counting, white parts, bounded fraction addition and unit-fraction comparison with equal-length wholes. Touch targets stay usable with horizontal scrolling for long fraction bars.
+
+Three new device regressions cover the fraction contracts; the full sitting test checks on-demand helper visibility and captures its screen. Existing session/reinforcement tests continue checking outgoing help flags. No web/backend deployment or real family write. APK/device gates pending; do not claim completion until CI results are recorded.

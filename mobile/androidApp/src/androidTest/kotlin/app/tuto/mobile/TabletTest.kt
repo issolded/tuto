@@ -289,8 +289,12 @@ class TabletTest {
                 val q = run.question!!
                 if (!shotFigure && (q.svg != null || q.nativeFigure != null)) { shot("03-question-with-figure"); shotFigure = true }
                 if (i == 0) {
+                    assertFalse(exists("hint-fox"))
                     shot("03-question-first")
                     compose.onNodeWithText("Hint").performScrollTo().performClick()
+                    compose.onNodeWithTag("hint-fox").performScrollTo().assertIsDisplayed()
+                    compose.onNodeWithText("Let's work it out").assertIsDisplayed()
+                    shot("03-interactive-hint")
                 }
                 if (q.format == "choice" && q.options.isNotEmpty()) {
                     tap("option_${q.answer}")

@@ -1,5 +1,6 @@
 package app.tuto.mobile.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,7 +87,7 @@ private fun Asking(run: MathRun, s: Strings, onClose: () -> Unit) {
     val q = run.question ?: return
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth / LocalDensity.current.fontScale.coerceAtLeast(1f) >= 960.dp
-        Column(Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(Modifier.fillMaxSize().padding(horizontal = if (maxWidth < 600.dp) 16.dp else 32.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             TopBar(run, s, onClose)
             if (wide) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
@@ -134,20 +135,39 @@ private fun QuestionPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: M
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             QuestionFigure(q, Modifier.fillMaxWidth())
         }
-        Spacer(Modifier.weight(1f))
-        if (run.hintsShown > 0 || run.feedback != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (run.hintsShown > 0) Fox(Modifier.size(156.dp).testTag("hint-fox"), FoxPose.Hint, event = q.question)
-                Bubble(run, q, s, Modifier.weight(1f))
+        val locked = run.feedback is MathRun.Feedback.Correct || run.feedback is MathRun.Feedback.Revealed
+        if (run.hintsShown == 0 && !locked) {
+            SoftButton(s.say("Hint", "İpucu", "Pista"), Modifier.testTag("math-hint")) { run.hint() }
+        }
+        AnimatedVisibility(visible = run.hintsShown > 0) {
+            key(run.index) {
+                Column(Modifier.fillMaxWidth().testTag("math-help-panel"), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Fox(Modifier.size(112.dp).testTag("hint-fox"), FoxPose.Hint, event = run.index)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(s.say("Let's work it out", "Birlikte çözelim", "Vamos a resolverlo"), style = MaterialTheme.typography.titleLarge)
+                            Bubble(run, q, s, Modifier.fillMaxWidth())
+                        }
+                    }
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color(0xFFF3F7FC)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        MathHelp(q)
+                    }
+                    if (!locked && run.hintsShown < q.hints.size) {
+                        TextButton(onClick = { run.hint() }) {
+                            Text(s.say("Another hint", "Bir ipucu daha", "Otra pista"))
+                        }
+                    }
+                }
             }
         }
+        if (run.hintsShown == 0 && run.feedback != null) Bubble(run, q, s, Modifier.fillMaxWidth())
     }
 }
 
 @Composable
 private fun Bubble(run: MathRun, q: MathQuestion, s: Strings, modifier: Modifier) {
     val fb = run.feedback
-    val hints = q.hints.take(run.hintsShown)
+    val hints = q.hints.take(run.hintsShown).takeLast(1)
     val (text, color) = when (fb) {
         is MathRun.Feedback.Correct -> s.say("Yes! That's right.", "Evet! Doğru.", "¡Sí! Correcto.") to Ink.greenSoft
         is MathRun.Feedback.Wrong -> (listOfNotNull(fb.why ?: s.say("Not quite. Have another go!", "Neredeyse! Bir daha dene.", "¡Casi! Prueba otra vez.")) + hints.lastOrNull().let { listOfNotNull(it) }).joinToString("\n") to Ink.wrongSoft
@@ -204,19 +224,14 @@ private fun AnswerPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: Mod
         }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val canHint = run.hintsShown < maxOf(1,q.hints.size) && !locked
             if (run.feedback is MathRun.Feedback.Wrong && run.hintsShown > 0) {
                 SoftButton(s.say("Skip", "Geç", "Saltar")) { run.skip() }
-            }
-            if (canHint) {
-                SoftButton(s.say("Hint", "İpucu", "Pista")) { run.hint() }
             }
             if (q.format == "decimal") SoftButton("±") { run.type("±") }
             if (q.format != "choice") {
                 BigButton(s.say("Check", "Kontrol et", "Comprobar"), Modifier.weight(1f), enabled = MathInput.valid(run.input) && !locked) { run.submit() }
             }
         }
-        if (run.hintsShown > 0) key(q.question) { MathHelp(q) }
         Scratchpad()
     }
 }

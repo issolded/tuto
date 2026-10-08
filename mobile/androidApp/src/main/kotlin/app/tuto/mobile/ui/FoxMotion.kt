@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -44,7 +45,8 @@ fun Fox(modifier: Modifier = Modifier, pose: FoxPose = FoxPose.Welcome, event: A
     }
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
       val side = minOf(maxWidth, maxHeight)
-      Box(Modifier.size(side).clip(RoundedCornerShape(20.dp))) {
+      // Hint artwork points left in the source; mirror both poster and TextureView toward the copy.
+      Box(Modifier.size(side).scale(scaleX = if (pose == FoxPose.Hint) -1f else 1f, scaleY = 1f).clip(RoundedCornerShape(20.dp))) {
         if (pose != FoxPose.Hint || still || !foreground || failed) Image(painterResource(pose.poster), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         if (!still && foreground) key(pose, event) {
             var player by remember { mutableStateOf<MediaPlayer?>(null) }

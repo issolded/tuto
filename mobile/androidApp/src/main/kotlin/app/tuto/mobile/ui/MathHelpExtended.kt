@@ -69,25 +69,7 @@ import org.json.JSONArray
                 TextButton({count=0}) { Text(reset) }
             }
         }
-        "fracbar" -> {
-            val compare=v.optString("mode") == "cmp"
-            val denoms=v.optJSONArray("denoms")
-            val parts=v.optInt("parts")
-            val rows=if(compare) (0 until (denoms?.length() ?: 0)).map { denoms!!.optInt(it) } else listOf(parts)
-            Text(s.say("Tap the equal parts. Compare the shaded lengths.", "Eşit parçalara dokun. Boyalı uzunlukları karşılaştır.", "Toca las partes iguales. Compara las longitudes coloreadas."))
-            rows.filter { it in 1..40 }.forEachIndexed { row,d ->
-                val fixed=when(v.optString("mode")) { "shade" -> v.optInt("shaded"); "add" -> v.optInt("a"); else -> 0 }
-                Row(Modifier.fillMaxWidth().height(48.dp),horizontalArrangement=Arrangement.spacedBy(2.dp)) {
-                    repeat(d) { col -> val id=row*100+col
-                        Box(Modifier.weight(1f).fillMaxHeight().background(when {col<fixed -> Color(0xFF008577);id in touched -> Color(0xFFFFB45B);else -> Color(0xFFE4EBF0)}).clickable { touched=if(id in touched)touched-id else touched+id })
-                    }
-                }
-                val selected=(0 until d).count { it<fixed || row*100+it in touched }
-                Text("$selected / $d")
-            }
-            if(v.optString("mode") == "add") Text(s.say("Add ${v.optInt("b")} more parts.", "${v.optInt("b")} parça daha ekle.", "Añade ${v.optInt("b")} partes más."))
-            TextButton({touched=emptySet()}) { Text(reset) }
-        }
+        "fracbar" -> FractionHelp(v)
         "tally", "pictogram" -> {
             val rows=v.optJSONArray("rows").objects()
             val use=v.optJSONArray("use")?.let { a -> (0 until a.length()).map { a.optInt(it) }.toSet() }
