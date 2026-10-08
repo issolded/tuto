@@ -22,9 +22,6 @@ import androidx.compose.ui.unit.dp
 import app.tuto.mobile.R
 import app.tuto.mobile.data.LocalStrings
 import org.json.JSONObject
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
 
 internal val ReadingMilestones = listOf(10, 50, 100, 200)
 
@@ -67,11 +64,11 @@ internal fun completedBookCount(books: List<JSONObject>): Int = books
                     ReadingMilestones.forEachIndexed { index, target ->
                         val earned = count >= target
                         Column(Modifier.offset(roomWidth * (.335f + (index % 2) * .06f), roomHeight * (.34f + (index / 2) * .17f))
-                            .size(roomWidth * .056f, roomHeight * .145f)
+                            .size(roomWidth * .058f, roomHeight * .145f)
                             .shadow(3.dp, RoundedCornerShape(3.dp))
                             .background(Color(0xFFB18C58), RoundedCornerShape(3.dp))
-                            .padding(3.dp).background(Color(0xFFFFF5DE))
                             .clickable(role = Role.Button) { award = target }
+                            .padding(3.dp).background(Color(0xFFFFF5DE))
                             .testTag("reading-award-$target"),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center) {
