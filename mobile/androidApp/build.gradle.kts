@@ -14,8 +14,8 @@ android {
         applicationId = "app.tuto.mobile.preview"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.10.0-paper-library"
+        versionCode = 14
+        versionName = "0.10.1-compact"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
         externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=MinSizeRel" } }
@@ -45,7 +45,6 @@ dependencies {
     implementation(files(layout.buildDirectory.file("quickjs-classes/quickjs.jar")).builtBy(quickJsClasses))
     // Draws the maths figures the engine renders as SVG.
     implementation("com.caverock:androidsvg-aar:1.4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.04.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
