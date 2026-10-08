@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.tuto.mobile.data.MathQuestion
@@ -48,26 +51,26 @@ import kotlin.math.sin
 
 /** The picture a question comes with, or nothing. Same pictures as the browser. */
 @Composable
-fun QuestionFigure(q: MathQuestion, modifier: Modifier = Modifier) {
+fun QuestionFigure(q: MathQuestion, modifier: Modifier = Modifier, maxFigureHeight: Dp = 320.dp) {
     var expanded by androidx.compose.runtime.remember(q) { androidx.compose.runtime.mutableStateOf(false) }
     if (q.svg == null && q.nativeFigure == null) return
     Column(modifier) {
         androidx.compose.material3.TextButton(onClick = { expanded = true }) { Text(app.tuto.mobile.data.LocalStrings.current.say("Enlarge picture", "Görseli büyüt", "Ampliar imagen")) }
-        FigureContent(q, Modifier.fillMaxWidth())
+        FigureContent(q, Modifier.fillMaxWidth(), maxFigureHeight)
     }
     if (expanded) PictureDialog({ expanded = false }) { FigureContent(q, Modifier.fillMaxSize()) }
 }
 
-@Composable private fun FigureContent(q: MathQuestion, modifier: Modifier) {
+@Composable private fun FigureContent(q: MathQuestion, modifier: Modifier, maxFigureHeight: Dp = 480.dp) {
     when {
-        q.svg != null -> SvgFigure(q.svg, modifier)
+        q.svg != null -> SvgFigure(q.svg, modifier, maxFigureHeight)
         q.nativeFigure != null && q.visual != null -> NativeFigure(q.nativeFigure, q.visual, modifier)
     }
 }
 
 /** An SVG rendered by the web's own figure components inside the engine. */
 @Composable
-fun SvgFigure(markup: String, modifier: Modifier = Modifier) {
+fun SvgFigure(markup: String, modifier: Modifier = Modifier, maxFigureHeight: Dp = 480.dp) {
     val prepared = remember(markup) { app.tuto.mobile.data.SvgMarkup.prepare(markup) }
     val svg = remember(prepared) { runCatching { SVG.getFromString(prepared) }.getOrNull() }
     if (svg == null) {
@@ -78,16 +81,19 @@ fun SvgFigure(markup: String, modifier: Modifier = Modifier) {
     val ratio = if (box != null && box.height() > 0f) box.width() / box.height() else 1.6f
     // Render to a software bitmap at the measured physical pixel size. Root CSS dimensions
     // and Picture playback on hardware canvases must not shrink or blank the web SVG.
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().heightIn(max = 480.dp).aspectRatio(ratio)) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
+        // A full-width square cannot also obey a shorter max height via aspectRatio:
+        // Compose can measure it beyond the bound. Give the bitmap an explicit viewport.
+        val viewportHeight = minOf(maxWidth / ratio, maxFigureHeight, maxHeight)
         val density = androidx.compose.ui.platform.LocalDensity.current
         val width = with(density) { maxWidth.roundToPx() }.coerceIn(1, 2400)
-        val height = with(density) { maxHeight.roundToPx() }.coerceIn(1, 2400)
+        val height = with(density) { viewportHeight.roundToPx() }.coerceIn(1, 2400)
         val bitmap = remember(prepared, width, height) {
             android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888).also {
                 svg.renderToCanvas(android.graphics.Canvas(it), android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat()))
             }
         }
-        androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+        androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.fillMaxWidth().height(viewportHeight).clipToBounds(), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
     }
 }
 

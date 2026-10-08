@@ -133,7 +133,7 @@ private fun QuestionPanel(run: MathRun, q: MathQuestion, s: Strings, modifier: M
             ListenButton(q.question, run.child.language, speaker, s.say("Listen", "Dinle", "Escuchar"), pal.soft)
         }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            QuestionFigure(q, Modifier.fillMaxWidth())
+            QuestionFigure(q, Modifier.fillMaxWidth(), maxFigureHeight = if (run.hintsShown > 0) 180.dp else 320.dp)
         }
         val locked = run.feedback is MathRun.Feedback.Correct || run.feedback is MathRun.Feedback.Revealed
         if (run.hintsShown == 0 && !locked) {

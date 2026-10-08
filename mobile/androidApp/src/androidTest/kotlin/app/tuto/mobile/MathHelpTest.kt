@@ -1,6 +1,11 @@
 package app.tuto.mobile
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import app.tuto.mobile.ui.SvgFigure
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.*
@@ -72,5 +77,15 @@ class MathHelpTest {
         compose.onNodeWithText("1 / 4").assertIsDisplayed()
         compose.onNodeWithTag("fraction-0-0").assertIsNotEnabled()
         compose.onNodeWithTag("fraction-1-3").assertIsNotEnabled()
+    }
+    @Test fun squareFigureHonoursCompactHintViewport() {
+        compose.setContent {
+            Column(Modifier.width(600.dp)) {
+                SvgFigure("""<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="95" fill="#416ec4"/></svg>""", Modifier.testTag("compact-figure"), maxFigureHeight = 180.dp)
+                androidx.compose.material3.Text("Hint below picture", Modifier.testTag("below-figure"))
+            }
+        }
+        compose.onNodeWithTag("compact-figure").assertHeightIsEqualTo(180.dp)
+        compose.onNodeWithTag("below-figure").assertIsDisplayed()
     }
 }
