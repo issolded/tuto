@@ -1,5 +1,7 @@
 package app.tuto.mobile.ui
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,7 +26,7 @@ import org.json.JSONObject
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun LibraryBrowser(books: List<JSONObject>, stories: List<JSONObject>, archive: Boolean, onArchive: (Boolean)->Unit, busy: Boolean, allowReading: Boolean, allowWriting: Boolean, onNewBook:()->Unit, onNewStory:()->Unit, onOpen:(JSONObject,Boolean)->Unit, onFinish:(JSONObject)->Unit, onDelete:(JSONObject,Boolean)->Unit) {
     val s=LocalStrings.current
-    val roomHeightLimit = (LocalConfiguration.current.screenHeightDp.dp - 240.dp).coerceIn(300.dp, 600.dp)
+    var choosingBook by remember { mutableStateOf(false) }
     var filters by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf("all") }
@@ -38,19 +40,19 @@ import org.json.JSONObject
     val years=all.filter(::completed).map { finishedYear(it.first) }.filter { it.isNotBlank() }.distinct().sortedDescending()
     Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Text(s.say("Your reading room", "Okuma odan", "Tu rincón de lectura"), style=MaterialTheme.typography.headlineMedium)
-            Text(s.say("Every book is a new world. Make this room yours.", "Her kitap yeni bir dünya. Bu oda senin.", "Cada libro es un mundo. Este rincón es tuyo."), color=Ink.soft)
+            Text(s.say("My Library", "Kütüphanem", "Mi biblioteca"), style=MaterialTheme.typography.headlineMedium)
+            Text(s.say("A little reading, a big adventure.", "Biraz okuma, büyük bir macera.", "Un poco de lectura, una gran aventura."), color=Ink.soft)
         }
     }
     FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         FilterChip(selected=!archive,onClick={onArchive(false);page=0},label={Text(s.say("Continue reading", "Okumaya devam", "Seguir leyendo"))})
         FilterChip(selected=archive,onClick={onArchive(true);page=0},label={Text(s.say("My bookshelf", "Kitap rafım", "Mi estantería"))},modifier=Modifier.testTag("library-archive"))
-        run {
-            if(allowReading) Button(onClick=onNewBook,enabled=!busy) { Text(s.say("Book Explorer", "Kitap keşfi", "Explorar libros")) }
+        if (!archive) {
+            if(allowReading) Button(onClick={choosingBook=true},enabled=!busy) { Text(s.say("Choose a book", "Kitap seç", "Elegir un libro")) }
             if(allowWriting) Button(onClick=onNewStory,enabled=!busy,modifier=Modifier.testTag("new-story")) { Text(s.say("Write a story", "Hikâye yaz", "Escribir cuento")) }
         }
+        TextButton(onClick={filters=!filters}) { Text(s.say("Search and filters", "Arama ve filtreler", "Buscar y filtrar")) }
     }
-    TextButton(onClick={filters=!filters}) { Text(s.say("Search and filters", "Arama ve filtreler", "Buscar y filtrar")) }
     if (filters) {
     OutlinedTextField(query,{query=it;page=0},label={Text(s.say("Search books and stories", "Kitap ve hikâye ara", "Buscar libros y cuentos"))},modifier=Modifier.fillMaxWidth())
     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -63,8 +65,7 @@ import org.json.JSONObject
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = maxWidth >= 840.dp
-        val roomWidth = minOf(maxWidth, roomHeightLimit * 1.6f).coerceAtLeast(480.dp)
-        val pageSize = if (archive) (roomWidth.value * .43f / 56f).toInt().coerceIn(3, 6) * 3 else 36
+        val pageSize = if (archive) 9 else 36
         val pages=((items.size+pageSize-1)/pageSize).coerceAtLeast(1)
         val current=page.coerceAtMost(pages-1)
         val shown=items.drop(current*pageSize).take(pageSize)
@@ -73,7 +74,7 @@ import org.json.JSONObject
             ShelfRoom(shown, archive, busy, onSelect={selected=it})
         }
         Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            if (archive) ReadingRoom(shown, completedCount, busy) { selected = it }
+            if (archive) ReadingRoom(shown, completedCount, busy, allowReading, allowWriting, { choosingBook=true }, onNewStory) { selected = it }
             else if(wide) Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(24.dp), verticalAlignment=Alignment.Top) {
                 Box(Modifier.weight(1f)) { shelves() }
                 ReadingNook(completedCount, Modifier.width(260.dp))
@@ -88,6 +89,19 @@ import org.json.JSONObject
             }
         }
     }
+    if (choosingBook && allowReading) AlertDialog(onDismissRequest={choosingBook=false},
+        title={Text(s.say("What are you reading now?", "Şimdi hangi kitabı okuyorsun?", "¿Qué estás leyendo ahora?"))},
+        text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement=Arrangement.spacedBy(10.dp)) {
+            val active=books.filter { !it.optBoolean("completed") }.distinctBy { it.optString("id") }
+            if(active.isEmpty()) Text(s.say("Start your next adventure by adding a book.", "Bir kitap ekleyerek yeni macerana başla.", "Añade un libro para empezar tu próxima aventura."))
+            active.forEach { b ->
+                OutlinedButton(onClick={choosingBook=false;onOpen(b,false)}, enabled=!busy, modifier=Modifier.fillMaxWidth().testTag("choose-${b.optString("id")}")) {
+                    Text(b.optString("title"), maxLines=2, overflow=TextOverflow.Ellipsis)
+                }
+            }
+        }},
+        confirmButton={Button(onClick={choosingBook=false;onNewBook()}, enabled=!busy, modifier=Modifier.testTag("add-new-book")) { Text(s.say("Add a new book", "Yeni kitap ekle", "Añadir un libro")) }},
+        dismissButton={TextButton(onClick={choosingBook=false}) { Text(s.say("Close", "Kapat", "Cerrar")) }})
     selected?.let { (b,story) -> AlertDialog(onDismissRequest={selected=null},title={Text(b.optString("title"))},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         BookCover(b,Modifier.width(160.dp).height(212.dp))
         b.optStringOrNull("author")?.let { Text(it, color=Ink.soft) }
@@ -117,8 +131,8 @@ private val BookColors=listOf(Color(0xFF315B75), Color(0xFF6C8265), Color(0xFFA7
             Text(s.say("$count adventures finished", "$count macera tamamlandı", "$count aventuras terminadas"), style=MaterialTheme.typography.titleLarge)
             Text(s.say("Tap a book to look inside.", "İçine bakmak için bir kitaba dokun.", "Toca un libro para abrirlo."), color=Ink.soft)
             // A reading milestone visualises real records; it never grants or invents Gems.
-            val next=(count/5+1)*5
-            LinearProgressIndicator(progress={ (count%5)/5f }, modifier=Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)), color=Ink.green)
+            val next=ReadingMilestones.firstOrNull { it>count } ?: ReadingMilestones.last()
+            LinearProgressIndicator(progress={ (count.toFloat()/next).coerceIn(0f,1f) }, modifier=Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)), color=Ink.green)
             Text(s.say("Next collection milestone: $next", "Sıradaki koleksiyon hedefi: $next", "Próximo hito de colección: $next"), style=MaterialTheme.typography.bodySmall, color=Ink.soft)
         }
     }

@@ -1215,3 +1215,16 @@ removal preserves the paper-cut identity; no new 3D mascot). Version 12/0.9.0-re
 Build/device checks pending; do not describe this as deployed or device-validated yet.
 
 Reading room final validation: source c1c6fc2, CI37749108413 passed APK/lint/22 JVM tests and 23/23 on both standard and 16 KiB tablets. Inspected clean native screenshot after reducing room height and separating the avatar/frames. Adaptive shelves now show 9–18 real records/page. 0.9.0 APK saved for physical-device testing; no live-family E2E claim. The pre-existing random spinner reinforcement failure is reproducible and documented in BUILD_STATUS; final CI passing does not resolve it.
+
+### 2026-10-08 Paper library approval supersedes the realistic warm room
+User rejected 0.9's photorealistic room as inconsistent with the app, then approved the
+pastel paper-cut interior: sky-blue window, writing desk -> story entry, existing reading
+fox -> What are you reading now? / Choose a book -> active books or add new, real completed
+books on shelves. Milestones are now explicitly 10/50/100/150 (not 200). Native-only.
+Room plate comes from the approved imagegen concept, with texts/books/fox/awards removed;
+all records, labels and actions are native and localized. Original reading video is matted
+offline into alpha WebP; API28+ animates within the room, lifecycle/reduce-motion aware,
+API26/27 and decode failure use a matching transparent poster. No runtime generation or
+white video rectangle. Nine actual completed records/page; narrow devices pan the room.
+Version 13/0.10.0-paper-library. Verification pending. No backend/web deployment or data
+migration; persistent cross-device award ledger remains outside this UI change.

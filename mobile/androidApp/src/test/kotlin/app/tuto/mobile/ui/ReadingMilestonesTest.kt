@@ -12,6 +12,7 @@ class ReadingMilestonesTest {
         assertEquals(1, completedBookCount(listOf(finished, JSONObject(finished.toString()), active, malformed)))
     }
     @Test fun allFourMilestonesUnlockAtTheirExactThresholds() {
+        assertEquals(listOf(10, 50, 100, 150), ReadingMilestones)
         for (threshold in ReadingMilestones) {
             val records = (1..threshold).map { JSONObject().put("id", "book-$it").put("completed", true) }
             assertEquals(threshold, completedBookCount(records))
