@@ -74,3 +74,10 @@ Native-only implementation of the approved interactive screen: hint and manipula
 Three new device regressions cover the fraction contracts; the full sitting test checks on-demand helper visibility and captures its screen. Existing session/reinforcement tests continue checking outgoing help flags. No web/backend deployment or real family write. APK/device gates pending; do not claim completion until CI results are recorded.
 
 First 0.8.0 run b9eaf1b: APK/lint/JVM and standard tablet 22/22 passed, but visual inspection caught an oversized square clock overflowing the hint row. Follow-up replaces aspect-ratio constraint overflow with an explicit SVG viewport; question figures cap at 320 dp, or 180 dp while help is open. Added a 600 dp-wide square figure regression asserting the 180 dp height. Delivery waits for this corrected source.
+
+
+## 0.8.0 final automated validation — 8 October 2026
+
+Source b2016a3d75a7c54ddcaa959708bea89377abd2e4, CI https://github.com/issolded/tuto/actions/runs/37733468246: Android build, JVM tests, lint, signature and alignment passed; standard and 16 KiB API 35 tablets each passed all 23 tests (zero failures/skips). The 16 KiB device reported PAGE_SIZE=16384. The four new helper tests cover fraction addition bounds/reset, shaded index arrays with white-part counting, unit-fraction comparison and square SVG viewport height. The full sitting still verifies help metadata and fresh reinforcement, and its hint screenshot was inspected.
+
+Delivered APK comes from artifact 11531180497, archive SHA256 011984332d6cffa48cb784d5474db64a7c344e13c9a84e117b2f1d2194c09d3d. Downloaded bytes matched; ZIP CRC and all four native-library alignment checks passed again. APK SHA256 e3559eae11753be3ca4016c969ab8ed34bfb0786b006babc84ee6381bab7be09. It is a native validation APK connected to the existing live backend; real-family/device acceptance remains with the user. No web/backend changes or real family writes.
