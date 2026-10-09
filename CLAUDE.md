@@ -118,6 +118,21 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 
 ## Açık işler / yol haritası
 
+- [ ] iOS kabuğu (2026-10-07, Claude; `claude/ios-shell`, kullanıcı kararı: iOS'ta native arayüz değil kabuk).
+      `mobile/iosShell`: iPhone + iPad, WKWebView canlı siteyi (`tuto-blue.vercel.app`) yükler. **Kural:** Vercel/Railway ile çıkan her şey
+      (ekranlar, sorular, `src/lib` motoru, yeni modül) uygulamaya release'siz gider; yalnız bu klasördeki değişiklik (Ekran Süresi, izin, ikon,
+      bildirim) App Store release ister. Android'den farklı: orada `src/lib` APK'da paketli. Kabuk: güvenli alan, oturum kalıcı, zoom/link önizleme/geri
+      kaydırma kapalı, dış linkler dışarıda, alert/confirm, çevrimdışı ekranı (ağ gelince kendiliğinden yeniler), kamera izni EN/TR/ES, UA'da
+      `TutoShell/<sürüm>` (`src/lib/nativeShell.js`). **Google girişi:** gömülü görünümde Google reddeder → kabukta `redirectTo`
+      `app.tuto.mobile://auth/<yol>`, kabuk `/auth/v1/authorize`'ı `ASWebAuthenticationSession`'da açar. **Supabase'de bir kez:** Redirect URLs'e
+      `app.tuto.mobile://**` (yoksa Google girişi kabukta tamamlanmaz; e-posta girişi etkilenmez). Proje XcodeGen'le üretilir (`project.yml`), bundle
+      ID `app.tuto.mobile`. Simülatörde iPhone/iPad çalıştı. İkon ve açılış mor `TutoMascot`; açılış `design_handoff_app_opening` seçenek D
+      (lila zemin, maskot + "tuto" yan yana, maskot yaylanarak düşer, yazı belirir; launch screen bilerek yalnız lila — animasyon boştan başladığı
+      için lockup orada olsa göz kırpardı). **TestFlight:** App Store Connect "Tuto: Learn & Earn", 1.0 (1) ve (2) yüklendi; yükleme
+      `mobile/iosShell/upload-testflight.sh` (bireysel hesap, kayıtlı cihaz yok → imzasız arşiv + yerel Apple Distribution sertifikasıyla export).
+      Gökhan App Store Connect ekibine davet edildi (ilk gün form kilitliydi, ertesi gün açıldı) → dahili test, inceleme yok. Sıradaki: Family
+      Controls entitlement başvurusu (dağıtım onayı haftalar sürebilir), App Store öncesi Sign in with Apple (4.8). Service worker yok (çevrimiçi).
+
 - [ ] Matematikte atlanan konular (2026-10-06, Claude; kullanıcı kararı). **Tuto öğretici değil asesör:** ebeveyn seviyeyi elle düşüremez/çıkaramaz
       (ölçümü bozar); ama "okulda henüz işlenmedi, bir süre sorma" diyebilir (kapsamı tanımlar). `children.math_skip` (jsonb), **4 hafta varsayılan, en çok 12,
       aynı anda en çok 3 konu**, kendiliğinden biter (`server/mathSkip.js`). Seviye ve doğruluk hesabına dokunmaz. Süzme tek yerde: `/math-plan` `skip_topic_ids`

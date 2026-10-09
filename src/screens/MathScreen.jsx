@@ -16,6 +16,7 @@ import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
 import { t, say } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
+import { useFeedbackHaptics } from '../lib/nativeShell'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -2243,6 +2244,7 @@ export default function MathScreen() {
   const [input,         setInput]        = useState('')
   const [flash,         setFlash]        = useState(null)        // { correct, answer }
   const [evalResult,    setEvalResult]   = useState(savedResult?.evalResult ?? null)
+  useFeedbackHaptics(flash, evalResult?.gems_earned)
   const [retrying,      setRetrying]     = useState(false)
   const [leveledUp,     setLeveledUp]    = useState(false)
   const [helpUsed,      setHelpUsed]     = useState(saved?.helpUsed ?? false)

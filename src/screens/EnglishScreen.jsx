@@ -7,6 +7,7 @@ import { EnglishStem, EnglishOptions, englishWhyLines } from '../components/Engl
 import { EnglishReviewList } from '../components/SittingReview'
 import Scratchpad from '../components/Scratchpad'
 import EnglishHelpVisual from '../components/EnglishHelpVisual'
+import { useFeedbackHaptics } from '../lib/nativeShell'
 
 // The child's English: verbal reasoning, spelling and grammar in the Bond 11+ English books'
 // formats. Ten questions from the child's age band, one at a time, each marked when it is sent.
@@ -75,6 +76,7 @@ export default function EnglishScreen() {
   const [flash, setFlash] = useState(null)        // the answer response while the overlay is up
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [result, setResult] = useState(null)
+  useFeedbackHaptics(flash, result?.gems_earned)
   // Help for the question on screen. `rungs` are the hints asked for so far (the server builds each
   // one when it is asked, so nothing that gives the answer is ever sent with the question);
   // `struck` the options out of play, by a hint or by a first wrong try (single-answer only).

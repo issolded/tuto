@@ -122,3 +122,18 @@ body {
   60% { transform: scale(1.05); }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* Screen-to-screen animation. Every navigate() runs as a View Transition (src/App.jsx): the old
+   screen fades out quickly while the new one fades up a few pixels, short enough that a child
+   tapping fast never waits on it. The bottom bars carry their own view-transition-name, so they
+   stay put instead of fading with the page. Browsers without the API navigate as before. */
+::view-transition-old(root) { animation: tt-vt-out 120ms ease-in both; }
+::view-transition-new(root) { animation: tt-vt-in 240ms cubic-bezier(.2, .8, .2, 1) both; }
+::view-transition-group(tt-bottom-nav) { animation: none; }
+::view-transition-old(tt-bottom-nav) { display: none; }
+::view-transition-new(tt-bottom-nav) { animation: none; }
+@keyframes tt-vt-out { to { opacity: 0; } }
+@keyframes tt-vt-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

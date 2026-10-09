@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase, getChildGems } from '../lib/supabase'
 import { NAV_ITEMS, NavIcon } from './BottomNav'
 import { t, childLang } from '../lib/i18n'
+import { haptic } from '../lib/nativeShell'
 
 const ACCENT = '#f79433'
 const INK_SOFT = '#b6aecb'
@@ -39,7 +40,7 @@ export default function RailNav({ active }) {
           const isActive = id === active
           const color = isActive ? ACCENT : INK_SOFT
           return (
-            <button key={id} onClick={() => nav(route)}
+            <button key={id} onClick={() => { haptic('selection'); nav(route) }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 background: isActive ? 'rgba(247,148,51,.10)' : 'none',
