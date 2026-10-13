@@ -147,6 +147,10 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       oturumu `src/lib` motoruyla kendisi kurar (aşağıya bak) ve `MathPlan`/`weighting` yalnız `focus` + `weak_topic_ids` taşıyor, `skip_topic_ids`'i bilmiyor →
       **native'de atlanan konu rotasyonda hâlâ çıkar** (zayıf/odak/pekiştirme listeleri sunucuda süzüldüğü için onlardan çıkmaz). Yapılacak: `Models.kt` `MathPlan`'a
       `skipTopicIds`, `MathEngine.kt` `weighting`'e `skipTopicIds` (ve `mobile/engine` paketinin yeniden derlenmesi, çünkü `planSession` filtresi paketin içinde).
+- [x] Eksik çarpan yardımı doğrudan (2026-10-13, Claude; kullanıcı bulgusu). "? × 8 = 48" yardımı 3 × 8'den başlıyor, kalanı `24 ÷ 8` ile
+      buluyordu: çapa "bildiğin işlem" değildi ve öğretilen bölmeyi kullanıyordu. Artık 3 adım: kolay çapa (5 × ya da 10 ×; en çok 5 zıplama
+      kalacak şekilde, çarpımı cevaba eşit olmayan), t'şer ileri sayma (`40 → 48`, zıplama sayısı), topla. İpucu aynı yolu söyler. TR "8'ları" eki kalktı.
+      Test `clock-h24.test.mjs`, math:check temiz. **Native etkisi:** `mathTemplates.js` native pakette; `mobile/engine` yeniden derlenmeli.
 - [x] Saat "başladı/bitirir" ipucu (2026-10-13, Claude; kullanıcı bulgusu). 08:00'da biten 43 dk'lık ders için ipucu "önce tam saate geri say" diyordu — zaten tam saat.
       İpucu artık yardımın üç durumunu izliyor: dakikalar saatin içinde kalıyorsa "saat değişmez, yalnız dakikalar", tam saatten geri gidiliyorsa
       "zaten tam saat, bir önceki saate geçersin; 60 − n", yalnız gerçekten tam saat aşılıyorsa eski iki adım. math:check temiz.

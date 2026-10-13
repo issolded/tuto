@@ -5943,10 +5943,12 @@ function missingFactor(level, lang) {
   const t = pick(tableFor(band))
   const k = randInt(2, 12)
   const p = t * k
-  // The fact to start from: about half way, and never a product or a remainder that is the answer itself
-  // (6 × 2 = 12 as the first step of "? × 2 = 24" would hand over the 12).
-  const half = [Math.floor(k / 2), Math.floor(k / 2) - 1, Math.floor(k / 2) + 1, 2, 3]
-    .find(h => h >= 2 && h <= k - 2 && h * t !== k && p - h * t !== k && h !== k) ?? Math.floor(k / 2)
+  // The fact to start from: one the child really has (5 × or 10 ×), close enough below the answer that the
+  // rest is a few jumps of t, and never a product that is the answer itself (5 × 2 = 10 for "? × 2 = 20").
+  // Not "half way": 3 × 8 is not a fact a 7-year-old holds, and the rest of the way was then a division —
+  // the very thing the question teaches.
+  const half = [5, 10, 4, 6, 3, 2].find(h => h < k && k - h <= 5 && h * t !== k) ?? Math.floor(k / 2)
+  const jumps = Array.from({ length: k - half + 1 }, (_, i) => num((half + i) * t, lang))
   const shape = randInt(0, 2)
   const q = shape === 0 ? `? × ${t} = ${p}` : shape === 1 ? `${t} × ? = ${p}` : `${p} = ? × ${t}`
   return {
@@ -5959,18 +5961,16 @@ function missingFactor(level, lang) {
     ...(k >= 6
       ? stepsHelp([
         stp(lang, `${half} × ${t}`, half * t,
-          `Start with a fact you know. What is ${half} × ${t}?`,
-          `Bildiğin bir işlemle başla. ${half} × ${t} kaç eder?`,
-          `Empieza con algo que ya sabes. ¿Cuánto es ${half} × ${t}?`),
-        stp(lang, `${p} − ${half * t}`, p - half * t,
-          `That gets you part of the way to ${p}. How much is still missing?`,
-          `Bu seni ${p} sayısına kadar bir yere getirdi. Daha ne kadar eksik?`,
-          `Eso te lleva parte del camino hasta ${p}. ¿Cuánto falta todavía?`),
-        stp(lang, `${p - half * t} ÷ ${t}`, k - half,
-          `How many more ${t}s make that?`, `Bu kaç tane daha ${t} eder?`, `¿Cuántos ${t} más hacen eso?`),
+          `Start with an easy fact. What is ${half} × ${t}?`,
+          `Kolay bir işlemle başla. ${half} × ${t} kaç eder?`,
+          `Empieza con algo fácil. ¿Cuánto es ${half} × ${t}?`),
+        stp(lang, jumps.join(' → '), k - half,
+          `Now count on in ${t}s up to ${num(p, lang)}. How many more ${t}s is that?`,
+          `Şimdi ${num(p, lang)} sayısına kadar ${trDist(t)} ${trDist(t)} ileri say. Kaç tane daha ${t}?`,
+          `Ahora cuenta de ${t} en ${t} hasta ${num(p, lang)}. ¿Cuántos ${t} más son?`),
         stp(lang, `${half} + ${k - half}`, k,
           `Add the ${t}s you used first and the ones you just found:`,
-          `Önce kullandığın ${t}'ları ve şimdi bulduklarını topla:`,
+          `Baştaki ${half} tane ile şimdi saydıklarını topla:`,
           `Suma los ${t} que usaste primero y los que acabas de encontrar:`),
       ])
       : p <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: p, size: t, mode: 'exact' } } : {}),
@@ -5978,9 +5978,9 @@ function missingFactor(level, lang) {
       say(lang, `Which number in the ${t} times table makes ${p}?`, `${t} çarpım tablosunda hangi sayı ${p} eder?`,
                 `¿Qué número de la tabla del ${t} da ${p}?`),
       k >= 6
-        ? say(lang, `Use a fact you know: ${half} × ${t} = ${half * t}. How many more ${t}s do you need to reach ${p}?`,
-                    `Bildiğin bir işlemi kullan: ${half} × ${t} = ${half * t}. ${p} sayısına ulaşmak için kaç tane daha ${t} lazım?`,
-                    `Usa algo que sabes: ${half} × ${t} = ${half * t}. ¿Cuántos ${t} más necesitas para llegar a ${p}?`)
+        ? say(lang, `Start from an easy fact: ${half} × ${t} = ${half * t}. Then count on in ${t}s to ${p}.`,
+                    `Kolay bir işlemden başla: ${half} × ${t} = ${half * t}. Sonra ${p} sayısına kadar ${trDist(t)} ${trDist(t)} say.`,
+                    `Empieza por algo fácil: ${half} × ${t} = ${half * t}. Luego cuenta de ${t} en ${t} hasta ${p}.`)
         : say(lang, `Count up in ${t}s until you reach ${p}, and count how many steps it took.`,
                     `${p} sayısına ulaşana kadar ${trDist(t)} ${trDist(t)} say ve kaç adım attığını say.`,
                     `Cuenta de ${t} en ${t} hasta llegar a ${p} y cuenta cuántos saltos has dado.`),
