@@ -169,10 +169,16 @@ export function EnglishStem({ item, lang, palette: C = LIGHT }) {
   }
   if (item.type === 'rhyme-synonym') {
     return (
-      <div style={{ fontSize: 17 }}>
-        <strong style={{ letterSpacing: 1 }}>{p.word.toUpperCase()}</strong>
-        <span style={{ ...small, margin: '0 8px' }}>{t('eng_rhymes_with', lang)}</span>
-        <strong>{p.rhyme}</strong>
+      // Two conditions, one line each: a 7-year-old checks every option against both.
+      <div style={{ fontSize: 17, lineHeight: 1.6 }}>
+        {[['eng_rs_means', p.word.toUpperCase()], ['eng_rs_rhymes', p.rhyme.toUpperCase()]].map(([key, w]) => {
+          const [before, after] = t(key, lang).split('%w%')
+          return (
+            <div key={key}>
+              <span style={{ color: C.dim }}>• </span>{before}<strong style={{ letterSpacing: 1 }}>{w}</strong>{after}
+            </div>
+          )
+        })}
       </div>
     )
   }
