@@ -3197,6 +3197,12 @@ function placeCountInMultiples(level, lang) {
     format: 'numeric',
     correct_answer: start + step * 4,
     operandKey: `pv:mult:${step}:${start}`,
+    // The same arrows as adding on: the last two terms and the next, each jump labelled +step. The child lands
+    // on a number already in the question first (the rule checks out), then on the answer.
+    help: { kind: 'jumps', mode: 'add', from: terms[2], to: start + step * 4, stops: [terms[2], terms[3], start + step * 4],
+      intro: say(lang, `Each jump is +${num(step, lang)}. Where do you land? Type it! 🦘`,
+                       `Her zıplama +${num(step, lang)}. Nereye vardın? Yaz! 🦘`,
+                       `Cada salto es +${num(step, lang)}. ¿Dónde caes? ¡Escríbelo! 🦘`) },
     hint_steps: [
       say(lang, `Every step goes up by the same amount.`,
                 `Her adımda aynı kadar artıyor.`,

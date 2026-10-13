@@ -1527,7 +1527,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
           textAlign: 'center', maxWidth: 290,
         }}>
-          {tutoBubble || t.addJumpsTap}
+          {tutoBubble || jumps.intro || t.addJumpsTap}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
           {stops.map((n, i) => (
