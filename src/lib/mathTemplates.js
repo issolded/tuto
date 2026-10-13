@@ -6442,7 +6442,21 @@ function timeYoung(level, lang) {
         }
         return stepsHelp(steps, { kind: 'digital', times: [here] }, true)
       })()),
-      hint_steps: [
+      // The same three cases as the help above. "Count back to the o'clock first" from 08:00 points at a
+      // step that does not exist, and when the minutes stay inside the hour there is no o'clock to reach.
+      hint_steps: !crosses ? [
+        say(lang, `The ${add} minutes stay inside this hour, so the hour does not change.`, `${add} dakika bu saatin içinde kalıyor, saat değişmez.`,
+                  `Los ${add} minutos caben en esta hora, así que la hora no cambia.`),
+        say(lang, `Only the minutes change: ${after ? 'add' : 'take away'} ${add}.`, `Yalnız dakikalar değişir: ${add} ${after ? 'ekle' : 'çıkar'}.`,
+                  `Solo cambian los minutos: ${after ? 'suma' : 'resta'} ${add}.`),
+      ] : !after && start % 60 === 0 ? [
+        say(lang, `${hm(start, pad)} is already an o'clock. Going back takes you into the hour before.`,
+                  `${hm(start, pad)} zaten tam saat. Geri gidince bir önceki saate geçersin.`,
+                  `Las ${hm(start, pad)} ya es una hora en punto. Al retroceder pasas a la hora anterior.`),
+        say(lang, `${add} minutes before the hour is 60 − ${add} minutes past the hour before.`,
+                  `Tam saatten ${add} dakika önce, bir önceki saatin 60 − ${add} dakika geçesidir.`,
+                  `${add} minutos antes de la hora en punto son 60 − ${add} minutos pasadas de la hora anterior.`),
+      ] : [
         say(lang, `Count ${after ? 'on' : 'back'} to the o'clock first.`, `Önce ${after ? 'ileri' : 'geri'} doğru tam saate kadar say.`,
                   `Cuenta primero ${after ? 'hacia delante' : 'hacia atrás'} hasta la hora en punto.`),
         say(lang, `Then ${after ? 'add' : 'take away'} whatever is left of the ${add} minutes.`, `Sonra ${add} dakikadan kalanı ${after ? 'ekle' : 'çıkar'}.`,
