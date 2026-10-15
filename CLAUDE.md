@@ -184,6 +184,21 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       `src/components/EnglishHelpVisual.jsx`. Denetim: açık resim cevabı taşımıyor, dolu resim cevabı yazıyor (`english-help-audit`). Tarayıcıda 390px.
       **Sıradaki fikir (kullanıcı):** kapalı küme "ölçek kartı" (north→south için dört yön, "?" karşıda; günler, mevsimler, aylar, büyüklük/sıcaklık
       ölçekleri) — elle yazılmış küçük bir tablo ister (antonimlerin çoğu kapalı küme değil), kapsam tahminen %5-15.
+- [x] Matematik yardımı, kullanıcı ekran görüntülerinden (2026-10-15, Claude). **(1) Büyük tuşlar:** yardımların dört ayrı 36px tuş ızgarası
+      vardı (zıplama, "katlarla say", adım adım, dizi okları); hepsi artık ana cevap klavyesinin kendisi, bir boy küçük (60px, `NumberKeyboard size`).
+      **(2) Hangi "?":** sorulan "?" turuncu hap içinde titrer (`.math-asking`, Hareketi Azalt'ta durur), cevap kutusu aynı turuncu çerçevede,
+      sırası gelmeyenler gri. **(3) İki sayı arasında ":" yok:** Türkiye'de ":" bölme işareti; "25 groups of 8: 25 × 8" 8 ÷ 25 gibi okunuyordu.
+      Aynı şeyin iki söylenişi "=", sayma listesi "→", sebep kelimeyle (Venn/Carroll TR "12 sayısı 5'ten büyük değil…"). Oranlar ("x : 4") kaldı.
+      `scripts/math-colon-check.mjs` `math:check` içinde. **(4) Basamak yardımı cevabı yazmıyordu artık:** +10/−1 sonrası değişen sütunun rakamı
+      turuncu "?" (`PlaceValueHelp` shift), çocuk blokları sayar; elde/bozma ara adımındaki "10" kalır. **(5) Bilgi ve soru ayrı paragraf:** soru
+      kartında (ekran + kâğıt) metnin sonundaki soru cümlesi alt satıra iner (`src/lib/splitAsk.js`, yalnız gösterim; ondalık ve "Mr." bölünmez;
+      test `split-ask.test.mjs`); ~%45 soru bölünüyor. **(6) Açı bilgisi yardımı:** dik açının yarısı / dik açı kaç derece / tam tur kaç derece /
+      tam ve yarım tur kaç dik açı sorularında yardım ipucunu tekrarlıyordu; artık `sectors` çizimi (açı eşit parçalara bölünmüş, her 90° parçada ayrı
+      dik açı karesi) + çocuğun yazdığı zincir (90 ÷ 2; 360 ÷ 2 → 180 ÷ 2; 90 + 90 → 180 + 180; kareleri say). **(7) Kolay olanla say:** çarpma
+      hikâyesinde grup sayısı 10/5/2 ise ipucu yer değiştirir ("10 × 8 = 8 × 10: 10'ar 10'ar 8 kez say").
+      Tarayıcıda lab'da 375px (+ yatay iPad 1180×820 klavye); gerçek MathScreen oturumunda oynanmadı (soru kartı bölmesi bileşen olarak çizildi).
+      **Native etkisi:** (3)(6)(7) `mathTemplates.js`'te → Android/iOS motor paketleri yeniden derlenmeli; `sectors` çizimi web `MathFigure`'da, native
+      yardım panelleri (iOS `HelpPanel.swift`, Android) onu, büyük tuşları, titreyen "?"yi, basamak "?"sini ve bilgi/soru bölmesini ayrıca ister.
 - [ ] Uygulamada hikâye yazma (2026-10-02, Codex): yerel geliştirme hazır. Otomatik kayıt,
       cihazda kurtarma kopyası, birden fazla taslak, kütüphaneden devam, sürüm çakışması koruması.
       Değerlendirme sunucuda; taslakta Gem yok, ilk tamamlamada mevcut ödül akışı.
