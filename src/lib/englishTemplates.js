@@ -3508,7 +3508,12 @@ function topicKey(item) {
   return item.prompt.word ? `w:${item.prompt.word}` : null
 }
 
-const PER_TYPE = 3
+// Kinds that feel like the same question to a child even though they are different types: all
+// five ask "what does this word mean?". A sitting holds at most FAMILY_CAP of a family.
+const FAMILY = {
+  synonym: 'meaning', antonym: 'meaning', sense: 'meaning', 'odd-synonym': 'meaning', definition: 'meaning',
+}
+const FAMILY_CAP = 3
 
 export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {}) {
   const band = BANDS[bandKey]
@@ -3517,38 +3522,50 @@ export function generateSession(bandKey, count = 10, seed = Date.now(), opts = {
   const seen = new Set()
   const topics = new Set()
   const perType = {}
+  const perFamily = {}
+  const take = item => {
+    seen.add(itemSignature(item))
+    const topic = topicKey(item)
+    if (topic) topics.add(topic)
+    perType[item.type] = (perType[item.type] || 0) + 1
+    const fam = FAMILY[item.type]
+    if (fam) perFamily[fam] = (perFamily[fam] || 0) + 1
+    out.push(item)
+  }
+  const fresh = item => item && !seen.has(itemSignature(item))
   // Kinds the child owes from the last review: one question of each (at most three) comes first,
   // so the sitting leans on them without becoming only them.
   for (const type of (Array.isArray(opts.focus) ? opts.focus : []).filter(t => band.types.includes(t)).slice(0, 3)) {
     for (let i = 0; i < 60; i++) {
       const item = generateItem(bandKey, type, (seed + 7 + i * 15485863) | 0, opts)
-      if (!item) continue
-      const sig = itemSignature(item)
-      if (seen.has(sig)) continue
-      seen.add(sig)
-      const topic = topicKey(item)
-      if (topic) topics.add(topic)
-      perType[item.type] = (perType[item.type] || 0) + 1
-      out.push(item)
-      break
+      if (fresh(item)) { take(item); break }
     }
   }
-  // Two passes, as the puzzle engine does: the first holds the per-type and per-topic caps so a
-  // sitting is varied, the second drops them rather than return a short sitting.
-  for (const capped of [true, false]) {
-    for (let i = 0; out.length < count && i < count * 60; i++) {
-      const item = generateItem(bandKey, null, (seed + i * 104729) | 0, opts)
-      if (!item) continue
-      const sig = itemSignature(item)
-      if (seen.has(sig)) continue
-      const topic = topicKey(item)
-      if (capped && (perType[item.type] || 0) >= PER_TYPE) continue
-      if (capped && topic && topics.has(topic)) continue
-      seen.add(sig)
-      if (topic) topics.add(topic)
-      perType[item.type] = (perType[item.type] || 0) + 1
-      out.push(item)
+  // The rest is dealt from a shuffled deck of the band's kinds, one question per kind, the way a
+  // test paper is laid out. Drawing each kind at random let 10 questions out of 12-25 kinds repeat
+  // one in nearly every sitting and triple one in half of them (Sarp, 2026-10-14).
+  const r = rng(seed ^ 0x5eed)
+  const deck = shuffle(r, opts.types || band.types)
+  for (let round = 0; out.length < count && round < 3; round++) {
+    for (const type of deck) {
+      if (out.length >= count) break
+      if ((perType[type] || 0) > round) continue
+      const fam = FAMILY[type]
+      if (fam && (perFamily[fam] || 0) >= FAMILY_CAP * (round + 1)) continue
+      for (let i = 0; i < 40; i++) {
+        const item = generateItem(bandKey, type, (seed + round * 31 + i * 104729 + deck.indexOf(type) * 7919) | 0, opts)
+        if (!fresh(item)) continue
+        const topic = topicKey(item)
+        if (topic && topics.has(topic) && i < 30) continue
+        take(item)
+        break
+      }
     }
+  }
+  // A band whose kinds keep failing still gets a full sitting rather than a short one.
+  for (let i = 0; out.length < count && i < count * 60; i++) {
+    const item = generateItem(bandKey, null, (seed + i * 104729) | 0, opts)
+    if (fresh(item)) take(item)
   }
   return out
 }
