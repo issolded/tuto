@@ -39,14 +39,15 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
 
 - **50 kayıt tamam (2026-10-17):** 48 ok, 2 dinlenecek (UK pencere cümlesi ve UK A05 konuşması). Deneme setinin bütün klipleri
   üretildi. Son 31 kayıt, faturalı projeden alınan `GEMINI_TTS_API_KEY` ile üretildi.
-- **Cambridge kelime listesi gece koşusu (2026-10-17 00:30'da başladı):** `build.mjs --set words --wait-quota`, `TTS_GAP_MS=2000`, `caffeinate` altında.
-  - Kapsam: 1.364 klip, 2.690 kayıt (88'i kalıp, ör. "at the moment"). Çeşide özgü kelimeler yalnız kendi aksanında (candy US, autumn UK).
+- **Cambridge kelime listesi (2026-10-17 gecesi):** 1.364 klip, 2.690 kayıt (88'i kalıp, ör. "at the moment").
+  - Çeşide özgü kelimeler yalnız kendi aksanında (candy US, autumn UK).
   - Atlananlar, karar bekliyor: "as … as", "city/town centre", "take a photo/picture" ve anlama göre okunuşu değişen close/live/read/use/wind.
-  - Kayıt başına ~11 sn sürüyor (Whisper + iki yargıç çağrısı); tamamı ~8–9 saat. Günlük kotaya takılırsa API'nin söylediği süre kadar bekleyip devam eder.
-  - Yarıda kalırsa aynı komut kaldığı yerden sürer.
-  - Log: oturum scratchpad'inde `words-run.log`.
-  - Kelime ses dosyaları (~2.690 × ~12 KB m4a + c2pa ≈ 30 MB) commit edilmedi: repoya mı, doğrudan Storage'a mı kullanıcı kararı.
-  - Tek kelimede US aksanı doğrulanamıyor (8 kelime altında yargıç yalnız not düşer). US kelimelerden örneklem dinlenmeli.
+  - **Asıl sınır faturalı projede de günde 100 istek** (`generate_requests_per_model_per_day`, proje + model başına). Gün UTC gece yarısı (04:00 +04) yenileniyor.
+  - Koşu: `run-words.sh` (oturum scratchpad'i), 4 işçi (`--shard k/4`), `--no-qc`, `TTS_KEYS` = TTS projesi + sunucu projesi, yani günde 200 kayıt. Biri dolunca öbürüne geçer, ikisi de doluysa yenilenmeyi bekler.
+  - Bu hızla 2.690 kayıt ~13 gün sürer. Ölçek için Google Cloud'da kota artışı istenmeli (kullanıcı işi).
+  - `--no-qc` kayıtları "unchecked": yalnız sinyal kontrolünden geçti. Whisper ve yargıç sonra `build.mjs --rejudge` ile çalışır; yargıç ses kotası harcamaz, sohbet modeli kullanır.
+  - Kelime ses dosyaları (~30 MB) commit edilmedi: repoya mı, doğrudan Storage'a mı kullanıcı kararı.
+  - Tek kelimede US aksanı doğrulanamıyor; US kelimelerden örneklem dinlenmeli. Tek başına "a" ve "I", Whisper'da "ah"/"am" diye duyulup fail oluyor.
 - **Onay:** Hiçbir kayıt onaylı değil. Kural: onaysız ses çocuğa gösterilmez; `approved` bir insan dinledikten sonra `true` yapılır.
 
 ## Kararlar (gerekçeleri ENGLISH-AUDIO.md'de)

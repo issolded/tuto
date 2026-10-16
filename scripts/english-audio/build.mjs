@@ -3,6 +3,9 @@
 //   GEMINI_API_KEY=… WHISPER_MODEL=~/.cache/whisper-cpp/ggml-base.en.bin node scripts/english-audio/build.mjs [--set trial|words] [--only id,id] [--takes 3] [--wait-quota]
 //   --set words: the Cambridge wordlist clips (WORD_CLIPS); default is the trial set.
 //   --wait-quota: at the daily quota, sleep until the API says it resets and go on (for unattended runs).
+//   --no-qc: make only, one take, signal check only; status "unchecked" until --rejudge runs Whisper and the
+//     listening model. For runs where the TTS rate is what matters.
+//   --shard k/n: only every n-th clip from the k-th (0-based), so n processes can share one set.
 //   TTS_GAP_MS: least time between TTS requests (default 6500, for the 10-a-minute free tier).
 //
 // Nothing here runs in the app: recordings are made once, checked, and stored as files the screen plays.
@@ -15,7 +18,7 @@
 //   scripts/english-audio/provenance/<id>.c2pa        the "made by AI" manifest Google appends to the audio
 //   src/lib/literacy/audioManifest.generated.json    clip -> file, text, voice, checks, status
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, renameSync, rmdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -34,12 +37,33 @@ const TAKES = Number(arg('takes', 3))
 const SET = arg('set', 'trial')
 const CLIPS = SET === 'words' ? WORD_CLIPS : SET === 'trial' ? TRIAL_CLIPS : (() => { throw new Error(`--set ${SET}?`) })()
 const WAIT_QUOTA = process.argv.includes('--wait-quota')
+const NO_QC = process.argv.includes('--no-qc')
 const GAP = Number(process.env.TTS_GAP_MS || 6500)
+const [SHARD, SHARDS] = (arg('shard', '0/1')).split('/').map(Number)
 const PAUSE = 0.45            // seconds between dialogue lines
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 for (const d of [OUT_AUDIO, OUT_PROV]) mkdirSync(d, { recursive: true })
 const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {}
+
+// Several shards write the one manifest: each write takes a lock (mkdir is atomic), re-reads the file so no
+// other shard's entries are lost, sets its own entry and replaces the file whole.
+function saveEntry(key, entry) {
+  const lock = MANIFEST + '.lock'
+  for (let i = 0; ; i++) {
+    try { mkdirSync(lock); break } catch {
+      if (i > 2000) throw new Error(`manifest lock stuck: remove ${lock}`)
+      execFileSync('sleep', ['0.01'])
+    }
+  }
+  try {
+    const now = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {}
+    now[key] = entry
+    writeFileSync(MANIFEST + '.tmp', JSON.stringify(now, null, 1) + '\n')
+    renameSync(MANIFEST + '.tmp', MANIFEST)
+    Object.assign(manifest, now)
+  } finally { rmdirSync(lock) }
+}
 
 function wav(pcm, rate = 24000) {
   const h = Buffer.alloc(44)
@@ -69,11 +93,24 @@ function splitWav(buf) {
 
 class DailyQuota extends Error {}
 let lastCall = 0
+// TTS_KEYS: keys of several projects, comma-separated (default GEMINI_API_KEY). The TTS model's daily quota is
+// per project, so when one project's day is used up the next key goes on; with all of them resting, the run
+// waits for the first to come back (--wait-quota) or stops.
+const KEYS = (process.env.TTS_KEYS || process.env.GEMINI_API_KEY || '').split(',').map(k => k.trim()).filter(Boolean)
+const restUntil = new Map()     // key -> time its daily quota comes back
 async function speak(text, voice, lang, tries = 5) {
   const wait = GAP - (Date.now() - lastCall)              // the free tier allows 10 requests a minute
   if (wait > 0) await sleep(wait)
+  let key = KEYS.find(k => (restUntil.get(k) || 0) <= Date.now())
+  if (!key) {
+    const back = Math.min(...KEYS.map(k => restUntil.get(k)))
+    if (!WAIT_QUOTA) throw new DailyQuota('every key has used its day')
+    console.log(`    every key has used its day; waiting ${Math.round((back - Date.now()) / 60000)} min (until ${new Date(back).toLocaleTimeString()})`)
+    await sleep(back - Date.now())
+    return speak(text, voice, lang, tries)
+  }
   lastCall = Date.now()
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text }] }],
       generationConfig: { responseModalities: ['AUDIO'], speechConfig: { languageCode: lang, voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } }),
@@ -81,15 +118,18 @@ async function speak(text, voice, lang, tries = 5) {
   const j = await r.json()
   // The model allows 100 requests a day per project: past that, waiting a minute does not help.
   if (r.status === 429 && /per_day|PerDay/.test(JSON.stringify(j.error))) {
-    if (!WAIT_QUOTA) throw new DailyQuota(j.error?.message)
-    // "Please retry in 4h5m49.68s." — sleep that long (or an hour if it is not said) and ask again.
+    if (!WAIT_QUOTA && KEYS.length === 1) throw new DailyQuota(j.error?.message)
+    // "Please retry in 4h5m49.68s." — rest this key that long (or an hour if it is not said), try the next.
     const m = /retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/.exec(j.error?.message || '')
     const ms = m ? ((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0)) * 1000 + 60000 : 3600000
-    console.log(`    daily quota; waiting ${Math.round(ms / 60000)} min (until ${new Date(Date.now() + ms).toLocaleTimeString()})`)
-    await sleep(ms)
+    restUntil.set(key, Date.now() + ms)
+    console.log(`    daily quota on key ${KEYS.indexOf(key) + 1}/${KEYS.length}; it rests until ${new Date(Date.now() + ms).toLocaleTimeString()}`)
     return speak(text, voice, lang, tries)
   }
-  if ((r.status === 429 || r.status >= 500) && tries > 0) { await sleep(15000); return speak(text, voice, lang, tries - 1) }
+  if ((r.status === 429 || r.status >= 500) && tries > 0) {
+    console.log(`    ${r.status}, waiting 15 s (${String(j.error?.message || '').split('\n')[0].slice(0, 120)})`)
+    await sleep(15000); return speak(text, voice, lang, tries - 1)
+  }
   const part = j.candidates?.[0]?.content?.parts?.find(p => p.inlineData)
   if (!part) throw new Error(`no audio: ${JSON.stringify(j.error || j).slice(0, 200)}`)
   return splitWav(Buffer.from(part.inlineData.data, 'base64'))
@@ -110,11 +150,15 @@ async function bestTake(text, voice, variety, kind) {
   for (let t = 1; t <= TAKES; t++) {
     const { pcm, c2pa, rate } = await speak(text, voice, LANG[variety])
     const w = wav(pcm, rate)
-    const qc = await check(w, text, variety, kind)
+    let qc
+    if (NO_QC) {
+      const sig = checkSignal(w, text, kind)
+      qc = { status: sig.ok ? 'unchecked' : 'fail', issues: sig.issues }
+    } else qc = await check(w, text, variety, kind)
     const take = { pcm, c2pa, rate, qc, take: t }
     if (!best || rank[qc.status] < rank[best.qc.status] || (qc.status === best.qc.status && qc.issues.length < best.qc.issues.length)) best = take
     console.log(`    take ${t}: ${qc.status}${qc.issues.length ? ' · ' + qc.issues.join(' · ') : ''}`)
-    if (qc.status === 'ok') break
+    if (qc.status === 'ok' || (NO_QC && qc.status === 'unchecked')) break
   }
   return best
 }
@@ -151,8 +195,9 @@ if (process.argv.includes('--rejudge')) {
 }
 
 let stopped = null
-clipLoop: for (const clip of CLIPS) {
+clipLoop: for (const [index, clip] of CLIPS.entries()) {
   if (ONLY && !ONLY.has(clip.id)) continue
+  if (index % SHARDS !== SHARD) continue
   for (const variety of clip.varieties || ['uk', 'us']) {
     const voices = clip.kind === 'dialogue'
       ? clip.lines.map(([sp]) => VOICES[variety][SPEAKERS[sp]])
@@ -166,8 +211,9 @@ clipLoop: for (const clip of CLIPS) {
     }
     // A clip waiting for a person to listen already had its takes; redoing it costs quota for a coin toss.
     // Name it in --only to try again.
-    if (!ONLY && manifest[key]?.id === id && manifest[key].status === 'listen' && existsSync(join(OUT_AUDIO, `${id}.m4a`))) {
-      console.log(`skip ${key} (waiting to be heard)`)
+    // Likewise a clip made with --no-qc and not checked yet: --rejudge checks it, remaking it would not.
+    if (!ONLY && manifest[key]?.id === id && ['listen', 'unchecked'].includes(manifest[key].status) && existsSync(join(OUT_AUDIO, `${id}.m4a`))) {
+      console.log(`skip ${key} (${manifest[key].status === 'listen' ? 'waiting to be heard' : 'made, not checked yet'})`)
       continue
     }
     console.log(`${key}`)
@@ -203,7 +249,7 @@ clipLoop: for (const clip of CLIPS) {
     if (manifest[key]?.id && manifest[key].id !== id) {
       for (const f of [join(OUT_AUDIO, `${manifest[key].id}.m4a`), join(OUT_PROV, `${manifest[key].id}.c2pa`)]) try { unlinkSync(f) } catch {}
     }
-    manifest[key] = {
+    const entry = {
       id, file: `english-audio/${id}.m4a`, clip: clip.id, variety, kind: clip.kind, items: clip.items,
       text: clip.kind === 'dialogue' ? undefined : clip.text, lines: clip.kind === 'dialogue' ? lines : undefined,
       voice: clip.kind === 'dialogue' ? undefined : voices[0], model: MODEL, made: new Date().toISOString().slice(0, 10),
@@ -211,8 +257,8 @@ clipLoop: for (const clip of CLIPS) {
       issues: [...lines.flatMap(l => l.issues), ...(whole && whole.ok === false ? [`whole dialogue: ${whole.issues[0]}`] : [])],
       approved: false,   // set by a person after listening
     }
-    writeFileSync(MANIFEST, JSON.stringify(manifest, null, 1) + '\n')
-    console.log(`  → ${manifest[key].status}`)
+    saveEntry(key, entry)
+    console.log(`  → ${entry.status}`)
   }
 }
 
