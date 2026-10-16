@@ -1,6 +1,9 @@
 // Makes, checks and stores the English recordings listed in clips.mjs, for UK and US English.
 //
-//   GEMINI_API_KEY=… WHISPER_MODEL=~/.cache/whisper-cpp/ggml-base.en.bin node scripts/english-audio/build.mjs [--only id,id] [--takes 3]
+//   GEMINI_API_KEY=… WHISPER_MODEL=~/.cache/whisper-cpp/ggml-base.en.bin node scripts/english-audio/build.mjs [--set trial|words] [--only id,id] [--takes 3] [--wait-quota]
+//   --set words: the Cambridge wordlist clips (WORD_CLIPS); default is the trial set.
+//   --wait-quota: at the daily quota, sleep until the API says it resets and go on (for unattended runs).
+//   TTS_GAP_MS: least time between TTS requests (default 6500, for the 10-a-minute free tier).
 //
 // Nothing here runs in the app: recordings are made once, checked, and stored as files the screen plays.
 // For each clip and variety, up to --takes recordings are made; the first that passes all three checks in
@@ -17,7 +20,7 @@ import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
-import { CLIPS, VOICES, SPEAKERS } from './clips.mjs'
+import { CLIPS as TRIAL_CLIPS, WORD_CLIPS, VOICES, SPEAKERS } from './clips.mjs'
 import { checkSignal, checkAsr, judge } from './qc.mjs'
 
 const MODEL = 'gemini-3.8-flash-tts'
@@ -28,6 +31,10 @@ const MANIFEST = 'src/lib/literacy/audioManifest.generated.json'
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d }
 const ONLY = arg('only') ? new Set(arg('only').split(',')) : null
 const TAKES = Number(arg('takes', 3))
+const SET = arg('set', 'trial')
+const CLIPS = SET === 'words' ? WORD_CLIPS : SET === 'trial' ? TRIAL_CLIPS : (() => { throw new Error(`--set ${SET}?`) })()
+const WAIT_QUOTA = process.argv.includes('--wait-quota')
+const GAP = Number(process.env.TTS_GAP_MS || 6500)
 const PAUSE = 0.45            // seconds between dialogue lines
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -63,7 +70,7 @@ function splitWav(buf) {
 class DailyQuota extends Error {}
 let lastCall = 0
 async function speak(text, voice, lang, tries = 5) {
-  const wait = 6500 - (Date.now() - lastCall)            // the TTS model allows 10 requests a minute
+  const wait = GAP - (Date.now() - lastCall)              // the free tier allows 10 requests a minute
   if (wait > 0) await sleep(wait)
   lastCall = Date.now()
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
@@ -73,7 +80,15 @@ async function speak(text, voice, lang, tries = 5) {
   })
   const j = await r.json()
   // The model allows 100 requests a day per project: past that, waiting a minute does not help.
-  if (r.status === 429 && /per_day|PerDay/.test(JSON.stringify(j.error))) throw new DailyQuota(j.error?.message)
+  if (r.status === 429 && /per_day|PerDay/.test(JSON.stringify(j.error))) {
+    if (!WAIT_QUOTA) throw new DailyQuota(j.error?.message)
+    // "Please retry in 4h5m49.68s." — sleep that long (or an hour if it is not said) and ask again.
+    const m = /retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/.exec(j.error?.message || '')
+    const ms = m ? ((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0)) * 1000 + 60000 : 3600000
+    console.log(`    daily quota; waiting ${Math.round(ms / 60000)} min (until ${new Date(Date.now() + ms).toLocaleTimeString()})`)
+    await sleep(ms)
+    return speak(text, voice, lang, tries)
+  }
   if ((r.status === 429 || r.status >= 500) && tries > 0) { await sleep(15000); return speak(text, voice, lang, tries - 1) }
   const part = j.candidates?.[0]?.content?.parts?.find(p => p.inlineData)
   if (!part) throw new Error(`no audio: ${JSON.stringify(j.error || j).slice(0, 200)}`)
@@ -138,7 +153,7 @@ if (process.argv.includes('--rejudge')) {
 let stopped = null
 clipLoop: for (const clip of CLIPS) {
   if (ONLY && !ONLY.has(clip.id)) continue
-  for (const variety of ['uk', 'us']) {
+  for (const variety of clip.varieties || ['uk', 'us']) {
     const voices = clip.kind === 'dialogue'
       ? clip.lines.map(([sp]) => VOICES[variety][SPEAKERS[sp]])
       : [VOICES[variety].female]
@@ -202,7 +217,7 @@ clipLoop: for (const clip of CLIPS) {
 }
 
 if (stopped) {
-  const left = CLIPS.flatMap(c => ['uk', 'us'].map(v => `${c.id}:${v}`)).filter(k => !manifest[k])
+  const left = CLIPS.flatMap(c => (c.varieties || ['uk', 'us']).map(v => `${c.id}:${v}`)).filter(k => !manifest[k])
   console.log(`\nStopped at ${stopped}: the TTS model's daily quota is used up (see the message above). Run the same command`)
   console.log(`tomorrow; accepted clips are skipped. Not made yet (${left.length}): ${left.join(', ')}`)
 }

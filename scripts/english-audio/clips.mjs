@@ -56,3 +56,39 @@ export const CLIPS = [
   { id: 'i-look', kind: 'instruction', text: 'Look and listen.', items: ['example'] },
   { id: 'i-your-turn', kind: 'instruction', text: 'Now you try.', items: ['example'] },
 ]
+
+// The Cambridge Young Learners wordlist (src/lib/literacy/yleWordlist.generated.js) as single-word clips,
+// kept apart from the trial set: `build.mjs --set words`. One clip per spelling, merged across meanings
+// ("at" / "at-2"); "child/children" gives both forms. A word the list pairs with its other-variety
+// equivalent is made only for its own variety: "candy" (UK "sweets") US only, "autumn" (US "fall") UK only;
+// "fall" is also a verb in the list, so it gets both. Left out, and listed by `wordSkips` for a person:
+// patterns ("as … as"), entries still holding "/" or "(", and words whose sound depends on the meaning
+// (close, live, read, use, wind) — said alone, the model picks one at random.
+import { YLE_WORDLIST } from '../../src/lib/literacy/yleWordlist.generated.js'
+
+const SOUND_BY_MEANING = new Set(['close', 'live', 'read', 'use', 'wind', 'tear', 'lead', 'record', 'bow', 'row'])
+const slug = t => t.toLowerCase().replace(/’/g, "'").replace(/[^a-z0-9']+/g, '-').replace(/'/g, '').replace(/^-|-$/g, '')
+
+export const wordSkips = []
+const byText = new Map()
+for (const e of YLE_WORDLIST) {
+  const own = e.uk ? ['us'] : e.us ? ['uk'] : ['uk', 'us']
+  for (const raw of e.forms?.length ? e.forms : [e.word]) {
+    const text = raw.trim()
+    if (/[…/()]/.test(text)) { wordSkips.push({ text, why: 'pattern or alternatives' }); continue }
+    if (SOUND_BY_MEANING.has(text.toLowerCase())) { wordSkips.push({ text, why: 'sound depends on the meaning' }); continue }
+    const key = text.toLowerCase()      // "May" and "may" sound the same: one clip, the lower-case spelling
+    const c = byText.get(key) || { id: `yw-${slug(text)}`, kind: text.includes(' ') ? 'phrase' : 'word', text, items: [], levels: new Set(), varieties: new Set() }
+    if (text === key) c.text = text
+    c.items.push(e.id); c.levels.add(e.level); own.forEach(v => c.varieties.add(v))
+    byText.set(key, c)
+  }
+}
+export const WORD_CLIPS = [...byText.values()].map(c => ({ ...c, levels: [...c.levels], varieties: ['uk', 'us'].filter(v => c.varieties.has(v)) }))
+{
+  const seen = new Map()
+  for (const c of WORD_CLIPS) {
+    if (seen.has(c.id)) throw new Error(`two words share the clip id ${c.id}: "${seen.get(c.id)}" and "${c.text}"`)
+    seen.set(c.id, c.text)
+  }
+}
