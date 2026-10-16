@@ -5,7 +5,7 @@ import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './engli
 import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
 import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from './puzzleReview.js'
 import { localTopicName } from './topicNames.js'
-import { activeSkips, skipIds, addSkip, removeSkip, yearTopicIds, describeSkips, SKIP_DEFAULT_WEEKS, SKIP_MAX_WEEKS, SKIP_MAX_TOPICS } from './mathSkip.js'
+import { activeSkips, skipIds, addSkip, removeSkip, yearTopicIds, describeSkips, remindersDue, markReminded, reminderText, canExtend, sinceOf, SKIP_DEFAULT_WEEKS, SKIP_MAX_WEEKS, SKIP_MAX_TOPICS } from './mathSkip.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
 import { buildWeekReport, weekContext } from './week.js'
@@ -838,7 +838,7 @@ const WA_TEMPLATES = {
 // An approval request is a third thing to the gate below and the same thing to Meta: both
 // templates say only "name + one clause", and getting a new one approved takes days we have
 // no reason to spend.
-const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity', autopilot: 'activity' }
+const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity', autopilot: 'activity', reminder: 'activity' }
 
 // A newline, a tab or a run of spaces in a variable is rejected by WhatsApp, and it rejects
 // the whole send rather than the variable — so a stray line break in a book title would lose
@@ -974,10 +974,15 @@ function stripInternalIds(text) {
 // 'autopilot' is the one message a parent gets no matter how quiet they asked for, because it
 // says approvals have come back to them. A parent who never hears it cannot tell whether Tuto
 // is still deciding on their behalf, and that is not a detail to leave to inference.
+//
+// 'reminder' is the same kind of message for a setting the parent made that is about to end on its
+// own (a maths topic left out until a date): it passes every level, for the reason autopilot does —
+// "quiet" means "don't tell me what happened", not "change things behind my back without asking".
+// It is still held by quiet hours and by autopilot, and its sweep retries rather than lose it.
 const NOTIFY_LEVEL_ALLOWS = {
-  quiet:    { attention: true, autopilot: true, approval: false, activity: false },
-  required: { attention: true, autopilot: true, approval: true,  activity: false },
-  all:      { attention: true, autopilot: true, approval: true,  activity: true  },
+  quiet:    { attention: true, autopilot: true, reminder: true, approval: false, activity: false },
+  required: { attention: true, autopilot: true, reminder: true, approval: true,  activity: false },
+  all:      { attention: true, autopilot: true, reminder: true, approval: true,  activity: true  },
 }
 
 // Quiet hours, and deliberately not the `allowed_hours` key already sitting in prefs. That one
@@ -1712,7 +1717,11 @@ const CONTRIBUTION_TOOLS = [{
         'itself — say so plainly, with the end date from the result, and that they can extend or end it any time. ' +
         'At most 3 topics can be skipped at once; if the result says too_many, tell them which are already ' +
         'skipped and ask which to bring back. To bring a topic back early set resume true (topic_id "all" for ' +
-        'every one). Do NOT use this for "she is struggling" — that is a topic to weight (set_math_focus) or ' +
+        'every one). A couple of days before a skip ends Tuto asks the parent once whether to bring it back or ' +
+        'keep it out longer (that message is in the conversation). A reply like "keep it out", "uzat", "bir süre ' +
+        'daha" = this tool with the SAME topic_id and weeks (4 if they name no length); "bring it back", "geri ' +
+        'ekle", "işlendi" = resume true. A topic can be out at most 12 weeks counted from when it was FIRST left ' +
+        'out: if the result is at_max, say it cannot be extended and give the date it comes back. Do NOT use this for "she is struggling" — that is a topic to weight (set_math_focus) or ' +
         'simply to wait on; ask whether the topic has actually not been taught yet.',
       parameters: {
         type: 'OBJECT',
@@ -2004,6 +2013,11 @@ async function setMathSkipTool(childId, topicId, parentId, { weeks, resume } = {
              detail: `at most ${SKIP_MAX_TOPICS} topics can be skipped at once so a session still covers the year`,
              skipped_now: describeSkips(current, lang) }
   }
+  if (added.error === 'at_max') {
+    return { success: false, error: 'at_max', max_weeks: SKIP_MAX_WEEKS, comes_back: added.until.slice(0, 10),
+             detail: `a topic can be left out for at most ${SKIP_MAX_WEEKS} weeks from when it was first left out; it cannot be extended past ${added.latest.slice(0, 10)}. It can still be brought back now (resume).`,
+             skipped_now: describeSkips(current, lang) }
+  }
   if (added.error) return { success: false, error: added.error, available }
   // A topic cannot be leaned on and left out at once: a skip ends the focus on it.
   const clearsFocus = child.math_focus?.topic_id === topicId
@@ -2011,8 +2025,65 @@ async function setMathSkipTool(childId, topicId, parentId, { weeks, resume } = {
   if (failed) return failed
   return { success: true, child: child.name, topic_name: localTopicName(topicId, topicId, lang),
            until: added.entry.until.slice(0, 10), weeks: added.entry.weeks,
+           ...(added.entry.capped ? { shortened_to_max: `${SKIP_MAX_WEEKS} weeks from when it was first left out is the most; it ends on the date above` } : {}),
            focus_cleared: clearsFocus, skipped_now: describeSkips(added.list, lang) }
 }
+
+// ── Before a skipped topic comes back ──────────────────────────────────────
+// A skip ends by itself, which is the point (a skip nobody remembers is a topic never assessed), but
+// ending silently means the parent's "not taught yet" quietly turns into "being assessed" without them
+// knowing. So a couple of days before the end the parent is asked once, in a fixed message (the
+// promise "it comes back on <date> if you don't answer" is code's to make, not the model's). The
+// message goes through sendNotification, which logs it as a Tuto turn, so a reply of "extend it" or
+// "bring it back" reaches a model that can see what "it" is and answers with set_math_skip.
+//
+// Once: `reminded_at` is written into the entry (compare-and-swap on the whole list, so a parent's
+// own change in the same moment is not overwritten) BEFORE the message goes. A failed channel loses
+// that one message — it is still in the transcript — rather than repeating it every sweep.
+// Not at night: the sweep only sends 09:00–20:00 in the parent's zone, and when the gate would hold it
+// (quiet hours, autopilot) it leaves the entry unmarked and tries again on the next sweep.
+const SKIP_REMINDER_SWEEP_MS = 15 * 60 * 1000
+const SKIP_REMINDER_HOURS = [9, 20]
+const LOCALE_FOR = { tr: 'tr-TR', en: 'en-GB', es: 'es-ES' }
+
+async function remindEndingMathSkips(now = Date.now()) {
+  const { data: kids, error } = await supabase
+    .from('children').select('id, name, parent_id, math_skip').not('math_skip', 'is', null)
+  if (error) { if (!/math_skip/i.test(error.message || '')) console.error(`[MATH-SKIP] reminder sweep: ${error.message}`); return }
+
+  for (const child of kids || []) {
+    const due = remindersDue(child.math_skip, now)
+    if (!due.length || !child.parent_id) continue
+    const { data: parent } = await supabase.from('parents').select('prefs, timezone').eq('id', child.parent_id).maybeSingle()
+    if (!parent) continue
+    const tz = parent.timezone || 'UTC'
+    const local = DateTime.fromMillis(now).setZone(tz)
+    if (local.hour < SKIP_REMINDER_HOURS[0] || local.hour >= SKIP_REMINDER_HOURS[1]) continue
+    const notice = { kind: 'reminder', child: child.name }
+    if (!sendGate(parent.prefs, notice, tz).send) continue
+
+    const marked = markReminded(child.math_skip, due.map(e => e.topic_id), now)
+    const { data: saved, error: casErr } = await supabase.from('children').update({ math_skip: marked })
+      .eq('id', child.id).eq('math_skip', JSON.stringify(child.math_skip)).select('id')
+    if (casErr) { console.error(`[MATH-SKIP] reminder mark failed for ${child.id}: ${casErr.message}`); continue }
+    if (!saved?.length) continue   // the list changed under us; the next sweep reads the new one
+
+    const lang = parentLang(parent.prefs)
+    for (const e of due) {
+      const since = sinceOf(e)
+      const days = Math.max(1, Math.round((now - since) / 86400000))
+      const topic = localTopicName(e.topic_id, e.topic_id, lang)
+      const date = DateTime.fromISO(e.until).setZone(tz).setLocale(LOCALE_FOR[lang] || 'en-GB').toLocaleString({ day: 'numeric', month: 'long' })
+      const text = reminderText(lang, { child: child.name, topic, date, weeksAgo: days >= 7 ? Math.round(days / 7) : 0, daysAgo: days, extendable: canExtend(e) })
+      console.log(`[MATH-SKIP] reminder → parent ${child.parent_id} (${child.name}, ${e.topic_id}, ends ${e.until.slice(0, 10)})`)
+      await sendNotification(child.parent_id, text, { ...notice, detail: {
+        en: `${topic} comes back to the maths sessions on ${date} — reply to keep it out longer or bring it back now`,
+        tr: `${topic} konusu ${date} tarihinde matematiğe geri geliyor — uzatmak ya da şimdi geri eklemek için yazabilirsin`,
+      } }).catch(err => console.error(`[MATH-SKIP] reminder send failed: ${err.message}`))
+    }
+  }
+}
+setInterval(() => { remindEndingMathSkips().catch(err => console.error(`[MATH-SKIP] reminder sweep: ${err.message}`)) }, SKIP_REMINDER_SWEEP_MS).unref()
 
 async function setMathFocusTool(childId, topicId, parentId) {
   const { data: child } = await supabase
@@ -3118,7 +3189,10 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
         `sorulmamasını öner; (3) işlendiyse ama zor geliyorsa set_math_focus'u öner; (4) "matematiğe ara verin" ` +
         `deme — ebeveyn kendisi isterse saygı göster ama ilk öneri olarak tek oturum verisiyle çocuğu konudan ` +
         `uzaklaştırma. mathSkipped içindeki konuları "zayıf" ya da "boşluk" diye okuma: tarihe kadar ölçüm ` +
-        `dışındalar. set_math_skip'te bitiş tarihini sonuçtan oku ve söyle; konu kendiliğinden geri gelir.\n\n` +
+        `dışındalar. set_math_skip'te bitiş tarihini sonuçtan oku ve söyle; konu kendiliğinden geri gelir. ` +
+        `Bitişten ~2 gün önce Tuto ebeveyne bir kez "geri ekleyelim mi, bir süre daha mı" diye sorar (mesaj ` +
+        `sohbette); cevap "uzat/bir süre daha" ise AYNI topic_id ile set_math_skip (weeks, söylemezse 4), ` +
+        `"geri ekle/işlendi" ise resume true. at_max dönerse uzatılamadığını ve geri geleceği tarihi söyle.\n\n` +
         `- GERİ BİLDİRİM: ebeveyn uygulamadan, bir ekrandan, bildirimlerden ya da senin cevaplarından ` +
         `memnuniyetsizliğini, kafa karışıklığını, bir hatayı ya da bir isteğini söylerse submit_feedback'i ` +
         `çağır (kendi sözünü olduğu gibi parent_words'e koy). "Ekibe iletiyorum", "not aldım", "geliştiricilere ` +

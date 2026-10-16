@@ -3,6 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { activeSkips, addSkip, removeSkip, skipIds, clampWeeks, yearTopicIds, describeSkips,
+         remindersDue, markReminded, reminderText, canExtend, latestUntil, REMIND_BEFORE_MS,
          SKIP_DEFAULT_WEEKS, SKIP_MAX_WEEKS, SKIP_MAX_TOPICS } from '../../server/mathSkip.js'
 import { planSession } from '../../src/lib/mathCurriculum.js'
 import { BRITISH_CURRICULUM } from '../../src/lib/gemini.js'
@@ -68,6 +69,98 @@ test('topics are described in the parent’s language, with the end date', () =>
   const { list } = addSkip([], 'y3_fractions', 4, NOW)
   assert.equal(describeSkips(list, 'tr', NOW)[0].name, 'Kesirler ve onda birler')
   assert.equal(describeSkips(list, 'en', NOW)[0].until, '2026-11-03')
+})
+
+test('extending never goes past 12 weeks from when the topic was first left out', () => {
+  const first = addSkip([], 'y3_fractions', 8, NOW).list
+  // six weeks in, "four more" would end at week 10 — fine, and `since` stays the first day
+  const ext = addSkip(first, 'y3_fractions', 4, NOW + 6 * WEEK)
+  assert.equal(Date.parse(ext.entry.until), NOW + 10 * WEEK)
+  assert.equal(Date.parse(ext.entry.since), NOW)
+  assert.equal(ext.entry.capped, undefined)
+  // at week 9, "eight more" is cut to week 12
+  const cut = addSkip(ext.list, 'y3_fractions', 8, NOW + 9 * WEEK)
+  assert.equal(Date.parse(cut.entry.until), NOW + 12 * WEEK)
+  assert.equal(cut.entry.capped, true)
+  // and once it already ends at week 12, extending is refused, not silently accepted
+  const refused = addSkip(cut.list, 'y3_fractions', 4, NOW + 11 * WEEK)
+  assert.equal(refused.error, 'at_max')
+  assert.equal(Date.parse(refused.latest), NOW + 12 * WEEK)
+  // after it has come back, leaving it out again is a fresh start
+  const fresh = addSkip(cut.list, 'y3_fractions', 4, NOW + 13 * WEEK)
+  assert.equal(fresh.error, undefined)
+  assert.equal(Date.parse(fresh.entry.since), NOW + 13 * WEEK)
+})
+
+test('entries written before `since` existed count from set_at', () => {
+  const old = [{ topic_id: 'y3_time', set_at: new Date(NOW).toISOString(), until: new Date(NOW + 12 * WEEK).toISOString(), weeks: 12, source: 'parent' }]
+  assert.equal(latestUntil(old[0]), NOW + 12 * WEEK)
+  assert.equal(canExtend(old[0]), false)
+  assert.equal(addSkip(old, 'y3_time', 4, NOW + 11 * WEEK).error, 'at_max')
+})
+
+test('the reminder is due in the last two days, once', () => {
+  const { list } = addSkip([], 'y3_division', 4, NOW)
+  const end = NOW + 4 * WEEK
+  assert.deepEqual(remindersDue(list, end - REMIND_BEFORE_MS - 1), [])
+  assert.deepEqual(remindersDue(list, end - REMIND_BEFORE_MS).map(e => e.topic_id), ['y3_division'])
+  assert.deepEqual(remindersDue(list, end - 1).map(e => e.topic_id), ['y3_division'])
+  assert.deepEqual(remindersDue(list, end), [], 'once it has ended there is nothing to ask')
+  const marked = markReminded(list, ['y3_division'], end - REMIND_BEFORE_MS)
+  assert.ok(marked[0].reminded_at)
+  assert.deepEqual(remindersDue(marked, end - 1), [], 'asked once, never again for that end date')
+})
+
+test('extending after the reminder earns a new reminder for the new end date', () => {
+  const end = NOW + 4 * WEEK
+  const asked = markReminded(addSkip([], 'y3_division', 4, NOW).list, ['y3_division'], end - REMIND_BEFORE_MS)
+  const ext = addSkip(asked, 'y3_division', 4, end - REMIND_BEFORE_MS + 3600e3)
+  assert.equal(ext.entry.reminded_at, undefined)
+  const newEnd = Date.parse(ext.entry.until)
+  assert.equal(remindersDue(ext.list, newEnd - REMIND_BEFORE_MS).length, 1)
+})
+
+test('an entry set inside the reminder window is not asked about', () => {
+  // Defensive: with a one-week minimum the tool cannot write one today, but a hand-edited row could.
+  const end = NOW + WEEK
+  const row = [{ topic_id: 'y3_time', set_at: new Date(end - 24 * 3600e3).toISOString(), since: new Date(NOW).toISOString(), until: new Date(end).toISOString(), weeks: 1 }]
+  assert.deepEqual(remindersDue(row, end - 3600e3), [])
+})
+
+test('only the entries that are due are marked; the others are untouched', () => {
+  let list = addSkip([], 'y3_division', 4, NOW).list
+  list = addSkip(list, 'y3_time', 8, NOW).list
+  const at = NOW + 4 * WEEK - REMIND_BEFORE_MS
+  assert.deepEqual(remindersDue(list, at).map(e => e.topic_id), ['y3_division'])
+  const marked = markReminded(list, ['y3_division'], at)
+  assert.equal(marked.find(e => e.topic_id === 'y3_time').reminded_at, undefined)
+})
+
+test('the reminder says what happens with no answer, in each language, and offers more time only below the cap', () => {
+  const base = { child: 'Ada', topic: 'Bölme', date: '3 Kasım', weeksAgo: 4, daysAgo: 28 }
+  const tr = reminderText('tr', { ...base, extendable: true })
+  assert.match(tr, /^4 hafta önce Ada için "Bölme"/)
+  assert.match(tr, /bir süre daha/)
+  assert.match(tr, /Cevap gelmezse 3 Kasım tarihinde planlandığı gibi geri gelir\.$/)
+  const trCap = reminderText('tr', { ...base, extendable: false })
+  assert.doesNotMatch(trCap, /bir süre daha/)
+  assert.match(trCap, /en fazla 12 hafta/)
+  const en = reminderText('en', { ...base, topic: 'Division', date: '3 November', extendable: true })
+  assert.match(en, /^4 weeks ago we left "Division" out of Ada's maths sessions/)
+  assert.match(en, /comes back on 3 November as planned\.$/)
+  const es = reminderText('es', { ...base, topic: 'División', date: '3 de noviembre', weeksAgo: 1, extendable: false })
+  assert.match(es, /^Hace 1 semana sacamos/)
+  assert.match(es, /vuelve el 3 de noviembre como estaba previsto\.$/)
+  assert.doesNotMatch(es, /un tiempo más/)
+  assert.match(reminderText('en', { ...base, weeksAgo: 0, daysAgo: 5, extendable: true }), /^5 days ago/)
+  for (const l of ['en', 'tr', 'es']) assert.doesNotMatch(reminderText(l, { ...base, extendable: true }), /undefined/)
+})
+
+test('canExtend: a week of room left is needed before more time is offered', () => {
+  const at = NOW
+  assert.equal(canExtend(addSkip([], 'y3_time', 4, at).entry), true)
+  assert.equal(canExtend(addSkip([], 'y3_time', 11, at).entry), true)
+  assert.equal(canExtend(addSkip([], 'y3_time', 12, at).entry), false)
 })
 
 // 8-year-old = Year 3 in the curriculum.

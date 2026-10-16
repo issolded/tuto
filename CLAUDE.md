@@ -147,6 +147,19 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       oturumu `src/lib` motoruyla kendisi kurar (aşağıya bak) ve `MathPlan`/`weighting` yalnız `focus` + `weak_topic_ids` taşıyor, `skip_topic_ids`'i bilmiyor →
       **native'de atlanan konu rotasyonda hâlâ çıkar** (zayıf/odak/pekiştirme listeleri sunucuda süzüldüğü için onlardan çıkmaz). Yapılacak: `Models.kt` `MathPlan`'a
       `skipTopicIds`, `MathEngine.kt` `weighting`'e `skipTopicIds` (ve `mobile/engine` paketinin yeniden derlenmesi, çünkü `planSession` filtresi paketin içinde).
+      **Bitmeden hatırlatma (2026-10-16, Claude):** bitişten 2 gün önce ebeveyne bir kez sabit metin (`reminderText`, EN/TR/ES, `say()`): "N hafta önce X'i
+      çıkarmıştık, <tarih>'te geri geliyor; geri ekleyeyim mi, bir süre daha mı? Cevap gelmezse <tarih>'te planlandığı gibi geri gelir." `remindEndingMathSkips`
+      15 dk'da bir; yalnız ebeveynin saatiyle 09–20, kayıt girdinin içinde `reminded_at` (migration yok; listeye compare-and-swap, yazma ÖNCE, mesaj sonra →
+      kanal düşerse o mesaj kaybolur ama transkriptte durur, tekrar gitmez). Mesaj `sendNotification` ile transkripte girer, cevap mevcut `set_math_skip`'le
+      (uzat = aynı topic_id + weeks, geri ekle = `resume`); uzatma yeni girdi yazar, yeni bitiş yeni hatırlatma alır. **Gate kararı:** yeni tür `reminder` her
+      `notify_level`'dan geçer (autopilot mesajıyla aynı gerekçe: "quiet" = olanı anlatma demek, ayarımı sormadan değiştir demek değil); sessiz saatler ve
+      otomatik pilot tutar ama süpürme girdiyi işaretlemez, sonra tekrar dener (genel kapı tutulan mesajı düşürür, bu düşürmez). WhatsApp şablonu `activity`.
+      **12 hafta artık toplam:** `since` (ilk çıkarılış) uzatmalarda korunur, uzatma `since + 12 hafta`yı geçemez (kırpılırsa `shortened_to_max`, zaten tavandaysa
+      `at_max`); tavana bir haftadan az kaldıysa hatırlatma uzatma önermez. Eskiden her uzatma sayacı sıfırlıyordu (sonsuz uzatılabilirdi). Test: `math-skip.test.mjs`
+      (19), harness'te `server/scripts/math-skip-reminder.mjs` (quiet ebeveyn, gece/sessiz saat/otomatik pilot tutması, transkript, tavan ES, araç), `chat-probe`
+      gerçek modelle (`--prior-tuto`, `--overlay`, `--expect-tool` eklendi): "bir süre daha kalsın"/"uzat" 6/6 `weeks:4`, "geri ekle"/"işlendi, geri ekle" 6/6
+      `resume:true`, tavanda uzatılamadığını söylüyor. Gerçek Telegram'da gönderilmedi. **Native etkisi:** yok — sunucu süpürmesi ve sohbet; istemcinin okuduğu
+      `skip_topic_ids` değişmedi (`describeSkips`'e `since`/`latest_until` alanı eklendi, okumayan yok sayar).
 - [x] "N'er say, sırada ne var" yardımı oklu (2026-10-13, Claude; kullanıcı bulgusu). `placeCountInMultiples` (400, 500, 600, 700, …) yardımda yalnız
       iki ipucu cümlesi gösteriyordu. Artık toplama ile aynı `jumps` `mode: 'add'` oku: son iki terim + cevap, her ok +adım; çocuk önce sorudaki
       sayıya (kural tutuyor mu), sonra cevaba zıplar. Giriş cümlesi yardımın kendi `intro`'su ("Her zıplama +100…"), yoksa eski `addJumpsTap`.
