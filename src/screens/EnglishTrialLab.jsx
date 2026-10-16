@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useMemo, useRef, useState } from 'react'
 import { TRIAL_ITEMS, PASSAGES, AREAS, TRIAL_REVISION } from '../lib/literacy/trialSet'
 import AUDIO from '../lib/literacy/audioManifest.generated.json'
 import ART from '../lib/literacy/artManifest.generated.json'
@@ -7,12 +7,24 @@ import { EMOJI_ART } from '../lib/puzzleArt.generated'
 // /english-trial-lab — the 36-item English trial set (docs/ENGLISH-TRIAL-SET.md) with its recordings and
 // pictures. A reviewer tool, not a child screen: the answer keys are in this bundle by design. Two views:
 // "Review" lists every item with its key and the check status of every recording; "Play" shows one item at
-// a time with nothing but the item, for trying the set with a child. Nothing is saved or sent anywhere.
+// a time with nothing but the item, for trying the set with a child. Nothing is sent anywhere. In Review a
+// recording can be marked as heard and approved: the marks stay in this browser (by recording hash) and the
+// page copies the command (scripts/english-audio/approve.mjs) that writes them into the manifest.
 // Reviewer chrome is in English like the other labs; everything inside an item is English by rule.
 
 const INK = '#2c2745', SOFT = '#8d83ad', LINE = '#e4def3', GREEN = '#3fa97a', RED = '#e2586a', BLUE = '#4f8fe0', ORANGE = '#f08a24'
 const FONT = "'Lexend', 'Nunito', system-ui, sans-serif"
 const STATUS_COLOUR = { ok: GREEN, listen: ORANGE, fail: RED, unchecked: SOFT, missing: '#c9c3da' }
+
+// Marks made while listening, keyed by recording hash so a re-recorded clip is not carried over.
+const MARKS_KEY = 'tuto_trial_audio_marks_v1'
+function readMarks() {
+  try { return new Set(JSON.parse(localStorage.getItem(MARKS_KEY) || '[]')) } catch { return new Set() }
+}
+function writeMarks(set) {
+  try { localStorage.setItem(MARKS_KEY, JSON.stringify([...set])) } catch { /* private mode: marks last this visit only */ }
+}
+const Marks = createContext({ marks: new Set(), toggle: () => {} })
 
 function clipInfo(id, variety) {
   const m = AUDIO[`${id}:${variety}`]
@@ -44,6 +56,7 @@ function ListenButton({ clip, variety, label = 'Listen', review, big }) {
         background: c.url ? BLUE : '#d8d4e6', color: 'white', fontFamily: FONT, fontWeight: 700, fontSize: big ? 20 : 14,
       }}>🔊 {label}</button>
       {review && <StatusDot c={c} />}
+      {review && c.id && <ApproveToggle c={c} />}
     </span>
   )
 }
@@ -51,6 +64,18 @@ function ListenButton({ clip, variety, label = 'Listen', review, big }) {
 function StatusDot({ c }) {
   const tip = c.status === 'missing' ? 'not recorded yet' : `${c.status}${c.issues?.length ? ': ' + c.issues.join(' · ') : ''}${c.approved ? ' · approved' : ' · not approved'}`
   return <span title={tip} style={{ fontSize: 11, fontFamily: FONT, fontWeight: 700, color: STATUS_COLOUR[c.status], whiteSpace: 'nowrap' }}>● {c.status}</span>
+}
+
+function ApproveToggle({ c }) {
+  const { marks, toggle } = useContext(Marks)
+  if (c.approved) return <span style={{ fontSize: 11, fontFamily: FONT, fontWeight: 700, color: GREEN }}>✓ approved</span>
+  const on = marks.has(c.id)
+  return (
+    <button onClick={() => toggle(c.id)} title={on ? 'Marked: will be in the approve command' : 'Heard it and it is right'} style={{
+      border: `1.5px solid ${on ? GREEN : LINE}`, background: on ? GREEN : 'white', color: on ? 'white' : SOFT, borderRadius: 999,
+      padding: '2px 8px', fontFamily: FONT, fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
+    }}>{on ? '✓ marked' : 'approve?'}</button>
+  )
 }
 
 // A stable shuffle per item and round, so the key is not always in the same place.
@@ -194,10 +219,24 @@ export default function EnglishTrialLab() {
   const [round, setRound] = useState(0)
   const [index, setIndex] = useState(0)
   const [score, setScore] = useState({})
+  const [marks, setMarks] = useState(readMarks)
+  const [copied, setCopied] = useState(false)
+  const toggle = id => setMarks(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    writeMarks(next)
+    return next
+  })
   const top = useRef(null)
   const items = TRIAL_ITEMS.filter(i => area === 'all' || i.area === area)
   const recs = Object.values(AUDIO)
   const count = s => recs.filter(r => r.status === s).length
+  // Only marks for recordings still in the manifest and not yet approved there.
+  const pending = recs.filter(r => marks.has(r.id) && !r.approved)
+  const command = `node scripts/english-audio/approve.mjs ${pending.map(r => r.id).join(',')}`
+  const copy = () => {
+    navigator.clipboard?.writeText(command).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }, () => {})
+  }
   const needed = new Set(TRIAL_ITEMS.flatMap(i => [i.instruction?.audio, i.prompt?.audio, i.prompt?.question, i.feedback?.audio, ...(i.options || []).map(o => o.audio)]).filter(Boolean))
   const missing = [...needed].filter(id => !AUDIO[`${id}:${variety}`]).length
 
@@ -207,13 +246,13 @@ export default function EnglishTrialLab() {
   const reset = () => { setRound(r => r + 1); setIndex(0); setScore({}) }
 
   return (
-    <div ref={top} style={{ minHeight: '100dvh', background: '#f4f3fa', padding: '20px 16px 60px', boxSizing: 'border-box', fontFamily: FONT, color: INK }}>
+    <div ref={top} style={{ minHeight: '100dvh', background: '#f4f3fa', padding: '20px 16px 160px', boxSizing: 'border-box', fontFamily: FONT, color: INK }}>
       <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <header>
           <div style={{ fontSize: 12, fontWeight: 700, color: SOFT, letterSpacing: 1 }}>TUTO · ENGLISH TRIAL SET · {TRIAL_REVISION}</div>
           <h1 style={{ margin: '4px 0 6px', fontSize: 28 }}>English trial lab</h1>
           <div style={{ fontSize: 13, color: SOFT, lineHeight: 1.5 }}>
-            Reviewer tool, nothing is saved. Recordings: {count('ok')} ok · {count('listen')} to hear · {count('fail')} failed · {missing} not made yet ({variety.toUpperCase()}). None approved until a person listens.
+            Reviewer tool. Recordings: {count('ok')} ok · {count('listen')} to hear · {count('fail')} failed · {missing} not made yet ({variety.toUpperCase()}) · {recs.filter(r => r.approved).length} approved. None reaches a child until a person has listened and approved it.
           </div>
         </header>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -224,7 +263,20 @@ export default function EnglishTrialLab() {
           {['all', ...Object.keys(AREAS)].map(a => btn(area === a, a === 'all' ? 'All' : a, () => { setArea(a); setIndex(0) }))}
         </div>
 
+        {view === 'review' && pending.length > 0 && (
+          <div style={{ position: 'fixed', left: 16, right: 16, bottom: 12, maxWidth: 728, margin: '0 auto', zIndex: 2, background: 'white', border: `1.5px solid ${GREEN}`, borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 6px 24px rgba(44,39,69,.18)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{pending.length} marked as heard. Run this in the repo, then commit the manifest:</div>
+            <code style={{ fontSize: 11, wordBreak: 'break-all', color: SOFT }}>{command}</code>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {btn(false, copied ? 'Copied ✓' : 'Copy command', copy)}
+              {btn(false, 'Clear marks', () => { setMarks(new Set()); writeMarks(new Set()) })}
+            </div>
+          </div>
+        )}
+
+        <Marks.Provider value={{ marks, toggle }}>
         {view === 'review' && items.map(it => <Item key={it.id + variety + round} item={it} variety={variety} review round={round} />)}
+        </Marks.Provider>
 
         {view === 'play' && (index < items.length ? (
           <>

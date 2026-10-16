@@ -76,7 +76,9 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
    - UK "The window is not open. It is closed." (iki çalıştırma da "Amerikan" dedi)
    - UK A05'te Ben'in "Good idea. Let's take our things over."
 
-   Onaylananlar için manifestte `approved: true`. Onay için küçük bir yardımcı ya da lab'da bir düğme yok; eklenebilir.
+   - Onay akışı (2026-10-17): lab'da Review görünümünde her kaydın yanında "approve?" düğmesi var. İşaretler tarayıcıda
+     kayıt karmasıyla tutulur. Alttaki şerit `node scripts/english-audio/approve.mjs <karma,…>` komutunu kopyalar; komut manifestte
+     `approved: true` ve `approved_on` yazar, `--revoke` geri alır. Yeniden üretilen kaydın karması değişir, onay ona taşınmaz.
 3. **"listen" kalan kayıtlar:** Başka bir İngiliz sesle (Kore, Aoede ve Despina kör testte 2/2 İngilizdi) tek replik denenebilir: `clips.mjs`'de klibe özel ses alanı eklemek gerekir.
 4. **Gerçek ölçek öncesi kota/maliyet kararı.** Gerekirse aynı hatta başka bir TTS servisi (Azure, ElevenLabs) takılabilir: yalnız `speak()` değişir.
 5. **Ses dışı açık işler** (bu oturumun konusu değil):
