@@ -199,6 +199,15 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       Tarayıcıda lab'da 375px (+ yatay iPad 1180×820 klavye); gerçek MathScreen oturumunda oynanmadı (soru kartı bölmesi bileşen olarak çizildi).
       **Native etkisi:** (3)(6)(7) `mathTemplates.js`'te → Android/iOS motor paketleri yeniden derlenmeli; `sectors` çizimi web `MathFigure`'da, native
       yardım panelleri (iOS `HelpPanel.swift`, Android) onu, büyük tuşları, titreyen "?"yi, basamak "?"sini ve bilgi/soru bölmesini ayrıca ister.
+- [x] Sohbetten görev gizleme/açma (2026-10-16, Claude; kullanıcı kararı). `update_task_reward` `active` artık her görev tipinde
+      (önceden yalnız bonus): "İngilizce görevini şimdilik gizle" → `active: false` (kart, oturum, gem yok; geçmiş kalır), tekrar
+      açılınca aynı ayarlar döner. Sayı gerekmez; gem/sınır değişikliğine karışmaz. Sohbet bağlamında `taskRewards` kapalı görevi
+      "SWITCHED OFF" diye gösterir. Kapanan görev bonustan da düşer (`bonusSettings` zaten süzüyordu); bonus tek etkinliğe ya da sıfıra
+      inerse sonuç `bonusNote` ile ebeveyne söyletir. Gerekçe: temel düzeyde zorlanan çocuk için ebeveyne "İngilizce görevini geçici
+      olarak gizleyebilirim, bana söylemen yeterli" mesajı (bkz. `docs/ENGLISH-SKILL-LADDERS.md`, Codex'in branch'inde). Ekranda
+      kapatma Görev Ayarları'nda zaten vardı. Doğrulama: chat-probe (gerçek model, yazma duvarı) TR gizleme 3/3 doğru çağrı,
+      belirsiz "bunu kaldıralım" hiçbir şeyi kapatmadı, "matematiği 40 gem yap" `active` göndermedi; testler 137/137.
+      **Native etkisi:** yok (sunucu aracı; native kartı aynı `task_settings`'ten okuyor).
 - [ ] Uygulamada hikâye yazma (2026-10-02, Codex): yerel geliştirme hazır. Otomatik kayıt,
       cihazda kurtarma kopyası, birden fazla taslak, kütüphaneden devam, sürüm çakışması koruması.
       Değerlendirme sunucuda; taslakta Gem yok, ilk tamamlamada mevcut ödül akışı.

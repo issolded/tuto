@@ -445,6 +445,7 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
           const gems = s.gems ?? def
           const cap = s.daily_cap ?? TASK_DEFAULT_CAPS[type]
           const rate = VARIABLE_TASKS.has(type) ? `up to ${gems} gems (scaled by score)` : `${gems} gems`
+          if (s.active === false) return [type, `SWITCHED OFF by the parent: the child does not see this task (was ${rate}, ${cap} a day)`]
           return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
@@ -1577,10 +1578,15 @@ const CONTRIBUTION_TOOLS = [{
         'variety (task_type english only) is British or American English — spelling and which words rhyme or sound the same ' +
         '("Amerikan İngilizcesi olsun", "British spelling please"): uk, us, or auto (back to the family\'s time zone). The ' +
         'current one is englishVariety in context.\n' +
-        'The server enforces 1-500 for gems and 0-50 for daily_cap. Only call this when the parent explicitly ' +
+        'active switches a task OFF (hidden from the child: no card, no sessions, no gems) or back ON, for any task type ' +
+        '("İngilizce görevini şimdilik gizle", "bulmacayı kaldır", "matematiği geri aç", "quita el inglés por ahora"). ' +
+        'It needs no number. Nothing is deleted: past sessions and gems stay, and switching it back on restores the same ' +
+        'settings. A task that is off shows as SWITCHED OFF in taskRewards. Only switch off what the parent named; if they ' +
+        'say "remove it" about something unclear, ask which task.\n' +
+        'The server enforces 1-500 for gems and 0-50 for daily_cap. Only change gems or daily_cap when the parent explicitly ' +
         'states a task type AND a specific new number — an unclear or partial request ("matematiği artıralım ' +
         'biraz", "çok fazla resim yapıyor") means asking for the exact number, never picking one yourself. ' +
-        'Never send a dial the parent did not mention: changing the rate is not changing the limit.',
+        'Never send a dial the parent did not mention: changing the rate is not changing the limit, and neither is switching off.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -1588,7 +1594,7 @@ const CONTRIBUTION_TOOLS = [{
           task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle, english, bonus.' },
           gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Omit entirely if they only asked to change the daily limit.' },
           daily_cap: { type: 'NUMBER', description: 'The exact new number of gem-earning sessions per day the parent said (whole number, 0-50). Omit entirely if they only asked to change the gem amount.' },
-          active: { type: 'BOOLEAN', description: 'Only for task_type bonus: false switches the daily bonus off, true back on. Omit otherwise.' },
+          active: { type: 'BOOLEAN', description: 'false switches this task off (hidden from the child), true back on. For bonus, the daily bonus. Omit unless the parent asked to hide or bring back a task.' },
           bonus_types: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Only for task_type bonus: the full list of activities the bonus counts afterwards, from math, reading, writing, drawing, puzzle, english. Omit unless the parent changed which activities count.' },
           variety: { type: 'STRING', description: 'Only for task_type english: uk, us or auto. Omit unless the parent asked for British/American English.' },
         },
@@ -2659,18 +2665,20 @@ async function updateBonusTool(childId, gems, active, parentId, types) {
     ...(Number(child.age) < BONUS_MIN_AGE ? { note: `saved, but the bonus only runs for children aged ${BONUS_MIN_AGE} and up — say so` } : {}) }
 }
 
-async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap, variety) {
+async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap, variety, active) {
   if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
 
   const wantsGems = gems !== undefined && gems !== null
   const wantsCap = dailyCap !== undefined && dailyCap !== null
   const wantsVariety = variety !== undefined && variety !== null
+  const wantsActive = active !== undefined && active !== null
+  if (wantsActive && typeof active !== 'boolean') return { success: false, error: 'active must be true or false' }
   if (wantsVariety) {
     if (taskType !== 'english') return { success: false, error: 'variety is only for task_type english' }
     if (!['uk', 'us', 'auto'].includes(variety)) return { success: false, error: 'variety must be uk, us or auto' }
-    if (!wantsGems && !wantsCap) return setEnglishVarietyTool(childId, variety, parentId)
+    if (!wantsGems && !wantsCap && !wantsActive) return setEnglishVarietyTool(childId, variety, parentId)
   }
-  if (!wantsGems && !wantsCap) return { success: false, error: 'nothing to change: give gems, daily_cap, or both' }
+  if (!wantsGems && !wantsCap && !wantsActive) return { success: false, error: 'nothing to change: give gems, daily_cap, active, or any of them' }
 
   let n = null
   if (wantsGems) {
@@ -2687,7 +2695,7 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap,
   }
 
   const { data: child } = await supabase
-    .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+    .from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
   if (!child) return { success: false, error: 'child not found' }
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
@@ -2695,7 +2703,7 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap,
   const current = nextSettings[taskType] || {}
   nextSettings[taskType] = {
     ...current,
-    active: current.active ?? true,
+    active: wantsActive ? active : (current.active ?? true),
     gems: wantsGems ? n : (current.gems ?? TASK_DEFAULT_GEMS[taskType]),
     daily_cap: wantsCap ? cap : (current.daily_cap ?? TASK_DEFAULT_CAPS[taskType]),
   }
@@ -2704,9 +2712,21 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap,
   if (error) return { success: false, error: error.message }
 
   const varietyResult = wantsVariety ? await setEnglishVarietyTool(childId, variety, parentId) : null
+  // Switching a task off takes it out of the daily bonus too (bonusSettings skips inactive ones).
+  // With one activity left the bonus pays a second time for that one; with none it stops. Either
+  // way the parent set the bonus up for several, so they should hear it changed.
+  const bonusBefore = bonusSettings(child.task_settings, child.age)
+  const bonusAfter = bonusSettings(nextSettings, child.age)
+  const bonusNote = !bonusBefore.active || bonusBefore.types.length < 2 || bonusAfter.types.length >= 2 ? null
+    : bonusAfter.types.length === 1
+      ? `the daily bonus now counts only ${bonusAfter.types[0]}, so it pays twice for that one activity — say so and offer to add another activity to it or switch the bonus off`
+      : 'the daily bonus has no activities left and will not pay — say so'
   return { success: true, childName: child.name, taskType,
+    active: nextSettings[taskType].active,
     gems: nextSettings[taskType].gems, dailyCap: nextSettings[taskType].daily_cap,
-    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null, wantsVariety ? 'variety' : null].filter(Boolean),
+    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null, wantsVariety ? 'variety' : null, wantsActive ? 'active' : null].filter(Boolean),
+    ...(wantsActive && !active ? { note: 'hidden from the child; past sessions and gems are kept, and saying so brings it back' } : {}),
+    ...(bonusNote ? { bonusNote } : {}),
     ...(varietyResult ? { variety: varietyResult.variety, varietyError: varietyResult.error } : {}) }
 }
 
@@ -3317,7 +3337,7 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
       } else if (name === 'update_task_reward') {
         toolResult = args.task_type === 'bonus'
           ? await updateBonusTool(args.child_id, args.gems, args.active, parentId, args.bonus_types)
-          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety)
+          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety, args.active)
       } else if (name === 'send_drawing_photo') {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId, opts.showPhotos)
       } else if (name === 'add_reward') {
