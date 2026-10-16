@@ -63,9 +63,13 @@ Bunu tamamen eleyemeyiz (B2'yi geçen çocuk B2'deki her kelimeyi bilmez), ama k
 4. Önkoşul gerçekten gerekmedikçe konmaz: sesle verilen kelimeyi yazdırmak (D dikte) için
    yazılı kelime basamağını (B) geçmiş olmak gerekmez.
 
-Etiketin kaynağı: B1–B3 için Cambridge YLE kelime listeleri (Starters, Movers, Flyers; herkese
-açık yayınlanıyor, yalnız düzey etiketi olarak kullanılır, soru metni bizim). B4–B6 için mevcut
-motorun kullandığı kelime sıklığı (Zipf) eşikleri; sıklık kelime düzeyinde, anlam etiketi elle.
+Etiketin kaynağı: B1–B3 için Cambridge 2018 Starters / Movers / Flyers kelime listesi, artık veri
+olarak `src/lib/literacy/yleWordlist.generated.js` (1.407 kayıt: Starters 495, Movers 399, Flyers 513;
+sözcük türü, İngiliz/Amerikan karşılığı (44 kayıt), 20 konu). Etiket **anlam düzeyinde**: liste kendisi de
+anlam etiketliyor ("at" yer anlamında Starters, zaman anlamında Movers; "bat" spor aleti Starters,
+hayvan Movers). Konular aynı kategoriden çeldirici seçmek için. Üretim `scripts/english/build_yle_wordlist.py`
+(PDF repoda değil), test `scripts/tests/yle-wordlist.test.mjs` (sayfadan gözle okunmuş sabit örneklerle).
+B4–B6 için mevcut motorun kelime sıklığı (Zipf) eşikleri; sıklık kelime düzeyinde, anlam etiketi elle.
 
 ## Kanıt kaydı: cevap biçimi ayrı tutulur
 

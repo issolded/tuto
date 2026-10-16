@@ -133,6 +133,16 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 
 ## Açık işler / yol haritası
 
+- [x] Cambridge kelime listesi veri oldu (2026-10-16, Claude). `src/lib/literacy/yleWordlist.generated.js`: 2018 Pre A1 Starters /
+      A1 Movers / A2 Flyers listesinden 1.407 kayıt (S 495, M 399, F 513), sözcük türü, not, İngiliz/Amerikan karşılığı (44), 20 konu; kimlik
+      anlam başına (`at` / `at-2`). Üretim `python3 scripts/english/build_yle_wordlist.py <pdf> --write` (PDF `english books/official-free/`,
+      repoda değil). Aynı belgenin üç okuması birbirini denetliyor: birleşik A-Z listesi (S/M/F işaretli, birincil), düzey başına listeler,
+      konu listesi; uyuşmazlık derlemeyi düşürür. Bağımsız kontrol: 2010 el kitabının 1.080 kelimesinin 1.046'sı yeni listede; eksikler
+      Cambridge'in 2018 notunun "çıkarıldı" dediği kelimeler (John, supper, policeman…), "eklendi" dedikleri (laptop, shorts, by myself,
+      police officer) var. Test `scripts/tests/yle-wordlist.test.mjs` sayfa görüntüsünden gözle okunmuş sabit örneklerle (14/14 rastgele
+      örneklem de tuttu; yolda iç içe parantez "candy (UK sweet(s))" bulundu ve düzeltildi). Yalnız kelime bilgisi; sınav içeriği yok.
+      Henüz hiçbir ekran içe aktarmıyor. **Native etkisi:** şimdilik yok.
+
 - [ ] İngilizce ses (2026-10-16, Claude; deneme, kod projede değil). `gemini-3.8-flash-tts`, aksan `languageCode` en-GB/en-US,
       düz metin (talimat metne yazılırsa okunur; sistem talimatı kabul edilmiyor). API PCM sonuna C2PA etiketi ekliyor: ses diye
       yazılırsa 125 ms cızırtı, ayrı `.c2pa` dosyasına alınır. Kota dakikada 10. Kalite kontrolü üç katman: kod (süre/sessizlik/
