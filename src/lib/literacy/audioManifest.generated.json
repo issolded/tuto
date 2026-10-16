@@ -1,0 +1,369 @@
+{
+ "w-dog:uk": {
+  "id": "6ec753b37ee257eb",
+  "file": "english-audio/6ec753b37ee257eb.m4a",
+  "clip": "w-dog",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "A01",
+   "B01"
+  ],
+  "text": "dog",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-dog:us": {
+  "id": "02f98b26aa861c1b",
+  "file": "english-audio/02f98b26aa861c1b.m4a",
+  "clip": "w-dog",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "A01",
+   "B01"
+  ],
+  "text": "dog",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-apple:uk": {
+  "id": "fde04b66a39fe148",
+  "file": "english-audio/fde04b66a39fe148.m4a",
+  "clip": "w-apple",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "A02",
+   "B02"
+  ],
+  "text": "apple",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-apple:us": {
+  "id": "2bb1e2a2cd2e4936",
+  "file": "english-audio/2bb1e2a2cd2e4936.m4a",
+  "clip": "w-apple",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "A02",
+   "B02"
+  ],
+  "text": "apple",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-sun:uk": {
+  "id": "46dc812aecaab791",
+  "file": "english-audio/46dc812aecaab791.m4a",
+  "clip": "w-sun",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "D01"
+  ],
+  "text": "sun",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-sun:us": {
+  "id": "3ace3e41db5f0583",
+  "file": "english-audio/3ace3e41db5f0583.m4a",
+  "clip": "w-sun",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "D01"
+  ],
+  "text": "sun",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-fish:uk": {
+  "id": "d04c294f30c6d524",
+  "file": "english-audio/d04c294f30c6d524.m4a",
+  "clip": "w-fish",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "D02"
+  ],
+  "text": "fish",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "w-fish:us": {
+  "id": "582c2b90623d1172",
+  "file": "english-audio/582c2b90623d1172.m4a",
+  "clip": "w-fish",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "D02"
+  ],
+  "text": "fish",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-ball-under-chair:uk": {
+  "id": "04cba62984baf80f",
+  "file": "english-audio/04cba62984baf80f.m4a",
+  "clip": "s-ball-under-chair",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A03"
+  ],
+  "text": "The ball is under the chair.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "listen",
+  "issues": [
+   "accent judged american (rhotic r in 'under' and 'chair')"
+  ],
+  "approved": false
+ },
+ "s-ball-under-chair:us": {
+  "id": "57c1d3700994f03d",
+  "file": "english-audio/57c1d3700994f03d.m4a",
+  "clip": "s-ball-under-chair",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A03"
+  ],
+  "text": "The ball is under the chair.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-two-cats-sleeping:uk": {
+  "id": "4cfb533490eff0af",
+  "file": "english-audio/4cfb533490eff0af.m4a",
+  "clip": "s-two-cats-sleeping",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A04"
+  ],
+  "text": "Two cats are sleeping.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-two-cats-sleeping:us": {
+  "id": "fe4c91cc79c907cc",
+  "file": "english-audio/fe4c91cc79c907cc.m4a",
+  "clip": "s-two-cats-sleeping",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A04"
+  ],
+  "text": "Two cats are sleeping.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-cat-on-bed:uk": {
+  "id": "e44316127c1e3304",
+  "file": "english-audio/e44316127c1e3304.m4a",
+  "clip": "s-cat-on-bed",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "CA01"
+  ],
+  "text": "The cat is on the bed.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-cat-on-bed:us": {
+  "id": "5607460136d6258d",
+  "file": "english-audio/5607460136d6258d.m4a",
+  "clip": "s-cat-on-bed",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "CA01"
+  ],
+  "text": "The cat is on the bed.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-box-open:uk": {
+  "id": "87c5747d7f27c096",
+  "file": "english-audio/87c5747d7f27c096.m4a",
+  "clip": "s-box-open",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "CA02"
+  ],
+  "text": "The box is open.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-box-open:us": {
+  "id": "1c41688714d7cdc2",
+  "file": "english-audio/1c41688714d7cdc2.m4a",
+  "clip": "s-box-open",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "CA02"
+  ],
+  "text": "The box is open.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "s-window-not-open:uk": {
+  "id": "0803520656a209fc",
+  "file": "english-audio/0803520656a209fc.m4a",
+  "clip": "s-window-not-open",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "CA03"
+  ],
+  "text": "The window is not open. It is closed.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "listen",
+  "issues": [
+   "accent judged american (unrounded /ɑ/ in \"not\")"
+  ],
+  "approved": false
+ },
+ "s-window-not-open:us": {
+  "id": "fce72ff12833cf12",
+  "file": "english-audio/fce72ff12833cf12.m4a",
+  "clip": "s-window-not-open",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "CA03"
+  ],
+  "text": "The window is not open. It is closed.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "d-a05:uk": {
+  "id": "c0ab1271a18b14ba",
+  "file": "english-audio/c0ab1271a18b14ba.m4a",
+  "clip": "d-a05",
+  "variety": "uk",
+  "kind": "dialogue",
+  "items": [
+   "A05"
+  ],
+  "lines": [
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "Shall we draw outside? I have paper and pencils in my bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Charon",
+    "text": "Look at those clouds. It is starting to rain, and the paper will get wet out here.",
+    "status": "ok",
+    "issues": [],
+    "take": 2
+   },
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "There is a table under that roof. We can sit there.",
+    "status": "ok",
+    "issues": [],
+    "take": 2
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Charon",
+    "text": "Good idea. Let's take our things over.",
+    "status": "listen",
+    "issues": [
+     "accent judged american (rhotic pronunciation of 'over' with an /ɚ/ coda)"
+    ],
+    "take": 1
+   }
+  ],
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "listen",
+  "issues": [
+   "accent judged american (rhotic pronunciation of 'over' with an /ɚ/ coda)"
+  ],
+  "approved": false
+ }
+}

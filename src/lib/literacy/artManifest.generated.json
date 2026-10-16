@@ -1,0 +1,81 @@
+{
+ "scenes": {
+  "ball-on-chair": "english-art/02f892adc2f87e35.svg",
+  "ball-under-chair": "english-art/1a8326cd7130f3dc.svg",
+  "ball-next-to-chair": "english-art/5be76213c21d26d2.svg",
+  "two-cats-sleeping": "english-art/1fe7fa3b74e33c4c.svg",
+  "one-cat-sleeping": "english-art/056a0f2ac5af76a3.svg",
+  "two-cats-running": "english-art/aa9d12f72b4076a1.svg",
+  "cat-under-bed": "english-art/c1a2a982ccb0b4f4.svg",
+  "cat-next-to-bed": "english-art/4f0ec486753d6053.svg",
+  "cat-on-bed": "english-art/9457eb0e357ffa5a.svg",
+  "box-closed": "english-art/8f4571781089220b.svg",
+  "box-open": "english-art/fcd3363debbd5ffc.svg",
+  "bag-open": "english-art/6721ad579c323cd5.svg",
+  "window-open": "english-art/1c328f85b88abff7.svg",
+  "door-open": "english-art/62b337e32181cdc4.svg",
+  "window-closed": "english-art/186b1057367af90b.svg"
+ },
+ "sets": [
+  {
+   "item": "A03",
+   "sentence": "The ball is under the chair.",
+   "key": "ball-under-chair",
+   "options": [
+    "ball-on-chair",
+    "ball-under-chair",
+    "ball-next-to-chair"
+   ]
+  },
+  {
+   "item": "A04",
+   "sentence": "Two cats are sleeping.",
+   "key": "two-cats-sleeping",
+   "options": [
+    "two-cats-sleeping",
+    "one-cat-sleeping",
+    "two-cats-running"
+   ]
+  },
+  {
+   "item": "CA01",
+   "sentence": "The cat is on the bed.",
+   "key": "cat-on-bed",
+   "options": [
+    "cat-under-bed",
+    "cat-next-to-bed",
+    "cat-on-bed"
+   ]
+  },
+  {
+   "item": "CA02",
+   "sentence": "The box is open.",
+   "key": "box-open",
+   "options": [
+    "box-closed",
+    "box-open",
+    "bag-open"
+   ]
+  },
+  {
+   "item": "CA03",
+   "sentence": "The window is not open. It is closed.",
+   "key": "window-closed",
+   "options": [
+    "window-open",
+    "door-open",
+    "window-closed"
+   ]
+  }
+ ],
+ "objects": {
+  "dog": "🐶",
+  "cat": "🐱",
+  "rabbit": "🐰",
+  "banana": "🍌",
+  "pear": "🍐",
+  "apple": "🍎",
+  "sun": "☀️",
+  "fish": "🐟"
+ }
+}

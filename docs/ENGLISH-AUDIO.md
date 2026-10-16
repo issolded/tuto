@@ -30,9 +30,15 @@ Onaylanmamış sesi olan soru çocuğa gösterilmez. Ses kapalıysa A alanı bil
 - **C2PA etiketi:** API ham PCM'in sonuna "yapay zekâyla üretildi" kaynak belgesi (C2PA, ~6 KB)
   ekliyor. Ses diye yazılırsa sonda 125 ms cızırtı olur. Etiket sesten ayrılır ve kaydın yanında
   ayrı dosya (`.c2pa`) olarak saklanır; Google'ın sese gömdüğü filigran (SynthID) kayıtta kalır.
-- **Kota:** ses modeli **dakikada 10 istek** (proje + model başına; sohbet modellerini etkilemez).
-  ~7.200 kayıt düz gidişle ~12 saat; toplu istek (`batchGenerateContent`) ya da kota artışı.
-  Maliyet kesin hesaplanmadı; birkaç saatlik toplam ses için düşük, tek seferlik.
+- **Kota:** ses modeli **dakikada 10, günde 100 istek** (proje + model başına; sohbet modellerini etkilemez).
+  Günlük sınır asıl darboğaz: ~7.200 kayıt (üretim tekrarlarıyla daha fazla istek) bu kotayla ~70+ gün.
+  Gerçek üretimden önce ücretli kota / artış şart. Maliyet kesin hesaplanmadı.
+- **Yanıt biçimi:** başlıklı WAV (`fmt `, `data`, `C2PA` bölümleri). Ses yalnız `data`; bütün dosyayı ses
+  saymak sonda cızırtı (C2PA) ve başta tık (başlık) yapıyordu.
+- **Sesler (kör aksan kontrolü, iki çalıştırma):** erkek sesler en-GB'de: Charon 2/2 ve Iapetus 2/2 İngiliz,
+  Puck ve Algenib 2/2 Amerikan (dil kodu sesi değiştirmiyor), Orus'ta Whisper "paper" yerine "people" duydu.
+  Kadın seslerin altısı (Leda, Kore, Aoede, Despina, Erinome, Laomedeia) 2/2 İngiliz. Seçim: UK Leda + Charon,
+  US Leda + Puck. Model her üretimde farklı okuyor: kayıt başına en çok 3 üretim, ilk tam geçen alınır.
 
 ## Kalite kontrolü (üç katman, denendi)
 
