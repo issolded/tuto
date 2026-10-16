@@ -52,6 +52,22 @@ soru metinleri gider (kullanıcı onaylı).
   görünüyordu), kova gibi çanta, iki pencere arasında iki fark (bölme sayısı + renk), ters "z". Uyarı: bu
   yetişkin bir modelin testi; çocuğun okuyacağını kanıtlamaz. Telefon boyutunda (131 px, `ART_PX=131`) de 5/5 üçlü 3/3.
 
+## Ölçüm: Cambridge kelimelerinin emoji karşılığı (2026-10-16)
+
+Python'un Unicode adlarıyla kaba eşleştirme (indirme yok): somut isimlerin (konu listesinde nesne/hayvan/yiyecek
+vb.) Starters'ta 234'te 155'i (%66), Movers'ta %45'i, Flyers'ta %42'si bir emoji adayıyla eşleşti. Eşleştirme iki
+yönde hatalı (bag→💰 para kesesi, ball→🎊 konfeti; bee/bike/burger "honeybee/bicycle/hamburger" adıyla kaçtı):
+gerçek oran tahminen Starters %70–80, üstte ~%50. Geri kalan (kitchen, classroom, street…) sahne çizimi ister.
+Noto Color Emoji standart emojinin tamamını çiziyor; ama projede yalnız 100 tanesi var, yenileri `scripts/fetch-puzzle-fonts.mjs`
+ile indirilir (**kullanıcı onayı bekliyor**).
+
+## Bekleyen karar: puansız çözülmüş örnek
+
+Her cevap biçiminin ilk karşılaşmasında puansız örnek gösterilecek (kullanıcı kararı). Örnek, sorularda geçmeyen
+bir kelimeyle yapılmalı (yoksa örnek o soruyu öğretir). Projedeki 8 emojinin hepsi deneme setinde kullanılıyor;
+örnek için yeni Noto çizimleri gerekiyor (indirme = kullanıcı onayı). Ses tarafı hazır: `i-look`, `i-your-turn`
+klipleri tanımlı, kota yenilenince üretilecek.
+
 ## Lab — durum
 
 - Veri: `src/lib/literacy/trialSet.js` (36 madde, belgeyle birebir; anahtar seçenek kimliğiyle).
