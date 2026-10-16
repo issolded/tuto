@@ -68,6 +68,10 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Sözel akıl yürütme kalıyor (2026-10-16, kullanıcı):** bugünkü "English" kartı (Bond 11+ harf/kelime bulmacaları)
+  silinmez; yeni İngilizce merdiveni gelince büyük ihtimalle İngilizcenin alt modülü olur. Merdivenin beceri kanıtına
+  karışmaz (VR sonucu İngilizce basamağı değiştirmez). Yeri ve varsayılanı açık: `docs/ENGLISH-SKILL-LADDERS.md`, açık soru 6.
+
 - **İngilizce etkinlik dili (2026-10-16, kullanıcı):** soru, metin, şık, yönerge, ipucu ve açıklamalar çocuğun uygulama dilinden bağımsız İngilizcedir. Genel uygulama kontrolleri çocuğun dilinde; ebeveyn mesajları `prefs.language` ile kalır. Başlangıçta kısa yönerge, ses/görsel ve yeni cevap biçiminde puansız çözülmüş örnek kullanılır; yönerge güçlüğü hedef beceri hatası sayılmaz. Önceki yönerge/yardımı EN/TR/ES çevirme önerisi geçersiz. Üç İngilizce tasarım belgesi güncellendi; kod değişmedi. Native etkisi: yok, yalnız tasarım kaydı.
 
 - **İngilizcede temel düzeyde zorlanma (2026-10-16, kullanıcı):** günlük İngilizce görevi kendiliğinden kaldırılmaz. Yanlış sonrası açıklama ve pratik devam eder; yardımlı/tekrar cevap bağımsız ilk kanıttan ayrılır. Yeterli farklı örnekte tekrarlanan zorlanma ebeveyne bir kez, gözlem olarak iletilir; gizleme/açma ebeveyn kararıdır. Yaş farkı, sessiz cihaz veya eksik oturum başarısızlık kanıtı değildir. Mesaj ve uygulama önkoşulları: `docs/ENGLISH-SKILL-LADDERS.md`, “Temel düzeyde zorlanan çocuk”. Sayısal bildirim eşikleri henüz doğrulanmadı. `docs/ENGLISH-TRIAL-SET.md` 36 soruluk editoryal deneme taslağıdır; ses/görsel varlıklar ve çocuk testi bekliyor. Native etkisi: yok, yalnız doküman.
@@ -128,6 +132,16 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
   bulunuyordu; etiket çevrilir çevrilmez o adım sessizce atlanırdı. Artık `kind: 'game'`.
 
 ## Açık işler / yol haritası
+
+- [ ] İngilizce ses (2026-10-16, Claude; deneme, kod projede değil). `gemini-3.8-flash-tts`, aksan `languageCode` en-GB/en-US,
+      düz metin (talimat metne yazılırsa okunur; sistem talimatı kabul edilmiyor). API PCM sonuna C2PA etiketi ekliyor: ses diye
+      yazılırsa 125 ms cızırtı, ayrı `.c2pa` dosyasına alınır. Kota dakikada 10. Kalite kontrolü üç katman: kod (süre/sessizlik/
+      patlama/son ses), Whisper (`whisper-cpp` + `ggml-base.en.bin`, metin birebir), kör dinleyen model (aksan söylenmez; söylenince
+      etikete uydu). 16 iyi kayıt geçti, bilerek bozulan 5'in 5'i yakalandı. AAC 32k: kelime ~6 KB, cümle ~10 KB. **Açık:** tek kelimede
+      US aksanı tutmuyor; İngiliz konuşmada erkek ses (Puck) aksan kayması şüphesi, kullanıcı dinleyecek. Ayrıntı `docs/ENGLISH-AUDIO.md`.
+      Kaynaklar: 18 resmî ücretsiz belge `english books/official-free/` (Cambridge 2018 listeleri, örnek sınavlar, A2 Key/B1 PfS; UK müfredat
+      ekleri, KS2 2024 sınavları), eşleştirme `docs/ENGLISH-SKILL-LADDERS.md` "Kaynaklar". **Native etkisi:** ses Storage'dan gelir, 🔊 ve yeni cevap
+      biçimleri her istemcide ayrıca.
 
 - [x] İngilizce okuryazarlık ilk yerel lab (2026-10-15, Codex; `codex/literacy-pilot`, yayın/push yok).
       `/literacy-lab`: 100 özgün kelime, 24 bağlam + 24 be cümle kalıbı, 6 özgün mini metin,

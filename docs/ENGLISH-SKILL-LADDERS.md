@@ -200,12 +200,13 @@ neden–sonuç / çıkarım / amaç). Tablodaki basamaklar bu dördünün tipik 
 **E'nin tavanı:** UK Year 6 okuma sınavı düzeyinde bir metinde çıkarım ve yazarın amacı.
 E en pahalı alan: her metin elle yazılır ve okunur, otomatik üretilmez (Codex'in kararı, katılıyorum).
 
-## Merdivene girmeyen motor tipleri: akıl yürütme modülüne
+## Merdivene girmeyen motor tipleri: sözel akıl yürütme (İngilizcenin alt modülü)
 
-Bunlar İngilizce bilgisinden çok **kelimelerle akıl yürütme** ölçüyor; anadilli çocuk için iyi
-11+ hazırlığı, Türk/İspanyol çocuk için ölçtüğü şey belirsiz. İngilizce merdiveninden çıkıp
-"sözel akıl yürütme" olarak ayrı yaşamalı (bkz. ürün kararı: NVR evrensel, VR yalnız
-İngilizce okuyan çocuğa varsayılan açık):
+**Kullanıcı kararı (2026-10-16): sözel akıl yürütme (VR) kalıyor**, büyük ihtimalle İngilizcenin bir
+alt modülü olarak. Bunlar İngilizce bilgisinden çok **kelimelerle akıl yürütme** ölçüyor; anadilli
+çocuk için iyi 11+ hazırlığı. Merdivenin beceri kanıtına karışmazlar: VR sonucu İngilizce
+basamaklarını yükseltmez ya da düşürmez, ayrı izlenir. Alt modülün nerede duracağı (ayrı kart mı,
+İngilizce kartının içinde mi) ve kime varsayılan açık olacağı açık soru (aşağıda 6).
 
 `anagram-pair`, `letter-code`, `front-letter`, `alpha-order`, `join-letter`, `change-pattern`,
 `word-ladder`, `not-from-letters`, `letter-analogy`, `analogy`, `rhyme-synonym`, `compound-front`,
@@ -221,6 +222,23 @@ B5–B6'ya yakın), `rhyme`, `homophone`, `syllables` (ses bilgisi, yukarıdaki 
 **Önemli:** motor tiplerinin kelime eşiği bugün **yaş bandına** bağlı (`BANDS[...]`). Merdivende
 kullanılınca bant değil, kelime basamağı (B kuralı) seçmeli. Yani tipler aynen alınır,
 kelime süzgeci değişir.
+
+## Kaynaklar ve hangi basamağa hizmet ettikleri (2026-10-16)
+
+Hepsi **yalnız ilham ve kapsam** içindir: metin, soru ve resim kopyalanmaz. Veri çıkarılacak yer
+(kelime düzeyi etiketleri gibi) resmî ücretsiz sürümdür.
+
+| Basamaklar | Kaynak | Yer |
+|---|---|---|
+| A1–A5, B1–B3, D1–D2, Ca1–Ca3 | Cambridge Pre A1 Starters / A1 Movers / A2 Flyers: **2018 kelime listeleri** (resmî, ücretsiz), 2018 değişiklik notu, örnek sınavlar cilt 1–2, Movers resimli kelime kitabı | `english books/official-free/` |
+| aynı | Cambridge YLE sınav kitapları (Starters 1–9, Movers 1/3/4/5, Flyers 4/5), 2010 öğretmen el kitabı (eski kelime listeleri; veri için 2018 listesi kullanılır), **Young Learners yerleştirme testi** (uyarlamalı, İngilizce, üç şıklı resim: tasarımımızı doğruluyor) | `english books/` |
+| A2 → B1 (Flyers üstü) | A2 Key for Schools el kitabı (2020, örnek sınav içinde), B1 Preliminary for Schools el kitabı | `official-free/` |
+| Anadilli alt-orta (B3–B5, Cd1–Cd4, D2–D4, E1–E3) | Scholastic Grammar 1–3, Spelling 1–2, Reading Comprehension 3, Morning Jumpstarts Reading 1 | `english books/` |
+| Anadilli üst ve tavan (B6, Cd5–Cd6, D5–D6, E4–E5) | UK ilkokul İngilizce müfredatı, Ek 1 (yazım, zorunlu kelime listeleri), Ek 2 (dilbilgisi sınıf sınıf), terimler sözlüğü; KS2 2024 dilbilgisi-noktalama-yazım ve okuma sınavları (açık lisanslı; okuma metinlerinin bir kısmı üçüncü kişiye ait) | `official-free/` |
+| Üst basamak yazım/dilbilgisi tipleri | Bond kitapları (mevcut İngilizce motoru) | motor |
+
+**Hâlâ eksik:** okuma metinleri (elle yazılacak, en büyük eksik) ve sahne çizimleri. İsteğe bağlı:
+harf–ses programı (Letters and Sounds) ve telaffuz puanlama servisi (bkz. `ENGLISH-AUDIO.md`).
 
 ## Sınama: iki uç çocuk
 
@@ -245,11 +263,12 @@ bulabildiğini** görmek.
   bu ihtiyatla gider ("Duyduğu kelimeleri tanıyor; aynı kelimeleri yazılı görünce daha çok zorlanıyor"),
   "İngilizcesi zayıf" ya da "okuyamıyor" diye değil.
 
-## Varlık ihtiyacı (kabaca, ölçülmedi)
+## Varlık ihtiyacı
 
-- **Ses:** A alanının tamamı + D1 dikte. Kelime başına bir kayıt (Starters–Flyers ~1.400 kelime)
-  + A3–A5 için birkaç yüz cümle. UK ve US ses ayrı. Önceden üretilir, dinlenip onaylanır;
-  çalışma anında model yok.
+- **Ses:** A alanının tamamı + D1 dikte + yanlış sonrası geri bildirim. Üretim, kalite kontrolü ve
+  ölçülmüş boyutlar `ENGLISH-AUDIO.md`'de (2026-10-16 denemesi). Kaba toplam: ~1.400 kelime + ~2.000
+  cümle + ~200 konuşma, iki aksan ≈ 7.200 kayıt ≈ 80 MB (AAC). İçerikle birlikte büyür; hepsi birden
+  üretilmez.
 - **Görsel:** A1–A2, B1, D1–D2, Ca1/Ca3, E1. Somut isimlerde bulmacalardaki Noto emoji çizimleri
   kullanılabilir; Starters listesinin ne kadarını kapsadıkları **ölçülmedi**. Eylem ve sahne
   (kedi masanın altında) için birkaç parçadan oluşan basit SVG sahne gerekir.
@@ -264,7 +283,9 @@ bulabildiğini** görmek.
 3. Ses yokken (cihaz sessizde) A alanı hiç sorulmasın mı, yoksa "sesi aç" diye bir kez istensin mi?
 4. Tavana çıkan alan ne sıklıkla yeniden yoklansın (unutma / yanlış yükseltme kontrolü)?
 5. Ebeveyne giden "ne yapabildiği" cümlelerinin listesi: alan × basamak başına bir cümle, üç dilde.
-6. Mevcut İngilizce kartı (sözel akıl yürütme) ne zaman ve nasıl yeniden adlandırılıyor?
+6. Sözel akıl yürütme alt modülü nerede durur (ayrı kart / İngilizce kartının içinde) ve kime
+   varsayılan açık olur? Bugünkü "English" kartı aslında bu modül; yeni İngilizce merdiveni geldiğinde
+   adı ve yeri değişecek.
 
 ## Temel düzeyde zorlanan çocuk (kullanıcı kararı, 2026-10-16)
 
