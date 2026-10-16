@@ -308,10 +308,9 @@
   "made": "2026-10-16",
   "status": "listen",
   "issues": [
-   "accent judged american twice (unrounded /ɑ/ in \"not\", rhotic/American cadence)"
+   "accent judged american twice (unrounded vowel /ɑ/ in 'not')"
   ],
-  "approved": false,
-  "notes": []
+  "approved": false
  },
  "s-window-not-open:us": {
   "id": "fce72ff12833cf12",
@@ -353,8 +352,10 @@
     "speaker": "Ben",
     "voice": "Charon",
     "text": "Look at those clouds. It is starting to rain, and the paper will get wet out here.",
-    "status": "ok",
-    "issues": [],
+    "status": "listen",
+    "issues": [
+     "accent judged american twice (Rhotic pronunciation of 'starting' and 'here', with American intonation and flap 't' in 'starting')"
+    ],
     "take": 2
    },
    {
@@ -363,16 +364,14 @@
     "text": "There is a table under that roof. We can sit there.",
     "status": "ok",
     "issues": [],
-    "take": 2
+    "take": 1
    },
    {
     "speaker": "Ben",
     "voice": "Charon",
     "text": "Good idea. Let's take our things over.",
-    "status": "listen",
-    "issues": [
-     "accent judged american (rhotic pronunciation of 'over' with an /ɚ/ coda)"
-    ],
+    "status": "ok",
+    "issues": [],
     "take": 1
    }
   ],
@@ -380,7 +379,7 @@
   "made": "2026-10-16",
   "status": "listen",
   "issues": [
-   "accent judged american (rhotic pronunciation of 'over' with an /ɚ/ coda)"
+   "accent judged american twice (Rhotic pronunciation of 'starting' and 'here', with American intonation and flap 't' in 'starting')"
   ],
   "approved": false
  }

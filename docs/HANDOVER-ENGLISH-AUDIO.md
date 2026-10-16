@@ -62,6 +62,11 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
 ## Tuzaklar (hepsi bir kez yaşandı)
 
 1. **Günlük kota: 100 istek.** Ses modeli proje başına günde 100 istek (dakikada 10) kabul ediyor. `build.mjs` günlük kotada düzgün durur ve ne kaldığını yazar. Tam içerik (~7.200 kayıt) bu kotayla 70+ gün sürer: ücretli kota ya da kota artışı gerekir. Bu kullanıcı kararı.
+   - **İkinci anahtar (2026-10-16):** `server/.env`'deki `GEMINI_TTS_API_KEY` ayrı ve faturasız bir projeden geliyor. Ücretsiz katmanda
+     bu model günde **10** istek kabul ediyor. Kota proje başına sayılıyor, anahtar başına değil; yeni anahtar ancak faturalı
+     bir projeden gelirse işe yarar. Kota hatası artık tam metniyle yazdırılıyor.
+   - "listen" durumundaki kayıtlar artık yeniden üretilmiyor; denemek için `--only <klip>` ver. Önceden her çalıştırmada
+     baştan üretiliyordu ve ikinci anahtarın 10 isteği bu yüzden gitti.
 2. **Yanıt başlıklı WAV.** Bölümleri `fmt`, `data` ve `C2PA`; ses yalnız `data` bölümünde. Bütün dosya ses sanılınca sonda 125 ms cızırtı (C2PA), başta tık (başlık) oluyordu. `splitWav()` bunu çözüyor.
 3. **Dinleyen modelin aksan kararı kısa kayıtlarda güvenilmez.**
    - Aynı İngiliz cümle bir soru biçiminde 3/3 "Amerikan", ipucu ipucu sorunca 2/2 "İngiliz" çıktı.

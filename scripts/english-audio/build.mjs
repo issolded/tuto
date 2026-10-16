@@ -149,6 +149,12 @@ clipLoop: for (const clip of CLIPS) {
       console.log(`skip ${key} (accepted, unchanged)`)
       continue
     }
+    // A clip waiting for a person to listen already had its takes; redoing it costs quota for a coin toss.
+    // Name it in --only to try again.
+    if (!ONLY && manifest[key]?.id === id && manifest[key].status === 'listen' && existsSync(join(OUT_AUDIO, `${id}.m4a`))) {
+      console.log(`skip ${key} (waiting to be heard)`)
+      continue
+    }
     console.log(`${key}`)
     let pcm, c2pa, rate = 24000, lines = []
     try {
@@ -170,6 +176,7 @@ clipLoop: for (const clip of CLIPS) {
     } catch (e) {
       if (!(e instanceof DailyQuota)) throw e
       stopped = key
+      console.log(`    quota: ${e.message}`)
       break clipLoop
     }
     const statusRank = { fail: 3, unchecked: 2, listen: 1, ok: 0 }
@@ -196,7 +203,7 @@ clipLoop: for (const clip of CLIPS) {
 
 if (stopped) {
   const left = CLIPS.flatMap(c => ['uk', 'us'].map(v => `${c.id}:${v}`)).filter(k => !manifest[k])
-  console.log(`\nStopped at ${stopped}: the TTS model's daily quota (100 requests) is used up. Run the same command`)
+  console.log(`\nStopped at ${stopped}: the TTS model's daily quota is used up (see the message above). Run the same command`)
   console.log(`tomorrow; accepted clips are skipped. Not made yet (${left.length}): ${left.join(', ')}`)
 }
 const all = Object.values(manifest)
