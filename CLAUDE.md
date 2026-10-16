@@ -68,6 +68,17 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 
 ## Sabit kararlar (tekrar önerme)
 
+- **İngilizce etkinlik dili (2026-10-16, kullanıcı):** soru, metin, şık, yönerge, ipucu ve açıklamalar çocuğun uygulama dilinden bağımsız İngilizcedir. Genel uygulama kontrolleri çocuğun dilinde; ebeveyn mesajları `prefs.language` ile kalır. Başlangıçta kısa yönerge, ses/görsel ve yeni cevap biçiminde puansız çözülmüş örnek kullanılır; yönerge güçlüğü hedef beceri hatası sayılmaz. Önceki yönerge/yardımı EN/TR/ES çevirme önerisi geçersiz. Üç İngilizce tasarım belgesi güncellendi; kod değişmedi. Native etkisi: yok, yalnız tasarım kaydı.
+
+- **İngilizcede temel düzeyde zorlanma (2026-10-16, kullanıcı):** günlük İngilizce görevi kendiliğinden kaldırılmaz. Yanlış sonrası açıklama ve pratik devam eder; yardımlı/tekrar cevap bağımsız ilk kanıttan ayrılır. Yeterli farklı örnekte tekrarlanan zorlanma ebeveyne bir kez, gözlem olarak iletilir; gizleme/açma ebeveyn kararıdır. Yaş farkı, sessiz cihaz veya eksik oturum başarısızlık kanıtı değildir. Mesaj ve uygulama önkoşulları: `docs/ENGLISH-SKILL-LADDERS.md`, “Temel düzeyde zorlanan çocuk”. Sayısal bildirim eşikleri henüz doğrulanmadı. `docs/ENGLISH-TRIAL-SET.md` 36 soruluk editoryal deneme taslağıdır; ses/görsel varlıklar ve çocuk testi bekliyor. Native etkisi: yok, yalnız doküman.
+
+- **İngilizce okuryazarlık pilotu UK/US ortak kapsam (2026-10-15, kullanıcı):** mümkün olduğunca
+  iki çeşitte ortak, tek doğru cevaplı kelime/ses/dilbilgisi örnekleri seçilir. Yazımı veya
+  cevabı bölgesel kullanımla değişen, aksana duyarlı maddeler ilk pilot dışında. Ortaklığı
+  doğrulanmış phonics korunur; UK/US metadata ve mevcut tercih silinmez. Ayrıntı:
+  `docs/ENGLISH-LITERACY-ARCHITECTURE.md` bölüm 7. Native etkisi: yalnız tasarım kaydı, kod değişmedi.
+
+
 - **Kitap okuma alanı** (2026-10-04): okuyucu telefon sütununa sabitlenmez; portal ile
   tam ekran açılır, masaüstünde 680px sayfa ve 18px metin kullanır. Telefonlarda genişliğe
   uyarlanır; sayfa taşarsa metin kaydırılır, sayfa değişince kaydırma sıfırlanır.
@@ -117,6 +128,30 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
   bulunuyordu; etiket çevrilir çevrilmez o adım sessizce atlanırdı. Artık `kind: 'game'`.
 
 ## Açık işler / yol haritası
+
+- [x] İngilizce okuryazarlık ilk yerel lab (2026-10-15, Codex; `codex/literacy-pilot`, yayın/push yok).
+      `/literacy-lab`: 100 özgün kelime, 24 bağlam + 24 be cümle kalıbı, 6 özgün mini metin,
+      10 beceri; deterministik üretim, ipucu, harf kurma/seçme, cevap/açıklama, beceri bazlı sonuç
+      ve içerik envanteri. Yalnız bellekte: hesap/DB/Gem/assessment/mastery yok; cevap anahtarı
+      lab istemcisinde, production çocuk ekranında kullanılamaz. UK/US ortak içerik adayları;
+      phonics/ses/serbest yazma yok. İngilizce reviewer lab; child UI'da da etkinlik yönerge/yardımı İngilizce kalacak.
+      `npm run literacy:check`: 5 test (5.000 soru + 200 oturum); Chromium/WebKit telefon/tablet
+      akışları geçti, build/lint/font temiz, i18n mevcut 115 bulguda aynı. Açık: editoryal/çocuk
+      denemesi, başlangıç için tanımların okuma yükü, adaptif planlama ve canlı entegrasyon.
+      Ayrıntı: `docs/LITERACY-PILOT.md`. Native etkisi: yok; yalnız yeni web lab, native paket değişmedi.
+
+
+- [ ] İngilizce okuryazarlık tasarımı (2026-10-15, Codex; kullanıcıyla kapsam görüşmesi).
+      İlk pilot 6–8 yaş odaklı; yaş İngilizce yeterliği değildir (9 yaş başlangıç / 7 yaş ileri okuyucu mümkün).
+      Reading, vocabulary, spelling ve temel grammar için beceri haritası ve mimari önerisi
+      `docs/ENGLISH-LITERACY-ARCHITECTURE.md` içinde. Öneri: yaş sunum/konu, performans beceri seçimi;
+      alan bazında kanıt, geçici 10 soruluk başlangıç yoklaması, çalışma anında LLM'siz kurallı üretim +
+      editoryal kelime/cümle/metin bankaları. Grade/CEFR eşdeğerliği veya 10 soruda kesin seviye iddiası yok.
+      Mevcut VR geçmişini literacy becerilerine dönüştürmeme, içerik sürümleme ve kapsam tavanı taslakta.
+      Bunlar uygulamaya alınmış kararlar değil; eşikler, ilk beceri listesi ve ürün geçişi netleşecek.
+      Kaynak incelemesi içindekiler + örnek sayfalar; tam kitap audit'i değil. Vocabulary ve ara okuma
+      seviyelerinin kapsamı açık. Native etkisi: bu doküman değişikliğinde yok; uygulama planı dokümanda.
+
 
 - [ ] iOS kabuğu (2026-10-07, Claude; `claude/ios-shell`, kullanıcı kararı: iOS'ta native arayüz değil kabuk).
       `mobile/iosShell`: iPhone + iPad, WKWebView canlı siteyi (`tuto-blue.vercel.app`) yükler. **Kural:** Vercel/Railway ile çıkan her şey
@@ -1219,3 +1254,5 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 - 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
 
 - 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.
+
+- **İngilizce deneme seti revizyon 2 (2026-10-16, Codex):** `docs/ENGLISH-TRIAL-SET.md` içindeki 36 maddenin geri bildirimleri İngilizce/kelimesiz görsel + İngilizce ses olarak netleşti; D01/02 sun/fish, CA03 farklı nesne, CA02–CA06 üç şık, B03 doğrudan zıt anlam sorusu oldu. Görev gizleme aracı `576db82` ile origin/main içinde koddan doğrulandı; commit kaydındaki gerçek model testi yeniden çalıştırılmadı. Bu literacy dalı henüz o commiti içermiyor. Native etkisi: yok, yalnız doküman.

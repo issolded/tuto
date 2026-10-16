@@ -44,6 +44,9 @@ const NOT_USER_FACING = [
   // Developer sandboxes. No child reaches them — they are unlisted routes whose whole content
   // is attribute names and audit counters, and translating that would hide what it reports.
   'screens/PuzzleLab.jsx', 'screens/EnglishLab.jsx',
+  // Isolated English-only literacy review pilot. Not a child screen; production wiring
+  // must localize directions/help first. Content vocabulary itself remains English.
+  'screens/LiteracyLab.jsx', 'lib/literacy/content.js', 'lib/literacy/engine.js',
   // The English engine and its lexicon. Two separate reasons, and neither is "not translated
   // yet". The lexicon is the module's subject matter: it is a list of English words, and the
   // question "why is `garment` not in Turkish" has no answer. The engine's English strings are
