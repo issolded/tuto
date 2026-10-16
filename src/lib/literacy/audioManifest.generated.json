@@ -163,7 +163,9 @@
   "status": "ok",
   "issues": [],
   "approved": false,
-  "notes": []
+  "notes": [
+   "accent judged american twice (rhoticity on 'under' and 'chair') (short clip: not trusted)"
+  ]
  },
  "s-ball-under-chair:us": {
   "id": "57c1d3700994f03d",
@@ -290,7 +292,7 @@
   "issues": [],
   "approved": false,
   "notes": [
-   "accent judged british twice (Rounded short vowel in 'box' (/bɒks/) and British diphthong in 'open') (short clip: not trusted)"
+   "accent judged british twice (rounded, short /ɒ/ vowel in 'box') (short clip: not trusted)"
   ]
  },
  "s-window-not-open:uk": {
@@ -308,9 +310,10 @@
   "made": "2026-10-16",
   "status": "listen",
   "issues": [
-   "accent judged american twice (unrounded vowel /ɑ/ in 'not')"
+   "accent judged american twice (unrounded /ɑ/ in \"not\")"
   ],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-window-not-open:us": {
   "id": "fce72ff12833cf12",
@@ -382,5 +385,666 @@
    "accent judged american twice (Rhotic pronunciation of 'starting' and 'here', with American intonation and flap 't' in 'starting')"
   ],
   "approved": false
+ },
+ "d-a05:us": {
+  "id": "37732520ed17c89b",
+  "file": "english-audio/37732520ed17c89b.m4a",
+  "clip": "d-a05",
+  "variety": "us",
+  "kind": "dialogue",
+  "items": [
+   "A05"
+  ],
+  "lines": [
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "Shall we draw outside? I have paper and pencils in my bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Puck",
+    "text": "Look at those clouds. It is starting to rain, and the paper will get wet out here.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "There is a table under that roof. We can sit there.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Puck",
+    "text": "Good idea. Let's take our things over.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   }
+  ],
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "q-a05:uk": {
+  "id": "0f120915a0d0b474",
+  "file": "english-audio/0f120915a0d0b474.m4a",
+  "clip": "q-a05",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "Why do they choose the table?",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "q-a05:us": {
+  "id": "402d33ab18a72393",
+  "file": "english-audio/402d33ab18a72393.m4a",
+  "clip": "q-a05",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "Why do they choose the table?",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a05-1:uk": {
+  "id": "73ff006e44f77be9",
+  "file": "english-audio/73ff006e44f77be9.m4a",
+  "clip": "o-a05-1",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To eat lunch.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a05-1:us": {
+  "id": "dcbc7697895205e2",
+  "file": "english-audio/dcbc7697895205e2.m4a",
+  "clip": "o-a05-1",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To eat lunch.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a05-2:uk": {
+  "id": "fe6593817621c1ab",
+  "file": "english-audio/fe6593817621c1ab.m4a",
+  "clip": "o-a05-2",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": [
+   "accent judged american twice (rhotic unstressed syllable in 'paper') (short clip: not trusted)"
+  ]
+ },
+ "o-a05-2:us": {
+  "id": "4d33b2b2041e13a0",
+  "file": "english-audio/4d33b2b2041e13a0.m4a",
+  "clip": "o-a05-2",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a05-3:uk": {
+  "id": "e4943239ff6d22ed",
+  "file": "english-audio/e4943239ff6d22ed.m4a",
+  "clip": "o-a05-3",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To watch the rain.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a05-3:us": {
+  "id": "82f82d8ce4ca9da3",
+  "file": "english-audio/82f82d8ce4ca9da3.m4a",
+  "clip": "o-a05-3",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To watch the rain.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "f-a05:uk": {
+  "id": "1e67afab6883e8e4",
+  "file": "english-audio/1e67afab6883e8e4.m4a",
+  "clip": "f-a05",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry. It is raining, so they choose a table under a roof.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "f-a05:us": {
+  "id": "3df24c6aebedcc63",
+  "file": "english-audio/3df24c6aebedcc63.m4a",
+  "clip": "f-a05",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry. It is raining, so they choose a table under a roof.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "d-a06:uk": {
+  "id": "ee7aa0692aca2e90",
+  "file": "english-audio/ee7aa0692aca2e90.m4a",
+  "clip": "d-a06",
+  "variety": "uk",
+  "kind": "dialogue",
+  "items": [
+   "A06"
+  ],
+  "lines": [
+   {
+    "speaker": "Leo",
+    "voice": "Charon",
+    "text": "We are nearly at the library. Have you got the book we need to take back?",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "I thought you had it. I only put my coat in this bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Leo",
+    "voice": "Charon",
+    "text": "Oh, I left the book on the kitchen table.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "Let's go back and get it. We still have time.",
+    "status": "ok",
+    "issues": [],
+    "take": 3
+   }
+  ],
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "d-a06:us": {
+  "id": "b6180b302d6700fb",
+  "file": "english-audio/b6180b302d6700fb.m4a",
+  "clip": "d-a06",
+  "variety": "us",
+  "kind": "dialogue",
+  "items": [
+   "A06"
+  ],
+  "lines": [
+   {
+    "speaker": "Leo",
+    "voice": "Puck",
+    "text": "We are nearly at the library. Have you got the book we need to take back?",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "I thought you had it. I only put my coat in this bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   },
+   {
+    "speaker": "Leo",
+    "voice": "Puck",
+    "text": "Oh, I left the book on the kitchen table.",
+    "status": "ok",
+    "issues": [],
+    "take": 2
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "Let's go back and get it. We still have time.",
+    "status": "ok",
+    "issues": [],
+    "take": 1
+   }
+  ],
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "q-a06:uk": {
+  "id": "d426fc256682d7c4",
+  "file": "english-audio/d426fc256682d7c4.m4a",
+  "clip": "q-a06",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "Why do they go back?",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "q-a06:us": {
+  "id": "c5a2dec1bd044787",
+  "file": "english-audio/c5a2dec1bd044787.m4a",
+  "clip": "q-a06",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "Why do they go back?",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a06-1:uk": {
+  "id": "15c94235d7bb402f",
+  "file": "english-audio/15c94235d7bb402f.m4a",
+  "clip": "o-a06-1",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a06-1:us": {
+  "id": "f699246337f6d864",
+  "file": "english-audio/f699246337f6d864.m4a",
+  "clip": "o-a06-1",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a06-2:uk": {
+  "id": "f215a07330c74b6a",
+  "file": "english-audio/f215a07330c74b6a.m4a",
+  "clip": "o-a06-2",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To find a coat.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a06-2:us": {
+  "id": "b1818708cb58a503",
+  "file": "english-audio/b1818708cb58a503.m4a",
+  "clip": "o-a06-2",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To find a coat.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a06-3:uk": {
+  "id": "edb5a6e92eaf006e",
+  "file": "english-audio/edb5a6e92eaf006e.m4a",
+  "clip": "o-a06-3",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To close a window.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "o-a06-3:us": {
+  "id": "24d61be2b9387d53",
+  "file": "english-audio/24d61be2b9387d53.m4a",
+  "clip": "o-a06-3",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To close a window.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "f-a06:uk": {
+  "id": "60aa8d13b7020cb2",
+  "file": "english-audio/60aa8d13b7020cb2.m4a",
+  "clip": "f-a06",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book. Leo left it on the kitchen table.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "f-a06:us": {
+  "id": "ce08e214426f464c",
+  "file": "english-audio/ce08e214426f464c.m4a",
+  "clip": "f-a06",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book. Leo left it on the kitchen table.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-listen-picture:uk": {
+  "id": "60da34acfa95a0af",
+  "file": "english-audio/60da34acfa95a0af.m4a",
+  "clip": "i-listen-picture",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "A01",
+   "A02",
+   "A03",
+   "A04"
+  ],
+  "text": "Listen and choose the picture.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-listen-picture:us": {
+  "id": "6a0fc3500b429247",
+  "file": "english-audio/6a0fc3500b429247.m4a",
+  "clip": "i-listen-picture",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "A01",
+   "A02",
+   "A03",
+   "A04"
+  ],
+  "text": "Listen and choose the picture.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-listen-answer:uk": {
+  "id": "8c30cf4b723fa79d",
+  "file": "english-audio/8c30cf4b723fa79d.m4a",
+  "clip": "i-listen-answer",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "A05",
+   "A06"
+  ],
+  "text": "Listen to the children. Then choose the answer.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-listen-answer:us": {
+  "id": "03cfaa3b9c4a1c0e",
+  "file": "english-audio/03cfaa3b9c4a1c0e.m4a",
+  "clip": "i-listen-answer",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "A05",
+   "A06"
+  ],
+  "text": "Listen to the children. Then choose the answer.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-look:uk": {
+  "id": "e86bb8367073b245",
+  "file": "english-audio/e86bb8367073b245.m4a",
+  "clip": "i-look",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Look and listen.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-look:us": {
+  "id": "112e4ff32e506925",
+  "file": "english-audio/112e4ff32e506925.m4a",
+  "clip": "i-look",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Look and listen.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-your-turn:uk": {
+  "id": "c6e1fd3f2c2d9cf2",
+  "file": "english-audio/c6e1fd3f2c2d9cf2.m4a",
+  "clip": "i-your-turn",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Now you try.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
+ },
+ "i-your-turn:us": {
+  "id": "b2fcaeb548fe9298",
+  "file": "english-audio/b2fcaeb548fe9298.m4a",
+  "clip": "i-your-turn",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Now you try.",
+  "voice": "Leda",
+  "model": "gemini-3.8-flash-tts",
+  "made": "2026-10-16",
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
  }
 }

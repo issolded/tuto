@@ -37,14 +37,8 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
 
 ## Durum
 
-- **19 kayıt var:** 17 ok, 2 dinlenecek (UK pencere cümlesi ve UK A05 konuşması). Kelimeler (dog, apple, sun, fish), A03, A04 ve CA01–CA03 cümleleri UK+US, A05 konuşması UK.
-- **Kalan:**
-  - A05 konuşması US
-  - A05/A06 soruları, şıkları ve geri bildirimleri
-  - A06 konuşması
-  - 4 yönerge (`i-*`)
-
-  Aynı `build.mjs` komutuyla tamamlanır.
+- **50 kayıt tamam (2026-10-17):** 48 ok, 2 dinlenecek (UK pencere cümlesi ve UK A05 konuşması). Deneme setinin bütün klipleri
+  üretildi. Son 31 kayıt, faturalı projeden alınan `GEMINI_TTS_API_KEY` ile üretildi.
 - **Onay:** Hiçbir kayıt onaylı değil. Kural: onaysız ses çocuğa gösterilmez; `approved` bir insan dinledikten sonra `true` yapılır.
 
 ## Kararlar (gerekçeleri ENGLISH-AUDIO.md'de)
