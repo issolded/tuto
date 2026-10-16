@@ -37,7 +37,7 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
 
 ## Durum
 
-- **19 kayıt var:** 18 ok, 1 dinlenecek. Kelimeler (dog, apple, sun, fish), A03, A04 ve CA01–CA03 cümleleri UK+US, A05 konuşması UK.
+- **19 kayıt var:** 17 ok, 2 dinlenecek (UK pencere cümlesi ve UK A05 konuşması). Kelimeler (dog, apple, sun, fish), A03, A04 ve CA01–CA03 cümleleri UK+US, A05 konuşması UK.
 - **Kalan:**
   - A05 konuşması US
   - A05/A06 soruları, şıkları ve geri bildirimleri
