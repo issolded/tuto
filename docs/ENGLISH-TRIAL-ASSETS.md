@@ -55,4 +55,10 @@ soru metinleri gider (kullanıcı onaylı).
   Test `scripts/tests/english-trial.test.mjs`: belgedeki 36 kimlik = veri; her anahtar kendi şıkkı; her ses
   ve resim tanımlı; A alanında yazı yok; çocuğun gördüğünde Türkçe/İspanyolca harf yok; resim üçlüleri
   maddelerle aynı.
-- Ekran: (sırada) `/english-trial-lab`, gözden geçirme için; ses UK/US seçmeli, her kaydın durumu görünür.
+- **Ekran: `/english-trial-lab`** (`src/screens/EnglishTrialLab.jsx`, gecikmeli yüklenen, menüde yok, hiçbir şey
+  kaydetmez). İki görünüm: **Review** (36 madde, anahtar ve her kaydın durumu: ok / listen / fail / missing, üstüne
+  gelince sorunlar) ve **Play with a child** (tek tek, anahtar ve durum gizli, sonda alan alan ✓/✗). UK/US ses,
+  alan süzgeci, şık sırası her turda karışık. Denendi (tarayıcı, 375px ve masaüstü): resimli seçim, sesli şık,
+  harf kurma, kart sıralama, yanlış sonrası İngilizce açıklama + ses; konsol hatasız, yatay taşma yok. Telefonda
+  sahneler iki sütun (131 px, üçü de ekranda; üç sütunda 78 px çocuk için küçüktü).
+- **Açık:** sesler henüz onaylı değil (lab onaylamaz, durumu gösterir); eksik kayıtlar yarın; çocukla denenmedi.
