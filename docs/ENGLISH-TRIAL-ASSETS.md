@@ -26,7 +26,10 @@ soru metinleri gider (kullanıcı onaylı).
   bugün doldurdu (yenilenme ~10 saat). **Kalan (yarın aynı komut):** A05 konuşması US, A05/A06 soru,
   şıklar ve geri bildirimler, A06 konuşması, 4 yönerge. Tam içerik (~7.200 kayıt) bu kotayla ~70 gün:
   gerçek üretimden önce ücretli kota / artış gerekir (kullanıcı kararı, hesap işi).
-- **"listen" çıkan 3 kayıt** (üç üretimin üçünde de yargıç "Amerikan" dedi): UK "The ball is under the chair.",
+- **Yeniden değerlendirme (iki çalıştırma + kısa kayıt kuralı, `--rejudge`):** 3 "listen"den 2'si ok oldu.
+  Kalan 1: UK "The window is not open. It is closed." (8 kelime; iki çalıştırma da "Amerikan", "not"taki ünlü).
+  A05 UK'deki Ben repliği konuşmanın içinde saklı olmadığı için yeniden denetlenemedi; "listen" kaldı.
+- (eski not) **"listen" çıkan 3 kayıt** (üç üretimin üçünde de yargıç "Amerikan" dedi): UK "The ball is under the chair.",
   UK "The window is not open. It is closed.", UK A05'te Ben'in "Good idea. Let's take our things over."
   Ortak nokta: kısa UK kayıtta sonu r'li ya da "not/hot" ünlülü kelime. Aynı cümle Leda'yla daha uzun
   bağlamda (voice test) 2/2 İngiliz bulunmuştu. Yargıcın mı yanıldığı, sesin mi kaydığı belirsiz: **kulak lazım.**
@@ -47,7 +50,7 @@ soru metinleri gider (kullanıcı onaylı).
   3 kez, cümleye uyan resmi seçmesi istendi: **5/5 üçlü 3/3**. Tek tek tarifte 15/15 doğru ("cat sleeping
   under the bed", "pink bag", "open window… cloud"). Yolda düzeltilen: alçak yatak (kedi altında değil önünde
   görünüyordu), kova gibi çanta, iki pencere arasında iki fark (bölme sayısı + renk), ters "z". Uyarı: bu
-  yetişkin bir modelin testi; çocuğun okuyacağını kanıtlamaz.
+  yetişkin bir modelin testi; çocuğun okuyacağını kanıtlamaz. Telefon boyutunda (131 px, `ART_PX=131`) de 5/5 üçlü 3/3.
 
 ## Lab — durum
 

@@ -113,6 +113,28 @@ function encode(wavBuf, dst) {
 
 const hash = s => createHash('sha1').update(s).digest('hex').slice(0, 16)
 
+// --rejudge: run the checks again on recordings already made (no new audio, no TTS quota), e.g. after a
+// change to qc.mjs. Dialogue lines are not stored separately, so a dialogue is re-checked whole by Whisper only.
+if (process.argv.includes('--rejudge')) {
+  for (const [key, m] of Object.entries(manifest)) {
+    if (ONLY && !ONLY.has(m.clip)) continue
+    const path = join(OUT_AUDIO, `${m.id}.m4a`)
+    if (!existsSync(path)) continue
+    const w = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', path, '-f', 'wav', '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '24000', '-'], { maxBuffer: 1e8 })
+    if (m.kind === 'dialogue') {
+      const clip = CLIPS.find(c => c.id === m.clip)
+      const whole = checkAsr(w, clip.lines.map(([, l]) => l).join(' '))
+      console.log(`${key}: whole dialogue ${whole.ok ? 'heard right' : whole.issues[0]} (lines keep their earlier status)`)
+      continue
+    }
+    const qc = await check(w, m.text, m.variety, m.kind === 'word' ? 'word' : 'sentence')
+    console.log(`${key}: ${m.status} -> ${qc.status}${qc.issues.length ? ' · ' + qc.issues.join(' · ') : ''}${qc.judge?.notes?.length ? ' · note: ' + qc.judge.notes.join('; ') : ''}`)
+    Object.assign(m, { status: qc.status, issues: qc.issues, notes: qc.judge?.notes || [] })
+    writeFileSync(MANIFEST, JSON.stringify(manifest, null, 1) + '\n')
+  }
+  process.exit(0)
+}
+
 let stopped = null
 clipLoop: for (const clip of CLIPS) {
   if (ONLY && !ONLY.has(clip.id)) continue

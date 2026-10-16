@@ -17,7 +17,7 @@ const dir = join(tmpdir(), 'english-art-check'); mkdirSync(dir, { recursive: tru
 function png(id) {
   const f = join(dir, `${id}.svg`)
   writeFileSync(f, SCENES[id]())
-  execFileSync('qlmanage', ['-t', '-s', '480', '-o', dir, f], { stdio: 'ignore' })   // macOS renders SVG
+  execFileSync('qlmanage', ['-t', '-s', String(process.env.ART_PX || 480), '-o', dir, f], { stdio: 'ignore' })   // macOS renders SVG
   return readFileSync(`${f}.png`).toString('base64')
 }
 async function ask(parts) {

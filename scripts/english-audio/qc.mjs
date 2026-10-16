@@ -72,7 +72,7 @@ export function checkAsr(wavBuf, text) {
   return heard === want ? { ok: true, issues: [], heard } : { ok: false, issues: [`heard "${heard}"`], heard }
 }
 
-export async function judge(wavBuf, text, variety, kind) {
+async function judgeOnce(wavBuf, text) {
   const prompt = `You are checking a recording made for a children's English quiz.
 Script: "${text}"
 Listen and answer ONLY with JSON: {"accent":"british|american|unclear","accent_cues":"…","stress_ok":true|false,"natural":1-5,"child_friendly":true|false,"problems":["…"]}
@@ -87,19 +87,39 @@ natural: 5 = sounds like a careful human speaker, 1 = robotic or garbled. proble
     if (r.status === 429 || r.status >= 500) { await new Promise(res => setTimeout(res, 15000)); continue }
     const j = await r.json()
     const t = j.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || ''
-    try {
-      // Gemini sometimes adds junk after the JSON object: keep the outermost braces.
-      const v = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1))
-      const want = variety === 'uk' ? 'british' : 'american'
-      const issues = []
-      // Short lines often carry no accent cue at all, so "unclear" is fine: what is caught is the wrong accent.
-      if (v.accent !== want && v.accent !== 'unclear') issues.push(`accent judged ${v.accent} (${v.accent_cues})`)
-      if (v.stress_ok === false) issues.push('stress')
-      if (v.natural < 4) issues.push(`naturalness ${v.natural}/5`)
-      if (v.child_friendly === false) issues.push('not child-friendly')
-      for (const p of v.problems || []) issues.push(p)
-      return { ok: !issues.length, issues, accent: v.accent, natural: v.natural }
-    } catch { /* unreadable: try again */ }
+    try { return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)) } catch { /* unreadable: try again */ }
   }
-  return { ok: null, issues: ['judge unavailable'] }
+  return null
+}
+
+// Two independent runs; a problem counts only if BOTH raise it. Measured 2026-10-16: on short clips the
+// accent verdict is not reliable (the same British clip was "American" 3/3 asked in general and "British"
+// 2/2 asked cue by cue; a clip with no cue at all is still called British). So below 8 words the accent is
+// only noted, never a reason to send the clip to a person.
+export const ACCENT_MIN_WORDS = 8
+export async function judge(wavBuf, text, variety, kind) {
+  const runs = [await judgeOnce(wavBuf, text), await judgeOnce(wavBuf, text)]
+  if (runs.some(v => !v)) return { ok: null, issues: ['judge unavailable'] }
+  const want = variety === 'uk' ? 'british' : 'american'
+  const flags = v => {
+    const f = new Set()
+    if (v.accent !== want && v.accent !== 'unclear') f.add('accent')
+    if (v.stress_ok === false) f.add('stress')
+    if (v.natural < 4) f.add('naturalness')
+    if (v.child_friendly === false) f.add('child-friendly')
+    if ((v.problems || []).length) f.add('problems')
+    return f
+  }
+  const [a, b] = runs.map(flags)
+  const both = [...a].filter(x => b.has(x))
+  const short = countWords(text) < ACCENT_MIN_WORDS
+  const issues = [], notes = []
+  for (const f of both) {
+    const say = f === 'accent' ? `accent judged ${runs[0].accent} twice (${runs[0].accent_cues})`
+      : f === 'naturalness' ? `naturalness ${runs[0].natural}/5 and ${runs[1].natural}/5`
+      : f === 'problems' ? `problems: ${[...(runs[0].problems || []), ...(runs[1].problems || [])].join('; ')}` : f
+    if (f === 'accent' && short) notes.push(say + ' (short clip: not trusted)')
+    else issues.push(say)
+  }
+  return { ok: !issues.length, issues, notes, accent: runs.map(v => v.accent), natural: runs.map(v => v.natural) }
 }

@@ -59,6 +59,13 @@ eklenmiş (1), sesi patlatılmış (1), ortada kesilmiş (1 + 2), yanlış metin
 "dog" duyuldu), yanlış aksan etiketi (3). Katman 3 ayrıca iki iyi kaydı işaretledi: İngiliz
 "The ball is under the chair." (r'ler okunuyor gibi) ve İngiliz A05 konuşmasında Ben.
 
+**Kısa kayıtlarda aksan yargısı güvenilmez (2026-10-16, ölçüldü).** Aynı İngiliz "The ball is under the chair."
+genel soruda 3/3 "Amerikan", ipucu ipucu soruda ("chair"de r var mı?) 2/2 "İngiliz"; Amerikan aynı cümle iki
+çalıştırmada bir İngiliz bir Amerikan; hiç ipucu olmayan kayıtta bile "İngiliz" deniyor. Uzun cümlelerde (ses
+seçimi testleri) tutarlıydı. Kural: yargıç iki kez bağımsız çalışır, bir sorun ancak ikisi de söylerse sayılır;
+**8 kelimenin altında aksan yalnız not** (`notes`), kaydı dinlemeye düşürmez (`ACCENT_MIN_WORDS`). Var olan
+kayıtlar yeniden üretmeden yeni kuralla denetlenir: `node scripts/english-audio/build.mjs --rejudge`.
+
 **İsteğe bağlı 4. katman:** Azure Pronunciation Assessment (metin + kayıt → ses birimi başına doğruluk;
 UK/US ayrı). En alt basamak kelimeleri için en değerli kontrol; Azure hesabı ister, karar
 alt basamak üretimine gelince.

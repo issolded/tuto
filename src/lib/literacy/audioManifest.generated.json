@@ -15,7 +15,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-dog:us": {
   "id": "02f98b26aa861c1b",
@@ -33,7 +34,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-apple:uk": {
   "id": "fde04b66a39fe148",
@@ -51,7 +53,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-apple:us": {
   "id": "2bb1e2a2cd2e4936",
@@ -69,7 +72,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-sun:uk": {
   "id": "46dc812aecaab791",
@@ -86,7 +90,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-sun:us": {
   "id": "3ace3e41db5f0583",
@@ -103,7 +108,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-fish:uk": {
   "id": "d04c294f30c6d524",
@@ -120,7 +126,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "w-fish:us": {
   "id": "582c2b90623d1172",
@@ -137,7 +144,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-ball-under-chair:uk": {
   "id": "04cba62984baf80f",
@@ -152,11 +160,10 @@
   "voice": "Leda",
   "model": "gemini-3.8-flash-tts",
   "made": "2026-10-16",
-  "status": "listen",
-  "issues": [
-   "accent judged american (rhotic r in 'under' and 'chair')"
-  ],
-  "approved": false
+  "status": "ok",
+  "issues": [],
+  "approved": false,
+  "notes": []
  },
  "s-ball-under-chair:us": {
   "id": "57c1d3700994f03d",
@@ -173,7 +180,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-two-cats-sleeping:uk": {
   "id": "4cfb533490eff0af",
@@ -190,7 +198,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-two-cats-sleeping:us": {
   "id": "fe4c91cc79c907cc",
@@ -207,7 +216,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-cat-on-bed:uk": {
   "id": "e44316127c1e3304",
@@ -224,7 +234,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-cat-on-bed:us": {
   "id": "5607460136d6258d",
@@ -241,7 +252,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-box-open:uk": {
   "id": "87c5747d7f27c096",
@@ -258,7 +270,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-box-open:us": {
   "id": "1c41688714d7cdc2",
@@ -275,7 +288,10 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": [
+   "accent judged british twice (Rounded short vowel in 'box' (/bɒks/) and British diphthong in 'open') (short clip: not trusted)"
+  ]
  },
  "s-window-not-open:uk": {
   "id": "0803520656a209fc",
@@ -292,9 +308,10 @@
   "made": "2026-10-16",
   "status": "listen",
   "issues": [
-   "accent judged american (unrounded /ɑ/ in \"not\")"
+   "accent judged american twice (unrounded /ɑ/ in \"not\", rhotic/American cadence)"
   ],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "s-window-not-open:us": {
   "id": "fce72ff12833cf12",
@@ -311,7 +328,8 @@
   "made": "2026-10-16",
   "status": "ok",
   "issues": [],
-  "approved": false
+  "approved": false,
+  "notes": []
  },
  "d-a05:uk": {
   "id": "c0ab1271a18b14ba",
