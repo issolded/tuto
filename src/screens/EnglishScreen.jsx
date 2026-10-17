@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { t, say, childLang } from '../lib/i18n'
+import { t, say } from '../lib/i18n'
 import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import { EnglishStem, EnglishOptions, englishWhyLines } from '../components/EnglishView'
@@ -62,7 +62,9 @@ export default function EnglishScreen() {
   const nav = useNavigate()
   const isTablet = useIsTablet()
   const [child] = useState(() => JSON.parse(localStorage.getItem('child') || 'null'))
-  const language = childLang(child)
+  // The English section speaks English: buttons, feedback, hints and explanations, whatever the child's
+  // app language (user decision 2026-10-17). The child's language still applies outside the section.
+  const language = 'en'
 
   const [step, setStep] = useState('loading')   // loading | welcome | questions | finishing | result | error
   const [session, setSession] = useState(null)

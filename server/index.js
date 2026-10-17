@@ -7387,9 +7387,11 @@ function playState(sessionId, index) {
   }
   return st
 }
-async function englishLangOf(childId) {
-  const { data } = await supabase.from('children').select('language').eq('id', childId).maybeSingle()
-  return ['en', 'tr', 'es'].includes(data?.language) ? data.language : 'en'
+// The language of the hints and explanations a child reads in an English session. Always English: the
+// English section speaks English whatever children.language says (user decision 2026-10-17). Kept as
+// a function so the call sites read the same; parent messages keep prefs.language.
+async function englishLangOf() {
+  return 'en'
 }
 async function openEnglishSession(sessionId) {
   let session = englishOpen.get(sessionId)

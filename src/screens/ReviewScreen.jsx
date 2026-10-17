@@ -10,7 +10,7 @@ import { ensureIconFont } from '../lib/puzzleIcons'
 // the parent from the child's card — the same questions and marks either way, because what a
 // parent is looking at when their child asks "why was that wrong?" should be what the child saw.
 //
-//   /child/review/:ledgerId           the child's own, in the child's language
+//   /child/review/:ledgerId           the child's own, in the child's language (an English sitting: English)
 //   /parent/child/:id/review/:ledgerId the parent's, in the parent's language
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
@@ -41,8 +41,11 @@ export default function ReviewScreen({ parent = false }) {
   }, [childId, ledgerId, lang])
 
   const back = () => (parent ? nav(`/parent/child/${id}`) : nav('/child/gems'))
-  const title = data?.kind === 'puzzle' ? t('task_puzzle', lang) : data?.kind === 'english' ? t('task_english', lang)
-    : data?.kind === 'math' ? t(data.practice ? 'gem_math_review' : 'task_math', lang) : ''
+  // A child's own English sitting reads in English, like the screen it came from (decision 2026-10-17);
+  // a parent reads it in the parent's language.
+  const shown = !parent && data?.kind === 'english' ? 'en' : lang
+  const title = data?.kind === 'puzzle' ? t('task_puzzle', shown) : data?.kind === 'english' ? t('task_english', shown)
+    : data?.kind === 'math' ? t(data.practice ? 'gem_math_review' : 'task_math', shown) : ''
   const score = data?.kind === 'puzzle' || data?.kind === 'english' ? `${data.correct ?? 0}/${data.total ?? 0}`
     : data?.kind === 'math' ? `${data.items.filter(r => r.correct).length}/${data.items.length}` : ''
 
@@ -53,30 +56,30 @@ export default function ReviewScreen({ parent = false }) {
     }}>
       <style>{ANIM}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px 8px' }}>
-        <button onClick={back} aria-label={t('dr_back', lang)} style={{
+        <button onClick={back} aria-label={t('dr_back', shown)} style={{
           width: 42, height: 42, borderRadius: 14, background: 'rgba(255,255,255,0.85)', border: 'none',
           fontSize: 19, color: INK, fontWeight: 800, cursor: 'pointer', boxShadow: '0 3px 10px rgba(40,30,70,.1)',
         }}>←</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 19, color: INK }}>{title}</div>
-          {data?.at && <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT }}>{formatDay(data.at, lang)} · {score}</div>}
+          {data?.at && <div style={{ fontWeight: 700, fontSize: 12.5, color: INK_SOFT }}>{formatDay(data.at, shown)} · {score}</div>}
         </div>
       </div>
 
       <div style={{ padding: '8px 18px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {!data ? (
-          <div style={{ textAlign: 'center', color: INK_SOFT, fontWeight: 700, padding: 40 }}>{t('review_loading', lang)}</div>
+          <div style={{ textAlign: 'center', color: INK_SOFT, fontWeight: 700, padding: 40 }}>{t('review_loading', shown)}</div>
         ) : data.kind === 'puzzle' && data.questions ? (
-          <PuzzleReviewList questions={data.questions} answers={data.answers} lang={lang} px={isTablet ? 56 : 40} />
+          <PuzzleReviewList questions={data.questions} answers={data.answers} lang={shown} px={isTablet ? 56 : 40} />
         ) : data.kind === 'english' && data.questions ? (
-          <EnglishReviewList questions={data.questions} answers={data.answers} lang={lang} />
+          <EnglishReviewList questions={data.questions} answers={data.answers} lang={shown} />
         ) : data.kind === 'math' && data.items?.length ? (
-          <MathReviewList items={data.items} lang={lang} />
+          <MathReviewList items={data.items} lang={shown} />
         ) : (
           // A sitting from before the sheets were kept, or a row nothing can be found behind:
           // said plainly, with the score where there is one, rather than an empty page.
           <div style={{ background: 'white', borderRadius: 16, padding: '18px 16px', fontWeight: 700, fontSize: 14, color: INK, lineHeight: 1.5, textAlign: 'center' }}>
-            {data.reason === 'sheet_changed' ? t('review_sheet_gone', lang) : t('review_none', lang)}
+            {data.reason === 'sheet_changed' ? t('review_sheet_gone', shown) : t('review_none', shown)}
           </div>
         )}
       </div>
