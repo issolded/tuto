@@ -147,6 +147,24 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       örneklem de tuttu; yolda iç içe parantez "candy (UK sweet(s))" bulundu ve düzeltildi). Yalnız kelime bilgisi; sınav içeriği yok.
       Henüz hiçbir ekran içe aktarmıyor. **Native etkisi:** şimdilik yok.
 
+- [ ] İngilizce ses hattı ve dinleme bankası (2026-10-17/18, Claude; `codex/english-literacy`, push yok).
+      **Motor Chirp 3 HD** (Cloud TTS, `scripts/english-audio/build.mjs` varsayılanı). `gemini-3.8-flash-tts` Tier 1'de günde 100 istekte
+      kalıyordu; Chirp dakikada 200 istek veriyor. Aynı 50 kayıtta kontrollerden eşit geçti. Kimlik `gcloud auth application-default login`,
+      kota projesi `vertexli` (API anahtarı kabul etmiyor).
+      **Kodlama AAC 64 kb/s, macOS `aac_at`.** ffmpeg `aac` 32k kullanıcının duyduğu tıslamaydı; ham FLAC repo dışında (`~/Downloads/tuto-audio-masters`).
+      **Storage:** herkese açık `english-audio` (karma adlı m4a, 1 yıl değişmez önbellek) ve özel `english-audio-masters` (FLAC); yükleme `upload.mjs`.
+      Repoda yalnız kod ve manifest. Lab sesi Storage'dan çalıyor.
+      **Kayıtlar:** deneme seti 50; Cambridge Starters/Movers/Flyers 2.690 (anlama göre okunuşu değişen close/live/read/use/wind dışarıda);
+      dinleme bankası 80 madde (`src/lib/literacy/listeningBank.js`: 40 A5 konuşma, 40 A4 anlatım, sesli şıklar).
+      **Banka kontrolü** `scripts/english-listening/check.mjs`:
+      - Starters+Movers kelimeleri, UK/US farkı olan kelime yok.
+      - Kör çözücü: konuşmasız 3/3 bilinen soru reddedilir. İlk 80'in 28'i sağduyuyla bilindi (yağmur → şemsiye, öğle → 12), cevapları ters çevrildi.
+      **Whisper kontrolü** aynı okunan yazımları kabul ediyor (by/bye, centre/center, 100/hundred; UK/US IPA sözlüğü).
+      Node bağlantısına 2 sn tanınıyor (yavaş hatta 250 ms'de bütün işçiler düşmüştü).
+      **Açık:** hiçbir kayıt onaylı değil (lab'da "approve?" + `approve.mjs`); UK /ɔː/ kelimelerinde (ball, wall) Whisper şüphesi dinlenmeli;
+      A1–A3 için resim gerekiyor; banka çocukla denenmedi; yetişkin konuşmacılar (Dad, Grandma) çocuk sesleriyle aynı.
+      **Native etkisi:** ses Storage'dan; dinleme sorusu ekranı (sesli şık) her istemcide ayrıca yapılmalı.
+
 - [ ] İngilizce ses (2026-10-16, Claude; deneme, kod projede değil). `gemini-3.8-flash-tts`, aksan `languageCode` en-GB/en-US,
       düz metin (talimat metne yazılırsa okunur; sistem talimatı kabul edilmiyor). API PCM sonuna C2PA etiketi ekliyor: ses diye
       yazılırsa 125 ms cızırtı, ayrı `.c2pa` dosyasına alınır. Kota dakikada 10. Kalite kontrolü üç katman: kod (süre/sessizlik/
