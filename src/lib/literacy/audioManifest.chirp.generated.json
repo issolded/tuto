@@ -1,0 +1,1479 @@
+{
+ "w-dog:uk": {
+  "id": "4011bea755abb8bf",
+  "file": "english-audio/4011bea755abb8bf.m4a",
+  "clip": "w-dog",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "A01",
+   "B01"
+  ],
+  "text": "dog",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "w-dog:us": {
+  "id": "6b49bdf5d28deb08",
+  "file": "english-audio/6b49bdf5d28deb08.m4a",
+  "clip": "w-dog",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "A01",
+   "B01"
+  ],
+  "text": "dog",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "w-apple:uk": {
+  "id": "46b9d4192d87879d",
+  "file": "english-audio/46b9d4192d87879d.m4a",
+  "clip": "w-apple",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "A02",
+   "B02"
+  ],
+  "text": "apple",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "w-apple:us": {
+  "id": "b6c600ec5eeaadcc",
+  "file": "english-audio/b6c600ec5eeaadcc.m4a",
+  "clip": "w-apple",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "A02",
+   "B02"
+  ],
+  "text": "apple",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-ball-under-chair:uk": {
+  "id": "65a8981ae3f206da",
+  "file": "english-audio/65a8981ae3f206da.m4a",
+  "clip": "s-ball-under-chair",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A03"
+  ],
+  "text": "The ball is under the chair.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-ball-under-chair:us": {
+  "id": "37268e69056d12a5",
+  "file": "english-audio/37268e69056d12a5.m4a",
+  "clip": "s-ball-under-chair",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A03"
+  ],
+  "text": "The ball is under the chair.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "w-sun:uk": {
+  "id": "c97142b99ba92b2e",
+  "file": "english-audio/c97142b99ba92b2e.m4a",
+  "clip": "w-sun",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "D01"
+  ],
+  "text": "sun",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "fail",
+  "issues": [
+   "heard \"done\""
+  ],
+  "approved": false
+ },
+ "w-sun:us": {
+  "id": "4e18c2551e9e0258",
+  "file": "english-audio/4e18c2551e9e0258.m4a",
+  "clip": "w-sun",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "D01"
+  ],
+  "text": "sun",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "w-fish:uk": {
+  "id": "78cf9dbb80a76c63",
+  "file": "english-audio/78cf9dbb80a76c63.m4a",
+  "clip": "w-fish",
+  "variety": "uk",
+  "kind": "word",
+  "items": [
+   "D02"
+  ],
+  "text": "fish",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "w-fish:us": {
+  "id": "fc671a69a7bf74af",
+  "file": "english-audio/fc671a69a7bf74af.m4a",
+  "clip": "w-fish",
+  "variety": "us",
+  "kind": "word",
+  "items": [
+   "D02"
+  ],
+  "text": "fish",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-two-cats-sleeping:uk": {
+  "id": "eef617588a7da281",
+  "file": "english-audio/eef617588a7da281.m4a",
+  "clip": "s-two-cats-sleeping",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A04"
+  ],
+  "text": "Two cats are sleeping.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-two-cats-sleeping:us": {
+  "id": "d5a1ba1896ea62ea",
+  "file": "english-audio/d5a1ba1896ea62ea.m4a",
+  "clip": "s-two-cats-sleeping",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A04"
+  ],
+  "text": "Two cats are sleeping.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-cat-on-bed:uk": {
+  "id": "3d73f059f7af6894",
+  "file": "english-audio/3d73f059f7af6894.m4a",
+  "clip": "s-cat-on-bed",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "CA01"
+  ],
+  "text": "The cat is on the bed.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-cat-on-bed:us": {
+  "id": "ebc62c5263ae21d5",
+  "file": "english-audio/ebc62c5263ae21d5.m4a",
+  "clip": "s-cat-on-bed",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "CA01"
+  ],
+  "text": "The cat is on the bed.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-box-open:uk": {
+  "id": "425f6fcd0209b1a3",
+  "file": "english-audio/425f6fcd0209b1a3.m4a",
+  "clip": "s-box-open",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "CA02"
+  ],
+  "text": "The box is open.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-box-open:us": {
+  "id": "9a03136364a9caf1",
+  "file": "english-audio/9a03136364a9caf1.m4a",
+  "clip": "s-box-open",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "CA02"
+  ],
+  "text": "The box is open.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "s-window-not-open:uk": {
+  "id": "d59bfdd673dbf085",
+  "file": "english-audio/d59bfdd673dbf085.m4a",
+  "clip": "s-window-not-open",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "CA03"
+  ],
+  "text": "The window is not open. It is closed.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "american"
+  ],
+  "natural": [
+   3,
+   5
+  ],
+  "approved": false
+ },
+ "s-window-not-open:us": {
+  "id": "8eeb29b3a8d0a7e4",
+  "file": "english-audio/8eeb29b3a8d0a7e4.m4a",
+  "clip": "s-window-not-open",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "CA03"
+  ],
+  "text": "The window is not open. It is closed.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   4
+  ],
+  "approved": false
+ },
+ "d-a05:uk": {
+  "id": "8c46e83d5c55de6f",
+  "file": "english-audio/8c46e83d5c55de6f.m4a",
+  "clip": "d-a05",
+  "variety": "uk",
+  "kind": "dialogue",
+  "items": [
+   "A05"
+  ],
+  "lines": [
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "Shall we draw outside? I have paper and pencils in my bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Charon",
+    "text": "Look at those clouds. It is starting to rain, and the paper will get wet out here.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "There is a table under that roof. We can sit there.",
+    "status": "ok",
+    "issues": [],
+    "take": 2,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Charon",
+    "text": "Good idea. Let's take our things over.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   }
+  ],
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "d-a05:us": {
+  "id": "f961930e7462be55",
+  "file": "english-audio/f961930e7462be55.m4a",
+  "clip": "d-a05",
+  "variety": "us",
+  "kind": "dialogue",
+  "items": [
+   "A05"
+  ],
+  "lines": [
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "Shall we draw outside? I have paper and pencils in my bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Puck",
+    "text": "Look at those clouds. It is starting to rain, and the paper will get wet out here.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Mia",
+    "voice": "Leda",
+    "text": "There is a table under that roof. We can sit there.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Ben",
+    "voice": "Puck",
+    "text": "Good idea. Let's take our things over.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   }
+  ],
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "q-a05:uk": {
+  "id": "25d6ebd481a1990a",
+  "file": "english-audio/25d6ebd481a1990a.m4a",
+  "clip": "q-a05",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "Why do they choose the table?",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "q-a05:us": {
+  "id": "4e4ef5cb64703717",
+  "file": "english-audio/4e4ef5cb64703717.m4a",
+  "clip": "q-a05",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "Why do they choose the table?",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a05-1:uk": {
+  "id": "754300734ad916ec",
+  "file": "english-audio/754300734ad916ec.m4a",
+  "clip": "o-a05-1",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To eat lunch.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a05-1:us": {
+  "id": "1ed605d508616edb",
+  "file": "english-audio/1ed605d508616edb.m4a",
+  "clip": "o-a05-1",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To eat lunch.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a05-2:uk": {
+  "id": "27e0287269d24b15",
+  "file": "english-audio/27e0287269d24b15.m4a",
+  "clip": "o-a05-2",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a05-2:us": {
+  "id": "ccdaa246e60ae951",
+  "file": "english-audio/ccdaa246e60ae951.m4a",
+  "clip": "o-a05-2",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a05-3:uk": {
+  "id": "74960a6fa4f2e892",
+  "file": "english-audio/74960a6fa4f2e892.m4a",
+  "clip": "o-a05-3",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To watch the rain.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a05-3:us": {
+  "id": "d12f26803889d665",
+  "file": "english-audio/d12f26803889d665.m4a",
+  "clip": "o-a05-3",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To watch the rain.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "f-a05:uk": {
+  "id": "e67096b8f9210b83",
+  "file": "english-audio/e67096b8f9210b83.m4a",
+  "clip": "f-a05",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry. It is raining, so they choose a table under a roof.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "f-a05:us": {
+  "id": "636b369f48312e53",
+  "file": "english-audio/636b369f48312e53.m4a",
+  "clip": "f-a05",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A05"
+  ],
+  "text": "To keep the paper dry. It is raining, so they choose a table under a roof.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "d-a06:uk": {
+  "id": "eaeb65d830492c37",
+  "file": "english-audio/eaeb65d830492c37.m4a",
+  "clip": "d-a06",
+  "variety": "uk",
+  "kind": "dialogue",
+  "items": [
+   "A06"
+  ],
+  "lines": [
+   {
+    "speaker": "Leo",
+    "voice": "Charon",
+    "text": "We are nearly at the library. Have you got the book we need to take back?",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     4,
+     5
+    ]
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "I thought you had it. I only put my coat in this bag.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Leo",
+    "voice": "Charon",
+    "text": "Oh, I left the book on the kitchen table.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "Let's go back and get it. We still have time.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "british"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   }
+  ],
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "approved": false
+ },
+ "d-a06:us": {
+  "id": "4761f2dc474dab12",
+  "file": "english-audio/4761f2dc474dab12.m4a",
+  "clip": "d-a06",
+  "variety": "us",
+  "kind": "dialogue",
+  "items": [
+   "A06"
+  ],
+  "lines": [
+   {
+    "speaker": "Leo",
+    "voice": "Puck",
+    "text": "We are nearly at the library. Have you got the book we need to take back?",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "british",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "I thought you had it. I only put my coat in this bag.",
+    "status": "fail",
+    "issues": [
+     "heard \"i thought you had it i only put my code in this bag\""
+    ],
+    "take": 1
+   },
+   {
+    "speaker": "Leo",
+    "voice": "Puck",
+    "text": "Oh, I left the book on the kitchen table.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   },
+   {
+    "speaker": "Kim",
+    "voice": "Leda",
+    "text": "Let's go back and get it. We still have time.",
+    "status": "ok",
+    "issues": [],
+    "take": 1,
+    "accent": [
+     "american",
+     "american"
+    ],
+    "natural": [
+     5,
+     5
+    ]
+   }
+  ],
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "fail",
+  "issues": [
+   "heard \"i thought you had it i only put my code in this bag\"",
+   "whole dialogue: heard \"we are nearly at the library have you got the book we need to take back i thought you had it i only put my code in this bag oh i left the book on the kitchen table let's go back and get it we still have time\""
+  ],
+  "approved": false
+ },
+ "q-a06:uk": {
+  "id": "9814101ff8058ae7",
+  "file": "english-audio/9814101ff8058ae7.m4a",
+  "clip": "q-a06",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "Why do they go back?",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "q-a06:us": {
+  "id": "c521680d080b8a21",
+  "file": "english-audio/c521680d080b8a21.m4a",
+  "clip": "q-a06",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "Why do they go back?",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a06-1:uk": {
+  "id": "bad7c91ac6b4b2ee",
+  "file": "english-audio/bad7c91ac6b4b2ee.m4a",
+  "clip": "o-a06-1",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a06-1:us": {
+  "id": "210e4bf8f2efdc2c",
+  "file": "english-audio/210e4bf8f2efdc2c.m4a",
+  "clip": "o-a06-1",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a06-2:uk": {
+  "id": "5d82411c53ffaf85",
+  "file": "english-audio/5d82411c53ffaf85.m4a",
+  "clip": "o-a06-2",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To find a coat.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a06-2:us": {
+  "id": "04b03b6475bf7816",
+  "file": "english-audio/04b03b6475bf7816.m4a",
+  "clip": "o-a06-2",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To find a coat.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a06-3:uk": {
+  "id": "b5f89c8ff7981fe6",
+  "file": "english-audio/b5f89c8ff7981fe6.m4a",
+  "clip": "o-a06-3",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To close a window.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "o-a06-3:us": {
+  "id": "4d267bb1429b8321",
+  "file": "english-audio/4d267bb1429b8321.m4a",
+  "clip": "o-a06-3",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To close a window.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "f-a06:uk": {
+  "id": "2e37090024cdcbd9",
+  "file": "english-audio/2e37090024cdcbd9.m4a",
+  "clip": "f-a06",
+  "variety": "uk",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book. Leo left it on the kitchen table.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "f-a06:us": {
+  "id": "fc56492c7e0d1db2",
+  "file": "english-audio/fc56492c7e0d1db2.m4a",
+  "clip": "f-a06",
+  "variety": "us",
+  "kind": "sentence",
+  "items": [
+   "A06"
+  ],
+  "text": "To get a book. Leo left it on the kitchen table.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-listen-picture:uk": {
+  "id": "c0de9b7f7062e3bf",
+  "file": "english-audio/c0de9b7f7062e3bf.m4a",
+  "clip": "i-listen-picture",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "A01",
+   "A02",
+   "A03",
+   "A04"
+  ],
+  "text": "Listen and choose the picture.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   3,
+   5
+  ],
+  "approved": false
+ },
+ "i-listen-picture:us": {
+  "id": "8f08b2bfc713aa54",
+  "file": "english-audio/8f08b2bfc713aa54.m4a",
+  "clip": "i-listen-picture",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "A01",
+   "A02",
+   "A03",
+   "A04"
+  ],
+  "text": "Listen and choose the picture.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-listen-answer:uk": {
+  "id": "96f70f258b3e6dcc",
+  "file": "english-audio/96f70f258b3e6dcc.m4a",
+  "clip": "i-listen-answer",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "A05",
+   "A06"
+  ],
+  "text": "Listen to the children. Then choose the answer.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "british",
+   "british"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-listen-answer:us": {
+  "id": "2518d85d8f37572c",
+  "file": "english-audio/2518d85d8f37572c.m4a",
+  "clip": "i-listen-answer",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "A05",
+   "A06"
+  ],
+  "text": "Listen to the children. Then choose the answer.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "american"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-look:uk": {
+  "id": "0cb938c50c2f9d73",
+  "file": "english-audio/0cb938c50c2f9d73.m4a",
+  "clip": "i-look",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Look and listen.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-look:us": {
+  "id": "cb5d597dbcd61205",
+  "file": "english-audio/cb5d597dbcd61205.m4a",
+  "clip": "i-look",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Look and listen.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "unclear",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-your-turn:uk": {
+  "id": "c2971bd8647918dd",
+  "file": "english-audio/c2971bd8647918dd.m4a",
+  "clip": "i-your-turn",
+  "variety": "uk",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Now you try.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ },
+ "i-your-turn:us": {
+  "id": "18a5e17ae82aae8c",
+  "file": "english-audio/18a5e17ae82aae8c.m4a",
+  "clip": "i-your-turn",
+  "variety": "us",
+  "kind": "instruction",
+  "items": [
+   "example"
+  ],
+  "text": "Now you try.",
+  "voice": "Leda",
+  "model": "chirp3-hd",
+  "made": "2026-10-17",
+  "status": "ok",
+  "issues": [],
+  "accent": [
+   "american",
+   "unclear"
+  ],
+  "natural": [
+   5,
+   5
+  ],
+  "approved": false
+ }
+}

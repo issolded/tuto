@@ -26,11 +26,15 @@ import { execFileSync } from 'node:child_process'
 import { CLIPS as TRIAL_CLIPS, WORD_CLIPS, VOICES, SPEAKERS } from './clips.mjs'
 import { checkSignal, checkAsr, judge } from './qc.mjs'
 
-const MODEL = 'gemini-3.8-flash-tts'
+// --engine gemini (default) | chirp. Chirp = Google Cloud Text-to-Speech, Chirp 3 HD voices (same voice names
+// as Gemini's). Cloud TTS takes no API key: it uses the gcloud login (gcloud auth application-default login,
+// quota project set) and allows 200 requests a minute instead of Gemini TTS's 10 a minute / 100 a day.
+const ENGINE = (() => { const i = process.argv.indexOf('--engine'); return i > 0 ? process.argv[i + 1] : 'gemini' })()
+const MODEL = ENGINE === 'chirp' ? 'chirp3-hd' : 'gemini-3.8-flash-tts'
 const LANG = { uk: 'en-GB', us: 'en-US' }
 const OUT_AUDIO = 'public/english-audio'
 const OUT_PROV = 'scripts/english-audio/provenance'
-const MANIFEST = 'src/lib/literacy/audioManifest.generated.json'
+const MANIFEST = process.env.AUDIO_MANIFEST || 'src/lib/literacy/audioManifest.generated.json'   // another file for a trial engine
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d }
 const ONLY = arg('only') ? new Set(arg('only').split(',')) : null
 const TAKES = Number(arg('takes', 3))
@@ -89,6 +93,47 @@ function splitWav(buf) {
   }
   if (!pcm) throw new Error('WAV without a data chunk')
   return { pcm, c2pa, rate }
+}
+
+let token = null, tokenAt = 0
+function cloudToken() {
+  if (!token || Date.now() - tokenAt > 30 * 60000) {
+    token = execFileSync('gcloud', ['auth', 'application-default', 'print-access-token'], { encoding: 'utf8' }).trim()
+    tokenAt = Date.now()
+  }
+  return token
+}
+async function speakChirp(text, voice, lang, tries = 5) {
+  const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${cloudToken()}`, 'x-goog-user-project': process.env.CLOUD_TTS_PROJECT || 'vertexli' },
+    body: JSON.stringify({ input: { text }, voice: { languageCode: lang, name: `${lang}-Chirp3-HD-${voice}` },
+      audioConfig: { audioEncoding: 'LINEAR16', sampleRateHertz: 24000 } }),
+  })
+  const j = await r.json()
+  if ((r.status === 429 || r.status >= 500) && tries > 0) {
+    console.log(`    ${r.status}, waiting 10 s (${String(j.error?.message || '').slice(0, 120)})`)
+    await sleep(10000); return speakChirp(text, voice, lang, tries - 1)
+  }
+  if (!j.audioContent) throw new Error(`no audio: ${JSON.stringify(j.error || j).slice(0, 200)}`)
+  return tidyTail(splitWav(Buffer.from(j.audioContent, 'base64')))     // a WAV with a header; no C2PA chunk here
+}
+
+// Chirp ends on a breath / room tail around -40 dB instead of silence, which the "sound in the last 20 ms"
+// check reads as a cut. A tail that quiet is not speech (speech is about -15 dB), so it is faded over 60 ms
+// and 120 ms of silence added. A louder end (-30 dB or more: speech really cut off) is left for the check.
+function tidyTail(t) {
+  const n = t.pcm.length / 2, last = Math.round(t.rate * 0.02)
+  let e = 0
+  for (let i = n - last; i < n; i++) { const x = t.pcm.readInt16LE(i * 2) / 32768; e += x * x }
+  if (20 * Math.log10(Math.sqrt(e / last) || 1e-9) > -30) return t
+  const pcm = Buffer.concat([Buffer.from(t.pcm), Buffer.alloc(Math.round(t.rate * 0.12) * 2)])
+  const fade = Math.round(t.rate * 0.06)
+  for (let k = 0; k < fade; k++) {
+    const i = n - fade + k
+    pcm.writeInt16LE(Math.round(pcm.readInt16LE(i * 2) * (1 - k / fade)), i * 2)
+  }
+  return { ...t, pcm }
 }
 
 class DailyQuota extends Error {}
@@ -151,7 +196,7 @@ async function bestTake(text, voice, variety, kind) {
   const rank = { ok: 0, listen: 1, unchecked: 2, fail: 3 }
   let best = null
   for (let t = 1; t <= TAKES; t++) {
-    const { pcm, c2pa, rate } = await speak(text, voice, LANG[variety])
+    const { pcm, c2pa, rate } = ENGINE === 'chirp' ? await speakChirp(text, voice, LANG[variety]) : await speak(text, voice, LANG[variety])
     const w = wav(pcm, rate)
     let qc
     if (NO_QC) {
@@ -180,6 +225,7 @@ const hash = s => createHash('sha1').update(s).digest('hex').slice(0, 16)
 if (process.argv.includes('--rejudge')) {
   for (const [key, m] of Object.entries(manifest)) {
     if (ONLY && !ONLY.has(m.clip)) continue
+    if ((SET === 'words') !== m.clip.startsWith('yw-')) continue      // --set picks trial or wordlist entries
     const path = join(OUT_AUDIO, `${m.id}.m4a`)
     if (!existsSync(path)) continue
     const w = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', path, '-f', 'wav', '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '24000', '-'], { maxBuffer: 1e8 })
@@ -191,8 +237,8 @@ if (process.argv.includes('--rejudge')) {
     }
     const qc = await check(w, m.text, m.variety, m.kind === 'word' ? 'word' : 'sentence')
     console.log(`${key}: ${m.status} -> ${qc.status}${qc.issues.length ? ' · ' + qc.issues.join(' · ') : ''}${qc.judge?.notes?.length ? ' · note: ' + qc.judge.notes.join('; ') : ''}`)
-    Object.assign(m, { status: qc.status, issues: qc.issues, notes: qc.judge?.notes || [] })
-    writeFileSync(MANIFEST, JSON.stringify(manifest, null, 1) + '\n')
+    Object.assign(m, { status: qc.status, issues: qc.issues, notes: qc.judge?.notes || [], accent: qc.judge?.accent, natural: qc.judge?.natural })
+    saveEntry(key, m)      // through the lock: other runs may be writing the same manifest
   }
   process.exit(0)
 }
@@ -227,7 +273,7 @@ clipLoop: for (const [index, clip] of CLIPS.entries()) {
       for (const [i, [sp, line]] of clip.lines.entries()) {
         console.log(`  ${sp}: ${line}`)
         const b = await bestTake(line, voices[i], variety, 'sentence')
-        lines.push({ speaker: sp, voice: voices[i], text: line, status: b.qc.status, issues: b.qc.issues, take: b.take })
+        lines.push({ speaker: sp, voice: voices[i], text: line, status: b.qc.status, issues: b.qc.issues, take: b.take, accent: b.qc.judge?.accent, natural: b.qc.judge?.natural })
         parts.push(b.pcm, Buffer.alloc(Math.round(b.rate * PAUSE) * 2))
         c2pa = c2pa || b.c2pa; rate = b.rate
       }
@@ -235,7 +281,7 @@ clipLoop: for (const [index, clip] of CLIPS.entries()) {
     } else {
       const b = await bestTake(clip.text, voices[0], variety, clip.kind === 'word' ? 'word' : 'sentence')
       pcm = b.pcm; c2pa = b.c2pa; rate = b.rate
-      lines.push({ voice: voices[0], text: clip.text, status: b.qc.status, issues: b.qc.issues, take: b.take })
+      lines.push({ voice: voices[0], text: clip.text, status: b.qc.status, issues: b.qc.issues, take: b.take, accent: b.qc.judge?.accent, natural: b.qc.judge?.natural })
     }
     } catch (e) {
       if (!(e instanceof DailyQuota)) throw e
@@ -258,6 +304,7 @@ clipLoop: for (const [index, clip] of CLIPS.entries()) {
       voice: clip.kind === 'dialogue' ? undefined : voices[0], model: MODEL, made: new Date().toISOString().slice(0, 10),
       status: whole && whole.ok === false ? 'fail' : status,
       issues: [...lines.flatMap(l => l.issues), ...(whole && whole.ok === false ? [`whole dialogue: ${whole.issues[0]}`] : [])],
+      accent: clip.kind === 'dialogue' ? undefined : lines[0].accent, natural: clip.kind === 'dialogue' ? undefined : lines[0].natural,
       approved: false,   // set by a person after listening
     }
     saveEntry(key, entry)
