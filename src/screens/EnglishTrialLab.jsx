@@ -289,10 +289,11 @@ export default function EnglishTrialLab() {
   })
   const top = useRef(null)
   const items = TRIAL_ITEMS.filter(i => area === 'all' || i.area === area)
-  const recs = Object.values(AUDIO).filter(r => !r.clip.startsWith('yw-'))   // the trial set; words have their own tab
+  const recs = Object.values(AUDIO).filter(r => !/^(yw|ld|lq|lo|lf)-/.test(r.clip) && r.clip !== 'i-listen-choose')   // the trial set; words and the bank have their own tabs
   const count = s => recs.filter(r => r.status === s).length
   // Only marks for recordings still in the manifest and not yet approved there.
-  const pending = Object.values(AUDIO).filter(r => marks.has(r.id) && !r.approved)
+  // One file can serve several clips ("dog" in the trial set and the wordlist): count and list it once.
+  const pending = [...new Map(Object.values(AUDIO).filter(r => marks.has(r.id) && !r.approved).map(r => [r.id, r])).values()]
   const command = `node scripts/english-audio/approve.mjs ${pending.map(r => r.id).join(',')}`
   const copy = () => {
     navigator.clipboard?.writeText(command).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }, () => {})
