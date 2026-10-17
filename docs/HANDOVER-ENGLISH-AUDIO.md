@@ -48,6 +48,11 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
   - `--no-qc` kayıtları "unchecked": yalnız sinyal kontrolünden geçti. Whisper ve yargıç sonra `build.mjs --rejudge` ile çalışır; yargıç ses kotası harcamaz, sohbet modeli kullanır.
   - Kelime ses dosyaları (~30 MB) commit edilmedi: repoya mı, doğrudan Storage'a mı kullanıcı kararı.
   - Tek kelimede US aksanı doğrulanamıyor; US kelimelerden örneklem dinlenmeli. Tek başına "a" ve "I", Whisper'da "ah"/"am" diye duyulup fail oluyor.
+- **Storage (2026-10-17):** 2.732 kayıt Supabase'de: herkese açık `english-audio` (m4a, 1 yıl değişmez önbellek, CDN) ve özel
+  `english-audio-masters` (FLAC). Repoda yalnız kod ve manifest. Yükleme: `node scripts/english-audio/upload.mjs` (`SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`). Var olan adı atlar, üzerine yazmaz. Lab sesleri Storage'dan çalıyor.
+- **Chirp sonucu:** 2.740 kayıt, 2.699 ok, 9 dinlenecek, 32 başarısız. Başarısızların çoğu UK /ɔː/ kelimeleri (ball, fall, hall,
+  tall, wall), Whisper "bull/full/hole" duyuyor; kulakla dinlenmeli.
 - **Onay:** Hiçbir kayıt onaylı değil. Kural: onaysız ses çocuğa gösterilmez; `approved` bir insan dinledikten sonra `true` yapılır.
 
 ## Kararlar (gerekçeleri ENGLISH-AUDIO.md'de)
