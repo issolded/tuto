@@ -55,7 +55,7 @@ const IRREGULAR = {
   meant: 'mean', paid: 'pay', sold: 'sell', shone: 'shine', stuck: 'stick', swept: 'sweep', lay: 'lie', led: 'lead', lit: 'light',
   blew: 'blow', blown: 'blow', dug: 'dig', fought: 'fight', froze: 'freeze', frozen: 'freeze', slid: 'slide', spun: 'spin',
   stole: 'steal', struck: 'strike', swung: 'swing', tore: 'tear', torn: 'tear', bent: 'bend', lent: 'lend', fled: 'flee', bit: 'bite', bitten: 'bite',
-  lying: 'lie', dying: 'die', tying: 'tie',
+  lying: 'lie', dying: 'die', tying: 'tie', shown: 'show',
   better: 'good', best: 'good', worse: 'bad', worst: 'bad', children: 'child', men: 'man', women: 'woman', feet: 'foot', teeth: 'tooth',
   mice: 'mouse', people: 'person', leaves: 'leaf', wolves: 'wolf', shelves: 'shelf', knives: 'knife', halves: 'half', lives: 'life',
   me: 'i', him: 'he', us: 'we', them: 'they', myself: 'i', herself: 'she', himself: 'he', themselves: 'they', ourselves: 'we', itself: 'it',
@@ -72,8 +72,13 @@ function lemmas(w) {
   return out
 }
 export function headword(word) {
+  if (BASE.has(word)) return word
   const forms = [word, ...(IRREGULAR[word] ? [IRREGULAR[word]] : []), ...lemmas(word).slice(1)]
-  return forms.find(l => LEVEL_OF.has(l)) || forms.find(l => DALE.has(l)) || word
+  const known = forms.find(l => BASE.has(l)) || forms.find(l => LEVEL_OF.has(l)) || forms.find(l => DALE.has(l))
+  if (known) return known
+  // A word no list knows still counts once with its plain inflections (suggested/suggest, footsteps);
+  // only -ed, -ing and -s are undone here, never -er/-est/-ly, which would turn whether into wheth.
+  return [/ied$/, /ies$/, /ed$/, /ing$/, /es$/, /s$/].map((re, i) => word.replace(re, i < 2 ? 'y' : '')).find(x => x !== word && x.length > 2) || word
 }
 export function levelOf(word) {
   let best
@@ -142,7 +147,7 @@ export function gate(item, levelName, names = NAMES) {
   }
   if (L.base) {
     // One limit for every word outside the level and the base list, whichever list it is on or not.
-    const content = [...flyers, ...outside].filter(w => !BASE.has(w))
+    const content = [...(L.dale ? [] : flyers), ...outside].filter(w => !BASE.has(w))
     if (content.length > L.contentAllowed) fail('content-words', `${content.length} > ${L.contentAllowed}: ${content.join(', ')}`)
   } else {
     if (flyers.size > L.flyersAllowed) fail('vocab-above-level', [...flyers].join(', '))
@@ -167,7 +172,7 @@ export function gate(item, levelName, names = NAMES) {
     const lens = q.options.map(o => o.length)
     if (lens[q.answer] > 1.6 * Math.max(...lens.filter((_, j) => j !== q.answer))) fail('giveaway', `${tag}: the answer is much longer than the others`)
   }
-  return { ok: issues.length === 0, issues, warnings, stats: { words: words.length, sentences: sents.length, flyers: [...flyers], outside: [...outside], content: [...flyers, ...outside].filter(w => !BASE.has(w)) } }
+  return { ok: issues.length === 0, issues, warnings, stats: { words: words.length, sentences: sents.length, flyers: [...flyers], outside: [...outside], content: [...(L.dale ? [] : flyers), ...outside].filter(w => !BASE.has(w)) } }
 }
 
 // The word list the generator is shown: base forms at the level's vocabulary, regional words removed.

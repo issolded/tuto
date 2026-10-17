@@ -2,8 +2,10 @@
 // told AND the gate enforces, so the two cannot drift. Levels follow docs/ENGLISH-SKILL-LADDERS.md E.
 
 export const LEVELS = {
-  // E2 and E4 are PROVISIONAL (2026-10-17): written to check Codex/Astra's 15-story draft, not decided.
-  // E2 borrows E3's word rule; E4 keeps Starters–Flyers with up to 3 words outside every list.
+  // E2 and E4 word rules (user decision 2026-10-17, to be tuned after the pilot): E2 as E3. E4 allows
+  // all three Cambridge lists and the Dale-Chall list (words most fourth-graders know); a content word
+  // is one on none of them, at most 4. (A first try at "Flyers + 4" counted record, tiny and button as
+  // content and failed every E4 story in the draft at 10-14.) Question orders follow the draft.
   E2: {
     words: [30, 55], sentences: [3, 5], maxSentenceWords: 15,
     vocab: ['starters', 'movers'], base: true, contentAllowed: 2,
@@ -12,7 +14,7 @@ export const LEVELS = {
     describe: 'three to five short sentences; explicit details and the order of events',
   },
   // E3 vocabulary (product decision 2026-10-17): Cambridge Starters + Movers, plus BASE_WORDS (everyday
-  // words of telling: place, time and basic verbs); any other word, at any level or none, is a content
+  // words of telling: place, time, basic verbs and a few function words); any other word, at any level or none, is a content
   // word, and a passage may have at most 2 of them, counted by headword over title, text and questions.
   E3: {
     words: [55, 100], sentences: [6, 9], maxSentenceWords: 14,
@@ -23,8 +25,8 @@ export const LEVELS = {
   },
   E4: {
     words: [120, 200], sentences: [9, 18], maxSentenceWords: 18,
-    vocab: ['starters', 'movers', 'flyers'], flyersAllowed: 99, outsideAllowed: 3,
-    ops: ['detail', 'inference', 'main-idea'],               // provisional, matching the 15-story draft
+    vocab: ['starters', 'movers', 'flyers'], base: true, dale: true, contentAllowed: 4,
+    ops: ['detail', 'inference', 'main-idea'],
     options: 3,
     describe: '120–200 words; a main idea and one simple inference from clues in the text',
   },
@@ -37,6 +39,10 @@ export const BASE_WORDS = [
   'same', 'other', 'each', 'beside', 'across', 'through', 'over', 'together', 'somewhere', 'soon', 'later',
   'still', 'usually', 'already', 'until',
   'keep', 'feel', 'stay', 'hear', 'follow', 'guess', 'leave', 'turn', 'hope', 'let',
+  // function words added after the 15-story draft (2026-10-17); `into` and `than` are already Movers
+  'as', 'away', 'onto', 'such', 'while',
+  // words of the fixed question stems ("What happened first?", "What is the story mainly about?")
+  'happen', 'mainly',
 ]
 
 export const OPS = {
