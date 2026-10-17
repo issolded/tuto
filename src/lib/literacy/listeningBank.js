@@ -12,7 +12,7 @@
 // different voices in A5. Audio: scripts/english-audio/clips.mjs (`--set listening`). Answer keys are
 // here because the lab is a reviewer tool; a child screen gets items from the server without the key.
 
-export const LISTENING_REVISION = 'listen-1'
+export const LISTENING_REVISION = 'listen-2'
 export const NARRATOR = 'narrator'
 // Names from the Cambridge Starters list (+ family words); the gender picks the voice in clips.mjs.
 export const SPEAKER_GENDER = {
@@ -191,6 +191,180 @@ const SOURCE = [
   ], question: 'What is Alice going to bring?', options: ['Grapes and water.', 'Bread and cheese.', 'Bananas.'],
   feedback: "Grapes and water. Matt's brother doesn't like bananas." },
 
+  { id: 'L5-021', step: 'A5', topic: 'School', lines: [
+    ['Kim', 'Are you going to the art club after school, Nick?'],
+    ['Nick', "No, not today. I'm going to the music club."],
+    ['Kim', 'But you love drawing!'],
+    ['Nick', 'I do, but on Tuesdays I play the guitar. I go to the art club on Thursdays.'],
+  ], question: 'Which club is Nick going to today?', options: ['The music club.', 'The art club.', 'The sports club.'],
+  feedback: 'The music club. He goes to the art club on Thursdays.' },
+
+  { id: 'L5-022', step: 'A5', topic: 'Transport', lines: [
+    ['Sue', 'Which bus goes to the zoo, Hugo?'],
+    ['Hugo', 'The number twelve. The number ten goes to the station.'],
+    ['Sue', 'And the number fifteen?'],
+    ['Hugo', "That one goes to the beach. Don't take it, or you can't see the animals!"],
+  ], question: 'Which bus goes to the zoo?', options: ['Number twelve.', 'Number ten.', 'Number fifteen.'],
+  feedback: 'Number twelve. Number ten goes to the station.' },
+
+  { id: 'L5-023', step: 'A5', topic: 'The home', lines: [
+    ['Tom', 'Grace, have you got the key for my bike?'],
+    ['Grace', 'No. I put it in the hall, next to the door.'],
+    ['Tom', "It isn't there now."],
+    ['Grace', 'Then Dad has it. He took your bike to the park this morning.'],
+  ], question: 'Who has the key now?', options: ['Dad.', 'Grace.', 'Tom.'],
+  feedback: 'Dad. He took the bike to the park.' },
+
+  { id: 'L5-024', step: 'A5', topic: 'Food & drink', lines: [
+    ['Matt', "I'm having chicken and rice. What about you, Lucy?"],
+    ['Lucy', "I don't like rice. Can I have chicken and potatoes?"],
+    ['Matt', "There aren't any potatoes today. There's salad."],
+    ['Lucy', 'OK, chicken and salad, please.'],
+    ['Matt', 'And to drink?'],
+    ['Lucy', 'Some water, please.'],
+  ], question: 'What is Lucy going to have?', options: ['Chicken and salad.', 'Chicken and rice.', 'Chicken and potatoes.'],
+  feedback: "Chicken and salad. There aren't any potatoes today." },
+
+  { id: 'L5-025', step: 'A5', topic: 'Family & friends', lines: [
+    ['May', "What did you buy for Sam's birthday, Ben?"],
+    ['Ben', 'A kite. Not a ball, he has lots of balls.'],
+    ['May', 'Oh! I wanted to buy a kite too.'],
+    ['Ben', 'You can buy a comic. Sam likes comics.'],
+    ['May', 'Good idea!'],
+  ], question: 'What is May going to buy for Sam?', options: ['A comic.', 'A kite.', 'A ball.'],
+  feedback: 'A comic. Ben bought the kite.' },
+
+  { id: 'L5-026', step: 'A5', topic: 'Weather', lines: [
+    ['Alice', 'Is it going to be sunny on Sunday, Dan?'],
+    ['Dan', "No, it's going to be cloudy and windy. But Saturday is going to be sunny."],
+    ['Alice', 'And Monday?'],
+    ['Dan', 'Rain, I think. Lots of rain.'],
+    ['Alice', "Then let's go to the beach on Saturday!"],
+  ], question: 'Which day is going to be sunny?', options: ['Saturday.', 'Sunday.', 'Monday.'],
+  feedback: 'Saturday. Sunday is going to be cloudy and windy.' },
+
+  { id: 'L5-027', step: 'A5', topic: 'School', lines: [
+    ['Eva', 'How many children are in your class, Bill?'],
+    ['Bill', 'Twenty-four. There are fourteen girls and ten boys.'],
+    ['Eva', "In my class there are twenty. That's ten girls and ten boys."],
+    ['Bill', 'So your class is smaller.'],
+    ['Eva', 'Yes, but our classroom is bigger!'],
+  ], question: "How many boys are in Bill's class?", options: ['Ten.', 'Fourteen.', 'Twenty.'],
+  feedback: "Ten. There are fourteen girls in Bill's class." },
+
+  { id: 'L5-028', step: 'A5', topic: 'Animals', lines: [
+    ['Jill', "Mark, where's the cat? I looked in the kitchen."],
+    ['Mark', 'She was on my bed this morning.'],
+    ['Jill', "She isn't there now."],
+    ['Mark', 'Look in the bathroom. She likes sleeping in the bath.'],
+    ['Jill', "Yes! She's in the bath."],
+  ], question: 'Where is the cat?', options: ['In the bath.', "On Mark's bed.", 'In the kitchen.'],
+  feedback: 'In the bath. She was on the bed this morning.' },
+
+  { id: 'L5-029', step: 'A5', topic: 'Sports & leisure', lines: [
+    ['Nick', 'Did you play basketball after school today, Ann?'],
+    ['Ann', 'Yes. The girls got six, and the boys got eight.'],
+    ['Nick', 'Oh no! But six is good.'],
+    ['Ann', 'Last week was better. We got ten, and the boys only got four.'],
+  ], question: 'How many did the girls get today?', options: ['Six.', 'Eight.', 'Ten.'],
+  feedback: 'Six. The boys got eight.' },
+
+  { id: 'L5-030', step: 'A5', topic: 'Clothes', lines: [
+    ['Grandma', 'Wear your blue shirt to the party, Sam.'],
+    ['Sam', 'But I want to wear my green T-shirt.'],
+    ['Grandma', 'That T-shirt is dirty. What about the white one?'],
+    ['Sam', 'OK, the white T-shirt. Can I wear my new shoes too?'],
+  ], question: 'Which T-shirt is Sam going to wear?', options: ['The white one.', 'The green one.', 'The blue one.'],
+  feedback: 'The white one. The green T-shirt is dirty.' },
+
+  { id: 'L5-031', step: 'A5', topic: 'School', lines: [
+    ['Tom', "What's for lunch today, May? I'm really hungry."],
+    ['May', "Pizza! And there's ice cream after it."],
+    ['Tom', 'Great! On Monday we had fish, and I really don\'t like fish.'],
+    ['May', "Oh no. On Wednesday there's fish again, Tom."],
+  ], question: 'When is there pizza?', options: ['Today.', 'On Monday.', 'On Wednesday.'],
+  feedback: 'Today. On Monday and Wednesday there is fish.' },
+
+  { id: 'L5-032', step: 'A5', topic: 'School', lines: [
+    ['Teacher', "Hugo, where's your homework?"],
+    ['Hugo', "I did it, but it isn't in my bag. I think it's on my desk at home."],
+    ['Teacher', 'Can you bring it on Monday?'],
+    ['Hugo', 'Yes, I can. Sorry!'],
+    ['Teacher', 'OK, Hugo. Put it in your bag this evening.'],
+  ], question: "Where is Hugo's homework?", options: ['At home.', 'In his bag.', "On the teacher's desk."],
+  feedback: 'At home. It is on his desk there.' },
+
+  { id: 'L5-033', step: 'A5', topic: 'Food & drink', lines: [
+    ['Kim', 'Dad, how many eggs do we need for the cake?'],
+    ['Dad', 'Three. And we need some milk.'],
+    ['Kim', 'We only have two eggs.'],
+    ['Dad', "Then I'm going to buy six more. Can you get the milk?"],
+    ['Kim', 'Yes! I can carry the milk.'],
+  ], question: 'How many eggs have they got now?', options: ['Two.', 'Three.', 'Six.'],
+  feedback: 'Two. They need three for the cake.' },
+
+  { id: 'L5-034', step: 'A5', topic: 'Places & directions', lines: [
+    ['Lucy', 'Where are you going, Ben?'],
+    ['Ben', "To the swimming pool. I've got my towel."],
+    ['Lucy', "The pool is closed today. It's Monday."],
+    ['Ben', "Oh no! I don't want to go home. Then I'm going to the park. Do you want to come?"],
+  ], question: 'Where is Ben going now?', options: ['To the park.', 'To the swimming pool.', 'Home.'],
+  feedback: 'To the park. The pool is closed today.' },
+
+  { id: 'L5-035', step: 'A5', topic: 'Family & friends', lines: [
+    ['Sue', "Who's coming to the zoo with us on Saturday, Matt?"],
+    ['Matt', 'My cousin Tom and his sister Jill.'],
+    ['Sue', 'Is your brother coming too?'],
+    ['Matt', "No, he's ill. He's at home in bed, and Grandma is with him."],
+    ['Sue', 'Oh, I hope he is better soon.'],
+  ], question: 'Who is coming to the zoo?', options: ['Tom and Jill.', "Matt's brother.", 'Grandma.'],
+  feedback: "Tom and Jill. Matt's brother is ill." },
+
+  { id: 'L5-036', step: 'A5', topic: 'School', lines: [
+    ['Hugo', "What's your first lesson today, Grace?"],
+    ['Grace', 'Art. Then we have music, and after lunch we have English.'],
+    ['Hugo', 'My first lesson is music. Then we have English too.'],
+    ['Grace', 'So we both have English and music today!'],
+  ], question: "What is Grace's first lesson?", options: ['Art.', 'Music.', 'English.'],
+  feedback: "Art. Hugo's first lesson is music." },
+
+  { id: 'L5-037', step: 'A5', topic: 'The world around us', lines: [
+    ['Eva', "Let's give our teacher some flowers. It's her birthday."],
+    ['Bill', 'Red flowers or yellow flowers?'],
+    ['Eva', 'She likes white flowers best.'],
+    ['Bill', 'OK, white ones then. We can buy them after school.'],
+    ['Eva', 'And we can make a card for her too.'],
+  ], question: 'Which flowers are they going to buy?', options: ['White ones.', 'Red ones.', 'Yellow ones.'],
+  feedback: 'White ones. Their teacher likes white flowers best.' },
+
+  { id: 'L5-038', step: 'A5', topic: 'Places & directions', lines: [
+    ['Dan', "Can you come to the library at two o'clock, Ann?"],
+    ['Ann', "I can't at two. I've got a piano lesson. I can come at three."],
+    ['Dan', "OK. Three o'clock at the library. Bring your new book!"],
+    ['Ann', 'Great. See you there!'],
+  ], question: 'What time are they going to the library?', options: ["At three o'clock.", "At two o'clock.", "At four o'clock."],
+  feedback: "At three o'clock. Ann has a piano lesson at two." },
+
+  { id: 'L5-039', step: 'A5', topic: 'Clothes', lines: [
+    ['Sam', "I can't find my watch."],
+    ['Jill', 'Is it in your coat?'],
+    ['Sam', 'No. My gloves are in my coat, but not my watch.'],
+    ['Jill', 'Is it on the table?'],
+    ['Sam', "No, it isn't."],
+    ['Jill', 'Look in your bag.'],
+    ['Sam', 'Yes! Here it is. Thank you, Jill.'],
+  ], question: "Where was Sam's watch?", options: ['In his bag.', 'In his coat.', 'On the table.'],
+  feedback: 'In his bag. His gloves are in his coat.' },
+
+  { id: 'L5-040', step: 'A5', topic: 'Animals', lines: [
+    ['Kim', "How many animals are on your uncle's farm, Mark?"],
+    ['Mark', 'He has four cows, two horses and lots of chickens.'],
+    ['Kim', 'Has he got any sheep?'],
+    ['Mark', "No, he hasn't. But he wants some."],
+    ['Kim', 'I want to see the horses!'],
+  ], question: "How many horses has Mark's uncle got?", options: ['Two.', 'Four.', 'Lots.'],
+  feedback: 'Two. He has four cows.' },
+
   // ── A4: two or three sentences ─────────────────────────────────────────────────────────────────
   { id: 'L4-001', step: 'A4', topic: 'Animals', lines: n('Tom has a big brown dog. His sister Kim has two small cats.'),
     question: 'Who has cats?', options: ['Kim.', 'Tom.', 'Tom and Kim.'], feedback: 'Kim. Tom has a dog.' },
@@ -232,7 +406,54 @@ const SOURCE = [
     question: 'Who has short brown hair?', options: ["Her friend's teacher.", "Lucy's teacher.", "Lucy's friend."], feedback: "Her friend's teacher. Lucy's teacher has long hair." },
   { id: 'L4-020', step: 'A4', topic: 'Transport', lines: n('Nick wants to go to the park, but his bike is broken. He walks there with his brother.'),
     question: 'How does Nick go to the park?', options: ['He walks.', 'By bike.', 'In the car.'], feedback: 'He walks. His bike is broken.' },
+  { id: 'L4-021', step: 'A4', topic: 'Family & friends', lines: n("Bill's party is on Friday after school. Sue's party is on Sunday afternoon."),
+    question: "When is Sue's party?", options: ['On Sunday.', 'On Friday.', 'On Saturday.'], feedback: "On Sunday. Bill's party is on Friday." },
+  { id: 'L4-022', step: 'A4', topic: 'Toys', lines: n('Anna has a red kite. Her friend Kim has a yellow kite with a long tail.'),
+    question: 'Who has a yellow kite?', options: ['Kim.', 'Anna.', 'Anna and Kim.'], feedback: "Kim. Anna's kite is red." },
+  { id: 'L4-023', step: 'A4', topic: 'The home', lines: n('The cat is in the bedroom. The dog is in the hall, and the bird is in the kitchen.'),
+    question: 'Where is the bird?', options: ['In the kitchen.', 'In the hall.', 'In the bedroom.'], feedback: 'In the kitchen. The dog is in the hall.' },
+  { id: 'L4-024', step: 'A4', topic: 'Time', lines: n("Matt eats an apple at eleven o'clock. At one o'clock, he has lunch with his friends."),
+    question: 'When does Matt have lunch?', options: ["At one o'clock.", "At eleven o'clock.", "At twelve o'clock."], feedback: "At one o'clock. He eats an apple at eleven." },
+  { id: 'L4-025', step: 'A4', topic: 'School', lines: n('Lucy has four pencils in her bag. Her brother has seven pencils and two rulers.'),
+    question: 'How many pencils has Lucy got?', options: ['Four.', 'Seven.', 'Eleven.'], feedback: 'Four. Her brother has seven.' },
+  { id: 'L4-026', step: 'A4', topic: 'Clothes', lines: n("Tom's T-shirt is green. His shorts are black, and his shoes are white."),
+    question: 'Which of his clothes are black?', options: ['His shorts.', 'His T-shirt.', 'His shoes.'], feedback: 'His shorts. His T-shirt is green.' },
+  { id: 'L4-027', step: 'A4', topic: 'Places & directions', lines: n('Grace goes to the library on Tuesday. On Thursday, she goes to the swimming pool.'),
+    question: 'When does Grace go to the library?', options: ['On Tuesday.', 'On Thursday.', 'On Monday.'], feedback: 'On Tuesday. She goes swimming on Thursday.' },
+  { id: 'L4-028', step: 'A4', topic: 'Family & friends', lines: n("Hugo's sister is eight. His brother is nine, and Hugo is six."),
+    question: 'How old is Hugo?', options: ['Six.', 'Eight.', 'Nine.'], feedback: 'Six. His sister is eight and his brother is nine.' },
+  { id: 'L4-029', step: 'A4', topic: 'School', lines: n('Eva is drawing a big horse. Her friend is drawing a fish in the sea.'),
+    question: 'What is Eva drawing?', options: ['A horse.', 'A fish.', 'A bird.'], feedback: 'A horse. Her friend is drawing a fish.' },
+  { id: 'L4-030', step: 'A4', topic: 'Food & drink', lines: n('Dan has a glass of milk for breakfast. His sister has orange juice.'),
+    question: 'Who has orange juice?', options: ["Dan's sister.", 'Dan.', "Dan's dad."], feedback: "Dan's sister. Dan has milk." },
+  { id: 'L4-031', step: 'A4', topic: 'The home', lines: n("Ann's school bag is on the chair. Her coat is on the floor."),
+    question: "Where is Ann's coat?", options: ['On the floor.', 'On the chair.', 'In her bag.'], feedback: 'On the floor. Her bag is on the chair.' },
+  { id: 'L4-032', step: 'A4', topic: 'Sports & leisure', lines: n('Mark plays the guitar after school. His friend Nick plays the piano.'),
+    question: 'What does Nick play?', options: ['The piano.', 'The guitar.', 'Tennis.'], feedback: 'The piano. Mark plays the guitar.' },
+  { id: 'L4-033', step: 'A4', topic: 'The home', lines: n('Sue lives on the first floor. Her friend May lives on the third floor.'),
+    question: 'Where does May live?', options: ['On the third floor.', 'On the first floor.', 'On the second floor.'], feedback: 'On the third floor. Sue lives on the first floor.' },
+  { id: 'L4-034', step: 'A4', topic: 'Transport', lines: n("The bus to the zoo goes at ten o'clock. The bus to the beach goes at nine."),
+    question: 'When does the bus to the beach go?', options: ["At nine o'clock.", "At ten o'clock.", "At eleven o'clock."], feedback: "At nine o'clock. The bus to the zoo goes at ten." },
+  { id: 'L4-035', step: 'A4', topic: 'Animals', lines: n("Jill's dog is white with a black tail. Her cat is black."),
+    question: 'Which animal is white?', options: ["Jill's dog.", "Jill's cat.", "Jill's bird."], feedback: "Jill's dog. Her cat is black." },
+  { id: 'L4-036', step: 'A4', topic: 'The home', lines: n('Sam puts his shoes under the bed. He puts his book on the table.'),
+    question: 'Where does Sam put his book?', options: ['On the table.', 'Under the bed.', 'In his bag.'], feedback: 'On the table. His shoes are under the bed.' },
+  { id: 'L4-037', step: 'A4', topic: 'The home', lines: n("Kim's brother and her mother are making a cake. Kim is washing the plates."),
+    question: 'What is Kim doing?', options: ['Washing the plates.', 'Making a cake.', 'Reading a book.'], feedback: 'Washing the plates. Her brother and mother are making a cake.' },
+  { id: 'L4-038', step: 'A4', topic: 'Sports & leisure', lines: n("Ben's grandpa has a big boat. Every Sunday, they go fishing on the river."),
+    question: 'When do they go fishing?', options: ['On Sunday.', 'On Saturday.', 'Every day.'], feedback: 'On Sunday. They go every Sunday.' },
+  { id: 'L4-039', step: 'A4', topic: 'Animals', lines: n("Alice's dog is two years old. Her cat is five years old."),
+    question: 'How old is the cat?', options: ['Five.', 'Two.', 'Seven.'], feedback: 'Five. The dog is two.' },
+  { id: 'L4-040', step: 'A4', topic: 'School', lines: n('Nick sits next to Hugo in class. Behind them, there are two girls, Lucy and May.'),
+    question: 'Who sits next to Nick?', options: ['Hugo.', 'Lucy.', 'May.'], feedback: 'Hugo. Lucy and May sit behind them.' },
 ]
+
+// Recording ids (scripts/english-audio/clips.mjs builds the same ones): the talk, the question, each option
+// by its place in `options` (answer first), the feedback, and the instruction for each step.
+export const listenClip = {
+  talk: id => `ld-${id}`, question: id => `lq-${id}`, option: (id, i) => `lo-${id}-${i + 1}`, feedback: id => `lf-${id}`,
+  instruction: step => (step === 'A5' ? 'i-listen-answer' : 'i-listen-choose'),
+}
 
 // Order the child sees: the answer moves to position (hash of id) % 3, the wrong options keep their order.
 const h = s => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7)
@@ -241,5 +462,5 @@ export const LISTENING_ITEMS = SOURCE.map(it => {
   const at = h(it.id) % 3
   const order = [...it.options.slice(1)]
   order.splice(at, 0, it.options[0])
-  return { ...it, choices: order.map((text, i) => ({ id: `o${i + 1}`, text })), key: `o${at + 1}` }
+  return { ...it, choices: order.map((text, i) => ({ id: `o${i + 1}`, text, audio: listenClip.option(it.id, it.options.indexOf(text)) })), key: `o${at + 1}` }
 })

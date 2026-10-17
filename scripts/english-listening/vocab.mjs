@@ -66,9 +66,12 @@ export const NUMBERS = /^\d+$/
 // Words of `text` above `maxLevel` (2 = Movers): [{ word, level }] (level 3 = Flyers, 4 = not on the lists).
 export function offList(text, maxLevel = 2) {
   const out = []
-  for (const raw of text.match(/[A-Za-z’']+|\d+/g) || []) {
-    if (NUMBERS.test(raw)) continue
-    for (const h of heads(raw)) {
+  for (const tok of text.match(/[A-Za-z’'-]+|\d+/g) || []) {
+    if (NUMBERS.test(tok)) continue
+    // a hyphenated word counts whole when the list has it ("T-shirt"), else part by part
+    const whole = tok.toLowerCase().replace(/’/g, "'").replace(/[^a-z']/g, '')
+    const parts = best.has(whole) ? [whole] : tok.split('-').filter(Boolean)
+    for (const raw of parts) for (const h of heads(raw)) {
       const lv = Math.min(...stems(h).map(s => best.get(s) ?? 4))
       if (lv > maxLevel) out.push({ word: raw, level: lv })
     }

@@ -6,13 +6,15 @@
 // made on its own with that speaker's voice and the lines are joined with a short pause, so that every
 // line can be checked on its own.
 
+import { LISTENING, SPEAKER_GENDER, NARRATOR, listenClip } from '../../src/lib/literacy/listeningBank.js'
+
 export const VOICES = {
   // Chosen 2026-10-16 by a blind accent check (two runs each, see docs/ENGLISH-AUDIO.md). Puck reads
   // American even when asked for en-GB, so the British male is Charon; for American English, Puck is right.
   uk: { female: 'Leda', male: 'Charon' },
   us: { female: 'Leda', male: 'Puck' },
 }
-export const SPEAKERS = { Mia: 'female', Ben: 'male', Leo: 'male', Kim: 'female' }
+export const SPEAKERS = { Mia: 'female', Ben: 'male', Leo: 'male', Kim: 'female', ...SPEAKER_GENDER }
 
 export const CLIPS = [
   // words — A01/A02 prompts, and the feedback of B01/B02 and D01/D02
@@ -92,3 +94,18 @@ export const WORD_CLIPS = [...byText.values()].map(c => ({ ...c, levels: [...c.l
     seen.set(c.id, c.text)
   }
 }
+
+// The listening bank (src/lib/literacy/listeningBank.js), A4 and A5: `build.mjs --set listening`. Per item the
+// talk (A5: one clip per line, joined; A4: the narrator), the question, the three options and the feedback.
+// A4 has its own instruction: "Listen to the children" does not fit a narrator.
+export const LISTENING_CLIPS = [
+  { id: 'i-listen-choose', kind: 'instruction', text: 'Listen. Then choose the answer.', items: ['A4'] },
+  ...LISTENING.flatMap(it => [
+    it.lines.length === 1 && it.lines[0][0] === NARRATOR
+      ? { id: listenClip.talk(it.id), kind: 'sentence', text: it.lines[0][1], items: [it.id] }
+      : { id: listenClip.talk(it.id), kind: 'dialogue', lines: it.lines, items: [it.id] },
+    { id: listenClip.question(it.id), kind: 'sentence', text: it.question, items: [it.id] },
+    ...it.options.map((o, i) => ({ id: listenClip.option(it.id, i), kind: 'sentence', text: o, items: [it.id] })),
+    { id: listenClip.feedback(it.id), kind: 'sentence', text: it.feedback, items: [it.id] },
+  ]),
+]

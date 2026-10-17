@@ -2,7 +2,7 @@
 //
 //   GEMINI_API_KEY=… WHISPER_MODEL=~/.cache/whisper-cpp/ggml-base.en.bin node scripts/english-audio/build.mjs [--set trial|words] [--only id,id] [--takes 3] [--wait-quota]
 //   GEMINI_API_KEY is for the listening model (and for --engine gemini); Chirp uses the gcloud login.
-//   --set words: the Cambridge wordlist clips (WORD_CLIPS); default is the trial set.
+//   --set trial (default) | words (the Cambridge wordlist) | listening (the A4/A5 bank).
 //   --wait-quota: at the daily quota, sleep until the API says it resets and go on (for unattended runs).
 //   --no-qc: make only, one take, signal check only; status "unchecked" until --rejudge runs Whisper and the
 //     listening model. For runs where the TTS rate is what matters.
@@ -24,7 +24,7 @@ import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
-import { CLIPS as TRIAL_CLIPS, WORD_CLIPS, VOICES, SPEAKERS } from './clips.mjs'
+import { CLIPS as TRIAL_CLIPS, WORD_CLIPS, LISTENING_CLIPS, VOICES, SPEAKERS } from './clips.mjs'
 import { checkSignal, checkAsr, judge } from './qc.mjs'
 import { fetchRetry } from './net.mjs'
 
@@ -41,7 +41,9 @@ const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ?
 const ONLY = arg('only') ? new Set(arg('only').split(',')) : null
 const TAKES = Number(arg('takes', 3))
 const SET = arg('set', 'trial')
-const CLIPS = SET === 'words' ? WORD_CLIPS : SET === 'trial' ? TRIAL_CLIPS : (() => { throw new Error(`--set ${SET}?`) })()
+const SETS = { trial: TRIAL_CLIPS, words: WORD_CLIPS, listening: LISTENING_CLIPS }
+const CLIPS = SETS[SET] || (() => { throw new Error(`--set ${SET}? (${Object.keys(SETS).join(', ')})`) })()
+const IN_SET = new Set(CLIPS.map(c => c.id))
 const WAIT_QUOTA = process.argv.includes('--wait-quota')
 const NO_QC = process.argv.includes('--no-qc')
 const GAP = Number(process.env.TTS_GAP_MS || 6500)
@@ -235,7 +237,7 @@ const hash = s => createHash('sha1').update(s).digest('hex').slice(0, 16)
 if (process.argv.includes('--rejudge')) {
   for (const [key, m] of Object.entries(manifest)) {
     if (ONLY && !ONLY.has(m.clip)) continue
-    if ((SET === 'words') !== m.clip.startsWith('yw-')) continue      // --set picks trial or wordlist entries
+    if (!IN_SET.has(m.clip)) continue                                  // --set picks which entries
     const path = join(OUT_AUDIO, `${m.id}.m4a`)
     if (!existsSync(path)) continue
     const w = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', path, '-f', 'wav', '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '24000', '-'], { maxBuffer: 1e8 })

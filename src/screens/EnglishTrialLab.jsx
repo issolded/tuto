@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useRef, useState } from 'react'
 import { TRIAL_ITEMS, PASSAGES, AREAS, TRIAL_REVISION } from '../lib/literacy/trialSet'
 import AUDIO from '../lib/literacy/audioManifest.generated.json'
+import { LISTENING_ITEMS, LISTENING_REVISION, listenClip, NARRATOR } from '../lib/literacy/listeningBank'
 import ART from '../lib/literacy/artManifest.generated.json'
 import { EMOJI_ART } from '../lib/puzzleArt.generated'
 
@@ -100,6 +101,40 @@ function WordsView({ variety }) {
         </span>
       ))}
     </section>
+  )
+}
+
+// The listening bank (A4/A5) as items the same Item card plays, with the transcript for the reviewer.
+const BANK_ITEMS = LISTENING_ITEMS.map(it => ({
+  id: it.id, area: 'A', step: it.step, mode: 'listen-answer', topic: it.topic, lines: it.lines,
+  instruction: { audio: listenClip.instruction(it.step) },
+  prompt: { audio: listenClip.talk(it.id), question: listenClip.question(it.id) },
+  options: it.choices.map(c => ({ id: c.id, audio: c.audio, text: c.text })), key: it.key,
+  feedback: { audio: listenClip.feedback(it.id) },
+}))
+function BankView({ variety, round }) {
+  const [step, setStep] = useState('all')
+  const items = BANK_ITEMS.filter(i => step === 'all' || i.step === step)
+  const chip = (on, label, f) => (
+    <button key={label} onClick={f} style={{ border: `2px solid ${on ? INK : LINE}`, background: on ? INK : 'white', color: on ? 'white' : INK, borderRadius: 999, padding: '4px 12px', fontFamily: FONT, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{label}</button>
+  )
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, color: SOFT }}>
+        {chip(step === 'all', 'All', () => setStep('all'))}{chip(step === 'A4', 'A4 short texts', () => setStep('A4'))}{chip(step === 'A5', 'A5 talks', () => setStep('A5'))}
+        <span>{items.length} items · {LISTENING_REVISION} · written for Tuto, checked by scripts/english-listening/check.mjs</span>
+      </div>
+      {items.map(it => (
+        <div key={it.id + variety + round} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Item item={it} variety={variety} review round={round} />
+          <details style={{ fontSize: 13, color: SOFT, padding: '0 8px' }}>
+            <summary style={{ cursor: 'pointer' }}>Transcript · {it.topic}</summary>
+            {it.lines.map(([who, line], i) => <div key={i}>{who === NARRATOR ? '' : <strong>{who}: </strong>}{line}</div>)}
+            <div style={{ marginTop: 4 }}>Options: {it.options.map(o => `${o.id === it.key ? '✓ ' : ''}${o.text}`).join(' · ')}</div>
+          </details>
+        </div>
+      ))}
+    </>
   )
 }
 
@@ -281,7 +316,7 @@ export default function EnglishTrialLab() {
           </div>
         </header>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}
+          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}{btn(view === 'bank', 'Listening bank', () => setView('bank'))}
           <span style={{ width: 12 }} />
           {btn(variety === 'uk', 'UK voice', () => setVariety('uk'))}{btn(variety === 'us', 'US voice', () => setVariety('us'))}
           <span style={{ width: 12 }} />
@@ -302,6 +337,7 @@ export default function EnglishTrialLab() {
         <Marks.Provider value={{ marks, toggle }}>
         {view === 'review' && items.map(it => <Item key={it.id + variety + round} item={it} variety={variety} review round={round} />)}
         {view === 'words' && <WordsView variety={variety} />}
+        {view === 'bank' && <BankView variety={variety} round={round} />}
         </Marks.Provider>
 
         {view === 'play' && (index < items.length ? (

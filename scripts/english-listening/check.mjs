@@ -19,7 +19,7 @@ const SOLVE = process.argv.includes('--solve')
 
 const STEP = {
   A4: { words: [12, 30], sentences: [2, 3], flyers: 1, speakers: [1, 1] },
-  A5: { words: [35, 65], sentences: [4, 9], flyers: 2, speakers: [2, 2] },
+  A5: { words: [35, 65], sentences: [4, 10], flyers: 2, speakers: [2, 2] },
 }
 const MAX_SENTENCE = 15
 // Said differently in UK and US English, or a different word for the same thing: kept out of the shared bank.
