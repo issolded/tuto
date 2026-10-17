@@ -26,11 +26,11 @@ const n = text => [[NARRATOR, text]]
 const SOURCE = [
   // ── A5: short talks ─────────────────────────────────────────────────────────────────────────
   { id: 'L5-001', step: 'A5', topic: 'School', lines: [
-    ['Ann', 'Is this your ruler, Ben? It was under my chair.'],
+    ['Grace', 'Is this your ruler, Ben? It was under my chair.'],
     ['Ben', 'No, mine is blue. That one is green.'],
-    ['Ann', 'Then whose is it?'],
+    ['Grace', 'Then whose is it?'],
     ['Ben', "I think it's Lucy's. She sits next to you, and her bag is green too."],
-  ], question: 'Whose ruler is it?', options: ["Lucy's.", "Ben's.", "Ann's."],
+  ], question: 'Whose ruler is it?', options: ["Lucy's.", "Ben's.", "Grace's."],
   feedback: "Lucy's. Ben's ruler is blue." },
 
   { id: 'L5-002', step: 'A5', topic: 'The home', lines: [
@@ -425,7 +425,7 @@ const SOURCE = [
   { id: 'L4-029', step: 'A4', topic: 'School', lines: n('Eva is drawing a big horse. Her friend is drawing a fish in the sea.'),
     question: 'What is Eva drawing?', options: ['A horse.', 'A fish.', 'A bird.'], feedback: 'A horse. Her friend is drawing a fish.' },
   { id: 'L4-030', step: 'A4', topic: 'Food & drink', lines: n('Dan has a glass of milk for breakfast. His sister has orange juice.'),
-    question: 'Who has orange juice?', options: ["Dan's sister.", 'Dan.', "Dan's dad."], feedback: "Dan's sister. Dan has milk." },
+    question: 'Who has orange juice?', options: ["Dan's sister.", 'Dan.', 'Their dad.'], feedback: "Dan's sister. Dan has milk." },
   { id: 'L4-031', step: 'A4', topic: 'The home', lines: n("Ann's school bag is on the chair. Her coat is on the floor."),
     question: "Where is Ann's coat?", options: ['On the floor.', 'On the chair.', 'In her bag.'], feedback: 'On the floor. Her bag is on the chair.' },
   { id: 'L4-032', step: 'A4', topic: 'Sports & leisure', lines: n('Mark plays the guitar after school. His friend Nick plays the piano.'),

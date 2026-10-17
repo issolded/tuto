@@ -62,7 +62,7 @@ export function checkSignal(wavBuf, text, kind) {
 // letters said one by one ("a.m.", "TV", "T-shirt" -> am, tv, tshirt; a run of single letters is joined),
 // and a few fixed pairs. Each pair must sound the same: "a.m." = "am" holds only because a run of letters
 // is joined first, so the verb "am" is still told apart from a wrong word.
-const SAME = { alright: 'all right', okay: 'ok', mister: 'mr', missus: 'mrs', 'o clock': "o'clock" }
+const SAME = { alright: 'all right', okay: 'ok', mister: 'mr', missus: 'mrs', 'o clock': "o'clock", gonna: 'going to' }
 const norm = t => {
   let w = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim()
   w = w.replace(/\b(?:[a-z] ){1,}[a-z]\b/g, run => run.replace(/ /g, ''))
@@ -107,7 +107,16 @@ function loadDicts() {
   })
   return dicts
 }
-const plain = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(' ').map(w => DIGITS[w] || w).join(' ')
+// Figures as words, 0-999 ("24" -> "twenty four"), so Whisper's digits compare with the script's words.
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+function say(n) {
+  if (n in DIGITS && n < 100) return DIGITS[n]
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + DIGITS[n % 10] : '')
+  if (n < 1000) return DIGITS[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' and ' + say(n % 100) : '')
+  return String(n)
+}
+const plain = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/-/g, ' ').split(' ')
+  .map(w => (/^\d+$/.test(w) && +w < 1000 ? say(+w) : w)).join(' ').replace(/\band (?=\w)/g, m => m).replace(/\s+/g, ' ').trim()
 function readings(phrase, dict) {
   let out = ['']
   for (const w of phrase.split(/[ -]+/).filter(Boolean)) {
@@ -117,10 +126,14 @@ function readings(phrase, dict) {
   }
   return out
 }
+function sameWord(a, b, d) { if (a === b) return true; const ra = new Set(readings(a, d)); return readings(b, d).some(r => ra.has(r)) }
 export function soundsSame(a, b) {
   a = plain(a); b = plain(b)
   if (a.replace(/[ -]/g, '') === b.replace(/[ -]/g, '')) return true          // firefighter / fire fighter
-  return loadDicts().some(d => { const ra = new Set(readings(a, d)); return readings(b, d).some(r => ra.has(r)) })
+  if (loadDicts().some(d => sameWord(a, b, d))) return true
+  // A sentence: word by word, each the same or the same sound ("wear your shirt" / "where your shirt").
+  const wa = a.split(' '), wb = b.split(' ')
+  return wa.length === wb.length && wa.length > 1 && loadDicts().some(d => wa.every((w, i) => sameWord(w, wb[i], d)))
 }
 
 async function judgeOnce(wavBuf, text) {

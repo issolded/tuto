@@ -123,10 +123,26 @@ async function speakChirp(text, voice, lang, tries = 5) {
   return tidyTail(splitWav(Buffer.from(j.audioContent, 'base64')))     // a WAV with a header; no C2PA chunk here
 }
 
+// Chirp sometimes starts with 0.7 s of near-silence (the check allows 0.7 s): anything quieter than -45 dB
+// before the first speech is cut to 0.15 s.
+function trimHead(t) {
+  const f = Math.round(t.rate * 0.01), n = t.pcm.length / 2
+  let first = 0
+  for (let i = 0; i + f <= n; i += f) {
+    let e = 0
+    for (let j = i; j < i + f; j++) { const x = t.pcm.readInt16LE(j * 2) / 32768; e += x * x }
+    if (20 * Math.log10(Math.sqrt(e / f) || 1e-9) > -45) { first = i; break }
+  }
+  const keep = Math.round(t.rate * 0.15)
+  if (first <= keep) return t
+  return { ...t, pcm: t.pcm.subarray((first - keep) * 2) }
+}
+
 // Chirp ends on a breath / room tail around -40 dB instead of silence, which the "sound in the last 20 ms"
 // check reads as a cut. A tail that quiet is not speech (speech is about -15 dB), so it is faded over 60 ms
 // and 120 ms of silence added. A louder end (-30 dB or more: speech really cut off) is left for the check.
 function tidyTail(t) {
+  t = trimHead(t)
   const n = t.pcm.length / 2, last = Math.round(t.rate * 0.02)
   let e = 0
   for (let i = n - last; i < n; i++) { const x = t.pcm.readInt16LE(i * 2) / 32768; e += x * x }
@@ -244,7 +260,15 @@ if (process.argv.includes('--rejudge')) {
     if (m.kind === 'dialogue') {
       const clip = CLIPS.find(c => c.id === m.clip)
       const whole = checkAsr(w, clip.lines.map(([, l]) => l).join(' '))
-      console.log(`${key}: whole dialogue ${whole.ok ? 'heard right' : whole.issues[0]} (lines keep their earlier status)`)
+      // Lines are not stored apart. When the whole talk is heard right, a line that failed only on Whisper's
+      // spelling ("heard ...") is cleared; other line findings (signal, accent) stay.
+      if (whole.ok) for (const l of m.lines) if (l.issues.length && l.issues.every(i => i.startsWith('heard '))) Object.assign(l, { status: 'ok', issues: [] })
+      const rank = { fail: 3, unchecked: 2, listen: 1, ok: 0 }
+      const before = m.status
+      m.status = whole.ok === false ? 'fail' : m.lines.reduce((w, l) => (rank[l.status] > rank[w] ? l.status : w), 'ok')
+      m.issues = [...m.lines.flatMap(l => l.issues), ...(whole.ok === false ? [`whole dialogue: ${whole.issues[0]}`] : [])]
+      saveEntry(key, m)
+      console.log(`${key}: ${before} -> ${m.status} (whole dialogue ${whole.ok ? 'heard right' : whole.issues[0]})`)
       continue
     }
     const qc = await check(w, m.text, m.variety, m.kind === 'word' ? 'word' : 'sentence')
