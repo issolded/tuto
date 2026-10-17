@@ -11,8 +11,10 @@ import DATA from '../lib/literacy/readingPreview.generated.json'
 // file. The real screen would get the sheet from the server and never see a key (EnglishScreen contract).
 //
 // What it is meant to show:
-// - the activity is in English (story, questions, hints, explanations); the app's own controls
-//   (Send, I don't know, Tap to carry on) follow the child's language — decision 2026-10-16
+// - everything on screen inside the English section is English: story, questions, hints, and also the
+//   controls and feedback (Send, I don't know, Correct, Tap to carry on) — user decision 2026-10-17,
+//   replacing 2026-10-16's "controls in the child's language". The say()/t() calls stay so the strings
+//   are the app's usual ones; they are asked for in English.
 // - a worked example the first time, with no points
 // - the story stays in reach while answering: looking back is reading, not cheating
 // - one try, then help (7+): a first wrong pick is struck out; a second, or a wrong after a hint,
@@ -125,7 +127,7 @@ export default function EnglishReadingPreview() {
   const isTablet = useIsTablet()
   const stories = DATA.items
   const [storyIdx, setStoryIdx] = useState(0)
-  const [lang, setLang] = useState('tr')          // the child's app language: controls only
+  const lang = 'en'                               // the English section speaks English, whatever the app language
   const [seenExample, setSeenExample] = useState(false)
   const [step, setStep] = useState('welcome')      // welcome | example | read | questions | result
   const [qIdx, setQIdx] = useState(0)
@@ -202,10 +204,6 @@ export default function EnglishReadingPreview() {
     background: ROSE, color: 'white', border: 'none', borderRadius: 20, padding: '16px 46px',
     fontFamily: FRED, fontSize: 20, fontWeight: 600, cursor: 'pointer', boxShadow: '0 10px 28px rgba(170,50,85,.38)',
   }
-  const pill = (active) => ({
-    border: 'none', borderRadius: 999, padding: '5px 11px', cursor: 'pointer', fontSize: 12.5, fontWeight: 800,
-    background: active ? '#fff' : 'rgba(255,255,255,.14)', color: active ? '#241f3a' : '#fff',
-  })
 
   // A preview bar, not part of the child's screen: which story, which app language, what this is.
   const bar = (
@@ -215,7 +213,6 @@ export default function EnglishReadingPreview() {
       <select value={storyIdx} onChange={e => restart(Number(e.target.value))} style={{ borderRadius: 8, border: 'none', padding: '4px 6px', fontSize: 12.5, maxWidth: 190 }}>
         {stories.map((s, i) => <option key={s.id} value={i}>{i + 1}. {s.title}</option>)}
       </select>
-      {['en', 'tr', 'es'].map(l => <button key={l} onClick={() => setLang(l)} style={pill(lang === l)}>{l.toUpperCase()}</button>)}
     </div>
   )
 

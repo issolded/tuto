@@ -8,6 +8,8 @@ yardımlı/bağımsız ayrımı aynen geçerli; burada tekrar edilmiyor.
 
 ## Etkinlik dili (kullanıcı kararı, 2026-10-16)
 
+**Güncelleme (2026-10-17, kullanıcı):** İngilizce bölümüne girildiğinde ekranda çıkan her şey İngilizcedir: doğru/yanlış geri bildirimi, Gönder, Bilmiyorum, İpucu, Devam, sonuç ekranı dahil. Çocuğun uygulama dili bölümün içinde hiçbir metni değiştirmez; bölümden çıkınca (ana ekran, ayarlar) geçerlidir. Ebeveyn mesajları `prefs.language` ile kalır. Aşağıdaki "genel uygulama kontrolleri çocuğun dilinde" cümlesi bu güncellemeyle geçersiz.
+
 İngilizce etkinliğinin soru, metin, şık, yönerge, ipucu ve yanlış sonrası açıklamalarının
 tamamı İngilizcedir; `children.language` bunları çevirmez. Geri/çıkış, ayarlar ve genel
 uygulama kontrolleri çocuğun seçtiği dilde kalabilir; ebeveyn iletişimi `prefs.language` kullanır.

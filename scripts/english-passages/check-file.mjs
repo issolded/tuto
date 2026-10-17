@@ -1,7 +1,8 @@
 // Put passages written elsewhere (a person, another model) through the same checks as our own writer.
 // Input: the JSON array the make-prompt.mjs prompt asks for. Output: out/<name>-<stamp>/REVIEW.md.
 //
-//   node scripts/english-passages/check-file.mjs <file.json> [level=E3] [name=external]
+//   node scripts/english-passages/check-file.mjs <file.json> [level=E3] [name=external] [--all]
+//   --all: report the word gate but run the model reviewers even when it fails (to compare writers).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,7 +11,8 @@ import { PREMISES } from './premises.mjs'
 import { MODELS, usage } from './llm.mjs'
 import { NAMES } from '../../src/lib/englishTables.js'
 
-const [file, level = 'E3', name = 'external'] = process.argv.slice(2)
+const args = process.argv.slice(2).filter(a => a !== '--all'), ALL = process.argv.includes('--all')
+const [file, level = 'E3', name = 'external'] = args
 const raw = readFileSync(file, 'utf8')
 const items = JSON.parse(raw.slice(raw.indexOf('['), raw.lastIndexOf(']') + 1))
 const here = dirname(fileURLToPath(import.meta.url))
@@ -20,7 +22,7 @@ const md = [`# ${name} passages (${level}) — checked ${new Date().toISOString(
 let passed = 0
 for (const [k, item] of items.entries()) {
   const premise = PREMISES.find(p => p.id === item.premise) || { id: `item${k + 1}`, genre: 'fiction', premise: '(none given)', source: name }
-  const check = await fullCheck(item, level, { names: NAMES, genre: premise.genre })
+  const check = await fullCheck(item, level, { names: NAMES, genre: premise.genre, skipGate: ALL })
   const status = check.verdict === 'pass' ? 'awaiting-human' : 'rejected'
   if (status === 'awaiting-human') passed++
   const id = `${level}-${name}-${premise.id}`
