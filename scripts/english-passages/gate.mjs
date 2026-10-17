@@ -55,6 +55,7 @@ const IRREGULAR = {
   meant: 'mean', paid: 'pay', sold: 'sell', shone: 'shine', stuck: 'stick', swept: 'sweep', lay: 'lie', led: 'lead', lit: 'light',
   blew: 'blow', blown: 'blow', dug: 'dig', fought: 'fight', froze: 'freeze', frozen: 'freeze', slid: 'slide', spun: 'spin',
   stole: 'steal', struck: 'strike', swung: 'swing', tore: 'tear', torn: 'tear', bent: 'bend', lent: 'lend', fled: 'flee', bit: 'bite', bitten: 'bite',
+  lying: 'lie', dying: 'die', tying: 'tie',
   better: 'good', best: 'good', worse: 'bad', worst: 'bad', children: 'child', men: 'man', women: 'woman', feet: 'foot', teeth: 'tooth',
   mice: 'mouse', people: 'person', leaves: 'leaf', wolves: 'wolf', shelves: 'shelf', knives: 'knife', halves: 'half', lives: 'life',
   me: 'i', him: 'he', us: 'we', them: 'they', myself: 'i', herself: 'she', himself: 'he', themselves: 'they', ourselves: 'we', itself: 'it',
@@ -69,6 +70,10 @@ function lemmas(w) {
     if (w.endsWith(suf)) { const s = w.slice(0, -suf.length); if (s.length > 2 && s.at(-1) === s.at(-2)) out.push(s.slice(0, -1)) }
   }
   return out
+}
+export function headword(word) {
+  const forms = [word, ...(IRREGULAR[word] ? [IRREGULAR[word]] : []), ...lemmas(word).slice(1)]
+  return forms.find(l => LEVEL_OF.has(l)) || forms.find(l => DALE.has(l)) || word
 }
 export function levelOf(word) {
   let best
@@ -121,8 +126,10 @@ export function gate(item, levelName, names = NAMES) {
 
   // Everything a child reads: passage, title, question stems and options.
   const all = [item.title || '', text, ...(item.questions || []).flatMap(q => [q.stem, ...(q.options || [])])].join(' \n ')
+  // Counted by headword, not by form: kept and keep, followed and follow, heavy and heavier are one
+  // word each. The headword is the first form the dictionaries know, else the word as written.
   const flyers = new Set(), outside = new Set()
-  for (const w of new Set(wordsOf(all))) {
+  for (const w of new Set(wordsOf(all).map(headword))) {
     if (blocked(w)) fail('blocklist', w)
     if (listed(TOPICS, w)) fail('grown-up-topic', w)
     if (REGIONAL.has(w)) fail('regional', w)
