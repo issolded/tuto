@@ -55,7 +55,7 @@ const IRREGULAR = {
   meant: 'mean', paid: 'pay', sold: 'sell', shone: 'shine', stuck: 'stick', swept: 'sweep', lay: 'lie', led: 'lead', lit: 'light',
   blew: 'blow', blown: 'blow', dug: 'dig', fought: 'fight', froze: 'freeze', frozen: 'freeze', slid: 'slide', spun: 'spin',
   stole: 'steal', struck: 'strike', swung: 'swing', tore: 'tear', torn: 'tear', bent: 'bend', lent: 'lend', fled: 'flee', bit: 'bite', bitten: 'bite',
-  lying: 'lie', dying: 'die', tying: 'tie', shown: 'show',
+  lying: 'lie', dying: 'die', tying: 'tie', shown: 'show', scarves: 'scarf', calves: 'calf', loaves: 'loaf',
   better: 'good', best: 'good', worse: 'bad', worst: 'bad', children: 'child', men: 'man', women: 'woman', feet: 'foot', teeth: 'tooth',
   mice: 'mouse', people: 'person', leaves: 'leaf', wolves: 'wolf', shelves: 'shelf', knives: 'knife', halves: 'half', lives: 'life',
   me: 'i', him: 'he', us: 'we', them: 'they', myself: 'i', herself: 'she', himself: 'he', themselves: 'they', ourselves: 'we', itself: 'it',
@@ -78,7 +78,9 @@ export function headword(word) {
   if (known) return known
   // A word no list knows still counts once with its plain inflections (suggested/suggest, footsteps);
   // only -ed, -ing and -s are undone here, never -er/-est/-ly, which would turn whether into wheth.
-  return [/ied$/, /ies$/, /ed$/, /ing$/, /es$/, /s$/].map((re, i) => word.replace(re, i < 2 ? 'y' : '')).find(x => x !== word && x.length > 2) || word
+  const stem = [/ied$/, /ies$/, /ed$/, /ing$/, /es$/, /s$/].map((re, i) => word.replace(re, i < 2 ? 'y' : '')).find(x => x !== word && x.length > 2) || word
+  // paused -> pause, not paus: a stem ending in s/v/z/c/g took an e before the ending.
+  return /(ed|ing|es)$/.test(word) && /[svzcg]$/.test(stem) ? stem + 'e' : stem
 }
 export function levelOf(word) {
   let best
