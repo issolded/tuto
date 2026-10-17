@@ -69,3 +69,19 @@ the review sheet is for a person and nothing is approved yet; E4 untried.
 - Outside writers: `make-prompt.mjs` writes the prompt (docs/ENGLISH-PASSAGE-PROMPT.md), `check-file.mjs`
   runs their JSON through the same checks.
 - Preview: `/english-reading-preview` (src/screens/EnglishReadingPreview.jsx), fed by `export-preview.mjs`.
+
+## Third round (2026-10-17 night): word policy and the reviewer comparison
+
+- E3 words (product decision, CLAUDE.md): Starters + Movers + `BASE_WORDS` (25 everyday words of telling);
+  everything else is a content word, at most 2 per passage, counted by headword over title, text and
+  questions. Astra's first eight under it: 6 pass, 2 have 3 content words.
+- Pedagogy rubric: `reason_logical` (does the reason really cause it) and `key_adds_info` (does the right
+  option say more than the text), and passage `logic_ok`, as separate checks.
+- `reviewer-set.mjs` / `compare-reviewers.mjs`: 12 items, 9 with a known fault (most found by a person after
+  the reviewer passed them), 3 clean, 2 runs each. gemini-3.1-pro 18/18 faults, 0/6 false alarms;
+  gemini-3.8-flash 12/18; gemini-3.5-flash 11/18; neither flash model saw "less water, so the box is strong".
+  Two items labelled clean at first were flagged by pro on both runs and, on reading, are faults (Astra's
+  corrected chair; the snail putting every apple back): relabelled with that note. The pedagogy reviewer
+  is now pro (`REVIEW_KEY`), falling back to gemini-3.8-flash on quota, recorded in the output.
+- Caveat: pro now both writes and reviews our own passages (separate calls, no shared reasoning); for
+  outside writers (Astra) there is no such overlap.

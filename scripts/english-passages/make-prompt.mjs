@@ -20,7 +20,8 @@ some are native English speakers, many are learners. Write ${premises.length} pa
   interesting, never preachy.
 - ${L.words[0]}–${L.words[1]} words, ${L.sentences[0]}–${L.sentences[1]} sentences, no sentence over ${L.maxSentenceWords} words.
 - Use ONLY words from the word list at the end (any normal form: plurals, -ed, -ing, irregular past). At most
-  ${L.flyersAllowed} other very common words per passage, only if no listed word can do the job.
+  ${L.base ? L.contentAllowed : L.flyersAllowed} other words per passage, counting the title, the story and the questions together
+  (keep/kept count as one word), and only if no listed word can do the job.
 - Names: only ${NAMES.join(', ')}. Two per story.
 - Reasons are sensible real-life reasons, said plainly with "because" or "so". Prefer reasons that belong to
   THIS story over what usually happens (not "the ice cream melted because it was hot").

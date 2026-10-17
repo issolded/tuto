@@ -16,7 +16,10 @@ export const MODELS = {
   generator: process.env.GEN_MODEL || 'gemini-3.5-flash',
   safety: process.env.SAFETY_MODEL || 'gemini-3.1-pro-preview',
   safetyFallback: 'gemini-3.8-flash',     // when the preview model will not answer; the record says which one did
-  pedagogy: process.env.PED_MODEL || 'gemini-3.8-flash',
+  // pro, chosen by the comparison set (reviewer-set.mjs, 2026-10-17): 18/18 known faults, 0/6 false alarms,
+  // against 12/18 for gemini-3.8-flash and 11/18 for gemini-3.5-flash.
+  pedagogy: process.env.PED_MODEL || 'gemini-3.1-pro-preview',
+  pedagogyFallback: 'gemini-3.8-flash',
   solver: process.env.SOLVER_MODEL || 'gemma-4-31b-it',
 }
 
@@ -24,6 +27,8 @@ export const usage = {}
 // The writer can run on another project's key (WRITER_KEY), so its daily pro quota is not spent by
 // the reviewers and the reviewers do not wait on it.
 export const WRITER_KEY = process.env.WRITER_KEY || KEY
+// The pedagogy reviewer's key (REVIEW_KEY), so its pro quota can be a third project's.
+export const REVIEW_KEY = process.env.REVIEW_KEY || KEY
 export async function call(model, prompt, { json = true, temperature = 0, system, tries = 6, key = KEY } = {}) {
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],

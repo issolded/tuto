@@ -1,0 +1,138 @@
+{
+  "models": [
+    "gemini-3.1-pro-preview"
+  ],
+  "runs": 2,
+  "table": {
+    "gemini-3.1-pro-preview": {
+      "clean-green-hat": [
+        {
+          "verdict": "clean",
+          "note": "The passage is well-written, logical, and perfectly fits the E3 level requirements."
+        },
+        {
+          "verdict": "clean",
+          "note": "The passage is a cute, well-written vignette that perfectly fits the E3 level requirements."
+        }
+      ],
+      "clean-shell": [
+        {
+          "verdict": "clean",
+          "note": "The passage is sweet, coherent, and perfectly fits the E3 level with explicit cause-and-effect relationships."
+        },
+        {
+          "verdict": "clean",
+          "note": "The passage is sweet, coherent, and perfectly fits the E3 level with explicit cause-and-effect relationships."
+        }
+      ],
+      "pencil-fixed": [
+        {
+          "verdict": "clean",
+          "note": "A well-structured, logical, and engaging short text suitable for the target age and level."
+        },
+        {
+          "verdict": "clean",
+          "note": "A well-structured, logical, and engaging short text that perfectly fits the E3 level."
+        }
+      ],
+      "chair-roof": [
+        {
+          "verdict": "caught",
+          "note": "Sentence 7 ('She had moved the big chair inside because rain came through the roof') contains a major logical flaw. Moving something inside because the roof is leaking makes no everyday sense, as the inside would be wet."
+        },
+        {
+          "verdict": "caught",
+          "note": "In sentence 7, moving a chair inside because rain is coming through the roof makes no physical sense, as a leaking roof would make the inside wet."
+        }
+      ],
+      "station-water": [
+        {
+          "verdict": "caught",
+          "note": "The passage reads like a disjointed list of sentences contrived to force cause-and-effect relationships. A random ball hitting the box is abrupt, and the logic in 'They do not add much water today, so the new box is strong' is physically nonsensical."
+        },
+        {
+          "verdict": "caught",
+          "note": "The passage reads like a disjointed list of sentences contrived to force cause-and-effect relationships. A random ball hitting the box is abrupt, and the logic in 'They do not add much water today, so the new box is strong' is physically nonsensical."
+        }
+      ],
+      "park-mother": [
+        {
+          "verdict": "caught",
+          "note": "The passage is highly appropriate for the E3 level, featuring clear, short sentences and logical, everyday events."
+        },
+        {
+          "verdict": "caught",
+          "note": "The passage is a great fit for the E3 level, with clear, logical events and simple sentences."
+        }
+      ],
+      "red-shoes": [
+        {
+          "verdict": "caught",
+          "note": "In sentence 6, Ben puts his 'dry shoes' on. In everyday life, 'very wet' shoes do not dry on their own just sitting by the door in the short time it takes for a rain shower to pass."
+        },
+        {
+          "verdict": "caught",
+          "note": "The passage is appropriate for the level. While very wet shoes might take longer to dry in reality than the story implies, 'Later' provides enough of a time lapse for a children's story."
+        }
+      ],
+      "clean-snail": [
+        {
+          "verdict": "FALSE-ALARM",
+          "note": "In Sentence 7 ('Soon, all the apples were back in the bag.'), there is a major logical and narrative gap. The text explicitly states the rabbit ran on with the bag and the snail is slow. It makes no physical sense for the slow snail to catch up and get the apples back into the rabbit's bag without any explanation of how this happened."
+        },
+        {
+          "verdict": "FALSE-ALARM",
+          "note": "There is a physical logic gap: the rabbit 'ran on' with the bag, and the snail is explicitly slow. It makes no physical sense for the slow snail to catch up to the running rabbit's bag to put the apples back in, making the resolution ('Soon, all the apples were back in the bag') feel unearned and illogical."
+        }
+      ],
+      "omar-grass": [
+        {
+          "verdict": "caught",
+          "note": "The story lacks coherence and logic. The boundary between reality (Omar drawing the story) and the fictional world (the cat going home with Omar) is broken. The lake appears out of nowhere in a garden setting, and walking on grass is not a logical cause for finding a cat."
+        },
+        {
+          "verdict": "caught",
+          "note": "The passage lacks coherence and logic. Omar draws a cat for a story, but at the end, the cat goes home with him as if it were real. The lake is introduced abruptly, and 'walking on the grass' is illogically presented as the cause of finding the cat. It reads like a list of loosely connected sentences."
+        }
+      ],
+      "ice-sun": [
+        {
+          "verdict": "caught",
+          "note": "Sentence 3 ('After ten minutes, the ice cube was bigger because the sun was hot.') contains a major logical flaw. Ice melts and gets smaller in the heat. This ruins the story quality and everyday logic."
+        },
+        {
+          "verdict": "caught",
+          "note": "The passage contains a major logical flaw in sentence 3: 'the ice cube was bigger because the sun was hot.' In reality, ice melts and gets smaller in the heat. This makes the story confusing and unsuitable for children unless framed as a fantasy/magic story, which it is not."
+        }
+      ],
+      "pencil-wearing": [
+        {
+          "verdict": "caught",
+          "note": "A well-structured, logical, and engaging problem-solving story that perfectly fits the target level."
+        },
+        {
+          "verdict": "caught",
+          "note": "A well-structured, logical, and engaging problem-solving story that perfectly fits the target level."
+        }
+      ],
+      "chair-fixed": [
+        {
+          "verdict": "FALSE-ALARM",
+          "note": "The logic in sentences 6 and 7 is highly flawed. Bringing a chair inside because a teddy is getting wet makes no sense (one would just move the teddy). Furthermore, if it was raining, it makes no sense that the woman would put a replacement small blue chair outside in its place."
+        },
+        {
+          "verdict": "FALSE-ALARM",
+          "note": "The passage has major coherence and logic issues. In 'A woman was painting the small chair beside it. She had brought the chair inside...', the pronoun 'the chair' grammatically points to the small chair, but contextually means the big chair, which is very confusing. Furthermore, it makes no everyday sense to bring the big chair inside to escape the rain, only to put a small blue chair outside in its place during that same rain."
+        }
+      ]
+    }
+  },
+  "usage": {
+    "gemini-3.1-pro-preview": {
+      "calls": 24,
+      "in": 23018,
+      "out": 48881,
+      "secs": 412
+    }
+  }
+}

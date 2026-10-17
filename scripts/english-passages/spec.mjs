@@ -2,9 +2,12 @@
 // told AND the gate enforces, so the two cannot drift. Levels follow docs/ENGLISH-SKILL-LADDERS.md E.
 
 export const LEVELS = {
+  // E3 vocabulary (product decision 2026-10-17): Cambridge Starters + Movers, plus BASE_WORDS (everyday
+  // words of telling: place, time and basic verbs); any other word, at any level or none, is a content
+  // word, and a passage may have at most 2 of them, counted by headword over title, text and questions.
   E3: {
     words: [55, 100], sentences: [6, 9], maxSentenceWords: 14,
-    vocab: ['starters', 'movers'], flyersAllowed: 4, outsideAllowed: 0,
+    vocab: ['starters', 'movers'], base: true, contentAllowed: 2,
     ops: ['detail', 'cause', 'cause'],             // one explicit detail, two explicit cause–effect
     options: 3,
     describe: 'six to nine short sentences; explicit cause and effect; no hidden meaning needed',
@@ -17,6 +20,15 @@ export const LEVELS = {
     describe: '120–200 words; a main idea and one simple inference from clues in the text',
   },
 }
+
+// Everyday words of telling that the Cambridge lists put at Flyers (or leave out: `beside`), and without
+// which a story reads like a list. Not content: they do not add reading load the way soil or hero does.
+// `lie` is left out on purpose (it is also "not true").
+export const BASE_WORDS = [
+  'same', 'other', 'each', 'beside', 'across', 'through', 'over', 'together', 'somewhere', 'soon', 'later',
+  'still', 'usually', 'already', 'until',
+  'keep', 'feel', 'stay', 'hear', 'follow', 'guess', 'leave', 'turn', 'hope', 'let',
+]
 
 export const OPS = {
   detail: 'an explicit detail stated in one sentence of the text',

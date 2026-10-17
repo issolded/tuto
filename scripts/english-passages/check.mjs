@@ -3,6 +3,7 @@
 // so the traps test exactly the code that guards real passages.
 import { gate } from './gate.mjs'
 import { safetyReview, pedagogyReview, blindSolve } from './agents.mjs'
+import { MODELS } from './llm.mjs'
 
 export const WITH_TEXT_RUNS = 2, NO_TEXT_RUNS = 3
 
@@ -21,6 +22,7 @@ export async function fullCheck(item, level, { names, skipGate = false, genre } 
   const other = [s1.other_concern, s2.other_concern].filter(x => x && x.trim() && !/^(none|no|n\/a)\.?$/i.test(x.trim()))
   out.safety = { flags, other, models: [s1.model, s2.model] }
   out.pedagogy = ped
+  if (ped.model && ped.model !== MODELS.pedagogy) out.reviewerFallback = ped.model
   const withText = solves.slice(0, WITH_TEXT_RUNS), noText = solves.slice(WITH_TEXT_RUNS)
   out.solve = item.questions.map((_, i) => ({ withText: withText.map(r => r[i]), noText: noText.map(r => r[i]) }))
 
@@ -31,12 +33,13 @@ export async function fullCheck(item, level, { names, skipGate = false, genre } 
   const safetyProblems = Object.entries(flags).map(([k, q]) => `safety ${k}: ${[...new Set(q)].join(' | ')}`)
   const problems = []
   ;(ped.questions || []).forEach((q, i) => {
-    for (const k of ['measures_op', 'single_correct', 'wrong_by_text', 'needs_text', 'reason_makes_sense'])
+    for (const k of ['measures_op', 'single_correct', 'wrong_by_text', 'needs_text', 'reason_logical'])
       if (q[k] === false) problems.push(`q${i + 1} pedagogy ${k}${q.note ? ` (${q.note})` : ''}`)
+    if (q.key_adds_info === true) problems.push(`q${i + 1} pedagogy key_adds_info${q.note ? ` (${q.note})` : ''}`)
     // Weak distractors make an item easy, not wrong: shown to the person, not sent back.
     if (q.distractors_plausible === false) notes.push(`q${i + 1} weak distractors${q.note ? ` (${q.note})` : ''}`)
   })
-  for (const k of ['natural', 'coherent', 'level_ok', 'story_quality']) if (ped.passage?.[k] === false) problems.push(`passage ${k}${ped.passage.note ? ` (${ped.passage.note})` : ''}`)
+  for (const k of ['natural', 'coherent', 'logic_ok', 'level_ok', 'story_quality']) if (ped.passage?.[k] === false) problems.push(`passage ${k}${ped.passage.note ? ` (${ped.passage.note})` : ''}`)
   out.solve.forEach((s, i) => {
     if (!s.withText.every(Boolean)) problems.push(`q${i + 1} solver missed it WITH the text (${s.withText.filter(Boolean).length}/${s.withText.length})`)
     // A strong model guesses far better than a seven-year-old, so its guess alone is a note. It is a

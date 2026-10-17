@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { LEVELS } from './spec.mjs'
+import { LEVELS, BASE_WORDS } from './spec.mjs'
 import { NAMES } from '../../src/lib/englishTables.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -102,6 +102,7 @@ const TOPICS = new Set(listFile('scripts/english/sentence-topics.txt'))
 const DALE = new Set(JSON.parse(readFileSync(join(root, 'scripts/english/vendor/dale-chall.json'), 'utf8')).map(w => w.toLowerCase()))
 // A word that is itself a dictionary word is matched as it is: `wood` must not be read as `woo` + d.
 // Only a word the dictionaries do not know is reduced to its stem first (`buried` → `bury`).
+const BASE = new Set(BASE_WORDS)
 const known = w => LEVEL_OF.has(w) || DALE.has(w)
 const forms = w => known(w) ? [w, ...(IRREGULAR[w] ? [IRREGULAR[w]] : [])] : lemmas(w)
 const listed = (set, w) => forms(w).some(l => set.has(l))
@@ -139,8 +140,14 @@ export function gate(item, levelName, names = NAMES) {
     if (lv === undefined) (lemmas(w).some(l => DALE.has(l)) ? flyers : outside).add(w)
     else if (!L.vocab.includes(lv)) flyers.add(w)
   }
-  if (flyers.size > L.flyersAllowed) fail('vocab-above-level', [...flyers].join(', '))
-  if (outside.size > L.outsideAllowed) fail('vocab-outside-lists', [...outside].join(', '))
+  if (L.base) {
+    // One limit for every word outside the level and the base list, whichever list it is on or not.
+    const content = [...flyers, ...outside].filter(w => !BASE.has(w))
+    if (content.length > L.contentAllowed) fail('content-words', `${content.length} > ${L.contentAllowed}: ${content.join(', ')}`)
+  } else {
+    if (flyers.size > L.flyersAllowed) fail('vocab-above-level', [...flyers].join(', '))
+    if (outside.size > L.outsideAllowed) fail('vocab-outside-lists', [...outside].join(', '))
+  }
 
   const qs = item.questions || []
   if (qs.length !== L.ops.length) fail('question-count', `${qs.length}, want ${L.ops.length}`)
@@ -160,12 +167,13 @@ export function gate(item, levelName, names = NAMES) {
     const lens = q.options.map(o => o.length)
     if (lens[q.answer] > 1.6 * Math.max(...lens.filter((_, j) => j !== q.answer))) fail('giveaway', `${tag}: the answer is much longer than the others`)
   }
-  return { ok: issues.length === 0, issues, warnings, stats: { words: words.length, sentences: sents.length, flyers: [...flyers], outside: [...outside] } }
+  return { ok: issues.length === 0, issues, warnings, stats: { words: words.length, sentences: sents.length, flyers: [...flyers], outside: [...outside], content: [...flyers, ...outside].filter(w => !BASE.has(w)) } }
 }
 
 // The word list the generator is shown: base forms at the level's vocabulary, regional words removed.
 export function allowedWords(levelName) {
   const L = LEVELS[levelName]
-  return [...LEVEL_OF].filter(([w, lv]) => L.vocab.includes(lv) && !REGIONAL.has(w) && !BLOCK.has(w)).map(([w]) => w).sort()
+  const words = [...LEVEL_OF].filter(([w, lv]) => L.vocab.includes(lv) && !REGIONAL.has(w) && !BLOCK.has(w)).map(([w]) => w)
+  return [...new Set([...words, ...(L.base ? BASE_WORDS : [])])].sort()
 }
 export const REGIONAL_WORDS = REGIONAL

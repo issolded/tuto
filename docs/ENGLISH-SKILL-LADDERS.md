@@ -52,6 +52,8 @@ hatasını fark etmek aynı beceri değil.
 
 ## Alanlar arası kural: hedef dışı kelime yükü
 
+**E3 okuma metinleri için somut kural (2026-10-17, kullanıcı):** Starters + Movers + 25 kelimelik temel anlatım listesi (`scripts/english-passages/spec.mjs` `BASE_WORDS`); geri kalan her kelime içerik kelimesi, metin başına (başlık ve sorular dahil, kök kelimeyle sayılarak) en çok 2. Ayrıntı ve gerekçe CLAUDE.md'de.
+
 "Yanlış cevap başka hangi sebepten olabilir?" sorusunun en sık cevabı **kelimeyi bilmemek**.
 Bunu tamamen eleyemeyiz (B2'yi geçen çocuk B2'deki her kelimeyi bilmez), ama küçültebiliriz:
 

@@ -1,7 +1,7 @@
 // The three model roles: a writer, two reviewers that never see the writer's reasoning, and a blind
 // solver that never sees the answer key. Each reviewer returns a fixed rubric, yes/no per line with a
 // quote, never a free "looks fine".
-import { call, MODELS, WRITER_KEY } from './llm.mjs'
+import { call, MODELS, WRITER_KEY, REVIEW_KEY } from './llm.mjs'
 import { LEVELS, OPS, SAFETY } from './spec.mjs'
 import { allowedWords, REGIONAL_WORDS } from './gate.mjs'
 
@@ -9,7 +9,7 @@ const rules = (level, names) => {
   const L = LEVELS[level]
   return `- ${L.words[0]}–${L.words[1]} words, ${L.sentences[0]}–${L.sentences[1]} sentences, no sentence longer than ${L.maxSentenceWords} words.
 - Use ONLY words from the word list below (any normal form: plurals, -ed, -ing, irregular past). At most
-  ${L.flyersAllowed} other very common words in total. Names: use only ${names.join(', ')}.
+  ${L.base ? L.contentAllowed : L.flyersAllowed} other words in total (title, story and questions together). Names: use only ${names.join(', ')}.
 - Never include: ${Object.entries(SAFETY).map(([k, v]) => `${k} (${v})`).join('; ')}.
 - Avoid these words, which differ between UK and US English: ${[...REGIONAL_WORDS].join(', ')}.
 
@@ -88,7 +88,7 @@ Answer JSON only:
   catch { return { ...(await call(MODELS.safetyFallback, prompt)), model: MODELS.safetyFallback } }
 }
 
-export async function pedagogyReview(item, level) {
+export async function pedagogyReview(item, level, model) {
   const L = LEVELS[level]
   const prompt = `You are a primary-school reading specialist reviewing one test item for a children's English
 reading app (ages 7–11). The level is ${level}: ${L.describe}. The answer key is given so you can check it.
@@ -105,11 +105,16 @@ For each question answer strictly by the text, not by what usually happens in li
   says the car was blue, "red" is wrong. Answer false only if the text leaves a wrong option possibly true.
 - distractors_plausible: would a child who read carelessly be tempted by at least one wrong option?
 - needs_text: could an adult who has NOT read the passage pick the key from common sense alone? (true = text needed)
-- reason_makes_sense (cause questions; true for others): is the stated reason a sensible, real-life reason for
-  that event, one a child would accept as "yes, that is why"? False if it is true only because the text says so
-  (e.g. "the dog found the cat because he walked on the grass"; "she put the paper on the desk so it is clean").
+- reason_logical (cause questions; true for others): could the stated reason really cause that event, physically
+  and in everyday life? Think it through: rain coming through a ROOF makes the INSIDE wet, so it is no reason to
+  move something inside; "the dog found the cat because he walked on the grass" is not a reason. False if the
+  reason works only because the text says so.
+- key_adds_info: does the RIGHT option claim anything the passage does not say (a colour, who was wearing what,
+  who was with whom)? True = it adds information; a paraphrase that keeps the meaning is not adding.
 For the passage:
 - natural: natural, correct English a children's book could print.
+- logic_ok: does every event and every "because/so" in the passage make physical and everyday sense (not only
+  the ones a question asks about)? Name the sentence in the note if not.
 - story_quality: would a good children's editor print it? It has a point, its events follow from each other,
   and the premise is visible. False for a list of loosely connected sentences.
 - coherent: events make sense in order; nothing contradicts.
@@ -117,9 +122,11 @@ For the passage:
 
 Answer JSON only:
 { "questions": [ { "measures_op": bool, "single_correct": bool, "wrong_by_text": bool,
-    "distractors_plausible": bool, "needs_text": bool, "reason_makes_sense": bool, "note": "" } ],
-  "passage": { "natural": bool, "coherent": bool, "level_ok": bool, "story_quality": bool, "note": "" } }`
-  return call(MODELS.pedagogy, prompt)
+    "distractors_plausible": bool, "needs_text": bool, "reason_logical": bool, "key_adds_info": bool, "note": "" } ],
+  "passage": { "natural": bool, "coherent": bool, "logic_ok": bool, "level_ok": bool, "story_quality": bool, "note": "" } }`
+  if (model) return call(model, prompt, { key: REVIEW_KEY })          // a named model: no fallback (comparisons)
+  try { return { ...(await call(MODELS.pedagogy, prompt, { tries: 3, key: REVIEW_KEY })), model: MODELS.pedagogy } }
+  catch { return { ...(await call(MODELS.pedagogyFallback, prompt)), model: MODELS.pedagogyFallback } }
 }
 
 // Options are shuffled per run with a fixed seed so runs differ but a rerun repeats.

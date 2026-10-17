@@ -18,7 +18,7 @@ for (const d of dirs) {
     const ped = r.check.pedagogy || {}
     // Older runs were reviewed before the sense/quality lines existed; a run that has them and says
     // no is left out even if the rest passed.
-    if (ped.passage?.story_quality === false || (ped.questions || []).some(q => q.reason_makes_sense === false)) continue
+    if (ped.passage?.story_quality === false || (ped.questions || []).some(q => q.reason_makes_sense === false || q.reason_logical === false || q.key_adds_info === true) || ped.passage?.logic_ok === false) continue
     items.push({
       id: r.id, level: r.level, title: r.item.title, passage: r.item.passage,
       questions: r.item.questions.map(q => ({ op: q.op, stem: q.stem, options: q.options, answer: q.answer, evidence: q.evidence })),
