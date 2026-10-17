@@ -27,9 +27,13 @@ function writeMarks(set) {
 }
 const Marks = createContext({ marks: new Set(), toggle: () => {} })
 
+// Recordings are served from Supabase Storage (public bucket english-audio, uploaded by
+// scripts/english-audio/upload.mjs); m.file is the bucket path. Not in the repo.
+const audioUrl = m => `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${m.file}`
+
 function clipInfo(id, variety) {
   const m = AUDIO[`${id}:${variety}`]
-  return m ? { ...m, url: `/${m.file}` } : { status: 'missing' }
+  return m ? { ...m, url: audioUrl(m) } : { status: 'missing' }
 }
 
 // One audio element for the page: a new tap stops what is playing. iOS plays only after a tap.
@@ -90,7 +94,7 @@ function WordsView({ variety }) {
       <div style={{ width: '100%', fontSize: 13, color: SOFT }}>{words.length} of the Cambridge wordlist ({variety.toUpperCase()}). Tap to hear.</div>
       {words.map(m => (
         <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1px solid ${LINE}`, borderRadius: 999, padding: '4px 8px 4px 4px' }}>
-          <button onClick={() => play(`/${m.file}`)} style={{ border: 'none', borderRadius: 999, padding: '6px 12px', background: BLUE, color: 'white', fontFamily: FONT, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>🔊 {m.text}</button>
+          <button onClick={() => play(audioUrl(m))} style={{ border: 'none', borderRadius: 999, padding: '6px 12px', background: BLUE, color: 'white', fontFamily: FONT, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>🔊 {m.text}</button>
           <StatusDot c={m} />
           <ApproveToggle c={m} />
         </span>
