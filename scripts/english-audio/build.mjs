@@ -1,6 +1,7 @@
 // Makes, checks and stores the English recordings listed in clips.mjs, for UK and US English.
 //
 //   GEMINI_API_KEY=… WHISPER_MODEL=~/.cache/whisper-cpp/ggml-base.en.bin node scripts/english-audio/build.mjs [--set trial|words] [--only id,id] [--takes 3] [--wait-quota]
+//   GEMINI_API_KEY is for the listening model (and for --engine gemini); Chirp uses the gcloud login.
 //   --set words: the Cambridge wordlist clips (WORD_CLIPS); default is the trial set.
 //   --wait-quota: at the daily quota, sleep until the API says it resets and go on (for unattended runs).
 //   --no-qc: make only, one take, signal check only; status "unchecked" until --rejudge runs Whisper and the
@@ -25,11 +26,12 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { CLIPS as TRIAL_CLIPS, WORD_CLIPS, VOICES, SPEAKERS } from './clips.mjs'
 import { checkSignal, checkAsr, judge } from './qc.mjs'
+import { fetchRetry } from './net.mjs'
 
-// --engine gemini (default) | chirp. Chirp = Google Cloud Text-to-Speech, Chirp 3 HD voices (same voice names
-// as Gemini's). Cloud TTS takes no API key: it uses the gcloud login (gcloud auth application-default login,
+// --engine chirp (default, chosen 2026-10-17 by ear and by the checks) | gemini. Chirp = Google Cloud
+// Text-to-Speech, Chirp 3 HD voices (same voice names as Gemini's). Cloud TTS takes no API key: it uses the gcloud login (gcloud auth application-default login,
 // quota project set) and allows 200 requests a minute instead of Gemini TTS's 10 a minute / 100 a day.
-const ENGINE = (() => { const i = process.argv.indexOf('--engine'); return i > 0 ? process.argv[i + 1] : 'gemini' })()
+const ENGINE = (() => { const i = process.argv.indexOf('--engine'); return i > 0 ? process.argv[i + 1] : 'chirp' })()
 const MODEL = ENGINE === 'chirp' ? 'chirp3-hd' : 'gemini-3.8-flash-tts'
 const LANG = { uk: 'en-GB', us: 'en-US' }
 const OUT_AUDIO = 'public/english-audio'
@@ -104,7 +106,7 @@ function cloudToken() {
   return token
 }
 async function speakChirp(text, voice, lang, tries = 5) {
-  const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+  const r = await fetchRetry('https://texttospeech.googleapis.com/v1/text:synthesize', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${cloudToken()}`, 'x-goog-user-project': process.env.CLOUD_TTS_PROJECT || 'vertexli' },
     body: JSON.stringify({ input: { text }, voice: { languageCode: lang, name: `${lang}-Chirp3-HD-${voice}` },
@@ -155,7 +157,7 @@ async function speak(text, voice, lang, tries = 5) {
     return speak(text, voice, lang, tries)
   }
   lastCall = Date.now()
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
+  const r = await fetchRetry(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text }] }],
       generationConfig: { responseModalities: ['AUDIO'], speechConfig: { languageCode: lang, voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } }),
@@ -211,10 +213,18 @@ async function bestTake(text, voice, variety, kind) {
   return best
 }
 
-function encode(wavBuf, dst) {
+// AAC 64 kb/s with macOS's own encoder (AudioToolbox). ffmpeg's built-in aac at 32 kb/s left an audible hiss
+// (coding SNR 12-17 dB against the raw speech; this one 21-27 dB, and pauses 12 dB cleaner), 2026-10-17.
+// The raw speech is kept as FLAC outside the repo (MASTERS), so a later change of format re-encodes
+// instead of making the recording again.
+const ENCODING = 'aac_at-64k'
+const MASTERS = process.env.AUDIO_MASTERS || join(process.env.HOME, 'Downloads', 'tuto-audio-masters')
+mkdirSync(MASTERS, { recursive: true })
+function encode(wavBuf, dst, id) {
   const tmp = join(tmpdir(), `ea-${process.pid}.wav`)
   writeFileSync(tmp, wavBuf)
-  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', tmp, '-c:a', 'aac', '-b:a', '32k', '-ac', '1', '-movflags', '+faststart', dst])
+  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', tmp, '-c:a', 'aac_at', '-b:a', '64k', '-ac', '1', '-movflags', '+faststart', dst])
+  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', tmp, '-c:a', 'flac', join(MASTERS, `${id}.flac`)])
   unlinkSync(tmp)
 }
 
@@ -252,7 +262,7 @@ clipLoop: for (const [index, clip] of CLIPS.entries()) {
       ? clip.lines.map(([sp]) => VOICES[variety][SPEAKERS[sp]])
       : [VOICES[variety].female]
     const script = clip.kind === 'dialogue' ? clip.lines.map(([sp, l]) => `${sp}: ${l}`).join('\n') : clip.text
-    const id = hash([MODEL, variety, voices.join('+'), script].join('|'))
+    const id = hash([MODEL, variety, voices.join('+'), script, ENCODING].join('|'))
     const key = `${clip.id}:${variety}`
     if (manifest[key]?.id === id && manifest[key].status === 'ok' && existsSync(join(OUT_AUDIO, `${id}.m4a`))) {
       console.log(`skip ${key} (accepted, unchanged)`)
@@ -293,7 +303,7 @@ clipLoop: for (const [index, clip] of CLIPS.entries()) {
     const status = lines.reduce((w, l) => (statusRank[l.status] > statusRank[w] ? l.status : w), 'ok')
     // A dialogue is also heard whole: Whisper on the joined clip must give every line, in order.
     const whole = clip.kind === 'dialogue' ? checkAsr(wav(pcm, rate), clip.lines.map(([, l]) => l).join(' ')) : null
-    encode(wav(pcm, rate), join(OUT_AUDIO, `${id}.m4a`))
+    encode(wav(pcm, rate), join(OUT_AUDIO, `${id}.m4a`), id)
     if (c2pa) writeFileSync(join(OUT_PROV, `${id}.c2pa`), c2pa)
     if (manifest[key]?.id && manifest[key].id !== id) {
       for (const f of [join(OUT_AUDIO, `${manifest[key].id}.m4a`), join(OUT_PROV, `${manifest[key].id}.c2pa`)]) try { unlinkSync(f) } catch {}

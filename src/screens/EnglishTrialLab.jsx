@@ -4,9 +4,6 @@ import AUDIO from '../lib/literacy/audioManifest.generated.json'
 import ART from '../lib/literacy/artManifest.generated.json'
 import { EMOJI_ART } from '../lib/puzzleArt.generated'
 
-// The same clips made with Cloud TTS Chirp 3 HD (build.mjs --engine chirp), for the Compare tab. Optional:
-// the glob is empty when that manifest does not exist.
-const CHIRP = Object.values(import.meta.glob('../lib/literacy/audioManifest.chirp.generated.json', { eager: true, import: 'default' }))[0] || {}
 
 // /english-trial-lab — the 36-item English trial set (docs/ENGLISH-TRIAL-SET.md) with its recordings and
 // pictures. A reviewer tool, not a child screen: the answer keys are in this bundle by design. Two views:
@@ -97,34 +94,6 @@ function WordsView({ variety }) {
           <StatusDot c={m} />
           <ApproveToggle c={m} />
         </span>
-      ))}
-    </section>
-  )
-}
-
-// Gemini and Chirp recordings of the same clip side by side, with the listening model's verdicts (two blind
-// runs each: accent heard, naturalness 1-5). Which sounds better is for a person to say.
-function CompareView({ variety }) {
-  const keys = Object.keys(CHIRP).filter(k => CHIRP[k].variety === variety && AUDIO[k]).sort()
-  if (!keys.length) return <div style={{ fontSize: 14, color: SOFT }}>No Chirp recordings yet.</div>
-  const one = (m, label) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-      <button onClick={() => play(`/${m.file}`)} style={{ border: 'none', borderRadius: 999, padding: '6px 12px', background: label === 'Gemini' ? BLUE : '#7a5cd6', color: 'white', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>🔊 {label}</button>
-      <StatusDot c={m} />
-      {m.natural && <span style={{ fontSize: 11, color: SOFT }}>natural {m.natural.join('/')}</span>}
-      {m.accent && <span style={{ fontSize: 11, color: SOFT }}>heard {m.accent.join('/')}</span>}
-    </span>
-  )
-  const avg = list => { const v = list.flatMap(m => m.natural || []); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(2) : '–' }
-  return (
-    <section style={{ background: 'white', borderRadius: 20, padding: 16, border: `1px solid ${LINE}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ fontSize: 13, color: SOFT }}>{keys.length} clips ({variety.toUpperCase()}). Mean naturalness: Gemini {avg(keys.map(k => AUDIO[k]))} · Chirp {avg(keys.map(k => CHIRP[k]))}. Dialogues are judged line by line when made, not here.</div>
-      {keys.map(k => (
-        <div key={k} style={{ borderTop: `1px solid ${LINE}`, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontSize: 13, fontWeight: 700 }}>{AUDIO[k].text || CHIRP[k].clip}</div>
-          {one(AUDIO[k], 'Gemini')}
-          {one(CHIRP[k], 'Chirp')}
-        </div>
       ))}
     </section>
   )
@@ -308,7 +277,7 @@ export default function EnglishTrialLab() {
           </div>
         </header>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}{btn(view === 'compare', 'Gemini vs Chirp', () => setView('compare'))}
+          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}
           <span style={{ width: 12 }} />
           {btn(variety === 'uk', 'UK voice', () => setVariety('uk'))}{btn(variety === 'us', 'US voice', () => setVariety('us'))}
           <span style={{ width: 12 }} />
@@ -329,7 +298,6 @@ export default function EnglishTrialLab() {
         <Marks.Provider value={{ marks, toggle }}>
         {view === 'review' && items.map(it => <Item key={it.id + variety + round} item={it} variety={variety} review round={round} />)}
         {view === 'words' && <WordsView variety={variety} />}
-        {view === 'compare' && <CompareView variety={variety} />}
         </Marks.Provider>
 
         {view === 'play' && (index < items.length ? (

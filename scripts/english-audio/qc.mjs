@@ -9,6 +9,7 @@ import { readFileSync, existsSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
+import { fetchRetry } from './net.mjs'
 
 export function readWav(buf) {
   const channels = buf.readUInt16LE(22), rate = buf.readUInt32LE(24), bits = buf.readUInt16LE(34)
@@ -57,7 +58,17 @@ export function checkSignal(wavBuf, text, kind) {
   return { ok: !issues.length, issues, secs: +secs.toFixed(2) }
 }
 
-const norm = t => t.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim()
+// Text compared as words. Two spellings of the same spoken words count as one, since Whisper picks its own:
+// letters said one by one ("a.m.", "TV", "T-shirt" -> am, tv, tshirt; a run of single letters is joined),
+// and a few fixed pairs. Each pair must sound the same: "a.m." = "am" holds only because a run of letters
+// is joined first, so the verb "am" is still told apart from a wrong word.
+const SAME = { alright: 'all right', okay: 'ok', mister: 'mr', missus: 'mrs', 'o clock': "o'clock" }
+const norm = t => {
+  let w = t.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim()
+  w = w.replace(/\b(?:[a-z] ){1,}[a-z]\b/g, run => run.replace(/ /g, ''))
+  for (const [k, v] of Object.entries(SAME)) w = w.replace(new RegExp(`\\b${k}\\b`, 'g'), v)
+  return w
+}
 
 export function checkAsr(wavBuf, text) {
   const model = process.env.WHISPER_MODEL
@@ -69,7 +80,47 @@ export function checkAsr(wavBuf, text) {
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
   for (const f of [tmpIn, tmp16]) try { unlinkSync(f) } catch {}
   const heard = norm(out), want = norm(text)
-  return heard === want ? { ok: true, issues: [], heard } : { ok: false, issues: [`heard "${heard}"`], heard }
+  if (heard === want) return { ok: true, issues: [], heard }
+  // A word said alone has no context: Whisper writes "bye" for "by", "c" for "sea", "center" for "centre",
+  // "100" for "hundred". Same sound in a pronunciation dictionary = heard right.
+  if (soundsSame(heard, want)) return { ok: true, issues: [], heard, note: `heard "${heard}", same sound` }
+  return { ok: false, issues: [`heard "${heard}"`], heard }
+}
+
+// UK and US pronunciation dictionaries (open-dict-data ipa-dict, MIT; scripts/english/vendor). word -> IPA
+// strings without stress marks. A phrase sounds the same when, in one of the two dictionaries, a reading of
+// it word by word equals a reading of the other; spaces, hyphens and accents do not count.
+const DIGITS = { 0: 'zero', 1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine',
+  10: 'ten', 11: 'eleven', 12: 'twelve', 13: 'thirteen', 14: 'fourteen', 15: 'fifteen', 16: 'sixteen', 17: 'seventeen',
+  18: 'eighteen', 19: 'nineteen', 20: 'twenty', 100: 'hundred', 1000: 'thousand' }
+let dicts = null
+function loadDicts() {
+  if (dicts) return dicts
+  const dir = new URL('../english/vendor/', import.meta.url)
+  dicts = ['ipa-en_UK.txt', 'ipa-en_US.txt'].map(f => {
+    const m = new Map()
+    for (const line of readFileSync(new URL(f, dir), 'utf8').split('\n')) {
+      const [w, ipa] = line.split('\t')
+      if (ipa) m.set(w, ipa.split(',').map(x => x.replace(/[\/ˈˌ\s]/g, '')))
+    }
+    return m
+  })
+  return dicts
+}
+const plain = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(' ').map(w => DIGITS[w] || w).join(' ')
+function readings(phrase, dict) {
+  let out = ['']
+  for (const w of phrase.split(/[ -]+/).filter(Boolean)) {
+    const p = dict.get(w)
+    if (!p) return []
+    out = out.flatMap(a => p.slice(0, 3).map(b => a + b)).slice(0, 27)
+  }
+  return out
+}
+export function soundsSame(a, b) {
+  a = plain(a); b = plain(b)
+  if (a.replace(/[ -]/g, '') === b.replace(/[ -]/g, '')) return true          // firefighter / fire fighter
+  return loadDicts().some(d => { const ra = new Set(readings(a, d)); return readings(b, d).some(r => ra.has(r)) })
 }
 
 async function judgeOnce(wavBuf, text) {
@@ -79,7 +130,7 @@ Listen and answer ONLY with JSON: {"accent":"british|american|unclear","accent_c
 accent: decide from concrete cues (r after vowels, t between vowels, vowels in words like bath/can't/hot); say unclear if the clip has no such cues.
 natural: 5 = sounds like a careful human speaker, 1 = robotic or garbled. problems: mispronunciation, wrong stress, odd pause, extra or missing words, noise. Empty if none.`
   for (let tries = 0; tries < 5; tries++) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    const r = await fetchRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: 'audio/wav', data: wavBuf.toString('base64') } }, { text: prompt }] }],
         generationConfig: { responseMimeType: 'application/json' } }),

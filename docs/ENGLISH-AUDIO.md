@@ -10,6 +10,32 @@ Ses **çalışma anında üretilmez.** Kayıtlar bir kez, geliştirme sırasınd
 onaylanır ve saklanır; motor soruyu kurarken yalnız hangi kaydın çalınacağını söyler (resimler gibi).
 Onaylanmamış sesi olan soru çocuğa gösterilmez. Ses kapalıysa A alanı bilinmiyor kalır.
 
+## Motor kararı: Chirp 3 HD (2026-10-17, kullanıcı)
+
+Üretim **Google Cloud Text-to-Speech, Chirp 3 HD** sesleriyle (`build.mjs` varsayılanı, `--engine gemini` hâlâ çalışır).
+- **Neden:** `gemini-3.8-flash-tts` faturalı Tier 1 projede de **günde 100, dakikada 10 istek**; 2.690 kelime ~2 hafta.
+  Chirp3-HD dakikada 200 istek; aynı set bir saatte.
+- **Karşılaştırma (aynı 50 kayıt, aynı kontroller):**
+  - Gemini: 48 ok, 2 dinlenecek; doğallık ortalaması 4,99.
+  - Chirp: 48 ok, 2 Whisper hatası; doğallık ortalaması 4,95. Bütün kayıtlar ilk üretimde geçti.
+  - Aksan: 8+ kelimelik kayıtlarda Chirp yargıç çalıştırmalarının 40/42'sinde doğru aksanı aldı.
+  - Kullanıcı lab'da dinledi: "chirp iyi".
+- **Sesler aynı adlarla:** UK Leda + Charon, US Leda + Puck (`en-GB-Chirp3-HD-Leda` gibi).
+- **Kimlik doğrulama:** API anahtarı kabul etmiyor, `gcloud auth application-default login` + kota projesi `vertexli` gerekiyor.
+- **Kuyruk:** Chirp sesi sessizliğe inmeden bitiriyor (~−40 dB nefes/oda kuyruğu); son 20 ms kontrolü bunu kesilme sanıyordu.
+  −30 dB altındaki kuyruk 60 ms'de söndürülüp 120 ms sessizlik ekleniyor; daha yüksek bir son kontrole kalıyor.
+- **Etiket:** Chirp çıktısında C2PA etiketi yok; yalnız Gemini ekliyordu.
+
+## Kodlama: AAC 64 kb/s, macOS kodlayıcısı (2026-10-17, kullanıcı)
+
+Kullanıcı iki motorda da tıslama duydu. Ölçüm:
+- **Kaynak temiz:** ham TTS çıktısında geniş bantlı tıslama yok. Sessiz anlarda enerji 250–650 Hz'de, 4 kHz üstü %4.
+- **Tıslamayı ffmpeg kodlayıcısı yapıyordu:** `aac`, 32 kb/s'de ham sese karşı 12–17 dB kodlama SNR'ı bırakıyordu.
+- **Yeni ayar:** `aac_at` (AudioToolbox) 64 kb/s ile 21–27 dB, sessiz yerler 12 dB daha temiz. Kullanıcı A/B dinledi: "64 çözüyor".
+- **Boyut iki katı:** kelime ~12 KB, uzun cümle ~44 KB, 2.690 kelime ~32 MB.
+- **Ham kayıtlar saklanıyor:** `~/Downloads/tuto-audio-masters/<id>.flac` (repo dışı). Kodlama bir daha değişirse yeniden
+  kodlanır, yeniden üretilmez. Kimlik karmasına kodlama da girdi (`aac_at-64k`).
+
 ## Üretim (denendi)
 
 - **Model:** `gemini-3.8-flash-tts` (projede zaten olan Gemini anahtarı). Düz metin gönderilir.

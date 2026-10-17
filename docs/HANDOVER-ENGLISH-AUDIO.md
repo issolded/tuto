@@ -52,7 +52,8 @@ node scripts/english-audio/build.mjs --rejudge  # kayıtları yeniden üretmeden
 
 ## Kararlar (gerekçeleri ENGLISH-AUDIO.md'de)
 
-- **Model:** `gemini-3.8-flash-tts`.
+- **Model:** Chirp 3 HD (Cloud TTS) 2026-10-17'den beri; gerekçe ve ölçüm `ENGLISH-AUDIO.md` "Motor kararı". Aşağıdaki Gemini notları `--engine gemini` için geçerli.
+- **Eski model:** `gemini-3.8-flash-tts`.
   - **Aksan:** `speechConfig.languageCode` (en-GB / en-US) ile.
   - **Metin:** düz metin gönderilir. Metne talimat yazılırsa model talimatı da okur; sistem talimatını kabul etmiyor.
 - **Sesler:**
