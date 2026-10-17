@@ -64,7 +64,7 @@ export function checkSignal(wavBuf, text, kind) {
 // is joined first, so the verb "am" is still told apart from a wrong word.
 const SAME = { alright: 'all right', okay: 'ok', mister: 'mr', missus: 'mrs', 'o clock': "o'clock" }
 const norm = t => {
-  let w = t.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim()
+  let w = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim()
   w = w.replace(/\b(?:[a-z] ){1,}[a-z]\b/g, run => run.replace(/ /g, ''))
   for (const [k, v] of Object.entries(SAME)) w = w.replace(new RegExp(`\\b${k}\\b`, 'g'), v)
   return w

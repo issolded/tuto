@@ -67,7 +67,7 @@ export const CLIPS = [
 import { YLE_WORDLIST } from '../../src/lib/literacy/yleWordlist.generated.js'
 
 const SOUND_BY_MEANING = new Set(['close', 'live', 'read', 'use', 'wind', 'tear', 'lead', 'record', 'bow', 'row'])
-const slug = t => t.toLowerCase().replace(/’/g, "'").replace(/[^a-z0-9']+/g, '-').replace(/'/g, '').replace(/^-|-$/g, '')
+const slug = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/’/g, "'").replace(/[^a-z0-9']+/g, '-').replace(/'/g, '').replace(/^-|-$/g, '')
 
 export const wordSkips = []
 const byText = new Map()
