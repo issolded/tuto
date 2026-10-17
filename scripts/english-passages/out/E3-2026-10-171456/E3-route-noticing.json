@@ -1,0 +1,304 @@
+{
+  "id": "E3-route-noticing",
+  "level": "E3",
+  "premise": {
+    "id": "route-noticing",
+    "genre": "fiction",
+    "theme": "neighbourhood",
+    "source": "150 Writing Prompts p7 (shape only)",
+    "premise": "On the walk to school a child notices one thing has changed, and works out why by the end of the day."
+  },
+  "names": [
+    "Kang",
+    "Leo"
+  ],
+  "models": {
+    "generator": "gemini-3.5-flash",
+    "safety": "gemini-3.1-pro-preview",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Park Door",
+    "passage": "Leo walked to school on a sunny morning. On his walk, he saw a green door at the park. The park door was painted green because it was ugly before. At school, Leo talked to his good friend Kang. Kang knew about the door because his uncle painted it yesterday. His uncle made the park door look very nice. Leo was happy to see the cool green door.",
+    "questions": [
+      {
+        "stem": "What did Leo see on his walk?",
+        "options": [
+          "A blue door.",
+          "A green door.",
+          "A brown door."
+        ],
+        "evidence": "On his walk, he saw a green door at the park.",
+        "op": "detail",
+        "answer": 1
+      },
+      {
+        "stem": "Why was the door painted?",
+        "options": [
+          "Because it was dirty.",
+          "Because it was old.",
+          "Because it was ugly."
+        ],
+        "evidence": "The park door was painted green because it was ugly before.",
+        "op": "cause",
+        "answer": 2
+      },
+      {
+        "stem": "Why did Kang know about the door?",
+        "options": [
+          "Because his dad painted it.",
+          "Because his uncle painted it.",
+          "Because his brother painted it."
+        ],
+        "evidence": "Kang knew about the door because his uncle painted it yesterday.",
+        "op": "cause",
+        "answer": 1
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 68,
+        "sentences": 7,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A blue door"
+        },
+        {
+          "q": 2,
+          "favourite": "It was very old."
+        },
+        {
+          "q": 3,
+          "favourite": "His dad painted the door."
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A red door"
+        },
+        {
+          "q": 2,
+          "favourite": "So it would look nice."
+        },
+        {
+          "q": 3,
+          "favourite": "Because he saw it on Monday."
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "The Park Door",
+        "passage": "Leo walked to school on a sunny morning. On his walk, he saw a green door at the park. The park door was painted green because it was ugly before. At school, Leo talked to his good friend Kang. Kang knew about the door because his uncle painted it yesterday. His uncle made the park door look very nice. Leo was happy to see the cool green door.",
+        "questions": [
+          {
+            "stem": "What did Leo see on his walk?",
+            "options": [
+              "A blue door.",
+              "A green door.",
+              "A brown door."
+            ],
+            "evidence": "On his walk, he saw a green door at the park.",
+            "op": "detail",
+            "answer": 1
+          },
+          {
+            "stem": "Why was the door painted?",
+            "options": [
+              "Because it was dirty.",
+              "Because it was old.",
+              "Because it was ugly."
+            ],
+            "evidence": "The park door was painted green because it was ugly before.",
+            "op": "cause",
+            "answer": 2
+          },
+          {
+            "stem": "Why did Kang know about the door?",
+            "options": [
+              "Because his dad painted it.",
+              "Because his uncle painted it.",
+              "Because his brother painted it."
+            ],
+            "evidence": "Kang knew about the door because his uncle painted it yesterday.",
+            "op": "cause",
+            "answer": 1
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Leo walked to school and saw that the park door was blue. At school, Kang said his dad painted it because it was dirty.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Leo see on his walk?",
+            "options": [
+              "A blue door.",
+              "A green door.",
+              "A brown door."
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why was the door painted?",
+            "options": [
+              "Because it was dirty.",
+              "Because it was old.",
+              "Because it was ugly."
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Kang know about the door?",
+            "options": [
+              "Because his dad painted it.",
+              "Because his uncle painted it.",
+              "Because his brother painted it."
+            ]
+          }
+        ]
+      },
+      "picks": [
+        1,
+        2,
+        1
+      ],
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "status": "awaiting-human"
+}

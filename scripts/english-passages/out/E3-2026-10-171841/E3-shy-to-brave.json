@@ -1,0 +1,228 @@
+{
+  "id": "E3-shy-to-brave",
+  "level": "E3",
+  "premise": {
+    "id": "shy-to-brave",
+    "genre": "fiction",
+    "theme": "feelings",
+    "source": "own",
+    "premise": "A child is nervous about doing something in front of others. A small idea helps, and the child feels proud."
+  },
+  "names": [
+    "Kofi",
+    "Max"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "A Clever Idea",
+    "passage": "Max had to sing a song in class today. He was afraid because everyone would look at him. He wanted to hide inside his coat. Then he had a clever idea. He only looked at his friend Kofi, so he did not worry. Max stood at the front of the room. He sang the song very well. The children clapped loudly, and Max smiled. He was very happy about it.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Max have to do?",
+        "options": [
+          "Read a story from a book.",
+          "Draw a picture on the board.",
+          "Use his voice to make music."
+        ],
+        "answer": 2,
+        "evidence": "Max had to sing a song in class today."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Max feel afraid?",
+        "options": [
+          "All the class would be watching him.",
+          "He had a bad cough and a headache.",
+          "He could not find his homework in his bag."
+        ],
+        "answer": 0,
+        "evidence": "He was afraid because everyone would look at him."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Max not worry?",
+        "options": [
+          "He kept his eyes on the classroom clock.",
+          "He sang the song with a good friend.",
+          "He kept his eyes on his classmate."
+        ],
+        "answer": 2,
+        "evidence": "He only looked at his friend Kofi, so he did not worry."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 70,
+        "sentences": 9,
+        "flyers": [
+          "use",
+          "voice",
+          "feel",
+          "kept"
+        ],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        2,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "A Clever Idea",
+        "passage": "Max had to sing a song in class today. He was afraid because everyone would look at him. He wanted to hide inside his coat. Then he had a clever idea. He only looked at his friend Kofi, so he did not worry. Max stood at the front of the room. He sang the song very well. The children clapped loudly, and Max smiled. He was very happy about it.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Max have to do?",
+            "options": [
+              "Read a story from a book.",
+              "Draw a picture on the board.",
+              "Use his voice to make music."
+            ],
+            "answer": 2,
+            "evidence": "Max had to sing a song in class today."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Max feel afraid?",
+            "options": [
+              "All the class would be watching him.",
+              "He had a bad cough and a headache.",
+              "He could not find his homework in his bag."
+            ],
+            "answer": 0,
+            "evidence": "He was afraid because everyone would look at him."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Max not worry?",
+            "options": [
+              "He kept his eyes on the classroom clock.",
+              "He sang the song with a good friend.",
+              "He kept his eyes on his classmate."
+            ],
+            "answer": 2,
+            "evidence": "He only looked at his friend Kofi, so he did not worry."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q1 guessable by a strong model without the text",
+        "q2 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

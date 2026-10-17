@@ -1,0 +1,226 @@
+{
+  "id": "E3-helping-neighbour",
+  "level": "E3",
+  "premise": {
+    "id": "helping-neighbour",
+    "genre": "fiction",
+    "theme": "community",
+    "source": "own",
+    "premise": "A child helps an older neighbour with a small job and learns something surprising about the neighbour."
+  },
+  "names": [
+    "Meera",
+    "Zoe"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Red Box",
+    "passage": "Zoe helped an old man clean his dirty room. She opened a red box because it looked exciting. Inside the box, she found a big clown hat. Zoe was surprised because the man was always quiet. The old man smiled and put on the hat. He said he worked in a big circus. He wanted the hat so he could look at it.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was inside the red box?",
+        "options": [
+          "A dirty coat for the cold.",
+          "Something funny to wear on the head.",
+          "A small picture of a circus."
+        ],
+        "answer": 1,
+        "evidence": "Inside the box, she found a big clown hat."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Zoe open the box?",
+        "options": [
+          "She wanted to eat the chocolate inside it.",
+          "She wanted to help him find his glasses.",
+          "She wanted to know what was in it."
+        ],
+        "answer": 2,
+        "evidence": "She opened a red box because it looked exciting."
+      },
+      {
+        "op": "cause",
+        "stem": "Why was Zoe surprised?",
+        "options": [
+          "The old man gave her a new toy.",
+          "The old man did not talk very much.",
+          "The old man started to sing loudly."
+        ],
+        "answer": 1,
+        "evidence": "Zoe was surprised because the man was always quiet."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 63,
+        "sentences": 7,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [
+        "A child being alone in the private room of an unspecified 'old man' ('Zoe helped an old man clean his dirty room') may raise safeguarding questions for some readers if the relationship is not specified.",
+        "A child being alone in an unspecified 'old man's dirty room' may raise minor safeguarding/stranger safety considerations for sensitive readers, though no harm or ill intent is depicted."
+      ],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": "A clown hat is something funny to wear on the head; distractors use words from the passage like 'dirty' and 'circus'."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": "The passage explicitly states she opened it because it looked exciting (she wanted to see/know what was inside)."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": "The text explicitly states she was surprised because the man was always quiet (did not talk very much)."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "Clear, engaging story with explicit cause-and-effect relationships appropriate for E3 level."
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [
+      "A child being alone in the private room of an unspecified 'old man' ('Zoe helped an old man clean his dirty room') may raise safeguarding questions for some readers if the relationship is not specified.",
+      "A child being alone in an unspecified 'old man's dirty room' may raise minor safeguarding/stranger safety considerations for sensitive readers, though no harm or ill intent is depicted."
+    ],
+    "notes": [
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        2
+      ]
+    },
+    {
+      "item": {
+        "title": "The Red Box",
+        "passage": "Zoe helped an old man clean his dirty room. She opened a red box because it looked exciting. Inside the box, she found a big clown hat. Zoe was surprised because the man was always quiet. The old man smiled and put on the hat. He said he worked in a big circus. He wanted the hat so he could look at it.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What was inside the red box?",
+            "options": [
+              "A dirty coat for the cold.",
+              "Something funny to wear on the head.",
+              "A small picture of a circus."
+            ],
+            "answer": 1,
+            "evidence": "Inside the box, she found a big clown hat."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Zoe open the box?",
+            "options": [
+              "She wanted to eat the chocolate inside it.",
+              "She wanted to help him find his glasses.",
+              "She wanted to know what was in it."
+            ],
+            "answer": 2,
+            "evidence": "She opened a red box because it looked exciting."
+          },
+          {
+            "op": "cause",
+            "stem": "Why was Zoe surprised?",
+            "options": [
+              "The old man gave her a new toy.",
+              "The old man did not talk very much.",
+              "The old man started to sing loudly."
+            ],
+            "answer": 1,
+            "evidence": "Zoe was surprised because the man was always quiet."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q2 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

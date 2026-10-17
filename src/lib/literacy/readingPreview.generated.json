@@ -1,0 +1,357 @@
+{
+ "note": "Candidates from scripts/english-passages; passed automatic checks, NOT approved by a person.",
+ "items": [
+  {
+   "id": "E3-animal-fact",
+   "level": "E3",
+   "title": "The Green Frog",
+   "passage": "A little green frog lives in the tall grass. Hungry birds fly above the grass to find food. The frog is green, so the birds can not see it. Sometimes a snake comes into the grass. The frog must move quickly to be safe. It jumps up because it has very strong back legs. The snake is slow and can not catch the frog. The safe frog goes to sleep on a big leaf.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What flies above the grass to find food?",
+     "options": [
+      "Birds that want to eat.",
+      "Bees that want to eat.",
+      "Ducks that want to eat."
+     ],
+     "answer": 0,
+     "evidence": "Hungry birds fly above the grass to find food."
+    },
+    {
+     "op": "cause",
+     "stem": "Why can the birds not see the frog?",
+     "options": [
+      "It hides behind a big brown animal.",
+      "Its body is green like the grass.",
+      "It goes into a big dirty lake."
+     ],
+     "answer": 1,
+     "evidence": "The frog is green, so the birds can not see it."
+    },
+    {
+     "op": "cause",
+     "stem": "Why does the frog jump up?",
+     "options": [
+      "The legs at its back are very strong.",
+      "It wants to catch a fly for dinner.",
+      "It is afraid of a big brown dog."
+     ],
+     "answer": 0,
+     "evidence": "It jumps up because it has very strong back legs."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-animal-shelter-trick",
+   "level": "E3",
+   "title": "The Green Hat",
+   "passage": "It was raining loudly, so Jack looked out the window. He saw a little cat in his garden. The cat was very dry because it sat under a huge plant. The plant had very big leaves. The rain bounced off the top of the big leaves. Jack smiled because he understood the clever animal. The ground under the plant was safe and dry. The leaves were a great green hat!",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Jack see in his garden?",
+     "options": [
+      "A big dog.",
+      "A small cat.",
+      "A black bird."
+     ],
+     "answer": 1,
+     "evidence": "He saw a little cat in his garden."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Jack look out the window?",
+     "options": [
+      "His friends were calling him.",
+      "The children were laughing.",
+      "The rain was very loud."
+     ],
+     "answer": 2,
+     "evidence": "It was raining loudly, so Jack looked out the window."
+    },
+    {
+     "op": "cause",
+     "stem": "Why was the little cat dry?",
+     "options": [
+      "It was sitting below a big plant.",
+      "It was hiding in a big box.",
+      "It ran into the house."
+     ],
+     "answer": 0,
+     "evidence": "The cat was very dry because it sat under a huge plant."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-helping-neighbour",
+   "level": "E3",
+   "title": "The Red Box",
+   "passage": "Zoe helped an old man clean his dirty room. She opened a red box because it looked exciting. Inside the box, she found a big clown hat. Zoe was surprised because the man was always quiet. The old man smiled and put on the hat. He said he worked in a big circus. He wanted the hat so he could look at it.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What was inside the red box?",
+     "options": [
+      "A dirty coat for the cold.",
+      "Something funny to wear on the head.",
+      "A small picture of a circus."
+     ],
+     "answer": 1,
+     "evidence": "Inside the box, she found a big clown hat."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Zoe open the box?",
+     "options": [
+      "She wanted to eat the chocolate inside it.",
+      "She wanted to help him find his glasses.",
+      "She wanted to know what was in it."
+     ],
+     "answer": 2,
+     "evidence": "She opened a red box because it looked exciting."
+    },
+    {
+     "op": "cause",
+     "stem": "Why was Zoe surprised?",
+     "options": [
+      "The old man gave her a new toy.",
+      "The old man did not talk very much.",
+      "The old man started to sing loudly."
+     ],
+     "answer": 1,
+     "evidence": "Zoe was surprised because the man was always quiet."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-lost-thing-trail",
+   "level": "E3",
+   "title": "The Blue Sock",
+   "passage": "Amir could not find his blue sock. He looked under his bed. Then he saw white hair on the stairs. He walked downstairs so he could find his sock. His cat was inside a big box. She had the blue sock. She took it because she was cold. She was sleeping quietly on it. Amir smiled and got another pair.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Amir see on the stairs?",
+     "options": [
+      "Grass from his boots.",
+      "Clothes from his bedroom.",
+      "Hair from his cat."
+     ],
+     "answer": 2,
+     "evidence": "Then he saw white hair on the stairs."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Amir walk downstairs?",
+     "options": [
+      "He wanted to find his sock.",
+      "He wanted to find his book.",
+      "He wanted to eat his breakfast."
+     ],
+     "answer": 0,
+     "evidence": "He walked downstairs so he could find his sock."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did the cat take the sock?",
+     "options": [
+      "She did not want to be cold.",
+      "She wanted to play a game.",
+      "She was looking for food."
+     ],
+     "answer": 0,
+     "evidence": "She took it because she was cold."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-plant-experiment",
+   "level": "E3",
+   "title": "The Two Beans",
+   "passage": "Priya and Sara wanted to grow beans. Priya put her bean inside the house. Sara put her bean outside in the garden. Both girls gave them water every day. Sara had a very big green plant. Her plant grew well because it had sun. Priya only had a small weak plant. Her bean was small because it had no sun. So Priya put her plant in the garden too.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Where did Sara put her bean?",
+     "options": [
+      "It was out on the balcony.",
+      "It was out in the garden.",
+      "It was in a flower box."
+     ],
+     "answer": 1,
+     "evidence": "Sara put her bean outside in the garden."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Sara have a big plant?",
+     "options": [
+      "The plant sat in the sun.",
+      "The plant grew in good ground.",
+      "The plant had very good food."
+     ],
+     "answer": 0,
+     "evidence": "Her plant grew well because it had sun."
+    },
+    {
+     "op": "cause",
+     "stem": "Why was Priya's plant small?",
+     "options": [
+      "It did not get any food.",
+      "It did not get any sun.",
+      "It was a bad bean."
+     ],
+     "answer": 1,
+     "evidence": "Her bean was small because it had no sun."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-rain-plan-change",
+   "level": "E3",
+   "title": "The Inside Picnic",
+   "passage": "Ravi and Rita wanted a picnic in the park. They could not go outside because it started to rain. Rita was sad about the wet weather. So, Ravi put a big blanket on two chairs. They made a great new house in the bedroom. The children ate their sandwiches inside the new house. The inside picnic was fantastic because there were no spiders. They want to eat in the house every weekend.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Where did the children make their new house?",
+     "options": [
+      "In a room for sleeping.",
+      "In a room for family games.",
+      "In a room for family films."
+     ],
+     "answer": 0,
+     "evidence": "They made a great new house in the bedroom."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did the children not go outside?",
+     "options": [
+      "It was a very cold day.",
+      "They had to do their homework.",
+      "The weather was very wet."
+     ],
+     "answer": 2,
+     "evidence": "They could not go outside because it started to rain."
+    },
+    {
+     "op": "cause",
+     "stem": "Why was the inside picnic fantastic?",
+     "options": [
+      "They did not see any scary animals.",
+      "They ate a big chocolate cake.",
+      "They drank a glass of lemonade."
+     ],
+     "answer": 0,
+     "evidence": "The inside picnic was fantastic because there were no spiders."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-shy-to-brave",
+   "level": "E3",
+   "title": "A Clever Idea",
+   "passage": "Max had to sing a song in class today. He was afraid because everyone would look at him. He wanted to hide inside his coat. Then he had a clever idea. He only looked at his friend Kofi, so he did not worry. Max stood at the front of the room. He sang the song very well. The children clapped loudly, and Max smiled. He was very happy about it.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Max have to do?",
+     "options": [
+      "Read a story from a book.",
+      "Draw a picture on the board.",
+      "Use his voice to make music."
+     ],
+     "answer": 2,
+     "evidence": "Max had to sing a song in class today."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Max feel afraid?",
+     "options": [
+      "All the class would be watching him.",
+      "He had a bad cough and a headache.",
+      "He could not find his homework in his bag."
+     ],
+     "answer": 0,
+     "evidence": "He was afraid because everyone would look at him."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Max not worry?",
+     "options": [
+      "He kept his eyes on the classroom clock.",
+      "He sang the song with a good friend.",
+      "He kept his eyes on his classmate."
+     ],
+     "answer": 2,
+     "evidence": "He only looked at his friend Kofi, so he did not worry."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  },
+  {
+   "id": "E3-team-mistake",
+   "level": "E3",
+   "title": "The Model Ship",
+   "passage": "Sam and Ella made a model ship for school. They painted the ship red and blue. Then Sam put a big sail on the ship. The ship fell down because the sail was too big. Ella was not angry with Sam. They wanted to fix the mistake so they worked carefully. Ella found a small paper square. Sam put it on the ship. Now the model ship looked fantastic!",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What were the children building?",
+     "options": [
+      "A big house for a bird.",
+      "A small boat for a class.",
+      "A funny kite for a friend."
+     ],
+     "answer": 1,
+     "evidence": "Sam and Ella made a model ship for school."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did the model ship fall down?",
+     "options": [
+      "The top part of the boat was huge.",
+      "The bottom part of the boat was not flat.",
+      "The front part of the boat was broken."
+     ],
+     "answer": 0,
+     "evidence": "The ship fell down because the sail was too big."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did the children work carefully together?",
+     "options": [
+      "They needed to carry a big glass bowl for grandma.",
+      "They needed to make the bad work right again.",
+      "They needed to help a good friend with difficult homework."
+     ],
+     "answer": 1,
+     "evidence": "They wanted to fix the mistake so they worked carefully."
+    }
+   ],
+   "writer": "gemini-3.1-pro-preview",
+   "premiseSource": "own",
+   "approved": false
+  }
+ ]
+}

@@ -29,6 +29,8 @@ const EnglishLab = lazy(() => import('./screens/EnglishLab'))
 const LiteracyLab = lazy(() => import('./screens/LiteracyLab'))
 // The English trial set with its recordings and pictures; a reviewer tool, answer keys included.
 const EnglishTrialLab = lazy(() => import('./screens/EnglishTrialLab'))
+// A design preview of a reading sitting with candidate passages (not approved; answer keys inside).
+const EnglishReadingPreview = lazy(() => import('./screens/EnglishReadingPreview'))
 const EnglishScreen = lazy(() => import('./screens/EnglishScreen'))
 // Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
 // screen needs.
@@ -127,6 +129,7 @@ function AppRoutes() {
         <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
         <Route path="/literacy-lab" element={<Suspense fallback={null}><LiteracyLab /></Suspense>} />
         <Route path="/english-trial-lab" element={<Suspense fallback={null}><EnglishTrialLab /></Suspense>} />
+        <Route path="/english-reading-preview" element={<Suspense fallback={null}><EnglishReadingPreview /></Suspense>} />
         <Route path="/english-lab" element={<Suspense fallback={null}><EnglishLab /></Suspense>} />
         <Route path="/child/stories" element={<StoriesEntry />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />

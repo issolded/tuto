@@ -1,0 +1,226 @@
+{
+  "id": "E3-plant-experiment",
+  "level": "E3",
+  "premise": {
+    "id": "plant-experiment",
+    "genre": "fiction",
+    "theme": "nature",
+    "source": "own",
+    "premise": "Two children grow the same seeds in two places. One plant grows better, and they find out what made the difference."
+  },
+  "names": [
+    "Priya",
+    "Sara"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Two Beans",
+    "passage": "Priya and Sara wanted to grow beans. Priya put her bean inside the house. Sara put her bean outside in the garden. Both girls gave them water every day. Sara had a very big green plant. Her plant grew well because it had sun. Priya only had a small weak plant. Her bean was small because it had no sun. So Priya put her plant in the garden too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Sara put her bean?",
+        "options": [
+          "It was out on the balcony.",
+          "It was out in the garden.",
+          "It was in a flower box."
+        ],
+        "answer": 1,
+        "evidence": "Sara put her bean outside in the garden."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sara have a big plant?",
+        "options": [
+          "The plant sat in the sun.",
+          "The plant grew in good ground.",
+          "The plant had very good food."
+        ],
+        "answer": 0,
+        "evidence": "Her plant grew well because it had sun."
+      },
+      {
+        "op": "cause",
+        "stem": "Why was Priya's plant small?",
+        "options": [
+          "It did not get any food.",
+          "It did not get any sun.",
+          "It was a bad bean."
+        ],
+        "answer": 1,
+        "evidence": "Her bean was small because it had no sun."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 69,
+        "sentences": 9,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "The Two Beans",
+        "passage": "Priya and Sara wanted to grow beans. Priya put her bean inside the house. Sara put her bean outside in the garden. Both girls gave them water every day. Sara had a very big green plant. Her plant grew well because it had sun. Priya only had a small weak plant. Her bean was small because it had no sun. So Priya put her plant in the garden too.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did Sara put her bean?",
+            "options": [
+              "It was out on the balcony.",
+              "It was out in the garden.",
+              "It was in a flower box."
+            ],
+            "answer": 1,
+            "evidence": "Sara put her bean outside in the garden."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Sara have a big plant?",
+            "options": [
+              "The plant sat in the sun.",
+              "The plant grew in good ground.",
+              "The plant had very good food."
+            ],
+            "answer": 0,
+            "evidence": "Her plant grew well because it had sun."
+          },
+          {
+            "op": "cause",
+            "stem": "Why was Priya's plant small?",
+            "options": [
+              "It did not get any food.",
+              "It did not get any sun.",
+              "It was a bad bean."
+            ],
+            "answer": 1,
+            "evidence": "Her bean was small because it had no sun."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q1 guessable by a strong model without the text",
+        "q2 guessable by a strong model without the text",
+        "q3 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

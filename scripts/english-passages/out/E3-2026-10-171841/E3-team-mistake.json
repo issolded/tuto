@@ -1,0 +1,226 @@
+{
+  "id": "E3-team-mistake",
+  "level": "E3",
+  "premise": {
+    "id": "team-mistake",
+    "genre": "fiction",
+    "theme": "teamwork",
+    "source": "own",
+    "premise": "A class team makes a mistake in a project. Instead of blaming one person, they find what went wrong and fix it."
+  },
+  "names": [
+    "Sam",
+    "Ella"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Model Ship",
+    "passage": "Sam and Ella made a model ship for school. They painted the ship red and blue. Then Sam put a big sail on the ship. The ship fell down because the sail was too big. Ella was not angry with Sam. They wanted to fix the mistake so they worked carefully. Ella found a small paper square. Sam put it on the ship. Now the model ship looked fantastic!",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What were the children building?",
+        "options": [
+          "A big house for a bird.",
+          "A small boat for a class.",
+          "A funny kite for a friend."
+        ],
+        "answer": 1,
+        "evidence": "Sam and Ella made a model ship for school."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the model ship fall down?",
+        "options": [
+          "The top part of the boat was huge.",
+          "The bottom part of the boat was not flat.",
+          "The front part of the boat was broken."
+        ],
+        "answer": 0,
+        "evidence": "The ship fell down because the sail was too big."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the children work carefully together?",
+        "options": [
+          "They needed to carry a big glass bowl for grandma.",
+          "They needed to make the bad work right again.",
+          "They needed to help a good friend with difficult homework."
+        ],
+        "answer": 1,
+        "evidence": "They wanted to fix the mistake so they worked carefully."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 69,
+        "sentences": 9,
+        "flyers": [
+          "together"
+        ],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "The Model Ship",
+        "passage": "Sam and Ella made a model ship for school. They painted the ship red and blue. Then Sam put a big sail on the ship. The ship fell down because the sail was too big. Ella was not angry with Sam. They wanted to fix the mistake so they worked carefully. Ella found a small paper square. Sam put it on the ship. Now the model ship looked fantastic!",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What were the children building?",
+            "options": [
+              "A big house for a bird.",
+              "A small boat for a class.",
+              "A funny kite for a friend."
+            ],
+            "answer": 1,
+            "evidence": "Sam and Ella made a model ship for school."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the model ship fall down?",
+            "options": [
+              "The top part of the boat was huge.",
+              "The bottom part of the boat was not flat.",
+              "The front part of the boat was broken."
+            ],
+            "answer": 0,
+            "evidence": "The ship fell down because the sail was too big."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the children work carefully together?",
+            "options": [
+              "They needed to carry a big glass bowl for grandma.",
+              "They needed to make the bad work right again.",
+              "They needed to help a good friend with difficult homework."
+            ],
+            "answer": 1,
+            "evidence": "They wanted to fix the mistake so they worked carefully."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q1 guessable by a strong model without the text",
+        "q3 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

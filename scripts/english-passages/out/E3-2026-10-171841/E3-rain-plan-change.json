@@ -1,0 +1,279 @@
+{
+  "id": "E3-rain-plan-change",
+  "level": "E3",
+  "premise": {
+    "id": "rain-plan-change",
+    "genre": "fiction",
+    "theme": "weather",
+    "source": "own",
+    "premise": "An outdoor plan is spoiled by rain, so the children change the plan, and the new plan turns out better."
+  },
+  "names": [
+    "Ravi",
+    "Rita"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Inside Picnic",
+    "passage": "Ravi and Rita wanted a picnic in the park. They could not go outside because it started to rain. Rita was sad about the wet weather. So, Ravi put a big blanket on two chairs. They made a great new house in the bedroom. The children ate their sandwiches inside the new house. The inside picnic was fantastic because there were no spiders. They want to eat in the house every weekend.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did the children make their new house?",
+        "options": [
+          "In a room for sleeping.",
+          "In a room for family games.",
+          "In a room for family films."
+        ],
+        "answer": 0,
+        "evidence": "They made a great new house in the bedroom."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the children not go outside?",
+        "options": [
+          "It was a very cold day.",
+          "They had to do their homework.",
+          "The weather was very wet."
+        ],
+        "answer": 2,
+        "evidence": "They could not go outside because it started to rain."
+      },
+      {
+        "op": "cause",
+        "stem": "Why was the inside picnic fantastic?",
+        "options": [
+          "They did not see any scary animals.",
+          "They ate a big chocolate cake.",
+          "They drank a glass of lemonade."
+        ],
+        "answer": 0,
+        "evidence": "The inside picnic was fantastic because there were no spiders."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 72,
+        "sentences": 8,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "regional? In a room for family films.",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "The Inside Picnic",
+        "passage": "Ravi and Rita wanted a picnic in the park. They could not go outside because it started to rain. Rita was sad about the wet weather. So, Ravi put a big blanket on two chairs. They made a great new house in the bedroom. The children ate their sandwiches inside the new house. The inside picnic was fantastic because there were no spiders. They want to eat in the house every weekend.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did the children make their new house?",
+            "options": [
+              "In a room for family games.",
+              "In a room for family films.",
+              "In a room for sleeping."
+            ],
+            "answer": 2,
+            "evidence": "They made a great new house in the bedroom."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the children stay inside?",
+            "options": [
+              "The weather was very wet.",
+              "They had to clean the kitchen.",
+              "They wanted to watch a film."
+            ],
+            "answer": 0,
+            "evidence": "They could not go outside because it started to rain."
+          },
+          {
+            "op": "cause",
+            "stem": "Why was the indoor picnic fantastic?",
+            "options": [
+              "They ate a big chocolate cake.",
+              "They drank a glass of lemonade.",
+              "They did not see any bugs."
+            ],
+            "answer": 2,
+            "evidence": "The inside picnic was fantastic because there were no spiders."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "revise",
+      "problems": [
+        "gate vocab-outside-lists: indoor"
+      ],
+      "warnings": []
+    },
+    {
+      "round": 2,
+      "mode": "guess-check",
+      "guessed": [
+        2
+      ]
+    },
+    {
+      "item": {
+        "title": "The Inside Picnic",
+        "passage": "Ravi and Rita wanted a picnic in the park. They could not go outside because it started to rain. Rita was sad about the wet weather. So, Ravi put a big blanket on two chairs. They made a great new house in the bedroom. The children ate their sandwiches inside the new house. The inside picnic was fantastic because there were no spiders. They want to eat in the house every weekend.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did the children make their new house?",
+            "options": [
+              "In a room for sleeping.",
+              "In a room for family games.",
+              "In a room for family films."
+            ],
+            "answer": 0,
+            "evidence": "They made a great new house in the bedroom."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the children not go outside?",
+            "options": [
+              "It was a very cold day.",
+              "They had to do their homework.",
+              "The weather was very wet."
+            ],
+            "answer": 2,
+            "evidence": "They could not go outside because it started to rain."
+          },
+          {
+            "op": "cause",
+            "stem": "Why was the inside picnic fantastic?",
+            "options": [
+              "They did not see any scary animals.",
+              "They ate a big chocolate cake.",
+              "They drank a glass of lemonade."
+            ],
+            "answer": 0,
+            "evidence": "The inside picnic was fantastic because there were no spiders."
+          }
+        ]
+      },
+      "round": 2,
+      "mode": "repair",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "regional? In a room for family films.",
+        "q2 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

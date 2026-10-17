@@ -1,0 +1,304 @@
+{
+  "id": "E3-trade-for-friend",
+  "level": "E3",
+  "premise": {
+    "id": "trade-for-friend",
+    "genre": "fiction",
+    "theme": "friends",
+    "source": "150 Writing Prompts p7 (shape only)",
+    "premise": "A child offers to swap something valuable for something small, because they really want to make a new friend. The other child notices the real reason."
+  },
+  "names": [
+    "Tom",
+    "Lily"
+  ],
+  "models": {
+    "generator": "gemini-3.5-flash",
+    "safety": "gemini-3.1-pro-preview",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "A Fun Game",
+    "passage": "Tom sat on the grass at school. He saw Lily with a small brown leaf in her hand. Tom gave Lily his red robot because he wanted to play a fun game. Lily looked at the red toy and smiled. Lily sat next to Tom because she wanted to play a game. They played with the robot on the grass. The two children enjoyed their happy day.",
+    "questions": [
+      {
+        "stem": "What did Lily have in her hand?",
+        "options": [
+          "A small green leaf",
+          "A small yellow leaf",
+          "A small brown leaf"
+        ],
+        "evidence": "He saw Lily with a small brown leaf in her hand.",
+        "op": "detail",
+        "answer": 2
+      },
+      {
+        "stem": "Why did Tom give his robot to Lily?",
+        "options": [
+          "Because he wanted to show a cool toy",
+          "Because he wanted to play a fun game",
+          "Because he wanted to make a new friend"
+        ],
+        "evidence": "Tom gave Lily his red robot because he wanted to play a fun game.",
+        "op": "cause",
+        "answer": 1
+      },
+      {
+        "stem": "Why did Lily sit next to Tom?",
+        "options": [
+          "Because she wanted to be his friend",
+          "Because she wanted to play a game",
+          "Because she wanted to talk to him"
+        ],
+        "evidence": "Lily sat next to Tom because she wanted to play a game.",
+        "op": "cause",
+        "answer": 1
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 67,
+        "sentences": 7,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A small green leaf"
+        },
+        {
+          "q": 2,
+          "favourite": "Because he wanted her pretty leaf"
+        },
+        {
+          "q": 3,
+          "favourite": "Because she saw he was sad"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A small yellow flower"
+        },
+        {
+          "q": 2,
+          "favourite": "Because he wanted to make a new friend"
+        },
+        {
+          "q": 3,
+          "favourite": "Because she wanted to see his toy"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "A Fun Game",
+        "passage": "Tom sat on the grass at school. He saw Lily with a small brown leaf in her hand. Tom gave Lily his red robot because he wanted to play a fun game. Lily looked at the red toy and smiled. Lily sat next to Tom because she wanted to play a game. They played with the robot on the grass. The two children enjoyed their happy day.",
+        "questions": [
+          {
+            "stem": "What did Lily have in her hand?",
+            "options": [
+              "A small green leaf",
+              "A small yellow leaf",
+              "A small brown leaf"
+            ],
+            "evidence": "He saw Lily with a small brown leaf in her hand.",
+            "op": "detail",
+            "answer": 2
+          },
+          {
+            "stem": "Why did Tom give his robot to Lily?",
+            "options": [
+              "Because he wanted to show a cool toy",
+              "Because he wanted to play a fun game",
+              "Because he wanted to make a new friend"
+            ],
+            "evidence": "Tom gave Lily his red robot because he wanted to play a fun game.",
+            "op": "cause",
+            "answer": 1
+          },
+          {
+            "stem": "Why did Lily sit next to Tom?",
+            "options": [
+              "Because she wanted to be his friend",
+              "Because she wanted to play a game",
+              "Because she wanted to talk to him"
+            ],
+            "evidence": "Lily sat next to Tom because she wanted to play a game.",
+            "op": "cause",
+            "answer": 1
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Tom sat on the grass at school. He saw Lily with a small green leaf. Tom wanted to make a new friend today. So he gave her his big red robot. He wanted her leaf for his robot. Lily saw why Tom gave her the toy. Lily wanted to be his friend too. So she smiled and sat next to Tom. They played a happy game with the robot.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Lily have in her hand?",
+            "options": [
+              "A small green leaf",
+              "A small yellow leaf",
+              "A small brown leaf"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Tom give his robot to Lily?",
+            "options": [
+              "Because he wanted to show a cool toy",
+              "Because he wanted to play a fun game",
+              "Because he wanted to make a new friend"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Lily sit next to Tom?",
+            "options": [
+              "Because she wanted to be his friend",
+              "Because she wanted to play a game",
+              "Because she wanted to talk to him"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        2,
+        1,
+        1
+      ],
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,283 @@
+{
+  "id": "E3-lost-thing-trail",
+  "level": "E3",
+  "premise": {
+    "id": "lost-thing-trail",
+    "genre": "fiction",
+    "theme": "home",
+    "source": "own",
+    "premise": "Something goes missing at home. Small clues lead to a pet or a younger sibling who moved it for a harmless reason."
+  },
+  "names": [
+    "Amir",
+    "Nina"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Blue Sock",
+    "passage": "Amir could not find his blue sock. He looked under his bed. Then he saw white hair on the stairs. He walked downstairs so he could find his sock. His cat was inside a big box. She had the blue sock. She took it because she was cold. She was sleeping quietly on it. Amir smiled and got another pair.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Amir see on the stairs?",
+        "options": [
+          "Grass from his boots.",
+          "Clothes from his bedroom.",
+          "Hair from his cat."
+        ],
+        "answer": 2,
+        "evidence": "Then he saw white hair on the stairs."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Amir walk downstairs?",
+        "options": [
+          "He wanted to find his sock.",
+          "He wanted to find his book.",
+          "He wanted to eat his breakfast."
+        ],
+        "answer": 0,
+        "evidence": "He walked downstairs so he could find his sock."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the cat take the sock?",
+        "options": [
+          "She did not want to be cold.",
+          "She wanted to play a game.",
+          "She was looking for food."
+        ],
+        "answer": 0,
+        "evidence": "She took it because she was cold."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 60,
+        "sentences": 9,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "The Blue Shoe",
+        "passage": "Nina could not find her blue shoe. She was sad because she wanted to walk to the park. Then she saw some sand on the floor. The sand made a line to the bathroom. Nina walked slowly to the open door. She looked inside and started to laugh. Her baby brother Amir had her shoe! He put it in the water so his toy frogs could sail.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Which thing did Nina lose?",
+            "options": [
+              "A green coat.",
+              "A black hat.",
+              "A blue shoe."
+            ],
+            "answer": 2,
+            "evidence": "Nina could not find her blue shoe."
+          },
+          {
+            "op": "cause",
+            "stem": "Why was Nina sad?",
+            "options": [
+              "She needed to go outside.",
+              "She had to do her homework.",
+              "She had a bad headache."
+            ],
+            "answer": 0,
+            "evidence": "She was sad because she wanted to walk to the park."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Amir put the shoe in the water?",
+            "options": [
+              "He made an island for his bear.",
+              "He made a house for his fish.",
+              "He made a boat for his frogs."
+            ],
+            "answer": 2,
+            "evidence": "He put it in the water so his toy frogs could sail."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "regenerate",
+      "problems": [
+        "safety copyable-danger: Her baby brother Amir had her shoe! He put it in the water so his toy frogs could sail."
+      ],
+      "warnings": [],
+      "notes": [
+        "q1 guessable by a strong model without the text",
+        "q2 guessable by a strong model without the text",
+        "q3 guessable by a strong model without the text"
+      ]
+    },
+    {
+      "round": 2,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2
+      ]
+    },
+    {
+      "item": {
+        "title": "The Blue Sock",
+        "passage": "Amir could not find his blue sock. He looked under his bed. Then he saw white hair on the stairs. He walked downstairs so he could find his sock. His cat was inside a big box. She had the blue sock. She took it because she was cold. She was sleeping quietly on it. Amir smiled and got another pair.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Amir see on the stairs?",
+            "options": [
+              "Grass from his boots.",
+              "Clothes from his bedroom.",
+              "Hair from his cat."
+            ],
+            "answer": 2,
+            "evidence": "Then he saw white hair on the stairs."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Amir walk downstairs?",
+            "options": [
+              "He wanted to find his sock.",
+              "He wanted to find his book.",
+              "He wanted to eat his breakfast."
+            ],
+            "answer": 0,
+            "evidence": "He walked downstairs so he could find his sock."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the cat take the sock?",
+            "options": [
+              "She did not want to be cold.",
+              "She wanted to play a game.",
+              "She was looking for food."
+            ],
+            "answer": 0,
+            "evidence": "She took it because she was cold."
+          }
+        ]
+      },
+      "round": 2,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q2 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}
