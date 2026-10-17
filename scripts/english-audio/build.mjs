@@ -119,9 +119,12 @@ async function speak(text, voice, lang, tries = 5) {
   // The model allows 100 requests a day per project: past that, waiting a minute does not help.
   if (r.status === 429 && /per_day|PerDay/.test(JSON.stringify(j.error))) {
     if (!WAIT_QUOTA && KEYS.length === 1) throw new DailyQuota(j.error?.message)
-    // "Please retry in 4h5m49.68s." — rest this key that long (or an hour if it is not said), try the next.
+    // "Please retry in 4h5m49.68s." — rest this key, try the next.
     const m = /retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/.exec(j.error?.message || '')
-    const ms = m ? ((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0)) * 1000 + 60000 : 3600000
+    // The hint is not to be trusted (at 04:01 it said 24 h, and the day came back hours sooner): at most 30 min,
+    // then ask again. A refused request costs nothing.
+    const hint = m ? ((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0)) * 1000 + 60000 : 3600000
+    const ms = Math.min(hint, 30 * 60000)
     restUntil.set(key, Date.now() + ms)
     console.log(`    daily quota on key ${KEYS.indexOf(key) + 1}/${KEYS.length}; it rests until ${new Date(Date.now() + ms).toLocaleTimeString()}`)
     return speak(text, voice, lang, tries)

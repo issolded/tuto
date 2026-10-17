@@ -78,6 +78,26 @@ function ApproveToggle({ c }) {
   )
 }
 
+// The Cambridge wordlist recordings (build.mjs --set words): one button per word, with its check status.
+// "unchecked" = made with --no-qc, only the signal check so far.
+function WordsView({ variety }) {
+  const words = Object.values(AUDIO).filter(m => m.clip.startsWith('yw-') && m.variety === variety)
+    .sort((a, b) => a.text.localeCompare(b.text))
+  if (!words.length) return <div style={{ fontSize: 14, color: SOFT }}>No wordlist recordings for this voice yet.</div>
+  return (
+    <section style={{ background: 'white', borderRadius: 20, padding: 16, border: `1px solid ${LINE}`, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ width: '100%', fontSize: 13, color: SOFT }}>{words.length} of the Cambridge wordlist ({variety.toUpperCase()}). Tap to hear.</div>
+      {words.map(m => (
+        <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1px solid ${LINE}`, borderRadius: 999, padding: '4px 8px 4px 4px' }}>
+          <button onClick={() => play(`/${m.file}`)} style={{ border: 'none', borderRadius: 999, padding: '6px 12px', background: BLUE, color: 'white', fontFamily: FONT, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>🔊 {m.text}</button>
+          <StatusDot c={m} />
+          <ApproveToggle c={m} />
+        </span>
+      ))}
+    </section>
+  )
+}
+
 // A stable shuffle per item and round, so the key is not always in the same place.
 function shuffled(list, seed) {
   const a = [...list]
@@ -229,10 +249,10 @@ export default function EnglishTrialLab() {
   })
   const top = useRef(null)
   const items = TRIAL_ITEMS.filter(i => area === 'all' || i.area === area)
-  const recs = Object.values(AUDIO)
+  const recs = Object.values(AUDIO).filter(r => !r.clip.startsWith('yw-'))   // the trial set; words have their own tab
   const count = s => recs.filter(r => r.status === s).length
   // Only marks for recordings still in the manifest and not yet approved there.
-  const pending = recs.filter(r => marks.has(r.id) && !r.approved)
+  const pending = Object.values(AUDIO).filter(r => marks.has(r.id) && !r.approved)
   const command = `node scripts/english-audio/approve.mjs ${pending.map(r => r.id).join(',')}`
   const copy = () => {
     navigator.clipboard?.writeText(command).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }, () => {})
@@ -256,14 +276,14 @@ export default function EnglishTrialLab() {
           </div>
         </header>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}
+          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}
           <span style={{ width: 12 }} />
           {btn(variety === 'uk', 'UK voice', () => setVariety('uk'))}{btn(variety === 'us', 'US voice', () => setVariety('us'))}
           <span style={{ width: 12 }} />
           {['all', ...Object.keys(AREAS)].map(a => btn(area === a, a === 'all' ? 'All' : a, () => { setArea(a); setIndex(0) }))}
         </div>
 
-        {view === 'review' && pending.length > 0 && (
+        {view !== 'play' && pending.length > 0 && (
           <div style={{ position: 'fixed', left: 16, right: 16, bottom: 12, maxWidth: 728, margin: '0 auto', zIndex: 2, background: 'white', border: `1.5px solid ${GREEN}`, borderRadius: 14, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 6px 24px rgba(44,39,69,.18)' }}>
             <div style={{ fontSize: 13, fontWeight: 700 }}>{pending.length} marked as heard. Run this in the repo, then commit the manifest:</div>
             <code style={{ fontSize: 11, wordBreak: 'break-all', color: SOFT }}>{command}</code>
@@ -276,6 +296,7 @@ export default function EnglishTrialLab() {
 
         <Marks.Provider value={{ marks, toggle }}>
         {view === 'review' && items.map(it => <Item key={it.id + variety + round} item={it} variety={variety} review round={round} />)}
+        {view === 'words' && <WordsView variety={variety} />}
         </Marks.Provider>
 
         {view === 'play' && (index < items.length ? (
