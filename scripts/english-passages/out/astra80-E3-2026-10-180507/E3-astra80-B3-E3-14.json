@@ -1,0 +1,220 @@
+{
+  "id": "E3-astra80-B3-E3-14",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-14",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-14",
+    "level": "E3",
+    "category": "performance",
+    "title": "The Quiet Part",
+    "passage": "Sam and Zoe were putting on a little show for their class. Sam was a bird, and Zoe was a tree. Zoe stood still because trees in their story could not walk. Sam hopped around her and sang his bird song. Then Zoe waved her arms because the story had a strong wind. Sam hid behind her and waited for the wind to stop. Zoe lowered her arms, and the bird came out again. Their teacher smiled at the tree that had helped tell the story.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was Sam in the show?",
+        "options": [
+          "A rabbit.",
+          "A mouse.",
+          "A bird."
+        ],
+        "answer": 2,
+        "evidence": "Sam was a bird, and Zoe was a tree."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Zoe stay in one place?",
+        "options": [
+          "Her shoes were difficult to move in.",
+          "Her tree could not walk in the story.",
+          "Her teacher had asked her to wait."
+        ],
+        "answer": 1,
+        "evidence": "Zoe stood still because trees in their story could not walk."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Zoe wave her arms?",
+        "options": [
+          "She was asking the class to sing.",
+          "She was showing the wind in the story.",
+          "She was telling Sam to come closer."
+        ],
+        "answer": 1,
+        "evidence": "Then Zoe waved her arms because the story had a strong wind."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "still",
+          "lower",
+          "stay"
+        ],
+        "outside": [],
+        "content": [
+          "lower"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "still",
+          "lower",
+          "stay"
+        ],
+        "outside": [],
+        "content": [
+          "lower"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

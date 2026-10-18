@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-22",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-22",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-22",
+    "level": "E3",
+    "category": "library",
+    "title": "The Picture Book",
+    "passage": "Kofi wanted a book he had read at the library before. He could not remember its name, but he knew the front picture. Rita drew a boat because Kofi said the book showed a boat. She added a green bird because he remembered one above the boat. They showed the drawing to the teacher. She found the book and put it beside their picture. The bird was green, and the boat was there too. Kofi smiled at the two pictures that had brought him back to his story.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was the green bird on the book?",
+        "options": [
+          "Inside the boat.",
+          "Above the boat.",
+          "Below the boat."
+        ],
+        "answer": 1,
+        "evidence": "She added a green bird because he remembered one above the boat."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Rita draw a boat?",
+        "options": [
+          "Kofi wanted to write a sea story.",
+          "Kofi remembered it on the book.",
+          "Kofi had seen one outside his home."
+        ],
+        "answer": 1,
+        "evidence": "Rita drew a boat because Kofi said the book showed a boat."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Rita add a green bird?",
+        "options": [
+          "It was the animal Rita liked drawing best.",
+          "It was the animal in their classroom picture.",
+          "It was another part Kofi could remember."
+        ],
+        "answer": 2,
+        "evidence": "She added a green bird because he remembered one above the boat."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 88,
+        "sentences": 8,
+        "flyers": [
+          "remember",
+          "beside"
+        ],
+        "outside": [],
+        "content": [
+          "remember"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 88,
+        "sentences": 8,
+        "flyers": [
+          "remember",
+          "beside"
+        ],
+        "outside": [],
+        "content": [
+          "remember"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

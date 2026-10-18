@@ -1,0 +1,228 @@
+{
+  "id": "E3-revised23-own-cartoon",
+  "level": "E3",
+  "premise": {
+    "id": "own-cartoon",
+    "genre": "fiction",
+    "theme": "creativity",
+    "source": "revised23: 150 Writing Prompts p7 (shape only)",
+    "premise": "A child invents a cartoon animal hero. The hero has one weakness that turns out to be useful."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "own-cartoon",
+    "title": "A Slow Hero",
+    "passage": "Amir drew a comic about a snail who helped other animals. Amir drew a rabbit running to a picnic with a bag. Apples fell out because the bag had a hole. The rabbit ran on, but the snail stopped beside a fallen apple. He found it because he moved slowly and watched the ground. The snail called, and the rabbit came back for the apples. The rabbit put a leaf inside the bag, over the hole. Then he put the apples back. Sara drew the last picture: the snail eating the biggest apple.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What animal was the hero of Amir's comic?",
+        "options": [
+          "A rabbit.",
+          "A mouse.",
+          "A snail."
+        ],
+        "answer": 2,
+        "evidence": "Amir drew a comic about a snail who helped other animals."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the apples fall out?",
+        "options": [
+          "The rabbit dropped the open bag.",
+          "There was a break in the bag.",
+          "The rabbit put too many in the bag."
+        ],
+        "answer": 1,
+        "evidence": "Apples fell out because the bag had a hole."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the snail find the fallen apple?",
+        "options": [
+          "He went slowly and looked down.",
+          "He stopped because the rabbit called.",
+          "He saw it because a bird pointed."
+        ],
+        "answer": 0,
+        "evidence": "He found it because he moved slowly and watched the ground."
+      }
+    ],
+    "id": "R1-E3-06",
+    "level": "E3",
+    "change_note_tr": "Salyangozun çağırması, tavşanın dönmesi, deliğin yaprakla kapanması ve elmaların çantaya konması açıkça eklendi.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 93,
+        "sentences": 9,
+        "flyers": [
+          "hero",
+          "other",
+          "hole",
+          "beside",
+          "over"
+        ],
+        "outside": [],
+        "content": [
+          "hero",
+          "hole"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 93,
+        "sentences": 9,
+        "flyers": [
+          "hero",
+          "other",
+          "hole",
+          "beside",
+          "over"
+        ],
+        "outside": [],
+        "content": [
+          "hero",
+          "hole"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,224 @@
+{
+  "id": "E3-revised23-E3-02",
+  "level": "E3",
+  "premise": {
+    "id": "E3-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E3-02",
+    "level": "E3",
+    "title": "The Long Picture",
+    "passage": "Leo and Sara were drawing a train on the kitchen table. Leo drew the front, and Sara drew the back. They put their pictures together, but a part of the train was missing. Sara added paper because the train needed a middle between the two ends. She drew that part with twenty little windows. Leo drew cats in the windows because Sara loved cats. Sara looked at the train and laughed. They had made a train with more cats than people.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where were Leo and Sara drawing?",
+        "options": [
+          "At a desk in the bedroom.",
+          "At the table in the kitchen.",
+          "On the floor in the hall."
+        ],
+        "answer": 1,
+        "evidence": "Leo and Sara were drawing a train on the kitchen table."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sara add more paper?",
+        "options": [
+          "She wanted to hide a paint mark.",
+          "Her first paper was wet.",
+          "A part was missing between the front and back."
+        ],
+        "answer": 2,
+        "evidence": "Sara added paper because the train needed a middle between the two ends."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Leo choose cats for the windows?",
+        "options": [
+          "He knew Sara liked those animals.",
+          "He wanted a picture of his pet.",
+          "He had been asked to draw them at school."
+        ],
+        "answer": 0,
+        "evidence": "Leo drew cats in the windows because Sara loved cats."
+      }
+    ],
+    "metrics": {
+      "words": 81,
+      "sentences": 8,
+      "max_sentence_words": 13
+    },
+    "change_note_tr": "Train carriage/gap/sheet dili sadeleşti; neden ve şıklar iki parçanın uzaklığı üzerinden yeniden yazıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "together",
+          "middle"
+        ],
+        "outside": [],
+        "content": [
+          "middle"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "together",
+          "middle"
+        ],
+        "outside": [],
+        "content": [
+          "middle"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,228 @@
+{
+  "id": "E3-revised23-invention-fix",
+  "level": "E3",
+  "premise": {
+    "id": "invention-fix",
+    "genre": "fiction",
+    "theme": "invention",
+    "source": "revised23: 150 Writing Prompts p6 (shape only)",
+    "premise": "A child builds a simple invention to solve a small problem at home. The first try goes wrong in a funny way, and a change makes it work."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "invention-fix",
+    "title": "The Pencil Catcher",
+    "passage": "Sam kept dropping pencils behind his desk at home. He made a paper slide to catch them below the desk. His sister Lily came to watch the first try. The pencil went down the slide and straight into her shoe. Sam laughed, but Lily held up the pencil. He added a box because the pencil needed somewhere to stop. The box fell over because it was too light. Sam put a rock inside, and his pencil catcher worked.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did the first pencil go?",
+        "options": [
+          "Into a bag by the desk.",
+          "Into one of Lily's shoes.",
+          "Into a cup on the floor."
+        ],
+        "answer": 1,
+        "evidence": "The pencil went down the slide and straight into her shoe."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sam add a box?",
+        "options": [
+          "To give the pencil a stopping place.",
+          "To make the slide a little taller.",
+          "To keep the paper slide straight."
+        ],
+        "answer": 0,
+        "evidence": "He added a box because the pencil needed somewhere to stop."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the box fall over?",
+        "options": [
+          "It had a wet bottom.",
+          "It had a very round bottom.",
+          "It was a very light box."
+        ],
+        "answer": 2,
+        "evidence": "The box fell over because it was too light."
+      }
+    ],
+    "id": "R1-E3-02",
+    "level": "E3",
+    "change_note_tr": "Ayakkabının giyildiği ek bilgisi çıkarıldı; son sorunun şıkları dengelendi ve heavy kökü kaldırıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 78,
+        "sentences": 8,
+        "flyers": [
+          "keep",
+          "slide",
+          "somewhere",
+          "over",
+          "light"
+        ],
+        "outside": [],
+        "content": [
+          "slide",
+          "light"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 78,
+        "sentences": 8,
+        "flyers": [
+          "keep",
+          "slide",
+          "somewhere",
+          "over",
+          "light"
+        ],
+        "outside": [],
+        "content": [
+          "slide",
+          "light"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

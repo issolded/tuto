@@ -1,0 +1,228 @@
+{
+  "id": "E3-revised23-dream-explained",
+  "level": "E3",
+  "premise": {
+    "id": "dream-explained",
+    "genre": "fiction",
+    "theme": "dreams",
+    "source": "revised23: 150 Writing Prompts cover (shape only)",
+    "premise": "A child has a strange dream, and in the morning finds an ordinary reason for each odd part of it."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "dream-explained",
+    "title": "The Singing Shoes",
+    "passage": "Zoe dreamed that her shoes were singing a song. Her feet were too heavy to lift off the ground. In the morning, she told her brother Ben about the dream. Ben showed her the radio beside her shoes. The shoes sang in her dream because the radio was playing. Then Zoe found their cat asleep across her feet. Her dream feet felt heavy because the cat was sleeping on them. Zoe moved her feet, and the cat went to sit with Ben.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Who heard about Zoe's dream in the morning?",
+        "options": [
+          "Her teacher.",
+          "Her aunt.",
+          "Her brother."
+        ],
+        "answer": 2,
+        "evidence": "In the morning, she told her brother Ben about the dream."
+      },
+      {
+        "op": "cause",
+        "stem": "Why were the shoes singing in Zoe's dream?",
+        "options": [
+          "Ben was singing in the hall.",
+          "Music was coming from the radio.",
+          "A song was playing on the television."
+        ],
+        "answer": 1,
+        "evidence": "The shoes sang in her dream because the radio was playing."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Zoe's feet feel heavy in her dream?",
+        "options": [
+          "Her pet was asleep on her feet.",
+          "Her blanket was under her feet.",
+          "Her boots were still on her feet."
+        ],
+        "answer": 0,
+        "evidence": "Her dream feet felt heavy because the cat was sleeping on them."
+      }
+    ],
+    "id": "R1-E3-03",
+    "level": "E3",
+    "change_note_tr": "lying ve resting yerine sleeping/asleep kullanıldı; aynı olay ve kanıt korunarak kelime yükü azaltıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "heavy",
+          "beside",
+          "across",
+          "feel",
+          "hear",
+          "still"
+        ],
+        "outside": [],
+        "content": [
+          "heavy"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "heavy",
+          "beside",
+          "across",
+          "feel",
+          "hear",
+          "still"
+        ],
+        "outside": [],
+        "content": [
+          "heavy"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

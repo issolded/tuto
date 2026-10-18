@@ -1,0 +1,242 @@
+{
+  "id": "E4-revised23-E4-05",
+  "level": "E4",
+  "premise": {
+    "id": "E4-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E4-05",
+    "level": "E4",
+    "title": "The Book That Came Back",
+    "passage": "Omar put a box of books by his classroom door. A sign invited classmates to take one and bring it back later. Ben chose a book about a bear who wanted to fly. The next morning, the book was back in the box. Omar felt disappointed because he thought Ben had stopped reading after a few pages. He picked it up and found a folded piece of paper inside. It showed the bear sitting in a little plane. Under the drawing, Ben had written that this was his idea for another adventure. At lunch, Ben asked if Omar had any more books about that bear. Omar opened his bag and took out a second book. This time, he added two blank sheets of paper. Ben smiled and asked if Omar wanted to draw the next adventure with him.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Ben leave inside the first book?",
+        "options": [
+          "A list of other books to read.",
+          "A picture of the bear in a plane.",
+          "A letter asking to keep the book."
+        ],
+        "answer": 1,
+        "evidence": "It showed the bear sitting in a little plane."
+      },
+      {
+        "op": "inference",
+        "stem": "What does Ben asking for another bear book tell us?",
+        "options": [
+          "He enjoyed reading about the bear.",
+          "He wanted a book with fewer pictures.",
+          "He had found the first book too difficult."
+        ],
+        "answer": 0,
+        "evidence": "At lunch, Ben asked if Omar had any more books about that bear.",
+        "rationale": "Asking for another story about the same character supports enjoyment, contrary to Omar's initial guess."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "A boy helps his friend find a lost book and then writes a story with him.",
+          "A boy changes a book his friend dislikes and then draws a different ending with him.",
+          "A boy learns his friend liked a book and is invited to draw another adventure."
+        ],
+        "answer": 2,
+        "evidence": "At lunch, Ben asked if Omar had any more books about that bear.",
+        "rationale": "The early return initially disappoints Omar, but the drawing and request show enjoyment; Ben ends by inviting him to draw together. Acceptance or a completed shared story is not stated."
+      }
+    ],
+    "metrics": {
+      "words": 138,
+      "sentences": 12,
+      "max_sentence_words": 14
+    },
+    "change_note_tr": "Whether/request/suggest/interest dili sadeleşti; üç ana fikir şıkkı olayın kısa özeti olarak eş üslupla yazıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 138,
+        "sentences": 12,
+        "flyers": [
+          "sign",
+          "fold",
+          "blank",
+          "sheet",
+          "list",
+          "dislike"
+        ],
+        "outside": [
+          "disappoint",
+          "mainly"
+        ],
+        "content": [
+          "disappoint"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 138,
+        "sentences": 12,
+        "flyers": [
+          "sign",
+          "fold",
+          "blank",
+          "sheet",
+          "list",
+          "dislike"
+        ],
+        "outside": [
+          "disappoint",
+          "mainly"
+        ],
+        "content": [
+          "disappoint"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "An adult could infer from the prompt alone that asking for another book about the same character means the reader enjoyed it."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q2 pedagogy needs_text (An adult could infer from the prompt alone that asking for another book about the same character means the reader enjoyed it.)",
+      "q2 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

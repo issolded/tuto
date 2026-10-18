@@ -1,0 +1,238 @@
+{
+  "id": "E3-revised23-E3-01",
+  "level": "E3",
+  "premise": {
+    "id": "E3-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E3-01",
+    "level": "E3",
+    "title": "The Paper Door",
+    "passage": "Mia made a house from a box for her toy animals. The giraffe could not go through the little door. Tom made the door taller because the giraffe needed more room. Mia put the giraffe inside with the other animals. Wind from an open window kept pushing the paper door open. Mia added a small rock because the wind was pushing the door. The rock held the door closed, and the animals stayed inside. Tom said their little house now had a rock for a doorkeeper.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Mia make the house from?",
+        "options": [
+          "A big book.",
+          "A toy boat.",
+          "A box."
+        ],
+        "answer": 2,
+        "evidence": "Mia made a house from a box for her toy animals."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Tom change the door?",
+        "options": [
+          "The giraffe was too tall to get in.",
+          "Mia wanted to see the animals inside.",
+          "The elephant needed a bigger opening."
+        ],
+        "answer": 0,
+        "evidence": "Tom made the door taller because the giraffe needed more room."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Mia put a rock by the door?",
+        "options": [
+          "She wanted a seat for the giraffe.",
+          "She needed to stop the wind opening it.",
+          "She wanted a table for the animals."
+        ],
+        "answer": 1,
+        "evidence": "Mia added a small rock because the wind was pushing the door."
+      }
+    ],
+    "metrics": {
+      "words": 86,
+      "sentences": 8,
+      "max_sentence_words": 12
+    },
+    "change_note_tr": "Rüzgârın kaynağı açık pencere oldu; zürafa açıkça içeri kondu; sorulardaki use/wide/step sadeleşti.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "through",
+          "other",
+          "keep",
+          "push",
+          "stay"
+        ],
+        "outside": [
+          "doorkeeper"
+        ],
+        "content": [
+          "push",
+          "doorkeeper"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "through",
+          "other",
+          "keep",
+          "push",
+          "stay"
+        ],
+        "outside": [
+          "doorkeeper"
+        ],
+        "content": [
+          "push",
+          "doorkeeper"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "A box is the standard craft material for a toy house, so an adult could guess C without reading."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q1 pedagogy needs_text (A box is the standard craft material for a toy house, so an adult could guess C without reading.)",
+      "q1 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

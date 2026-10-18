@@ -1,0 +1,232 @@
+{
+  "id": "E3-astra80-B3-E3-08",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-08",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-08",
+    "level": "E3",
+    "category": "music",
+    "title": "The Cup Song",
+    "passage": "Jack put three cups on the kitchen table. Aisha tapped each one with a pencil. She chose the blue cup because she liked the noise it made. Jack sang a song while she tapped it. Then the cup moved close to falling off the table. Jack held it because he did not want it to fall. Aisha ended the song with three quiet taps. Jack smiled and said he had played the holding part.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which cup did Aisha choose?",
+        "options": [
+          "The red cup.",
+          "The blue cup.",
+          "The green cup."
+        ],
+        "answer": 1,
+        "evidence": "She chose the blue cup because she liked the noise it made."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Aisha choose that cup?",
+        "options": [
+          "She liked its picture of a bird.",
+          "She liked its little round shape.",
+          "She liked what she heard from it."
+        ],
+        "answer": 2,
+        "evidence": "She chose the blue cup because she liked the noise it made."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Jack hold the cup?",
+        "options": [
+          "It was close to falling off.",
+          "It was too hot for the table.",
+          "It had drinking water inside."
+        ],
+        "answer": 0,
+        "evidence": "Jack held it because he did not want it to fall."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 74,
+        "sentences": 8,
+        "flyers": [
+          "tap",
+          "each",
+          "while",
+          "hear"
+        ],
+        "outside": [],
+        "content": [
+          "tap"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 74,
+        "sentences": 8,
+        "flyers": [
+          "tap",
+          "each",
+          "while",
+          "hear"
+        ],
+        "outside": [],
+        "content": [
+          "tap"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

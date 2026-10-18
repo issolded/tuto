@@ -1,0 +1,227 @@
+{
+  "id": "E2-revised23-E2-05",
+  "level": "E2",
+  "premise": {
+    "id": "E2-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E2-05",
+    "level": "E2",
+    "title": "The Quiet Show",
+    "passage": "Nina put two chairs in front of her little toy stage. Omar sat on one chair to watch her show. Their cat jumped onto the other chair and fell asleep. Nina made her toy mouse dance, but only Omar clapped at the end.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How many seats did Nina put out?",
+        "options": [
+          "Three seats.",
+          "Two seats.",
+          "Four seats."
+        ],
+        "answer": 1,
+        "evidence": "Nina put two chairs in front of her little toy stage."
+      },
+      {
+        "op": "detail",
+        "stem": "Which toy danced in the show?",
+        "options": [
+          "A toy rabbit.",
+          "A toy monkey.",
+          "A toy mouse."
+        ],
+        "answer": 2,
+        "evidence": "Nina made her toy mouse dance, but only Omar clapped at the end."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened before the toy started dancing?",
+        "options": [
+          "The cat went to sleep.",
+          "Omar put the chairs away.",
+          "Nina took the stage upstairs."
+        ],
+        "answer": 0,
+        "evidence": "Their cat jumped onto the other chair and fell asleep."
+      }
+    ],
+    "metrics": {
+      "words": 43,
+      "sentences": 4,
+      "max_sentence_words": 13
+    },
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "stage",
+          "other",
+          "happen",
+          "away"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": [
+          "stage"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "stage",
+          "other",
+          "happen",
+          "away"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": [
+          "stage"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

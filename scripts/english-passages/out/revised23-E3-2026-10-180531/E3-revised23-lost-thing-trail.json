@@ -1,0 +1,231 @@
+{
+  "id": "E3-revised23-lost-thing-trail",
+  "level": "E3",
+  "premise": {
+    "id": "lost-thing-trail",
+    "genre": "fiction",
+    "theme": "home",
+    "source": "revised23: own",
+    "premise": "Something goes missing at home. Small clues lead to a pet or a younger sibling who moved it for a harmless reason."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "lost-thing-trail",
+    "title": "The Missing Scarf",
+    "passage": "Meera could not find her scarf before a walk. A little red part showed under the living room door. She opened it and saw the scarf across the floor, behind the sofa. A line of toy animals stood beside it. Meera followed them because her little brother Kofi always played with those animals. Behind the sofa, Kofi was putting a teddy on the scarf. He had taken it because his teddy needed a picnic blanket. Meera brought a towel, and Kofi moved the teddy onto it.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Meera first see part of her scarf?",
+        "options": [
+          "Below the living room door.",
+          "Beside the kitchen table.",
+          "Under the bedroom chair."
+        ],
+        "answer": 0,
+        "evidence": "A little red part showed under the living room door."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Meera follow the toy animals?",
+        "options": [
+          "She wanted to put them in their box.",
+          "She needed to count them for a game.",
+          "She knew her brother liked playing with them."
+        ],
+        "answer": 2,
+        "evidence": "Meera followed them because her little brother Kofi always played with those animals."
+      },
+      {
+        "op": "cause",
+        "stem": "Why had Kofi taken the scarf?",
+        "options": [
+          "He wanted to keep his teddy warm.",
+          "He wanted somewhere for his teddy to have a picnic.",
+          "He wanted to make his teddy some clothes."
+        ],
+        "answer": 1,
+        "evidence": "He had taken it because his teddy needed a picnic blanket."
+      }
+    ],
+    "id": "R1-E3-07",
+    "level": "E3",
+    "change_note_tr": "Atkının konumu doğal bir ifadeyle yazıldı; piknik eşyasını kimin taşıdığı açıklaştırıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "across",
+          "beside",
+          "follow",
+          "keep",
+          "warm",
+          "somewhere"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": [
+          "warm"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "across",
+          "beside",
+          "follow",
+          "keep",
+          "warm",
+          "somewhere"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": [
+          "warm"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

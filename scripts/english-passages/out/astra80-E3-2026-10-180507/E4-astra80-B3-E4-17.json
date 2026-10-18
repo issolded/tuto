@@ -1,0 +1,256 @@
+{
+  "id": "E4-astra80-B3-E4-17",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-17",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-17",
+    "level": "E4",
+    "category": "nature",
+    "title": "The Flower After Lunch",
+    "passage": "Amir drew a flower in the school garden before the morning lesson. Sara planned to draw the same flower after lunch. When she arrived, she found that it looked different from Amir's picture. Some petals had opened farther, and a shadow now fell across the ground beside it. Sara wondered if Amir had drawn a different plant. He showed her a bent leaf that appeared in his picture and on the plant. Sara drew her picture, and they asked their teacher to return before going home. Before going home, they made one drawing together and wrote the time below it. They added times to the earlier pictures and placed all three in order on the wall. The bent leaf showed that the changing flower was still the same plant. Amir added a space for another drawing. They wanted to see what the same flower would look like on a cloudy morning.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What helped them find the same plant?",
+        "options": [
+          "A bent leaf.",
+          "A broken pot.",
+          "A wooden sign."
+        ],
+        "answer": 0,
+        "evidence": "He showed her a bent leaf that appeared in his picture and on the plant."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did they write the time below the drawings?",
+        "options": [
+          "To connect each view with when they saw it.",
+          "To show how quickly each child could finish drawing.",
+          "To remember when their teacher wanted the pictures back."
+        ],
+        "answer": 0,
+        "evidence": "Before going home, they made one drawing together and wrote the time below it.",
+        "rationale": "Their observations differ across the day; recording time allows meaningful comparison rather than assuming different plants."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Finding which child makes the best flower drawings.",
+          "Moving a plant to different places to make it grow faster.",
+          "Following changes in one flower by drawing it at different times."
+        ],
+        "answer": 2,
+        "evidence": "They added times to the earlier pictures and placed all three in order on the wall.",
+        "rationale": "They revisit and label views of one plant without changing its conditions."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 151,
+        "sentences": 12,
+        "flyers": [
+          "plan",
+          "farther",
+          "shadow",
+          "beside",
+          "wonder",
+          "bent",
+          "return",
+          "order",
+          "pot",
+          "wooden",
+          "sign",
+          "connect"
+        ],
+        "outside": [
+          "petal",
+          "mainly"
+        ],
+        "content": [
+          "petal"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 151,
+        "sentences": 12,
+        "flyers": [
+          "plan",
+          "farther",
+          "shadow",
+          "beside",
+          "wonder",
+          "bent",
+          "return",
+          "order",
+          "pot",
+          "wooden",
+          "sign",
+          "connect"
+        ],
+        "outside": [
+          "petal",
+          "mainly"
+        ],
+        "content": [
+          "petal"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

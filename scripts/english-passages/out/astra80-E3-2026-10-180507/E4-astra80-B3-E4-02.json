@@ -1,0 +1,251 @@
+{
+  "id": "E4-astra80-B3-E4-02",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-02",
+    "level": "E4",
+    "category": "discovery",
+    "title": "The Photograph Corner",
+    "passage": "Lily found a photograph of a garden in an old family album. She could see a low wall and a tree beside a little wooden seat. Ben said it looked nothing like the garden outside their window. They took the album to the window and compared the two views. The tree outside was much taller, and there was no wooden seat. Lily noticed a pale square on the wall in the photograph. The same square was still showing outside, partly hidden by leaves. Ben moved to the other end of the window and held the photograph up. From there, the wall and the tree lined up with the picture. They asked their aunt about the missing seat. She said it had broken years ago, before either child could remember it. Ben looked at the photograph again, now sure that it showed their garden.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What had disappeared from the garden?",
+        "options": [
+          "A wooden seat.",
+          "A low wall.",
+          "A tall tree."
+        ],
+        "answer": 0,
+        "evidence": "She said it had broken years ago, before either child could remember it."
+      },
+      {
+        "op": "inference",
+        "stem": "What helped them work out which garden the photograph showed?",
+        "options": [
+          "All the plants were exactly the same size.",
+          "A mark on the wall had stayed the same.",
+          "Someone had written the address on the picture."
+        ],
+        "answer": 1,
+        "evidence": "The same square was still showing outside, partly hidden by leaves.",
+        "rationale": "The persistent wall mark and matching positions connect the old picture to the changed garden."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Finding a familiar place in an older picture.",
+          "Planning to rebuild a garden from an old picture.",
+          "Learning how to take a photograph through glass."
+        ],
+        "answer": 0,
+        "evidence": "Ben looked at the photograph again, now sure that it showed their garden.",
+        "rationale": "The children use surviving details to identify the garden in an older view."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 143,
+        "sentences": 12,
+        "flyers": [
+          "beside",
+          "wooden",
+          "compare",
+          "notice",
+          "pale",
+          "either",
+          "exact",
+          "size",
+          "plan",
+          "rebuild"
+        ],
+        "outside": [
+          "photograph",
+          "album",
+          "mainly",
+          "familiar"
+        ],
+        "content": [
+          "photograph",
+          "album",
+          "familiar"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 143,
+        "sentences": 12,
+        "flyers": [
+          "beside",
+          "wooden",
+          "compare",
+          "notice",
+          "pale",
+          "either",
+          "exact",
+          "size",
+          "plan",
+          "rebuild"
+        ],
+        "outside": [
+          "photograph",
+          "album",
+          "mainly",
+          "familiar"
+        ],
+        "content": [
+          "photograph",
+          "album",
+          "familiar"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

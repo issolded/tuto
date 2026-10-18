@@ -1,0 +1,256 @@
+{
+  "id": "E4-astra80-B3-E4-20",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-20",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-20",
+    "level": "E4",
+    "category": "observation",
+    "title": "The Longer Shadow",
+    "passage": "Meera and Dan stood in the school playground with their teacher early one morning. Dan pointed to his shadow and said it was much taller than he was. Meera marked its end with chalk while he stood beside a painted square. After lunch, they returned to the same square and stood in the same places. Dan's shadow no longer reached the chalk mark. He wondered whether Meera had moved the mark while he was in class. She pointed to her own shadow, which was shorter too. Their teacher asked them to compare where the sunlight came from without looking at the sun. They noticed that the light now fell from higher in the sky. Meera added a second chalk mark and wrote afternoon beside it. Dan looked between the marks and smiled. He had stayed the same height, but his shadow had told a different story.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Meera use to mark the shadow's end?",
+        "options": [
+          "A small stone.",
+          "Chalk.",
+          "A paper flag."
+        ],
+        "answer": 1,
+        "evidence": "Meera marked its end with chalk while he stood beside a painted square."
+      },
+      {
+        "op": "inference",
+        "stem": "Why was moving the first mark not a good explanation?",
+        "options": [
+          "Dan had grown taller during the lesson.",
+          "Both children's shadows had become shorter.",
+          "The painted square had changed its shape."
+        ],
+        "answer": 1,
+        "evidence": "She pointed to her own shadow, which was shorter too.",
+        "rationale": "A change in both shadows supports changed lighting rather than a moved mark for one child."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Finding the tallest child by measuring shadows at different times.",
+          "Choosing a sunny place to draw pictures on the playground.",
+          "Comparing observations to understand a change during the day."
+        ],
+        "answer": 2,
+        "evidence": "Meera added a second chalk mark and wrote afternoon beside it.",
+        "rationale": "Fixed positions and repeated marks document changing shadow length without confusing it with a height change."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 146,
+        "sentences": 12,
+        "flyers": [
+          "shadow",
+          "chalk",
+          "beside",
+          "return",
+          "reach",
+          "wonder",
+          "own",
+          "compare",
+          "sunlight",
+          "notice",
+          "height",
+          "become",
+          "measure"
+        ],
+        "outside": [
+          "whether",
+          "explanation",
+          "mainly",
+          "observation"
+        ],
+        "content": [
+          "whether",
+          "explanation",
+          "observation"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 146,
+        "sentences": 12,
+        "flyers": [
+          "shadow",
+          "chalk",
+          "beside",
+          "return",
+          "reach",
+          "wonder",
+          "own",
+          "compare",
+          "sunlight",
+          "notice",
+          "height",
+          "become",
+          "measure"
+        ],
+        "outside": [
+          "whether",
+          "explanation",
+          "mainly",
+          "observation"
+        ],
+        "content": [
+          "whether",
+          "explanation",
+          "observation"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

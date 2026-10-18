@@ -1,0 +1,222 @@
+{
+  "id": "E3-astra80-B3-E3-02",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-02",
+    "level": "E3",
+    "category": "discovery",
+    "title": "The Hidden Drawing",
+    "passage": "Lily found a drawing inside an old school book. It showed a small house with a purple door. Ben turned it over because he wanted to find a name. Lily had written her name on the back a year before. She laughed at the little house and its huge windows. She kept the drawing because it showed her first try at a house. Ben gave her clean paper for another picture. This time, she drew their house with Ben looking out of a window.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was purple in the old drawing?",
+        "options": [
+          "The roof of the house.",
+          "The door of the house.",
+          "The wall of the house."
+        ],
+        "answer": 1,
+        "evidence": "It showed a small house with a purple door."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ben turn the drawing over?",
+        "options": [
+          "To see who had made it.",
+          "To find another picture of the house.",
+          "To read a story on the back."
+        ],
+        "answer": 0,
+        "evidence": "Ben turned it over because he wanted to find a name."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Lily keep the old drawing?",
+        "options": [
+          "It was a picture from her teacher.",
+          "It was her first house picture.",
+          "It was a picture for Ben's birthday."
+        ],
+        "answer": 1,
+        "evidence": "She kept the drawing because it showed her first try at a house."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "turn",
+          "over",
+          "keep",
+          "time"
+        ],
+        "outside": [],
+        "content": [
+          "time"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "turn",
+          "over",
+          "keep",
+          "time"
+        ],
+        "outside": [],
+        "content": [
+          "time"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

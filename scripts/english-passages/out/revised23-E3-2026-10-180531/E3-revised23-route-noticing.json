@@ -1,0 +1,224 @@
+{
+  "id": "E3-revised23-route-noticing",
+  "level": "E3",
+  "premise": {
+    "id": "route-noticing",
+    "genre": "fiction",
+    "theme": "neighbourhood",
+    "source": "revised23: 150 Writing Prompts p7 (shape only)",
+    "premise": "On the walk to school a child notices one thing has changed, and works out why by the end of the day."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "route-noticing",
+    "title": "The Missing Chair",
+    "passage": "Ella and her grandfather Dan walked past the bookshop on their school walk. A small blue chair stood where the big chair usually stood. Ella stopped because she always waved to the teddy on the big chair. That afternoon, a woman was painting the small chair outside. She had taken the big chair and teddy inside because rain was coming. After the rain stopped, she brought the small chair outside for painting. Now the big chair and teddy were outside again too. Ella waved to the teddy, and Dan waved too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What stood outside the bookshop that morning?",
+        "options": [
+          "A little green table.",
+          "A little blue chair.",
+          "A little yellow box."
+        ],
+        "answer": 1,
+        "evidence": "A small blue chair stood where the big chair usually stood."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ella stop at the bookshop?",
+        "options": [
+          "She usually said hello to the teddy there.",
+          "She wanted to buy a book there.",
+          "She needed to give a book back there."
+        ],
+        "answer": 0,
+        "evidence": "Ella stopped because she always waved to the teddy on the big chair."
+      },
+      {
+        "op": "cause",
+        "stem": "Why had the woman taken the big chair and teddy inside?",
+        "options": [
+          "She needed more room for painting.",
+          "She wanted to change the teddy's clothes.",
+          "She wanted to keep them out of the rain."
+        ],
+        "answer": 2,
+        "evidence": "She had taken the big chair and teddy inside because rain was coming."
+      }
+    ],
+    "id": "R1-E3-05",
+    "level": "E3",
+    "change_note_tr": "Büyük sandalye ve ayı birlikte içeri alındı; küçük sandalyenin yağmur durduktan sonra boyamak için dışarı konduğu açıklandı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 91,
+        "sentences": 8,
+        "flyers": [
+          "past",
+          "usually",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "past"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 91,
+        "sentences": 8,
+        "flyers": [
+          "past",
+          "usually",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "past"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "regional? bookshop",
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

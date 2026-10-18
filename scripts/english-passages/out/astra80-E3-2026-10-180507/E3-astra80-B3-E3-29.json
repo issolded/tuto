@@ -1,0 +1,226 @@
+{
+  "id": "E3-astra80-B3-E3-29",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-29",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-29",
+    "level": "E3",
+    "category": "games",
+    "title": "The Brown Shape",
+    "passage": "Max and Priya looked for tiny animals in a picture book. Priya found a rabbit under a tree. Max pointed to a brown shape because he thought it was a bear. Priya looked closely and saw that it was a rock. She moved a lamp closer because the picture was difficult to see. Now Max could see a little mouse beside the rock. He found the mouse's tail and followed it with his finger. The bear was on the next page, much easier to find.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was the rabbit?",
+        "options": [
+          "Behind a house.",
+          "Below a tree.",
+          "Beside a lake."
+        ],
+        "answer": 1,
+        "evidence": "Priya found a rabbit under a tree."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Max point to the brown shape?",
+        "options": [
+          "He wanted to show a funny word.",
+          "He thought he had found an animal.",
+          "He wanted Priya to turn the page."
+        ],
+        "answer": 1,
+        "evidence": "Max pointed to a brown shape because he thought it was a bear."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Priya move the lamp closer?",
+        "options": [
+          "The picture was not easy to see.",
+          "The table was not easy to clean.",
+          "The room was not easy to cross."
+        ],
+        "answer": 0,
+        "evidence": "She moved a lamp closer because the picture was difficult to see."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "tiny",
+          "beside",
+          "follow",
+          "finger",
+          "turn"
+        ],
+        "outside": [],
+        "content": [
+          "tiny",
+          "finger"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "tiny",
+          "beside",
+          "follow",
+          "finger",
+          "turn"
+        ],
+        "outside": [],
+        "content": [
+          "tiny",
+          "finger"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

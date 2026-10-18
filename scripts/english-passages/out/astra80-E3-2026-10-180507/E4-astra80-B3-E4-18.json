@@ -1,0 +1,256 @@
+{
+  "id": "E4-astra80-B3-E4-18",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-18",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-18",
+    "level": "E4",
+    "category": "games",
+    "title": "The Score on the Back",
+    "passage": "Max and Priya played a guessing game with cards they had made themselves. Priya won the first round and wrote her score on the back of a card. In the next round, Max noticed that card whenever it was face down. He remembered the animal on its other side and guessed it at once. Priya started to clap, then saw where he was looking. Max explained that the writing had given the answer away. They checked all the cards and found a small blue mark on another one. Priya placed each card inside the same kind of paper cover, with the picture hidden until opened. They wrote future scores in a separate book. When they played again, Max had to listen to the clues before guessing. He missed the first animal but laughed at his mistake. This round felt more like the game they had meant to make.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Priya write her first score?",
+        "options": [
+          "On the lid of the box.",
+          "On a page in her book.",
+          "On the back of a card."
+        ],
+        "answer": 2,
+        "evidence": "Priya won the first round and wrote her score on the back of a card."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did the paper covers help?",
+        "options": [
+          "They made the animal pictures larger to look at.",
+          "They hid marks that showed which card was which.",
+          "They reminded each player how many points they had."
+        ],
+        "answer": 1,
+        "evidence": "Priya placed each card inside the same kind of paper cover, with the picture hidden until opened.",
+        "rationale": "Writing and marks distinguish the backs; uniform covers remove those unintended clues."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Making animal clues easier after both players forget the answers.",
+          "Finding a quicker way to add scores at the end of a game.",
+          "Removing a secret clue so a guessing game works properly."
+        ],
+        "answer": 2,
+        "evidence": "When they played again, Max had to listen to the clues before guessing.",
+        "rationale": "After masking identifying marks, players must again rely on the intended clues."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 148,
+        "sentences": 12,
+        "flyers": [
+          "notice",
+          "whenever",
+          "side",
+          "check",
+          "cover",
+          "separate",
+          "lid",
+          "remind",
+          "remove",
+          "proper"
+        ],
+        "outside": [
+          "clu",
+          "mainly",
+          "clue"
+        ],
+        "content": [
+          "clu",
+          "clue"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 148,
+        "sentences": 12,
+        "flyers": [
+          "notice",
+          "whenever",
+          "side",
+          "check",
+          "cover",
+          "separate",
+          "lid",
+          "remind",
+          "remove",
+          "proper"
+        ],
+        "outside": [
+          "clu",
+          "mainly",
+          "clue"
+        ],
+        "content": [
+          "clu",
+          "clue"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

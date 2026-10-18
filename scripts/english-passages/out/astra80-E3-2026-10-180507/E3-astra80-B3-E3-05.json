@@ -1,0 +1,236 @@
+{
+  "id": "E3-astra80-B3-E3-05",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-05",
+    "level": "E3",
+    "category": "pets",
+    "title": "The Other Bowl",
+    "passage": "Nina put water in a small bowl for her dog. Omar put it beside the dog's food bowl. The dog drank, and water went over the top of the little bowl. Nina brought a bigger bowl because the small one was too full. She put the water into it and dried the floor. Omar moved the bowls because they were in front of the kitchen door. The dog followed them to the new place. It drank again, and now the floor stayed dry.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where were the bowls before Omar moved them?",
+        "options": [
+          "In front of the bedroom door.",
+          "In front of the kitchen door.",
+          "In front of the bathroom door."
+        ],
+        "answer": 1,
+        "evidence": "Omar moved the bowls because they were in front of the kitchen door."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Nina get a bigger bowl?",
+        "options": [
+          "The little bowl had a broken bottom.",
+          "The little bowl was difficult to wash.",
+          "The little bowl held too much water."
+        ],
+        "answer": 2,
+        "evidence": "Nina brought a bigger bowl because the small one was too full."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Omar move the bowls?",
+        "options": [
+          "They were beside a hot window.",
+          "They were under a wet towel.",
+          "They were in front of the door."
+        ],
+        "answer": 2,
+        "evidence": "Omar moved the bowls because they were in front of the kitchen door."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "other",
+          "beside",
+          "over",
+          "full",
+          "follow",
+          "stay"
+        ],
+        "outside": [],
+        "content": [
+          "full"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "other",
+          "beside",
+          "over",
+          "full",
+          "follow",
+          "stay"
+        ],
+        "outside": [],
+        "content": [
+          "full"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

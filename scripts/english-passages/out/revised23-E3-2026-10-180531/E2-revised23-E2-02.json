@@ -1,0 +1,237 @@
+{
+  "id": "E2-revised23-E2-02",
+  "level": "E2",
+  "premise": {
+    "id": "E2-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E2-02",
+    "level": "E2",
+    "title": "A Hat for the Bear",
+    "passage": "Lily put her teddy on the table and made it a red paper hat. The hat fell over the eyes of the bear. Ben put a little towel inside the hat. Lily put the hat back on, and now the bear could see.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Lily put her teddy?",
+        "options": [
+          "On the bed.",
+          "On the table.",
+          "On the sofa."
+        ],
+        "answer": 1,
+        "evidence": "Lily put her teddy on the table and made it a red paper hat."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Ben put inside the hat?",
+        "options": [
+          "Some paper.",
+          "Another hat.",
+          "A little towel."
+        ],
+        "answer": 2,
+        "evidence": "Ben put a little towel inside the hat."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which happened first?",
+        "options": [
+          "Lily put the teddy on the table.",
+          "Ben put the towel inside the hat.",
+          "Lily put the hat back on."
+        ],
+        "answer": 0,
+        "evidence": "Lily put her teddy on the table and made it a red paper hat."
+      }
+    ],
+    "metrics": {
+      "words": 43,
+      "sentences": 4,
+      "max_sentence_words": 14
+    },
+    "change_note_tr": "Tahminle çözülen sorular için yer ayrıntısı ve olağan alternatiflerle iç dolgu sorusu yazıldı; sıralama seçenekleri metindeki olaylarla eşlendi.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "over",
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "over",
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

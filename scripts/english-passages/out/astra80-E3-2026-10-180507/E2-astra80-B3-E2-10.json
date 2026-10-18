@@ -1,0 +1,215 @@
+{
+  "id": "E2-astra80-B3-E2-10",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-10",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-10",
+    "level": "E2",
+    "category": "imagination",
+    "title": "The Sofa Train",
+    "passage": "Ravi lined up three toy animals on the sofa. Yan sat beside them and called the sofa a train. Ravi asked where the train was going. Yan pointed to the kitchen and said the animals needed to stop for lunch.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How many toy animals were on the sofa?",
+        "options": [
+          "Five animals.",
+          "Three animals.",
+          "Two animals."
+        ],
+        "answer": 1,
+        "evidence": "Ravi lined up three toy animals on the sofa."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did Yan want the train to stop?",
+        "options": [
+          "At the bedroom.",
+          "At the kitchen.",
+          "At the bathroom."
+        ],
+        "answer": 1,
+        "evidence": "Yan pointed to the kitchen and said the animals needed to stop for lunch."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Ravi asked where it was going.",
+          "Yan pointed to the kitchen.",
+          "Yan called the sofa a train."
+        ],
+        "answer": 2,
+        "evidence": "Yan sat beside them and called the sofa a train."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 40,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 40,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

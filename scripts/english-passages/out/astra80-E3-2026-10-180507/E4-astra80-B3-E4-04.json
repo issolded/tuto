@@ -1,0 +1,245 @@
+{
+  "id": "E4-astra80-B3-E4-04",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-04",
+    "level": "E4",
+    "category": "classroom",
+    "title": "The Question Box",
+    "passage": "Raj helped Ella make a box for questions about their class animal project. They put it by the door with some small pieces of paper. By lunch, there were six questions inside, all asking where the answers would appear. Raj looked at their sign and saw that it only said QUESTIONS. He added words saying the class would discuss them on Friday. Ella placed an example beside the box: How do penguins keep warm? The next morning, they opened the box and found questions about birds, cats, and frogs. One child wanted to know whether fish ever slept. Raj read every question aloud while Ella wrote them on a large page. They left room beneath each one for the class to add answers. Ella kept the six original questions too. She said those had helped them improve the box before the animal project even started.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "When would the class discuss the questions?",
+        "options": [
+          "On Monday.",
+          "On Friday.",
+          "On Wednesday."
+        ],
+        "answer": 1,
+        "evidence": "He added words saying the class would discuss them on Friday."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did the first questions ask where answers would appear?",
+        "options": [
+          "The class had already answered every animal question.",
+          "The children had lost the page of written answers.",
+          "The original sign had not explained the next step."
+        ],
+        "answer": 2,
+        "evidence": "Raj looked at their sign and saw that it only said QUESTIONS.",
+        "rationale": "The first sign only names the box; after a time and example are added, subject questions appear."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Choosing the easiest animal questions for a class test.",
+          "Finding a larger box when too many questions arrive.",
+          "Making an invitation clearer so people can take part."
+        ],
+        "answer": 2,
+        "evidence": "He added words saying the class would discuss them on Friday.",
+        "rationale": "The children improve the instructions and example so the question activity works as intended."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 145,
+        "sentences": 12,
+        "flyers": [
+          "sign",
+          "beside",
+          "aloud",
+          "beneath",
+          "even",
+          "test",
+          "clear"
+        ],
+        "outside": [
+          "discus",
+          "whether",
+          "original",
+          "mainly"
+        ],
+        "content": [
+          "discus",
+          "whether",
+          "original"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 145,
+        "sentences": 12,
+        "flyers": [
+          "sign",
+          "beside",
+          "aloud",
+          "beneath",
+          "even",
+          "test",
+          "clear"
+        ],
+        "outside": [
+          "discus",
+          "whether",
+          "original",
+          "mainly"
+        ],
+        "content": [
+          "discus",
+          "whether",
+          "original"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

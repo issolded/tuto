@@ -1,0 +1,224 @@
+{
+  "id": "E3-astra80-B3-E3-13",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-13",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-13",
+    "level": "E3",
+    "category": "food",
+    "title": "The Two Sandwiches",
+    "passage": "Lily made two cheese sandwiches for a picnic with Ben. Ben put an apple in each of their lunch boxes. Lily chose a bigger box because her sandwich would not fit. She put it inside, and the bread did not break. Ben added a little note because he wanted to make Lily smile at lunch. At the picnic, she opened the box and found his drawing. It showed a mouse carrying a huge cheese sandwich. Lily drew another mouse on the back and gave the note to Ben.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Ben put in each lunch box?",
+        "options": [
+          "An apple.",
+          "A banana.",
+          "A pear."
+        ],
+        "answer": 0,
+        "evidence": "Ben put an apple in each of their lunch boxes."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Lily choose another box?",
+        "options": [
+          "The first one was wet after washing.",
+          "The first one still had toys inside.",
+          "The first one was too small for her food."
+        ],
+        "answer": 2,
+        "evidence": "Lily chose a bigger box because her sandwich would not fit."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ben add a note?",
+        "options": [
+          "He wanted Lily to write a shopping note.",
+          "He wanted Lily to enjoy a funny picture.",
+          "He wanted Lily to learn a spelling word."
+        ],
+        "answer": 1,
+        "evidence": "Ben added a little note because he wanted to make Lily smile at lunch."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 88,
+        "sentences": 8,
+        "flyers": [
+          "each",
+          "fit",
+          "note",
+          "still"
+        ],
+        "outside": [],
+        "content": [
+          "fit",
+          "note"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 88,
+        "sentences": 8,
+        "flyers": [
+          "each",
+          "fit",
+          "note",
+          "still"
+        ],
+        "outside": [],
+        "content": [
+          "fit",
+          "note"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

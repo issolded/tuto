@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-06",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-06",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-06",
+    "level": "E3",
+    "category": "nature",
+    "title": "The Garden Name",
+    "passage": "Amir and Sara planted beans with their teacher at school. Each child wrote a name on a little piece of wood. Amir put his beside his beans because he wanted to find them again. Sara drew a bean below her name. The next week, green leaves were showing above the ground. Amir looked closely because he could not see the beans now. The teacher showed him where each plant was growing. Sara pointed to her drawing and said that bean had not changed.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Sara draw below her name?",
+        "options": [
+          "A leaf.",
+          "A bean.",
+          "A flower."
+        ],
+        "answer": 1,
+        "evidence": "Sara drew a bean below her name."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Amir put his name beside the beans?",
+        "options": [
+          "To tell the teacher how old he was.",
+          "To show Sara how to spell her name.",
+          "To know which plants were his later."
+        ],
+        "answer": 2,
+        "evidence": "Amir put his beside his beans because he wanted to find them again."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Amir look closely at the plants?",
+        "options": [
+          "The leaves had turned yellow.",
+          "The beans were no longer showing.",
+          "The little name board had fallen."
+        ],
+        "answer": 1,
+        "evidence": "Amir looked closely because he could not see the beans now."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "each",
+          "piece",
+          "wood",
+          "beside",
+          "leave",
+          "later",
+          "turn"
+        ],
+        "outside": [],
+        "content": [
+          "piece",
+          "wood"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "each",
+          "piece",
+          "wood",
+          "beside",
+          "leave",
+          "later",
+          "turn"
+        ],
+        "outside": [],
+        "content": [
+          "piece",
+          "wood"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

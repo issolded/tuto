@@ -1,0 +1,224 @@
+{
+  "id": "E3-astra80-B3-E3-01",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-01",
+    "level": "E3",
+    "category": "food",
+    "title": "The Apple Boat",
+    "passage": "Mia put apples into two bowls for a snack. Tom brought a little toy boat to the table. He moved his bowl because the boat needed a place beside him. Mia put a paper fish beside the boat. Tom laughed and gave the fish a little paper plate. He kept the apple in his bowl because he wanted to eat it. Mia drew an apple on the paper plate. Now everyone had a snack, the paper fish too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What toy did Tom bring?",
+        "options": [
+          "A little truck.",
+          "A little boat.",
+          "A little plane."
+        ],
+        "answer": 1,
+        "evidence": "Tom brought a little toy boat to the table."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Tom move his bowl?",
+        "options": [
+          "To sit closer to Mia.",
+          "To make room for his toy.",
+          "To keep it out of the sun."
+        ],
+        "answer": 1,
+        "evidence": "He moved his bowl because the boat needed a place beside him."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Tom keep his apple?",
+        "options": [
+          "He wanted it for his afternoon snack.",
+          "He wanted to give it to Mia later.",
+          "He wanted to put it in his bag."
+        ],
+        "answer": 0,
+        "evidence": "He kept the apple in his bowl because he wanted to eat it."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 78,
+        "sentences": 8,
+        "flyers": [
+          "snack",
+          "beside",
+          "keep",
+          "later"
+        ],
+        "outside": [],
+        "content": [
+          "snack"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 78,
+        "sentences": 8,
+        "flyers": [
+          "snack",
+          "beside",
+          "keep",
+          "later"
+        ],
+        "outside": [],
+        "content": [
+          "snack"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": true,
+          "note": "The key specifies an 'afternoon' snack, but the passage only mentions 'a snack' without specifying the time of day."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q3 pedagogy key_adds_info (The key specifies an 'afternoon' snack, but the passage only mentions 'a snack' without specifying the time of day.)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

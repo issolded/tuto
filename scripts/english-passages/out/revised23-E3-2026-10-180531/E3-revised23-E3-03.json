@@ -1,0 +1,245 @@
+{
+  "id": "E3-revised23-E3-03",
+  "level": "E3",
+  "premise": {
+    "id": "E3-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E3-03",
+    "level": "E3",
+    "title": "The Bag Song",
+    "passage": "Priya wanted to remember three things for school the next morning. She needed her book, her lunch, and her drawing. Max made a song because Priya often remembered words with music. They sang it together as she put everything in her bag. The next morning, Priya sang the song at the door. She went back because her lunch was still in the kitchen. Max had taken it out because he wanted to add an apple. Priya added one more line: ask Max about the apple.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was Priya when she sang the song the next morning?",
+        "options": [
+          "At the kitchen table.",
+          "At the door.",
+          "Beside her bed."
+        ],
+        "answer": 1,
+        "evidence": "The next morning, Priya sang the song at the door."
+      },
+      {
+        "op": "cause",
+        "stem": "Why had Max taken the lunch out of the bag?",
+        "options": [
+          "He was putting an apple with her food.",
+          "He wanted to put it in a bigger box.",
+          "He wanted to check whose lunch it was."
+        ],
+        "answer": 0,
+        "evidence": "Max had taken it out because he wanted to add an apple."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Priya go back into the house?",
+        "options": [
+          "She had left her drawing on the table.",
+          "She wanted to find her school book.",
+          "Her lunch was still inside the house."
+        ],
+        "answer": 2,
+        "evidence": "She went back because her lunch was still in the kitchen."
+      }
+    ],
+    "metrics": {
+      "words": 85,
+      "sentences": 8,
+      "max_sentence_words": 12
+    },
+    "change_note_tr": "List/collect çıkarıldı; tahmin riskini azaltmak için yer ayrıntısı ve Max'in öğle yemeğini çıkarma nedeni soruldu.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "remember",
+          "together",
+          "as",
+          "still",
+          "beside",
+          "check",
+          "leave"
+        ],
+        "outside": [],
+        "content": [
+          "remember",
+          "check"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "remember",
+          "together",
+          "as",
+          "still",
+          "beside",
+          "check",
+          "leave"
+        ],
+        "outside": [],
+        "content": [
+          "remember",
+          "check"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

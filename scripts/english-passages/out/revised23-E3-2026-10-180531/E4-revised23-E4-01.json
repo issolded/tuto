@@ -1,0 +1,252 @@
+{
+  "id": "E4-revised23-E4-01",
+  "level": "E4",
+  "premise": {
+    "id": "E4-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E4-01",
+    "level": "E4",
+    "title": "The Wrong Sound",
+    "passage": "Amir was making a short film with his toy animals. Lily helped him record the sounds on a tablet. They needed footsteps for a tiny mouse crossing a kitchen floor. Amir tapped two pencils on the table, but the sound was much too loud. On the screen, the little mouse seemed as heavy as an elephant. Lily laughed and asked him to play that part again. Amir reached for the button that would remove the sound. Then he stopped and looked at the toy elephant beside the tablet. They recorded quiet taps for the mouse and saved the loud ones for the elephant. At the end, the elephant tried to creep past a sleeping cat. Its enormous footsteps woke the cat every time. That became the part Lily wanted to watch most.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How did Amir first make the footsteps?",
+        "options": [
+          "He tapped pencils on a table.",
+          "He tapped his shoes on the floor.",
+          "He tapped spoons against a cup."
+        ],
+        "answer": 0,
+        "evidence": "Amir tapped two pencils on the table, but the sound was much too loud."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Amir decide to save the loud sound?",
+        "options": [
+          "He thought the mouse should seem larger.",
+          "He thought it would suit a different animal.",
+          "He thought it would help Lily hear the film."
+        ],
+        "answer": 1,
+        "evidence": "They recorded quiet taps for the mouse and saved the loud ones for the elephant.",
+        "rationale": "The same sound was unsuitable for the mouse but was reused for the elephant."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Two children change where they film to make their animals easier to hear.",
+          "Two children change their toy animals to make the story easier to follow.",
+          "Two children change how they use a sound to make their film funnier."
+        ],
+        "answer": 2,
+        "evidence": "They recorded quiet taps for the mouse and saved the loud ones for the elephant.",
+        "rationale": "The central change is from an unsuitable recording to a successful comic scene using that recording."
+      }
+    ],
+    "metrics": {
+      "words": 132,
+      "sentences": 12,
+      "max_sentence_words": 15
+    },
+    "change_note_tr": "Üç ana fikir şıkkı aynı özne, uzunluk ve özet tonunda yeniden yazıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 132,
+        "sentences": 12,
+        "flyers": [
+          "record",
+          "tiny",
+          "tap",
+          "seem",
+          "reach",
+          "button",
+          "remove",
+          "beside",
+          "creep",
+          "became",
+          "against",
+          "suit"
+        ],
+        "outside": [
+          "footstep",
+          "mainly"
+        ],
+        "content": [
+          "footstep"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 132,
+        "sentences": 12,
+        "flyers": [
+          "record",
+          "tiny",
+          "tap",
+          "seem",
+          "reach",
+          "button",
+          "remove",
+          "beside",
+          "creep",
+          "became",
+          "against",
+          "suit"
+        ],
+        "outside": [
+          "footstep",
+          "mainly"
+        ],
+        "content": [
+          "footstep"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,276 @@
+{
+  "id": "E4-astra80-B3-E4-11",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-11",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-11",
+    "level": "E4",
+    "category": "library",
+    "title": "The Page Nobody Chose",
+    "passage": "Kofi and Rita were choosing pictures from a book to copy for a display. Kofi chose a bright bird, and Rita chose a house covered in flowers. They passed a plain picture of a wooden bench without stopping. Later, Kofi looked for somewhere to put his bird in their shared drawing. Rita suggested a tree, but the page already had two large trees. They turned back through the book and came to the bench again. Kofi drew it between the trees and placed the bird on its back. Rita added a person sitting there, looking towards the house covered in flowers. The plain bench now joined the different parts of their picture. When the teacher asked which book picture had helped most, they looked at each other. Then both pointed to the page they had nearly skipped. Rita placed a bookmark there before returning the book.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Rita choose to copy first?",
+        "options": [
+          "A house covered in flowers.",
+          "A tree full of birds.",
+          "A bench beside a river."
+        ],
+        "answer": 0,
+        "evidence": "Kofi chose a bright bird, and Rita chose a house covered in flowers."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did they point to the bench page?",
+        "options": [
+          "It had helped their separate drawings work together.",
+          "It had been the easiest page to find in the book.",
+          "It had shown them how to draw every kind of bird."
+        ],
+        "answer": 0,
+        "evidence": "The plain bench now joined the different parts of their picture.",
+        "rationale": "The bench supplies a connection and place for the characters, despite being initially overlooked."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Discovering the value of something that first seemed uninteresting.",
+          "Choosing the brightest picture for a classroom competition.",
+          "Learning to copy every page of a library book."
+        ],
+        "answer": 0,
+        "evidence": "Then both pointed to the page they had nearly skipped.",
+        "rationale": "Their judgement of the plain picture changes when they find an important use for it."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 146,
+        "sentences": 12,
+        "flyers": [
+          "nobody",
+          "copy",
+          "bright",
+          "cover",
+          "pass",
+          "plain",
+          "wooden",
+          "bench",
+          "share",
+          "towards",
+          "return",
+          "beside",
+          "separate",
+          "discover",
+          "value",
+          "seem"
+        ],
+        "outside": [
+          "display",
+          "suggest",
+          "bookmark",
+          "mainly",
+          "uninterest"
+        ],
+        "content": [
+          "display",
+          "suggest",
+          "bookmark",
+          "uninterest"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 146,
+        "sentences": 12,
+        "flyers": [
+          "nobody",
+          "copy",
+          "bright",
+          "cover",
+          "pass",
+          "plain",
+          "wooden",
+          "bench",
+          "share",
+          "towards",
+          "return",
+          "beside",
+          "separate",
+          "discover",
+          "value",
+          "seem"
+        ],
+        "outside": [
+          "display",
+          "suggest",
+          "bookmark",
+          "mainly",
+          "uninterest"
+        ],
+        "content": [
+          "display",
+          "suggest",
+          "bookmark",
+          "uninterest"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

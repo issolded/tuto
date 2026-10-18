@@ -1,0 +1,230 @@
+{
+  "id": "E3-astra80-B3-E3-30",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-30",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-30",
+    "level": "E3",
+    "category": "observation",
+    "title": "The Morning Light",
+    "passage": "Meera saw a long bright shape on her bedroom wall. Dan looked at it and then at the partly open door. He closed the door because he wanted to find where the light came from. The shape was gone. Meera opened the door again, and the shape came back. She looked into the hall because the light was coming through the door. A lamp was on beside the stairs. Dan turned it off, and the shape was gone again.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was the lamp?",
+        "options": [
+          "In the hall by the stairs.",
+          "In the bedroom by the bed.",
+          "In the kitchen by the table."
+        ],
+        "answer": 0,
+        "evidence": "A lamp was on beside the stairs."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Dan first close the door?",
+        "options": [
+          "To keep the room quiet for Meera.",
+          "To stop a cold wind coming inside.",
+          "To find what was making the bright shape."
+        ],
+        "answer": 2,
+        "evidence": "He closed the door because he wanted to find where the light came from."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Meera look into the hall?",
+        "options": [
+          "The light was coming from there.",
+          "Dan had called her from the stairs.",
+          "She had heard their cat in the hall."
+        ],
+        "answer": 0,
+        "evidence": "She looked into the hall because the light was coming through the door."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 79,
+        "sentences": 8,
+        "flyers": [
+          "light",
+          "bright",
+          "through",
+          "beside",
+          "turn",
+          "keep",
+          "hear"
+        ],
+        "outside": [],
+        "content": [
+          "light",
+          "bright"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 79,
+        "sentences": 8,
+        "flyers": [
+          "light",
+          "bright",
+          "through",
+          "beside",
+          "turn",
+          "keep",
+          "hear"
+        ],
+        "outside": [],
+        "content": [
+          "light",
+          "bright"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

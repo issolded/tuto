@@ -1,0 +1,225 @@
+{
+  "id": "E3-astra80-B3-E3-18",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-18",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-18",
+    "level": "E3",
+    "category": "games",
+    "title": "The Small Goal",
+    "passage": "Max and Priya played a table game with a paper ball. They moved it by blowing slowly across the table. Priya made a goal from two pencils. Max moved the pencils because the ball could not go between them. Priya put a box below the table because the ball kept falling off. The next ball went between the pencils and into the box. Max clapped, and Priya smiled at her first goal. Then she took the ball out for his turn.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What made Priya's goal?",
+        "options": [
+          "Two rulers.",
+          "Two pencils.",
+          "Two books."
+        ],
+        "answer": 1,
+        "evidence": "Priya made a goal from two pencils."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Max move the pencils?",
+        "options": [
+          "The ball needed a bigger opening.",
+          "The pencils needed room to dry.",
+          "The table needed room for a book."
+        ],
+        "answer": 0,
+        "evidence": "Max moved the pencils because the ball could not go between them."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Priya put a box below?",
+        "options": [
+          "To hold toys they were not playing with.",
+          "To catch balls leaving the table.",
+          "To give her feet a place to sit."
+        ],
+        "answer": 1,
+        "evidence": "Priya put a box below the table because the ball kept falling off."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "blow",
+          "across",
+          "keep",
+          "turn",
+          "leave"
+        ],
+        "outside": [],
+        "content": [
+          "blow"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "blow",
+          "across",
+          "keep",
+          "turn",
+          "leave"
+        ],
+        "outside": [],
+        "content": [
+          "blow"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

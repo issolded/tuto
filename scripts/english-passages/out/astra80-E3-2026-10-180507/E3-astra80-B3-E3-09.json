@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-09",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-09",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-09",
+    "level": "E3",
+    "category": "helping",
+    "title": "The Paper Mountain",
+    "passage": "Meera had a big box of clean paper on her desk. Dan wanted to help her carry it to the classroom. He took some because the box was too heavy for Meera. They walked together and put their paper on the classroom table. Meera counted the pages because their class needed twenty. There was one page more than they needed. Dan drew a mountain on it with two children at the top. He called it their paper mountain, now much easier to carry.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did they take the paper?",
+        "options": [
+          "To the music room.",
+          "To the classroom.",
+          "To the dining room."
+        ],
+        "answer": 1,
+        "evidence": "Dan wanted to help her carry it to the classroom."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Dan take some paper?",
+        "options": [
+          "Meera wanted him to read every page.",
+          "Meera needed him to wash the table.",
+          "Meera could not easily carry all of it."
+        ],
+        "answer": 2,
+        "evidence": "He took some because the box was too heavy for Meera."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Meera count the pages?",
+        "options": [
+          "She wanted to find a missing drawing.",
+          "She wanted to put names on the pages.",
+          "She needed the right number for class."
+        ],
+        "answer": 2,
+        "evidence": "Meera counted the pages because their class needed twenty."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "heavy",
+          "together"
+        ],
+        "outside": [],
+        "content": [
+          "heavy"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "heavy",
+          "together"
+        ],
+        "outside": [],
+        "content": [
+          "heavy"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,260 @@
+{
+  "id": "E4-astra80-B3-E4-07",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-07",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-07",
+    "level": "E4",
+    "category": "games",
+    "title": "The Hidden Rule",
+    "passage": "Max arranged four picture cards in a row and asked Priya to add another. The cards showed a banana, a lemon, a yellow hat, and a yellow bus. Priya chose a yellow bird from the pile and placed it at the end. Max nodded and asked how she had worked out his rule. Priya said all the pictures were yellow. Max explained that his rule had been things he had seen that morning. He had seen a yellow bird too, so her choice happened to fit. They looked at the cards and saw that both explanations worked. Max added a picture of a blue bicycle from his morning walk. Priya smiled and changed her explanation. For the next round, she chose her own cards and kept her rule secret. This time, Max asked for one more example before giving his answer.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which card did Max add after the bird?",
+        "options": [
+          "A blue bicycle.",
+          "A green tractor.",
+          "A red car."
+        ],
+        "answer": 0,
+        "evidence": "Max added a picture of a blue bicycle from his morning walk."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Max ask for another example in the next round?",
+        "options": [
+          "He had forgotten the names of the pictured objects.",
+          "He wanted Priya to put the cards in order by their first letters.",
+          "He knew one set of cards could fit different rules."
+        ],
+        "answer": 2,
+        "evidence": "They looked at the cards and saw that both explanations worked.",
+        "rationale": "The previous round produced two plausible rules, making another example useful before committing."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Remembering every object seen during a morning walk.",
+          "Finding that more than one explanation can fit the same clues.",
+          "Learning a new way to name objects in a card game."
+        ],
+        "answer": 1,
+        "evidence": "They looked at the cards and saw that both explanations worked.",
+        "rationale": "The turn depends on two valid interpretations of the first group and an example that distinguishes them."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 141,
+        "sentences": 12,
+        "flyers": [
+          "rule",
+          "arrange",
+          "row",
+          "pile",
+          "choice",
+          "fit",
+          "own",
+          "forgotten",
+          "order",
+          "set"
+        ],
+        "outside": [
+          "explanation",
+          "object",
+          "mainly",
+          "clu"
+        ],
+        "content": [
+          "explanation",
+          "object",
+          "clu"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 141,
+        "sentences": 12,
+        "flyers": [
+          "rule",
+          "arrange",
+          "row",
+          "pile",
+          "choice",
+          "fit",
+          "own",
+          "forgotten",
+          "order",
+          "set"
+        ],
+        "outside": [
+          "explanation",
+          "object",
+          "mainly",
+          "clu"
+        ],
+        "content": [
+          "explanation",
+          "object",
+          "clu"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

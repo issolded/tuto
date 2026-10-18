@@ -1,0 +1,267 @@
+{
+  "id": "E4-revised23-E4-04",
+  "level": "E4",
+  "premise": {
+    "id": "E4-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E4-04",
+    "level": "E4",
+    "title": "The Empty Square",
+    "passage": "Yan and Rita made a board game on a large sheet of paper. Every square told players to do something, such as clap twice or name an animal. One square near the end was empty. Yan reached for a pen, but Rita suggested testing the game first. When Yan landed on the empty square, he waited for an instruction. Rita said he could make one up just for that turn. He asked everyone to speak like a robot until his next turn. Rita laughed so much that her robot voice came out in little squeaks. They played again, and this time Rita landed there. She asked Yan to name an animal beginning with the first letter of his name. He thought for a moment, then said yak. After the game, Yan wrote just two words in the empty square: YOUR IDEA.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Yan ask everyone to do on his turn?",
+        "options": [
+          "Sing their answers.",
+          "Clap after each word.",
+          "Speak like a robot."
+        ],
+        "answer": 2,
+        "evidence": "He asked everyone to speak like a robot until his next turn."
+      },
+      {
+        "op": "inference",
+        "stem": "How did Yan feel about trying Rita's idea?",
+        "options": [
+          "He found it useful enough to keep in the game.",
+          "He found it too difficult and made the game shorter.",
+          "He found it confusing and wrote the old rule again."
+        ],
+        "answer": 0,
+        "evidence": "After the game, Yan wrote just two words in the empty square: YOUR IDEA.",
+        "rationale": "After they both invent actions, Yan gives the square a permanent label that preserves the new activity."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Two children remove a square after finding that it makes their game too difficult.",
+          "Two children keep a new rule after trying it in an unfinished part of their game.",
+          "Two children add animal pictures after finding that their game has too much writing."
+        ],
+        "answer": 1,
+        "evidence": "After the game, Yan wrote just two words in the empty square: YOUR IDEA.",
+        "rationale": "The blank square changes from an omission into a deliberate opportunity for players to invent something."
+      }
+    ],
+    "metrics": {
+      "words": 141,
+      "sentences": 12,
+      "max_sentence_words": 15
+    },
+    "change_note_tr": "Yan/yak cevabını ele veren soru robot konuşmasına çevrildi; çıkarımda YOUR IDEA etiketi sorudan çıkarıldı; özet şıkları dengelendi.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 141,
+        "sentences": 12,
+        "flyers": [
+          "sheet",
+          "reach",
+          "test",
+          "voice",
+          "squeak",
+          "useful",
+          "rule",
+          "remove",
+          "unfinished"
+        ],
+        "outside": [
+          "suggest",
+          "instruction",
+          "yak",
+          "confuse",
+          "mainly"
+        ],
+        "content": [
+          "suggest",
+          "instruction",
+          "yak",
+          "confuse"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 141,
+        "sentences": 12,
+        "flyers": [
+          "sheet",
+          "reach",
+          "test",
+          "voice",
+          "squeak",
+          "useful",
+          "rule",
+          "remove",
+          "unfinished"
+        ],
+        "outside": [
+          "suggest",
+          "instruction",
+          "yak",
+          "confuse",
+          "mainly"
+        ],
+        "content": [
+          "suggest",
+          "instruction",
+          "yak",
+          "confuse"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

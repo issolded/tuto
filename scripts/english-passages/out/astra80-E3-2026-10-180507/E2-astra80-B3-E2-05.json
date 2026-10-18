@@ -1,0 +1,228 @@
+{
+  "id": "E2-astra80-B3-E2-05",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-05",
+    "level": "E2",
+    "category": "pets",
+    "title": "The Empty Bag",
+    "passage": "Nina put an empty paper bag on the living room floor. Omar watched their kitten walk inside and turn around. The kitten sat in the bag with its head showing. Nina drew a cat on some paper and put the picture beside the bag.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was the bag made of?",
+        "options": [
+          "Paper.",
+          "Wood.",
+          "Glass."
+        ],
+        "answer": 0,
+        "evidence": "Nina put an empty paper bag on the living room floor."
+      },
+      {
+        "op": "detail",
+        "stem": "Which part of the kitten could Omar see?",
+        "options": [
+          "Its tail.",
+          "Its head.",
+          "Its feet."
+        ],
+        "answer": 1,
+        "evidence": "The kitten sat in the bag with its head showing."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "The kitten sat in the bag.",
+          "The kitten walked into the bag.",
+          "Nina drew a cat."
+        ],
+        "answer": 1,
+        "evidence": "Omar watched their kitten walk inside and turn around."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "empty",
+          "turn",
+          "beside",
+          "wood",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "empty",
+          "wood"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "empty",
+          "turn",
+          "beside",
+          "wood",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "empty",
+          "wood"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": false,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Wood and glass are implausible materials for a bag, allowing readers to guess 'Paper' without reading the passage."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q1 pedagogy needs_text (Wood and glass are implausible materials for a bag, allowing readers to guess 'Paper' without reading the passage.)",
+      "q1 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 weak distractors (Wood and glass are implausible materials for a bag, allowing readers to guess 'Paper' without reading the passage.)"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

@@ -1,0 +1,228 @@
+{
+  "id": "E3-astra80-B3-E3-10",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-10",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-10",
+    "level": "E3",
+    "category": "imagination",
+    "title": "The Table Trip",
+    "passage": "Ravi wrote a story about a table that wanted to travel. Yan gave the table wheels for its trip. Ravi drew a donkey pulling the table along a forest road. Yan put two cups on the table for its trip. He added a box because the cups kept falling off. The cups stayed inside the box while the donkey pulled the table. At the end, the donkey stopped because it needed a drink. Two rabbits took out the cups and gave the donkey water.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Who pulled the table along?",
+        "options": [
+          "A horse.",
+          "A donkey.",
+          "A cow."
+        ],
+        "answer": 1,
+        "evidence": "Ravi drew a donkey pulling the table along a forest road."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the donkey stop?",
+        "options": [
+          "It wanted to eat some grass.",
+          "It had found its home in the forest.",
+          "It was thirsty after the trip."
+        ],
+        "answer": 2,
+        "evidence": "At the end, the donkey stopped because it needed a drink."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Yan add a box?",
+        "options": [
+          "The donkey needed something to eat.",
+          "The rabbits needed somewhere to sleep.",
+          "The cups would not stay on the table."
+        ],
+        "answer": 2,
+        "evidence": "He added a box because the cups kept falling off."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "wheel",
+          "pull",
+          "keep",
+          "stay",
+          "while",
+          "somewhere"
+        ],
+        "outside": [],
+        "content": [
+          "wheel",
+          "pull"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "wheel",
+          "pull",
+          "keep",
+          "stay",
+          "while",
+          "somewhere"
+        ],
+        "outside": [],
+        "content": [
+          "wheel",
+          "pull"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

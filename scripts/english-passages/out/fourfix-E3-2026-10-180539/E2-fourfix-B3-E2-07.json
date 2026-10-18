@@ -1,0 +1,230 @@
+{
+  "id": "E2-fourfix-B3-E2-07",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-07",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "fourfix: fourfix"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "fourfix",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-07",
+    "level": "E2",
+    "category": "games",
+    "title": "The Red Ball",
+    "passage": "Max hid a red ball under one of three cups. Priya pointed to the cup in the middle. Max lifted it and showed her the ball. Priya laughed and said she had seen a red part below the cup.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Max hide?",
+        "options": [
+          "A red ball.",
+          "A red car.",
+          "A red apple."
+        ],
+        "answer": 0,
+        "evidence": "Max hid a red ball under one of three cups."
+      },
+      {
+        "op": "detail",
+        "stem": "Which cup did Priya choose?",
+        "options": [
+          "The first one.",
+          "The middle one.",
+          "The last one."
+        ],
+        "answer": 1,
+        "evidence": "Priya pointed to the cup in the middle."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Max lifted the cup.",
+          "Priya said how she knew.",
+          "Priya chose a cup."
+        ],
+        "answer": 2,
+        "evidence": "Priya pointed to the cup in the middle."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 39,
+        "sentences": 4,
+        "flyers": [
+          "middle",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "middle"
+        ]
+      }
+    },
+    "change_note_tr": "Kırmızı parçanın bardak kaldırılmadan önce görüldüğü had seen ile açıklaştırıldı; sıralama şıkkı yeni eyleme uyarlandı."
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 39,
+        "sentences": 4,
+        "flyers": [
+          "middle",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "middle"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

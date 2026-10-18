@@ -1,0 +1,230 @@
+{
+  "id": "E3-fourfix-B3-E3-21",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-21",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "fourfix: fourfix"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "fourfix",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-21",
+    "level": "E3",
+    "category": "imagination",
+    "title": "The Moon Garden",
+    "passage": "Ravi drew a garden on the moon for a new story. Yan added round flowers that looked like little stars. Ravi drew a glass house because his story plants needed air. Yan put all the flowers inside the house. He added a lamp because his story garden had no light at night. Ravi added a child looking at the flowers through the glass. The child carried a picture of a garden at home. Yan drew one small star flower on that picture too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Yan put the flowers?",
+        "options": [
+          "Beside the glass house.",
+          "Above the glass house.",
+          "Inside the glass house."
+        ],
+        "answer": 2,
+        "evidence": "Yan put all the flowers inside the house."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ravi add a glass house?",
+        "options": [
+          "His plants needed a place away from light.",
+          "His plants needed a bigger place to walk.",
+          "His plants needed air around them."
+        ],
+        "answer": 2,
+        "evidence": "Ravi drew a glass house because his story plants needed air."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Yan add a lamp?",
+        "options": [
+          "The garden needed light when night came.",
+          "The child needed a lamp for reading.",
+          "The child needed a lamp to find a toy."
+        ],
+        "answer": 0,
+        "evidence": "He added a lamp because his story garden had no light at night."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "air",
+          "light",
+          "through",
+          "beside",
+          "away"
+        ],
+        "outside": [],
+        "content": [
+          "air",
+          "light"
+        ]
+      }
+    },
+    "change_note_tr": "Cam evde gereksiz pencere gerekçesi kaldırıldı; gece ışığı olmayan hikâye bahçesine lamba eklendi, neden sorusu ve kanıtı güncellendi."
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "air",
+          "light",
+          "through",
+          "beside",
+          "away"
+        ],
+        "outside": [],
+        "content": [
+          "air",
+          "light"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "An adult can eliminate A and B by common sense alone, as glass lets in light and plants cannot walk."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q2 pedagogy needs_text (An adult can eliminate A and B by common sense alone, as glass lets in light and plants cannot walk.)",
+      "q2 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

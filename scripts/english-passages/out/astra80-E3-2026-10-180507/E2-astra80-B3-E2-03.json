@@ -1,0 +1,223 @@
+{
+  "id": "E2-astra80-B3-E2-03",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-03",
+    "level": "E2",
+    "category": "clothes",
+    "title": "The Long Scarf",
+    "passage": "Sam put his long scarf across the backs of two chairs. Zoe sat between the chairs with her toy dog. Sam called the scarf a rainbow and asked about the weather. Zoe held up the dog and said it was raining dogs today.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Sam put the scarf?",
+        "options": [
+          "Across two tables.",
+          "Across two boxes.",
+          "Across two chairs."
+        ],
+        "answer": 2,
+        "evidence": "Sam put his long scarf across the backs of two chairs."
+      },
+      {
+        "op": "detail",
+        "stem": "What toy did Zoe have?",
+        "options": [
+          "A cat.",
+          "A bear.",
+          "A dog."
+        ],
+        "answer": 2,
+        "evidence": "Zoe sat between the chairs with her toy dog."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Sam asked about the weather.",
+          "Zoe sat between the chairs.",
+          "Zoe held up her toy."
+        ],
+        "answer": 1,
+        "evidence": "Zoe sat between the chairs with her toy dog."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "across",
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "across",
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

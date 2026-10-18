@@ -1,0 +1,244 @@
+{
+  "id": "E4-astra80-B3-E4-14",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-14",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-14",
+    "level": "E4",
+    "category": "performance",
+    "title": "The Audience of One",
+    "passage": "Sam had prepared a funny show for three friends after school. Only Zoe could come because the others had music lessons. He looked at the three empty chairs and began putting his paper hat away. Zoe asked if a show needed three people watching before it could start. Sam thought about that, then put the hat back on. He started the first part of his show while Zoe sat in the middle chair. She laughed at a moment when he had expected everyone to be quiet. Sam stopped, then tried moving again more slowly. Zoe laughed even harder and asked how he had done it. After the show, they worked on that part together. Sam wrote down the new part so he could remember it next time. The other two chairs had stayed empty, but he had found something worth keeping for a bigger audience.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Why could the other friends not come?",
+        "options": [
+          "They had a sports match.",
+          "They had music lessons.",
+          "They had a library visit."
+        ],
+        "answer": 1,
+        "evidence": "Only Zoe could come because the others had music lessons."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Sam write down the new part?",
+        "options": [
+          "Zoe had forgotten all the words of the first show.",
+          "Zoe's laughter helped him find a part that worked well.",
+          "The teacher had asked him to copy a whole play."
+        ],
+        "answer": 1,
+        "evidence": "Zoe laughed even harder and asked how he had done it.",
+        "rationale": "Her laughter and their joint revision reveal an effective moment that he wants to preserve."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Finding value in performing for a smaller audience than expected.",
+          "Choosing the funniest costume before inviting friends to a show.",
+          "Learning why music lessons are more popular than acting."
+        ],
+        "answer": 0,
+        "evidence": "Sam wrote down the new part so he could remember it next time.",
+        "rationale": "A disappointing turnout becomes a useful and enjoyable performance with feedback."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 145,
+        "sentences": 12,
+        "flyers": [
+          "expect",
+          "even",
+          "worth",
+          "forgotten",
+          "copy",
+          "whole",
+          "value"
+        ],
+        "outside": [
+          "audience",
+          "laughter",
+          "mainly",
+          "perform"
+        ],
+        "content": [
+          "audience",
+          "laughter",
+          "perform"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 145,
+        "sentences": 12,
+        "flyers": [
+          "expect",
+          "even",
+          "worth",
+          "forgotten",
+          "copy",
+          "whole",
+          "value"
+        ],
+        "outside": [
+          "audience",
+          "laughter",
+          "mainly",
+          "perform"
+        ],
+        "content": [
+          "audience",
+          "laughter",
+          "perform"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,224 @@
+{
+  "id": "E2-astra80-B3-E2-04",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-04",
+    "level": "E2",
+    "category": "classroom",
+    "title": "The Little Note",
+    "passage": "Raj found a note inside his pencil case at school. Ella had drawn a star and written HELLO below it. Raj smiled and put the note beside his spelling book. After the lesson, he drew a second star and gave the note back to Ella.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Raj find the note?",
+        "options": [
+          "In his lunch box.",
+          "In his pencil case.",
+          "In his school bag."
+        ],
+        "answer": 1,
+        "evidence": "Raj found a note inside his pencil case at school."
+      },
+      {
+        "op": "detail",
+        "stem": "What had Ella drawn?",
+        "options": [
+          "A star.",
+          "A moon.",
+          "A sun."
+        ],
+        "answer": 0,
+        "evidence": "Ella had drawn a star and written HELLO below it."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Raj drew another star.",
+          "Raj gave the note back.",
+          "Raj smiled at the note."
+        ],
+        "answer": 2,
+        "evidence": "Raj smiled and put the note beside his spelling book."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 45,
+        "sentences": 4,
+        "flyers": [
+          "note",
+          "case",
+          "beside",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "note",
+          "case"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 45,
+        "sentences": 4,
+        "flyers": [
+          "note",
+          "case",
+          "beside",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "note",
+          "case"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

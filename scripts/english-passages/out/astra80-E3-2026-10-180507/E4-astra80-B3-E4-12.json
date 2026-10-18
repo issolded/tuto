@@ -1,0 +1,260 @@
+{
+  "id": "E4-astra80-B3-E4-12",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-12",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-12",
+    "level": "E4",
+    "category": "building",
+    "title": "The Door That Stayed Open",
+    "passage": "Tom and Mia built a little shop from a large cardboard box. They made a door from a separate piece of card and attached it with tape. Mia put toy fruit on the shelves while Tom wrote prices on paper. When they opened the door, it knocked the nearest shelf and sent apples onto the floor. Tom picked up the apples and tried opening the door less widely. Now the toy bear carrying a shopping bag could not fit through. Mia moved the shelf away from the door, leaving a clear space behind it. They tested the door again before putting the apples back. This time, it opened fully and the shelf stayed still. Tom sent the bear inside with its bag. Mia asked what it wanted to buy. Tom said the bear would start with the apples, since it already knew where they were.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What fell when the door hit the shelf?",
+        "options": [
+          "Toy apples.",
+          "Toy oranges.",
+          "Toy carrots."
+        ],
+        "answer": 0,
+        "evidence": "When they opened the door, it knocked the nearest shelf and sent apples onto the floor."
+      },
+      {
+        "op": "inference",
+        "stem": "Why was opening the door only a little not a good solution?",
+        "options": [
+          "It left too little room for a shopper to enter.",
+          "It made the shelf too high for Mia to reach.",
+          "It stopped Tom from writing the prices clearly."
+        ],
+        "answer": 0,
+        "evidence": "Now the toy bear carrying a shopping bag could not fit through.",
+        "rationale": "The collision is reduced, but the bear and bag cannot pass, so the doorway’s purpose is still blocked."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Choosing which fruit a pretend shop should sell first.",
+          "Making a shop smaller so it fits on a classroom table.",
+          "Testing and changing a model so its parts work together."
+        ],
+        "answer": 2,
+        "evidence": "This time, it opened fully and the shelf stayed still.",
+        "rationale": "Moving the shelf solves the interference while preserving both access and the display."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 145,
+        "sentences": 12,
+        "flyers": [
+          "cardboard",
+          "separate",
+          "tape",
+          "price",
+          "knock",
+          "less",
+          "wide",
+          "fit",
+          "clear",
+          "test",
+          "fully",
+          "reach",
+          "fits"
+        ],
+        "outside": [
+          "attach",
+          "onto",
+          "solution",
+          "mainly",
+          "pretend"
+        ],
+        "content": [
+          "attach",
+          "solution",
+          "pretend"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 145,
+        "sentences": 12,
+        "flyers": [
+          "cardboard",
+          "separate",
+          "tape",
+          "price",
+          "knock",
+          "less",
+          "wide",
+          "fit",
+          "clear",
+          "test",
+          "fully",
+          "reach",
+          "fits"
+        ],
+        "outside": [
+          "attach",
+          "onto",
+          "solution",
+          "mainly",
+          "pretend"
+        ],
+        "content": [
+          "attach",
+          "solution",
+          "pretend"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "regional? They made a door from a separate piece of card | piece of card",
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

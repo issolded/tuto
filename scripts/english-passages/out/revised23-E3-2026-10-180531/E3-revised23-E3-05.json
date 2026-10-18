@@ -1,0 +1,226 @@
+{
+  "id": "E3-revised23-E3-05",
+  "level": "E3",
+  "premise": {
+    "id": "E3-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E3-05",
+    "level": "E3",
+    "title": "The Last Page",
+    "passage": "Meera made a little book about a duck looking for its egg. Dan read it and turned to the last page. The page was empty because Meera could not choose an ending. Dan drew a small yellow foot at the bottom. Meera laughed and added another foot, a head, and two wings. She drew an open egg because the baby duck had come out. Then she drew the big duck looking at its baby. Dan read the book again, right to the new ending.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Dan draw on the last page?",
+        "options": [
+          "A little yellow wing.",
+          "A little yellow foot.",
+          "A little yellow head."
+        ],
+        "answer": 1,
+        "evidence": "Dan drew a small yellow foot at the bottom."
+      },
+      {
+        "op": "cause",
+        "stem": "Why was the last page empty?",
+        "options": [
+          "Meera had run out of yellow paint.",
+          "Dan had asked for a page to write on.",
+          "Meera did not know how to end the story."
+        ],
+        "answer": 2,
+        "evidence": "The page was empty because Meera could not choose an ending."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Meera draw the egg open?",
+        "options": [
+          "The little duck was outside it now.",
+          "The big duck had dropped it.",
+          "The egg had fallen from a table."
+        ],
+        "answer": 0,
+        "evidence": "She drew an open egg because the baby duck had come out."
+      }
+    ],
+    "metrics": {
+      "words": 84,
+      "sentences": 8,
+      "max_sentence_words": 12
+    },
+    "change_note_tr": "Yanıltıcı first çıkarıldı; space/decide/finish yerine daha basit şıklar yazıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "turn",
+          "empty",
+          "wing"
+        ],
+        "outside": [],
+        "content": [
+          "empty",
+          "wing"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "turn",
+          "empty",
+          "wing"
+        ],
+        "outside": [],
+        "content": [
+          "empty",
+          "wing"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

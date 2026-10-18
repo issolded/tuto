@@ -1,0 +1,222 @@
+{
+  "id": "E3-astra80-B3-E3-23",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-23",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-23",
+    "level": "E3",
+    "category": "building",
+    "title": "The Little Tunnel",
+    "passage": "Tom put a book over two boxes to make a tunnel. Mia sent a toy train through it. The last part of the train caught on one box. Tom moved the boxes because the train needed more room. Mia tried again, and all of the train came through. She put a lamp beside it because she wanted to see inside the tunnel. Tom looked in and found a small toy sheep. Mia moved the sheep outside before the next train came.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was the tunnel roof made from?",
+        "options": [
+          "A plate.",
+          "A ruler.",
+          "A book."
+        ],
+        "answer": 2,
+        "evidence": "Tom put a book over two boxes to make a tunnel."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Tom move the boxes?",
+        "options": [
+          "The train needed a longer place to go through.",
+          "The train had stopped before getting to them.",
+          "The opening was too small for the train."
+        ],
+        "answer": 2,
+        "evidence": "Tom moved the boxes because the train needed more room."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Mia bring a lamp?",
+        "options": [
+          "To make the toy train look yellow.",
+          "To look inside the little tunnel.",
+          "To read the name below the train."
+        ],
+        "answer": 1,
+        "evidence": "She put a lamp beside it because she wanted to see inside the tunnel."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "tunnel",
+          "over",
+          "through",
+          "beside"
+        ],
+        "outside": [],
+        "content": [
+          "tunnel"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "tunnel",
+          "over",
+          "through",
+          "beside"
+        ],
+        "outside": [],
+        "content": [
+          "tunnel"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

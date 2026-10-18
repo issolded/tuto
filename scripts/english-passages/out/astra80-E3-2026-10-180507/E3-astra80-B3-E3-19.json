@@ -1,0 +1,231 @@
+{
+  "id": "E3-astra80-B3-E3-19",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-19",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-19",
+    "level": "E3",
+    "category": "music",
+    "title": "The Slow Ending",
+    "passage": "Jack and Aisha were learning a song about a train. The first part went quickly, like a train going fast. Jack slowed down because the train in the song was stopping. Aisha moved her toy train across the table while he sang. She stopped it beside a cup because the cup was their station. Jack sang the last word, and Aisha opened the toy train's door. They put a small toy bear beside the train. It had come for a very quiet cup of tea.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was their station?",
+        "options": [
+          "A cup.",
+          "A box.",
+          "A book."
+        ],
+        "answer": 0,
+        "evidence": "She stopped it beside a cup because the cup was their station."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Jack sing more slowly?",
+        "options": [
+          "The song's words were difficult to read.",
+          "The song's train was coming to a stop.",
+          "The song's ending was hard to hear."
+        ],
+        "answer": 1,
+        "evidence": "Jack slowed down because the train in the song was stopping."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Aisha stop beside the cup?",
+        "options": [
+          "That was where the table ended.",
+          "That was the train's stopping place.",
+          "That was where she kept the train."
+        ],
+        "answer": 1,
+        "evidence": "She stopped it beside a cup because the cup was their station."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "fast",
+          "across",
+          "while",
+          "beside",
+          "hard",
+          "hear",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "fast",
+          "hard"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "fast",
+          "across",
+          "while",
+          "beside",
+          "hard",
+          "hear",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "fast",
+          "hard"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

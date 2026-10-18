@@ -1,0 +1,243 @@
+{
+  "id": "E4-revised23-E4-03",
+  "level": "E4",
+  "premise": {
+    "id": "E4-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E4-03",
+    "level": "E4",
+    "title": "A Place in the Picture",
+    "passage": "Kofi and Ella were making a picture for the school library. Kofi painted a huge tree, while Ella drew children reading beneath it. When they put the two parts together, one branch covered a child's book. Kofi offered to paint over the branch, but he liked its crooked shape. Ella moved her drawing lower, and now the child's feet disappeared below the paper. For a while, neither of them changed anything. Then Ella took a clean sheet and drew the child sitting higher, with legs hanging down. She placed the new drawing on the branch. The child was reading in the tree, with the book clearly in view. Kofi added a bird looking at the open pages. They left the rest of the children on the ground. Their picture now had one reader with a very unusual seat.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where would the finished picture go?",
+        "options": [
+          "In the school hall.",
+          "In their classroom.",
+          "In the school library."
+        ],
+        "answer": 2,
+        "evidence": "Kofi and Ella were making a picture for the school library."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Ella draw the child again?",
+        "options": [
+          "To make the child fit a place in the tree.",
+          "To make the child look more like Kofi.",
+          "To give the child a different book to read."
+        ],
+        "answer": 0,
+        "evidence": "Then Ella took a clean sheet and drew the child sitting higher, with legs hanging down.",
+        "rationale": "The new pose lets the child sit on the branch instead of being hidden by it or falling outside the page."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Two children choose one drawing when they cannot fit both into their picture.",
+          "Two children change a drawing so they can keep both parts of their picture.",
+          "Two children start a new drawing when they run out of room in their picture."
+        ],
+        "answer": 1,
+        "evidence": "The child was reading in the tree, with the book clearly in view.",
+        "rationale": "The problem and resolution concern combining the tree and reader drawings into one picture."
+      }
+    ],
+    "metrics": {
+      "words": 138,
+      "sentences": 12,
+      "max_sentence_words": 16
+    },
+    "change_note_tr": "Ana fikir seçenekleri aynı özet yapısına ve benzer uzunluğa getirildi.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 138,
+        "sentences": 12,
+        "flyers": [
+          "beneath",
+          "branch",
+          "cover",
+          "crooked",
+          "neither",
+          "sheet",
+          "hang",
+          "clear",
+          "rest",
+          "fit",
+          "cannot"
+        ],
+        "outside": [
+          "mainly"
+        ],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 138,
+        "sentences": 12,
+        "flyers": [
+          "beneath",
+          "branch",
+          "cover",
+          "crooked",
+          "neither",
+          "sheet",
+          "hang",
+          "clear",
+          "rest",
+          "fit",
+          "cannot"
+        ],
+        "outside": [
+          "mainly"
+        ],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

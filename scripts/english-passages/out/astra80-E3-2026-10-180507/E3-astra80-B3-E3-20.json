@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-20",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-20",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-20",
+    "level": "E3",
+    "category": "helping",
+    "title": "The Two Bags",
+    "passage": "Meera and Dan helped put away the classroom toys. Meera had a bag of cars, and Dan had a bag of animals. A little toy horse was in Meera's bag. She gave it to Dan because his bag was for animals. Dan took out a toy truck and gave it to her. He looked in his bag again because he wanted all the cars together. At the bottom, he found a book about trucks. They put that on the bookcase, beside the other books.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Dan find at the bottom?",
+        "options": [
+          "A picture of a train.",
+          "A toy red car.",
+          "A book about trucks."
+        ],
+        "answer": 2,
+        "evidence": "At the bottom, he found a book about trucks."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Meera give Dan the horse?",
+        "options": [
+          "His bag was the animal bag.",
+          "He wanted a horse for his drawing.",
+          "He needed a toy to take home."
+        ],
+        "answer": 0,
+        "evidence": "She gave it to Dan because his bag was for animals."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Dan look in his bag again?",
+        "options": [
+          "To find any cars in the wrong bag.",
+          "To find a pencil for the teacher.",
+          "To find the book he had lost."
+        ],
+        "answer": 0,
+        "evidence": "He looked in his bag again because he wanted all the cars together."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "away",
+          "together",
+          "beside",
+          "other"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "away",
+          "together",
+          "beside",
+          "other"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "regional? toy truck",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

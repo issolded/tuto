@@ -1,0 +1,230 @@
+{
+  "id": "E2-astra80-B3-E2-09",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-09",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-09",
+    "level": "E2",
+    "category": "helping",
+    "title": "The Open Door",
+    "passage": "Meera carried a big box of books towards the classroom. Dan opened the door and stood beside it. Meera put the box on the teacher's desk and thanked him. Dan looked inside the box and found the animal book he wanted to read.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was Meera carrying?",
+        "options": [
+          "A box of books.",
+          "A box of toys.",
+          "A box of clothes."
+        ],
+        "answer": 0,
+        "evidence": "Meera carried a big box of books towards the classroom."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did she put the box?",
+        "options": [
+          "Under the teacher's chair.",
+          "Beside the classroom window.",
+          "On the teacher's desk."
+        ],
+        "answer": 2,
+        "evidence": "Meera put the box on the teacher's desk and thanked him."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Meera put down the box.",
+          "Dan looked inside the box.",
+          "Dan opened the door."
+        ],
+        "answer": 2,
+        "evidence": "Dan opened the door and stood beside it."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "towards",
+          "beside",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "towards"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "towards",
+          "beside",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "towards"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

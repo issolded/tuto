@@ -1,0 +1,221 @@
+{
+  "id": "E3-revised23-trade-for-friend",
+  "level": "E3",
+  "premise": {
+    "id": "trade-for-friend",
+    "genre": "fiction",
+    "theme": "friends",
+    "source": "revised23: 150 Writing Prompts p7 (shape only)",
+    "premise": "A child offers to swap something valuable for something small, because they really want to make a new friend. The other child notices the real reason."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "trade-for-friend",
+    "title": "The Little Shell",
+    "passage": "Tom brought his best model plane to school in a big box. Mia, a new classmate, had a little white shell. Tom asked to swap his plane for her shell. He offered it because he wanted Mia to play with him. Mia looked at the plane, then at Tom. She gave the box back because she wanted a friend, not a plane. Then she put her shell between them on the table. They made a little island for it and played together.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Mia bring to school?",
+        "options": [
+          "A small white shell.",
+          "A little blue boat.",
+          "A small green frog."
+        ],
+        "answer": 0,
+        "evidence": "Mia, a new classmate, had a little white shell."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Tom offer his plane?",
+        "options": [
+          "He wanted something for his garden.",
+          "He wanted someone to play with.",
+          "He wanted more room in his bag."
+        ],
+        "answer": 1,
+        "evidence": "He offered it because he wanted Mia to play with him."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Mia give the box back?",
+        "options": [
+          "She wanted a different model.",
+          "She wanted a smaller toy.",
+          "She wanted someone to be friends with."
+        ],
+        "answer": 2,
+        "evidence": "She gave the box back because she wanted a friend, not a plane."
+      }
+    ],
+    "id": "R1-E3-01",
+    "level": "E3",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "together"
+        ],
+        "outside": [
+          "swap"
+        ],
+        "content": [
+          "swap"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "together"
+        ],
+        "outside": [
+          "swap"
+        ],
+        "content": [
+          "swap"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

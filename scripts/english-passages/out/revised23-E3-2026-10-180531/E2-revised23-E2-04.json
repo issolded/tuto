@@ -1,0 +1,235 @@
+{
+  "id": "E2-revised23-E2-04",
+  "level": "E2",
+  "premise": {
+    "id": "E2-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E2-04",
+    "level": "E2",
+    "title": "Two Lunch Boxes",
+    "passage": "Raj opened a green lunch box and found a toy frog. Ella opened another green lunch box and found two sandwiches. They looked at the names on the boxes and laughed. They gave each other the right box, and Ella sat her frog beside her lunch.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Raj find when he first opened a box?",
+        "options": [
+          "A toy frog.",
+          "A toy mouse.",
+          "A toy fish."
+        ],
+        "answer": 0,
+        "evidence": "Raj opened a green lunch box and found a toy frog."
+      },
+      {
+        "op": "detail",
+        "stem": "How many sandwiches were in the box Ella opened?",
+        "options": [
+          "Three.",
+          "One.",
+          "Two."
+        ],
+        "answer": 2,
+        "evidence": "Ella opened another green lunch box and found two sandwiches."
+      },
+      {
+        "op": "sequence",
+        "stem": "What did they do just before giving the boxes back?",
+        "options": [
+          "They ate their sandwiches.",
+          "They read the names and laughed.",
+          "They put their boxes in their bags."
+        ],
+        "answer": 1,
+        "evidence": "They looked at the names on the boxes and laughed."
+      }
+    ],
+    "metrics": {
+      "words": 46,
+      "sentences": 4,
+      "max_sentence_words": 15
+    },
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 46,
+        "sentences": 4,
+        "flyers": [
+          "each",
+          "other",
+          "beside",
+          "just"
+        ],
+        "outside": [],
+        "content": [
+          "just"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 46,
+        "sentences": 4,
+        "flyers": [
+          "each",
+          "other",
+          "beside",
+          "just"
+        ],
+        "outside": [],
+        "content": [
+          "just"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

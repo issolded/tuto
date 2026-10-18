@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-04",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-04",
+    "level": "E3",
+    "category": "classroom",
+    "title": "The Short Message",
+    "passage": "Raj wrote a message for Ella on the classroom board. He wanted her to bring her animal book after lunch. Ella stood by the door but could not read his little letters. Raj wrote bigger because Ella was reading from across the room. Then he drew a cat because her book had cats on the front. Ella saw the cat and held up the right book. Raj smiled and drew a chair beside the cat. Ella brought her chair too, for their reading.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was on the front of Ella's book?",
+        "options": [
+          "Pictures of dogs.",
+          "Pictures of birds.",
+          "Pictures of cats."
+        ],
+        "answer": 2,
+        "evidence": "Then he drew a cat because her book had cats on the front."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj make his letters bigger?",
+        "options": [
+          "Ella wanted to copy them into a book.",
+          "Ella wanted to paint over the little letters.",
+          "Ella was looking from the other end of the room."
+        ],
+        "answer": 2,
+        "evidence": "Raj wrote bigger because Ella was reading from across the room."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj draw a cat?",
+        "options": [
+          "It matched the animals on her book.",
+          "It showed the pet he wanted at home.",
+          "It was the next word in their lesson."
+        ],
+        "answer": 0,
+        "evidence": "Then he drew a cat because her book had cats on the front."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "across",
+          "beside",
+          "copy",
+          "over",
+          "other",
+          "match"
+        ],
+        "outside": [],
+        "content": [
+          "copy",
+          "match"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "across",
+          "beside",
+          "copy",
+          "over",
+          "other",
+          "match"
+        ],
+        "outside": [],
+        "content": [
+          "copy",
+          "match"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

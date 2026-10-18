@@ -1,0 +1,226 @@
+{
+  "id": "E3-astra80-B3-E3-15",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-15",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-15",
+    "level": "E3",
+    "category": "school",
+    "title": "The Wrong Day",
+    "passage": "Raj brought his sports shoes to school on Tuesday. Ella looked at them and pointed to the class calendar. The sports lesson was on Wednesday this week. Raj kept the shoes at school because he needed them the next day. He wrote a note because he wanted to tell his parent where they were. Ella drew a little shoe beside the words. Raj put the note in his bag and laughed. His shoes were at school before the next school day had started.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "When was the sports lesson that week?",
+        "options": [
+          "On Wednesday.",
+          "On Thursday.",
+          "On Friday."
+        ],
+        "answer": 0,
+        "evidence": "The sports lesson was on Wednesday this week."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj leave the shoes at school?",
+        "options": [
+          "He wanted Ella to try them on.",
+          "He would wear them there the next day.",
+          "He needed his teacher to clean them."
+        ],
+        "answer": 1,
+        "evidence": "Raj kept the shoes at school because he needed them the next day."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj write a note?",
+        "options": [
+          "To ask for a different sports lesson.",
+          "To tell Ella when school would end.",
+          "To say where his shoes were."
+        ],
+        "answer": 2,
+        "evidence": "He wrote a note because he wanted to tell his parent where they were."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "calendar",
+          "keep",
+          "note",
+          "beside",
+          "leave"
+        ],
+        "outside": [],
+        "content": [
+          "calendar",
+          "note"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "calendar",
+          "keep",
+          "note",
+          "beside",
+          "leave"
+        ],
+        "outside": [],
+        "content": [
+          "calendar",
+          "note"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

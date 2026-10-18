@@ -1,0 +1,233 @@
+{
+  "id": "E2-revised23-E2-01",
+  "level": "E2",
+  "premise": {
+    "id": "E2-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E2-01",
+    "level": "E2",
+    "title": "The Small Box",
+    "passage": "Tom put a small box on the table for his toy car. Mia put a toy duck in the box. Tom came back with his car and saw the duck. He made a paper boat for the duck, and his car got its box back.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Tom want to put in the box?",
+        "options": [
+          "His toy car.",
+          "His toy train.",
+          "His toy plane."
+        ],
+        "answer": 0,
+        "evidence": "Tom put a small box on the table for his toy car."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Tom make for the duck?",
+        "options": [
+          "A little bed.",
+          "A paper boat.",
+          "A small hat."
+        ],
+        "answer": 1,
+        "evidence": "He made a paper boat for the duck, and his car got its box back."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Tom saw the duck.",
+          "Mia put the duck in the box.",
+          "Tom put the box on the table."
+        ],
+        "answer": 2,
+        "evidence": "Tom put a small box on the table for his toy car."
+      }
+    ],
+    "metrics": {
+      "words": 45,
+      "sentences": 4,
+      "max_sentence_words": 15
+    },
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 45,
+        "sentences": 4,
+        "flyers": [
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 45,
+        "sentences": 4,
+        "flyers": [
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}
