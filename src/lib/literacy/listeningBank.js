@@ -227,7 +227,7 @@ const SOURCE = [
 
   { id: 'L5-025', step: 'A5', topic: 'Family & friends', lines: [
     ['May', "What did you buy for Sam's birthday, Ben?"],
-    ['Ben', 'A kite. Not a ball, he has lots of balls.'],
+    ['Ben', 'A kite. Not a ball. He has got five of them.'],
     ['May', 'Oh! I wanted to buy a kite too.'],
     ['Ben', 'You can buy a comic. Sam likes comics.'],
     ['May', 'Good idea!'],
@@ -452,7 +452,7 @@ const SOURCE = [
 // by its place in `options` (answer first), the feedback, and the instruction for each step.
 export const listenClip = {
   talk: id => `ld-${id}`, question: id => `lq-${id}`, option: (id, i) => `lo-${id}-${i + 1}`, feedback: id => `lf-${id}`,
-  instruction: step => (step === 'A5' ? 'i-listen-answer' : 'i-listen-choose'),
+  instruction: () => 'i-listen-choose',
 }
 
 // Order the child sees: the answer moves to position (hash of id) % 3, the wrong options keep their order.

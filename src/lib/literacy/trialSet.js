@@ -39,9 +39,9 @@ export const TRIAL_ITEMS = [
     options: pics(['on', scene('ball-on-chair')], ['under', scene('ball-under-chair')], ['next', scene('ball-next-to-chair')]), key: 'under', feedback: { audio: 's-ball-under-chair' } },
   { id: 'A04', area: 'A', step: 'A3', mode: 'listen-picture', instruction: { audio: 'i-listen-picture' }, prompt: { audio: 's-two-cats-sleeping' },
     options: pics(['two-sleep', scene('two-cats-sleeping')], ['one-sleep', scene('one-cat-sleeping')], ['two-run', scene('two-cats-running')]), key: 'two-sleep', feedback: { audio: 's-two-cats-sleeping' } },
-  { id: 'A05', area: 'A', step: 'A5', mode: 'listen-answer', instruction: { audio: 'i-listen-answer' }, prompt: { audio: 'd-a05', question: 'q-a05' },
+  { id: 'A05', area: 'A', step: 'A5', mode: 'listen-answer', instruction: { audio: 'i-listen-choose' }, prompt: { audio: 'd-a05', question: 'q-a05' },
     options: [{ id: 'o1', audio: 'o-a05-1' }, { id: 'o2', audio: 'o-a05-2' }, { id: 'o3', audio: 'o-a05-3' }], key: 'o2', feedback: { audio: 'f-a05' } },
-  { id: 'A06', area: 'A', step: 'A5', mode: 'listen-answer', instruction: { audio: 'i-listen-answer' }, prompt: { audio: 'd-a06', question: 'q-a06' },
+  { id: 'A06', area: 'A', step: 'A5', mode: 'listen-answer', instruction: { audio: 'i-listen-choose' }, prompt: { audio: 'd-a06', question: 'q-a06' },
     options: [{ id: 'o1', audio: 'o-a06-1' }, { id: 'o2', audio: 'o-a06-2' }, { id: 'o3', audio: 'o-a06-3' }], key: 'o1', feedback: { audio: 'f-a06' } },
 
   // ── B: reading words ────────────────────────────────────────────────────────────────────────

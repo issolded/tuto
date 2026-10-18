@@ -1,0 +1,18 @@
+# Exceptions to the safety pass (safety.mjs). One word per line, with the reason. Everything else on the
+# engine's lists (scripts/english/blocklist.txt, LDNOOBW, cuss 1-2) stops a text from being recorded.
+#
+# The pass folds endings (-s, -ed, -ing) to catch inflected forms; these are clean words it misread:
+striped        # folded to "strip"
+interested     # folded to "interest" (grown-up list: money sense)
+interesting    # same
+#
+# Words of the Cambridge Young Learners lists (Starters/Movers/Flyers), taught to children aged 7-12.
+# The engine's blocklist keeps them out of WordNet example sentences for other reasons (hospital and
+# police scenes, "sentence" as a court sentence); said alone, as the list's own word, they are fine.
+ambulance
+nurse
+medicine
+police
+sentence
+horrible
+naughty

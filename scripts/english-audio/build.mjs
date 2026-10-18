@@ -27,6 +27,7 @@ import { execFileSync } from 'node:child_process'
 import { CLIPS as TRIAL_CLIPS, WORD_CLIPS, LISTENING_CLIPS, VOICES, SPEAKERS } from './clips.mjs'
 import { checkSignal, checkAsr, judge } from './qc.mjs'
 import { fetchRetry } from './net.mjs'
+import { safety } from './safety.mjs'
 
 // --engine chirp (default, chosen 2026-10-17 by ear and by the checks) | gemini. Chirp = Google Cloud
 // Text-to-Speech, Chirp 3 HD voices (same voice names as Gemini's). Cloud TTS takes no API key: it uses the gcloud login (gcloud auth application-default login,
@@ -301,6 +302,10 @@ clipLoop: for (const [index, clip] of CLIPS.entries()) {
       console.log(`skip ${key} (${manifest[key].status === 'listen' ? 'waiting to be heard' : 'made, not checked yet'})`)
       continue
     }
+    // Safety gate: a text with a blocked word is never sent to TTS (safety.mjs, the English engine's lists).
+    const said = clip.kind === 'dialogue' ? clip.lines.map(([, l]) => l) : [clip.text]
+    const blocked = said.flatMap(t => safety(t).blocked)
+    if (blocked.length) { console.log(`BLOCKED ${key}: ${[...new Set(blocked)].join(', ')} (not recorded)`); continue }
     console.log(`${key}`)
     let pcm, c2pa, rate = 24000, lines = []
     try {

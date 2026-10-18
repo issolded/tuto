@@ -1,6 +1,7 @@
 // Checks the listening bank (src/lib/literacy/listeningBank.js), A4 and A5 items: everything is heard,
 // nothing is read. Two parts:
-//   static (always): sizes, vocabulary against Starters + Movers, UK/US words, speakers, options
+//   static (always): sizes, vocabulary against Starters + Movers, UK/US words, the safety lists
+//                    (scripts/english-audio/safety.mjs), speakers, options
 //   --solve: a blind solver (gemini-3.8-flash) answers each question 3 times WITHOUT the transcript and twice
 //            WITH it. Guessed without it (3/3 on the key) = the question measures common sense, not
 //            listening: rejected. Missed with it = the question or the key is unclear: rejected.
@@ -11,6 +12,7 @@
 import { readFileSync } from 'node:fs'
 import { offList, wordCount } from './vocab.mjs'
 import { fetchRetry } from '../english-audio/net.mjs'
+import { safety } from '../english-audio/safety.mjs'
 import { LISTENING, SPEAKER_GENDER, NARRATOR } from '../../src/lib/literacy/listeningBank.js'
 
 const arg = k => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : null }
@@ -49,6 +51,9 @@ function staticCheck(it) {
   if (unlisted.length) problems.push(`not on the lists: ${unlisted.join(', ')}`)
   if (flyers.length > S.flyers) problems.push(`${flyers.length} Flyers words (${flyers.join(', ')}), at most ${S.flyers}`)
   else if (flyers.length) notes.push(`Flyers: ${flyers.join(', ')}`)
+  const unsafe = [...new Set(safety(all).blocked)], grownUp = [...new Set(safety(all).grownUp)]
+  if (unsafe.length) problems.push(`blocked word: ${unsafe.join(', ')}`)
+  if (grownUp.length) notes.push(`grown-up topic word: ${grownUp.join(', ')}`)
   const regional = [...new Set(words(all).filter(w => REGIONAL.has(w)))]
   if (regional.length) problems.push(`UK/US word: ${regional.join(', ')}`)
   const who = [...new Set(it.lines.map(([s]) => s))]

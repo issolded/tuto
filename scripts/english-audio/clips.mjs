@@ -54,7 +54,9 @@ export const CLIPS = [
   { id: 'f-a06', kind: 'sentence', text: 'To get a book. Leo left it on the kitchen table.', items: ['A06'] },
   // instructions, heard in the listening area (A has no written text) and in the worked example
   { id: 'i-listen-picture', kind: 'instruction', text: 'Listen and choose the picture.', items: ['A01', 'A02', 'A03', 'A04'] },
-  { id: 'i-listen-answer', kind: 'instruction', text: 'Listen to the children. Then choose the answer.', items: ['A05', 'A06'] },
+  // One neutral instruction for every listen-and-answer item (2026-10-18, user): the voices are adults, and some
+  // talks have Dad or a teacher, so "Listen to the children" was not right.
+  { id: 'i-listen-choose', kind: 'instruction', text: 'Listen. Then choose the answer.', items: ['A05', 'A06', 'A4', 'A5'] },
   { id: 'i-look', kind: 'instruction', text: 'Look and listen.', items: ['example'] },
   { id: 'i-your-turn', kind: 'instruction', text: 'Now you try.', items: ['example'] },
 ]
@@ -97,9 +99,8 @@ export const WORD_CLIPS = [...byText.values()].map(c => ({ ...c, levels: [...c.l
 
 // The listening bank (src/lib/literacy/listeningBank.js), A4 and A5: `build.mjs --set listening`. Per item the
 // talk (A5: one clip per line, joined; A4: the narrator), the question, the three options and the feedback.
-// A4 has its own instruction: "Listen to the children" does not fit a narrator.
+// The instruction, i-listen-choose, is in the trial set above.
 export const LISTENING_CLIPS = [
-  { id: 'i-listen-choose', kind: 'instruction', text: 'Listen. Then choose the answer.', items: ['A4'] },
   ...LISTENING.flatMap(it => [
     it.lines.length === 1 && it.lines[0][0] === NARRATOR
       ? { id: listenClip.talk(it.id), kind: 'sentence', text: it.lines[0][1], items: [it.id] }

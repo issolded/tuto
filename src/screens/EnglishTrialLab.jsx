@@ -190,7 +190,7 @@ function Item({ item, variety, review, round, onDone }) {
       {item.prompt?.picture && <Picture p={item.prompt.picture} size={130} />}
       {item.prompt?.audio && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <ListenButton clip={item.prompt.audio} variety={variety} big review={review} label={item.mode === 'listen-answer' ? 'Listen to the children' : 'Listen'} />
+          <ListenButton clip={item.prompt.audio} variety={variety} big review={review} label="Listen" />
           {item.prompt.question && <ListenButton clip={item.prompt.question} variety={variety} big review={review} label="Question" />}
         </div>
       )}
@@ -289,7 +289,7 @@ export default function EnglishTrialLab() {
   })
   const top = useRef(null)
   const items = TRIAL_ITEMS.filter(i => area === 'all' || i.area === area)
-  const recs = Object.values(AUDIO).filter(r => !/^(yw|ld|lq|lo|lf)-/.test(r.clip) && r.clip !== 'i-listen-choose')   // the trial set; words and the bank have their own tabs
+  const recs = Object.values(AUDIO).filter(r => !/^(yw|ld|lq|lo|lf)-/.test(r.clip))   // the trial set; words and the bank have their own tabs
   const count = s => recs.filter(r => r.status === s).length
   // Only marks for recordings still in the manifest and not yet approved there.
   // One file can serve several clips ("dog" in the trial set and the wordlist): count and list it once.
