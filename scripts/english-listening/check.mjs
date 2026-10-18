@@ -10,7 +10,7 @@
 //
 // Exit 1 when any item fails. A pass means "worth a person's time", never "approved".
 import { readFileSync } from 'node:fs'
-import { offList, wordCount } from './vocab.mjs'
+import { offList, wordCount, REGIONAL } from './vocab.mjs'
 import { fetchRetry } from '../english-audio/net.mjs'
 import { safety } from '../english-audio/safety.mjs'
 import { LISTENING, SPEAKER_GENDER, NARRATOR } from '../../src/lib/literacy/listeningBank.js'
@@ -24,12 +24,7 @@ const STEP = {
   A5: { words: [35, 65], sentences: [4, 10], flyers: 2, speakers: [2, 2] },
 }
 const MAX_SENTENCE = 15
-// Said differently in UK and US English, or a different word for the same thing: kept out of the shared bank.
-const REGIONAL = new Set(('mum mom mummy mommy holiday holidays vacation garden yard football soccer autumn fall sweets candy biscuit biscuits ' +
-  'cookie cookies chips fries crisps flat apartment trousers pants rubbish trash garbage lift elevator maths math shop shops store stores ' +
-  'film films movie movies rubber eraser pavement sidewalk queue torch flashlight lorry truck motorway highway petrol gas ' +
-  'colour color favourite favorite centre center programme program pyjamas pajamas jumper sweater nappy diaper postman ' +
-  'mailman semester rucksack backpack cinema theater theatre tap faucet').split(' '))
+
 const NAMES_OK = new Set(Object.keys(SPEAKER_GENDER))
 
 const sentences = t => t.split(/(?<=[.!?])\s+/).filter(Boolean)

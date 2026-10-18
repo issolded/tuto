@@ -5,6 +5,7 @@ import { CATALOG, entriesFor, hasContent, pick, STATUS } from '../../src/lib/lit
 import { TRACKS, start, nextProbe, record, gaps } from '../../src/lib/literacy/ladder.js'
 import { BANDS, generateItem as vrItem } from '../../src/lib/englishTemplates.js'
 import { SKILLS, generateItem as litItem } from '../../src/lib/literacy/engine.js'
+import { pictureItem } from '../../src/lib/literacy/pictureWords.js'
 
 test('every entry names a real step and a known status', () => {
   for (const e of CATALOG) {
@@ -23,6 +24,8 @@ test('every generator reference makes items', () => {
       if (e.source === 'vr-engine') {
         assert.ok(BANDS[e.ref.band]?.types.includes(e.ref.type), `${e.ref.type} is not in band ${e.ref.band}`)
         if (vrItem(e.ref.band, e.ref.type, seed * 7919)) made++
+      } else if (e.source === 'picture-words') {
+        if (pictureItem(e.ref.kind, seed)) made++
       } else {
         assert.ok(SKILLS[e.ref.skill], e.ref.skill)
         if (litItem(e.ref.skill, seed * 7919)) made++
@@ -32,9 +35,10 @@ test('every generator reference makes items', () => {
   }
 })
 
-test('nothing is approved yet, so a child screen gets nothing; the lab gets 30 of 32 steps', () => {
+test('nothing is approved yet, so a child screen gets nothing; checked content covers 28 of 32 steps', () => {
   assert.equal(gaps(hasContent('approved')).length, 32)
-  assert.deepEqual(gaps(hasContent('draft')), ['A2', 'Ca2'])
+  assert.deepEqual(gaps(hasContent('checked')), ['A2', 'A3', 'Ca1', 'E5'])
+  assert.deepEqual(gaps(hasContent('draft')), ['A2'])
 })
 
 test('pick is deterministic, alternates sources, and avoids items already seen', () => {
@@ -46,6 +50,7 @@ test('pick is deterministic, alternates sources, and avoids items already seen',
   const sources = new Set([0, 1, 2].map(s => pick('B', 'B3', s, { minStatus: 'draft' }).source))
   assert.ok(sources.size >= 2, 'B3 has a bank and a generator: both should come up')
   assert.equal(pick('A', 'A2', 1, { minStatus: 'draft' }), null)
+  assert.equal(pick('A', 'A1', 4, { minStatus: 'checked' }).source, 'picture-words')
 })
 
 test('the ladder engine runs on the catalog: every probe can be served', () => {
@@ -58,6 +63,7 @@ test('the ladder engine runs on the catalog: every probe can be served', () => {
     assert.ok(got, `nothing to serve at ${p.step}`)
     s = record(s, { track: p.track, step: p.step, item: got.id || JSON.stringify(got.ref), correct: i % 3 !== 0, session: 1 + Math.floor(i / 10) })
   }
-  // A track with no checked content at all is never asked and stays unknown (Ca at "checked").
-  assert.equal(s.tracks.Ca.history.length, 0)
+  // A step with no checked content is never asked.
+  const empty = new Set(gaps(has))
+  for (const t of Object.keys(s.tracks)) for (const h of s.tracks[t].history) assert.ok(!empty.has(`${t}${h.step}`), `${t}${h.step} was asked`)
 })

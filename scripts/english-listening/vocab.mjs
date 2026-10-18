@@ -33,7 +33,7 @@ const IRREGULAR = {
   better: 'good', best: 'good', worse: 'bad', worst: 'bad', me: 'i', my: 'i', mine: 'i', him: 'he', his: 'he', her: 'she', hers: 'she',
   us: 'we', our: 'we', ours: 'we', them: 'they', their: 'they', theirs: 'they', its: 'it', an: 'a', shoes: 'shoe', clothes: 'clothes',
   hid: 'hide', put: 'put', let: 'let', cut: 'cut', hit: 'hit', read: 'read', shut: 'shut', laid: 'lay', paid: 'pay', kept: 'keep',
-  built: 'build', lent: 'lend', meant: 'mean', swept: 'sweep', tore: 'tear', stuck: 'stick', fed: 'feed', bit: 'bite', hung: 'hang',
+  built: 'build', sung: 'sing', sang: 'sing', swum: 'swim', drunk: 'drink', drawn: 'draw', written: 'write', ridden: 'ride', eaten2: 'eat', lent: 'lend', meant: 'mean', swept: 'sweep', tore: 'tear', stuck: 'stick', fed: 'feed', bit: 'bite', hung: 'hang',
 }
 const CONTRACT = { "n't": ['not'], "'s": [], "'re": ['be'], "'m": ['be'], "'ll": ['will'], "'ve": ['have'], "'d": ['would'] }
 const SPECIAL = { "can't": ['can', 'not'], "won't": ['will', 'not'], "don't": ['do', 'not'], "doesn't": ['do', 'not'], "didn't": ['do', 'not'],
@@ -79,3 +79,10 @@ export function offList(text, maxLevel = 2) {
   return out
 }
 export const wordCount = text => (text.match(/[A-Za-z’']+|\d+/g) || []).length
+
+// Said differently in UK and US English, or a different word for the same thing: kept out of the shared bank.
+export const REGIONAL = new Set(('mum mom mummy mommy holiday holidays vacation garden yard football soccer autumn fall sweets candy biscuit biscuits ' +
+  'cookie cookies chips fries crisps flat apartment trousers pants rubbish trash garbage lift elevator maths math shop shops store stores ' +
+  'film films movie movies rubber eraser pavement sidewalk queue torch flashlight lorry truck motorway highway petrol gas ' +
+  'colour color favourite favorite centre center programme program pyjamas pajamas jumper sweater nappy diaper postman ' +
+  'mailman semester rucksack backpack cinema theater theatre tap faucet').split(' '))

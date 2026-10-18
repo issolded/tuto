@@ -14,6 +14,7 @@
 import { TRIAL_ITEMS } from './trialSet.js'
 import { LISTENING } from './listeningBank.js'
 import READING from './readingPreview.generated.json' with { type: 'json' }
+import { SENTENCES } from './sentenceBank.js'
 
 export const STATUS = ['draft', 'checked', 'approved']
 const atLeast = (s, min) => STATUS.indexOf(s) >= STATUS.indexOf(min)
@@ -24,7 +25,11 @@ const steps = s => ({ track: s.match(/^[A-Z][a-z]?/)[0], step: s })
 // of seeds): the server tries the next seed.
 const VR = 'vr-engine'      // src/lib/englishTemplates.js generateItem(band, type, seed): live English card
 const LIT = 'literacy-engine'   // src/lib/literacy/engine.js generateItem(skill, seed): Codex pilot lab
+const PIC = 'picture-words'     // src/lib/literacy/pictureWords.js pictureItem(kind, seed): Starters noun -> 4 pictures
 const GENERATED = [
+  // ── A1 / B1: a word heard or read -> one of four pictures ──
+  { source: PIC, step: 'A1', format: 'listen-picture', ref: { kind: 'listen' }, note: '32 Starters nouns drawn in the project; recordings not approved' },
+  { source: PIC, step: 'B1', format: 'read-picture', ref: { kind: 'read' }, note: '32 Starters nouns drawn in the project' },
   // ── B: written word meaning ──
   { source: LIT, step: 'B2', format: 'read-choice', ref: { skill: 'meaning' }, note: 'word -> definition; reading load is the definition' },
   { source: LIT, step: 'B2', format: 'read-choice', ref: { skill: 'cloze' } },
@@ -78,6 +83,8 @@ const BANKS = [
     'the 36-item trial set: editorial, not tried with a child; audio not approved'),
   ...bank('listening-bank', LISTENING.map(i => ({ id: i.id, step: i.step, format: 'listen-answer' })), 'checked',
     'blind-solver and safety checked; audio not approved'),
+  ...bank('sentence-bank', SENTENCES.map(i => ({ id: i.id, step: i.step, format: 'read-choice' })), 'checked',
+    'src/lib/literacy/sentenceBank.js: vocabulary, safety and blind-solver checked; not approved'),
   ...bank('reading-passages', READING.items.map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'checked',
     'scripts/english-passages candidates: passed automatic checks, not approved by a person'),
 ]

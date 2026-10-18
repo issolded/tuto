@@ -2,6 +2,8 @@ import { createContext, useContext, useMemo, useRef, useState } from 'react'
 import { TRIAL_ITEMS, PASSAGES, AREAS, TRIAL_REVISION } from '../lib/literacy/trialSet'
 import AUDIO from '../lib/literacy/audioManifest.generated.json'
 import { LISTENING_ITEMS, LISTENING_REVISION, listenClip, NARRATOR } from '../lib/literacy/listeningBank'
+import { SENTENCE_ITEMS, SENTENCE_REVISION } from '../lib/literacy/sentenceBank'
+import { pictureItem } from '../lib/literacy/pictureWords'
 import ART from '../lib/literacy/artManifest.generated.json'
 import { EMOJI_ART } from '../lib/puzzleArt.generated'
 
@@ -47,9 +49,10 @@ function play(url) {
 }
 
 function Picture({ p, size = 120, fill = false }) {
-  const src = p.object ? EMOJI_ART[ART.objects[p.object]] : `/${ART.scenes[p.scene]}`
+  const src = p.emoji ? EMOJI_ART[p.emoji] : p.object ? EMOJI_ART[ART.objects[p.object]] : `/${ART.scenes[p.scene]}`
   // fill: as wide as its option card, so three options sit side by side on a phone
-  const style = fill ? { width: '100%', height: 'auto', aspectRatio: p.object ? '1' : '240 / 200' } : { width: size, height: p.object ? size : size * 200 / 240 }
+  const square = p.object || p.emoji
+  const style = fill ? { width: '100%', height: 'auto', aspectRatio: square ? '1' : '240 / 200' } : { width: size, height: square ? size : size * 200 / 240 }
   return <img src={src} alt="" draggable={false} style={{ ...style, objectFit: 'contain', display: 'block' }} />
 }
 
@@ -134,6 +137,31 @@ function BankView({ variety, round }) {
           </details>
         </div>
       ))}
+    </>
+  )
+}
+
+// The gap-filling content (2026-10-18): A1/B1 picture-word items (generated; 12 samples each) and the written
+// sentence bank (Ca2, Ca3, Ca4, Cd6, E1).
+const GAP_ITEMS = [
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(seed => pictureItem('listen', seed)),
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(seed => pictureItem('read', seed)),
+  ...SENTENCE_ITEMS,
+]
+function GapView({ variety, round }) {
+  const [step, setStep] = useState('all')
+  const steps = [...new Set(GAP_ITEMS.map(i => i.step))]
+  const items = GAP_ITEMS.filter(i => step === 'all' || i.step === step)
+  const chip = (on, label, f) => (
+    <button key={label} onClick={f} style={{ border: `2px solid ${on ? INK : LINE}`, background: on ? INK : 'white', color: on ? 'white' : INK, borderRadius: 999, padding: '4px 12px', fontFamily: FONT, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{label}</button>
+  )
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, color: SOFT }}>
+        {chip(step === 'all', 'All', () => setStep('all'))}{steps.map(s => chip(step === s, s, () => setStep(s)))}
+        <span>{items.length} items · {SENTENCE_REVISION} · pictures generated (samples), sentences checked by scripts/english-ladder/check-bank.mjs</span>
+      </div>
+      {items.map(it => <Item key={it.id + variety + round} item={it} variety={variety} review round={round} />)}
     </>
   )
 }
@@ -317,7 +345,7 @@ export default function EnglishTrialLab() {
           </div>
         </header>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}{btn(view === 'bank', 'Listening bank', () => setView('bank'))}
+          {btn(view === 'review', 'Review', () => setView('review'))}{btn(view === 'play', 'Play with a child', () => { setView('play'); reset() })}{btn(view === 'words', 'Words', () => setView('words'))}{btn(view === 'bank', 'Listening bank', () => setView('bank'))}{btn(view === 'gaps', 'New steps', () => setView('gaps'))}
           <span style={{ width: 12 }} />
           {btn(variety === 'uk', 'UK voice', () => setVariety('uk'))}{btn(variety === 'us', 'US voice', () => setVariety('us'))}
           <span style={{ width: 12 }} />
@@ -339,6 +367,7 @@ export default function EnglishTrialLab() {
         {view === 'review' && items.map(it => <Item key={it.id + variety + round} item={it} variety={variety} review round={round} />)}
         {view === 'words' && <WordsView variety={variety} />}
         {view === 'bank' && <BankView variety={variety} round={round} />}
+        {view === 'gaps' && <GapView variety={variety} round={round} />}
         </Marks.Provider>
 
         {view === 'play' && (index < items.length ? (
