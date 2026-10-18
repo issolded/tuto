@@ -16,3 +16,10 @@ police
 sentence
 horrible
 naughty
+#
+# Reading stories (2026-10-18): plain uses the endings fold misread or a list over-blocks.
+stripe         # folded to "strip"
+stripes        # same
+tested         # folded to "teste"
+hearing        # the sense; the blocklist means the court hearing
+balls          # plain plural (three balls); the slang use is blocked as phrases in safety.mjs

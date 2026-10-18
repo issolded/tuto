@@ -13,7 +13,9 @@ const list = f => readFileSync(new URL(f, dir), 'utf8').split('\n').map(l => l.t
 const cuss = Object.entries(JSON.parse(readFileSync(new URL('vendor/cuss.json', dir), 'utf8'))).filter(([, s]) => s >= 1).map(([w]) => w.toLowerCase())
 const ALLOW = new Set(readFileSync(new URL('./safety-allow.txt', import.meta.url), 'utf8').split('\n')
   .map(l => l.replace(/#.*/, '').trim().toLowerCase()).filter(Boolean))
-const BLOCKED = new Set([...list('blocklist.txt'), ...list('vendor/ldnoobw-en.txt'), ...cuss])
+// A word allowed on its own can still be slang in a phrase: these stay blocked (matched as whole phrases).
+const PHRASES = ['lots of balls', 'has balls', 'have balls', 'got balls', 'his balls', 'my balls', 'no balls']
+const BLOCKED = new Set([...list('blocklist.txt'), ...list('vendor/ldnoobw-en.txt'), ...cuss, ...PHRASES])
 const GROWN_UP = new Set(list('sentence-topics.txt'))
 
 const forms = w => [w, w.replace(/'s$/, ''), w.replace(/s$/, ''), w.replace(/es$/, ''), w.replace(/ed$/, ''), w.replace(/ed$/, 'e'), w.replace(/ing$/, ''), w.replace(/ing$/, 'e')]

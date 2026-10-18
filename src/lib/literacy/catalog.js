@@ -15,6 +15,7 @@ import { TRIAL_ITEMS } from './trialSet.js'
 import { LISTENING } from './listeningBank.js'
 import READING from './readingPreview.generated.json' with { type: 'json' }
 import { SENTENCES } from './sentenceBank.js'
+import STORIES from './readingStories.generated.json' with { type: 'json' }
 
 export const STATUS = ['draft', 'checked', 'approved']
 const atLeast = (s, min) => STATUS.indexOf(s) >= STATUS.indexOf(min)
@@ -85,6 +86,9 @@ const BANKS = [
     'blind-solver and safety checked; audio not approved'),
   ...bank('sentence-bank', SENTENCES.map(i => ({ id: i.id, step: i.step, format: 'read-choice' })), 'checked',
     'src/lib/literacy/sentenceBank.js: vocabulary, safety and blind-solver checked; not approved'),
+  // Draft, not checked: 341 of 600 questions were answered right 3/3 by a solver that never saw the story.
+  ...bank('reading-stories-200', STORIES.items.map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'draft',
+    'batch of 2026-10-18: gate passed, safety clean, every key right with the text; 57% of questions answerable without reading'),
   ...bank('reading-passages', READING.items.map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'checked',
     'scripts/english-passages candidates: passed automatic checks, not approved by a person'),
 ]
