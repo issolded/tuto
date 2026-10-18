@@ -215,7 +215,50 @@
     "notes": [
       "q2 guessable by a strong model without the text",
       "q3 guessable by a strong model without the text"
-    ]
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Uses 'little' as a fair synonym for 'short' to test comprehension rather than exact word matching."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests the explicit cause. The paraphrase 'too tall for short pencils' perfectly captures 'too deep' in context."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good distractors and accurately tests the explicit cause provided in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is well-written, logical, and perfectly suited for the target level. The ending where the pencils look like the cat's hair is a cute, cohesive touch."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
   },
   "log": [],
   "status": "awaiting-human"
