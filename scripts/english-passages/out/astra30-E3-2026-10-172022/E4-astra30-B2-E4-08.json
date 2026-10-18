@@ -1,0 +1,236 @@
+{
+  "id": "E4-astra30-B2-E4-08",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-08",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-08",
+    "level": "E4",
+    "category": "music",
+    "title": "The Space in the Song",
+    "passage": "Jack and Aisha had written a song for a little classroom show. Jack sang the words while Aisha played four notes on a keyboard. At the end of each line, Jack took a breath, but Aisha started the next part immediately. He kept arriving a word behind the music. They tried singing faster, then playing more slowly, but neither change felt right. Aisha asked Jack to sing without the keyboard while she listened. This time, she noticed the little spaces between his lines. She marked those places on her paper and waited there when they tried together again. Jack finished each breath before the next notes began. At the show, they reached the last word together. Afterwards, Jack said that Aisha had played the quiet parts very well too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What instrument did Aisha play?",
+        "options": [
+          "A keyboard.",
+          "A guitar.",
+          "A piano."
+        ],
+        "answer": 0,
+        "evidence": "Jack sang the words while Aisha played four notes on a keyboard."
+      },
+      {
+        "op": "inference",
+        "stem": "What did Jack mean by the quiet parts?",
+        "options": [
+          "The notes Aisha played too softly to hear.",
+          "The pauses when Aisha waited for his breath.",
+          "The words Jack forgot during the show."
+        ],
+        "answer": 1,
+        "evidence": "She marked those places on her paper and waited there when they tried together again.",
+        "rationale": "Aisha deliberately stops between lines so Jack can breathe; his comment values those silent intervals."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Listening to each other to make a song work.",
+          "Finding a louder instrument for a classroom show.",
+          "Writing easier words so a song can be sung quickly."
+        ],
+        "answer": 0,
+        "evidence": "Jack finished each breath before the next notes began.",
+        "rationale": "The successful change is coordination through listening and pauses, not speed or simpler words."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "breath",
+          "neither",
+          "notice",
+          "reach",
+          "afterwards",
+          "sung"
+        ],
+        "outside": [
+          "immediately",
+          "paus"
+        ],
+        "content": [
+          "immediately",
+          "paus"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "breath",
+          "neither",
+          "notice",
+          "reach",
+          "afterwards",
+          "sung"
+        ],
+        "outside": [
+          "immediately",
+          "pause"
+        ],
+        "content": [
+          "immediately",
+          "pause"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

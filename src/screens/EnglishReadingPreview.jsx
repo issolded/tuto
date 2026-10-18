@@ -5,6 +5,8 @@ import TutoMascot from '../components/TutoMascot'
 import { useIsTablet } from '../components/Shell'
 import DATA from '../lib/literacy/readingPreview.generated.json'
 
+const DECISIONS_KEY = 'tuto_reading_decisions_v1'
+
 // Preview of a reading-comprehension sitting (ladder level E) inside the child's English screen.
 // A design preview, not the product: the passages are candidates from scripts/english-passages that
 // passed the automatic checks and have NOT been approved by a person, and the answer keys are in this
@@ -126,6 +128,19 @@ export default function EnglishReadingPreview() {
   const nav = useNavigate()
   const isTablet = useIsTablet()
   const stories = DATA.items
+  // Reviewer decisions, kept in this browser and downloaded as JSON for the repo
+  // (scripts/english-passages/decisions.json). Not the product's storage: a preview tool.
+  const [decisions, setDecisions] = useState(() => { try { return JSON.parse(localStorage.getItem(DECISIONS_KEY) || '{}') } catch { return {} } })
+  function decide(id, verdict) {
+    const note = verdict === 'rejected' ? (window.prompt('Neden? (kısa not)') || '') : ''
+    const next = { ...decisions, [id]: { verdict, note, at: new Date().toISOString() } }
+    setDecisions(next)
+    try { localStorage.setItem(DECISIONS_KEY, JSON.stringify(next)) } catch { /* private window: kept in memory only */ }
+  }
+  function download() {
+    const blob = new Blob([JSON.stringify({ source: DATA.source || null, decisions }, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reading-decisions.json'; a.click()
+  }
   const [storyIdx, setStoryIdx] = useState(0)
   const lang = 'en'                               // the English section speaks English, whatever the app language
   const [seenExample, setSeenExample] = useState(false)
@@ -206,13 +221,27 @@ export default function EnglishReadingPreview() {
   }
 
   // A preview bar, not part of the child's screen: which story, which app language, what this is.
+  const cur = stories[storyIdx]
+  const dec = cur && decisions[cur.id]
+  const nDone = stories.filter(x => decisions[x.id]).length
+  const mark = v => v === 'approved' ? '✅ ' : v === 'rejected' ? '❌ ' : ''
+  const small = (bg) => ({ border: 'none', borderRadius: 8, padding: '5px 10px', fontWeight: 800, fontSize: 12.5, cursor: 'pointer', background: bg, color: '#fff' })
   const bar = (
     <div style={{ background: '#241f3a', color: '#fff', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', flexWrap: 'wrap', fontSize: 12.5 }}>
-      <b style={{ fontWeight: 800, opacity: .85 }}>Önizleme · onaysız aday metinler</b>
+      <b style={{ fontWeight: 800, opacity: .85 }}>Önizleme · {nDone}/{stories.length} karar</b>
       <span style={{ flex: 1 }} />
-      <select value={storyIdx} onChange={e => restart(Number(e.target.value))} style={{ borderRadius: 8, border: 'none', padding: '4px 6px', fontSize: 12.5, maxWidth: 190 }}>
-        {stories.map((s, i) => <option key={s.id} value={i}>{i + 1}. {s.title}</option>)}
+      <select value={storyIdx} onChange={e => restart(Number(e.target.value))} style={{ borderRadius: 8, border: 'none', padding: '4px 6px', fontSize: 12.5, maxWidth: 220 }}>
+        {stories.map((s, i) => <option key={s.id} value={i}>{mark(decisions[s.id]?.verdict)}{s.level ? s.level + ' · ' : ''}{s.title}</option>)}
       </select>
+      {cur && <>
+        <button onClick={() => decide(cur.id, 'approved')} style={small(dec?.verdict === 'approved' ? '#2e9b6a' : 'rgba(255,255,255,.18)')}>Onayla</button>
+        <button onClick={() => decide(cur.id, 'rejected')} style={small(dec?.verdict === 'rejected' ? '#c4475f' : 'rgba(255,255,255,.18)')}>Reddet</button>
+      </>}
+      <button onClick={download} disabled={!nDone} style={{ ...small('rgba(255,255,255,.18)'), opacity: nDone ? 1 : .4 }}>⬇ JSON</button>
+      {dec?.note && <span style={{ flexBasis: '100%', opacity: .8 }}>Not: {dec.note}</span>}
+      {cur && <span style={{ flexBasis: '100%', opacity: .75 }}>
+        Pedagoji denetçisi: {cur.reviewer === 'pro' ? 'pro' : 'yalnız flash (pro bekliyor)'}{cur.reviewNote ? ` · Claude: ${cur.reviewNote}` : ''}
+      </span>}
     </div>
   )
 

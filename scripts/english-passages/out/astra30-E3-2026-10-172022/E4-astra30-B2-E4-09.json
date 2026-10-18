@@ -1,0 +1,248 @@
+{
+  "id": "E4-astra30-B2-E4-09",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-09",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-09",
+    "level": "E4",
+    "category": "observation",
+    "title": "The Afternoon Circle",
+    "passage": "Meera noticed a round patch of light on the classroom wall after lunch. In the morning, that part of the wall had been plain. Dan thought someone had painted a circle while the class was outside. Meera moved her hand across it, and the circle appeared on her hand instead. They looked towards the window, where a small round mirror stood on a table. Their teacher carefully turned the mirror, and the bright circle moved across the wall. She turned it towards the table, and the circle moved there too. Dan brought his drawing over and held it beside the light, keeping it out of his eyes. His paper sun now had a bright circle beside it. Before going home, he put the drawing on the wall where the light had first appeared.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What stood on the table near the window?",
+        "options": [
+          "A small glass bottle.",
+          "A small reading lamp.",
+          "A small round mirror."
+        ],
+        "answer": 2,
+        "evidence": "They looked towards the window, where a small round mirror stood on a table."
+      },
+      {
+        "op": "inference",
+        "stem": "What showed that the circle was not painted on the wall?",
+        "options": [
+          "It was round rather than square.",
+          "It moved onto Meera's hand.",
+          "It appeared after the class had lunch."
+        ],
+        "answer": 1,
+        "evidence": "Meera moved her hand across it, and the circle appeared on her hand instead.",
+        "rationale": "The bright area appears on a new surface when blocked and moves when the mirror turns; paint would remain on the wall."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Working out what made a changing patch of light.",
+          "Finding the best place to hang a classroom painting.",
+          "Learning to draw a circle without a round object."
+        ],
+        "answer": 0,
+        "evidence": "Their teacher carefully turned the mirror, and the bright circle moved across the wall.",
+        "rationale": "The observations trace an apparent mark to light reflected by a mirror."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 133,
+        "sentences": 10,
+        "flyers": [
+          "notice",
+          "patch",
+          "plain",
+          "towards",
+          "bright",
+          "beside",
+          "rather",
+          "hang"
+        ],
+        "outside": [
+          "onto",
+          "object"
+        ],
+        "content": [
+          "object"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 133,
+        "sentences": 10,
+        "flyers": [
+          "notice",
+          "patch",
+          "plain",
+          "towards",
+          "bright",
+          "beside",
+          "rather",
+          "hang"
+        ],
+        "outside": [
+          "onto",
+          "object"
+        ],
+        "content": [
+          "object"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

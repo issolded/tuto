@@ -1,0 +1,228 @@
+{
+  "id": "E3-astra30-B2-E3-08",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-08",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-08",
+    "level": "E3",
+    "category": "music",
+    "title": "The Quiet Clap",
+    "passage": "Jack and Aisha made a song for their toy animals. Jack clapped loudly after every animal name. Aisha asked him to stop because she could not hear the names. Jack tried a quiet clap with only two fingers. Now Aisha could hear every word of the song. She added a long pause because the toy snail moved very slowly. Jack slowly moved the snail across the table in the pause. The slowest animal got there before the song ended.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How did Jack make his quiet clap?",
+        "options": [
+          "With two of his fingers.",
+          "With both of his feet.",
+          "With one of his pencils."
+        ],
+        "answer": 0,
+        "evidence": "Jack tried a quiet clap with only two fingers."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Aisha ask Jack to stop clapping loudly?",
+        "options": [
+          "The claps were waking her sleeping cat.",
+          "The claps stopped her hearing the names.",
+          "The claps were making the table move."
+        ],
+        "answer": 1,
+        "evidence": "Aisha asked him to stop because she could not hear the names."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Aisha leave a pause?",
+        "options": [
+          "Jack needed longer to read a word.",
+          "She needed longer to find the mouse.",
+          "The snail could not come in quickly."
+        ],
+        "answer": 2,
+        "evidence": "She added a long pause because the toy snail moved very slowly."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 79,
+        "sentences": 8,
+        "flyers": [
+          "hear",
+          "finger",
+          "across",
+          "leave"
+        ],
+        "outside": [
+          "pause"
+        ],
+        "content": [
+          "finger",
+          "pause"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 79,
+        "sentences": 8,
+        "flyers": [
+          "hear",
+          "finger",
+          "across",
+          "leave"
+        ],
+        "outside": [
+          "pause"
+        ],
+        "content": [
+          "finger",
+          "pause"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

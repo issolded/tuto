@@ -1,0 +1,251 @@
+{
+  "id": "E4-astra30-B2-E4-10",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-10",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-10",
+    "level": "E4",
+    "category": "imagination",
+    "title": "The Dragon Who Packed Too Much",
+    "passage": "Ravi was writing a comic about a dragon going on a picnic. Yan drew a bag full of cups, plates, books, and a huge blanket. In the next picture, the dragon tried to fly, but the bag stayed on the ground. Ravi wanted the dragon to reach a hill for its picnic. Yan suggested drawing a smaller bag, but Ravi liked all the things inside the big one. They looked at the first picture again. It showed the dragon waiting beside a little cart. Yan drew the dragon putting the bag in the cart and pulling it along the path. At the hill, the dragon opened the blanket for its friends. Ravi added one last picture of the empty cart. A sleepy rabbit had chosen it for a bed.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did the dragon put in the cart?",
+        "options": [
+          "The friends going to the picnic.",
+          "The books borrowed from a library.",
+          "The bag of picnic things."
+        ],
+        "answer": 2,
+        "evidence": "Yan drew the dragon putting the bag in the cart and pulling it along the path."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did the cart solve the problem?",
+        "options": [
+          "It let the dragon move the bag without flying.",
+          "It made the picnic things fit in a smaller bag.",
+          "It showed the dragon a shorter path to the hill."
+        ],
+        "answer": 0,
+        "evidence": "Yan drew the dragon putting the bag in the cart and pulling it along the path.",
+        "rationale": "The bag could not be lifted for flight; moving it on a cart provides a different way to transport it."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Using something already in a comic to solve its story problem.",
+          "Removing extra characters to make a comic easier to follow.",
+          "Changing the place of a picnic so a comic can end sooner."
+        ],
+        "answer": 0,
+        "evidence": "It showed the dragon waiting beside a little cart.",
+        "rationale": "The authors reuse the cart from their opening picture to resolve the transport problem rather than removing the contents of the bag."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "pack",
+          "reach",
+          "beside",
+          "cart",
+          "sleepy",
+          "chosen",
+          "fit",
+          "remove",
+          "extra"
+        ],
+        "outside": [
+          "dragon",
+          "suggest",
+          "solve",
+          "character"
+        ],
+        "content": [
+          "dragon",
+          "suggest",
+          "solve",
+          "character"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "pack",
+          "reach",
+          "beside",
+          "cart",
+          "sleepy",
+          "chosen",
+          "fit",
+          "remove",
+          "extra"
+        ],
+        "outside": [
+          "dragon",
+          "suggest",
+          "solve",
+          "character"
+        ],
+        "content": [
+          "dragon",
+          "suggest",
+          "solve",
+          "character"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

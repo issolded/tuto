@@ -1,0 +1,284 @@
+{
+  "id": "E3-astra30-B2-E3-06",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-06",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-06",
+    "level": "E3",
+    "category": "nature",
+    "title": "The Leaf Pictures",
+    "passage": "Amir and Sara took fallen leaves back to their classroom. Sara put one under some paper and drew over it with a crayon. Lines from the leaf showed on the paper. Amir tried too, but his paper moved across the desk. Sara held it because Amir needed the paper to stay still. He chose a yellow crayon because his leaf picture was for the sun. Sara made a green leaf picture for a tree. Amir drew grass below the tree and smiled at their sunny picture.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Amir choose for his picture?",
+        "options": [
+          "An orange crayon.",
+          "A purple crayon.",
+          "A yellow crayon."
+        ],
+        "answer": 2,
+        "evidence": "He chose a yellow crayon because his leaf picture was for the sun."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sara hold the paper?",
+        "options": [
+          "To stop it moving while Amir drew.",
+          "To show the teacher his finished picture.",
+          "To keep the wet paint off the desk."
+        ],
+        "answer": 0,
+        "evidence": "Sara held it because Amir needed the paper to stay still."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Amir choose yellow?",
+        "options": [
+          "He was making a banana in the drawing.",
+          "He was making a duck in the drawing.",
+          "He was making the sun in the drawing."
+        ],
+        "answer": 2,
+        "evidence": "He chose a yellow crayon because his leaf picture was for the sun."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "leave",
+          "over",
+          "across",
+          "stay",
+          "still",
+          "while",
+          "finish",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "finish"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 86,
+        "sentences": 8,
+        "flyers": [
+          "leave",
+          "over",
+          "across",
+          "stay",
+          "still",
+          "while",
+          "finish",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "finish"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests an explicit detail from the text."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests an explicit cause stated in the text."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good cause question with plausible distractors based on the color yellow."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is well-written, age-appropriate, and clearly demonstrates explicit cause and effect suitable for the E3 level."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

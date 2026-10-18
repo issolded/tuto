@@ -1,0 +1,214 @@
+{
+  "id": "E3-astra30-B2-E3-01",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-01",
+    "level": "E3",
+    "category": "friendship",
+    "title": "The Two Pictures",
+    "passage": "Tom wanted to draw with Mia after lunch. He put his best pencils on her desk. Mia looked surprised because she already had pencils in her bag. Tom said he wanted someone to draw with. Mia moved her chair because they needed room for two pictures. Tom took his pencils back and sat beside her. He drew a dog, and she drew a cat. Then they drew a long sofa for both animals to sit on.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Mia draw?",
+        "options": [
+          "A picture of a cat.",
+          "A picture of a horse.",
+          "A picture of a rabbit."
+        ],
+        "answer": 0,
+        "evidence": "He drew a dog, and she drew a cat."
+      },
+      {
+        "op": "cause",
+        "stem": "Why was Mia surprised by the pencils?",
+        "options": [
+          "She wanted pens for her picture.",
+          "She wanted to go and eat lunch.",
+          "She had pencils in her school bag."
+        ],
+        "answer": 2,
+        "evidence": "Mia looked surprised because she already had pencils in her bag."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Mia move her chair?",
+        "options": [
+          "To sit closer to the window.",
+          "To get a book from her bag.",
+          "To make room for their drawings."
+        ],
+        "answer": 2,
+        "evidence": "Mia moved her chair because they needed room for two pictures."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 76,
+        "sentences": 8,
+        "flyers": [
+          "already",
+          "beside"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 76,
+        "sentences": 8,
+        "flyers": [
+          "already",
+          "beside"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

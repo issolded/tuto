@@ -1,0 +1,207 @@
+{
+  "id": "E2-astra30-B2-E2-03",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-03",
+    "level": "E2",
+    "category": "art",
+    "title": "The Round Cat",
+    "passage": "Sam drew a big orange circle on his paper. Zoe added two ears at the top and a long tail. Sam drew a face inside the circle. Zoe wrote CAT below their picture, and Sam laughed at their very round animal.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Sam draw at the start?",
+        "options": [
+          "An orange circle.",
+          "A yellow square.",
+          "A green star."
+        ],
+        "answer": 0,
+        "evidence": "Sam drew a big orange circle on his paper."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did Zoe write CAT?",
+        "options": [
+          "Above their drawing.",
+          "Inside their drawing.",
+          "Under their drawing."
+        ],
+        "answer": 2,
+        "evidence": "Zoe wrote CAT below their picture, and Sam laughed at their very round animal."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Zoe added the ears.",
+          "Sam drew the face.",
+          "Zoe wrote the word."
+        ],
+        "answer": 0,
+        "evidence": "Zoe added two ears at the top and a long tail."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Tests explicit detail from the first sentence."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Tests explicit detail. 'Under' is an appropriate synonym for 'below'."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests the sequence of events as they occurred in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A sweet, simple, and coherent passage that perfectly fits the E2 level requirements."
+      },
+      "model": "gemini-3.1-pro-preview"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

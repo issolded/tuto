@@ -1,356 +1,1385 @@
 {
  "note": "Candidates from scripts/english-passages; passed automatic checks, NOT approved by a person.",
+ "source": "astra30-E3-2026-10-172022",
  "items": [
   {
-   "id": "E3-animal-fact",
-   "level": "E3",
-   "title": "The Green Frog",
-   "passage": "A little green frog lives in the tall grass. Hungry birds fly above the grass to find food. The frog is green, so the birds can not see it. Sometimes a snake comes into the grass. The frog must move quickly to be safe. It jumps up because it has very strong back legs. The snake is slow and can not catch the frog. The safe frog goes to sleep on a big leaf.",
+   "id": "B2-E2-01",
+   "level": "E2",
+   "title": "The Second Seat",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Tom sat on a mat with his picture book. Mia came over and asked to look at the pictures. Tom moved his bag off the mat, and Mia sat beside him. They opened the book together and found a frog wearing boots.",
    "questions": [
     {
      "op": "detail",
-     "stem": "What flies above the grass to find food?",
+     "stem": "Where did Tom sit?",
      "options": [
-      "Birds that want to eat.",
-      "Bees that want to eat.",
-      "Ducks that want to eat."
-     ],
-     "answer": 0,
-     "evidence": "Hungry birds fly above the grass to find food."
-    },
-    {
-     "op": "cause",
-     "stem": "Why can the birds not see the frog?",
-     "options": [
-      "It hides behind a big brown animal.",
-      "Its body is green like the grass.",
-      "It goes into a big dirty lake."
-     ],
-     "answer": 1,
-     "evidence": "The frog is green, so the birds can not see it."
-    },
-    {
-     "op": "cause",
-     "stem": "Why does the frog jump up?",
-     "options": [
-      "The legs at its back are very strong.",
-      "It wants to catch a fly for dinner.",
-      "It is afraid of a big brown dog."
-     ],
-     "answer": 0,
-     "evidence": "It jumps up because it has very strong back legs."
-    }
-   ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
-   "approved": false
-  },
-  {
-   "id": "E3-animal-shelter-trick",
-   "level": "E3",
-   "title": "The Green Hat",
-   "passage": "It was raining loudly, so Jack looked out the window. He saw a little cat in his garden. The cat was very dry because it sat under a huge plant. The plant had very big leaves. The rain bounced off the top of the big leaves. Jack smiled because he understood the clever animal. The ground under the plant was safe and dry. The leaves were a great green hat!",
-   "questions": [
-    {
-     "op": "detail",
-     "stem": "What did Jack see in his garden?",
-     "options": [
-      "A big dog.",
-      "A small cat.",
-      "A black bird."
-     ],
-     "answer": 1,
-     "evidence": "He saw a little cat in his garden."
-    },
-    {
-     "op": "cause",
-     "stem": "Why did Jack look out the window?",
-     "options": [
-      "His friends were calling him.",
-      "The children were laughing.",
-      "The rain was very loud."
+      "On a small chair.",
+      "On a green sofa.",
+      "On a floor mat."
      ],
      "answer": 2,
-     "evidence": "It was raining loudly, so Jack looked out the window."
+     "evidence": "Tom sat on a mat with his picture book."
     },
     {
-     "op": "cause",
-     "stem": "Why was the little cat dry?",
+     "op": "detail",
+     "stem": "What was the frog wearing?",
      "options": [
-      "It was sitting below a big plant.",
-      "It was hiding in a big box.",
-      "It ran into the house."
+      "A pair of boots.",
+      "A little hat.",
+      "A long scarf."
      ],
      "answer": 0,
-     "evidence": "The cat was very dry because it sat under a huge plant."
+     "evidence": "They opened the book together and found a frog wearing boots."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Tom moved his bag.",
+      "Mia asked to see the pictures.",
+      "They opened the book together."
+     ],
+     "answer": 1,
+     "evidence": "Mia came over and asked to look at the pictures."
     }
    ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
    "approved": false
   },
   {
-   "id": "E3-helping-neighbour",
-   "level": "E3",
-   "title": "The Red Box",
-   "passage": "Zoe helped an old man clean his dirty room. She opened a red box because it looked exciting. Inside the box, she found a big clown hat. Zoe was surprised because the man was always quiet. The old man smiled and put on the hat. He said he worked in a big circus. He wanted the hat so he could look at it.",
+   "id": "B2-E2-02",
+   "level": "E2",
+   "title": "The Cup House",
+   "reviewer": "pro",
+   "reviewNote": "'a paper door she had drawn on the cup' çelişkili: ya kâğıttan kapı ya bardağa çizilmiş kapı.",
+   "passage": "Lily put a cup over her little toy mouse. Ben came to the table and lifted the cup. Lily pointed to a paper door she had drawn on the cup. Ben put it back and asked the mouse if he could come inside.",
    "questions": [
     {
      "op": "detail",
-     "stem": "What was inside the red box?",
+     "stem": "What was under the cup?",
      "options": [
-      "A dirty coat for the cold.",
-      "Something funny to wear on the head.",
-      "A small picture of a circus."
+      "A little toy cat.",
+      "A little toy mouse.",
+      "A little toy frog."
      ],
      "answer": 1,
-     "evidence": "Inside the box, she found a big clown hat."
+     "evidence": "Lily put a cup over her little toy mouse."
     },
     {
-     "op": "cause",
-     "stem": "Why did Zoe open the box?",
+     "op": "detail",
+     "stem": "What had Lily drawn on the cup?",
      "options": [
-      "She wanted to eat the chocolate inside it.",
-      "She wanted to help him find his glasses.",
-      "She wanted to know what was in it."
+      "A door for the house.",
+      "A window for the house.",
+      "A roof for the house."
+     ],
+     "answer": 0,
+     "evidence": "Lily pointed to a paper door she had drawn on the cup."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Lily pointed to her drawing.",
+      "Ben lifted the cup.",
+      "Ben asked to come inside."
+     ],
+     "answer": 1,
+     "evidence": "Ben came to the table and lifted the cup."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E2-03",
+   "level": "E2",
+   "title": "The Round Cat",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Sam drew a big orange circle on his paper. Zoe added two ears at the top and a long tail. Sam drew a face inside the circle. Zoe wrote CAT below their picture, and Sam laughed at their very round animal.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Sam draw at the start?",
+     "options": [
+      "An orange circle.",
+      "A yellow square.",
+      "A green star."
+     ],
+     "answer": 0,
+     "evidence": "Sam drew a big orange circle on his paper."
+    },
+    {
+     "op": "detail",
+     "stem": "Where did Zoe write CAT?",
+     "options": [
+      "Above their drawing.",
+      "Inside their drawing.",
+      "Under their drawing."
      ],
      "answer": 2,
-     "evidence": "She opened a red box because it looked exciting."
+     "evidence": "Zoe wrote CAT below their picture, and Sam laughed at their very round animal."
     },
     {
-     "op": "cause",
-     "stem": "Why was Zoe surprised?",
+     "op": "sequence",
+     "stem": "Which came first?",
      "options": [
-      "The old man gave her a new toy.",
-      "The old man did not talk very much.",
-      "The old man started to sing loudly."
+      "Zoe added the ears.",
+      "Sam drew the face.",
+      "Zoe wrote the word."
      ],
-     "answer": 1,
-     "evidence": "Zoe was surprised because the man was always quiet."
+     "answer": 0,
+     "evidence": "Zoe added two ears at the top and a long tail."
     }
    ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
    "approved": false
   },
   {
-   "id": "E3-lost-thing-trail",
-   "level": "E3",
-   "title": "The Blue Sock",
-   "passage": "Amir could not find his blue sock. He looked under his bed. Then he saw white hair on the stairs. He walked downstairs so he could find his sock. His cat was inside a big box. She had the blue sock. She took it because she was cold. She was sleeping quietly on it. Amir smiled and got another pair.",
+   "id": "B2-E2-04",
+   "level": "E2",
+   "title": "A Very Small Teacher",
+   "reviewer": "pro",
+   "reviewNote": "Soru kuruluşu tuhaf: 'What did Ella give the bear with its pencil?' -> '...besides the pencil?'",
+   "passage": "Raj put his toy bear on the desk before school started. Ella gave the bear a pencil and a small book. Their teacher came in and smiled at the bear. Raj moved it to his bag, but Ella said it needed homework too.",
    "questions": [
     {
      "op": "detail",
-     "stem": "What did Amir see on the stairs?",
+     "stem": "Where did Raj first put his bear?",
      "options": [
-      "Grass from his boots.",
-      "Clothes from his bedroom.",
-      "Hair from his cat."
+      "On the classroom floor.",
+      "On the classroom desk.",
+      "By the classroom door."
+     ],
+     "answer": 1,
+     "evidence": "Raj put his toy bear on the desk before school started."
+    },
+    {
+     "op": "detail",
+     "stem": "What did Ella give the bear with its pencil?",
+     "options": [
+      "A little book.",
+      "A little ruler.",
+      "A little bag."
+     ],
+     "answer": 0,
+     "evidence": "Ella gave the bear a pencil and a small book."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Raj put the bear in his bag.",
+      "Ella said the bear needed homework.",
+      "The teacher smiled at the bear."
      ],
      "answer": 2,
-     "evidence": "Then he saw white hair on the stairs."
-    },
-    {
-     "op": "cause",
-     "stem": "Why did Amir walk downstairs?",
-     "options": [
-      "He wanted to find his sock.",
-      "He wanted to find his book.",
-      "He wanted to eat his breakfast."
-     ],
-     "answer": 0,
-     "evidence": "He walked downstairs so he could find his sock."
-    },
-    {
-     "op": "cause",
-     "stem": "Why did the cat take the sock?",
-     "options": [
-      "She did not want to be cold.",
-      "She wanted to play a game.",
-      "She was looking for food."
-     ],
-     "answer": 0,
-     "evidence": "She took it because she was cold."
+     "evidence": "Their teacher came in and smiled at the bear."
     }
    ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
    "approved": false
   },
   {
-   "id": "E3-plant-experiment",
-   "level": "E3",
-   "title": "The Two Beans",
-   "passage": "Priya and Sara wanted to grow beans. Priya put her bean inside the house. Sara put her bean outside in the garden. Both girls gave them water every day. Sara had a very big green plant. Her plant grew well because it had sun. Priya only had a small weak plant. Her bean was small because it had no sun. So Priya put her plant in the garden too.",
+   "id": "B2-E2-05",
+   "level": "E2",
+   "title": "The Warm Seat",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Nina put a blanket on a chair for her cat. Omar sat on the sofa to read a book. The cat walked past the chair and sat beside Omar. Nina brought the blanket over, and the cat went to sleep on it.",
    "questions": [
     {
      "op": "detail",
-     "stem": "Where did Sara put her bean?",
+     "stem": "What was Omar doing on the sofa?",
      "options": [
-      "It was out on the balcony.",
-      "It was out in the garden.",
-      "It was in a flower box."
-     ],
-     "answer": 1,
-     "evidence": "Sara put her bean outside in the garden."
-    },
-    {
-     "op": "cause",
-     "stem": "Why did Sara have a big plant?",
-     "options": [
-      "The plant sat in the sun.",
-      "The plant grew in good ground.",
-      "The plant had very good food."
-     ],
-     "answer": 0,
-     "evidence": "Her plant grew well because it had sun."
-    },
-    {
-     "op": "cause",
-     "stem": "Why was Priya's plant small?",
-     "options": [
-      "It did not get any food.",
-      "It did not get any sun.",
-      "It was a bad bean."
-     ],
-     "answer": 1,
-     "evidence": "Her bean was small because it had no sun."
-    }
-   ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
-   "approved": false
-  },
-  {
-   "id": "E3-rain-plan-change",
-   "level": "E3",
-   "title": "The Inside Picnic",
-   "passage": "Ravi and Rita wanted a picnic in the park. They could not go outside because it started to rain. Rita was sad about the wet weather. So, Ravi put a big blanket on two chairs. They made a great new house in the bedroom. The children ate their sandwiches inside the new house. The inside picnic was fantastic because there were no spiders. They want to eat in the house every weekend.",
-   "questions": [
-    {
-     "op": "detail",
-     "stem": "Where did the children make their new house?",
-     "options": [
-      "In a room for sleeping.",
-      "In a room for family games.",
-      "In a room for family films."
-     ],
-     "answer": 0,
-     "evidence": "They made a great new house in the bedroom."
-    },
-    {
-     "op": "cause",
-     "stem": "Why did the children not go outside?",
-     "options": [
-      "It was a very cold day.",
-      "They had to do their homework.",
-      "The weather was very wet."
+      "Drawing a picture.",
+      "Playing a game.",
+      "Reading his book."
      ],
      "answer": 2,
-     "evidence": "They could not go outside because it started to rain."
+     "evidence": "Omar sat on the sofa to read a book."
     },
     {
-     "op": "cause",
-     "stem": "Why was the inside picnic fantastic?",
+     "op": "detail",
+     "stem": "Where did the cat choose to sit?",
      "options": [
-      "They did not see any scary animals.",
-      "They ate a big chocolate cake.",
-      "They drank a glass of lemonade."
+      "Next to Omar.",
+      "Next to Nina.",
+      "Under the table."
      ],
      "answer": 0,
-     "evidence": "The inside picnic was fantastic because there were no spiders."
+     "evidence": "The cat walked past the chair and sat beside Omar."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Nina brought the blanket over.",
+      "The cat went to sleep.",
+      "The cat sat beside Omar."
+     ],
+     "answer": 2,
+     "evidence": "The cat walked past the chair and sat beside Omar."
     }
    ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
    "approved": false
   },
   {
-   "id": "E3-shy-to-brave",
-   "level": "E3",
-   "title": "A Clever Idea",
-   "passage": "Max had to sing a song in class today. He was afraid because everyone would look at him. He wanted to hide inside his coat. Then he had a clever idea. He only looked at his friend Kofi, so he did not worry. Max stood at the front of the room. He sang the song very well. The children clapped loudly, and Max smiled. He was very happy about it.",
+   "id": "B2-E2-06",
+   "level": "E2",
+   "title": "The Leaf Boat",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Amir and Sara looked at leaves in their school playground. Sara found a small leaf shaped like a boat. Amir put a round rock inside it. Sara carried the leaf to their teacher and called it a boat with one person.",
    "questions": [
     {
      "op": "detail",
-     "stem": "What did Max have to do?",
+     "stem": "Where did they look at leaves?",
      "options": [
-      "Read a story from a book.",
-      "Draw a picture on the board.",
-      "Use his voice to make music."
+      "In the park near school.",
+      "In the garden at home.",
+      "In the school playground."
      ],
      "answer": 2,
-     "evidence": "Max had to sing a song in class today."
+     "evidence": "Amir and Sara looked at leaves in their school playground."
     },
     {
-     "op": "cause",
-     "stem": "Why did Max feel afraid?",
+     "op": "detail",
+     "stem": "What did Amir put in the leaf?",
      "options": [
-      "All the class would be watching him.",
-      "He had a bad cough and a headache.",
-      "He could not find his homework in his bag."
+      "A little green apple.",
+      "A little round rock.",
+      "A little white shell."
      ],
-     "answer": 0,
-     "evidence": "He was afraid because everyone would look at him."
+     "answer": 1,
+     "evidence": "Amir put a round rock inside it."
     },
     {
-     "op": "cause",
-     "stem": "Why did Max not worry?",
+     "op": "sequence",
+     "stem": "Which came first?",
      "options": [
-      "He kept his eyes on the classroom clock.",
-      "He sang the song with a good friend.",
-      "He kept his eyes on his classmate."
+      "Amir put a rock inside it.",
+      "Sara found the boat-shaped leaf.",
+      "Sara showed the teacher the leaf."
      ],
-     "answer": 2,
-     "evidence": "He only looked at his friend Kofi, so he did not worry."
+     "answer": 1,
+     "evidence": "Sara found a small leaf shaped like a boat."
     }
    ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
    "approved": false
   },
   {
-   "id": "E3-team-mistake",
-   "level": "E3",
-   "title": "The Model Ship",
-   "passage": "Sam and Ella made a model ship for school. They painted the ship red and blue. Then Sam put a big sail on the ship. The ship fell down because the sail was too big. Ella was not angry with Sam. They wanted to fix the mistake so they worked carefully. Ella found a small paper square. Sam put it on the ship. Now the model ship looked fantastic!",
+   "id": "B2-E2-07",
+   "level": "E2",
+   "title": "The Last Animal",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Max and Priya played a game with animal pictures on the floor. Max picked up the lion, and Priya picked up the bear. They both reached for the last picture, a duck. Each held one end and made it fly between them.",
    "questions": [
     {
      "op": "detail",
-     "stem": "What were the children building?",
+     "stem": "Which picture did Max pick up?",
      "options": [
-      "A big house for a bird.",
-      "A small boat for a class.",
-      "A funny kite for a friend."
+      "The picture of a tiger.",
+      "The picture of a horse.",
+      "The picture of a lion."
      ],
-     "answer": 1,
-     "evidence": "Sam and Ella made a model ship for school."
+     "answer": 2,
+     "evidence": "Max picked up the lion, and Priya picked up the bear."
     },
     {
-     "op": "cause",
-     "stem": "Why did the model ship fall down?",
+     "op": "detail",
+     "stem": "Which animal was on the last picture?",
      "options": [
-      "The top part of the boat was huge.",
-      "The bottom part of the boat was not flat.",
-      "The front part of the boat was broken."
-     ],
-     "answer": 0,
-     "evidence": "The ship fell down because the sail was too big."
-    },
-    {
-     "op": "cause",
-     "stem": "Why did the children work carefully together?",
-     "options": [
-      "They needed to carry a big glass bowl for grandma.",
-      "They needed to make the bad work right again.",
-      "They needed to help a good friend with difficult homework."
+      "A sheep.",
+      "A duck.",
+      "A frog."
      ],
      "answer": 1,
-     "evidence": "They wanted to fix the mistake so they worked carefully."
+     "evidence": "They both reached for the last picture, a duck."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Both reached for the duck.",
+      "Priya picked up the bear.",
+      "They made the duck fly."
+     ],
+     "answer": 1,
+     "evidence": "Max picked up the lion, and Priya picked up the bear."
     }
    ],
-   "writer": "gemini-3.1-pro-preview",
-   "premiseSource": "own",
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E2-08",
+   "level": "E2",
+   "title": "The Wrong Song",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Jack started singing a song about a little green frog. Aisha thought it was their song about a big blue fish. They sang different words together and then stopped. Jack tried the fish words with the frog song, and they both laughed.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Which animal was in Jack's first song?",
+     "options": [
+      "A little blue bird.",
+      "A little green frog.",
+      "A little brown mouse."
+     ],
+     "answer": 1,
+     "evidence": "Jack started singing a song about a little green frog."
+    },
+    {
+     "op": "detail",
+     "stem": "What did Jack try at the end?",
+     "options": [
+      "Bird words with the fish song.",
+      "Fish words with the frog song.",
+      "Frog words with the bird song."
+     ],
+     "answer": 1,
+     "evidence": "Jack tried the fish words with the frog song, and they both laughed."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "They stopped singing.",
+      "Jack tried the fish words.",
+      "They sang different words together."
+     ],
+     "answer": 2,
+     "evidence": "They sang different words together and then stopped."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E2-09",
+   "level": "E2",
+   "title": "The Blue Foot",
+   "reviewer": "pro",
+   "reviewNote": "'gave him a dry sock': çorap ıslak değil boyalıydı; 'clean sock'.",
+   "passage": "Meera found a blue mark on the kitchen floor. Dan showed her his sock with blue paint on the bottom. He took off the sock and washed the mark off the floor. Meera looked at the clean floor and gave him a dry sock.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Where was the blue mark?",
+     "options": [
+      "On the kitchen floor.",
+      "On the bathroom wall.",
+      "On the bedroom door."
+     ],
+     "answer": 0,
+     "evidence": "Meera found a blue mark on the kitchen floor."
+    },
+    {
+     "op": "detail",
+     "stem": "What did Meera give Dan?",
+     "options": [
+      "A towel that was wet.",
+      "A shoe that was clean.",
+      "A sock that was dry."
+     ],
+     "answer": 2,
+     "evidence": "Meera looked at the clean floor and gave him a dry sock."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Dan took off his sock.",
+      "Dan washed the floor mark.",
+      "Meera gave Dan another sock."
+     ],
+     "answer": 0,
+     "evidence": "He took off the sock and washed the mark off the floor."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E2-10",
+   "level": "E2",
+   "title": "The Moon Chair",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Ravi put a chair in the living room and called it the moon. Yan sat on it with a book about stars. Ravi asked what the weather was like up there. Yan looked at the book and said it was very good for reading.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Ravi call the chair?",
+     "options": [
+      "A mountain.",
+      "An island.",
+      "The moon."
+     ],
+     "answer": 2,
+     "evidence": "Ravi put a chair in the living room and called it the moon."
+    },
+    {
+     "op": "detail",
+     "stem": "What was Yan's book about?",
+     "options": [
+      "Stars in the sky.",
+      "Animals in the sea.",
+      "Trees in a forest."
+     ],
+     "answer": 0,
+     "evidence": "Yan sat on it with a book about stars."
+    },
+    {
+     "op": "sequence",
+     "stem": "Which came first?",
+     "options": [
+      "Yan sat down with his book.",
+      "Ravi asked about the weather.",
+      "Yan said it was good for reading."
+     ],
+     "answer": 0,
+     "evidence": "Yan sat on it with a book about stars."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-01",
+   "level": "E3",
+   "title": "The Two Pictures",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Tom wanted to draw with Mia after lunch. He put his best pencils on her desk. Mia looked surprised because she already had pencils in her bag. Tom said he wanted someone to draw with. Mia moved her chair because they needed room for two pictures. Tom took his pencils back and sat beside her. He drew a dog, and she drew a cat. Then they drew a long sofa for both animals to sit on.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Mia draw?",
+     "options": [
+      "A picture of a cat.",
+      "A picture of a horse.",
+      "A picture of a rabbit."
+     ],
+     "answer": 0,
+     "evidence": "He drew a dog, and she drew a cat."
+    },
+    {
+     "op": "cause",
+     "stem": "Why was Mia surprised by the pencils?",
+     "options": [
+      "She wanted pens for her picture.",
+      "She wanted to go and eat lunch.",
+      "She had pencils in her school bag."
+     ],
+     "answer": 2,
+     "evidence": "Mia looked surprised because she already had pencils in her bag."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Mia move her chair?",
+     "options": [
+      "To sit closer to the window.",
+      "To get a book from her bag.",
+      "To make room for their drawings."
+     ],
+     "answer": 2,
+     "evidence": "Mia moved her chair because they needed room for two pictures."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-02",
+   "level": "E3",
+   "title": "The Pencil Cup",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Lily kept her pencils in a tall cup on her desk. The short red pencil was difficult to take out. Ben put paper in the bottom because the cup was too deep. Lily put her pencils back and could see every one. She added a drawing because the cup looked very plain. Her drawing showed a red cat with long green legs. Ben pointed at the pencils above the cat. Now it had funny hair too.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Which pencil was difficult to take out?",
+     "options": [
+      "The little red one.",
+      "The little blue one.",
+      "The little black one."
+     ],
+     "answer": 0,
+     "evidence": "The short red pencil was difficult to take out."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Ben add paper inside the cup?",
+     "options": [
+      "The cup was too tall for short pencils.",
+      "The bottom had water in it.",
+      "The bottom had a broken part."
+     ],
+     "answer": 0,
+     "evidence": "Ben put paper in the bottom because the cup was too deep."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Lily add her picture?",
+     "options": [
+      "She wanted to hide a dirty mark.",
+      "She wanted Ben to learn animal words.",
+      "She wanted something on the plain cup."
+     ],
+     "answer": 2,
+     "evidence": "She added a drawing because the cup looked very plain."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-03",
+   "level": "E3",
+   "title": "The Purple Tree",
+   "reviewer": "pro",
+   "reviewNote": "Mantık boşluğu: Sam yalnız mor buluyor, sonra 'mor ağacına' bakıyor; morla boyadığı yazmıyor. Ekle: 'So he painted the tree purple.'",
+   "passage": "Sam was painting a tree for the classroom wall. He looked for green paint but found only purple. Zoe brought a different box because the green paint was inside it. Sam looked at his purple tree and smiled. He kept it purple because he liked the strange tree. Zoe painted orange apples on its branches. Sam added a yellow bird with a purple tail. They called their picture a tree from a dream.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Zoe paint on the tree?",
+     "options": [
+      "Yellow lemons.",
+      "Orange apples.",
+      "Red flowers."
+     ],
+     "answer": 1,
+     "evidence": "Zoe painted orange apples on its branches."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Zoe bring another box?",
+     "options": [
+      "It had paper for a new picture.",
+      "It had the paint Sam wanted.",
+      "It had a place for the wet picture."
+     ],
+     "answer": 1,
+     "evidence": "Zoe brought a different box because the green paint was inside it."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Sam keep the tree purple?",
+     "options": [
+      "He wanted to paint a night sky.",
+      "He liked how the purple tree looked.",
+      "He wanted a tree like one in a book."
+     ],
+     "answer": 1,
+     "evidence": "He kept it purple because he liked the strange tree."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-04",
+   "level": "E3",
+   "title": "Reading Together",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Raj and Ella were reading one book at a classroom table. They sat across from each other with the book between them. Ella turned it because the words were upside down for her. Now the words were upside down for Raj. He moved his chair beside Ella so both could read the words. They opened the book and read the first page together. The picture showed a dog standing on its head. Ella laughed and turned the book for the dog.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What was the dog doing in the picture?",
+     "options": [
+      "Standing on a chair.",
+      "Standing by a tree.",
+      "Standing on its head."
+     ],
+     "answer": 2,
+     "evidence": "The picture showed a dog standing on its head."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Ella first turn the book?",
+     "options": [
+      "The picture was too small to see.",
+      "The next page had a different story.",
+      "The words were not the right way up."
+     ],
+     "answer": 2,
+     "evidence": "Ella turned it because the words were upside down for her."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Raj move his chair?",
+     "options": [
+      "To read the words together with her.",
+      "To show the book to their teacher.",
+      "To put the book back in his bag."
+     ],
+     "answer": 0,
+     "evidence": "He moved his chair beside Ella so both could read the words."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-05",
+   "level": "E3",
+   "title": "The Blue Blanket",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Nina put a blue blanket in a box for her cat. The cat climbed in but soon came out again. Omar moved the box because it stood beside the loud television. He put it in a quiet place under the table. The cat went back inside and started washing its face. Nina sat down because she wanted to watch it fall asleep. Soon, the cat closed its eyes on the blue blanket. Omar turned the television down, and they read their books together.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Where did Omar put the box?",
+     "options": [
+      "Behind the sofa.",
+      "Beside the door.",
+      "Below the table."
+     ],
+     "answer": 2,
+     "evidence": "He put it in a quiet place under the table."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Omar move the box?",
+     "options": [
+      "The sun was making that place hot.",
+      "The box was stopping a door from opening.",
+      "The television was loud next to it."
+     ],
+     "answer": 2,
+     "evidence": "Omar moved the box because it stood beside the loud television."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Nina sit down?",
+     "options": [
+      "She wanted to give the cat its dinner.",
+      "She wanted to see the cat go to sleep.",
+      "She wanted to draw the cat in her book."
+     ],
+     "answer": 1,
+     "evidence": "Nina sat down because she wanted to watch it fall asleep."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-06",
+   "level": "E3",
+   "title": "The Leaf Pictures",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Amir and Sara took fallen leaves back to their classroom. Sara put one under some paper and drew over it with a crayon. Lines from the leaf showed on the paper. Amir tried too, but his paper moved across the desk. Sara held it because Amir needed the paper to stay still. He chose a yellow crayon because his leaf picture was for the sun. Sara made a green leaf picture for a tree. Amir drew grass below the tree and smiled at their sunny picture.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Amir choose for his picture?",
+     "options": [
+      "An orange crayon.",
+      "A purple crayon.",
+      "A yellow crayon."
+     ],
+     "answer": 2,
+     "evidence": "He chose a yellow crayon because his leaf picture was for the sun."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Sara hold the paper?",
+     "options": [
+      "To stop it moving while Amir drew.",
+      "To show the teacher his finished picture.",
+      "To keep the wet paint off the desk."
+     ],
+     "answer": 0,
+     "evidence": "Sara held it because Amir needed the paper to stay still."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Amir choose yellow?",
+     "options": [
+      "He was making a banana in the drawing.",
+      "He was making a duck in the drawing.",
+      "He was making the sun in the drawing."
+     ],
+     "answer": 2,
+     "evidence": "He chose a yellow crayon because his leaf picture was for the sun."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-07",
+   "level": "E3",
+   "title": "The Short Throw",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Max and Priya took turns throwing socks into a box. Priya stood close because her first throws had missed the box. Max stood across the room and missed too. He moved closer and got his next sock inside. Then the box fell over because Max had thrown a heavy wet sock. They stood it up and chose only dry socks. Priya threw again, and her sock went into the box. Max called it a good game for washing day.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What were they throwing into the box?",
+     "options": [
+      "Their socks.",
+      "Their hats.",
+      "Their scarves."
+     ],
+     "answer": 0,
+     "evidence": "Max and Priya took turns throwing socks into a box."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Priya stand close?",
+     "options": [
+      "She wanted to sit down after throwing.",
+      "Her earlier throws had not gone in.",
+      "She needed more room behind the box."
+     ],
+     "answer": 1,
+     "evidence": "Priya stood close because her first throws had missed the box."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did the box fall over?",
+     "options": [
+      "A cat jumped on it in their game.",
+      "A wet sock was too heavy for it.",
+      "A child moved it while looking for a sock."
+     ],
+     "answer": 1,
+     "evidence": "Then the box fell over because Max had thrown a heavy wet sock."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-08",
+   "level": "E3",
+   "title": "The Quiet Clap",
+   "reviewer": "flash",
+   "reviewNote": "'The snail could not come in quickly' belirsiz (müzikte giriş mi, odaya girmek mi). 'The snail moved very slowly.'",
+   "passage": "Jack and Aisha made a song for their toy animals. Jack clapped loudly after every animal name. Aisha asked him to stop because she could not hear the names. Jack tried a quiet clap with only two fingers. Now Aisha could hear every word of the song. She added a long pause because the toy snail moved very slowly. Jack slowly moved the snail across the table in the pause. The slowest animal got there before the song ended.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "How did Jack make his quiet clap?",
+     "options": [
+      "With two of his fingers.",
+      "With both of his feet.",
+      "With one of his pencils."
+     ],
+     "answer": 0,
+     "evidence": "Jack tried a quiet clap with only two fingers."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Aisha ask Jack to stop clapping loudly?",
+     "options": [
+      "The claps were waking her sleeping cat.",
+      "The claps stopped her hearing the names.",
+      "The claps were making the table move."
+     ],
+     "answer": 1,
+     "evidence": "Aisha asked him to stop because she could not hear the names."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Aisha leave a pause?",
+     "options": [
+      "Jack needed longer to read a word.",
+      "She needed longer to find the mouse.",
+      "The snail could not come in quickly."
+     ],
+     "answer": 2,
+     "evidence": "She added a long pause because the toy snail moved very slowly."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-09",
+   "level": "E3",
+   "title": "The Moving Poster",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Meera saw the classroom poster moving against the wall. Dan looked behind it but found nothing there. They watched it move again when their teacher opened the window. Dan closed the window because he wanted to test the wind. The poster stopped moving against the wall. Meera opened the window again because the room was getting hot. Now Dan held the bottom of the poster. Its paper animals stayed still, and the room felt better.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What was drawn on the poster?",
+     "options": [
+      "Pictures of animals.",
+      "Pictures of boats.",
+      "Pictures of flowers."
+     ],
+     "answer": 0,
+     "evidence": "Its paper animals stayed still, and the room felt better."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Dan close the window?",
+     "options": [
+      "To hear what the teacher was saying.",
+      "To stop rain coming into the classroom.",
+      "To see what the wind was doing."
+     ],
+     "answer": 2,
+     "evidence": "Dan closed the window because he wanted to test the wind."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Meera open the window again?",
+     "options": [
+      "The playground was too quiet.",
+      "The classroom felt too hot.",
+      "The poster was still moving."
+     ],
+     "answer": 1,
+     "evidence": "Meera opened the window again because the room was getting hot."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E3-10",
+   "level": "E3",
+   "title": "The Cloud Sheep",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Ravi wrote a story about a sheep made from a cloud. Yan drew the sheep above a small house. Ravi gave it long legs because it needed to reach the ground. Yan drew the legs right down to the grass. Then he added boots because Ravi wanted the sheep to walk through rain. The sheep now had four big yellow boots. Ravi wrote that it took them off before going inside. Yan drew four little clouds coming out of the boots.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Yan draw below the sheep?",
+     "options": [
+      "A little boat.",
+      "A little train.",
+      "A little house."
+     ],
+     "answer": 2,
+     "evidence": "Yan drew the sheep above a small house."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Ravi give the sheep long legs?",
+     "options": [
+      "Its feet needed to get down to the ground.",
+      "Its feet needed to get over a tall wall.",
+      "Its feet needed to get across a big lake."
+     ],
+     "answer": 0,
+     "evidence": "Ravi gave it long legs because it needed to reach the ground."
+    },
+    {
+     "op": "cause",
+     "stem": "Why did Yan add boots?",
+     "options": [
+      "The story needed a trip through cold snow.",
+      "The story needed a walk in wet weather.",
+      "The story needed a dance in new clothes."
+     ],
+     "answer": 1,
+     "evidence": "Then he added boots because Ravi wanted the sheep to walk through rain."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-01",
+   "level": "E4",
+   "title": "A Game for Two",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Tom had brought a new card game to school. At lunch, he put the cards on a table and waited. Mia stopped to look, but she did not sit down. Tom began explaining every rule, speaking faster each time she looked towards the door. Then Mia pointed at the clock and said she had only five minutes before music. Tom looked at the large pile of cards in front of him. He put most of them back in the box and left six on the table. They played one short round before Mia had to go. At the door, she asked him to bring the whole game tomorrow. Tom packed the cards with a smile. This time, he put two chairs beside the table before leaving.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "How many cards did Tom leave on the table?",
+     "options": [
+      "Six cards.",
+      "Eight cards.",
+      "Ten cards."
+     ],
+     "answer": 0,
+     "evidence": "He put most of them back in the box and left six on the table."
+    },
+    {
+     "op": "inference",
+     "stem": "What did Tom learn about Mia's first reaction?",
+     "options": [
+      "She already knew all the game rules.",
+      "She wanted to play with someone else.",
+      "She had little time for a long game."
+     ],
+     "answer": 2,
+     "evidence": "Then Mia pointed at the clock and said she had only five minutes before music."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Choosing a different game after losing a round.",
+      "Teaching a class to play a game without cards.",
+      "Changing a plan so a friend can join in."
+     ],
+     "answer": 2,
+     "evidence": "They played one short round before Mia had to go."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-02",
+   "level": "E4",
+   "title": "The Sock Window",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Lily and Ben were putting clean socks into pairs. One blue sock was missing, although they had checked the washing basket twice. Ben looked under the table and behind the door. Lily picked up a white shirt from the basket and noticed something blue through the thin cloth. She put her hand inside a sleeve and pulled out the missing sock. Ben laughed and held up another shirt like a window. There was nothing inside that one, but he checked the rest before putting them down. Soon, every sock had a partner. Lily placed the last blue pair on top of the pile. Ben put the empty basket on his head for a moment. Lily told him to check it first, in case there was another sock hiding inside.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Where did Lily find the missing sock?",
+     "options": [
+      "Inside a pillow cover.",
+      "Inside a shirt sleeve.",
+      "Inside another blue sock."
+     ],
+     "answer": 1,
+     "evidence": "She put her hand inside a sleeve and pulled out the missing sock."
+    },
+    {
+     "op": "inference",
+     "stem": "Why did Ben check the other shirts?",
+     "options": [
+      "He thought the shirts might still be wet.",
+      "He thought Lily had put them in the wrong pile.",
+      "He thought more socks could be inside them."
+     ],
+     "answer": 2,
+     "evidence": "There was nothing inside that one, but he checked the rest before putting them down."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Learning to wash clothes without mixing them up.",
+      "Making a new game from clothes that no longer fit.",
+      "Finding a missing item during an ordinary job."
+     ],
+     "answer": 2,
+     "evidence": "She put her hand inside a sleeve and pulled out the missing sock."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-03",
+   "level": "E4",
+   "title": "The Picture You Can Hear",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Sam and Zoe were drawing the same playground after school. Sam filled his page with swings, trees, and children. Zoe drew just a tree with little curved marks around it. Sam asked why her picture had so few things. Zoe pointed towards the branches, where leaves were moving in the wind. She said the marks showed the soft sound she could hear. Sam looked at his busy page again. He had drawn a ball beside two children, but their game seemed strangely quiet. He added marks around the bouncing ball and wrote a word for its sound. Zoe smiled and added a bird to her tree. When they showed their pictures to the teacher, Sam asked her to listen. She looked surprised, so he pointed to the marks and explained.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Zoe draw first?",
+     "options": [
+      "A ball with marks around it.",
+      "A tree with marks around it.",
+      "A bird with marks around it."
+     ],
+     "answer": 1,
+     "evidence": "Zoe drew just a tree with little curved marks around it."
+    },
+    {
+     "op": "inference",
+     "stem": "What gave Sam his new idea for the ball?",
+     "options": [
+      "Zoe showed that a larger ball was easier to see.",
+      "Zoe showed that the page needed another tree.",
+      "Zoe showed that marks could suggest a sound."
+     ],
+     "answer": 2,
+     "evidence": "She said the marks showed the soft sound she could hear."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Finding a way to show sounds in pictures.",
+      "Choosing the quietest place to draw outside.",
+      "Learning to draw a playground from a photograph."
+     ],
+     "answer": 0,
+     "evidence": "He added marks around the bouncing ball and wrote a word for its sound."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-04",
+   "level": "E4",
+   "title": "The Practice Reader",
+   "reviewer": "pro",
+   "reviewNote": "",
+   "passage": "Raj was going to read his short story to the class on Friday. At home, he read it to Ella, but he kept stopping to ask if she liked it. Ella answered every question, and they never reached the last page. The next evening, she put a toy rabbit on a chair. She sat beside it and asked Raj to read to the rabbit first. Raj nearly stopped after the first page, then looked at its quiet face and went on. He reached the ending before asking Ella anything. She told him which part had made her laugh. On Friday, Raj pictured the rabbit while he stood in front of the class. He read the whole story, then looked up. Several children were smiling at the same funny ending.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "Which toy did Ella put on a chair?",
+     "options": [
+      "A toy rabbit.",
+      "A toy monkey.",
+      "A toy penguin."
+     ],
+     "answer": 0,
+     "evidence": "The next evening, she put a toy rabbit on a chair."
+    },
+    {
+     "op": "inference",
+     "stem": "How did the rabbit help Raj?",
+     "options": [
+      "It helped him choose a new name for his story.",
+      "It helped him read on without asking for comments.",
+      "It helped him remember a page that he had lost."
+     ],
+     "answer": 1,
+     "evidence": "Raj nearly stopped after the first page, then looked at its quiet face and went on."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Changing a story after friends ask for a different ending.",
+      "Trying a new way to prepare for reading aloud.",
+      "Choosing a toy to take to a classroom show."
+     ],
+     "answer": 1,
+     "evidence": "He reached the ending before asking Ella anything."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-05",
+   "level": "E4",
+   "title": "The Visitor at the Window",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Nina was drawing at a low window while Omar read beside her. Their cat jumped onto the wide seat below the glass and watched Nina move her pencil. Whenever she lifted it, the cat reached towards its bright red end. Nina put the pencil down, but the cat stayed, looking at her hand. Omar brought its toy mouse and moved it across the floor. The cat jumped down to follow, leaving Nina room to draw. She finished a picture of the cat with one foot in the air. Then she put the pencil in a drawer and showed Omar her page. He held it near the cat, but the cat walked past without looking. Omar laughed that the cat had liked the moving pencil much more than its own picture.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Omar bring for the cat?",
+     "options": [
+      "Its blue blanket.",
+      "Its toy mouse.",
+      "Its food bowl."
+     ],
+     "answer": 1,
+     "evidence": "Omar brought its toy mouse and moved it across the floor."
+    },
+    {
+     "op": "inference",
+     "stem": "What most likely caught the cat's attention at the window?",
+     "options": [
+      "The animal drawn on the page.",
+      "The smell of food near the chair.",
+      "The way the pencil moved."
+     ],
+     "answer": 2,
+     "evidence": "Whenever she lifted it, the cat reached towards its bright red end."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Teaching a cat to sit still while someone draws its picture.",
+      "Helping a child finish drawing by giving her cat something else to follow.",
+      "Finding a lost toy by watching where a cat looks."
+     ],
+     "answer": 1,
+     "evidence": "The cat jumped down to follow, leaving Nina room to draw."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-06",
+   "level": "E4",
+   "title": "Two Views of One Tree",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Amir and Sara stood on opposite sides of a tree in the school playground. Their teacher asked them to draw what they could see without moving. Amir drew a short branch near the ground. Sara drew a round hole higher up. When they compared their drawings, each thought the other had added something that was not there. They asked the teacher which picture was right. Instead of choosing, she asked them to exchange places and look again. Amir could now see the hole, while Sara found the low branch partly hidden by leaves. They turned their papers over and made a second drawing. Back in class, they put all four pictures together. Amir said their tree seemed to have grown two new parts, although it had not changed.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did Sara draw in her first picture?",
+     "options": [
+      "A round hole in the tree.",
+      "A bird sitting on a branch.",
+      "A flower growing near the tree."
+     ],
+     "answer": 0,
+     "evidence": "Sara drew a round hole higher up."
+    },
+    {
+     "op": "inference",
+     "stem": "Why did the teacher ask them to exchange places?",
+     "options": [
+      "To help them see what the other child could see.",
+      "To give them more space for their drawing paper.",
+      "To keep the sunlight out of both children's eyes."
+     ],
+     "answer": 0,
+     "evidence": "Amir could now see the hole, while Sara found the low branch partly hidden by leaves."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Deciding which child can draw a tree more accurately.",
+      "Finding that different views can both be right.",
+      "Discovering how quickly a tree grows new branches."
+     ],
+     "answer": 1,
+     "evidence": "Back in class, they put all four pictures together."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-07",
+   "level": "E4",
+   "title": "The Round That Did Not Count",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Max and Priya made a game in which players rolled a ball towards three boxes. The nearest box was worth one point, and the farthest was worth three. Priya scored eight points before Max noticed that one box had moved. Each time the ball touched it, the light box slid a little farther across the floor. Max had been playing after Priya, so his throws had started with the box farther away. They put a book inside each box to stop it moving. Priya suggested starting again with no points. Max agreed, and they tested one throw each before the new round. This time, all three boxes stayed in place. Priya still scored eight points. Max smiled and said he could believe those eight much more easily.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did they put inside the boxes?",
+     "options": [
+      "Towels to make them softer.",
+      "Books to hold them still.",
+      "Paper to cover the bottoms."
+     ],
+     "answer": 1,
+     "evidence": "They put a book inside each box to stop it moving."
+    },
+    {
+     "op": "inference",
+     "stem": "Why did they start again with no points?",
+     "options": [
+      "They had forgotten which box was worth three.",
+      "The moving box had made the turns unequal.",
+      "The ball had broken before Max could play."
+     ],
+     "answer": 1,
+     "evidence": "Max had been playing after Priya, so his throws had started with the box farther away."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Finding and fixing a problem that made a game unfair.",
+      "Learning to throw a ball farther to get more points.",
+      "Making a game shorter by taking one box out."
+     ],
+     "answer": 0,
+     "evidence": "This time, all three boxes stayed in place."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-08",
+   "level": "E4",
+   "title": "The Space in the Song",
+   "reviewer": "flash",
+   "reviewNote": "İkinci doğru şık riski: keyboard doğru, 'piano' çocuk için de doğru sayılabilir. Piano yerine drum/recorder.",
+   "passage": "Jack and Aisha had written a song for a little classroom show. Jack sang the words while Aisha played four notes on a keyboard. At the end of each line, Jack took a breath, but Aisha started the next part immediately. He kept arriving a word behind the music. They tried singing faster, then playing more slowly, but neither change felt right. Aisha asked Jack to sing without the keyboard while she listened. This time, she noticed the little spaces between his lines. She marked those places on her paper and waited there when they tried together again. Jack finished each breath before the next notes began. At the show, they reached the last word together. Afterwards, Jack said that Aisha had played the quiet parts very well too.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What instrument did Aisha play?",
+     "options": [
+      "A keyboard.",
+      "A guitar.",
+      "A piano."
+     ],
+     "answer": 0,
+     "evidence": "Jack sang the words while Aisha played four notes on a keyboard."
+    },
+    {
+     "op": "inference",
+     "stem": "What did Jack mean by the quiet parts?",
+     "options": [
+      "The notes Aisha played too softly to hear.",
+      "The pauses when Aisha waited for his breath.",
+      "The words Jack forgot during the show."
+     ],
+     "answer": 1,
+     "evidence": "She marked those places on her paper and waited there when they tried together again."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Listening to each other to make a song work.",
+      "Finding a louder instrument for a classroom show.",
+      "Writing easier words so a song can be sung quickly."
+     ],
+     "answer": 0,
+     "evidence": "Jack finished each breath before the next notes began."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-09",
+   "level": "E4",
+   "title": "The Afternoon Circle",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Meera noticed a round patch of light on the classroom wall after lunch. In the morning, that part of the wall had been plain. Dan thought someone had painted a circle while the class was outside. Meera moved her hand across it, and the circle appeared on her hand instead. They looked towards the window, where a small round mirror stood on a table. Their teacher carefully turned the mirror, and the bright circle moved across the wall. She turned it towards the table, and the circle moved there too. Dan brought his drawing over and held it beside the light, keeping it out of his eyes. His paper sun now had a bright circle beside it. Before going home, he put the drawing on the wall where the light had first appeared.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What stood on the table near the window?",
+     "options": [
+      "A small glass bottle.",
+      "A small reading lamp.",
+      "A small round mirror."
+     ],
+     "answer": 2,
+     "evidence": "They looked towards the window, where a small round mirror stood on a table."
+    },
+    {
+     "op": "inference",
+     "stem": "What showed that the circle was not painted on the wall?",
+     "options": [
+      "It was round rather than square.",
+      "It moved onto Meera's hand.",
+      "It appeared after the class had lunch."
+     ],
+     "answer": 1,
+     "evidence": "Meera moved her hand across it, and the circle appeared on her hand instead."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Working out what made a changing patch of light.",
+      "Finding the best place to hang a classroom painting.",
+      "Learning to draw a circle without a round object."
+     ],
+     "answer": 0,
+     "evidence": "Their teacher carefully turned the mirror, and the bright circle moved across the wall."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
+   "approved": false
+  },
+  {
+   "id": "B2-E4-10",
+   "level": "E4",
+   "title": "The Dragon Who Packed Too Much",
+   "reviewer": "flash",
+   "reviewNote": "",
+   "passage": "Ravi was writing a comic about a dragon going on a picnic. Yan drew a bag full of cups, plates, books, and a huge blanket. In the next picture, the dragon tried to fly, but the bag stayed on the ground. Ravi wanted the dragon to reach a hill for its picnic. Yan suggested drawing a smaller bag, but Ravi liked all the things inside the big one. They looked at the first picture again. It showed the dragon waiting beside a little cart. Yan drew the dragon putting the bag in the cart and pulling it along the path. At the hill, the dragon opened the blanket for its friends. Ravi added one last picture of the empty cart. A sleepy rabbit had chosen it for a bed.",
+   "questions": [
+    {
+     "op": "detail",
+     "stem": "What did the dragon put in the cart?",
+     "options": [
+      "The friends going to the picnic.",
+      "The books borrowed from a library.",
+      "The bag of picnic things."
+     ],
+     "answer": 2,
+     "evidence": "Yan drew the dragon putting the bag in the cart and pulling it along the path."
+    },
+    {
+     "op": "inference",
+     "stem": "Why did the cart solve the problem?",
+     "options": [
+      "It let the dragon move the bag without flying.",
+      "It made the picnic things fit in a smaller bag.",
+      "It showed the dragon a shorter path to the hill."
+     ],
+     "answer": 0,
+     "evidence": "Yan drew the dragon putting the bag in the cart and pulling it along the path."
+    },
+    {
+     "op": "main-idea",
+     "stem": "What is this story mostly about?",
+     "options": [
+      "Using something already in a comic to solve its story problem.",
+      "Removing extra characters to make a comic easier to follow.",
+      "Changing the place of a picnic so a comic can end sooner."
+     ],
+     "answer": 0,
+     "evidence": "It showed the dragon waiting beside a little cart."
+    }
+   ],
+   "writer": "astra30",
+   "premiseSource": "astra30: astra30",
    "approved": false
   }
  ]

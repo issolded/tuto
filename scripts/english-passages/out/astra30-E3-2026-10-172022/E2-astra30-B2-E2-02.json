@@ -1,0 +1,217 @@
+{
+  "id": "E2-astra30-B2-E2-02",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-02",
+    "level": "E2",
+    "category": "home",
+    "title": "The Cup House",
+    "passage": "Lily put a cup over her little toy mouse. Ben came to the table and lifted the cup. Lily pointed to a paper door she had drawn on the cup. Ben put it back and asked the mouse if he could come inside.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was under the cup?",
+        "options": [
+          "A little toy cat.",
+          "A little toy mouse.",
+          "A little toy frog."
+        ],
+        "answer": 1,
+        "evidence": "Lily put a cup over her little toy mouse."
+      },
+      {
+        "op": "detail",
+        "stem": "What had Lily drawn on the cup?",
+        "options": [
+          "A door for the house.",
+          "A window for the house.",
+          "A roof for the house."
+        ],
+        "answer": 0,
+        "evidence": "Lily pointed to a paper door she had drawn on the cup."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Lily pointed to her drawing.",
+          "Ben lifted the cup.",
+          "Ben asked to come inside."
+        ],
+        "answer": 1,
+        "evidence": "Ben came to the table and lifted the cup."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "over",
+          "if"
+        ],
+        "outside": [],
+        "content": [
+          "if"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "over",
+          "if"
+        ],
+        "outside": [],
+        "content": [
+          "if"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good explicit detail question."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "The phrase 'for the house' is a fair paraphrase given the title 'The Cup House' and the context of asking to come inside."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good sequence question testing the order of events explicitly stated in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A cute, coherent micro-story that perfectly fits the E2 level requirements."
+      },
+      "model": "gemini-3.1-pro-preview"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

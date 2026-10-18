@@ -1,0 +1,242 @@
+{
+  "id": "E3-astra30-B2-E3-04",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-04",
+    "level": "E3",
+    "category": "school",
+    "title": "Reading Together",
+    "passage": "Raj and Ella were reading one book at a classroom table. They sat across from each other with the book between them. Ella turned it because the words were upside down for her. Now the words were upside down for Raj. He moved his chair beside Ella so both could read the words. They opened the book and read the first page together. The picture showed a dog standing on its head. Ella laughed and turned the book for the dog.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was the dog doing in the picture?",
+        "options": [
+          "Standing on a chair.",
+          "Standing by a tree.",
+          "Standing on its head."
+        ],
+        "answer": 2,
+        "evidence": "The picture showed a dog standing on its head."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ella first turn the book?",
+        "options": [
+          "The picture was too small to see.",
+          "The next page had a different story.",
+          "The words were not the right way up."
+        ],
+        "answer": 2,
+        "evidence": "Ella turned it because the words were upside down for her."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj move his chair?",
+        "options": [
+          "To read the words together with her.",
+          "To show the book to their teacher.",
+          "To put the book back in his bag."
+        ],
+        "answer": 0,
+        "evidence": "He moved his chair beside Ella so both could read the words."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "together",
+          "across",
+          "each",
+          "other",
+          "turn",
+          "upside",
+          "beside",
+          "way"
+        ],
+        "outside": [],
+        "content": [
+          "upside",
+          "way"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "together",
+          "across",
+          "each",
+          "other",
+          "turn",
+          "upside",
+          "beside",
+          "way"
+        ],
+        "outside": [],
+        "content": [
+          "upside",
+          "way"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

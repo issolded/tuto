@@ -1,0 +1,239 @@
+{
+  "id": "E4-astra30-B2-E4-06",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-06",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-06",
+    "level": "E4",
+    "category": "nature",
+    "title": "Two Views of One Tree",
+    "passage": "Amir and Sara stood on opposite sides of a tree in the school playground. Their teacher asked them to draw what they could see without moving. Amir drew a short branch near the ground. Sara drew a round hole higher up. When they compared their drawings, each thought the other had added something that was not there. They asked the teacher which picture was right. Instead of choosing, she asked them to exchange places and look again. Amir could now see the hole, while Sara found the low branch partly hidden by leaves. They turned their papers over and made a second drawing. Back in class, they put all four pictures together. Amir said their tree seemed to have grown two new parts, although it had not changed.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Sara draw in her first picture?",
+        "options": [
+          "A round hole in the tree.",
+          "A bird sitting on a branch.",
+          "A flower growing near the tree."
+        ],
+        "answer": 0,
+        "evidence": "Sara drew a round hole higher up."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did the teacher ask them to exchange places?",
+        "options": [
+          "To help them see what the other child could see.",
+          "To give them more space for their drawing paper.",
+          "To keep the sunlight out of both children's eyes."
+        ],
+        "answer": 0,
+        "evidence": "Amir could now see the hole, while Sara found the low branch partly hidden by leaves.",
+        "rationale": "The different viewpoints reveal different features; switching places resolves their disagreement."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Deciding which child can draw a tree more accurately.",
+          "Finding that different views can both be right.",
+          "Discovering how quickly a tree grows new branches."
+        ],
+        "answer": 1,
+        "evidence": "Back in class, they put all four pictures together.",
+        "rationale": "The drawings differ because of position, not because one child invented a feature."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 128,
+        "sentences": 11,
+        "flyers": [
+          "side",
+          "branch",
+          "compare",
+          "exchange",
+          "seem",
+          "sunlight",
+          "discover"
+        ],
+        "outside": [
+          "although",
+          "accurately"
+        ],
+        "content": [
+          "although",
+          "accurately"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 128,
+        "sentences": 11,
+        "flyers": [
+          "side",
+          "branch",
+          "compare",
+          "exchange",
+          "seem",
+          "sunlight",
+          "discover"
+        ],
+        "outside": [
+          "although",
+          "accurately"
+        ],
+        "content": [
+          "although",
+          "accurately"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

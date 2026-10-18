@@ -1,0 +1,215 @@
+{
+  "id": "E3-astra30-B2-E3-05",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-05",
+    "level": "E3",
+    "category": "pets",
+    "title": "The Blue Blanket",
+    "passage": "Nina put a blue blanket in a box for her cat. The cat climbed in but soon came out again. Omar moved the box because it stood beside the loud television. He put it in a quiet place under the table. The cat went back inside and started washing its face. Nina sat down because she wanted to watch it fall asleep. Soon, the cat closed its eyes on the blue blanket. Omar turned the television down, and they read their books together.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Omar put the box?",
+        "options": [
+          "Behind the sofa.",
+          "Beside the door.",
+          "Below the table."
+        ],
+        "answer": 2,
+        "evidence": "He put it in a quiet place under the table."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Omar move the box?",
+        "options": [
+          "The sun was making that place hot.",
+          "The box was stopping a door from opening.",
+          "The television was loud next to it."
+        ],
+        "answer": 2,
+        "evidence": "Omar moved the box because it stood beside the loud television."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Nina sit down?",
+        "options": [
+          "She wanted to give the cat its dinner.",
+          "She wanted to see the cat go to sleep.",
+          "She wanted to draw the cat in her book."
+        ],
+        "answer": 1,
+        "evidence": "Nina sat down because she wanted to watch it fall asleep."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "soon",
+          "beside",
+          "turn",
+          "together"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 83,
+        "sentences": 8,
+        "flyers": [
+          "soon",
+          "beside",
+          "turn",
+          "together"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

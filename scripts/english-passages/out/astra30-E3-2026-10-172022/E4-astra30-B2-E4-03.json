@@ -1,0 +1,279 @@
+{
+  "id": "E4-astra30-B2-E4-03",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-03",
+    "level": "E4",
+    "category": "art",
+    "title": "The Picture You Can Hear",
+    "passage": "Sam and Zoe were drawing the same playground after school. Sam filled his page with swings, trees, and children. Zoe drew just a tree with little curved marks around it. Sam asked why her picture had so few things. Zoe pointed towards the branches, where leaves were moving in the wind. She said the marks showed the soft sound she could hear. Sam looked at his busy page again. He had drawn a ball beside two children, but their game seemed strangely quiet. He added marks around the bouncing ball and wrote a word for its sound. Zoe smiled and added a bird to her tree. When they showed their pictures to the teacher, Sam asked her to listen. She looked surprised, so he pointed to the marks and explained.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Zoe draw first?",
+        "options": [
+          "A ball with marks around it.",
+          "A tree with marks around it.",
+          "A bird with marks around it."
+        ],
+        "answer": 1,
+        "evidence": "Zoe drew just a tree with little curved marks around it."
+      },
+      {
+        "op": "inference",
+        "stem": "What gave Sam his new idea for the ball?",
+        "options": [
+          "Zoe showed that a larger ball was easier to see.",
+          "Zoe showed that the page needed another tree.",
+          "Zoe showed that marks could suggest a sound."
+        ],
+        "answer": 2,
+        "evidence": "She said the marks showed the soft sound she could hear.",
+        "rationale": "After Zoe explains her marks, Sam adds marks and a sound word to his own ball drawing."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Finding a way to show sounds in pictures.",
+          "Choosing the quietest place to draw outside.",
+          "Learning to draw a playground from a photograph."
+        ],
+        "answer": 0,
+        "evidence": "He added marks around the bouncing ball and wrote a word for its sound.",
+        "rationale": "The children explore representing what they hear as well as what they see."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 130,
+        "sentences": 12,
+        "flyers": [
+          "fill",
+          "curve",
+          "towards",
+          "branch",
+          "beside",
+          "seem"
+        ],
+        "outside": [
+          "suggest",
+          "photograph"
+        ],
+        "content": [
+          "suggest",
+          "photograph"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 130,
+        "sentences": 12,
+        "flyers": [
+          "fill",
+          "curve",
+          "towards",
+          "branch",
+          "beside",
+          "seem"
+        ],
+        "outside": [
+          "suggest",
+          "photograph"
+        ],
+        "content": [
+          "suggest",
+          "photograph"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "A solid detail question. The distractors are plausible because both a ball and a bird are drawn later in the story."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Effectively measures inference by requiring the reader to connect Zoe's explanation of her drawing to Sam's subsequent action."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately captures the main idea of the text without being overly specific."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is charming, well-structured, and perfectly suited for the target age group and reading level."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,227 @@
+{
+  "id": "E3-astra30-B2-E3-07",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-07",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-07",
+    "level": "E3",
+    "category": "games",
+    "title": "The Short Throw",
+    "passage": "Max and Priya took turns throwing socks into a box. Priya stood close because her first throws had missed the box. Max stood across the room and missed too. He moved closer and got his next sock inside. Then the box fell over because Max had thrown a heavy wet sock. They stood it up and chose only dry socks. Priya threw again, and her sock went into the box. Max called it a good game for washing day.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What were they throwing into the box?",
+        "options": [
+          "Their socks.",
+          "Their hats.",
+          "Their scarves."
+        ],
+        "answer": 0,
+        "evidence": "Max and Priya took turns throwing socks into a box."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Priya stand close?",
+        "options": [
+          "She wanted to sit down after throwing.",
+          "Her earlier throws had not gone in.",
+          "She needed more room behind the box."
+        ],
+        "answer": 1,
+        "evidence": "Priya stood close because her first throws had missed the box."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the box fall over?",
+        "options": [
+          "A cat jumped on it in their game.",
+          "A wet sock was too heavy for it.",
+          "A child moved it while looking for a sock."
+        ],
+        "answer": 1,
+        "evidence": "Then the box fell over because Max had thrown a heavy wet sock."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 79,
+        "sentences": 8,
+        "flyers": [
+          "turn",
+          "across",
+          "over",
+          "heavy",
+          "while"
+        ],
+        "outside": [
+          "scarv"
+        ],
+        "content": [
+          "heavy",
+          "scarv"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 79,
+        "sentences": 8,
+        "flyers": [
+          "turn",
+          "across",
+          "over",
+          "heavy",
+          "while"
+        ],
+        "outside": [],
+        "content": [
+          "heavy"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,250 @@
+{
+  "id": "E2-astra30-B2-E2-10",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-10",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-10",
+    "level": "E2",
+    "category": "imagination",
+    "title": "The Moon Chair",
+    "passage": "Ravi put a chair in the living room and called it the moon. Yan sat on it with a book about stars. Ravi asked what the weather was like up there. Yan looked at the book and said it was very good for reading.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Ravi call the chair?",
+        "options": [
+          "A mountain.",
+          "An island.",
+          "The moon."
+        ],
+        "answer": 2,
+        "evidence": "Ravi put a chair in the living room and called it the moon."
+      },
+      {
+        "op": "detail",
+        "stem": "What was Yan's book about?",
+        "options": [
+          "Stars in the sky.",
+          "Animals in the sea.",
+          "Trees in a forest."
+        ],
+        "answer": 0,
+        "evidence": "Yan sat on it with a book about stars."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Yan sat down with his book.",
+          "Ravi asked about the weather.",
+          "Yan said it was good for reading."
+        ],
+        "answer": 0,
+        "evidence": "Yan sat on it with a book about stars."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good detail question."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "The addition of 'in the sky' to 'stars' is a natural paraphrase and does not add unwarranted specific information."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good sequence question."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A sweet, imaginative micro-story that perfectly fits the E2 level."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}
