@@ -111,3 +111,39 @@ Okulda İngilizce okuyan 6 yaşındaki bir çocuk, aynı yaştaki ana dil çocuk
 - A sütunu kaynağa değil yargıya dayanıyor (müfredatın konuşma bölümü yıllara bölünmemiş).
 - Sonradan öğrenen çocukta durak→basamak eşlemesi Cambridge düzeyi tanımlarından (kelime listesi düzeyi); Cambridge'in
   kendi örnek sınavlarıyla ayrıca sağlanmalı.
+
+## Merdiven motoru (2026-10-18, Claude)
+
+`src/lib/literacy/ladder.js`. Saf modül: model yok, veritabanı yok, saat yok. Durum düz JSON, sunucu çocuk başına saklayacak.
+Test `scripts/tests/ladder.test.mjs`.
+
+- **`start({ age, stop, perTrack })`:** iz başına başlangıç. Yukarıdaki tablolar `AGE_TABLE` / `STOPS` olarak kodda.
+  Ebeveyn seçmediyse geniş taramanın ortası: yaşa göre "sağlam" basamak, izin yarısını aşmayacak şekilde.
+- **`nextProbe(state, { has, session })`:** en az cevaplanmış iz önce. `has(iz, basamak)` içerik bankasının o basamaktan
+  soru verip veremediğini söyler. Veremiyorsa en yakın basamağa geçilir; hiç yoksa iz "bilinmiyor" kalır, çocuk takılmaz.
+  `gaps(has)` boş basamakları listeler, içerik işinin yapılacaklar listesi bu.
+- **`record(state, cevap)`:**
+  - Yalnız bağımsız cevap (ilk deneme, ipucusuz) kanıttır; yardımlı cevap kaydedilir, seviyeyi oynatmaz.
+  - **Yerleştirme:** bir basamak "geçildi" demek için ya net iki doğru ya da bir doğru artı üstünde bir doğru gerekir; "çok zor" demek için iki yanlış. Üç şıkta tahminle doğru bilme şansı üçte bir. İlk sürüm tek doğruyu "geçti" sayıyordu ve simüle çocukların ancak %70'ini bir basamak yakınına koyabiliyordu.
+  - Yerleştirme iz başına en çok 6 cevap sürer; sınırda en olası basamağa yerleşir.
+  - **Yerleştikten sonra:** her 4. soru bir üst basamağı dener. Üst basamakta iki oturuma yayılmış art arda 3 doğru → yukarı; basamakta son 4 cevabın 3'ü yanlış → aşağı.
+  - Durum "geçici"den "yerleşmiş"e, basamakta iki oturumda 3 doğru gelince geçer.
+- **Zorlanma koruması:** oturumda art arda 2 yanlış → sıradaki soru çocuğun bildiği en yüksek basamaktan.
+- **`summary(state)`:** iz başına basamak, durum (bilinmiyor / geçici / yerleşmiş), en alt basamağın altında mı, cevap ve
+  oturum sayısı, ebeveyne söylenebilir mi, yaşa göre üstte / yerinde / altta. Yaşa göre karşılaştırmayı yalnız ana dil
+  çocuk için kullan. `height` izler arası karşılaştırma için ("okuma dinlemenin önünde").
+
+**Simüle çocuklarla ölçüm.** Her izde gerçek basamağı olan, bildiği basamakta %10 dikkatsizlik yapan, bilmediğinde üçte bir
+tahminle bilen çocuklar; 60 tohum, oturum başına 10 soru.
+
+| Çocuk | ±1 basamak, 4 oturum | 8 oturum | 12 oturum | İlk oturumda yanlış oranı |
+|---|---|---|---|---|
+| 8 yaş ana dil, "kendi yaşında" | %92 | %97 | %98 | %23 |
+| 8 yaş, ebeveyn seçmedi | %90 | %96 | %99 | %18 |
+| 7 yaş öğrenen, "basit cümleler" | %75 | %84 | %93 | %35 |
+| 7 yaş öğrenen, ebeveyn "kendi yaşında" dedi | %75 | %83 | %92 | %40 |
+| 10 yaş, ebeveyn "hiç bilmiyor" dedi | %96 | %97 | %97 | %12 |
+
+En zayıf durum en alttaki öğrenen çocuk: üç şıkta tahmin onu yukarı taşıyor, ancak oturumlar içinde iniyor. Çare motor
+değil soru biçimi: dört şık, ya da harf kurma gibi tahmin edilemeyen biçimler. İlk oturumda %35–40 yanlış, ilk deneyim
+için yüksek; zorlanma koruması bunun içinde, pilotla bakılmalı. **Eşiklerin hepsi `RULES` içinde, pilotla ayarlanacak.**
