@@ -214,7 +214,7 @@ E en pahalı alan: her metin elle yazılır ve okunur, otomatik üretilmez (Code
 alt modülü olarak. Bunlar İngilizce bilgisinden çok **kelimelerle akıl yürütme** ölçüyor; anadilli
 çocuk için iyi 11+ hazırlığı. Merdivenin beceri kanıtına karışmazlar: VR sonucu İngilizce
 basamaklarını yükseltmez ya da düşürmez, ayrı izlenir. Alt modülün nerede duracağı (ayrı kart mı,
-İngilizce kartının içinde mi) ve kime varsayılan açık olacağı açık soru (aşağıda 6).
+İngilizce kartının içinde mi) ve kime açılacağı 2026-10-18'de karara bağlandı: "Navigasyon ve sözel akıl yürütme".
 
 `anagram-pair`, `letter-code`, `front-letter`, `alpha-order`, `join-letter`, `change-pattern`,
 `word-ladder`, `not-from-letters`, `letter-analogy`, `analogy`, `rhyme-synonym`, `compound-front`,
@@ -291,9 +291,103 @@ bulabildiğini** görmek.
 3. Ses yokken (cihaz sessizde) A alanı hiç sorulmasın mı, yoksa "sesi aç" diye bir kez istensin mi?
 4. Tavana çıkan alan ne sıklıkla yeniden yoklansın (unutma / yanlış yükseltme kontrolü)?
 5. Ebeveyne giden "ne yapabildiği" cümlelerinin listesi: alan × basamak başına bir cümle, üç dilde.
-6. Sözel akıl yürütme alt modülü nerede durur (ayrı kart / İngilizce kartının içinde) ve kime
-   varsayılan açık olur? Bugünkü "English" kartı aslında bu modül; yeni İngilizce merdiveni geldiğinde
-   adı ve yeri değişecek.
+6. (Karara bağlandı, aşağıda: "Navigasyon ve sözel akıl yürütme".)
+
+## Navigasyon ve sözel akıl yürütme (kullanıcı kararı, 2026-10-18; revizyon 2 ve 3 Astra incelemeleriyle)
+
+**Navigasyon**
+- **Tek "English" kartı**, matematik gibi. Vocabulary / reading / spelling / grammar / listening
+  çocuğa ayrı kart ya da menü olarak sunulmaz; hangi becerinin çalışılacağını planlayıcı seçer.
+  Alan dökümü ebeveyn tarafında (çocuk sayfası, rapor) ve sonuç ekranındaki özet satırında görünür.
+  Metin anlama (E) oturum içinde bir blok; ana ekrandaki "Reading" gerçek kitap okuma olarak kalır.
+- **Tek kart, sıfır seçim değil (rev. 2, rev. 3'te daraltıldı):** planlayıcı beceriyi seçer; çocuk başlangıçta
+  yalnız **hikâye konusu** ve **blok sırası** arasında seçer. Eşdeğerlik aynı basamaktan fazlası demek: hedef
+  beceri, yaklaşık uzunluk, kelime yükü ve destek de benzer olmalı. Seçilmeyen hikâye yalnız başlığı/kapak
+  görseli gösterildiyse havuza döner, yani iki seçenek havuzu iki kat hızlı tüketmez. İki seçenekte gem aynı.
+  Zayıf alanı atlatmaz. İngilizcede motivasyon etkisi doğrulanmadı.
+- **Ses kontrolü (rev. 2):** ilk dinleme bloğundan önce örnek ses + "Duydum / Şimdi ses kullanamıyorum".
+  İkincisinde dinleme o oturumda atlanır, `unknown` kalır. "Duydum" çocuğun beyanıdır, kanıt değildir;
+  sesin çalınmış görünmesi de. Ses yerine yazılı metin gösterilirse ölçülen şey artık dinleme değildir.
+- **VR "Bulmacalarım"a girmez.** Bulmaca dilden bağımsızdır; VR İngilizce bilgisine dayanır, ana
+  dili İngilizce olmayan çocuk için bulmaca değil kelime sınavıdır. VR, English kartının içinde
+  ayrı bir oturum türüdür ("Word puzzles"): kanıtı, gem sınırı ve geçmişi okuryazarlıktan ayrı.
+  Kapalıyken çocuk seçim ekranı görmez, doğrudan okuryazarlık oturumuna girer.
+
+**Kanıt (rev. 2; sayısal eşiklerden önce bunlar tamamlanır)**
+- **Beceri alan içinde ayrı izlenir.** Eş anlamı bilip zıt anlamda, geçmiş zamanı bilip özne–fiil
+  uyumunda zorlanan çocuk alan ortalamasında kaybolmaz. Durum beceri × basamak düzeyinde tutulur.
+- **`secure` = "bu basamakta tanımlanan beceriler için şimdilik yeterli bağımsız kanıt var"**; kalıcı
+  "beceri tamamlandı" hükmü değil, yeniden yoklanabilir.
+- **Bağımlılık grubu, beceri başına (rev. 3):** kanıt birimi beceriden bağımsız tek bir doğru/yanlış değildir.
+  Bir metin tek bir **bağımlılık grubu**dur; sonuçları beceri başına ayrı değerlendirilir. Aynı metin aynı
+  beceriye üç bağımsız örnek vermez, ama farklı becerilere ait gözlemler (ayrıntı doğru, çıkarım yanlış)
+  kaybolmaz. Kelimede belirleyici olan ölçülen beceri: dog/dogs kelime anlamında aynı aile (iki bağımsız
+  kelime sayılmaz), çoğul oluşturma sorusunda ayrıca çoğul becerisine kanıt verir. Aynı hikâyeyi başka gün
+  okumak yeni metin çeşitliliği sayılmaz; **gecikmeli tekrar başarısı** olarak ayrı saklanır.
+- **Eşik beceriye göre, ortak sayı yok (rev. 3):** 12 kelime ile 12 ayrı hikâye çok farklı yük; tek bir
+  "10–12 birim" eşiği bütün alanlara uygulanmaz. Gereken örnek ve metin sayısı beceri başına ayrı belirlenir.
+  Ortak çerçeve (varsayım): en az iki ayrı gün, en az iki soru ailesi, yüksek bağımsız doğruluk, alt beceri
+  kapsamı, E için metin çeşitliliği. Dört çocuklu pilot akışın sorunlarını gösterir; eşiklerin genel geçerliliğini
+  doğrulamaz, öyle sunulmaz. Üst basamağı denemek bu kadar kanıt beklemez.
+- **Türetilen durum ile kalıcı olay ayrı (rev. 3):** yeterlik (`secure`), teklif uygunluğu ve zorlanma ham
+  deneme kayıtlarından yeniden hesaplanır (`evidenceReducer`); deneme kaydı madde, aile, bağımlılık grubu,
+  gün, kullanılan destek, **içerik sürümü ve değerlendirme kuralı sürümü**nü taşır. Buna karşılık gönderilmiş
+  mesaj, ebeveyn reddi, "bir daha sorma" ve elle açma/kapama **kalıcı olay** olarak saklanır ve yeniden
+  hesaplanmaz: eşik değişince geçmişte gönderilmiş teklif unutulup yeniden gönderilmez.
+
+**VR ne zaman açılır**
+- **Ebeveyn beyanıyla değil, ölçümle.** Onboarding'de okul/dil sorusu yok. Yoklama(lar) + merdivene
+  göre Tuto önerir, ebeveyn onaylar. Ebeveyn istediği an Görev Ayarları'ndan ya da sohbetten elle açabilir
+  (iki yüzey; "Tuto'ya Sor" izinli araç listesine de girer).
+- **Önkoşul soru ailesi başına (rev. 2).** VR-1 ↔ B3, VR-2 ↔ B4 yalnız kaba **eşleme hipotezi**; bütün
+  eşlemeyi bir basamak yukarı taşımak sorunu çözmez. Her VR ailesi için gereken kelime/yazım becerisi
+  ayrı tanımlanır (ör. harf şifresi ve alfabetik sıra alfabe bilgisi ister, kelime bilgisi değil; analoji
+  B3/B4 ilişkileri; saklı kelime yazılı kelime tanıma) ve kısa doğrudan yoklamayla kontrol edilir. VR oturumu
+  yalnız önkoşulu karşılanmış ailelerden soru çeker; ebeveyne teklif aile başına değil, bir bantta yeterli
+  aile açılınca gider. "Yeterli aile" tekrar etmeden kısa bir oturum üretebilecek içerik olmasını da kapsar.
+  **Tablo mevcut üreticilerden çıkarılır (rev. 3):** ilk taslağı motoru bilen ajan hazırlar, ikinci inceleme
+  gerçek örnek sorular üzerinden yapılır. Her satır: aile, gereken beceri, kelime yükü, doğrudan yoklama,
+  denemeye alınma koşulu. Tek etiket (ör. "alfabe biliyor") harf şifresinin bütün yükünü açıklamaz. Bugün gerçek akıl yürütme tipleri yalnız iki bantta: 7-8 (`YOUNG_VR_TYPES` + `odd-two`)
+  ve 8-9 (`word-grid`, `letter-pair`, `shared-letters`, `hidden-word`, `odd-two`). 8-9'daki
+  `synonym`/`antonym`/`sense` ve 9-12 bantlarının tamamı (kelime/yazım/dilbilgisi) merdivene girer.
+  Okuryazarlıkla açılan çocukta VR bandı `bandForAge`'den gelmez.
+- **İki ayrı karar (rev. 2): deneme erişimi ≠ yeterlik.** İlk yoklamada güçlü kanıt varsa ebeveyne kısa bir
+  "Word puzzles denemesi" önerilebilir; `secure` yine ikinci günkü kanıtı bekler. **Pilot deneme kuralı (rev. 3):**
+  iki uygun ailede üçer yeni sorunun tamamı yardımsız doğru. Bu bir yeterlik eşiği değildir. Şans düzeltmesi tek
+  yüzdeye çevrilmez (şık sayısı, bağımlılık ve soru kalitesi farklı). Kuralın fazla seçici olup olmadığı pilotta
+  izlenir. Ana dili İngilizce çocuğun ilk oturumda bu kurala ulaşabilmesi için planlayıcı ilk yoklamaya bu
+  ailelerin önkoşul maddelerini bilerek koymalıdır.
+- **Teklif:** deneme önerisi ya da önkoşullar karşılanınca ebeveyne bir kez yazılır; reddedilir ya da
+  cevapsız kalırsa bir sonraki VR seviyesinde yeniden sorulur. Ebeveyn "bir daha sorma" diyebilir: teklifler
+  kapanır, elle açma açık kalır. Eşik kodda, mesajı model yazar, `sendGate`'ten geçer.
+- **Mevcut çocuklar:** VR geçmişi olan çocukta (Ada dahil) VR açık kalır, teklif beklenmez.
+- **Eksik: VR-2'nin üstü yok.** Bond'un 9-12 Verbal Reasoning kitapları motora hiç girmedi; ana dili
+  İngilizce 10-12 yaş çocuk için VR tavanı düşük. Tamamlanacak (kullanıcı, 2026-10-18).
+
+**Ebeveyn mesajı: iddianın kapsamı kodda (rev. 2)**
+- Model yalnız kodun seçtiği kalıbı doğal dile çevirir; ölçülmemiş alan hakkında cümle kuramaz. B3 + yazım
+  kanıtından "temel kelime ve okuma becerileri oturdu" denmez (metin anlama ölçülmemiş olabilir). Örnek:
+  "Ada, sık kullanılan kelimelerin anlamlarını ve bazı harf örüntülerini farklı sorularda yardımsız buldu.
+  İngilizce kelime bulmacalarını da deneyebilir."
+- Cümle listesi **beceri × durum** düzeyinde başlar (rev. 3); kalıp yalnız ilgili kanıt varsa kullanılır. Üç dilde.
+  İlk Türkçe çekirdek:
+
+  | Durum | Örnek |
+  |---|---|
+  | Yeterli kanıt | "Farklı kısa metinlerde açıkça verilen bilgileri yardımsız bulabiliyor." |
+  | Az kanıt | "Çıkarım sorularında henüz yeterli örneğimiz yok." |
+  | Yardımla başarı | "İpucundan sonra doğru cevabı buldu; yardımsız yeni örneklerle tekrar bakacağız." |
+  | Tekrarlanan zorlanma | "Farklı sorularda geçmiş zaman biçimini seçerken zorlandı." |
+  | İçerik tavanı | "Elimizdeki en ileri örnekleri çözdü; daha ilerisini henüz ölçmedik." |
+
+**Öncelik:** önce kanıt sayma kuralları ve VR önkoşul tablosu, sayısal eşikler en son. En büyük risk
+navigasyon değil; az ya da birbirine bağımlı cevaptan fazla kesin sonuç çıkarmak.
+
+- Veri önerisi: çocuk başına `english_vr: { enabled, source: 'existing'|'parent'|'trial'|'offer' }` + ayrı,
+  yalnız eklenen olay kaydı (teklif gönderildi / reddedildi / cevapsız / bir daha sorma / elle açıldı-kapandı;
+  zaman ve kural sürümüyle).
+  Native etkisi: kural/teklif/ayar sunucuda, native'e geçer; English kartı içindeki seçenekler (VR, eşdeğer
+  seçim, ses kontrolü) web, Android ve iOS'ta ayrı ayrı yapılır.
 
 ## Temel düzeyde zorlanan çocuk (kullanıcı kararı, 2026-10-16)
 
