@@ -2,6 +2,7 @@ import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
 import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './englishPlay.js'
+import { mountLiteracyLab } from './literacyLab.js'
 import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
 import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from './puzzleReview.js'
 import { localTopicName } from './topicNames.js'
@@ -8631,6 +8632,9 @@ async function syncAgesFromBirthDates() {
     else console.log(`[AGE] ${c.id}: ${c.age} → ${age}`)
   }
 }
+
+// English ladder lab sitting: off unless LITERACY_LAB=1 (internal; no child card, no gems, no parent message).
+mountLiteracyLab(app, { supabase, tzForChild })
 
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')

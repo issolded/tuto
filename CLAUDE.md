@@ -199,8 +199,18 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       simülasyonu eşiği değişmedi. **Migration (henüz bağlı değil, çalıştırmak davranış değiştirmez):** `server/migrations/2026-10-19_english_literacy_evidence.sql`:
       `english_literacy_attempts` (ham cevap; seviye saklanmaz), `english_parent_events` (teklif/ret/"bir daha sorma"/VR aç-kapa/zorlanma bildirimi;
       tetikleyiciyle yalnız eklenir), `children.english_vr`; VR geçmişi olan çocuk `existing` ile açık başlar. PGlite'ta iki kez çalıştırıldı.
-      **Açık:** sunucu bağlantısı (cevap yazma, replay, teklif kararı), ebeveyn cümle kalıpları, VR önkoşul tablosunun gerçek sorularla incelemesi.
-      Native etkisi: yok; ladder.js native paketlerine girmiyor, sunucuya bağlanınca kurallar sunucuda kalacak.
+      **Sunucu (aynı gün):** `server/literacyEvidence.js` cevap yazar, durumu `replay` ile kurar, olayları okur/ekler, `vrDecision` (varsayılan kuru;
+      `write: true` teklifi seviye başına bir kez kaydeder, mesaj göndermez). Karar `src/lib/literacy/vrOffer.js` + veri `vrPrereqs.js` (önkoşul tablosu
+      taslak 1; probe isteyen aile kapalı: K0 bekliyor). Kurallar sunucuya `server/literacy` kopyasıyla (`npm run puzzle:sync`, `english:check`
+      denetliyor). **Lab oturumu** `server/literacyLab.js`, yalnız `LITERACY_LAB=1` iken (yoksa 404): `POST /api/lab/literacy/:childId/next`,
+      `POST /api/lab/literacy/sittings/:id/answer`, `GET /api/lab/literacy/:childId/state`; çocuk kartı yok, gem yok, ebeveyn mesajı yok. Sunucu soruyu
+      katalogdan dağıtır (basamağı ladder seçer), anahtarı tutar, işaretler, yazar. Yalnız metin kaynakları (literacy motoru, VR motoru, cümle bankası,
+      okuma metinleri; `build` hariç); dinleme/resim/deneme seti atlanır. Test `literacy-evidence.test.mjs` 13; harness'te uçtan uca
+      (`server/scripts/literacy-lab-play.mjs`): bayrak kapalı 404, 10 soru, anahtar sızıntısı 0, ipuçlu cevap kanıt değil, metin 3 soru tek grup, replay.
+      Yolda: `server/puzzle` kopyası 4 Ekim'den beri gerideydi ("corner mark" → "little dot" sunucuya hiç gitmemişti), senkronlandı.
+      **Açık:** migration çalışmadan lab 503 der; ebeveyn cümle kalıpları ve gerçek teklif mesajı; VR önkoşul tablosunun gerçek sorularla incelemesi;
+      K0 probe'ları; deneme kuralı için VR maddesi soran yoklama yok; lab'ın arayüzü yok (yalnız uçlar).
+      Native etkisi: yok; ladder.js native paketlerine girmiyor, kurallar sunucuda.
 - [ ] VR içeriğini tamamla (2026-10-18, kullanıcı: "unutmayalım"). Gerçek akıl yürütme tipleri yalnız 7-8 ve 8-9 bantlarında; 9-12 bantları Bond "English" kitaplarından (kelime/yazım/dilbilgisi) ve merdivene geçecek. Ana dili İngilizce 10-12 yaş için VR tavanı düşük: Bond 9-12 Verbal Reasoning kitapları motora hiç girmedi; VR-3+ seviyeleri onlardan kurulup merdivene eşlenmeli.
 - [ ] İngilizce okuryazarlık tasarımı (2026-10-15, Codex; kullanıcıyla kapsam görüşmesi).
       İlk pilot 6–8 yaş odaklı; yaş İngilizce yeterliği değildir (9 yaş başlangıç / 7 yaş ileri okuyucu mümkün).
