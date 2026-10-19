@@ -208,6 +208,12 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       okuma metinleri; `build` hariç); dinleme/resim/deneme seti atlanır. Test `literacy-evidence.test.mjs` 13; harness'te uçtan uca
       (`server/scripts/literacy-lab-play.mjs`): bayrak kapalı 404, 10 soru, anahtar sızıntısı 0, ipuçlu cevap kanıt değil, metin 3 soru tek grup, replay.
       Yolda: `server/puzzle` kopyası 4 Ekim'den beri gerideydi ("corner mark" → "little dot" sunucuya hiç gitmemişti), senkronlandı.
+      **VR önkoşul tablosu taslak 2 (2026-10-19):** 23 aile × 7 gerçek soru okundu (`scripts/english/vr-sample.mjs`). 7-8'in çoğu harf bulmacası
+      (anagram, merdiven, değişim kalıbı, "yapılamayan kelime", karışık harf: şıklar verili, harf harf çözülüyor) → yük `letters`; kullanıcının
+      "okuryazarlık tabanı" kararıyla her aileye **taban B2 + D1** (`FLOOR`). Anlam aileleri bir basamak ağır (pair-meaning/compound-front B4,
+      hidden-word B5 + Ca4). 8-9 kendi beş ailesiyle açılamıyordu: seviye artık alttaki bantla birlikte sayılıyor (kendi bandından ≥3).
+      İçerik bulguları (canlı English kartında, düzeltilmedi): `rhyme-synonym` SPONGE→cake yalnız UK; `compound-front` payroll/payload;
+      `hidden-word` yetişkin/bozuk WordNet cümleleri; 8-9 `odd-two` dorm/hash/automobile. Ayrıntı `docs/ENGLISH-VR-PREREQUISITES.md`.
       **Açık:** migration çalışmadan lab 503 der; ebeveyn cümle kalıpları ve gerçek teklif mesajı; VR önkoşul tablosunun gerçek sorularla incelemesi;
       K0 probe'ları; deneme kuralı için VR maddesi soran yoklama yok; lab'ın arayüzü yok (yalnız uçlar).
       Native etkisi: yok; ladder.js native paketlerine girmiyor, kurallar sunucuda.

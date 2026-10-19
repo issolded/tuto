@@ -12,7 +12,7 @@
 // - VR already on (by the parent, by an accepted offer, or because the child played it before): nothing to offer.
 // - Trial access is not competence: a strong first probe may earn a short trial offer, `secure` still waits for days.
 
-import { VR_FAMILIES, VR_LEVELS, ENOUGH, VR_PREREQS_VERSION } from './vrPrereqs.js'
+import { VR_FAMILIES, VR_LEVELS, ENOUGH, FLOOR, VR_PREREQS_VERSION } from './vrPrereqs.js'
 
 // A ladder step is met when its track is placed above it, or placed at it and secure there.
 export function stepMet(state, track, step) {
@@ -21,18 +21,26 @@ export function stepMet(state, track, step) {
   return tr.step > step || (tr.step === step && tr.status === 'secure')
 }
 
+// Open = the product floor (reading and building short words) and the family's own load are both met.
 export function familyOpen(state, fam) {
   if (fam.probes.length) return false                   // no probe exists yet: closed, never guessed
-  return Object.entries(fam.needs).every(([t, s]) => stepMet(state, t, s))
+  const need = { ...FLOOR }
+  for (const [t, st] of Object.entries(fam.needs)) need[t] = Math.max(need[t] || 0, st)
+  return Object.entries(need).every(([t, st]) => stepMet(state, t, st))
 }
 
 // Families open at each level, and whether the level has enough of them.
 export function openFamilies(state) {
   const out = {}
-  for (const level of VR_LEVELS) {
-    const fams = VR_FAMILIES.filter(f => f.band === level && familyOpen(state, f))
-    const wide = fams.filter(f => f.answers >= ENOUGH.wideAnswers).length
-    out[level] = { families: fams.map(f => f.type), enough: fams.length >= ENOUGH.families && wide >= ENOUGH.wide }
+  const open = VR_FAMILIES.filter(f => familyOpen(state, f))
+  for (const [i, level] of VR_LEVELS.entries()) {
+    const upTo = open.filter(f => VR_LEVELS.indexOf(f.band) <= i)
+    const own = open.filter(f => f.band === level)
+    const wide = upTo.filter(f => f.answers >= ENOUGH.wideAnswers).length
+    out[level] = {
+      families: own.map(f => f.type),
+      enough: upTo.length >= ENOUGH.families && wide >= ENOUGH.wide && own.length >= ENOUGH.ownBand,
+    }
   }
   return out
 }

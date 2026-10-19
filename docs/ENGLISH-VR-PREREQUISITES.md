@@ -1,99 +1,90 @@
-# Tuto — Sözel akıl yürütme (VR): soru ailesi başına önkoşul tablosu (taslak 1, 2026-10-18)
+# Tuto — Sözel akıl yürütme (VR): soru ailesi başına önkoşul tablosu (taslak 2, 2026-10-19)
 
 Karar bağlamı: `ENGLISH-SKILL-LADDERS.md`, "Navigasyon ve sözel akıl yürütme" (rev. 3). VR oturumu yalnız
-önkoşulu karşılanmış ailelerden soru çeker. Bu tablo **mevcut üreticilerden** (`src/lib/englishTemplates.js`)
-okunarak çıkarıldı: her satır üreticinin hangi kelime havuzundan çektiğine ve çocuktan ne istediğine dayanır.
-**Henüz gerçek örnek sorular üzerinden incelenmedi** (ikinci inceleme adımı); basamak eşlemeleri hipotezdir.
+önkoşulu karşılanmış ailelerden soru çeker. Veri: `src/lib/literacy/vrPrereqs.js`, karar: `vrOffer.js`.
 
-## Okuma notu: VR-1 tek bir seviye değil
+**Taslak 2 nasıl yapıldı:** her aileden 7 gerçek soru üretildi (`node scripts/english/vr-sample.mjs`) ve her satırın
+"gereken beceri" sütunu soruların kendisinden okundu. Taslak 1 üreticilerin kaynak kodundan çıkarılmıştı.
 
-"VR-1 ↔ B3" hipotezi tablo çıkınca tutmadı. 7-8 bandının 18 ailesi dört farklı yüke ayrılıyor; bunların
-ikisi B3'ün altında, biri (analogy) belirli kelime bilgisi istediği için üstünde:
+## Taslak 1'den ne değişti
 
-| Kademe | Aileler | Asıl yük |
-|---|---|---|
-| **K0 Alfabe** | `letter-analogy`, `letter-sum`, `alpha-order`, `letters-in-order`, `letter-code` (kodlama yönü) | Alfabe sırası/harf konumu; neredeyse hiç kelime bilgisi yok |
-| **K1 Kısa kelime yapısı** | `anagram-pair`, `join-letter`, `change-pattern`, `word-ladder`, `not-from-letters`, `unscramble`, `front-letter`, `letter-code` (çözme yönü), `logic-grid` | 3–5 harfli sık kelimeleri okuma ve yazımını bilme (B2 + D1–D2); `logic-grid` kısa cümle anlama |
-| **K2 Anlam** | `pair-meaning`, `odd-two`, `compound-front`, `rhyme-synonym`, `analogy` | B3 eş/zıt anlam ve kategori; `analogy` ve `rhyme-synonym` ek bilgi ister |
-| **K3 (8-9 bandı)** | `word-grid`, `letter-pair`, `shared-letters`, `hidden-word`, `odd-two` | B4 kelime genişliği + D3–D4 yazım; `hidden-word` cümle okuma |
-
-Ürün sorusu (kullanıcı için): K0 aileleri İngilizce bilmeyen çocuğa da (Osman) çok erken açılabilir; yük
-alfabe ve akıl yürütme. Bu bir "ilk VR kapısı" olarak istenen bir şey mi, yoksa VR ancak K1'den mi başlamalı?
-Yönergeler İngilizce olduğu için K0 da puansız çözülmüş örnek ister.
+1. **7-8 ailelerinin çoğu harf bulmacası; kelimeyi bilmek gerekmiyor.** `anagram-pair` (host/shoe/most/shot/shop),
+   `not-from-letters` (HEART'tan "rot" yapılamaz), `change-pattern` (dig→dog, pit→pot, hip→?), `word-ladder`
+   (TEN→?→FIN), `unscramble` (şıklar verili olduğu için harf sayımıyla çözülüyor): hepsi harf harf kontrol edilerek
+   çözülüyor, çünkü şıkların hepsi gerçek kelime ve doğru olan yalnız harf kuralıyla ayrılıyor. Taslak 1 bunlara B2/D1
+   demişti; asıl yük **harf**. `letter-code` kodlama yönü alfabe sırası istemiyor, yalnız harf eşleme; çözme yönü
+   büyük harfli anahtarla küçük harfli şıkları eşlemeyi istiyor (probe `case`).
+2. **Ürün tabanı (kullanıcı, 2026-10-18: "VR'ı açmak için bir okuryazarlık tabanı olmalı").** Yük tek başına
+   ölçüt olsaydı harf aileleri hiç İngilizcesi olmayan çocuğa (Osman) ilk gün açılırdı. Bu yüzden her aile için ayrıca
+   **taban: B2 + D1** (kısa sık kelimeleri okuma ve kurma). Gerçek yük sütunu ileride ayrı karar için korunuyor.
+3. **Anlam aileleri bir basamak ağır.** `pair-meaning` çiftleri B3 değil B4–B5 (remarkable/noteworthy,
+   foreign/domestic, majority/minority, client/customer, feast/banquet). `compound-front` kuyrukları yetişkin kelime
+   (payroll, payload, sidekick, highland) → B4. `front-letter` dört kelimeyi parçadan hatırlatıyor (double, drill,
+   dear, deer; palace, please, post, place) → B3 + D2. `hidden-word` cümleleri WordNet'in yetişkin örnek cümleleri
+   ("the book underwent fundamental changes", "dust particles suspended in the air") → B5 + Ca4.
+4. **8-9 seviyesi kendi beş ailesiyle hiç açılamıyordu** (beş aile, beşi de açık olmalıydı). Seviye artık
+   o seviye ve altındaki açık ailelerle sayılıyor, kendi bandından en az 3 aile şartıyla (oturum iki bandı karıştırabilir).
 
 ## Tablo
 
-Sütunlar: **Gereken beceri** (merdiven kodu ya da merdivende olmayan beceri), **Kelime yükü** (üreticinin
-havuzu), **Doğrudan yoklama** (merdiven kanıtı yetmiyorsa açılmadan önce sorulacak kısa madde),
-**Denemeye alınma koşulu** (bu aile deneme oturumuna girebilir mi), **Havuz** (3000 tohumda farklı soru /
-farklı cevap; `node scripts/english/vr-pool.mjs`). Farklı cevap sayısı bağımsız kanıt için daha anlamlı
-(aynı cevap farklı şıklarla aynı kelime ailesidir).
+**Yük:** sorunun gerçekten istediği. **Gerekenler:** taban (B2 + D1) dahil değil, onun üstüne. **Probe:** merdivende
+olmayan kontrol; probe yoksa aile kapalı. **Cevap:** 3000 tohumda farklı cevap sayısı.
 
-### 7-8 bandı (`YOUNG_VR_TYPES` + `odd-two`)
+### 7-8
 
-| Aile | Ne soruyor | Gereken beceri | Kelime yükü | Doğrudan yoklama | Denemeye alınma koşulu | Havuz |
-|---|---|---|---|---|---|---|
-| `letter-analogy` | AB : CD = EF : ? (alfabe yardımcı satırı var) | Alfabe sırası, adım sayma; **merdivende yok** | Yok | Alfabe sırası maddesi (aşağıda) | Alfabe yoklaması geçti | 1430 / 89 |
-| `letter-sum` | a = 2, b = 3… c + d? | Harfi etiket olarak okuma + 24'e kadar toplama/çıkarma | Yok (matematik yükü var) | Yok; matematik düzeyi ayrıca bilinir | Her zaman (yönerge örneğiyle) | 1956 / 43 |
-| `alpha-order` | 5 kelimeden alfabetik sırada N. olan (7-8'de ilk harfler farklı) | Alfabe sırası; kelimeyi okumak gerekmez | Dale-Chall 3–7 harf (okunur ama anlamı gerekmez) | Alfabe sırası maddesi | Alfabe yoklaması geçti | 1174 / 1174 |
-| `letters-in-order` | Harfleri alfabetik sırada olan kelime | Alfabe sırası, harf harf karşılaştırma | Dale-Chall 3–5 harf | Alfabe sırası maddesi | Alfabe yoklaması geçti | 85 / 85 (dar) |
-| `letter-code` kodlama | TABLE = 12345 ise BAT = ? | Harf konumu eşleme; büyük/küçük harf eşleme | Anahtar 4–6, hedef 3–5 harf Dale-Chall | Büyük–küçük harf eşleme maddesi | Alfabe yoklaması geçti | 1137 / 674 (iki yön birlikte) |
-| `letter-code` çözme | SADM = 1234 ise 123 = ? (şıklar kelime) | Yukarıdaki + çıkan kelimeyi tanıma (B2) | Aynı | Yok | B2 yeterli kanıt | (yukarıda) |
-| `anagram-pair` | Aynı harflerden yapılmış iki kelime | Kısa kelimeyi okuma, harf sayma (B2, D1) | Dale-Chall 3–5 | Yok | B2 + D1 yeterli kanıt | 77 / 154 (dar) |
-| `join-letter` | peac (h) ome | İki kelimenin yazımını hatırlama (D1–D2), tanıma (B2) | Dale-Chall 3–5; parçalar kelime değil | Yok | B2 + D2 yeterli kanıt | 2764 / 20 harf |
-| `front-letter` | _aste _ind _ish _ater → w | Dört kelimeyi parçadan **hatırlama** (yazım hafızası, D2–D3) | Dale-Chall 4–6 | Yok | B2 + D2 yeterli kanıt | 2988 / 22 harf |
-| `change-pattern` | pit→pot, lit→lot, file→? | Kural çıkarma + cevabın kelime olduğunu tanıma (B2, D1) | Dale-Chall 3–5 | Yok | B2 + D1 yeterli kanıt | 1136 / 468 |
-| `word-ladder` | TEN → ? → FIN | Harf değiştirip kelime bulma (B2, D1) | Dale-Chall 3–4 | Yok | B2 + D1 yeterli kanıt | 1648 / 433 |
-| `not-from-letters` | HEART: the rat rot tar → rot | Uzun kelimenin harflerini sayma; kısa kelimeleri okuma (B2) | Büyük 6–9, küçük 3–5 harf Dale-Chall | Yok | B2 yeterli kanıt | 2158 / 755 |
-| `unscramble` | LELB → bell | Karışık harften somut ismi **hatırlama** (B1–B2 + D1–D2) | Dale-Chall somut isim 4–6 | Yok | B2 + D2 yeterli kanıt | 214 / 214 |
-| `logic-grid` | Dört çocuk iki özellik / üç kişilik sıralama | Kısa cümle anlama (Ca1–Ca3), karşılaştırma sıfatı (`smaller than`, Cd4'e yakın) | Sahne tabloları (`LOGIC_SCENES`, `ORDER_SCENES`), isimler | Yok | Ca3 yeterli kanıt | 2997 / 24 |
-| `pair-meaning` | En eş/en zıt anlamlı çift (cümlesiz) | B3 eş ve zıt anlam | Elle yazılmış `PAIR_SYNONYMS` / `PAIR_ANTONYMS` + kategori çiftleri | Yok | B3 (eş ve zıt ayrı beceri) yeterli kanıt | 153 / 153 |
-| `odd-two` | Beş kelimeden farklı olan İKİ (kategori) | B2 kategori + "hangi ikisi" akıl yürütmesi | Somut isim, Zipf ≥ 4,0 (bandın cevap eşiği) | Yok | B2 kategori + B3 yeterli kanıt | 59 / 118 (7-8, dar) |
-| `compound-front` | CAKE CUP POT ROOM → TEA | Bileşik kelime bilgisi (teacup); B3 düzeyi + kalıp bilgisi | Baş Dale-Chall 3–6, kuyruklar bandın okunur kelimeleri | Bir bileşik kelime tanıma maddesi önerilir | B3 yeterli kanıt | 2081 / 30 |
-| `analogy` | Frog : tadpole = swan : ? | İlişki akıl yürütmesi + **belirli kelime bilgisi** (yavru/ses/yuva/dişi: `cygnet`, `gosling`, `owlet`) | Elle `RELATIONS` tabloları | Seçilen ilişkide 1–2 kelime maddesi | B3 + ilişki maddesi geçti; anadilli olmayan için en geç açılan K2 ailesi | 122 / 111 |
-| `rhyme-synonym` | CABLE, tyre → wire | Eş anlam (B3) + **kafiye** (ses bilgisi, aksana duyarlı; merdiven dışı) | Elle `RHYME_CLUES`, kafiye grupları | Sesli kafiye maddesi (ses gerekir) | B3 + kafiye maddesi; ses yoksa açılmaz | 44 / 43 (en dar) |
+| Aile | Örnek (gerçek) | Yük | Gerekenler | Probe | Cevap |
+|---|---|---|---|---|---|
+| `letter-sum` | a=5, b=7, c=8, d=9; c − b → 1 | harf + 24'e kadar işlem | — | — | 43 |
+| `anagram-pair` | host / shoe / most / shot / shop → host + shot | harf | — | — | 154 |
+| `not-from-letters` | HOSPITAL: also / lit / lot / top / tag → tag | harf | — | — | 755 |
+| `change-pattern` | dig→dog, pit→pot; hip → hop | harf kuralı | — | — | 468 |
+| `word-ladder` | BOOK → ? → ROOT: hook / room / boot / look → boot | harf | — | — | 433 |
+| `unscramble` | LMAP: camp / meal / slap / male / lamp → lamp | harf | — | — | 214 |
+| `letter-code` | LOST = 1234; LOT → 1 2 4 / SALE = 1234; 3 4 1 1 → less | harf eşleme; çözmede büyük/küçük harf | — | `case` | 674 |
+| `letter-analogy` | LM : OP = OP : ? → RS | alfabe sırası | — | `alphabet` | 89 |
+| `alpha-order` | brake / tank / stream / roll / noise, 3.? → roll | alfabe sırası (ilk harfler farklı) | — | `alphabet` | 1174 |
+| `letters-in-order` | dry / glad / see / oil / ton → dry | alfabe sırası, her harf çifti | — | `alphabet` | 85 |
+| `join-letter` | tal(_)og → l (tall, log) | yazımdan kelime hatırlama | B2, D2 | — | 20 harf |
+| `front-letter` | _ouble _rill _ear _eer → d | dört kelimeyi parçadan hatırlama | B3, D2 | — | 22 harf |
+| `logic-grid` | "Kofi and Priya have yellow bikes…" Who has a red bike with baskets? | cümle okuma, karşılaştırma | Ca3 | — | 24 |
+| `odd-two` | breakfast / chest / lunch / tissue / belly → breakfast + lunch | kategori | B3 | — | 118 |
+| `pair-meaning` | foreign, domestic (most opposite) | eş/zıt anlam, orta-seyrek kelime | B4 | — | 153 |
+| `compound-front` | able / roll / load / back → pay | bileşik kelime bilgisi | B4 | — | 30 |
+| `analogy` | wolf : howl = frog : ? → croak | ilişki + belirli kelime (hayvan sesi, yavru) | B3 | `relation-words` | 111 |
+| `rhyme-synonym` | VEHICLE, star → car | eş anlam + kafiye (ses) | B4 | `rhyme-audio` | 43 |
 
-### 8-9 bandı (akıl yürütme tipleri)
+### 8-9
 
-`synonym`, `antonym`, `sense` ve `WORD_TYPES` bu tabloda değil: kararla merdivene geçtiler.
+| Aile | Örnek (gerçek) | Yük | Gerekenler | Cevap |
+|---|---|---|---|---|
+| `odd-two` | snack / dog / lunch / wolf / breakfast → dog + wolf | kategori, geniş kelime | B4 | 371 |
+| `word-grid` | 12 kelime; "combine"a yakın iki → mix + fuse | eş/zıt anlam + 12 kelime okuma | B4 | 140 |
+| `letter-pair` | customer → c__ent → li | anlam + yazımı tamamlama | B4, D3 | 261 |
+| `shared-letters` | b___er, h___ing → itt | parçadan geniş yazım hatırlama | B4, D4 | 839 |
+| `hidden-word` | "dust particles susp___ed in the air" → end | yetişkin cümle okuma + yazım | B5, Ca4 | 60 |
 
-| Aile | Ne soruyor | Gereken beceri | Kelime yükü | Doğrudan yoklama | Denemeye alınma koşulu | Havuz |
-|---|---|---|---|---|---|---|
-| `odd-two` | Yukarıdaki gibi | B2 kategori + B4 kelime genişliği | Somut isim, Zipf ≥ 3,6 | Yok | B4 yeterli kanıt | 193 / 371 |
-| `word-grid` | 12 kelimelik ızgaradan hedefe en yakın/zıt İKİ | B4 eş ve zıt anlam; 12 kelimeyi okuma yükü | Hedef Zipf 4,0–5,5; dolgu ≥ 4,2 somut | Yok | B4 yeterli kanıt | 86 / 140 (dar) |
-| `letter-pair` | tired → sl__py | B4 eş/zıt anlam + yazımı tamamlama (D3–D4) | Elle çiftler, cevap 5–10 harf | Yok | B4 + D3 yeterli kanıt | 379 / 261 |
-| `shared-letters` | Aynı üç harf iki kelimeyi tamamlar | Parçadan kelime tanıma: geniş yazılı kelime bilgisi (B4) + yazım (D4); anlam ipucu yok | 5–9 harf, Zipf ≥ 4,2 | Yok | B4 + D4 yeterli kanıt | 2055 / 839 |
-| `hidden-word` | "…under her pil___." → low | Cümle okuma (C-anlam, E1–E2 düzeyi) + B4 + üç harfli kelime | WordNet örnek cümleleri, somut ev sahibi kelime | Yok | B4 + Ca4 yeterli kanıt | 95 / 60 (dar) |
+## Seviye ne zaman "yeterli"
 
-## Merdivende olmayan, yazılması gereken yoklamalar
+Seviye L teklif edilebilir: L ve altındaki açık aile ≥ 5, bunların ≥ 3'ünün farklı cevabı ≥ 200, L bandının kendi açık
+ailesi ≥ 3 (varsayım). Sonuç:
+- Taban (B2 + D1) karşılanınca 7-8 açılır: beş harf ailesinin dördü geniş (not-from-letters, change-pattern,
+  word-ladder, unscramble).
+- 8-9 en erken B4 + D3/D4'te açılır; `hidden-word` B5'i bekler.
 
-Bugün hiçbir üretici bunları sormuyor; K0 ve iki K2 ailesi bunlara bağlı.
+## İçerik bulguları (canlıdaki English kartında da geçerli, bu taslakta düzeltilmedi)
 
-1. **Alfabe sırası:** "Which letter comes next? D E F _" ve "Which word comes first in ABC order? bed / cat".
-   Kelime yükü sıfır, 3 şık. `letter-analogy`, `alpha-order`, `letters-in-order`, `letter-code` için.
-2. **Büyük–küçük harf eşleme:** "B" → b / d / p. `letter-code` (anahtar büyük harfle basılıyor).
-3. **İlişki kelimesi:** "A baby swan is a…" cygnet / gosling / kitten. `analogy` için, ilişki başına.
-4. **Kafiye (sesli):** 🔊 "cat" → hat / cup / dog. `rhyme-synonym` için; ses yoksa aile açılmaz.
-5. İsteğe bağlı **bileşik kelime:** "tea + cup" → teacup mı? `compound-front` için.
+1. **`rhyme-synonym` SPONGE → cake:** "sponge" = kek yalnız İngiliz kullanımı; UK/US ortak kapsam kararıyla çelişiyor.
+2. **`compound-front`:** payroll, payload, sidekick gibi yetişkin bileşikler 7-8'de.
+3. **`hidden-word`:** WordNet örnek cümleleri yetişkin ve yer yer bozuk ("water is the element of fishes",
+   "if you want to leave early you have to ask the foreman"); 7 örnekte aynı ev sahibi kelime (fundamental) iki kez.
+4. **8-9 `odd-two`:** dorm, hash, automobile, technician, basin: Amerikan ya da çocuğa uzak kelimeler; "can / purse"
+   (kap) ve "organ" (vücut) grupları belirsiz.
+5. **`pair-meaning`:** çeldirici çiftler rastgele okunuyor ("board, ugly", "thick, thrown"); bilinçli seçilmiş değil.
 
-## "Yeterli aile" ve oturum içeriği
+## Açık
 
-Oturum 10 soru, aile başına en çok bir soru (`generateSession` tip başına bir soru dağıtıyor). Tekrarsız bir
-kısa oturum için açık ailelerin **farklı cevap** havuzu belirleyici. Dar aileler (`rhyme-synonym` 43,
-`letters-in-order` 85, `hidden-word` 60 cevap, 7-8 `odd-two` 59 soru) haftada birkaç oturumda tekrar eder.
-Öneri (varsayım): "yeterli aile" = en az 5 açık aile ve bunların en az 3'ünün farklı cevap havuzu ≥ 200.
-K0 tek başına bu koşulu sağlıyor (`alpha-order`, `letter-code`, `letter-analogy` geniş), yani K0 açılırsa
-kısa VR oturumu kurulabilir.
-
-## Pilot deneme kuralıyla ilişkisi
-
-Rev. 3 kuralı: iki uygun ailede üçer yeni sorunun tamamı yardımsız doğru. Yorumumuz: "uygun aile" = bu
-tablodaki koşulu sağlanmış aile; üç soru o ailenin kendi VR sorusu (ilk yoklamaya planlayıcı koyar).
-**Bu yorum Astra'ya sorulacak:** alternatif, üç sorunun merdiven önkoşul maddeleri olması.
-
-## İkinci inceleme için
-
-- Her aileden 5–10 gerçek soru üretip (`generateItem(band, type, seed)`) gereken beceri sütununu soruların
-  kendisinden doğrulamak; özellikle `front-letter` (yazım hafızası mı, tanıma mı) ve `compound-front`.
-- K0'ın ürün kararı (yukarıda).
-- Eşlemelerin pilotta nasıl sınanacağı: önkoşulu karşılayan çocuğun ailede yardımsız doğru oranı, karşılamayanınkinden belirgin yüksek mi.
+- Probe'lar (alfabe, büyük/küçük harf, ilişki kelimesi, sesli kafiye) yazılmadı; bu ailelerin hepsi kapalı.
+- Taban B2 + D1 bir ürün kuralı, ölçülmüş eşik değil. Harf ailelerini İngilizcesi olmayan çocuğa açmak ayrı bir karar.
+- Pilot deneme kuralının VR maddesi soran yoklaması yok.
+- Bu tablo VR'nin 7-8 ve 8-9 bantlarını kapsıyor. `tuto-app` çalışma ağacındaki yeni bantlar (6-7, vr-9-10, vr-10-11,
+  vr-11-12; commit edilmedi) eklendiğinde aynı yöntemle satır eklenecek.

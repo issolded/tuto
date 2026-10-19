@@ -159,3 +159,21 @@ test('appendEvents keeps what it is given', async () => {
   assert.equal(events[0].kind, 'vr_no_more_offers')
   assert.deepEqual(events[0].detail, { channel: 'telegram' })
 })
+
+// ── Draft 2 (2026-10-19): what the real items showed ──
+test('letter puzzles need no English by load, but the floor keeps them shut without it', () => {
+  const none = openFamilies(placed({ B: [1, 'secure'], D: [1, 'secure'] }))
+  assert.deepEqual(none['7-8'].families, [], 'B1 is below the floor')
+  const floor = openFamilies(placed({ B: [2, 'secure'], D: [1, 'secure'] }))
+  for (const t of ['anagram-pair', 'not-from-letters', 'change-pattern', 'word-ladder', 'unscramble']) {
+    assert.ok(floor['7-8'].families.includes(t), t)
+  }
+  assert.equal(floor['7-8'].enough, true, 'at the floor a short 7-8 sitting can already be made')
+})
+
+test('8-9 opens on its own families plus the lower band; hidden-word waits for B5', () => {
+  const o = openFamilies(placed({ B: [4, 'secure'], D: [4, 'secure'], Ca: [4, 'secure'] }))
+  assert.ok(!o['8-9'].families.includes('hidden-word'))
+  assert.equal(o['8-9'].enough, true)
+  assert.equal(openFamilies(placed({ B: [4, 'secure'], D: [2, 'secure'] }))['8-9'].enough, false, 'only two 8-9 families')
+})
