@@ -189,6 +189,18 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       Ayrıntı: `docs/LITERACY-PILOT.md`. Native etkisi: yok; yalnız yeni web lab, native paket değişmedi.
 
 
+- [ ] İngilizce kanıt modeli rev. 3 (2026-10-19, Claude; `codex/english-literacy`, push yok). `src/lib/literacy/ladder.js` Astra'yla varılan kurallara geçti
+      (`RULES_VERSION` `ladder-2`): kanıt birimi cevap değil (basamak, beceri, grup); bir metin tek grup, aynı beceriye tek birim, farklı beceriler ayrı;
+      birim yalnız ilk gündeki cevapların hepsi doğruysa doğru; aynı grup başka gün = gecikmeli tekrar, yeni kanıt değil. `settled` → `secure`: her beceri
+      için birim/gün/doğruluk + basamakta en az iki soru ailesi; eşik `SECURE` + `SECURE_BY_TRACK` (E 3, Ca 4 birim) + `SECURE_BY_SKILL`, ölçülmüş değil.
+      `secure` her cevapta yeniden okunur, kaybedilebilir. `start({ skills })` basamağın kapsaması gereken becerileri verir. `summary` beceri başına
+      durum seçer (`secure`/`struggling`/`helped`/`little`/`unknown`) + `ceiling` — ebeveyn cümlesinin iddia kapsamı buradan. `replay(attempts)`
+      durumu ham kayıtlardan kurar; her cevap içerik ve kural sürümü taşır. Test: `ladder.test.mjs` 26 (13 yeni), `npm test` 193/193, yerleştirme
+      simülasyonu eşiği değişmedi. **Migration (henüz bağlı değil, çalıştırmak davranış değiştirmez):** `server/migrations/2026-10-19_english_literacy_evidence.sql`:
+      `english_literacy_attempts` (ham cevap; seviye saklanmaz), `english_parent_events` (teklif/ret/"bir daha sorma"/VR aç-kapa/zorlanma bildirimi;
+      tetikleyiciyle yalnız eklenir), `children.english_vr`; VR geçmişi olan çocuk `existing` ile açık başlar. PGlite'ta iki kez çalıştırıldı.
+      **Açık:** sunucu bağlantısı (cevap yazma, replay, teklif kararı), ebeveyn cümle kalıpları, VR önkoşul tablosunun gerçek sorularla incelemesi.
+      Native etkisi: yok; ladder.js native paketlerine girmiyor, sunucuya bağlanınca kurallar sunucuda kalacak.
 - [ ] VR içeriğini tamamla (2026-10-18, kullanıcı: "unutmayalım"). Gerçek akıl yürütme tipleri yalnız 7-8 ve 8-9 bantlarında; 9-12 bantları Bond "English" kitaplarından (kelime/yazım/dilbilgisi) ve merdivene geçecek. Ana dili İngilizce 10-12 yaş için VR tavanı düşük: Bond 9-12 Verbal Reasoning kitapları motora hiç girmedi; VR-3+ seviyeleri onlardan kurulup merdivene eşlenmeli.
 - [ ] İngilizce okuryazarlık tasarımı (2026-10-15, Codex; kullanıcıyla kapsam görüşmesi).
       İlk pilot 6–8 yaş odaklı; yaş İngilizce yeterliği değildir (9 yaş başlangıç / 7 yaş ileri okuyucu mümkün).

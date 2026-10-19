@@ -380,6 +380,10 @@ bulabildiğini** görmek.
   | Tekrarlanan zorlanma | "Farklı sorularda geçmiş zaman biçimini seçerken zorlandı." |
   | İçerik tavanı | "Elimizdeki en ileri örnekleri çözdü; daha ilerisini henüz ölçmedik." |
 
+**Uygulama (2026-10-19):** kanıt kuralları `src/lib/literacy/ladder.js`'te (`RULES_VERSION` `ladder-2`, testler
+`scripts/tests/ladder.test.mjs`); ham cevap ve kalıcı ebeveyn olayı tabloları
+`server/migrations/2026-10-19_english_literacy_evidence.sql`. VR önkoşul taslağı: `ENGLISH-VR-PREREQUISITES.md`.
+
 **Öncelik:** önce kanıt sayma kuralları ve VR önkoşul tablosu, sayısal eşikler en son. En büyük risk
 navigasyon değil; az ya da birbirine bağımlı cevaptan fazla kesin sonuç çıkarmak.
 

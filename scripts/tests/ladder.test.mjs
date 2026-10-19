@@ -3,7 +3,7 @@
 // Fixed seeds; the numbers checked are the ones the engine promises (placement within one step, in few answers).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { start, nextProbe, record, summary, gaps, TRACKS, TRACK_ORDER, RULES } from '../../src/lib/literacy/ladder.js'
+import { start, nextProbe, record, replay, summary, gaps, units, skillStatus, TRACKS, TRACK_ORDER, RULES, RULES_VERSION } from '../../src/lib/literacy/ladder.js'
 
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32) }
 
@@ -127,13 +127,143 @@ test('promotion needs a run one step up over two sessions; demotion needs repeat
   assert.equal(s.tracks.D.step, 3)
 })
 
-test('settled only after right answers at the step in two sessions', () => {
-  let s = start({ age: 8, stop: 'native' })
-  s.tracks.Ca = { ...s.tracks.Ca, phase: 'placed', status: 'provisional', step: 3, lo: 3, hi: 4 }
-  for (let i = 0; i < 3; i++) s = record(s, { track: 'Ca', step: 'Ca3', correct: true, session: 1 })
-  assert.equal(s.tracks.Ca.status, 'provisional')
-  s = record(s, { track: 'Ca', step: 'Ca3', correct: true, session: 2 })
-  assert.equal(s.tracks.Ca.status, 'settled')
+// ── Evidence rules, rev. 3 (docs/ENGLISH-SKILL-LADDERS.md "Navigasyon ve sözel akıl yürütme") ──
+
+// A placed track at `step`, so the evidence tests start from a known place.
+function placedAt(t, step, opts = { age: 8, stop: 'native' }) {
+  const s = start(opts)
+  s.tracks[t] = { ...s.tracks[t], phase: 'placed', status: 'provisional', step, lo: step, hi: step + 1 }
+  return s
+}
+const ans = (s, a) => record(s, { session: a.day, ...a })
+
+test('three questions on one text give a skill one unit, not three', () => {
+  let s = placedAt('E', 3)
+  for (const q of [1, 2, 3]) s = ans(s, { track: 'E', step: 'E3', skill: 'cause', group: 'story-12', item: `story-12-q${q}`, correct: true, day: 1 })
+  const us = units(s.tracks.E).filter(u => u.skill === 'cause')
+  assert.equal(us.length, 1)
+  assert.equal(us[0].answers, 3)
+})
+
+test('one text, different skills: each skill keeps its own unit and result', () => {
+  let s = placedAt('E', 3)
+  s = ans(s, { track: 'E', step: 'E3', skill: 'detail', group: 'story-7', correct: true, day: 1 })
+  s = ans(s, { track: 'E', step: 'E3', skill: 'inference', group: 'story-7', correct: false, day: 1 })
+  const sum = summary(s).E.skills
+  assert.equal(sum.detail.right, 1)
+  assert.equal(sum.inference.right, 0)
+  assert.equal(sum.inference.units, 1)
+})
+
+test('a unit is right only if every answer in it on its first day was right', () => {
+  let s = placedAt('E', 3)
+  s = ans(s, { track: 'E', step: 'E3', skill: 'cause', group: 'story-3', correct: true, day: 1 })
+  s = ans(s, { track: 'E', step: 'E3', skill: 'cause', group: 'story-3', correct: false, day: 1 })
+  assert.equal(units(s.tracks.E)[0].correct, false)
+})
+
+test('the same text on a later day is a delayed repeat, not new evidence', () => {
+  let s = placedAt('E', 3)
+  s = ans(s, { track: 'E', step: 'E3', skill: 'detail', group: 'story-1', correct: true, day: 1 })
+  s = ans(s, { track: 'E', step: 'E3', skill: 'detail', group: 'story-1', correct: true, day: 2 })
+  const st = skillStatus(s, 'E', 3, 'detail')
+  assert.equal(st.units, 1)
+  assert.equal(st.days, 1, 'the repeat does not add a day of evidence')
+  assert.deepEqual(st.delayed, { asked: 1, right: 1 })
+})
+
+test('dog/dogs: one word family is one unit for meaning, and separate evidence for the plural skill', () => {
+  let s = placedAt('B', 2)
+  s = ans(s, { track: 'B', step: 'B2', skill: 'meaning', group: 'word:dog', item: 'dog', correct: true, day: 1 })
+  s = ans(s, { track: 'B', step: 'B2', skill: 'meaning', group: 'word:dog', item: 'dogs', correct: true, day: 1 })
+  s = ans(s, { track: 'Cd', step: 'Cd1', skill: 'plural', group: 'word:dog', item: 'dogs', correct: true, day: 1 })
+  assert.equal(skillStatus(s, 'B', 2, 'meaning').units, 1)
+  assert.equal(units(s.tracks.Cd).filter(u => u.skill === 'plural').length, 1)
+})
+
+test('secure needs enough units, two days, two question families and high accuracy', () => {
+  const words = (s, day, n, family, from = 0) => {
+    for (let i = 0; i < n; i++) s = ans(s, { track: 'B', step: 'B3', skill: 'synonym', family, group: `w${from + i}`, correct: true, day })
+    return s
+  }
+  let s = placedAt('B', 3)
+  s = words(s, 1, 6, 'vr-synonym')
+  assert.equal(s.tracks.B.status, 'provisional', 'one day is not enough')
+  s = words(s, 2, 1, 'vr-synonym', 6)
+  assert.equal(s.tracks.B.status, 'provisional', 'one family is not enough')
+  s = words(s, 2, 1, 'trial-synonym', 7)
+  assert.equal(s.tracks.B.status, 'secure')
+  assert.equal(skillStatus(s, 'B', 3, 'synonym').status, 'secure')
+})
+
+test('a skill the step lists but never asked keeps the track from being secure', () => {
+  let s = placedAt('B', 3, { age: 8, stop: 'native', skills: { B3: ['synonym', 'antonym'] } })
+  for (const [day, family] of [[1, 'a'], [1, 'a'], [1, 'a'], [2, 'b'], [2, 'b'], [2, 'b']]) {
+    s = ans(s, { track: 'B', step: 'B3', skill: 'synonym', family, correct: true, day })
+  }
+  assert.equal(skillStatus(s, 'B', 3, 'synonym').status, 'secure')
+  assert.equal(s.tracks.B.status, 'provisional')
+  assert.equal(summary(s).B.skills.antonym.status, 'unknown')
+})
+
+test('thresholds are per track: a reading skill needs fewer units than a word skill', () => {
+  assert.ok((RULES.SECURE_BY_TRACK.E?.units ?? RULES.SECURE.units) < RULES.SECURE.units)
+  let s = placedAt('E', 3)
+  let i = 0
+  for (const [day, family] of [[1, 'story'], [2, 'story'], [2, 'info']]) {
+    s = ans(s, { track: 'E', step: 'E3', skill: 'detail', family, group: `text-${i++}`, correct: true, day })
+  }
+  assert.equal(skillStatus(s, 'E', 3, 'detail').status, 'secure')
+})
+
+test('secure is a reading of the evidence, not a badge: later misses take it away', () => {
+  let s = placedAt('B', 3)
+  for (const [day, family] of [[1, 'a'], [1, 'a'], [1, 'a'], [2, 'b'], [2, 'b'], [2, 'b']]) {
+    s = ans(s, { track: 'B', step: 'B3', skill: 'synonym', family, correct: true, day })
+  }
+  assert.equal(s.tracks.B.status, 'secure')
+  s = ans(s, { track: 'B', step: 'B3', skill: 'synonym', family: 'a', correct: false, day: 3 })
+  s = ans(s, { track: 'B', step: 'B3', skill: 'synonym', family: 'a', correct: false, day: 3 })
+  assert.equal(s.tracks.B.status, 'provisional', '6 of 8 is under 80%')
+})
+
+test('the statement the code may choose per skill: helped, little, struggling', () => {
+  let s = placedAt('Cd', 3)
+  s = ans(s, { track: 'Cd', step: 'Cd3', skill: 'past', correct: true, independent: false, day: 1 })
+  assert.equal(skillStatus(s, 'Cd', 3, 'past').status, 'helped')
+  s = ans(s, { track: 'Cd', step: 'Cd3', skill: 'past', correct: true, day: 1 })
+  assert.equal(skillStatus(s, 'Cd', 3, 'past').status, 'little')
+  for (const day of [2, 2, 3]) s = ans(s, { track: 'Cd', step: 'Cd3', skill: 'agreement', correct: false, day })
+  assert.equal(skillStatus(s, 'Cd', 3, 'agreement').status, 'struggling')
+})
+
+test('ceiling: secure at the top step is said as "nothing further measured"', () => {
+  let s = placedAt('Ca', 4)
+  for (const [day, family] of [[1, 'a'], [1, 'a'], [2, 'b'], [2, 'b']]) {
+    s = ans(s, { track: 'Ca', step: 'Ca4', skill: 'order', family, correct: true, day })
+  }
+  assert.equal(summary(s).Ca.ceiling, true)
+})
+
+test('every stored answer keeps its content and rule version', () => {
+  const s = ans(start({ age: 8 }), { track: 'B', step: 'B2', correct: true, day: 1, contentVersion: 'stories-200@a555085' })
+  const h = s.tracks.B.history[0]
+  assert.equal(h.contentVersion, 'stories-200@a555085')
+  assert.equal(h.ruleVersion, RULES_VERSION)
+})
+
+test('replay rebuilds the same state from the stored answers', () => {
+  const opts = { age: 8, stop: 'native' }
+  const attempts = []
+  let s = start(opts)
+  const r = rng(11)
+  for (let i = 0; i < 40; i++) {
+    const p = nextProbe(s, { session: 1 + Math.floor(i / 10) })
+    const a = { track: p.track, step: p.step, item: `i${i}`, correct: r() < 0.7, session: 1 + Math.floor(i / 10) }
+    attempts.push(a)
+    s = record(s, a)
+  }
+  assert.deepEqual(replay(attempts, opts), s)
 })
 
 test('a step the bank cannot serve is skipped, and gaps() lists it', () => {
