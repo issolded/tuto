@@ -61,7 +61,7 @@ import {
   RELATIONS, LOGIC_SCENES, ORDER_SCENES, NAMES, POSSESSIVES, MISSPELLINGS, CONTRACTIONS,
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
   PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, PAIR_ANTONYMS,
-  SYNONYM_GROUPS, GRID_OPPOSITES, SENSE_ANSWERS,
+  SYNONYM_GROUPS, GRID_OPPOSITES, SENSE_ANSWERS, COMPOUND_HEADS, HIDDEN_SENTENCES,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -1031,14 +1031,33 @@ function genOddTwo(r, band, seed) {
   // only in a grocer's sense (to a child it is a verb), `leftovers` is a meal, not a food kind.
   // A 2026-09-27 test sheet put `produce` beside butter and cheese and the adult reading it
   // picked it as the odd one.
-  const notMember = new Set(['produce', 'leftovers', 'female', 'male', 'young', 'giant'])
+  //
+  // 2026-10-19 (VR prerequisite read, seven real questions per family): the 8-9 line still put
+  // words on the page that are American, adult or a dictionary's sense rather than a child's —
+  // `dorm`, `hash`, `automobile`, `technician`, `basin`, `sedan`, `laundry` as a garment,
+  // `lounge` as a seat, `ridge`. UK/US common scope and the reading age both take them out.
+  const notMember = new Set(['produce', 'leftovers', 'female', 'male', 'young', 'giant',
+    'dorm', 'dormitory', 'observatory', 'hash', 'barbecue', 'barbeque', 'technician', 'laundry',
+    'veil', 'citrus', 'basin', 'lounge', 'ridge', 'highland', 'upland', 'headland', 'auto',
+    'automobile', 'sedan', 'jeep', 'kit', 'tissue', 'organ', 'queen', 'servant', 'employee',
+    'bathtub', 'robe'])
+  // A Dale-Chall word may sit below the answer bar, down to the 3.4 floor: taking the vague
+  // groups and adult words out (below) left the youngest band nine groups and 33 questions, and
+  // `rabbit`, `mouse` and `squirrel` are rarer than `restaurant` without being any less a
+  // seven-year-old's word.
+  const barFor = (w) => (band.familiarOnly && FAMILIAR_SET.has(w) ? 34 : floor)
   const inGroup = (c) => c[2].filter(
-    w => !notMember.has(w) && z(w) >= floor && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
+    w => !notMember.has(w) && z(w) >= barFor(w) && concrete(w) && (WORD_LEX[w] || '').startsWith('noun.'))
   // WordNet categories may overlap in ordinary language. `container / vessel`, `body part /
   // external body part`, and the botanical `herb` category (which includes bananas and
   // pineapples) made questions with four or five defensible answers. `animal.n.01` holds
   // `critter, female, giant, male` — not a group anyone would name.
-  const excluded = new Set(['herb.n.01', 'animal.n.01'])
+  // `container.n.01` and `body_part.n.01` went too (2026-10-19): a can, a purse, a spoon, a
+  // drawer and an envelope are all WordNet containers and no child groups them, and "body part"
+  // sets `organ`, `belly` and `shin` against `face` and `head`, which are body parts as well —
+  // the fuzziness the overlap pair below was only half covering. `case.n.05` is `wallet`,
+  // `luggage` and `kit`, the same kind of group.
+  const excluded = new Set(['herb.n.01', 'animal.n.01', 'container.n.01', 'body_part.n.01', 'case.n.05'])
   const overlappingPairs = new Set([
     'body_part.n.01|external_body_part.n.01',
     'container.n.01|vessel.n.03',
@@ -1279,58 +1298,24 @@ function genSharedLetters(r, band, seed) {
   }
 }
 
-// The three-letter words that can hide, and the words they can hide in. Memoised like the
-// rest: this walked the whole lexicon AND the whole example list, per question.
-//
-// The host has to be a concrete word, not merely a readable one. Every word in "the bipolar
-// distribution of certain species" clears the frequency bar and the sentence still means
-// nothing to a nine-year-old; `bipolar` is what put it there. A sentence about a thing tends to
-// be a sentence a child can picture.
-const HIDDEN_POOLS = new Map()
-
-function hiddenWordPools(band) {
-  const key = `${band.option}|${band.answer}`
-  if (!HIDDEN_POOLS.has(key)) {
-    HIDDEN_POOLS.set(key, {
-      // The hidden word is the ANSWER and the book is explicit that it must be a word —
-      // its own are `low`, `owe`, `tea`, `tin`, `ant`, `ice`, all between Zipf 3.5 and 6.5.
-      // At the option bar this was answering `roc`, `ani`, `pap`, `arb` and `dit`, which are
-      // in a dictionary and in no child's head.
-      three: new Set(Object.keys(WORD_Z).filter(
-        w => w.length === 3 && z(w) >= band.hidden && !BANNED.has(w))),
-      hosts: Object.keys(EXAMPLES).filter(
-        w => z(w) >= band.answer && concrete(w) && w.length >= 6 && w.length <= 11),
-    })
-  }
-  return HIDDEN_POOLS.get(key)
-}
+// The three-letter words a hidden-word question offers: Dale-Chall's, less the ones that are
+// slang, a name, sound effects or not a seven-to-nine-year-old's (`wee`, `bob`, `baa`, `rye`,
+// `sod`, `tar`, `cod`…). Both the answer and the four wrong options come from here, so the
+// child is choosing between words they know.
+const HIDDEN_SKIP = new Set(('gay sod wee bob rye boo mew coo baa moo dab sap elm ore tar tax fib bib '
+  + 'sis bye hog cod rap eve sir guy rob rot bid mow sew tow').split(' '))
+const kidThree = () => memo('kid-three', () => FAMILIAR.filter(
+  w => w.length === 3 && !BANNED.has(w) && !HIDDEN_SKIP.has(w)))
 
 function genHiddenWord(r, band, seed) {
   // "The tooth fairy had placed a coin under her pil___." — and the three letters that go in
   // are themselves a word (`low`). Two conditions at once, which is what makes it the book's
   // hardest letter type, and the sentence is what tells the child which word is wanted.
-  const { three, hosts } = hiddenWordPools(band)
-  if (!hosts.length) return null
-
-  const found = []
-  for (const w of shuffle(r, hosts).slice(0, 400)) {
-    for (let at = 1; at + 3 < w.length; at++) {
-      const mid = w.slice(at, at + 3)
-      if (three.has(mid)) found.push([w, at, mid])
-    }
-    if (found.length > 30) break
-  }
-  if (!found.length) return null
-  const [word, at, truth] = pickOne(r, found)
-  if (BANNED.has(truth) || BANNED.has(word)) return null
-  if (visiblePieces(word.slice(0, at) + '___' + word.slice(at + 3)).some(p => BANNED.has(p))) return null
-
-  const sentence = EXAMPLES[word]
-  // The builder screens every sentence, but it screens them as strings and this one is about
-  // to have a hole cut in it — belt and braces on the one path where the text is rewritten.
-  if ((sentence.toLowerCase().match(/[a-z']+/g) || []).some(w => BANNED.has(w))) return null
+  // Sentences, hosts and answers are a hand-written table (englishTables.js says why).
+  const [sentence, word, truth] = pickOne(r, HIDDEN_SENTENCES)
+  const at = word.indexOf(truth, 1)
+  if (at < 1) return null
   const masked = word.slice(0, at) + '___' + word.slice(at + 3)
-  // The sentence has the whole word in it — blank that out too or the question answers itself.
   const blanked = sentence.replace(new RegExp(`\\b${word}\\b`, 'i'), masked)
   if (blanked === sentence) return null
 
@@ -1338,7 +1323,7 @@ function genHiddenWord(r, band, seed) {
   const alts = []
   // Distractors are real three-letter WORDS, as the book's are — the child is choosing between
   // words, and the test is which one also completes the longer one.
-  for (const cand of shuffle(r, [...three])) {
+  for (const cand of shuffle(r, kidThree())) {
     if (alts.length >= band.options - 1) break
     if (avoid.has(cand)) continue
     if ((word.slice(0, at) + cand + word.slice(at + 3)) in WORD_Z) continue
@@ -2495,31 +2480,19 @@ function genRhymeSynonym(r, band, seed) {
     { kind: 'rhyme-synonym', clue, rhyme: cue, variety: v }, 5)
 }
 
+// A compound the table vouches for, or one the lexicon has. The lexicon is stripped of
+// function words, so `someone` and `anything` are not in it; the table is what knows them.
+const isCompound = (h, t) => !!COMPOUND_HEADS[h]?.includes(t) || anyWord(h + t)
+
 function genCompoundFront(r, band, seed) {
   // "Find a word that can be put in front of each of the following words to make new, compound
-  // words. CAKE CUP POT ROOM" — TEA.
-  const heads = memo(`compound|${band.answer}|${band.option}|${band.familiarOnly}`, () => {
-    // The head is the answer and comes from the strict list. The tails are only read, so they
-    // may be any word a child of the band knows — Dale-Chall alone left 29 usable heads.
-    const short = new Set(kidWords(band, 3, 6))
-    const readable = (w) => plainWord(w) && z(w) >= band.answer && (!band.familiarOnly || familiar(w))
-    const m = new Map()
-    for (const w of Object.keys(WORD_Z)) {
-      if (!plainWord(w) || w.length < 6 || w.length > 11 || z(w) < band.option) continue
-      for (let i = 3; i <= w.length - 3; i++) {
-        const head = w.slice(0, i)
-        const tail = w.slice(i)
-        if (!short.has(head) || !readable(tail)) continue
-        if (!m.has(head)) m.set(head, new Set())
-        m.get(head).add(tail)
-      }
-    }
-    return [...m.entries()].map(([h, t]) => [h, [...t]]).filter(([, t]) => t.length >= 4)
-  })
+  // words. CAKE CUP POT ROOM" — TEA. Heads and tails come from a hand-written table
+  // (englishTables.js says why the lexicon-generated version was dropped).
+  const heads = Object.entries(COMPOUND_HEADS).filter(([h, t]) => t.length >= 4 && !BANNED.has(h))
   if (heads.length < 5) return null
   const [head, tails] = pickOne(r, heads)
   const shown = shuffle(r, tails).slice(0, 4)
-  const makes = (h) => shown.filter(t => (h + t) in WORD_Z).length
+  const makes = (h) => shown.filter(t => isCompound(h, t)).length
   const others = shuffle(r, heads.map(([h]) => h).filter(h => h !== head && makes(h) < 4))
   const traps = others.filter(h => makes(h) >= 1).map(text => ({ text, why: 'fits-some' }))
   const rest = others.filter(h => makes(h) === 0).map(text => ({ text, why: 'unrelated' }))
@@ -3384,7 +3357,7 @@ function validateNewFamilies(item, texts, answers, wrong) {
       return null
     }
     case 'compound-front':
-      return exactlyOne(h => p.tails.every(t => anyWord(h + t)), 'go in front of all four')
+      return exactlyOne(h => p.tails.every(t => isCompound(h, t)), 'go in front of all four')
     case 'pair-meaning': {
       const { antonyms } = index()
       const split = (t) => t.split(', ')

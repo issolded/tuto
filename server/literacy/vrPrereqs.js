@@ -6,7 +6,7 @@
 //   needs   ladder steps that must be met: { B: 2, D: 1 } = track B placed above step 2 or secure at it, and D1 likewise
 //   probes  checks the ladder does not have (alphabet order, case matching, relation words, sound rhyme). No probe
 //           exists yet, so a family that needs one is closed.
-//   answers distinct answers in 3000 seeds (scripts/english/vr-pool.mjs, 2026-10-18)
+//   answers distinct answers in 3000 seeds (scripts/english/vr-pool.mjs, 2026-10-18; content fixes re-measured 2026-10-19)
 //
 // FLOOR: the product rule on top of the load (user, 2026-10-18: "VR'ı açmak için bir okuryazarlık tabanı olmalı").
 // Draft 2 found that most 7-8 families are letter puzzles a child can solve without knowing the words (an anagram,
@@ -38,17 +38,17 @@ export const VR_FAMILIES = [
   // Reading sentences.
   { band: '7-8', type: 'logic-grid', load: 'sentences', needs: { Ca: 3 }, probes: [], answers: 24 },
   // Meaning.
-  { band: '7-8', type: 'odd-two', load: 'meaning', needs: { B: 3 }, probes: [], answers: 118 },
+  { band: '7-8', type: 'odd-two', load: 'meaning', needs: { B: 3 }, probes: [], answers: 150 },
   { band: '7-8', type: 'pair-meaning', load: 'meaning', needs: { B: 4 }, probes: [], answers: 153 },
-  { band: '7-8', type: 'compound-front', load: 'meaning', needs: { B: 4 }, probes: [], answers: 30 },
+  { band: '7-8', type: 'compound-front', load: 'meaning', needs: { B: 4 }, probes: [], answers: 31 },
   { band: '7-8', type: 'analogy', load: 'meaning', needs: { B: 3 }, probes: ['relation-words'], answers: 111 },
-  { band: '7-8', type: 'rhyme-synonym', load: 'meaning+sound', needs: { B: 4 }, probes: ['rhyme-audio'], answers: 43 },
+  { band: '7-8', type: 'rhyme-synonym', load: 'meaning+sound', needs: { B: 4 }, probes: ['rhyme-audio'], answers: 47 },
   // ── 8-9 band ──
-  { band: '8-9', type: 'odd-two', load: 'meaning', needs: { B: 4 }, probes: [], answers: 371 },
+  { band: '8-9', type: 'odd-two', load: 'meaning', needs: { B: 4 }, probes: [], answers: 203 },
   { band: '8-9', type: 'word-grid', load: 'meaning', needs: { B: 4 }, probes: [], answers: 140 },
   { band: '8-9', type: 'letter-pair', load: 'meaning+spelling', needs: { B: 4, D: 3 }, probes: [], answers: 261 },
   { band: '8-9', type: 'shared-letters', load: 'spelling-recall', needs: { B: 4, D: 4 }, probes: [], answers: 839 },
-  { band: '8-9', type: 'hidden-word', load: 'sentences+spelling', needs: { B: 5, Ca: 4 }, probes: [], answers: 60 },
+  { band: '8-9', type: 'hidden-word', load: 'sentences+spelling', needs: { B: 5, Ca: 4 }, probes: [], answers: 45 },
 ]
 
 // VR levels in order. A level may be offered when a short sitting can be made without repeating itself (draft 2

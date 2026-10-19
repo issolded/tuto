@@ -139,6 +139,20 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 
 ## Açık işler / yol haritası
 
+- [x] VR içerik bulguları 1–4 düzeltildi (2026-10-19, Claude; `codex/english-literacy`, push yok). Kaynak `docs/ENGLISH-VR-PREREQUISITES.md`
+      "İçerik bulguları". **rhyme-synonym:** UK ya da US'e bağlı ipuçları çıktı (SPONGE→cake, EVENING MEAL→tea, AUTUMN→fall, RENT→hire,
+      FRIEND→mate, PIPS→seeds), 10 ortak ipucu eklendi. **compound-front:** sözlükten türetme bırakıldı (payroll/payload/sidekick/highland;
+      yarısı bileşik bile değildi: bar+gain, man+age, sea+son), yerine elle `COMPOUND_HEADS` (31 baş × ≥4 çocuk bileşiği, UK/US ortak;
+      `someone` gibi sözlükte olmayanları tablo onaylar, `isCompound`). Audit'te bu tip frekans eşiğinden muaf (elle okunmuş tablo; blocklist
+      hâlâ geçerli). **hidden-word:** WordNet örnek cümleleri yerine elle 53 cümle (`HIDDEN_SENTENCES`), cevap ve çeldiriciler Dale-Chall üç
+      harflileri (argo/isim/ses kelimeleri hariç); eski `band.hidden` kadranı artık okunmuyor. **odd-two:** kap/vücut bölümü/"case" grupları
+      çıktı, dorm/hash/automobile/technician/basin/sedan/laundry/lounge/ridge/organ/queen/servant/bathtub/robe üye değil; 7-8 havuzu 40'ın altına
+      düşünce Dale-Chall kelimesi 3.4'e kadar inebiliyor. Havuz (3000 seed, cevap): rhyme-synonym 43→47, compound-front 30→31, 7-8 odd-two
+      118→150, 8-9 odd-two 371→203, hidden-word 60→45; `vrPrereqs.js` güncellendi. `english:check`, `npm test` 208/208 temiz.
+      **Açık:** bulgu 5 (`pair-meaning` çeldiricileri) dokunulmadı; cümleler/bileşikler çocukla denenmedi. **Native etkisi:** İngilizce
+      soruyu sunucu üretiyor (`server/english` senkronlu), deploy sonrası native'e kendiliğinden geçer; `mobile/engine` paketi etkilenmez,
+      yeni tip/alan yok.
+
 - [x] Cambridge kelime listesi veri oldu (2026-10-16, Claude). `src/lib/literacy/yleWordlist.generated.js`: 2018 Pre A1 Starters /
       A1 Movers / A2 Flyers listesinden 1.407 kayıt (S 495, M 399, F 513), sözcük türü, not, İngiliz/Amerikan karşılığı (44), 20 konu; kimlik
       anlam başına (`at` / `at-2`). Üretim `python3 scripts/english/build_yle_wordlist.py <pdf> --write` (PDF `english books/official-free/`,

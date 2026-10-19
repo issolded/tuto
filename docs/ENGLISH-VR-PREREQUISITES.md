@@ -47,21 +47,21 @@ olmayan kontrol; probe yoksa aile kapalı. **Cevap:** 3000 tohumda farklı cevap
 | `join-letter` | tal(_)og → l (tall, log) | yazımdan kelime hatırlama | B2, D2 | — | 20 harf |
 | `front-letter` | _ouble _rill _ear _eer → d | dört kelimeyi parçadan hatırlama | B3, D2 | — | 22 harf |
 | `logic-grid` | "Kofi and Priya have yellow bikes…" Who has a red bike with baskets? | cümle okuma, karşılaştırma | Ca3 | — | 24 |
-| `odd-two` | breakfast / chest / lunch / tissue / belly → breakfast + lunch | kategori | B3 | — | 118 |
+| `odd-two` | fox / breakfast / wolf / dinner / dog → breakfast + dinner | kategori | B3 | — | 150 |
 | `pair-meaning` | foreign, domestic (most opposite) | eş/zıt anlam, orta-seyrek kelime | B4 | — | 153 |
-| `compound-front` | able / roll / load / back → pay | bileşik kelime bilgisi | B4 | — | 30 |
+| `compound-front` | brush / pin / cut / style → hair | bileşik kelime bilgisi | B4 | — | 31 |
 | `analogy` | wolf : howl = frog : ? → croak | ilişki + belirli kelime (hayvan sesi, yavru) | B3 | `relation-words` | 111 |
-| `rhyme-synonym` | VEHICLE, star → car | eş anlam + kafiye (ses) | B4 | `rhyme-audio` | 43 |
+| `rhyme-synonym` | VEHICLE, star → car | eş anlam + kafiye (ses) | B4 | `rhyme-audio` | 47 |
 
 ### 8-9
 
 | Aile | Örnek (gerçek) | Yük | Gerekenler | Cevap |
 |---|---|---|---|---|
-| `odd-two` | snack / dog / lunch / wolf / breakfast → dog + wolf | kategori, geniş kelime | B4 | 371 |
+| `odd-two` | snack / dog / lunch / wolf / breakfast → dog + wolf | kategori, geniş kelime | B4 | 203 |
 | `word-grid` | 12 kelime; "combine"a yakın iki → mix + fuse | eş/zıt anlam + 12 kelime okuma | B4 | 140 |
 | `letter-pair` | customer → c__ent → li | anlam + yazımı tamamlama | B4, D3 | 261 |
 | `shared-letters` | b___er, h___ing → itt | parçadan geniş yazım hatırlama | B4, D4 | 839 |
-| `hidden-word` | "dust particles susp___ed in the air" → end | yetişkin cümle okuma + yazım | B5, Ca4 | 60 |
+| `hidden-word` | "She wrote her name on the p___r." → ape | cümle okuma + yazım | B5, Ca4 | 45 |
 
 ## Seviye ne zaman "yeterli"
 
@@ -71,7 +71,9 @@ ailesi ≥ 3 (varsayım). Sonuç:
   word-ladder, unscramble).
 - 8-9 en erken B4 + D3/D4'te açılır; `hidden-word` B5'i bekler.
 
-## İçerik bulguları (canlıdaki English kartında da geçerli, bu taslakta düzeltilmedi)
+## İçerik bulguları (1–4 düzeltildi 2026-10-19; 5 açık)
+
+Tablodaki örnek ve cevap sayıları düzeltmeden sonra yeniden ölçüldü (`vr-pool.mjs`).
 
 1. **`rhyme-synonym` SPONGE → cake:** "sponge" = kek yalnız İngiliz kullanımı; UK/US ortak kapsam kararıyla çelişiyor.
 2. **`compound-front`:** payroll, payload, sidekick gibi yetişkin bileşikler 7-8'de.
@@ -79,6 +81,13 @@ ailesi ≥ 3 (varsayım). Sonuç:
    "if you want to leave early you have to ask the foreman"); 7 örnekte aynı ev sahibi kelime (fundamental) iki kez.
 4. **8-9 `odd-two`:** dorm, hash, automobile, technician, basin: Amerikan ya da çocuğa uzak kelimeler; "can / purse"
    (kap) ve "organ" (vücut) grupları belirsiz.
+   **Düzeltme (2026-10-19):** (1) UK ya da US'e bağlı ipuçları çıktı: SPONGE→cake, EVENING MEAL→tea, AUTUMN→fall,
+   RENT→hire, FRIEND→mate, PIPS→seeds; yerine 10 ortak ipucu. (2) `compound-front` artık elle yazılmış
+   `COMPOUND_HEADS` (31 baş, her biri ≥4 çocuk bileşiği, UK/US ortak); sözlükten türetilen eski hâlin yarısı bileşik
+   bile değildi (bar+gain, man+age, sea+son). (3) `hidden-word` elle yazılmış 53 cümle (`HIDDEN_SENTENCES`), cevap ve
+   çeldiriciler Dale-Chall üç harflileri; WordNet örnek cümleleri artık kullanılmıyor. (4) `odd-two`'da kap, vücut
+   bölümü ve "case" grupları çıktı; dorm, hash, automobile, technician, basin, sedan, laundry, lounge, ridge, organ,
+   queen (böcek), servant, bathtub, robe üye değil; 7-8 havuzu daralınca Dale-Chall kelimesi 3.4'e kadar inebiliyor.
 5. **`pair-meaning`:** çeldirici çiftler rastgele okunuyor ("board, ugly", "thick, thrown"); bilinçli seçilmiş değil.
 
 ## Açık
