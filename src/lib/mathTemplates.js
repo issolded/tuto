@@ -293,16 +293,17 @@ function partitionSteps(a, b, add, lang) {
     ]
   }
 
+  // The first piece is named, not worked: "799 − 400 = 399, now take away the 60" left one
+  // trivial step and read as the answer on screen. The child does both sums.
   const first = parts[0]
   const rest = parts.slice(1).map(x => num(x, lang)).join(` ${sign} `)
-  const afterFirst = add ? a + first : a - first
   return [
-    say(lang, `Break ${num(b, lang)} up: ${parts.map(x => num(x, lang)).join(' + ')}. ${add ? 'Add' : 'Take away'} the ${num(first, lang)} first.`,
-              `${num(b, lang)} sayısını parçala: ${parts.map(x => num(x, lang)).join(' + ')}. Önce ${num(first, lang)} ${add ? 'ekle' : 'çıkar'}.`,
-              `Separa ${num(b, lang)} así: ${parts.map(x => num(x, lang)).join(' + ')}. Primero ${add ? 'suma' : 'resta'} ${num(first, lang)}.`),
-    say(lang, `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Now ${add ? 'add' : 'take away'} the ${rest}.`,
-              `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Şimdi ${rest} ${add ? 'ekle' : 'çıkar'}.`,
-              `${num(a, lang)} ${sign} ${num(first, lang)} = ${num(afterFirst, lang)}. Ahora ${add ? 'suma' : 'resta'} ${rest}.`),
+    say(lang, `Break ${num(b, lang)} up: ${parts.map(x => num(x, lang)).join(' + ')}.`,
+              `${num(b, lang)} sayısını parçala: ${parts.map(x => num(x, lang)).join(' + ')}.`,
+              `Separa ${num(b, lang)} así: ${parts.map(x => num(x, lang)).join(' + ')}.`),
+    say(lang, `${add ? 'Add' : 'Take away'} the ${num(first, lang)} first. ${num(a, lang)} ${sign} ${num(first, lang)} = ? Then ${add ? 'add' : 'take away'} the ${rest}.`,
+              `Önce ${num(first, lang)} ${add ? 'ekle' : 'çıkar'}. ${num(a, lang)} ${sign} ${num(first, lang)} = ? Sonra ${rest} ${add ? 'ekle' : 'çıkar'}.`,
+              `Primero ${add ? 'suma' : 'resta'} ${num(first, lang)}. ${num(a, lang)} ${sign} ${num(first, lang)} = ? Luego ${add ? 'suma' : 'resta'} ${rest}.`),
   ]
 }
 

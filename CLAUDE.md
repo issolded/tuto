@@ -160,6 +160,11 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       gerçek modelle (`--prior-tuto`, `--overlay`, `--expect-tool` eklendi): "bir süre daha kalsın"/"uzat" 6/6 `weeks:4`, "geri ekle"/"işlendi, geri ekle" 6/6
       `resume:true`, tavanda uzatılamadığını söylüyor. Gerçek Telegram'da gönderilmedi. **Native etkisi:** yok — sunucu süpürmesi ve sohbet; istemcinin okuduğu
       `skip_topic_ids` değişmedi (`describeSkips`'e `since`/`latest_until` alanı eklendi, okumayan yok sayar).
+- [x] Parçalayarak toplama/çıkarma ipucu ara sonucu vermiyor (2026-10-19, Claude; kullanıcı bulgusu). "799 − 460" ipucu
+      "799 − 400 = 399. Şimdi 60'ı çıkar" diyordu: geriye tek önemsiz adım kalıyor, ekranda cevap gibi okunuyordu. Artık
+      `partitionSteps` yalnız yöntemi söyler: "460'ı parçala: 400 + 60." / "Önce 400 çıkar. 799 − 400 = ? Sonra 60 çıkar."
+      İki işlemi de çocuk yapar. Yanlıştan sonra açılan yazdırmalı yardım (`partitionChain`) değişmedi. math:check temiz, testler 145/145.
+      **Native etkisi:** `mathTemplates.js` native pakette; `mobile/engine` yeniden derlenene kadar native eski ipucunu gösterir.
 - [x] "N'er say, sırada ne var" yardımı oklu (2026-10-13, Claude; kullanıcı bulgusu). `placeCountInMultiples` (400, 500, 600, 700, …) yardımda yalnız
       iki ipucu cümlesi gösteriyordu. Artık toplama ile aynı `jumps` `mode: 'add'` oku: son iki terim + cevap, her ok +adım; çocuk önce sorudaki
       sayıya (kural tutuyor mu), sonra cevaba zıplar. Giriş cümlesi yardımın kendi `intro`'su ("Her zıplama +100…"), yoksa eski `addJumpsTap`.
