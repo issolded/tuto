@@ -1,0 +1,30 @@
+name: Withdraw obsolete Android preview
+on:
+  push:
+    branches: ['codex/android-complete']
+    paths: ['.github/workflows/withdraw-android-preview.yml']
+permissions:
+  contents: read
+jobs:
+  withdraw:
+    if: github.repository == 'issolded/tuto'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # The user explicitly asked to delete the dummy preview. Restrict this
+      # one-time operation to the inspected release; never delete newer builds.
+      - name: Remove the inspected obsolete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/issolded/tuto/releases --paginate --jq '.[] | select(.id == 397715776)' > old-release.json
+          if [ ! -s old-release.json ]; then
+            echo 'The obsolete release is already absent.'
+            exit 0
+          fi
+          jq -e '.tag_name == "android-preview" and .name == "Tuto Android preview" and (.assets | length == 1) and .assets[0].id == 593265107 and .assets[0].name == "tuto-android-preview.apk"' old-release.json > /dev/null
+          gh api --method DELETE repos/issolded/tuto/releases/397715776
+          echo 'Removed the obsolete Android preview release and its APK. Source tags are retained.'

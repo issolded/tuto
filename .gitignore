@@ -45,3 +45,6 @@ tuto drawings/
 # drawings/<id>/step-NN.webp — is what the repo keeps; see
 # server/scripts/prepare_drawing_set.py.
 cizims_sep2026
+
+# Kotlin build cache
+mobile/.kotlin/

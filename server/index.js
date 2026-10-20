@@ -1,3 +1,4 @@
+import { installDeviceScreenTime } from './deviceScreenTime.js'
 import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
@@ -3557,6 +3558,8 @@ app.set('trust proxy', 1) // Railway sits behind a proxy — needed so req.proto
 app.use(cors())
 app.use(express.json({ limit: '15mb' }))
 app.use(express.urlencoded({ extended: false })) // Twilio posts form-encoded webhooks
+
+installDeviceScreenTime(app, supabase, parentFromBearer)
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
