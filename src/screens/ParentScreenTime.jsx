@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react'
+import {useEffect,useState,useCallback} from 'react'
 import {useNavigate,useSearchParams} from 'react-router-dom'
 import {supabase} from '../lib/supabase'
 import {useT,adoptAccountLang} from '../lib/parentI18n'
@@ -9,33 +9,36 @@ const NAMES={'com.google.android.youtube':'YouTube','com.netflix.mediaclient':'N
 const duration=s=>`${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`
 export default function ParentScreenTime(){
  const s=useT(),nav=useNavigate(),[params]=useSearchParams()
+ const wanted=params.get('child')
  const [children,setChildren]=useState([]),[child,setChild]=useState(''),[error,setError]=useState('')
  useEffect(()=>{let alive=true;(async()=>{try{
   const {data:{user}}=await supabase.auth.getUser();if(!user)return nav('/parent/login')
   const [kids,parent]=await Promise.all([supabase.from('children').select('id,name').eq('parent_id',user.id).order('created_at'),supabase.from('parents').select('prefs').eq('id',user.id).single()])
   if(kids.error||parent.error)throw Error('load');if(!alive)return
-  adoptAccountLang(parent.data?.prefs?.language);setChildren(kids.data);setChild(kids.data.some(c=>c.id===params.get('child'))?params.get('child'):kids.data[0]?.id||'')
- }catch{if(alive)setError(s('sc_load_error'))}})();return()=>{alive=false}},[nav])
+  adoptAccountLang(parent.data?.prefs?.language);setChildren(kids.data);setChild(kids.data.some(c=>c.id===wanted)?wanted:kids.data[0]?.id||'')
+ }catch{if(alive)setError('sc_load_error')}})();return()=>{alive=false}},[nav,wanted])
  return <div className="tc-col" style={{background:PC.bg,minHeight:'100dvh',fontFamily:FONT}}><style>{PCSS}</style><TopBar title={s('st_title')}/><main style={{padding:'16px 18px 112px'}}>
- {error&&<p role="alert">{error}</p>}
+ {error&&<p role="alert">{s(error)}</p>}
  <label>{s('sc_child')}<select className="tc-input" value={child} onChange={e=>setChild(e.target.value)}>{children.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
  {child&&<DevicePanel key={child} child={child}/>}
  </main><ParentNav/></div>
 }
 function DevicePanel({child}){
- const s=useT(),[state,setState]=useState(null),[policy,setPolicy]=useState(null),[rows,setRows]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[code,setCode]=useState(''),[saved,setSaved]=useState(false)
+ const s=useT(),[state,setState]=useState(null),[policy,setPolicy]=useState(null),[report,setReport]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[code,setCode]=useState(''),[saved,setSaved]=useState(false)
  const [period,setPeriod]=useState('day'),[day,setDay]=useState(new Date().toLocaleDateString('en-CA')),[device,setDevice]=useState('')
  const range=reportRange(day,period)
- const call=(suffix='',method='GET',body)=>deviceScreenCall(child,suffix,method,body)
+ const call=useCallback((suffix='',method='GET',body)=>deviceScreenCall(child,suffix,method,body),[child])
+ const reportKey=`${child}|${range.from}|${range.to}|${device}`
+ const rows=report?.key===reportKey?report.rows:null
  async function load(){const j=await call();setState(j);setPolicy(j.policy)}
- useEffect(()=>{let alive=true;call().then(j=>{if(alive){setState(j);setPolicy(j.policy);setDay(new Intl.DateTimeFormat('en-CA',{timeZone:j.policy.timezone}).format(new Date()))}}).catch(()=>{if(alive)setError(s('ds_unavailable'))});return()=>{alive=false}},[child])
- useEffect(()=>{let alive=true;setRows(null);call(`/usage?from=${range.from}&to=${range.to}${device?'&device='+encodeURIComponent(device):''}`).then(j=>{if(alive)setRows(j.rows)}).catch(()=>{if(alive)setError(s('ds_unavailable'))});return()=>{alive=false}},[child,range.from,range.to,device])
- async function act(fn){setBusy(true);setError('');try{await fn()}catch(e){setError(s(e.message==='policy_changed'?'ds_conflict':'ds_unavailable'))}finally{setBusy(false)}}
+ useEffect(()=>{let alive=true;call().then(j=>{if(alive){setState(j);setPolicy(j.policy);setDay(new Intl.DateTimeFormat('en-CA',{timeZone:j.policy.timezone}).format(new Date()))}}).catch(()=>{if(alive)setError('ds_unavailable')});return()=>{alive=false}},[call])
+ useEffect(()=>{let alive=true;call(`/usage?from=${range.from}&to=${range.to}${device?'&device='+encodeURIComponent(device):''}`).then(j=>{if(alive)setReport({key:reportKey,rows:j.rows})}).catch(()=>{if(alive)setError('ds_unavailable')});return()=>{alive=false}},[call,range.from,range.to,device,reportKey])
+ async function act(fn){setBusy(true);setError('');try{await fn()}catch(e){setError(e.message==='policy_changed'?'ds_conflict':'ds_unavailable')}finally{setBusy(false)}}
  function edit(p){setPolicy({...policy,...p});setSaved(false)}
  const totals=rows?usageTotals(rows):null
- if(!state)return <p role="status">{error||s('loading')}</p>
+ if(!state)return <p role="status">{error?s(error):s('loading')}</p>
  return <div style={{display:'grid',gap:16,marginTop:16}}>
- {error&&<p role="alert">{error}</p>}
+ {error&&<p role="alert">{s(error)}</p>}
  <Card><h2>{s('ds_usage')}</h2><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{['day','week','month'].map(v=><button className="tc-btn" key={v} aria-pressed={period===v} onClick={()=>setPeriod(v)}>{s('ds_'+v)}</button>)}</div>
  <input aria-label={s('ds_date')} type="date" value={day} onChange={e=>e.target.value&&setDay(e.target.value)}/><p>{range.from} — {range.to}</p>
  <select aria-label={s('ds_device')} value={device} onChange={e=>setDevice(e.target.value)}><option value="">{s('ds_all_devices')}</option>{state.devices.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>

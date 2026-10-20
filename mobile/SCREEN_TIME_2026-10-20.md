@@ -19,7 +19,7 @@ Rules default disabled. Netflix, YouTube and Roblox share a daily weekday/weeken
 - Migration and deployed server are required before real-device pairing; do not claim deployed until verified.
 - Accessibility shielding is not OS package suspension. Parents/children can disable permissions, force stop or uninstall; reports expose last heartbeat and permission state, not tamper-proof guarantees.
 - Small video windows, browser equivalents of YouTube, multi-user profiles, device clock changes and Samsung process management need physical-device acceptance. No browser/domain filtering is implemented.
-- Native parent has no device-revoke button yet; web parent supports revocation. Category groups, temporary bonus minutes and Gem conversion are next scope; not silently connected to the legacy web demo/chat give_screen_time tool. Old demo prefs are not migrated or enforced.
+- Native and web parent support device revocation. Category groups, temporary bonus minutes and Gem conversion are next scope; not silently connected to the legacy web demo/chat give_screen_time tool. Old demo prefs are not migrated or enforced.
 - Background sync uses WorkManager (~15-minute scheduling, not exact). With Accessibility active it attempts roughly every minute. Remote changes require connectivity; no immediate offline-unlock promise.
 - Visible notification permission is required to measure/enforce in this pilot. Revoking permission stops measurement; history is partial, not a zero.
 - Play Accessibility declaration and monitoring disclosure review are needed before Play distribution. This is a development APK, not store approval.

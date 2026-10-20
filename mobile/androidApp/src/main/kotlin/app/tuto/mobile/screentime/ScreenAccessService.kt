@@ -47,7 +47,7 @@ class ScreenAccessService:AccessibilityService() {
   fun text(en:String,tr:String,es:String)=when(resources.configuration.locales[0].language){"tr"->tr;"es"->es;else->en}
   layout.addView(TextView(this).apply {this.text=text("Time for a break","Mola zamanı","Hora de descansar");textSize=28f;setTextColor(Color.rgb(15,36,70));gravity=Gravity.CENTER})
   layout.addView(TextView(this).apply {this.text=text("Your parent's screen-time rule applies. Ask your parent to change it.","Ebeveyninin ekran süresi kuralı geçerli. Değişiklik için ebeveynine sor.","Se aplica la regla familiar de tiempo de pantalla. Pide un cambio a tu familia.");textSize=18f;gravity=Gravity.CENTER})
-  layout.addView(Button(this).apply {this.text=text("Home","Ana ekran","Inicio");setOnClickListener {performGlobalAction(GLOBAL_ACTION_HOME);foreground="";hide()}})
+  layout.addView(Button(this).apply {this.text=text("Home","Ana ekran","Inicio");setOnClickListener {performGlobalAction(GLOBAL_ACTION_HOME);this@ScreenAccessService.foreground="";hide()}})
   val params=WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT,WindowManager.LayoutParams.MATCH_PARENT,WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,android.graphics.PixelFormat.OPAQUE)
   runCatching {(getSystemService(WINDOW_SERVICE) as WindowManager).addView(layout,params);overlay=layout}
  }

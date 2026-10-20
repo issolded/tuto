@@ -48,6 +48,7 @@ import java.time.Instant
  val s=LocalStrings.current;val scope=rememberCoroutineScope();val id=p.selected!!.getString("id")
  var state by remember(id){mutableStateOf<JSONObject?>(null)};var policy by remember(id){mutableStateOf(JSONObject())};var rows by remember(id){mutableStateOf<List<JSONObject>?>(null)}
  var period by remember {mutableStateOf("day")};var day by remember {mutableStateOf(LocalDate.now())};var device by remember {mutableStateOf("")};var code by remember {mutableStateOf("")}
+ var revoke by remember {mutableStateOf<String?>(null)}
  var error by remember {mutableStateOf("")};var busy by remember {mutableStateOf(false)};var saved by remember {mutableStateOf(false)}
  val root="/api/parent/children/${enc(id)}/device-screen"
  suspend fun load(){val j=p.cloud.parentCall("GET",root);state=j;policy=j.getJSONObject("policy")}
@@ -77,7 +78,9 @@ import java.time.Instant
   Text(d.optString("name"));Text(d.optString("last_seen").takeUnless{it=="null"}?:s.say("Not connected","Bağlanmadı","Sin conexión"))
   Text(if(!d.isNull("revoked_at"))s.say("Revoked","Kaldırıldı","Revocado") else if(!d.isNull("last_seen") && d.optLong("applied_revision")==state!!.optLong("revision"))s.say("Latest rules acknowledged","Son kurallar doğrulandı","Reglas confirmadas") else s.say("Waiting for device","Cihaz bekleniyor","Esperando dispositivo"))
   Text("${s.say("Usage / protection permissions","Kullanım / koruma izinleri","Permisos de uso / protección")}: ${d.optJSONObject("status")?.optBoolean("usage_access")} / ${d.optJSONObject("status")?.optBoolean("accessibility")}")
+  if(d.isNull("revoked_at"))TextButton({revoke=d.getString("id")},enabled=!busy){Text(s.say("Revoke device","Cihazı kaldır","Revocar dispositivo"))}
  }}}
+ if(revoke!=null)AlertDialog(onDismissRequest={revoke=null},title={Text(s.say("Revoke this device?","Bu cihaz kaldırılsın mı?","¿Revocar dispositivo?"))},text={Text(s.say("Monitoring and limits stop after its next sync.","Ölçüm ve limitler sonraki bağlantıda durur.","La medición y los límites se detienen tras sincronizar."))},confirmButton={TextButton({val target=revoke!!;revoke=null;act{p.cloud.parentCall("POST","$root/revoke/${enc(target)}",JSONObject());load()}}){Text(s.say("Revoke","Kaldır","Revocar"))}},dismissButton={TextButton({revoke=null}){Text(s.say("Cancel","İptal","Cancelar"))}})
  Button({act{code=p.cloud.parentCall("POST","$root/pair",JSONObject()).getString("code");load()}},enabled=!busy){Text(s.say("Link child Android device","Çocuk Android cihazını bağla","Vincular Android del niño"))}
  if(code.isNotBlank())Text("$code\n"+s.say("10 minutes. Enter in child Settings → Screen time.","10 dakika. Çocuk Ayarlar → Ekran süresi alanına girin.","10 minutos. Introduce en Ajustes → Tiempo de pantalla."))
  Text(s.say("Rules","Kurallar","Reglas"),style=MaterialTheme.typography.headlineSmall)

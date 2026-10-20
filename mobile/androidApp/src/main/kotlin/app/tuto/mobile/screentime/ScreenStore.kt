@@ -27,6 +27,7 @@ class ScreenStore(private val context:Context) {
     val notificationsEnabled get()=androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
     fun showNotification() {
         if(!paired || !notificationsEnabled)return
+        if(android.os.Build.VERSION.SDK_INT>=33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)return
         val manager=context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.createNotificationChannel(android.app.NotificationChannel("screen-time","Tuto screen time",android.app.NotificationManager.IMPORTANCE_LOW))
         val pending=android.app.PendingIntent.getActivity(context,0,android.content.Intent(context,app.tuto.mobile.MainActivity::class.java),android.app.PendingIntent.FLAG_IMMUTABLE)
@@ -47,7 +48,11 @@ class ScreenStore(private val context:Context) {
         sync()
     }
     fun collect():Unit = synchronized(collectLock) {
-        if(!paired || !usageAccess || !notificationsEnabled) return
+        if(!paired) return
+        if(!usageAccess || !notificationsEnabled) {
+            prefs.edit().putLong("cursor",System.currentTimeMillis()).putString("foreground","").putBoolean("visible",false).commit()
+            return
+        }
         val now=System.currentTimeMillis();val from=prefs.getLong("cursor",now)
         if(now<from) return // Do not credit time twice after a backwards clock change.
         val rows=JSONObject(prefs.getString("rows","{}")!!)
@@ -55,21 +60,15 @@ class ScreenStore(private val context:Context) {
         var visible=prefs.getBoolean("visible",false)
         var at=from
         fun credit(until:Long) {
-            var cursor=at
-            if(visible && pkg.isNotBlank()) {
-                while(cursor<until) {
-                    val date=Instant.ofEpochMilli(cursor).atZone(zone).toLocalDate()
-                    val end=minOf(until,date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli())
-                    val key="$date|$pkg";val row=rows.optJSONObject(key) ?: JSONObject().put("day",date.toString()).put("package",pkg).put("label",label(pkg)).put("ms",0L)
-                    row.put("ms",row.optLong("ms")+end-cursor);rows.put(key,row);cursor=end
-                }
-            }
+            if(visible && pkg.isNotBlank()) UsageBuckets.credit(rows,pkg,label(pkg),at,until,zone)
             at=until
         }
         val events=(context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager).queryEvents(from,now) ?: return
         val e=UsageEvents.Event()
         while(events.hasNextEvent()) {
             events.getNextEvent(e);if(e.timeStamp<from || e.timeStamp>now)continue
+            // An abrupt restart may have no shutdown event: never charge the powered-off gap.
+            if(e.eventType==UsageEvents.Event.DEVICE_STARTUP) {visible=false;pkg="";at=e.timeStamp;continue}
             credit(e.timeStamp)
             when(e.eventType) {
                 UsageEvents.Event.ACTIVITY_RESUMED->{pkg=e.packageName.orEmpty();visible=true}
