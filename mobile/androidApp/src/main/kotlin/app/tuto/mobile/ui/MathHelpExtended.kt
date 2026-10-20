@@ -1,5 +1,7 @@
 package app.tuto.mobile.ui
 
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -116,7 +118,16 @@ private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString() else n.toString
     steps.take(solved).forEach { Text("${it.optString("q")} = ${it.optString("a")} ✓") }
     if(solved>=steps.size) { Text(s.say("Now answer the question above.","Şimdi yukarıdaki soruyu cevapla.","Ahora responde la pregunta de arriba."));return }
     val step=steps[solved]
-    Text(step.optString("say"));Text("${step.optString("q")} = ?",color=Color(0xFFC55A16),style=MaterialTheme.typography.titleLarge)
+    Text(step.optString("say"))
+    val pulse = if(android.animation.ValueAnimator.areAnimatorsEnabled()) {
+        val transition=rememberInfiniteTransition(label="asked-value")
+        val scale by transition.animateFloat(1f,1.12f,infiniteRepeatable(tween(800),RepeatMode.Reverse),label="asked-value-scale")
+        scale
+    } else 1f
+    Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+        Text("${step.optString("q")} = ",style=MaterialTheme.typography.titleLarge)
+        Text("?",Modifier.graphicsLayer {scaleX=pulse;scaleY=pulse},color=Color(0xFFC55A16),style=MaterialTheme.typography.titleLarge)
+    }
     OutlinedTextField(input,{input=it},Modifier.testTag("help-step-input"),singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Text),label={Text(s.say("This step","Bu adım","Este paso"))})
     FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         listOf("1","2","3","4","5","6","7","8","9","0",".","−","⌫").forEach { key ->
