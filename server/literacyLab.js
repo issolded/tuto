@@ -2,7 +2,7 @@
 // key, marks the answer and writes it to english_literacy_attempts. Two doors onto the same sitting:
 //
 //   the child's English card (always on; index.js loads this module on first use)
-//     GET  /api/children/:childId/english-menu       -> { vr }        does the card offer "Word puzzles" too
+//     GET  /api/children/:childId/english-menu       -> { vr, gems, will_pay }   "Word puzzles" too? what it pays
 //     POST /api/children/:childId/literacy/next      { sitting_id? } -> the next question (key kept back)
 //     POST /api/literacy-sittings/:id/answer         { item_id, answers: [{ question_id, chosen }], skipped }
 //   the internal lab (LITERACY_LAB=1 only)
@@ -10,7 +10,8 @@
 //     POST /api/lab/literacy/sittings/:id/answer
 //     GET  /api/lab/literacy/:childId/state          -> ladder summary + VR decision (dry run)
 //
-// No gems, no parent message yet. Sources: the literacy engine, the VR engine, the sentence bank, the reading texts
+// Gems from the English card's own setting, one daily limit for both kinds of sitting (index.js payLiteracy).
+// No parent message yet. Sources: the literacy engine, the VR engine, the sentence bank, the reading texts
 // and the picture words (B1 read a word -> picture, D1 picture -> build the word). Listening needs approved audio and
 // Ca1 needs scene art: those steps are gaps for now. A sitting lives in memory: a restart loses the question on
 // screen, never a stored answer.
@@ -138,19 +139,25 @@ async function childOf(supabase, id) {
   return (await supabase.from('children').select('*').eq('id', id).maybeSingle()).data
 }
 
-async function nextFor(supabase, child, { sittingId, minStatus }) {
+async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quote = null }) {
   let sitting = sittings.get(sittingId)
+  let fresh = false
   if (!sitting || sitting.childId !== child.id) {
-    sitting = { id: crypto.randomUUID(), childId: child.id, minStatus, items: new Map(), dealt: 0, right: 0, answered: 0 }
+    fresh = true
+    sitting = { id: crypto.randomUUID(), childId: child.id, minStatus, items: new Map(), dealt: 0, right: 0, answered: 0, shares: 0, paid: null }
     sittings.set(sitting.id, sitting)
     if (sittings.size > 500) sittings.delete(sittings.keys().next().value)
   }
-  const head = { sitting_id: sitting.id, of: SITTING_LENGTH }
-  if (sitting.dealt >= SITTING_LENGTH) return { ...head, done: true, right: sitting.right, answered: sitting.answered }
+  const head = { sitting_id: sitting.id, of: SITTING_LENGTH, ...(fresh && quote ? await quote(child) : {}) }
+  const finished = async (extra = {}) => {
+    if (pay && !sitting.paid) sitting.paid = await pay(child, sitting)
+    return { ...head, done: true, right: sitting.right, answered: sitting.answered, ...(sitting.paid || {}), ...extra }
+  }
+  if (sitting.dealt >= SITTING_LENGTH) return finished()
   const { state, missing } = await literacyState(supabase, child)
   if (missing) return { error: [503, 'english ladder tables missing'] }
   const probe = nextProbe(state, { has: supported(sitting.minStatus), session: sitting.id })
-  if (!probe) return { ...head, done: true, right: sitting.right, answered: sitting.answered, reason: 'no content' }
+  if (!probe) return finished({ reason: 'no content' })
   const { rows } = await loadAttempts(supabase, child.id)
   // Bank items and words already met (a text is stored as `text:<id>`, a word as `word:<w>`) are not dealt again.
   const avoid = new Set(rows.flatMap(r => [String(r.grp), String(r.grp).replace(/^text:/, '')]))
@@ -191,6 +198,9 @@ async function answerFor(supabase, tzForChild, sittingId, body) {
     if (!saved.ok) return { error: [saved.missing ? 503 : 500, saved.error || 'english ladder tables missing'] }
     sitting.answered++
     if (correct) sitting.right++
+    // Gems per question, as the VR sitting: right with no help is a whole share, wrong or "I don't know" none.
+    // A reading text's questions each count here (fair to the child), though the evidence counts the text once.
+    if (correct && !hinted) sitting.shares++
     results.push({ question_id: q.id, correct, key: q.key, explain: q.explain })
   }
   return { results }
@@ -199,7 +209,7 @@ async function answerFor(supabase, tzForChild, sittingId, body) {
 const send = (res, out) => (out.error ? res.status(out.error[0]).json({ error: out.error[1] }) : res.json(out))
 
 // The child's door. Called from index.js after a lazy import, so a load failure here never takes the server down.
-export function childHandlers({ supabase, tzForChild }) {
+export function childHandlers({ supabase, tzForChild, gems = null }) {
   return {
     async menu(req, res) {
       const child = await childOf(supabase, req.params.childId)
@@ -212,7 +222,7 @@ export function childHandlers({ supabase, tzForChild }) {
       const child = await childOf(supabase, req.params.childId)
       if (!child) return res.status(404).json({ error: 'child not found' })
       if (!englishActive(child)) return res.status(403).json({ error: 'English is switched off for this child' })
-      send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus: CHILD_MIN_STATUS }))
+      send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus: CHILD_MIN_STATUS, pay: gems?.pay, quote: gems?.quote }))
     },
     async answer(req, res) {
       send(res, await answerFor(supabase, tzForChild, req.params.id, req.body))

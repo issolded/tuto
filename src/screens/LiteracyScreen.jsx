@@ -9,7 +9,7 @@ import { EMOJI_ART } from '../lib/puzzleArt.generated'
 // by the ladder on the server from the child's own answers. The server deals each question and keeps its key
 // (server/literacyLab.js); this screen shows the words and pictures and sends what was chosen. A reading text comes
 // with its questions together and is answered as one. Everything here is English (user decision 2026-10-17).
-// No gems yet: this is the first version of the sitting.
+// Gems come from the English card's setting and its daily limit, shared with word puzzles (server/index.js).
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 const ROSE = '#D9577A'
@@ -100,13 +100,16 @@ export default function LiteracyScreen() {
   const [results, setResults] = useState(null)      // question id -> { correct, key, explain }
   const [busy, setBusy] = useState(false)
   const [score, setScore] = useState({ right: 0, answered: 0 })
+  const [quote, setQuote] = useState(null)          // { gems, will_pay } from the first question
+  const [paid, setPaid] = useState(null)            // { gems_earned, capped } at the end
 
   const load = (id) => post(`/api/children/${child.id}/literacy/next`, { sitting_id: id })
   function apply(r) {
     setBusy(false)
     setSittingId(r.sitting_id)
     setOf(r.of || 10)
-    if (r.done) { setStep('result'); return }
+    if (r.gems != null) setQuote({ gems: r.gems, will_pay: r.will_pay })
+    if (r.done) { setPaid({ gems_earned: r.gems_earned || 0, capped: !!r.capped }); setStep('result'); return }
     setItem(r.item); setN(r.n); setValues({}); setResults(null)
     setStep(s => (s === 'loading' ? 'welcome' : 'question'))
   }
@@ -160,7 +163,12 @@ export default function LiteracyScreen() {
   </>)
   if (step === 'welcome') return center(<>
     <TutoMascot size={140} expression="excited" color={ROSE} style={{ animation: 'float 3s ease-in-out infinite' }} />
-    <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5 }}>Ten questions in English.{'\n'}Some are easy, some are hard. That is fine!</div>
+    <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK, lineHeight: 1.5 }}>Ten questions in English. Some are easy, some are hard. That is fine!</div>
+    {quote && (
+      <div style={{ background: quote.will_pay ? ROSE : 'rgba(255,255,255,.8)', color: quote.will_pay ? '#fff' : INK_SOFT, borderRadius: 11, padding: '4px 13px', fontFamily: FRED, fontWeight: 600, fontSize: 13 }}>
+        {quote.will_pay ? <>⭐ {t('math_up_to_gems', 'en')} {quote.gems} {t('math_gems_word', 'en')}</> : <>🌙 {t('puzzle_no_gems', 'en')}</>}
+      </div>
+    )}
     <button className="lt-press" style={primary} onClick={() => setStep('question')}>{t('math_lets_go', 'en')}</button>
   </>)
   if (step === 'result') return center(<>
@@ -169,6 +177,9 @@ export default function LiteracyScreen() {
     <div style={{ background: 'white', borderRadius: 20, padding: '14px 26px', fontFamily: FRED, fontSize: 19, color: INK }}>
       {score.right} of {score.answered} right
     </div>
+    {paid && (paid.gems_earned > 0
+      ? <div style={{ fontFamily: FRED, fontSize: 22, color: ROSE, fontWeight: 600 }}>+{paid.gems_earned} ⭐</div>
+      : paid.capped ? <div style={{ fontSize: 15, color: INK_SOFT }}>🌙 {t('puzzle_no_gems', 'en')}</div> : null)}
     <button className="lt-press" style={primary} onClick={() => nav('/child/home')}>Done</button>
   </>)
 

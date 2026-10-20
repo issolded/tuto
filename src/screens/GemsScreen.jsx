@@ -28,7 +28,7 @@ const REASON_KEYS = {
 
 const REASON_EMOJI = {
   math: '🔢', reading: '📚', writing: '✏️',
-  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', bonus: '🫴', story: '📖', daily_bonus: '🏅', math_review: '🔁', english_review: '🔁', puzzle_review: '🔁',
+  homework: '📸', drawing: '🎨', puzzle: '🧩', english: '🔤', english_literacy: '📖', bonus: '🫴', story: '📖', daily_bonus: '🏅', math_review: '🔁', english_review: '🔁', puzzle_review: '🔁',
   adjustment: '🫳',
   'Welcome bonus': '🎉', welcome: '🎉',
 }
@@ -118,7 +118,7 @@ export default function GemsScreen() {
               // reason (a reward's own name, a parent's note) is shown as written.
               const TASK_KEYS = { math: 'task_math', reading: 'task_reading', writing: 'task_writing',
                                   story: 'task_writing', homework: 'task_homework', drawing: 'task_drawing',
-                                  puzzle: 'task_puzzle', english: 'task_english' }
+                                  puzzle: 'task_puzzle', english: 'task_english', english_literacy: 'task_english' }
               const labelKey = TASK_KEYS[key] || REASON_KEYS[key]
               const label = labelKey ? t(labelKey, lang) : (key || t('gem_task', lang))
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')

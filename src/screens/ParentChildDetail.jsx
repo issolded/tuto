@@ -32,6 +32,7 @@ const TASK_LABELS = {
   drawing:  { key: 'task_drawing',  type: null },
   puzzle:   { key: 'task_puzzle',   type: 'puzzle' },
   english:  { key: 'task_english',  type: 'english' },
+  english_literacy: { key: 'task_english', type: 'english' },
   bonus:    { parentKey: 'cd_bonus', type: null },
   daily_bonus: { parentKey: 'ts_bonus_title', type: null },
 }

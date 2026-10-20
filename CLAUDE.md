@@ -235,7 +235,11 @@ bunların tamamlandığı anlamına gelmez.
       ilk istekte yüklenir, yüklenemezse yalnız bu uçlar 503). 10 soru, basamağı ladder seçer, anahtar sunucuda, cevap `english_literacy_attempts`'e;
       içerik `checked` düzeyinde (taslak 200 hikâye girmiyor). **Yeni:** B1 resimden kelime (`picture-words`) ve D1 resme bakıp harflerle kelime kurma
       (`pictureBuildItem`, Noto SVG çizimleri) — VR tabanı B2 + D1 artık ölçülebiliyor. Hâlâ boş: A1–A5 (onaylı ses yok), Ca1 (sahne çizimi), E5.
-      Okuma metni tek blok, soruları birlikte cevaplanır. **Gem yok** (ilk sürüm; kullanıcı kararı bekliyor: ayrı görev tipi mi, English'in sınırı mı).
+      Okuma metni tek blok, soruları birlikte cevaplanır. **Gem (kullanıcı kararı 2026-10-20):** kart başına tek ayar; English kartının gem/günlük
+      sınırı iki oturuma birlikte (`englishDoneToday` = `english` + `english_literacy` ödenmiş satırlar), ledger sebebi ayrı (`english_literacy`,
+      `ref_id` = oturum, oturum başına bir kez). Soru başı pay: yardımsız doğru tam, yanlış/"I don't know" sıfır; metnin her sorusu ayrı pay (kanıt tek
+      birim). Ana ekran sayacı (`today-summary`) ve gem geçmişi/çocuk sayfası etiketi English; ebeveyn haftalık raporu ve panodaki "bugün" sayısı
+      henüz okuryazarlık oturumunu saymıyor (oturum tablosu yok). Harness'te: 3 ödenmiş oturumdan sonra VR ve English ikisi de `will_pay: false`.
       İpucu yok; "I don't know" bağımsız yanlış. Ebeveyn mesajı yok. Doğrulama: tarayıcıda 375px harness'le kapı (VR açık/kapalı), 10 soruluk oturum
       (VR antonim, cümle bankası, resim, harf kurma; yanlış cevap geri bildirimi), metin bloğu çizimi (taklit yanıtla), Word puzzles yolu; kayıtlar
       beceri/grup/aile/günle yazıldı. Test `literacy-sitting.test.mjs` (her kaynak işaretlenebilir, açık öğede anahtar yok). Gerçek Supabase/iPad'de denenmedi.
