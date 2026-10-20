@@ -1,4 +1,4 @@
-import {useEffect,useState,useCallback} from 'react'
+import {useEffect,useState,useCallback,useRef} from 'react'
 import {useNavigate,useSearchParams} from 'react-router-dom'
 import {supabase} from '../lib/supabase'
 import {useT,useUiLang,adoptAccountLang} from '../lib/parentI18n'
@@ -6,6 +6,8 @@ import {deviceScreenCall,reportRange,usageTotals} from '../lib/deviceScreenTime'
 import {PC,FONT,PCSS,TopBar,Card} from '../lib/parentUI'
 import './ParentScreenTime.css'
 import ParentNav from '../components/ParentNav'
+import ScreenAppActions from '../components/ScreenAppActions'
+import {SYSTEM_PACKAGES,protectedPackage,screenEventMessage} from '../../server/screenAppRules'
 const NAMES={'com.google.android.youtube':'YouTube','com.netflix.mediaclient':'Netflix','com.roblox.client':'Roblox'}
 const duration=(s,lang)=>`${Math.floor(s/3600)}${lang==='tr'?'sa':'h'} ${Math.floor(s%3600/60)}${lang==='tr'?'dk':'m'}`
 export default function ParentScreenTime(){
@@ -27,25 +29,38 @@ export default function ParentScreenTime(){
 function DevicePanel({child}){
  const lang=useUiLang(),s=useT(),[state,setState]=useState(null),[policy,setPolicy]=useState(null),[report,setReport]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[code,setCode]=useState(''),[saved,setSaved]=useState(false)
  const [period,setPeriod]=useState('day'),[day,setDay]=useState(new Date().toLocaleDateString('en-CA')),[device,setDevice]=useState('')
+ const [selected,setSelected]=useState(null),[showSystem,setShowSystem]=useState(false),[events,setEvents]=useState([]),[eventError,setEventError]=useState(false),[refresh,setRefresh]=useState(0)
+ const say=(en,tr,es)=>lang==='tr'?tr:lang==='es'?es:en
  const range=reportRange(day,period)
  const call=useCallback((suffix='',method='GET',body)=>deviceScreenCall(child,suffix,method,body),[child])
  const reportKey=`${child}|${range.from}|${range.to}|${device}`
  const rows=report?.key===reportKey?report.rows:null
  async function load(){const j=await call();setState(j);setPolicy(j.policy)}
  useEffect(()=>{let alive=true;call().then(j=>{if(alive){setState(j);setPolicy(j.policy);setDay(new Intl.DateTimeFormat('en-CA',{timeZone:j.policy.timezone}).format(new Date()))}}).catch(()=>{if(alive)setError('ds_unavailable')});return()=>{alive=false}},[call])
- useEffect(()=>{let alive=true;call(`/usage?from=${range.from}&to=${range.to}${device?'&device='+encodeURIComponent(device):''}`).then(j=>{if(alive)setReport({key:reportKey,rows:j.rows})}).catch(()=>{if(alive)setError('ds_unavailable')});return()=>{alive=false}},[call,range.from,range.to,device,reportKey])
+ useEffect(()=>{let alive=true;call(`/usage?from=${range.from}&to=${range.to}${device?'&device='+encodeURIComponent(device):''}`).then(j=>{if(alive)setReport({key:reportKey,rows:j.rows})}).catch(()=>{if(alive)setError('ds_unavailable')});return()=>{alive=false}},[call,range.from,range.to,device,reportKey,refresh])
  async function act(fn){setBusy(true);setError('');try{await fn()}catch(e){setError(e.message==='policy_changed'?'ds_conflict':'ds_unavailable')}finally{setBusy(false)}}
  function edit(p){setPolicy({...policy,...p});setSaved(false)}
+ useEffect(()=>{let alive=true;const read=()=>call('/events').then(j=>{if(alive){setEvents(j.events);setEventError(false)}}).catch(()=>{if(alive)setEventError(true)});read();const timer=setInterval(read,30000);return()=>{alive=false;clearInterval(timer)}},[call,refresh])
  const purchase=policy?.purchase||{enabled:false,gemCost:10,minutes:15,dailyMax:60}
- const totals=rows?usageTotals(rows):null
+ const isLearning=p=>p==='app.tuto.mobile'||p.startsWith('app.tuto.mobile.')
+ const visible=rows?.filter(r=>!isLearning(r.package)&&(showSystem||(!SYSTEM_PACKAGES.has(r.package)&&!(policy?.report?.hidden||[]).includes(r.package))))
+ const totals=visible?usageTotals(visible):null
+ const learning=rows?.filter(r=>isLearning(r.package)).reduce((n,r)=>n+r.seconds,0)||0
+ async function saveApp(rule,hidden){const hiddenApps=new Set(policy.report?.hidden||[]);hidden?hiddenApps.add(selected.package):hiddenApps.delete(selected.package);const next={...policy,apps:{...policy.apps,[selected.package]:rule},report:{hidden:[...hiddenApps]}};const j=await call('','PUT',{policy:next,revision:state.revision});setState({...state,...j});setPolicy(j.policy);setSelected(null);setSaved(true)}
+ const extraIds=useRef({})
+ async function extra(deviceId,minutes,pkg,requestId){const key=[deviceId,minutes,pkg,requestId||''].join('|');const id=extraIds.current[key] ||= crypto.randomUUID();await call('/extra','POST',{id,device_id:deviceId,package:pkg,minutes,request_id:requestId});delete extraIds.current[key];setRefresh(r=>r+1);setSelected(null)}
  if(!state)return <p role="status">{error?s(error):s('loading')}</p>
  return <div style={{display:'grid',gap:16,marginTop:16}}>
  {error&&<p role="alert">{s(error)}</p>}
  <Card><h2>{s('ds_usage')}</h2><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{['day','week','month'].map(v=><button className="tc-btn" key={v} aria-pressed={period===v} onClick={()=>setPeriod(v)}>{({day:s('ds_day'),week:s('ds_week'),month:s('ds_month')})[v]}</button>)}</div>
  <input aria-label={s('ds_date')} type="date" value={day} onChange={e=>e.target.value&&setDay(e.target.value)}/><p>{range.from} — {range.to}</p>
  <select aria-label={s('ds_device')} value={device} onChange={e=>setDevice(e.target.value)}><option value="">{s('ds_all_devices')}</option>{state.devices.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>
- {totals?<><h3>{duration(totals.total,lang)}</h3>{!rows.length?<p>{s('ds_no_data')}</p>:<>{totals.apps.map(([pkg,a])=><div key={pkg} style={{margin:'14px 0'}}><div style={{display:'flex',justifyContent:'space-between',gap:10,overflowWrap:'anywhere'}}><span>{NAMES[pkg]||a.label}</span><strong>{duration(a.seconds,lang)}</strong></div><meter style={{width:'100%'}} min="0" max={totals.total||1} value={a.seconds}/></div>)}<h3>{s('ds_daily')}</h3>{Object.entries(totals.days).map(([date,seconds])=><div key={date} className="ds-day"><span>{date} · {duration(seconds,lang)}</span><meter min="0" max={Math.max(...Object.values(totals.days),1)} value={seconds}/></div>)}</>}</>:<p>{s('loading')}</p>}
+ {totals?<><h3>{duration(totals.total,lang)}</h3>{!visible.length?<p>{s('ds_no_data')}</p>:<>{totals.apps.map(([pkg,a])=><div key={pkg} style={{margin:'14px 0'}}><button className="ds-app-button" onClick={()=>setSelected({package:pkg,label:NAMES[pkg]||a.label})}><span style={{display:'flex',justifyContent:'space-between',gap:10}}><span>{NAMES[pkg]||a.label} ›</span><strong>{duration(a.seconds,lang)}</strong></span></button><meter style={{width:'100%'}} min="0" max={totals.total||1} value={a.seconds}/></div>)}<h3>{s('ds_daily')}</h3>{Object.entries(totals.days).map(([date,seconds])=><div key={date} className="ds-day"><span>{date} · {duration(seconds,lang)}</span><meter min="0" max={Math.max(...Object.values(totals.days),1)} value={seconds}/></div>)}</>}</>:<p>{s('loading')}</p>}
+ <p className="ds-learning">{say('Learning in Tuto','Tuto öğrenme süresi','Aprendizaje en Tuto')}: {duration(learning,lang)}</p>
+ <label><input type="checkbox" checked={showSystem} onChange={e=>setShowSystem(e.target.checked)}/>{say('Show system and hidden apps','Sistem ve gizlenen uygulamaları göster','Mostrar apps del sistema y ocultas')}</label><p><small>{say('The total above includes the displayed apps only.','Yukarıdaki toplam yalnızca listelenen uygulamaları kapsar.','El total incluye solo las aplicaciones mostradas.')}</small></p><button onClick={()=>act(async()=>{await load();setRefresh(r=>r+1)})} disabled={busy}>{say('Refresh','Yenile','Actualizar')}</button>
  <small>{s('ds_measure_note')}</small></Card>
+ <Card><h2>{say('Requests & notifications','Talepler ve bildirimler','Solicitudes y avisos')}</h2>{eventError?<p>{say('Notification service is not ready.','Bildirim servisi henüz hazır değil.','El servicio de avisos no está listo.')}</p>:!events.length?<p>{say('No events yet.','Henüz bildirim yok.','Aún no hay avisos.')}</p>:events.map(e=><div className="ds-event" key={e.id}><p>{screenEventMessage(e,'',lang)}</p><small>{new Date(e.created_at).toLocaleString()} · {e.kind==='extra'?(e.applied_at?say('Applied on tablet','Tablette uygulandı','Aplicado'):say('Waiting for tablet','Tablet bekleniyor','Esperando tableta')):({pending:say('Pending','Bekliyor','Pendiente'),approved:say('Approved','Onaylandı','Aprobado'),rejected:say('Declined','Reddedildi','Rechazado'),recorded:say('Recorded','Kaydedildi','Registrado')}[e.status]||e.status)}</small>{e.kind==='request'&&e.status==='pending'&&<div className="ds-action-row"><button disabled={busy} onClick={()=>act(()=>extra(e.device_id,e.minutes,e.package,e.id))}>{say('Approve','Onayla','Aprobar')}</button><button disabled={busy} onClick={()=>act(async()=>{await call('/requests/'+e.id+'/reject','POST',{});setRefresh(r=>r+1)})}>{say('Decline','Reddet','Rechazar')}</button></div>}</div>)}</Card>
+ {selected&&<ScreenAppActions key={selected.package} app={selected} policy={policy} devices={state.devices} defaultDevice={device} lang={lang} busy={busy} onClose={()=>!busy&&setSelected(null)} onSave={(rule,hide)=>act(()=>saveApp(rule,hide))} onExtra={(d,m)=>act(()=>extra(d,m,selected.package))}/>}
  <Card><h2>{s('ds_devices')}</h2>{state.devices.map(d=><div key={d.id} style={{borderBottom:'1px solid #ddd',padding:'12px 0'}}><strong>{d.name}</strong><p>{d.last_seen?new Date(d.last_seen).toLocaleString():s('ds_never')}</p><p>{d.revoked_at?s('ds_revoked'):d.last_seen&&d.applied_revision===state.revision?s('ds_applied'):s('ds_pending')}</p><p>{s('ds_usage_permission')}: {d.status?.usage_access?'✓':'—'} · {s('ds_protection')}: {d.status?.accessibility?'✓':'—'}</p>{!d.revoked_at&&<button disabled={busy} onClick={()=>{if(window.confirm(s('ds_revoke_confirm')))act(async()=>{await call('/revoke/'+d.id,'POST',{});await load()})}}>{s('ds_revoke')}</button>}</div>)}
  <button disabled={busy} onClick={()=>act(async()=>setCode((await call('/pair','POST',{})).code))}>{s('ds_pair')}</button>{code&&<p><strong style={{letterSpacing:2}}>{code}</strong><br/>{s('ds_pair_note')}</p>}</Card>
  <Card><h2>{s('ds_rules')}</h2><fieldset disabled={busy} style={{border:0,padding:0,display:'grid',gap:14}}>
@@ -54,7 +69,7 @@ function DevicePanel({child}){
  <label>{s('ds_timezone')}<input className="tc-input" value={policy.timezone} onChange={e=>edit({timezone:e.target.value})}/></label>
  <label>{s('ds_weekend')}<select value={policy.weekendDays.join(',')} onChange={e=>edit({weekendDays:e.target.value.split(',').map(Number)})}><option value="0,6">{s('ds_sat_sun')}</option><option value="5,6">{s('ds_fri_sat')}</option></select></label>
  <label>{s('ds_start')}<input type="time" value={policy.start} onChange={e=>edit({start:e.target.value})}/></label><label>{s('ds_end')}<input type="time" value={policy.end} onChange={e=>edit({end:e.target.value})}/></label><small>{s('ds_hours_note')}</small>
- {Object.entries(policy.apps).map(([pkg,a])=><div key={pkg}><strong>{NAMES[pkg]||pkg}</strong><select value={a.mode} onChange={e=>edit({apps:{...policy.apps,[pkg]:{...a,mode:e.target.value}}})}>{['timed','allowed','blocked'].map(m=><option key={m} value={m}>{({timed:s('sc_timed'),allowed:s('sc_allowed'),blocked:s('sc_blocked')})[m]}</option>)}</select>{a.mode==='timed'&&<label>{s('ds_app_limit')}<input type="number" min="0" max="1440" value={a.limit} onChange={e=>edit({apps:{...policy.apps,[pkg]:{...a,limit:Number(e.target.value)}}})}/></label>}</div>)}
+ {Object.entries(policy.apps).map(([pkg,a])=><div key={pkg}><strong>{NAMES[pkg]||a.label||pkg}</strong><select value={a.mode} onChange={e=>edit({apps:{...policy.apps,[pkg]:{...a,mode:e.target.value}}})}>{['timed','allowed','blocked'].map(m=><option key={m} value={m}>{({timed:s('sc_timed'),allowed:s('sc_allowed'),blocked:s('sc_blocked')})[m]}</option>)}</select>{a.mode==='timed'&&<label>{s('ds_app_limit')}<input type="number" min="0" max="1440" value={a.limit} onChange={e=>edit({apps:{...policy.apps,[pkg]:{...a,limit:Number(e.target.value)}}})}/></label>}</div>)}
  <h3>{s('ds_gem_shop')}</h3>
  <label><input type="checkbox" checked={purchase.enabled} onChange={e=>edit({purchase:{...purchase,enabled:e.target.checked}})}/>{s('ds_gem_enabled')}</label>
  {[['gemCost',s('ds_gem_cost'),10000],['minutes',s('ds_gem_minutes'),120],['dailyMax',s('ds_gem_max'),240]].map(([key,label,max])=><label key={key}>{label}<input type="number" min="1" max={max} value={purchase[key]} onChange={e=>edit({purchase:{...purchase,[key]:Number(e.target.value)}})}/></label>)}
