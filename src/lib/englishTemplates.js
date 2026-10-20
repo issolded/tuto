@@ -62,6 +62,7 @@ import {
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
   PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, PAIR_ANTONYMS,
   SYNONYM_GROUPS, GRID_OPPOSITES, SENSE_ANSWERS, COMPOUND_HEADS, HIDDEN_SENTENCES,
+  PAIR_SOUND_ALIKE, PAIR_MEANING_YOUNG_SKIP,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -1005,8 +1006,8 @@ function genSense(r, band, seed) {
   }
 }
 
-function genOddTwo(r, band, seed) {
-  const { catsOf } = index()
+/** The groups a child can name and their members, as odd-two and pair-meaning both use them. */
+function childGroups(band) {
   // Concrete members only. WordNet's hypernym tree is full of groups a child cannot see —
   // `measure / step / parking` really do share an ancestor, and nobody nine years old is going
   // to find it. A group question is only a question when the group is one you could point at.
@@ -1058,6 +1059,15 @@ function genOddTwo(r, band, seed) {
   // the fuzziness the overlap pair below was only half covering. `case.n.05` is `wallet`,
   // `luggage` and `kit`, the same kind of group.
   const excluded = new Set(['herb.n.01', 'animal.n.01', 'container.n.01', 'body_part.n.01', 'case.n.05'])
+  const usable = CATEGORIES
+    .map((c, i) => [i, c])
+    .filter(([, c]) => !excluded.has(c[0]) && inGroup(c).length >= 3)
+  return { inGroup, usable }
+}
+
+function genOddTwo(r, band, seed) {
+  const { catsOf } = index()
+  const { inGroup, usable } = childGroups(band)
   const overlappingPairs = new Set([
     'body_part.n.01|external_body_part.n.01',
     'container.n.01|vessel.n.03',
@@ -1071,9 +1081,6 @@ function genOddTwo(r, band, seed) {
   const foodish = (k) => FOODS.has(k) || k === 'young_mammal.n.01'
   const overlaps = (a, b) => overlappingPairs.has([a[0], b[0]].sort().join('|'))
     || (foodish(a[0]) && foodish(b[0]) && (FOODS.has(a[0]) || FOODS.has(b[0])))
-  const usable = CATEGORIES
-    .map((c, i) => [i, c])
-    .filter(([, c]) => !excluded.has(c[0]) && inGroup(c).length >= 3)
   if (!usable.length) return null
   const [inIdx, inCat] = pickOne(r, usable)
   const inside = shuffle(r, inGroup(inCat)).slice(0, 3)
@@ -2512,13 +2519,25 @@ function genPairMeaning(r, band, seed) {
   // relations are made for every sense of a word, and a pair shown with no sentence is read in
   // its commonest one: its antonyms offered `lie, sit` as opposites, and its synonyms `check,
   // contain`. The opposites come from the hand table for the same reason.
-  const synPairs = memo('curated-syn-pairs', () => PAIR_SYNONYMS.filter(([a, b]) =>
-    plainWord(a) && plainWord(b)))
-  const antPairs = memo('ant-pairs', () => PAIR_ANTONYMS)
+  // In the youngest band both words must be ones the book's children read: Dale-Chall or
+  // common (Zipf 4.7), because the tables also feed older bands and pair-meaning was showing
+  // seven-year-olds remarkable/noteworthy and majority/minority. The hand-written opposites are
+  // exempt (`up`, `in`, `go` are not in the frequency list at all).
+  const young = band.familiarOnly
+  const readable = (w) => FAMILIAR_SET.has(w) || z(w) >= 47
+  const youngPair = ([a, b]) => !PAIR_MEANING_YOUNG_SKIP.has(`${a}|${b}`) && readable(a) && readable(b)
+  const handOpposite = ([a, b]) => RELATIONS.opposite[a]?.includes(b)
+  const synPairs = memo(`curated-syn-pairs|${young}`, () => PAIR_SYNONYMS.filter((p) =>
+    plainWord(p[0]) && plainWord(p[1]) && (!young || youngPair(p))))
+  const antPairs = memo(`ant-pairs|${young}`, () => PAIR_ANTONYMS.filter((p) =>
+    !young || handOpposite(p) || youngPair(p)))
+  // Two of a kind from the same groups odd-two uses, with its filters: read raw, the WordNet
+  // categories were offering `dish, empty` (containers), `skull, tooth` and `laundry, shirt`.
   const catPairs = memo(`cat-pairs|${band.answer}|${band.familiarOnly}`, () => {
+    const { inGroup, usable } = childGroups(band)
     const out = []
-    for (const [, , members] of CATEGORIES) {
-      const ms = members.filter(kid)
+    for (const [, c] of usable) {
+      const ms = inGroup(c).filter(kid)
       for (let i = 0; i + 1 < ms.length; i++) out.push([ms[i], ms[i + 1]])
     }
     return out
@@ -2534,7 +2553,7 @@ function genPairMeaning(r, band, seed) {
       if (!p || !clean(p)) continue
       if (why !== 'opposite-pair' && (antonyms.get(p[0])?.has(p[1])
         || RELATIONS.opposite[p[0]]?.includes(p[1]) || RELATIONS.opposite[p[1]]?.includes(p[0]))) continue
-      if (why !== 'same-meaning-pair' && related(p[0], p[1])) continue
+      if (why !== 'same-meaning-pair' && (related(p[0], p[1]) || sharesNeighbour(p[0], p[1]))) continue
       p.forEach(w => used.add(w))
       pairs.push({ text: `${p[0]}, ${p[1]}`, why })
       return
@@ -2542,11 +2561,9 @@ function genPairMeaning(r, band, seed) {
   }
   take(opposite ? synPairs : antPairs, opposite ? 'same-meaning-pair' : 'opposite-pair')
   take(catPairs, 'same-group-pair')
-  const avoid = new Set(used)
-  const two = fillers(r, band, avoid, 2)
-  if (two.length === 2 && !related(two[0], two[1]) && !antonyms.get(two[0])?.has(two[1])) {
-    pairs.push({ text: `${two[0]}, ${two[1]}`, why: 'unrelated-pair' })
-  }
+  // The fourth pair was two random filler words ("board, ugly", "thick, thrown"), which a child
+  // crosses out at a glance and which therefore tested nothing. The book's is a sound-alike pair.
+  take(PAIR_SOUND_ALIKE, 'sound-alike-pair')
   if (pairs.length < 3) return null
   return finish(r, 'pair-meaning', seed, { opposite }, [`${right[0]}, ${right[1]}`], pairs,
     { kind: 'pair-meaning', opposite, pair: right }, 4)

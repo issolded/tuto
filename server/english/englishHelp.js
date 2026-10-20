@@ -277,7 +277,7 @@ const HELP = {
         ? L(`Opposite means one word is the reverse of the other (${eg[0]}, ${eg[1]}). Check each pair.`, `Zıt, bir kelimenin diğerinin tersi olması demek (${eg[2]}). Her çifti kontrol et.`, `Opuesto quiere decir que una palabra es lo contrario de la otra (${eg[3]}). Revisa cada pareja.`)
         : L('Same meaning means you could swap one word for the other in a sentence. Check each pair.', 'Aynı anlam, bir cümlede birini diğerinin yerine koyabilmek demek. Her çifti kontrol et.', 'Mismo significado quiere decir que puedes cambiar una palabra por la otra en una frase. Revisa cada pareja.'),
       steps: [
-        L('Say each pair out loud and decide: same, opposite, or only in the same family of things (like car and bus).', 'Her çifti yüksek sesle söyle ve karar ver: aynı, zıt ya da yalnızca aynı grup (araba ile otobüs gibi).', 'Di cada pareja en voz alta y decide: igual, opuesta o solo de la misma familia (como coche y autobús).'),
+        L('Look at what each pair MEANS and decide: same, opposite, only the same family of things (like car and bus), or two words that only sound the same (like blue and blew).', 'Her çiftin ANLAMINA bak ve karar ver: aynı, zıt, yalnızca aynı grup (araba ile otobüs gibi) ya da yalnızca aynı okunan iki kelime (blue ile blew gibi).', 'Mira lo que SIGNIFICA cada pareja y decide: igual, opuesta, solo de la misma familia (como coche y autobús) o dos palabras que solo suenan igual (como blue y blew).'),
         L(`${ans(it)[0]} is the pair that ${opp ? 'is opposite' : 'means the same'}.`, `${ans(it)[0]} çifti ${opp ? 'zıt anlamlı' : 'aynı anlamda'}.`, `${ans(it)[0]} es la pareja que ${opp ? 'es opuesta' : 'significa lo mismo'}.`),
       ],
     }

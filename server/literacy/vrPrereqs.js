@@ -39,7 +39,7 @@ export const VR_FAMILIES = [
   { band: '7-8', type: 'logic-grid', load: 'sentences', needs: { Ca: 3 }, probes: [], answers: 24 },
   // Meaning.
   { band: '7-8', type: 'odd-two', load: 'meaning', needs: { B: 3 }, probes: [], answers: 150 },
-  { band: '7-8', type: 'pair-meaning', load: 'meaning', needs: { B: 4 }, probes: [], answers: 153 },
+  { band: '7-8', type: 'pair-meaning', load: 'meaning', needs: { B: 4 }, probes: [], answers: 90 },
   { band: '7-8', type: 'compound-front', load: 'meaning', needs: { B: 4 }, probes: [], answers: 31 },
   { band: '7-8', type: 'analogy', load: 'meaning', needs: { B: 3 }, probes: ['relation-words'], answers: 111 },
   { band: '7-8', type: 'rhyme-synonym', load: 'meaning+sound', needs: { B: 4 }, probes: ['rhyme-audio'], answers: 47 },

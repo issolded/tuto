@@ -48,7 +48,7 @@ olmayan kontrol; probe yoksa aile kapalı. **Cevap:** 3000 tohumda farklı cevap
 | `front-letter` | _ouble _rill _ear _eer → d | dört kelimeyi parçadan hatırlama | B3, D2 | — | 22 harf |
 | `logic-grid` | "Kofi and Priya have yellow bikes…" Who has a red bike with baskets? | cümle okuma, karşılaştırma | Ca3 | — | 24 |
 | `odd-two` | fox / breakfast / wolf / dinner / dog → breakfast + dinner | kategori | B3 | — | 150 |
-| `pair-meaning` | foreign, domestic (most opposite) | eş/zıt anlam, orta-seyrek kelime | B4 | — | 153 |
+| `pair-meaning` | tall, short (most opposite); yanlışlar: quick, fast / salad, soup / sea, see | eş/zıt anlam, sık kelime | B4 (B3'e inmesi açık karar) | — | 90 |
 | `compound-front` | brush / pin / cut / style → hair | bileşik kelime bilgisi | B4 | — | 31 |
 | `analogy` | wolf : howl = frog : ? → croak | ilişki + belirli kelime (hayvan sesi, yavru) | B3 | `relation-words` | 111 |
 | `rhyme-synonym` | VEHICLE, star → car | eş anlam + kafiye (ses) | B4 | `rhyme-audio` | 47 |
@@ -89,6 +89,14 @@ Tablodaki örnek ve cevap sayıları düzeltmeden sonra yeniden ölçüldü (`vr
    bölümü ve "case" grupları çıktı; dorm, hash, automobile, technician, basin, sedan, laundry, lounge, ridge, organ,
    queen (böcek), servant, bathtub, robe üye değil; 7-8 havuzu daralınca Dale-Chall kelimesi 3.4'e kadar inebiliyor.
 5. **`pair-meaning`:** çeldirici çiftler rastgele okunuyor ("board, ugly", "thick, thrown"); bilinçli seçilmiş değil.
+   **Düzeltme (2026-10-20):** dördüncü çift artık kitaptaki gibi **sesteş** (sea, see; tail, tale): elle yazılmış
+   `PAIR_SOUND_ALIKE`, 32 çift, iki IPA sözlüğünde de sesteş, aksana duyarlı olanlar (root/route) yok. Aynı türden
+   çift `odd-two`'nun filtrelerinden geçiyor (`childGroups`); ham okunduğunda `dish, empty`, `skull, tooth`, `laundry,
+   shirt` çıkıyordu. Doğru çift küçük bantta iki kelimesi de Dale-Chall ya da Zipf ≥ 4.7 olmalı (elle yazılmış zıtlar
+   muaf); tek lehçeli ya da okunduğundan seyrek olanlar `PAIR_MEANING_YOUNG_SKIP` (rent/hire, autumn/fall,
+   pavement/sidewalk, graze/scratch, brook/stream, foreign/domestic). Bulgu 3'teki remarkable/noteworthy,
+   majority/minority, client/customer, feast/banquet artık 7-8'de çıkmıyor. Doğru çift havuzu 153 → 90 (3000 seed × 2 çeşit).
+   Gereken basamak B4'te bırakıldı; çiftler artık B3 kelimesi, indirmek kullanıcı kararı.
 
 ## Açık
 

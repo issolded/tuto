@@ -122,6 +122,29 @@ export const PAIR_ANTONYMS = [
   ['noisy', 'quiet'],
 ]
 
+// The book's third wrong pair in pair-meaning: two words that only SOUND alike (fear, fare). It
+// asks whether the child is reading the word or hearing it. Each pair sounds the same in both
+// UK and US speech (checked against both IPA dictionaries), both words are ones a 7-8 year old
+// reads, and none depends on accent: root/route, which some US speakers split, is left out.
+export const PAIR_SOUND_ALIKE = [
+  ['sea', 'see'], ['son', 'sun'], ['meat', 'meet'], ['week', 'weak'], ['hear', 'here'],
+  ['too', 'two'], ['right', 'write'], ['peace', 'piece'], ['hole', 'whole'], ['mail', 'male'],
+  ['buy', 'bye'], ['plain', 'plane'], ['steal', 'steel'], ['tail', 'tale'], ['bear', 'bare'],
+  ['deer', 'dear'], ['break', 'brake'], ['sail', 'sale'], ['waist', 'waste'], ['way', 'weigh'],
+  ['fair', 'fare'], ['made', 'maid'], ['hair', 'hare'], ['heard', 'herd'], ['not', 'knot'],
+  ['peak', 'peek'], ['toe', 'tow'], ['heel', 'heal'], ['pair', 'pear'], ['night', 'knight'],
+  ['wait', 'weight'], ['some', 'sum'],
+]
+
+// Right pairs that pair-meaning does not use in the youngest band although both words pass its
+// reading bar: they mean the same in one variety only (rent/hire and autumn/fall are UK, the
+// pavement/sidewalk pair crosses the two), or one word is rarer than it reads (a `graze`, a
+// `brook`, `domestic` as the opposite of foreign).
+export const PAIR_MEANING_YOUNG_SKIP = new Set([
+  'rent|hire', 'autumn|fall', 'pavement|sidewalk', 'graze|scratch', 'brook|stream',
+  'foreign|domestic',
+])
+
 // Four genuinely interchangeable/near-equivalent words for `odd-synonym`. These are groups,
 // not all pairwise combinations inferred from a dictionary sense: contextual and slang groups
 // such as dough/lettuce/bread/cabbage and fink/canary/sneaker/snitch are deliberately absent.

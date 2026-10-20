@@ -958,6 +958,8 @@ const STRINGS = {
     es: 'Esa no tiene que ver con la palabra.' },
   eng_why_unrelated_pair: { en: 'Those two are not linked.', tr: 'Bu ikisinin bir bağı yok.',
     es: 'Esas dos no tienen relación.' },
+  eng_why_sound_alike_pair: { en: 'Those two sound the same, but they do not mean the same.', tr: 'Bu ikisi aynı okunuyor ama aynı anlama gelmiyor.',
+    es: 'Esas dos suenan igual, pero no significan lo mismo.' },
   eng_why_opposite_pair: { en: 'Those two are opposites.', tr: 'Bu ikisi birbirinin tersi.',
     es: 'Esas dos son contrarias.' },
   eng_why_same_group_pair: { en: 'Those two are the same kind of thing.', tr: 'Bu ikisi aynı türden şeyler.',

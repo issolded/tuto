@@ -149,7 +149,11 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
       çıktı, dorm/hash/automobile/technician/basin/sedan/laundry/lounge/ridge/organ/queen/servant/bathtub/robe üye değil; 7-8 havuzu 40'ın altına
       düşünce Dale-Chall kelimesi 3.4'e kadar inebiliyor. Havuz (3000 seed, cevap): rhyme-synonym 43→47, compound-front 30→31, 7-8 odd-two
       118→150, 8-9 odd-two 371→203, hidden-word 60→45; `vrPrereqs.js` güncellendi. `english:check`, `npm test` 208/208 temiz.
-      **Açık:** bulgu 5 (`pair-meaning` çeldiricileri) dokunulmadı; cümleler/bileşikler çocukla denenmedi. **Native etkisi:** İngilizce
+      **Bulgu 5 (2026-10-20):** `pair-meaning`'in dördüncü şıkkı rastgele iki kelime yerine UK/US ortak sesteş çift (`PAIR_SOUND_ALIKE`, 32);
+      aynı türden çift `odd-two` filtrelerinden (`childGroups`); 7-8'de doğru çiftin iki kelimesi Dale-Chall ya da Zipf ≥ 4.7
+      (`PAIR_MEANING_YOUNG_SKIP` tek lehçeli/seyrekleri ayırır). Doğru çift havuzu 153→90; `vrPrereqs` B4'te bırakıldı (B3'e inmesi açık karar).
+      Yeni sebep anahtarı `eng_why_sound_alike_pair` (native'de `eng_why_*` kopyası zaten yok).
+      **Açık:** cümleler/bileşikler/sesteş çiftler çocukla denenmedi. **Native etkisi:** İngilizce
       soruyu sunucu üretiyor (`server/english` senkronlu), deploy sonrası native'e kendiliğinden geçer; `mobile/engine` paketi etkilenmez,
       yeni tip/alan yok.
 
