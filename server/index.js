@@ -8675,7 +8675,7 @@ const literacyGems = {
   },
 }
 async function literacyRoutes() {
-  if (!literacyChild) literacyChild = import('./literacyLab.js').then(m => m.childHandlers({ supabase, tzForChild, gems: literacyGems }))
+  if (!literacyChild) literacyChild = import('./literacyLab.js').then(m => m.childHandlers({ supabase, tzForChild, gems: literacyGems, varietyFor: englishVarietyFor }))
   return literacyChild
 }
 const literacyRoute = (name) => async (req, res) => {

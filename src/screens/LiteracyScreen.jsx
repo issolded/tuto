@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { t } from '../lib/i18n'
 import TutoMascot from '../components/TutoMascot'
@@ -30,6 +30,23 @@ async function post(path, body) {
   if (!res.ok) throw new Error(String(res.status))
   return res.json()
 }
+
+// Plays recordings one after another (a talk, then its question). One player for the screen: a new tap stops the old.
+const player = { audio: null, token: 0 }
+function play(urls) {
+  const list = [].concat(urls || []).filter(Boolean)
+  player.audio?.pause()
+  const token = ++player.token
+  const step = (i) => {
+    if (i >= list.length || token !== player.token) return
+    const a = new Audio(list[i])
+    player.audio = a
+    a.onended = () => step(i + 1)
+    a.play().catch(() => {})       // blocked autoplay: the 🔊 button plays it on a tap
+  }
+  step(0)
+}
+const stopAudio = () => { player.token++; player.audio?.pause() }
 
 const Picture = ({ emoji, size = 72 }) => (EMOJI_ART[emoji]
   ? <img src={EMOJI_ART[emoji]} alt="" draggable={false} style={{ width: size, height: size }} />
@@ -64,6 +81,7 @@ function Answer({ q, value, onChange, result }) {
     )
   }
   const pictures = q.options.some(o => o.picture)
+  const sounds = q.options.every(o => o.audio && !o.text && !o.picture)
   const need = q.pick || 1
   return (
     <div style={{ display: 'grid', gridTemplateColumns: pictures ? '1fr 1fr' : '1fr', gap: 10 }}>
@@ -73,13 +91,13 @@ function Answer({ q, value, onChange, result }) {
         const wrong = result && chosen && !right
         return (
           <button key={o.id} className="lt-press" disabled={!!result}
-            onClick={() => onChange(need === 1 ? [o.id] : chosen ? value.filter(x => x !== o.id) : [...(value || []), o.id].slice(-need))}
+            onClick={() => { if (o.audio) play(o.audio); onChange(need === 1 ? [o.id] : chosen ? value.filter(x => x !== o.id) : [...(value || []), o.id].slice(-need)) }}
             style={{
-              borderRadius: 18, padding: pictures ? '14px 8px' : '14px 16px', textAlign: pictures ? 'center' : 'left', cursor: 'pointer',
+              borderRadius: 18, padding: pictures ? '14px 8px' : '14px 16px', textAlign: pictures || sounds ? 'center' : 'left', cursor: 'pointer',
               background: right ? '#E4F6EC' : wrong ? '#FCE4EA' : 'white', fontSize: 17, color: INK, fontWeight: 600,
               border: `3px solid ${right ? GREEN : wrong ? ROSE : chosen ? ROSE : 'transparent'}`, boxShadow: '0 3px 10px rgba(40,30,70,.07)',
             }}>
-            {o.picture ? <Picture emoji={o.picture.emoji} /> : o.text}
+            {o.picture ? <Picture emoji={o.picture.emoji} /> : sounds ? <>🔊 {q.options.indexOf(o) + 1}</> : o.text}
           </button>
         )
       })}
@@ -103,7 +121,11 @@ export default function LiteracyScreen() {
   const [quote, setQuote] = useState(null)          // { gems, will_pay } from the first question
   const [paid, setPaid] = useState(null)            // { gems_earned, capped } at the end
 
-  const load = (id) => post(`/api/children/${child.id}/literacy/next`, { sitting_id: id })
+  const load = (id, extra = {}) => post(`/api/children/${child.id}/literacy/next`, { sitting_id: id, ...extra })
+  // Sound: unknown until the first listening question, then the child's answer for the rest of the sitting.
+  // "I can't use sound now" is not a wrong answer: listening is skipped and stays unknown (rev. 3).
+  const [audioOk, setAudioOk] = useState(null)
+  const autoPlayed = useRef(null)
   function apply(r) {
     setBusy(false)
     setSittingId(r.sitting_id)
@@ -114,10 +136,22 @@ export default function LiteracyScreen() {
     setStep(s => (s === 'loading' ? 'welcome' : 'question'))
   }
   const fail = () => { setBusy(false); setStep('error') }
-  function next(id = sittingId) {
+  function next(id = sittingId, extra = {}) {
+    stopAudio()
     setBusy(true)
-    load(id).then(apply, fail)
+    load(id, extra).then(apply, fail)
   }
+  function noSound() {
+    setAudioOk(false)
+    next(sittingId, { no_audio: true, discard_item: item.id })
+  }
+  // A listening question plays itself once when it appears (if the browser allows it).
+  useEffect(() => {
+    if (step === 'question' && audioOk && item?.prompt?.listen && autoPlayed.current !== item.id) {
+      autoPlayed.current = item.id
+      play(item.prompt.audio)
+    }
+  }, [step, audioOk, item])
 
   useEffect(() => {
     if (!child?.id) { nav('/child', { replace: true }); return }
@@ -183,6 +217,17 @@ export default function LiteracyScreen() {
     <button className="lt-press" style={primary} onClick={() => nav('/child/home')}>Done</button>
   </>)
 
+  // ── sound check, before the first listening question ──
+  if (item?.prompt?.listen && audioOk === null) return center(<>
+    <TutoMascot size={120} expression="excited" color={ROSE} />
+    <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 21, color: INK }}>Now some listening!</div>
+    <button className="lt-press" onClick={() => play(item.prompt.instruction_audio || item.prompt.audio[0])} style={{ ...primary, background: 'white', color: ROSE }}>🔊 Play a sound</button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 300 }}>
+      <button className="lt-press" onClick={() => { stopAudio(); setAudioOk(true) }} style={primary}>I can hear it</button>
+      <button className="lt-press" onClick={noSound} disabled={busy} style={{ ...smallBtn, padding: '14px 18px', fontSize: 16 }}>I can't use sound now</button>
+    </div>
+  </>)
+
   // ── question ──
   const p = item.prompt || {}
   const vrItem = p.stem_key ? { type: p.type, prompt: p.vr, pick: p.pick } : null
@@ -204,7 +249,13 @@ export default function LiteracyScreen() {
           </div>
         )}
         <div style={{ fontFamily: FRED, fontSize: 19, color: INK, lineHeight: 1.45 }}>
-          {vrItem ? <>{t(p.stem_key, 'en')}<div style={{ marginTop: 8 }}><EnglishStem item={vrItem} lang="en" /></div></>
+          {p.listen ? (
+            <div style={{ textAlign: 'center' }}>
+              {p.instruction && <div style={{ fontSize: 15, color: INK_SOFT, marginBottom: 6 }}>{p.instruction}</div>}
+              <button className="lt-press" onClick={() => play(p.audio)} style={{ ...primary, padding: '18px 34px', fontSize: 22 }}>🔊 Listen</button>
+              <div style={{ fontSize: 14, color: INK_SOFT, marginTop: 8 }}>Tap to hear it again.</div>
+            </div>
+          ) : vrItem ? <>{t(p.stem_key, 'en')}<div style={{ marginTop: 8 }}><EnglishStem item={vrItem} lang="en" /></div></>
             : <>
               {p.instruction && <div style={{ fontSize: 15, color: INK_SOFT, marginBottom: 6 }}>{p.instruction}</div>}
               {p.picture && <div style={{ textAlign: 'center' }}><Picture emoji={p.picture.emoji} size={110} /></div>}
@@ -221,7 +272,9 @@ export default function LiteracyScreen() {
         ))}
         {results && !allRight && item.questions.some(q => results[q.id]?.explain && !results[q.id].correct && q.mode !== 'build') && (
           <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', fontSize: 15, color: INK }}>
-            {item.questions.filter(q => results[q.id] && !results[q.id].correct && results[q.id].explain).map(q => <div key={q.id}>✓ {results[q.id].explain}</div>)}
+            {item.questions.filter(q => results[q.id] && !results[q.id].correct && results[q.id].explain).map(q => (
+              <div key={q.id}>✓ {results[q.id].explain}{results[q.id].explain_audio && <button onClick={() => play(results[q.id].explain_audio)} aria-label="Hear it" style={{ ...smallBtn, marginLeft: 8, padding: '4px 10px' }}>🔊</button>}</div>
+            ))}
           </div>
         )}
       </div>

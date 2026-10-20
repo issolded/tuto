@@ -19,7 +19,9 @@
 import crypto from 'node:crypto'
 import { DateTime } from 'luxon'
 import { nextProbe, RULES_VERSION } from './literacy/ladder.js'
-import { entriesFor } from './literacy/catalog.js'
+import { entriesFor, TEXT_ONLY_BLIND } from './literacy/catalog.js'
+import { LISTENING_ITEMS, listenClip } from './literacy/listeningBank.js'
+import AUDIO from './literacy/audioManifest.generated.json' with { type: 'json' }
 import { SENTENCE_ITEMS, SENTENCE_REVISION } from './literacy/sentenceBank.js'
 import { generateItem as literacyItem } from './literacy/engine.js'
 import { pictureItem, pictureBuildItem } from './literacy/pictureWords.js'
@@ -31,17 +33,27 @@ export const LAB_ON = () => process.env.LITERACY_LAB === '1'
 export const SITTING_LENGTH = 10
 const CHILD_MIN_STATUS = 'checked'
 const TEXTS = { 'reading-stories-200': STORIES.items, 'reading-passages': READING.items }
-const SUPPORTED = new Set(['literacy-engine', 'vr-engine', 'sentence-bank', 'reading-stories-200', 'reading-passages', 'picture-words'])
+const SUPPORTED = new Set(['literacy-engine', 'vr-engine', 'sentence-bank', 'reading-stories-200', 'reading-passages', 'picture-words', 'listening-bank'])
 // The literacy engine's build is from a definition (a reading load); D1 is served by the picture build instead.
-// Picture words' listen kind needs approved audio.
-const servable = e => SUPPORTED.has(e.source) && !(e.source === 'literacy-engine' && e.ref?.skill === 'build')
-  && !(e.source === 'picture-words' && e.ref?.kind === 'listen')
+// Listening (track A) needs sound: a sitting where the child said "I can't use sound now" is dealt none.
+const LISTENS = e => e.source === 'listening-bank' || (e.source === 'picture-words' && e.ref?.kind === 'listen')
+const servable = (e, { audio = true } = {}) => SUPPORTED.has(e.source) && !(e.source === 'literacy-engine' && e.ref?.skill === 'build')
+  && (audio || !LISTENS(e))
 
-const supported = (minStatus) => (track, step) => entriesFor(track, step, { minStatus }).some(servable)
+const supported = (minStatus, opts) => (track, step) => entriesFor(track, step, { minStatus }).some(e => servable(e, opts))
+
+// A recording's public address, or null. Only clips that passed the automatic check (status ok, no issues): the
+// recordings are on the card by user decision 2026-10-20 without a person approving each one. File names are
+// content hashes, so the address says nothing about the answer.
+const AUDIO_BASE = `${process.env.SUPABASE_URL || ''}/storage/v1/object/public/`
+export function audioUrl(clip, variety = 'uk') {
+  const m = AUDIO[`${clip}:${variety}`] || AUDIO[`${clip}:uk`]
+  return m && m.status === 'ok' && !m.issues?.length ? AUDIO_BASE + m.file : null
+}
 
 // One source for the step, like catalog.pick but only among sources a sitting can serve.
-function pickSource(track, step, seed, { minStatus, avoid }) {
-  const list = entriesFor(track, step, { minStatus }).filter(servable)
+function pickSource(track, step, seed, { minStatus, avoid, audio = true }) {
+  const list = entriesFor(track, step, { minStatus }).filter(e => servable(e, { audio }))
   if (!list.length) return null
   const e = list[seed % list.length]
   if (e.kind === 'bank') {
@@ -54,17 +66,32 @@ function pickSource(track, step, seed, { minStatus, avoid }) {
 
 // A dealt item: questions with options and keys. Each question carries the evidence fields the ladder records.
 // Keys stay on the server; publicItem() is what is sent.
-export async function dealItem(track, step, pick, { avoid = new Set() } = {}) {
+export async function dealItem(track, step, pick, { avoid = new Set(), variety = 'uk' } = {}) {
   const base = { track, step, source: pick.source, format: pick.format }
   if (pick.source === 'sentence-bank') {
     const it = SENTENCE_ITEMS.find(x => x.id === pick.id)
     return { ...base, id: it.id, contentVersion: SENTENCE_REVISION, prompt: it.prompt,
       questions: [{ id: 'q0', options: it.options, key: [it.key], skill: step, group: it.id, family: 'sentence-bank', explain: it.feedback.text }] }
   }
+  if (pick.source === 'listening-bank') {
+    const it = LISTENING_ITEMS.find(x => x.id === pick.id)
+    const talk = audioUrl(listenClip.talk(it.id), variety)
+    const question = audioUrl(listenClip.question(it.id), variety)
+    const options = it.choices.map(c => ({ id: c.id, audio: audioUrl(c.audio, variety) }))
+    if (!talk || !question || options.some(o => !o.audio)) return null      // a missing or flagged clip: not dealt
+    // Everything is heard, nothing read: the options are sounds, the text appears only in the feedback.
+    return { ...base, id: it.id, contentVersion: `listening:${it.id}`,
+      prompt: { audio: [talk, question], instruction_audio: audioUrl(listenClip.instruction(), variety), listen: true },
+      questions: [{ id: 'q0', options, key: [it.key], skill: step, group: it.id, family: 'listening-bank', explain: it.feedback,
+        explain_audio: audioUrl(listenClip.feedback(it.id), variety) }] }
+  }
   if (TEXTS[pick.source]) {
     const it = TEXTS[pick.source].find(x => x.id === pick.id)
+    // A question a solver answered without the text is not evidence of reading: only text-dependent ones are asked.
+    const asked = it.questions.map((q, i) => [q, i]).filter(([q]) => (q.blindRight ?? 0) <= TEXT_ONLY_BLIND || pick.source !== 'reading-stories-200')
+    if (!asked.length) return null
     return { ...base, id: it.id, contentVersion: `${pick.source}:${it.id}`, passage: { title: it.title, text: it.passage },
-      questions: it.questions.map((q, i) => ({
+      questions: asked.map(([q, i]) => ({
         id: `q${i}`, stem: q.stem, options: q.options.map((text, j) => ({ id: `o${j}`, text })), key: [`o${q.answer}`],
         // One text is one group: three questions give a skill one unit (ladder.js), each skill keeps its own.
         skill: q.op, group: `text:${it.id}`, family: pick.source, explain: q.evidence,
@@ -79,8 +106,17 @@ export async function dealItem(track, step, pick, { avoid = new Set() } = {}) {
         questions: [{ id: 'q0', mode: 'build', letters: it.letters, key: [it.key], skill: 'build-picture', group: `word:${it.key}`,
           family: 'picture-build', explain: it.key }] }
     }
-    const it = pictureItem('read', pick.ref.seed, { avoid: words })
+    const listen = pick.ref.kind === 'listen'
+    const it = pictureItem(listen ? 'listen' : 'read', pick.ref.seed, { avoid: words })
     if (!it) return null
+    if (listen) {
+      const word = audioUrl(it.prompt.audio, variety)
+      if (!word) return null
+      return { ...base, id: it.id, contentVersion: 'picture-words-1',
+        prompt: { audio: [word], instruction_audio: audioUrl(it.instruction.audio, variety), listen: true },
+        questions: [{ id: 'q0', options: it.options, key: [it.key], skill: 'listen-picture', group: `word:${it.key}`,
+          family: 'picture-listen', explain: it.key, explain_audio: word }] }
+    }
     return { ...base, id: it.id, contentVersion: 'picture-words-1', prompt: { text: it.prompt.text, instruction: it.instruction.text },
       questions: [{ id: 'q0', options: it.options, key: [it.key], skill: 'read-picture', group: `word:${it.key}`,
         family: 'picture-words', explain: it.key }] }
@@ -139,7 +175,7 @@ async function childOf(supabase, id) {
   return (await supabase.from('children').select('*').eq('id', id).maybeSingle()).data
 }
 
-async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quote = null }) {
+async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quote = null, noAudio = false, discard = null, variety = 'uk' }) {
   let sitting = sittings.get(sittingId)
   let fresh = false
   if (!sitting || sitting.childId !== child.id) {
@@ -148,6 +184,11 @@ async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quot
     sittings.set(sitting.id, sitting)
     if (sittings.size > 500) sittings.delete(sittings.keys().next().value)
   }
+  // "I can't use sound now": no listening for the rest of this sitting, and the listening question on screen is
+  // put back unanswered (it does not count towards the ten).
+  if (noAudio) sitting.noAudio = true
+  const back = discard && sitting.items.get(discard)
+  if (back && !back.answered) { sitting.items.delete(discard); sitting.dealt-- }
   const head = { sitting_id: sitting.id, of: SITTING_LENGTH, ...(fresh && quote ? await quote(child) : {}) }
   const finished = async (extra = {}) => {
     if (pay && !sitting.paid) sitting.paid = await pay(child, sitting)
@@ -156,7 +197,7 @@ async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quot
   if (sitting.dealt >= SITTING_LENGTH) return finished()
   const { state, missing } = await literacyState(supabase, child)
   if (missing) return { error: [503, 'english ladder tables missing'] }
-  const probe = nextProbe(state, { has: supported(sitting.minStatus), session: sitting.id })
+  const probe = nextProbe(state, { has: supported(sitting.minStatus, { audio: !sitting.noAudio }), session: sitting.id })
   if (!probe) return finished({ reason: 'no content' })
   const { rows } = await loadAttempts(supabase, child.id)
   // Bank items and words already met (a text is stored as `text:<id>`, a word as `word:<w>`) are not dealt again.
@@ -164,8 +205,8 @@ async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quot
   for (const it of sitting.items.values()) for (const q of it.questions) avoid.add(String(q.group))
   let item = null
   for (let k = 0; k < 8 && !item; k++) {
-    const pick = pickSource(probe.track, probe.step, crypto.randomInt(1, 2 ** 30), { minStatus: sitting.minStatus, avoid })
-    if (pick) item = await dealItem(probe.track, probe.step, pick, { avoid })
+    const pick = pickSource(probe.track, probe.step, crypto.randomInt(1, 2 ** 30), { minStatus: sitting.minStatus, avoid, audio: !sitting.noAudio })
+    if (pick) item = await dealItem(probe.track, probe.step, pick, { avoid, variety })
   }
   if (!item) return { error: [500, `could not deal ${probe.step}`] }
   item.dealtId = crypto.randomUUID()
@@ -201,7 +242,7 @@ async function answerFor(supabase, tzForChild, sittingId, body) {
     // Gems per question, as the VR sitting: right with no help is a whole share, wrong or "I don't know" none.
     // A reading text's questions each count here (fair to the child), though the evidence counts the text once.
     if (correct && !hinted) sitting.shares++
-    results.push({ question_id: q.id, correct, key: q.key, explain: q.explain })
+    results.push({ question_id: q.id, correct, key: q.key, explain: q.explain, explain_audio: q.explain_audio ?? null })
   }
   return { results }
 }
@@ -209,7 +250,7 @@ async function answerFor(supabase, tzForChild, sittingId, body) {
 const send = (res, out) => (out.error ? res.status(out.error[0]).json({ error: out.error[1] }) : res.json(out))
 
 // The child's door. Called from index.js after a lazy import, so a load failure here never takes the server down.
-export function childHandlers({ supabase, tzForChild, gems = null }) {
+export function childHandlers({ supabase, tzForChild, gems = null, varietyFor = null }) {
   return {
     async menu(req, res) {
       const child = await childOf(supabase, req.params.childId)
@@ -222,7 +263,11 @@ export function childHandlers({ supabase, tzForChild, gems = null }) {
       const child = await childOf(supabase, req.params.childId)
       if (!child) return res.status(404).json({ error: 'child not found' })
       if (!englishActive(child)) return res.status(403).json({ error: 'English is switched off for this child' })
-      send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus: CHILD_MIN_STATUS, pay: gems?.pay, quote: gems?.quote }))
+      const variety = varietyFor ? await varietyFor(child) : (child.english_variety === 'us' ? 'us' : 'uk')
+      send(res, await nextFor(supabase, child, {
+        sittingId: req.body?.sitting_id, minStatus: CHILD_MIN_STATUS, pay: gems?.pay, quote: gems?.quote,
+        noAudio: req.body?.no_audio === true, discard: req.body?.discard_item ?? null, variety,
+      }))
     },
     async answer(req, res) {
       send(res, await answerFor(supabase, tzForChild, req.params.id, req.body))
@@ -240,7 +285,7 @@ export function mountLiteracyLab(app, { supabase, tzForChild }) {
     const child = await childOf(supabase, req.params.childId)
     if (!child) return res.status(404).json({ error: 'child not found' })
     const minStatus = ['draft', 'checked', 'approved'].includes(req.body?.min_status) ? req.body.min_status : 'checked'
-    send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus }))
+    send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus, noAudio: req.body?.no_audio === true, discard: req.body?.discard_item ?? null, variety: child.english_variety === 'us' ? 'us' : 'uk' }))
   }))
   app.post('/api/lab/literacy/sittings/:id/answer', guard(async (req, res) => send(res, await answerFor(supabase, tzForChild, req.params.id, req.body))))
   app.get('/api/lab/literacy/:childId/state', guard(async (req, res) => {

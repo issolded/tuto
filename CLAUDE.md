@@ -234,7 +234,13 @@ bunların tamamlandığı anlamına gelmez.
       `POST /api/children/:id/literacy/next`, `POST /api/literacy-sittings/:id/answer` (çocuk kimliğiyle, mevcut English uçlarıyla aynı düzey; modül
       ilk istekte yüklenir, yüklenemezse yalnız bu uçlar 503). 10 soru, basamağı ladder seçer, anahtar sunucuda, cevap `english_literacy_attempts`'e;
       içerik `checked` düzeyinde (taslak 200 hikâye girmiyor). **Yeni:** B1 resimden kelime (`picture-words`) ve D1 resme bakıp harflerle kelime kurma
-      (`pictureBuildItem`, Noto SVG çizimleri) — VR tabanı B2 + D1 artık ölçülebiliyor. Hâlâ boş: A1–A5 (onaylı ses yok), Ca1 (sahne çizimi), E5.
+      (`pictureBuildItem`, Noto SVG çizimleri) — VR tabanı B2 + D1 artık ölçülebiliyor.
+      **Dinleme ve 200 hikâye (2026-10-20, kullanıcı: "ses kayıtları da geçsin, reading de"):** A1 (duyulan kelime → resim) ve A4/A5 (dinleme bankası)
+      çocuk oturumunda. Kayıtlar tek tek onaylanmadı; yalnız otomatik kontrolden `status: ok` ve sorunsuz geçen klipler (`audioUrl`), adresler içerik
+      hash'i olduğu için cevabı söylemez. A'da okuma yok: şıklar 🔊 1/2/3, metin yalnız geri bildirimde (🔊 ile). İlk dinleme sorusundan önce ses
+      kontrolü ("I can hear it" / "I can't use sound now"); ses yoksa o soru sayılmadan geri alınır, oturumda dinleme yok, A `unknown` kalır.
+      Ses UK/US çocuğun çeşidinden (`englishVarietyFor`). 200 hikâye `checked` oldu ama yalnız kör çözücünün en çok 1/3 bildiği sorular sorulur
+      (`TEXT_ONLY_BLIND`; E2 122, E3 73, E4 13 soru), hiç kalmayan hikâye dağıtılmaz. Hâlâ boş: A2, A3, Ca1, E5.
       Okuma metni tek blok, soruları birlikte cevaplanır. **Gem (kullanıcı kararı 2026-10-20):** kart başına tek ayar; English kartının gem/günlük
       sınırı iki oturuma birlikte (`englishDoneToday` = `english` + `english_literacy` ödenmiş satırlar), ledger sebebi ayrı (`english_literacy`,
       `ref_id` = oturum, oturum başına bir kez). Soru başı pay: yardımsız doğru tam, yanlış/"I don't know" sıfır; metnin her sorusu ayrı pay (kanıt tek
