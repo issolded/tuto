@@ -357,11 +357,15 @@ export const BANDS = {
   //
   // It used to be size: two sizes here and three at 10-11. Both bands now offer the same two,
   // because the third value was the 0.82 in the middle and nobody could see it — see SIZES.
+  // No pictures from 9-10 up (2026-10-20, user decision). Both 10 Minute Tests books are shapes
+  // end to end; the 7/2/1 and 8/1/1 mixes were ours, not theirs. And a picture question does not
+  // scale with the band — the emoji and icon tables are the same world knowledge a seven-year-old
+  // gets, so a ten-year-old was handed 🐛 → 🦋 in the middle of a sheet of codes.
   '9-10': {
     types: TYPES,
-    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence'),   // see 8-9
-    iconTypes: ICON_TYPES,
-    sources: { geometric: 7, icon: 2, glyph: 1 },
+    glyphTypes: [],
+    iconTypes: [],
+    sources: { geometric: 10, icon: 0, glyph: 0 },
     options: 5,
     nearCategories: true,       // see GLYPH_NEAR
     attributes: ATTRIBUTES,
@@ -382,9 +386,9 @@ export const BANDS = {
   },
   '10-11': {
     types: TYPES,
-    glyphTypes: GLYPH_TYPES.filter(t => t !== 'glyph-sequence'),   // see 8-9
-    iconTypes: ICON_TYPES,
-    sources: { geometric: 8, icon: 1, glyph: 1 },   // the older the child, the more abstract
+    glyphTypes: [],             // see 9-10
+    iconTypes: [],
+    sources: { geometric: 10, icon: 0, glyph: 0 },
     options: 5,
     nearCategories: true,       // see GLYPH_NEAR
     attributes: ATTRIBUTES,
@@ -429,9 +433,6 @@ BANDS['11-12'] = {
   ...BANDS['10-11'],
   types: [...BANDS['10-11'].types, 'overlay', 'matrix',
     'compound-analogy', 'compound-mirror', 'cube-net'],
-  glyphTypes: [],
-  iconTypes: [],
-  sources: { geometric: 10, icon: 0, glyph: 0 },
 }
 
 export const BAND_KEYS = Object.keys(BANDS)

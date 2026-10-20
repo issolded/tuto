@@ -181,6 +181,11 @@ bunların tamamlandığı anlamına gelmez.
       gerçek modelle (`--prior-tuto`, `--overlay`, `--expect-tool` eklendi): "bir süre daha kalsın"/"uzat" 6/6 `weeks:4`, "geri ekle"/"işlendi, geri ekle" 6/6
       `resume:true`, tavanda uzatılamadığını söylüyor. Gerçek Telegram'da gönderilmedi. **Native etkisi:** yok — sunucu süpürmesi ve sohbet; istemcinin okuduğu
       `skip_topic_ids` değişmedi (`describeSkips`'e `since`/`latest_until` alanı eklendi, okumayan yok sayar).
+- [x] NVR 9-10 ve 10-11'de emoji/ikon sorusu yok (2026-10-20, Claude; kullanıcı kararı, Sarp 10 yaş bulgusu). Bu bantlarda oran 7/2/1 ve
+      8/1/1'di, oturum başına ~1 resimli soru; resimli sorular banda göre zorlaşmıyor (aynı `puzzleGlyphs` tabloları, 7 yaşın 🐛→🦋'u). İki 10 Minute
+      Tests kitabı tamamen geometrik; artık `sources` 10/0/0, `glyphTypes`/`iconTypes` boş (11-12 gibi). 8-9 ve altı değişmedi. Yan etki:
+      sunucu kopyası `puzzleExplain`/`puzzleHelp` main'de senkronsuzdu ("küçük nokta" metni), `puzzle:sync` ile girdi.
+      **Native etkisi:** yok — NVR soruları sunucuda üretiliyor (`server/puzzle`).
 - [x] "N'er say, sırada ne var" yardımı oklu (2026-10-13, Claude; kullanıcı bulgusu). `placeCountInMultiples` (400, 500, 600, 700, …) yardımda yalnız
       iki ipucu cümlesi gösteriyordu. Artık toplama ile aynı `jumps` `mode: 'add'` oku: son iki terim + cevap, her ok +adım; çocuk önce sorudaki
       sayıya (kural tutuyor mu), sonra cevaba zıplar. Giriş cümlesi yardımın kendi `intro`'su ("Her zıplama +100…"), yoksa eski `addJumpsTap`.
