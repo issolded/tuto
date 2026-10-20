@@ -72,3 +72,19 @@ test('purchase pricing is parent-controlled and bounded',()=>{
  for(const purchase of [{enabled:true,gemCost:0,minutes:15,dailyMax:60},{enabled:true,gemCost:10,minutes:121,dailyMax:240},{enabled:true,gemCost:10,minutes:15,dailyMax:10}])assert.throws(()=>validatePolicy({...defaultPolicy(),purchase}))
  assert.equal(defaultPolicy().purchase.enabled,false)
 })
+
+test('any reported app can have a limit; hiding does not alter enforcement',()=>{
+ const pkg='com.example.newgame';const p=defaultPolicy();p.apps[pkg]={mode:'timed',limit:20,label:'New game',untrusted:'drop'};p.report={hidden:[pkg,pkg]};
+ const v=validatePolicy(p);assert.deepEqual(v.apps[pkg],{mode:'timed',limit:20,label:'New game'});assert.deepEqual(v.report.hidden,[pkg]);
+ for(const protectedPkg of ['com.sec.android.app.launcher','com.android.settings','app.tuto.mobile.preview']){
+  p.apps[protectedPkg]={mode:'blocked',limit:0};assert.throws(()=>validatePolicy(p),/invalid_protected_app/);delete p.apps[protectedPkg];
+ }
+})
+test('new parent actions reject non-owners before touching device data',async()=>{
+ for(const route of ['get /api/parent/children/:childId/device-screen/events','post /api/parent/children/:childId/device-screen/extra','post /api/parent/children/:childId/device-screen/requests/:requestId/reject']){
+  const h=harness('stranger',null);assert.equal((await h.request(route,{body:{}})).status,403);assert.equal(h.reads,1);
+ }
+ for(const route of ['post /api/device-screen/events','post /api/device-screen/ack']){
+  const h=harness(null,null);assert.equal((await h.request(route,{body:{}})).status,401);assert.equal(h.reads,0);
+ }
+})
