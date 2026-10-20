@@ -1,0 +1,11 @@
+.gradle/
+**/build/
+local.properties
+.idea/
+*.jks
+*.keystore
+androidApp/src/main/assets/
+engine/node_modules/
+
+# Local Android native build intermediates
+.cxx/

@@ -1,8 +1,8 @@
+import { installDeviceScreenTime } from './deviceScreenTime.js'
 import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
 import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './englishPlay.js'
-import { mountLiteracyLab } from './literacyLab.js'
 import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
 import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from './puzzleReview.js'
 import { localTopicName } from './topicNames.js'
@@ -3558,6 +3558,8 @@ app.set('trust proxy', 1) // Railway sits behind a proxy — needed so req.proto
 app.use(cors())
 app.use(express.json({ limit: '15mb' }))
 app.use(express.urlencoded({ extended: false })) // Twilio posts form-encoded webhooks
+
+installDeviceScreenTime(app, supabase, parentFromBearer)
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
@@ -8634,7 +8636,12 @@ async function syncAgesFromBirthDates() {
 }
 
 // English ladder lab sitting: off unless LITERACY_LAB=1 (internal; no child card, no gems, no parent message).
-mountLiteracyLab(app, { supabase, tzForChild })
+// Imported only when on, so a server without the flag never loads it (it uses JSON import attributes, which
+// older Node versions reject at load time, and that would take the whole server down).
+if (process.env.LITERACY_LAB === '1') {
+  const { mountLiteracyLab } = await import('./literacyLab.js')
+  mountLiteracyLab(app, { supabase, tzForChild })
+}
 
 app.listen(3000, async () => {
   console.log('Tuto sunucusu port 3000\'de çalışıyor.')

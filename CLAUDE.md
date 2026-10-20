@@ -137,6 +137,27 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 - **Mantık UI metnine bakmaz.** Onboarding'de oyun ödülü `label.includes('video game')` ile
   bulunuyordu; etiket çevrilir çevrilmez o adım sessizce atlanırdı. Artık `kind: 'game'`.
 
+## Android teslimat kararı — 2026-10-06
+
+Kullanıcı dummy/çevrimdışı Android önizlemesini istemiyor; tek, gerçek backend'e bağlı,
+uçtan uca çalışan Android native uygulama istiyor. iOS bu işin dışında. Gerçek native kaynak
+`claude/practical-franklin-xigneu` (`6468f58`); eski `mobile/native-tablet-preview` canlı
+özelliklerin kaynağı değildir. `codex/android-complete` dalına main `11869e7` birleştirildi.
+Bu birleştirme web ekranlarının native taşındığı anlamına gelmez. Eksikler `mobile/README.md`.
+6 Ekim 21:11 Dubai kullanıcı güncellemesi: canlı doğrulama sürerken testleri geçen gerçek
+native APK'yı kendi tabletinde denemek için açıkça istedi. 0.5.0 (kaynak 7c9cb3a,
+20 JVM + 11 tablet testi) teslim edildi; bu canlı E2E kabulü değildir. Eski dummy
+önizleme geri getirilmez. Eski otomatik
+preview release adımı bu geliştirme dalında kaldırıldı. 6 Ekim 2026: değişiklikler uzak dalda; eski android-preview yayını ve APK gerçekten silindi (CI 37477802302); etiket/kaynak geçmişi tutuldu.
+
+Android takip (2026-10-06): 34 web rotası / 30 ekran dosyası envanteri
+`mobile/WEB_PARITY_AUDIT_2026-10-06.md`. Kullanıcının tercihi **alt menü**, sol menü değil;
+Home/Goals/Settings native alt gezinmeye geçirildi. PIN unutma, hedef hataları ve sunucudan
+bakiye yenileme; bulmaca ipucu/skip/pekiştirme başlat-bitir-ertele eklendi. Native bulmaca
+JVM testleri 4/4; izole backend matrisi 8 yaş × EN/TR/ES geçti. Bunlar cihaz veya gerçek
+WhatsApp teslim testi değildir. Eksik native modüller dosyada ayrı; CI/yayın izni beklemek
+bunların tamamlandığı anlamına gelmez.
+
 ## Açık işler / yol haritası
 
 - [x] VR içerik bulguları 1–4 düzeltildi (2026-10-19, Claude; `codex/english-literacy`, push yok). Kaynak `docs/ENGLISH-VR-PREREQUISITES.md`
@@ -1351,3 +1372,90 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 - 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.
 
 - **İngilizce deneme seti revizyon 2 (2026-10-16, Codex):** `docs/ENGLISH-TRIAL-SET.md` içindeki 36 maddenin geri bildirimleri İngilizce/kelimesiz görsel + İngilizce ses olarak netleşti; D01/02 sun/fish, CA03 farklı nesne, CA02–CA06 üç şık, B03 doğrudan zıt anlam sorusu oldu. Görev gizleme aracı `576db82` ile origin/main içinde koddan doğrulandı; commit kaydındaki gerçek model testi yeniden çalıştırılmadı. Bu literacy dalı henüz o commiti içermiyor. Native etkisi: yok, yalnız doküman.
+
+### 2026-10-06 Android publication and device validation
+User explicitly approved publishing `codex/android-complete` to public `issolded/tuto`.
+Shell push had no credentials; connected GitHub API published an identical tree as
+`ea40ddc`, then version-only bump `3217f87` (4 / 0.4.0-native-validation).
+CI https://github.com/issolded/tuto/actions/runs/37461523253 passed build, 9 JVM tests,
+lint (0 errors, 11 warnings), and all 4 Pixel Tablet API 35 UI tests. Captured
+landscape screens inspected. Test API is injected: no live WhatsApp or real family
+E2E verified. Missing native modules remain; do not describe this as full parity
+or deliver the withdrawn offline preview. See mobile/BUILD_STATUS.md.
+
+
+### 2026-10-06 Android missing-module implementation
+
+User explicitly requested implementation of English, reading/library, homework, stories/drawing, parent and newer maths features, not another placeholder preview. Native implementations now exist in `EnglishRun`, `FeatureRun`, `ParentRun`, `Cloud`, `Media`, and their Compose screens. Only mobile code/CI/docs changed; web/backend production was not deployed. Public Supabase anon config is packaged from the deployed frontend (never a service-role key). Parent tokens are Keystore encrypted, child requests never inherit the parent token. New photo originals use private Storage; parent previews request ownership-checked signed URLs. Native device and state tests use isolated fake transports and never write a real family. Full scope and remaining differences are in `mobile/NATIVE_MODULES_2026-10-06.md`.
+
+Still not a full-parity release: complete specialised maths helpers, OAuth, some parent/history/library presentation, cross-process in-flight sessions, and live auth/storage/model/WhatsApp E2E remain. The earlier offline preview stays withdrawn; do not call a successful compile or fake-server device run a live E2E pass. Version 0.5.0 is validation only. Existing user authorization to publish this work to public `issolded/tuto`, `codex/android-complete`, remains valid.
+
+Android module follow-up: local full build + lint + 14 JVM tests passed; public source `980d085`, CI `37471192968` Android job passed. Its tablet result was 5/7: all three new ModulesTest cases passed, existing sibling PIN and maths tests failed. Maths Check was below the viewport after extra controls; paper action moved into the top bar and scratchpad after primary actions. Login now dismisses IME; tests verify visible/selected controls and wait for platform UI settling. Follow-up also refreshes signed-in child language/task settings from anon RLS, adds full puzzle history figures, preserves automatic English variety and legacy age-only profiles, and explains the story completion word minimum. Follow-up device re-run required; no live E2E claim.
+
+Android follow-up c9df357: CI 37473978404 passed both jobs and all 7 Pixel Tablet tests; the two prior failures are resolved. Next changes: signed numeric answers, ordered in-place photo crop replacement, pending-save help metadata, additional descriptor-driven maths manipulatives (including half pictograms) and translated screen-plan labels. New helper tests exercise signed-decimal worked steps and half-key counting. These need their own final CI; live family/WhatsApp remains unverified. No source/backend production deployment.
+
+Android retirement verified: release 397715776 / asset 593265107 were the obsolete android-preview APK. User-authorized scoped cleanup workflow 37477802302 succeeded; subsequent GitHub release listing is empty. Native validation source remains 9b6957f while final six-mode place-value guidance and shape/arithmetic counters are being validated. CI debug signing is not a stable production update certificate; no production signing key is configured.
+
+Final maths follow-up: six guided place-value modes (build/missing/shift/compare/arrange/digit), explicit borrow/carry exchange, counted shape marks and literal sum counters. Local full APK/instrumentation/lint build passed; 18 JVM tests passed. Added tablet 100−1 borrowing path; final device CI pending. Previous source 9b6957f passed all 9 tablet tests in CI 37476924186.
+
+Math review contract audit found a real stale-state bug: help_shown from the original sitting survived into fresh reinforcement and could suppress its reward. Clear both help sets and wrong tries at new-session/review boundaries. The existing full maths tablet test now opens a hint, finishes, then answers a fresh review unaided and asserts the outgoing help flags/tries are clean. Android and tablet CI jobs now run independently (tablet builds its own APKs); both are still required.
+
+Android source126694a passed both CI jobs in37481528885:18 JVM and10 tablet tests, including clean help flags on unaided maths reinforcement. Native Google OAuth follow-up adds PKCE, encrypted short-lived verifier, exact custom callback, initiated-flow guard and Android intent routing. Requires Supabase allowlist entry app.tuto.mobile://auth/callback; no admin configuration or live Google login was performed. Local execution environment went offline after the initial patch, so this follow-up is reconstructed against the published source and validated by GitHub CI. Unit and isolated callback device tests are included; do not call the provider/live family/WhatsApp path verified.
+
+OAuth source ec5c86d: Android build/JVM/lint passed; tablet10/11. The new callback test reached its assertions but ActivityScenario teardown timed out at PAUSED. Follow-up retains the original activity launch intent instead of replacing it with the callback intent; callback data is still consumed directly and cleared. Re-run the same callback test and all tablet gates; do not suppress the failure or claim it passed before re-run.
+
+Android automated closure (6 October 2026): source7c9cb3a passed CI37486144183:APK/lint,20 JVM tests and11/11 Pixel Tablet tests including guarded OAuth callback plus teardown. Native Google PKCE code is implemented; Supabase redirect allowlist app.tuto.mobile://auth/callback and real provider/family/Storage/model/WhatsApp E2E still require external setup/test access. No real family writes, messages, backend deploy or migration occurred. Obsolete preview release/APK deletion was verified. Canonical current evidence is mobile/BUILD_STATUS.md. Local environment disconnected with older uncommitted OAuth edits; tested GitHub source is authoritative and those local edits must be reconciled rather than blindly pushed.
+
+Android photo follow-up (6 October evening): raw inline camera photos could exceed Express's 15 MiB JSON body limit. LocalPhoto.modelImage now uses an EXIF-oriented JPEG derivative, max edge 1600 and max 640 KiB, off the UI thread; 15 base64 pages fit within the limit. Reading/story transcription, drawing review and cover uploads use it. Private Storage originals and homework EXIF/date processing remain unchanged. Added three real Android decoder/encoder tests for noisy 15-page payload budget, orientation/date/original-byte preservation and invalid-photo rejection. Version 6 / 0.5.1-native-validation; CI result pending. User is testing the previously delivered 0.5.0; do not imply these changes are already in that APK. Backend/web not deployed.
+
+Android photo follow-up verified: source d6e6d1c, CI37502854810 passed build/lint/JVM and 14/14 tablet tests. Initial emulator archive download failed before tests; rerun of failed job passed unchanged source. Native 0.5.1 photo derivatives are validated. User device installation remains unresolved (unknown-developer Play Protect prompt, then App not installed; user reports no Tuto installed, is updating Android). Do not assume certificate conflict or say photo patch fixes installation. Live family/provider/WhatsApp gates unchanged.
+
+Android install investigation (6 October night): user tablet is Galaxy Tab S10 FE SM-X520, One UI 8.5; Auto Blocker off, no visible old Tuto, Android updated, still generic App not installed after Play Protect override. User cannot attach USB and explicitly wants native testing. Exact package-manager error remains unavailable; do not claim a root cause. APK audit confirmed alpha13 libquickjs.so uses 4 KiB ELF LOAD segments (APK ZIP entries already 16 KiB aligned; no testOnly flag). Version 7/0.5.2 rebuilds the exact alpha13 JNI/QuickJS sources (pinned upstream SHA and submodules) with NDK r28 and 16 KiB link flags, retaining its Kotlin API. AAR classes only are used so the old .so cannot be packaged. CI adds native ELF/ZIP checks and apksigner verification; tablet matrix now includes 4 KiB and google_apis_ps16k with PAGE_SIZE assertion. These gates must pass before delivering the new APK. This resolves a known binary compatibility gap, not proven Samsung install diagnosis. Web/backend/auth settings unchanged.
+
+### 2026-10-07 Android design revision
+Native-only: white seamless mascot assets; left greeting avatar, enlarged Gem balance and nearest-goal remainder; animated task selection. Library has one bottom-nav entry, a reading room with completed-book shelves, selectable uniform covers, real collection milestones and animated reading companion. Active books/stories remain in Continue reading; new-book and new-story actions stay available. Maths helper appears only on hint/help, with running entrance. SVG layout is native-owned and pixel-render validation is required, because nonempty SVG strings alone did not establish visible Android artwork. Web/backend remain unchanged. Version 9 / 0.7.0-bookshelf; validation pending until BUILD_STATUS records final results.
+
+
+Android Bookshelf follow-up 0.7.1 (7 October): source da3e603, CI37649661317 passed build/lint/20 JVM tests and 19/19 tests on each standard and 16 KiB tablet. Native embedded SVG data images now retain vector drawing via nested SVG viewports; five mascot clips are 1080p H.264 Baseline, fixing HEVC Main 10 decoding failure. Downloaded CI APK digest/signature/alignment verified; prior local repack must not be delivered. Details and remaining live-family/device acceptance limits are in mobile/BUILD_STATUS.md.
+
+
+### 2026-10-08 Android interactive hint design
+User approved the interactive hint preview for native Android, reusing browser help features. Question, right-facing fox, hint copy and descriptor-driven manipulatives now share the question column; answer controls stay in their own column. Hint poster and video are mirrored together to point toward the text. Fraction helpers respect the web contract (shaded index arrays, white-part questions, capped addition and equal-whole unit-fraction comparison). No new model calls or score/Gem rules; no web/backend changes. Version 11 / 0.8.0-interactive-hints. CI and device validation required before delivery; see mobile/BUILD_STATUS.md.
+
+Android interactive hints 0.8.0 verified: source b2016a3, CI37733468246 passed APK/JVM/lint/signature/alignment and 23/23 tests on both standard and 16 KiB tablets. Visual inspection of the first run caught oversized square SVGs; final source uses explicit viewports (320 dp question, 180 dp with hint), with a regression test. APK artifact11531180497 was integrity-checked. Live physical-tablet/family acceptance remains; web/backend unchanged.
+
+### 2026-10-08 Warm 2.5D reading room
+User rejected the geometric 3D fox and approved a soft, textured interior at eye level,
+using the existing paper-cut Tuto identity. Native-only ReadingRoom layers a generated
+empty warm room plate, a transparent reference-preserving fox cutout and real book targets.
+18 records/page keeps shelf targets usable; narrow screens pan instead of shrinking.
+Search/filters collapse to give the room priority. Milestones 10/50/100/200 count unique
+completed books, excluding authored stories and duplicate rows. These frames currently
+reflect the loaded records; permanent cross-device earned-award history still needs an
+explicit backend contract/migration (not silently written). No new Gems are issued.
+The room fox has a subtle idle transform; tapping opens the existing genuine reading video.
+Transparent page-turn animation in the room is NOT implemented. Sources: supplied room
+reference and existing fox_reading.webp, edited with built-in image generation (background
+removal preserves the paper-cut identity; no new 3D mascot). Version 12/0.9.0-reading-room.
+Build/device checks pending; do not describe this as deployed or device-validated yet.
+
+Reading room final validation: source c1c6fc2, CI37749108413 passed APK/lint/22 JVM tests and 23/23 on both standard and 16 KiB tablets. Inspected clean native screenshot after reducing room height and separating the avatar/frames. Adaptive shelves now show 9–18 real records/page. 0.9.0 APK saved for physical-device testing; no live-family E2E claim. The pre-existing random spinner reinforcement failure is reproducible and documented in BUILD_STATUS; final CI passing does not resolve it.
+
+### 2026-10-08 Paper library approval supersedes the realistic warm room
+User rejected 0.9's photorealistic room as inconsistent with the app, then approved the
+pastel paper-cut interior: sky-blue window, writing desk -> story entry, existing reading
+fox -> What are you reading now? / Choose a book -> active books or add new, real completed
+books on shelves. Milestones are now explicitly 10/50/100/150 (not 200). Native-only.
+Room plate comes from the approved imagegen concept, with texts/books/fox/awards removed;
+all records, labels and actions are native and localized. Original reading video is matted
+offline into alpha WebP; API28+ animates within the room, lifecycle/reduce-motion aware,
+API26/27 and decode failure use a matching transparent poster. No runtime generation or
+white video rectangle. Nine actual completed records/page; narrow devices pan the room.
+Version 13/0.10.0-paper-library. Verification pending. No backend/web deployment or data
+migration; persistent cross-device award ledger remains outside this UI change.
+
+### 2026-10-20 Android device screen time
+User prioritized real Android app usage measurement/enforcement and parent daily/weekly/monthly dashboard, plus all main changes missing in Android. Working branch codex/android-screen-time merges main 18e2f57 into Android 78ba7e5. New screen_devices/screen_policies/screen_usage require migration 2026-10-20_device_screen_time.sql (user runs DB changes). Parent-owned short-lived pairing, separate encrypted device token, offline local rules, UsageEvents + Accessibility shielding, native/web parent reporting. Existing screen_control_web demo/Gem tools are separate and must not claim to control this device policy. Precise setup, implemented behavior and unverified limits: mobile/SCREEN_TIME_2026-10-20.md. Not deployed or physically validated yet.
+
+
+Android screen-time validation complete (20 October 2026): tested source 4b78cf8, CI39378994905 passed all three jobs: 28 JVM tests and 27/27 tests each on standard and 16 KiB API35 tablets, plus APK signature/alignment. APK 0.11.0 is 23,772,603 bytes. Web build, 151 Node tests and six synthetic browser scenarios passed. Canonical delivery evidence and remaining activation gates: ANDROID_SCREEN_TIME_DELIVERY.md (supersedes earlier pending test notes). User-run SQL migration and infrastructure deployment are still required; no live family writes or messages. PR #27 contains all changes; not merged/deployed.

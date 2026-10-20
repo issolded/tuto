@@ -5,7 +5,7 @@
 // then: node scripts/literacy-lab-play.mjs
 const [ON, OFF] = ['http://localhost:3998', 'http://localhost:3997']
 const fam = async (base) => (await (await fetch(`${base}/__h/families`)).json()).main.child
-const post = async (base, path, body) => { const r = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return [r.status, await r.json()] }
+const post = async (base, path, body) => { const r = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const t = await r.text(); let j = null; try { j = JSON.parse(t) } catch {} return [r.status, j] }
 const offChild = await fam(OFF)
 console.log('flag off:', (await post(OFF, `/api/lab/literacy/${offChild}/next`, {}))[0])
 const child = await fam(ON)

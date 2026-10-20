@@ -1,0 +1,7 @@
+Frameworks/
+build/
+*.xcodeproj/
+*.xcresult/
+*.id
+*.png
+*.zip

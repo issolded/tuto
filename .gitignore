@@ -49,3 +49,6 @@ cizims_sep2026
 # English recordings: made by scripts/english-audio/build.mjs, served from Supabase Storage (upload.mjs)
 public/english-audio/
 ab-listen/
+
+# Kotlin build cache
+mobile/.kotlin/
