@@ -27,7 +27,7 @@ const ENGINES = [
   // deals and marks their items on the server.
   { from: 'src/lib/literacy', to: 'server/literacy', files: [
     'ladder.js', 'vrPrereqs.js', 'vrOffer.js', 'catalog.js', 'engine.js', 'content.js', 'sentenceBank.js', 'pictureWords.js',
-    'trialSet.js', 'listeningBank.js', 'readingPreview.generated.json', 'readingStories.generated.json',
+    'trialSet.js', 'listeningBank.js', 'readingPreview.generated.json', 'readingStories.generated.json', 'audioManifest.generated.json',
   ] },
 ]
 const FROM = 'src/lib'

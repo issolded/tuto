@@ -18,6 +18,8 @@ import { SENTENCES } from './sentenceBank.js'
 import STORIES from './readingStories.generated.json' with { type: 'json' }
 
 export const STATUS = ['draft', 'checked', 'approved']
+// A reading question counts as reading only if a solver without the text could not answer it.
+export const TEXT_ONLY_BLIND = 1
 const atLeast = (s, min) => STATUS.indexOf(s) >= STATUS.indexOf(min)
 const steps = s => ({ track: s.match(/^[A-Z][a-z]?/)[0], step: s })
 
@@ -84,12 +86,16 @@ const BANKS = [
   ...bank('trial-set', TRIAL_ITEMS.map(i => ({ id: i.id, step: i.step, format: i.mode })), 'draft',
     'the 36-item trial set: editorial, not tried with a child; audio not approved'),
   ...bank('listening-bank', LISTENING.map(i => ({ id: i.id, step: i.step, format: 'listen-answer' })), 'checked',
-    'blind-solver and safety checked; audio not approved'),
+    'blind-solver and safety checked; recordings not approved one by one: on the child card by user decision 2026-10-20, clips with status ok only'),
   ...bank('sentence-bank', SENTENCES.map(i => ({ id: i.id, step: i.step, format: 'read-choice' })), 'checked',
     'src/lib/literacy/sentenceBank.js: vocabulary, safety and blind-solver checked; not approved'),
-  // Draft, not checked: 341 of 600 questions were answered right 3/3 by a solver that never saw the story.
-  ...bank('reading-stories-200', STORIES.items.map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'draft',
-    'batch of 2026-10-18: gate passed, safety clean, every key right with the text; 57% of questions answerable without reading'),
+  // 341 of 600 questions were answered right 3/3 by a solver that never saw the story: those are not evidence of
+  // reading. A story is served only for its questions the blind solver got at most 1 of 3 (TEXT_ONLY_BLIND), and
+  // only if it has one; that subset meets the automatic bar, so it is `checked`. Put on the child's card by user
+  // decision 2026-10-20; no person has approved it.
+  ...bank('reading-stories-200', STORIES.items.filter(i => i.questions.some(q => (q.blindRight ?? 3) <= TEXT_ONLY_BLIND))
+    .map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'checked',
+    'batch of 2026-10-18: only the questions a blind solver could not answer (<= 1 of 3) are served'),
   ...bank('reading-passages', READING.items.map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'checked',
     'scripts/english-passages candidates: passed automatic checks, not approved by a person'),
 ]
