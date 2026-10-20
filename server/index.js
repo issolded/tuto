@@ -1,3 +1,4 @@
+import { installDeviceScreenTime } from './deviceScreenTime.js'
 import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
@@ -5,6 +6,7 @@ import { newPlayState, judgeAnswer, nextHintLevel, questionShare } from './engli
 import { buildReview, englishSessionNotice, englishReviewLateNotice } from './englishReview.js'
 import { buildPuzzleReview, puzzleSessionNotice, puzzleReviewLateNotice } from './puzzleReview.js'
 import { localTopicName } from './topicNames.js'
+import { activeSkips, skipIds, addSkip, removeSkip, yearTopicIds, describeSkips, remindersDue, markReminded, reminderText, canExtend, sinceOf, SKIP_DEFAULT_WEEKS, SKIP_MAX_WEEKS, SKIP_MAX_TOPICS } from './mathSkip.js'
 import { reviewCandidates, reviewOutcome, carryTopics, mathSessionNotice, mathReviewLateNotice, REVIEW_WINDOW_MS } from './mathReview.js'
 import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
 import { buildWeekReport, weekContext } from './week.js'
@@ -218,6 +220,7 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
         notify_per_task: prefsAll.notify_per_task !== false }
     : null
 
+  const ctxLang = parentLang(prefsAll)
   return Promise.all(children.map(async child => {
     const [
       { data: submissions },
@@ -404,6 +407,14 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
       englishVariety: child.english_variety
         ? `${child.english_variety === 'us' ? 'American' : 'British'} English — chosen by the parent`
         : `${englishVarietyForZone(tz) === 'us' ? 'American' : 'British'} English — from the family's time zone (the parent has not chosen)`,
+      // Topics the parent asked to leave out. Not "weak" and not a gap: they are outside what the child is
+      // being assessed on until the date, and any "what is the level" answer should say so.
+      mathSkipped: activeSkips(child.math_skip).length
+        ? { topics: describeSkips(child.math_skip, ctxLang),
+            note: 'a parent asked for these to be left out of the maths sessions until the date shown; they come back by themselves' }
+        : 'no topic is being left out for ' + child.name,
+      // What set_math_skip can be about: this child's year, whether or not a session has asked it yet.
+      mathCurriculumTopics: yearTopicsFor(child.age, ctxLang),
       mathFocus: child.math_focus
         ? { ...child.math_focus, note: 'a parent asked for this; it clears itself once the topic passes 80% over its last 12' }
         : 'no topic is being weighted for ' + child.name,
@@ -435,6 +446,7 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
           const gems = s.gems ?? def
           const cap = s.daily_cap ?? TASK_DEFAULT_CAPS[type]
           const rate = VARIABLE_TASKS.has(type) ? `up to ${gems} gems (scaled by score)` : `${gems} gems`
+          if (s.active === false) return [type, `SWITCHED OFF by the parent: the child does not see this task (was ${rate}, ${cap} a day)`]
           return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
@@ -827,7 +839,7 @@ const WA_TEMPLATES = {
 // An approval request is a third thing to the gate below and the same thing to Meta: both
 // templates say only "name + one clause", and getting a new one approved takes days we have
 // no reason to spend.
-const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity', autopilot: 'activity' }
+const TEMPLATE_KIND = { attention: 'attention', approval: 'activity', activity: 'activity', autopilot: 'activity', reminder: 'activity' }
 
 // A newline, a tab or a run of spaces in a variable is rejected by WhatsApp, and it rejects
 // the whole send rather than the variable — so a stray line break in a book title would lose
@@ -963,10 +975,15 @@ function stripInternalIds(text) {
 // 'autopilot' is the one message a parent gets no matter how quiet they asked for, because it
 // says approvals have come back to them. A parent who never hears it cannot tell whether Tuto
 // is still deciding on their behalf, and that is not a detail to leave to inference.
+//
+// 'reminder' is the same kind of message for a setting the parent made that is about to end on its
+// own (a maths topic left out until a date): it passes every level, for the reason autopilot does —
+// "quiet" means "don't tell me what happened", not "change things behind my back without asking".
+// It is still held by quiet hours and by autopilot, and its sweep retries rather than lose it.
 const NOTIFY_LEVEL_ALLOWS = {
-  quiet:    { attention: true, autopilot: true, approval: false, activity: false },
-  required: { attention: true, autopilot: true, approval: true,  activity: false },
-  all:      { attention: true, autopilot: true, approval: true,  activity: true  },
+  quiet:    { attention: true, autopilot: true, reminder: true, approval: false, activity: false },
+  required: { attention: true, autopilot: true, reminder: true, approval: true,  activity: false },
+  all:      { attention: true, autopilot: true, reminder: true, approval: true,  activity: true  },
 }
 
 // Quiet hours, and deliberately not the `allowed_hours` key already sitting in prefs. That one
@@ -1567,10 +1584,15 @@ const CONTRIBUTION_TOOLS = [{
         'variety (task_type english only) is British or American English — spelling and which words rhyme or sound the same ' +
         '("Amerikan İngilizcesi olsun", "British spelling please"): uk, us, or auto (back to the family\'s time zone). The ' +
         'current one is englishVariety in context.\n' +
-        'The server enforces 1-500 for gems and 0-50 for daily_cap. Only call this when the parent explicitly ' +
+        'active switches a task OFF (hidden from the child: no card, no sessions, no gems) or back ON, for any task type ' +
+        '("İngilizce görevini şimdilik gizle", "bulmacayı kaldır", "matematiği geri aç", "quita el inglés por ahora"). ' +
+        'It needs no number. Nothing is deleted: past sessions and gems stay, and switching it back on restores the same ' +
+        'settings. A task that is off shows as SWITCHED OFF in taskRewards. Only switch off what the parent named; if they ' +
+        'say "remove it" about something unclear, ask which task.\n' +
+        'The server enforces 1-500 for gems and 0-50 for daily_cap. Only change gems or daily_cap when the parent explicitly ' +
         'states a task type AND a specific new number — an unclear or partial request ("matematiği artıralım ' +
         'biraz", "çok fazla resim yapıyor") means asking for the exact number, never picking one yourself. ' +
-        'Never send a dial the parent did not mention: changing the rate is not changing the limit.',
+        'Never send a dial the parent did not mention: changing the rate is not changing the limit, and neither is switching off.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -1578,7 +1600,7 @@ const CONTRIBUTION_TOOLS = [{
           task_type: { type: 'STRING', description: 'One of: reading, math, writing, homework, drawing, puzzle, english, bonus.' },
           gems: { type: 'NUMBER', description: 'The exact new gem amount the parent said (whole number, 1-500). Omit entirely if they only asked to change the daily limit.' },
           daily_cap: { type: 'NUMBER', description: 'The exact new number of gem-earning sessions per day the parent said (whole number, 0-50). Omit entirely if they only asked to change the gem amount.' },
-          active: { type: 'BOOLEAN', description: 'Only for task_type bonus: false switches the daily bonus off, true back on. Omit otherwise.' },
+          active: { type: 'BOOLEAN', description: 'false switches this task off (hidden from the child), true back on. For bonus, the daily bonus. Omit unless the parent asked to hide or bring back a task.' },
           bonus_types: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Only for task_type bonus: the full list of activities the bonus counts afterwards, from math, reading, writing, drawing, puzzle, english. Omit unless the parent changed which activities count.' },
           variety: { type: 'STRING', description: 'Only for task_type english: uk, us or auto. Omit unless the parent asked for British/American English.' },
         },
@@ -1677,6 +1699,38 @@ const CONTRIBUTION_TOOLS = [{
         properties: {
           child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
           topic_id: { type: 'STRING', description: 'A topic_id copied exactly from that child\'s mathTopics in context, or "none" to stop weighting.' },
+        },
+        required: ['child_id', 'topic_id'],
+      },
+    },
+    {
+      name: 'set_math_skip',
+      description:
+        'Leaves one maths curriculum topic OUT of the child\'s sessions for a few weeks, because the parent says ' +
+        'it has not been taught yet or they want a break from it ("henüz kesirleri görmediler, bir süre sorma", ' +
+        '"leave out time for now", "no division yet"). Tuto assesses; the parent knows what school has covered, ' +
+        'and this is how that knowledge reaches the sessions. It does NOT change the difficulty level, the accuracy ' +
+        'figures or any other topic.\n' +
+        'The topic must be one of this child\'s year: the exact topic_id values are in mathCurriculumTopics in ' +
+        'context. Match the parent\'s words to one of THOSE ids — never invent one. If their words fit none or ' +
+        'fit two, ASK which they mean and list the names; do not guess.\n' +
+        'It lasts 4 weeks unless the parent names another length (weeks, 1–12), then the topic comes back by ' +
+        'itself — say so plainly, with the end date from the result, and that they can extend or end it any time. ' +
+        'At most 3 topics can be skipped at once; if the result says too_many, tell them which are already ' +
+        'skipped and ask which to bring back. To bring a topic back early set resume true (topic_id "all" for ' +
+        'every one). A couple of days before a skip ends Tuto asks the parent once whether to bring it back or ' +
+        'keep it out longer (that message is in the conversation). A reply like "keep it out", "uzat", "bir süre ' +
+        'daha" = this tool with the SAME topic_id and weeks (4 if they name no length); "bring it back", "geri ' +
+        'ekle", "işlendi" = resume true. A topic can be out at most 12 weeks counted from when it was FIRST left ' +
+        'out: if the result is at_max, say it cannot be extended and give the date it comes back. Do NOT use this for "she is struggling" — that is a topic to weight (set_math_focus) or ' +
+        'simply to wait on; ask whether the topic has actually not been taught yet.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          child_id: { type: 'STRING', description: 'The exact id of the child, from the children list in context.' },
+          topic_id: { type: 'STRING', description: 'A topic_id copied exactly from that child\'s mathCurriculumTopics in context, or "all" together with resume.' },
+          weeks: { type: 'NUMBER', description: 'How many weeks to leave it out, 1 to 12. Leave out for the default of 4.' },
+          resume: { type: 'BOOLEAN', description: 'true to bring the topic back into the sessions now.' },
         },
         required: ['child_id', 'topic_id'],
       },
@@ -1906,6 +1960,132 @@ async function submitFeedbackTool(parentId, args) {
   return { success: true, recorded: true }
 }
 
+// math_skip is its own read and swallows errors: the column arrives with a migration, and naming a
+// missing column in the main child select would drop the whole request (math-plan carries the gem
+// level, the context carries everything). Missing column = nothing skipped.
+async function readMathSkip(childId) {
+  const { data, error } = await supabase.from('children').select('math_skip').eq('id', childId).maybeSingle()
+  return error ? [] : (Array.isArray(data?.math_skip) ? data.math_skip : [])
+}
+
+// The topics of this child's year, named in the parent's language — what a skip can be about.
+function yearTopicsFor(age, lang) {
+  return yearTopicIds(mathLevelBand(age)[1]).map(id => ({ topic_id: id, name: localTopicName(id, id, lang) }))
+}
+
+// Leaves a topic out of the child's maths sessions for a few weeks (the parent knows it has not been
+// taught yet), or brings it back. Both the chat tool and the panel come through here.
+async function setMathSkipTool(childId, topicId, parentId, { weeks, resume } = {}) {
+  const { data: child } = await supabase
+    .from('children').select('id, name, parent_id, age, math_focus').eq('id', childId).maybeSingle()
+  if (!child) return { success: false, error: 'child not found' }
+  if (child.parent_id !== parentId) return { success: false, error: 'not your child' }
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', parentId).maybeSingle()
+  const lang = parentLang(parentRow?.prefs)
+  const available = yearTopicsFor(child.age, lang)
+  const current = await readMathSkip(childId)
+
+  const write = async (list, extra = {}) => {
+    const { error } = await supabase.from('children').update({ math_skip: list, ...extra }).eq('id', childId)
+    if (error) {
+      console.error(`[MATH-SKIP] write failed for ${childId}: ${error.message}`)
+      return { success: false, error: 'could not be saved right now' }
+    }
+    return null
+  }
+
+  if (resume) {
+    if (topicId !== 'all' && !available.some(t => t.topic_id === topicId)) {
+      return { success: false, error: `"${topicId}" is not one of ${child.name}'s topics`, available }
+    }
+    const { list, removed } = removeSkip(current, topicId)
+    if (!removed) return { success: true, child: child.name, nothing_to_bring_back: true, skipped_now: describeSkips(current, lang) }
+    const failed = await write(list)
+    if (failed) return failed
+    return { success: true, child: child.name, brought_back: topicId === 'all' ? 'all' : localTopicName(topicId, topicId, lang), skipped_now: describeSkips(list, lang) }
+  }
+
+  if (!available.some(t => t.topic_id === topicId)) {
+    return { success: false, error: `"${topicId}" is not one of ${child.name}'s topics`, available }
+  }
+  const added = addSkip(current, topicId, weeks)
+  if (added.error === 'too_many') {
+    return { success: false, error: 'too_many', max: SKIP_MAX_TOPICS,
+             detail: `at most ${SKIP_MAX_TOPICS} topics can be skipped at once so a session still covers the year`,
+             skipped_now: describeSkips(current, lang) }
+  }
+  if (added.error === 'at_max') {
+    return { success: false, error: 'at_max', max_weeks: SKIP_MAX_WEEKS, comes_back: added.until.slice(0, 10),
+             detail: `a topic can be left out for at most ${SKIP_MAX_WEEKS} weeks from when it was first left out; it cannot be extended past ${added.latest.slice(0, 10)}. It can still be brought back now (resume).`,
+             skipped_now: describeSkips(current, lang) }
+  }
+  if (added.error) return { success: false, error: added.error, available }
+  // A topic cannot be leaned on and left out at once: a skip ends the focus on it.
+  const clearsFocus = child.math_focus?.topic_id === topicId
+  const failed = await write(added.list, clearsFocus ? { math_focus: null } : {})
+  if (failed) return failed
+  return { success: true, child: child.name, topic_name: localTopicName(topicId, topicId, lang),
+           until: added.entry.until.slice(0, 10), weeks: added.entry.weeks,
+           ...(added.entry.capped ? { shortened_to_max: `${SKIP_MAX_WEEKS} weeks from when it was first left out is the most; it ends on the date above` } : {}),
+           focus_cleared: clearsFocus, skipped_now: describeSkips(added.list, lang) }
+}
+
+// ── Before a skipped topic comes back ──────────────────────────────────────
+// A skip ends by itself, which is the point (a skip nobody remembers is a topic never assessed), but
+// ending silently means the parent's "not taught yet" quietly turns into "being assessed" without them
+// knowing. So a couple of days before the end the parent is asked once, in a fixed message (the
+// promise "it comes back on <date> if you don't answer" is code's to make, not the model's). The
+// message goes through sendNotification, which logs it as a Tuto turn, so a reply of "extend it" or
+// "bring it back" reaches a model that can see what "it" is and answers with set_math_skip.
+//
+// Once: `reminded_at` is written into the entry (compare-and-swap on the whole list, so a parent's
+// own change in the same moment is not overwritten) BEFORE the message goes. A failed channel loses
+// that one message — it is still in the transcript — rather than repeating it every sweep.
+// Not at night: the sweep only sends 09:00–20:00 in the parent's zone, and when the gate would hold it
+// (quiet hours, autopilot) it leaves the entry unmarked and tries again on the next sweep.
+const SKIP_REMINDER_SWEEP_MS = 15 * 60 * 1000
+const SKIP_REMINDER_HOURS = [9, 20]
+const LOCALE_FOR = { tr: 'tr-TR', en: 'en-GB', es: 'es-ES' }
+
+async function remindEndingMathSkips(now = Date.now()) {
+  const { data: kids, error } = await supabase
+    .from('children').select('id, name, parent_id, math_skip').not('math_skip', 'is', null)
+  if (error) { if (!/math_skip/i.test(error.message || '')) console.error(`[MATH-SKIP] reminder sweep: ${error.message}`); return }
+
+  for (const child of kids || []) {
+    const due = remindersDue(child.math_skip, now)
+    if (!due.length || !child.parent_id) continue
+    const { data: parent } = await supabase.from('parents').select('prefs, timezone').eq('id', child.parent_id).maybeSingle()
+    if (!parent) continue
+    const tz = parent.timezone || 'UTC'
+    const local = DateTime.fromMillis(now).setZone(tz)
+    if (local.hour < SKIP_REMINDER_HOURS[0] || local.hour >= SKIP_REMINDER_HOURS[1]) continue
+    const notice = { kind: 'reminder', child: child.name }
+    if (!sendGate(parent.prefs, notice, tz).send) continue
+
+    const marked = markReminded(child.math_skip, due.map(e => e.topic_id), now)
+    const { data: saved, error: casErr } = await supabase.from('children').update({ math_skip: marked })
+      .eq('id', child.id).eq('math_skip', JSON.stringify(child.math_skip)).select('id')
+    if (casErr) { console.error(`[MATH-SKIP] reminder mark failed for ${child.id}: ${casErr.message}`); continue }
+    if (!saved?.length) continue   // the list changed under us; the next sweep reads the new one
+
+    const lang = parentLang(parent.prefs)
+    for (const e of due) {
+      const since = sinceOf(e)
+      const days = Math.max(1, Math.round((now - since) / 86400000))
+      const topic = localTopicName(e.topic_id, e.topic_id, lang)
+      const date = DateTime.fromISO(e.until).setZone(tz).setLocale(LOCALE_FOR[lang] || 'en-GB').toLocaleString({ day: 'numeric', month: 'long' })
+      const text = reminderText(lang, { child: child.name, topic, date, weeksAgo: days >= 7 ? Math.round(days / 7) : 0, daysAgo: days, extendable: canExtend(e) })
+      console.log(`[MATH-SKIP] reminder → parent ${child.parent_id} (${child.name}, ${e.topic_id}, ends ${e.until.slice(0, 10)})`)
+      await sendNotification(child.parent_id, text, { ...notice, detail: {
+        en: `${topic} comes back to the maths sessions on ${date} — reply to keep it out longer or bring it back now`,
+        tr: `${topic} konusu ${date} tarihinde matematiğe geri geliyor — uzatmak ya da şimdi geri eklemek için yazabilirsin`,
+      } }).catch(err => console.error(`[MATH-SKIP] reminder send failed: ${err.message}`))
+    }
+  }
+}
+setInterval(() => { remindEndingMathSkips().catch(err => console.error(`[MATH-SKIP] reminder sweep: ${err.message}`)) }, SKIP_REMINDER_SWEEP_MS).unref()
+
 async function setMathFocusTool(childId, topicId, parentId) {
   const { data: child } = await supabase
     .from('children').select('id, name, parent_id, age').eq('id', childId).maybeSingle()
@@ -1923,6 +2103,10 @@ async function setMathFocusTool(childId, topicId, parentId) {
   // separately, so a second copy would drift — and it is unnecessary: a session covers every
   // topic of the child's year, so one sitting is enough for all of them to be known. A topic
   // the child has never met cannot be weighted, which is the right answer anyway.
+  if (skipIds(await readMathSkip(childId)).includes(topicId)) {
+    return { success: false, error: 'topic_is_skipped', child: child.name,
+             detail: 'that topic is being left out of the sessions; bring it back with set_math_skip (resume) before weighting it' }
+  }
   const standing = await topicStanding(childId)
   if (!standing?.length) {
     return { success: false, error: 'no maths answered yet', child: child.name,
@@ -2553,18 +2737,20 @@ async function updateBonusTool(childId, gems, active, parentId, types) {
     ...(Number(child.age) < BONUS_MIN_AGE ? { note: `saved, but the bonus only runs for children aged ${BONUS_MIN_AGE} and up — say so` } : {}) }
 }
 
-async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap, variety) {
+async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap, variety, active) {
   if (!Object.hasOwn(TASK_DEFAULT_GEMS, taskType)) return { success: false, error: `unknown task type ${taskType}` }
 
   const wantsGems = gems !== undefined && gems !== null
   const wantsCap = dailyCap !== undefined && dailyCap !== null
   const wantsVariety = variety !== undefined && variety !== null
+  const wantsActive = active !== undefined && active !== null
+  if (wantsActive && typeof active !== 'boolean') return { success: false, error: 'active must be true or false' }
   if (wantsVariety) {
     if (taskType !== 'english') return { success: false, error: 'variety is only for task_type english' }
     if (!['uk', 'us', 'auto'].includes(variety)) return { success: false, error: 'variety must be uk, us or auto' }
-    if (!wantsGems && !wantsCap) return setEnglishVarietyTool(childId, variety, parentId)
+    if (!wantsGems && !wantsCap && !wantsActive) return setEnglishVarietyTool(childId, variety, parentId)
   }
-  if (!wantsGems && !wantsCap) return { success: false, error: 'nothing to change: give gems, daily_cap, or both' }
+  if (!wantsGems && !wantsCap && !wantsActive) return { success: false, error: 'nothing to change: give gems, daily_cap, active, or any of them' }
 
   let n = null
   if (wantsGems) {
@@ -2581,7 +2767,7 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap,
   }
 
   const { data: child } = await supabase
-    .from('children').select('id, name, parent_id, task_settings').eq('id', childId).maybeSingle()
+    .from('children').select('id, name, age, parent_id, task_settings').eq('id', childId).maybeSingle()
   if (!child) return { success: false, error: 'child not found' }
   if (child.parent_id !== parentId) return { success: false, error: 'forbidden' }
 
@@ -2589,7 +2775,7 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap,
   const current = nextSettings[taskType] || {}
   nextSettings[taskType] = {
     ...current,
-    active: current.active ?? true,
+    active: wantsActive ? active : (current.active ?? true),
     gems: wantsGems ? n : (current.gems ?? TASK_DEFAULT_GEMS[taskType]),
     daily_cap: wantsCap ? cap : (current.daily_cap ?? TASK_DEFAULT_CAPS[taskType]),
   }
@@ -2598,9 +2784,21 @@ async function updateTaskRewardTool(childId, taskType, gems, parentId, dailyCap,
   if (error) return { success: false, error: error.message }
 
   const varietyResult = wantsVariety ? await setEnglishVarietyTool(childId, variety, parentId) : null
+  // Switching a task off takes it out of the daily bonus too (bonusSettings skips inactive ones).
+  // With one activity left the bonus pays a second time for that one; with none it stops. Either
+  // way the parent set the bonus up for several, so they should hear it changed.
+  const bonusBefore = bonusSettings(child.task_settings, child.age)
+  const bonusAfter = bonusSettings(nextSettings, child.age)
+  const bonusNote = !bonusBefore.active || bonusBefore.types.length < 2 || bonusAfter.types.length >= 2 ? null
+    : bonusAfter.types.length === 1
+      ? `the daily bonus now counts only ${bonusAfter.types[0]}, so it pays twice for that one activity — say so and offer to add another activity to it or switch the bonus off`
+      : 'the daily bonus has no activities left and will not pay — say so'
   return { success: true, childName: child.name, taskType,
+    active: nextSettings[taskType].active,
     gems: nextSettings[taskType].gems, dailyCap: nextSettings[taskType].daily_cap,
-    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null, wantsVariety ? 'variety' : null].filter(Boolean),
+    changed: [wantsGems ? 'gems' : null, wantsCap ? 'daily_cap' : null, wantsVariety ? 'variety' : null, wantsActive ? 'active' : null].filter(Boolean),
+    ...(wantsActive && !active ? { note: 'hidden from the child; past sessions and gems are kept, and saying so brings it back' } : {}),
+    ...(bonusNote ? { bonusNote } : {}),
     ...(varietyResult ? { variety: varietyResult.variety, varietyError: varietyResult.error } : {}) }
 }
 
@@ -2984,6 +3182,18 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
         `Çalışma konusunu, odağını veya zorluğunu ebeveynin ayarlayabileceği bir yer HENÜZ YOK. Akışı ` +
         `bozmamak ya da kibar görünmek için sahte bir başarı mesajı vermek — para/gem/ayar etkilenmese bile — ` +
         `ebeveynin sana güvenini kalıcı olarak kırar; hiçbir zaman kabul edilebilir bir kısayol değildir.\n\n` +
+        `- MATEMATİK SEVİYESİ VE KONULAR: Tuto seviyeyi ebeveynin elle ayarladığı bir şey değil, çocuğun ` +
+        `performansından ÖLÇEN bir araçtır; seviyeyi elle düşürme ya da yükseltme aracın YOK ve varmış gibi davranma. ` +
+        `Ebeveyn "zorlanıyor", "seviyeyi düşürelim", "çok zor geliyor" derse sırayla: (1) context'ten (mathTopics, ` +
+        `recentMathQuestions, used_hint) en çok nerede takıldığını söyle, rakamı yalnız yeterli veri varsa; (2) o ` +
+        `konunun okulda HENÜZ İŞLENİP İŞLENMEDİĞİNİ sor — işlenmediyse set_math_skip ile bir süre (varsayılan 4 hafta) ` +
+        `sorulmamasını öner; (3) işlendiyse ama zor geliyorsa set_math_focus'u öner; (4) "matematiğe ara verin" ` +
+        `deme — ebeveyn kendisi isterse saygı göster ama ilk öneri olarak tek oturum verisiyle çocuğu konudan ` +
+        `uzaklaştırma. mathSkipped içindeki konuları "zayıf" ya da "boşluk" diye okuma: tarihe kadar ölçüm ` +
+        `dışındalar. set_math_skip'te bitiş tarihini sonuçtan oku ve söyle; konu kendiliğinden geri gelir. ` +
+        `Bitişten ~2 gün önce Tuto ebeveyne bir kez "geri ekleyelim mi, bir süre daha mı" diye sorar (mesaj ` +
+        `sohbette); cevap "uzat/bir süre daha" ise AYNI topic_id ile set_math_skip (weeks, söylemezse 4), ` +
+        `"geri ekle/işlendi" ise resume true. at_max dönerse uzatılamadığını ve geri geleceği tarihi söyle.\n\n` +
         `- GERİ BİLDİRİM: ebeveyn uygulamadan, bir ekrandan, bildirimlerden ya da senin cevaplarından ` +
         `memnuniyetsizliğini, kafa karışıklığını, bir hatayı ya da bir isteğini söylerse submit_feedback'i ` +
         `çağır (kendi sözünü olduğu gibi parent_words'e koy). "Ekibe iletiyorum", "not aldım", "geliştiricilere ` +
@@ -3202,7 +3412,7 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
       } else if (name === 'update_task_reward') {
         toolResult = args.task_type === 'bonus'
           ? await updateBonusTool(args.child_id, args.gems, args.active, parentId, args.bonus_types)
-          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety)
+          : await updateTaskRewardTool(args.child_id, args.task_type, args.gems, parentId, args.daily_cap, args.variety, args.active)
       } else if (name === 'send_drawing_photo') {
         toolResult = await sendDrawingPhotoTool(args.painting_id, parentId, opts.showPhotos)
       } else if (name === 'add_reward') {
@@ -3215,6 +3425,8 @@ async function handleMessage(parentId, replyCb, text, opts = {}) {
         toolResult = await rejectSuggestionById(args.request_id, parentId)
       } else if (name === 'set_math_focus') {
         toolResult = await setMathFocusTool(args.child_id, args.topic_id, parentId)
+      } else if (name === 'set_math_skip') {
+        toolResult = await setMathSkipTool(args.child_id, args.topic_id, parentId, { weeks: args.weeks, resume: args.resume === true })
       } else if (name === 'submit_feedback') {
         toolResult = await submitFeedbackTool(parentId, args)
       } else if (name === 'update_preferences') {
@@ -3346,6 +3558,8 @@ app.set('trust proxy', 1) // Railway sits behind a proxy — needed so req.proto
 app.use(cors())
 app.use(express.json({ limit: '15mb' }))
 app.use(express.urlencoded({ extended: false })) // Twilio posts form-encoded webhooks
+
+installDeviceScreenTime(app, supabase, parentFromBearer)
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
@@ -5775,7 +5989,7 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
     // waiting for the other two first bought nothing and cost a whole round trip — and this
     // call is the only thing standing between tapping Maths and seeing a question, now that
     // the questions themselves take 0.04 ms to build.
-    const [{ data: child }, { data: prevRows }, standing, owed] = await Promise.all([
+    const [{ data: child }, { data: prevRows }, standing, owed, skipList] = await Promise.all([
       supabase.from('children').select('id, age, math_focus').eq('id', childId).maybeSingle(),
       supabase.from('math_progress').select('level').eq('child_id', childId)
         .order('created_at', { ascending: false }).limit(1),
@@ -5787,18 +6001,23 @@ app.get('/api/children/:childId/math-plan', async (req, res) => {
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false }).limit(3)
         .then(r => (r.error ? [] : (r.data || [])), () => []),
+      readMathSkip(childId),
     ])
     if (!child) return res.status(404).json({ error: 'child not found' })
+    // Topics a parent left out: removed from every list that would put them back in a session.
+    const skip = skipIds(skipList)
+    const unskipped = ids => ids.filter(id => !skip.includes(id))
     res.json({
       level: prevRows?.[0]?.level ?? null,   // null = the client falls back to the age footing
-      focus: child.math_focus ?? null,
+      focus: child.math_focus && !skip.includes(child.math_focus.topic_id) ? child.math_focus : null,
+      skip_topic_ids: skip,
       standing: standing ?? [],
       // Named so the client never has to know the thresholds, and so there is one place to
       // change what "weak" means.
-      weak_topic_ids: (standing ?? []).filter(t => t.standing === 'weak').map(t => t.topic_id),
+      weak_topic_ids: unskipped((standing ?? []).filter(t => t.standing === 'weak').map(t => t.topic_id)),
       // What the child owes from a review they did not take or did not finish; the screen puts these
       // ahead of the weak ones, since the child was just shown they went wrong.
-      review_topic_ids: [...new Set(owed.flatMap(r => (r.carry_topics || []).map(t => t.topic_id)))],
+      review_topic_ids: unskipped([...new Set(owed.flatMap(r => (r.carry_topics || []).map(t => t.topic_id)))]),
     })
   } catch (err) {
     console.error('[MATH-PLAN]', err.message)
@@ -7998,6 +8217,39 @@ app.get('/api/parent/children/:childId/week', async (req, res) => {
 })
 
 
+// The parent panel's side of set_math_skip: same function, same rules, behind the parent's token.
+async function mathSkipPanel(req, childId) {
+  const userId = await parentFromBearer(req)
+  if (!userId) return { status: 401, body: { error: 'unauthorized' } }
+  const { data: child } = await supabase.from('children').select('id, age, parent_id').eq('id', childId).maybeSingle()
+  if (!child || child.parent_id !== userId) return { status: 404, body: { error: 'not found' } }
+  return { userId, child }
+}
+async function mathSkipState(child, userId) {
+  const { data: parentRow } = await supabase.from('parents').select('prefs').eq('id', userId).maybeSingle()
+  const lang = parentLang(parentRow?.prefs)
+  return { active: describeSkips(await readMathSkip(child.id), lang), available: yearTopicsFor(child.age, lang),
+           max: SKIP_MAX_TOPICS, default_weeks: SKIP_DEFAULT_WEEKS, max_weeks: SKIP_MAX_WEEKS }
+}
+app.get('/api/parent/children/:childId/math-skip', async (req, res) => {
+  try {
+    const a = await mathSkipPanel(req, req.params.childId)
+    if (a.status) return res.status(a.status).json(a.body)
+    res.json(await mathSkipState(a.child, a.userId))
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+app.post('/api/parent/children/:childId/math-skip', async (req, res) => {
+  try {
+    const a = await mathSkipPanel(req, req.params.childId)
+    if (a.status) return res.status(a.status).json(a.body)
+    const { topic_id, weeks, resume } = req.body || {}
+    const r = await setMathSkipTool(req.params.childId, String(topic_id || ''), a.userId, { weeks, resume: resume === true })
+    if (!r.success) return res.status(400).json(r)
+    res.json({ ...r, ...(await mathSkipState(a.child, a.userId)) })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+
 // The in-app chat: a third channel into the same brain. handleMessage does not know or care
 // which channel it is answering — Telegram and WhatsApp hand it a reply callback, this hands it
 // one that collects. Tuto never starts a conversation here: the screen shows only what was asked
@@ -8019,7 +8271,7 @@ const APP_CHAT_MAX = 1000
 // progress, screen time and gems. Enforced in code by the tool list — the model is never shown
 // the approval, settings or PIN tools from this channel — and explained to it by APP_SCOPE_NOTE
 // so it can say where those things are done instead of pretending it cannot hear them.
-const APP_CHAT_TOOLS = new Set(['give_screen_time', 'gift_gems', 'deduct_gems', 'update_task_reward', 'set_math_focus'])
+const APP_CHAT_TOOLS = new Set(['give_screen_time', 'gift_gems', 'deduct_gems', 'update_task_reward', 'set_math_focus', 'set_math_skip'])
 const APP_SCOPE_NOTE =
   '\n\nCHANNEL — the "Ask Tuto" tab inside the Tuto parent app. Here you talk ONLY about: the children\'s ' +
   'progress and development (what they did, maths / English / reading / puzzles / writing, what they find hard, ' +

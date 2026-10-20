@@ -34,6 +34,7 @@ import org.json.JSONArray
                         .put("a", if(add) to else to-from)
                 }
             }
+            v.optString("intro").takeIf { it.isNotBlank() }?.let { Text(it) }
             HelpSteps(steps)
         }
         "fill" -> {
@@ -106,16 +107,22 @@ import org.json.JSONArray
 
 private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString() else n.toString()
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable private fun HelpSteps(steps:List<JSONObject>) {
     val s=LocalStrings.current
-    var solved by remember { mutableIntStateOf(0) }
-    var input by remember { mutableStateOf("") }
-    var misses by remember { mutableIntStateOf(0) }
+    var solved by remember(steps.toString()) { mutableIntStateOf(0) }
+    var input by remember(steps.toString()) { mutableStateOf("") }
+    var misses by remember(steps.toString()) { mutableIntStateOf(0) }
     steps.take(solved).forEach { Text("${it.optString("q")} = ${it.optString("a")} ✓") }
     if(solved>=steps.size) { Text(s.say("Now answer the question above.","Şimdi yukarıdaki soruyu cevapla.","Ahora responde la pregunta de arriba."));return }
     val step=steps[solved]
-    Text(step.optString("say"));Text("${step.optString("q")} = ?",style=MaterialTheme.typography.titleLarge)
+    Text(step.optString("say"));Text("${step.optString("q")} = ?",color=Color(0xFFC55A16),style=MaterialTheme.typography.titleLarge)
     OutlinedTextField(input,{input=it},Modifier.testTag("help-step-input"),singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Text),label={Text(s.say("This step","Bu adım","Este paso"))})
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        listOf("1","2","3","4","5","6","7","8","9","0",".","−","⌫").forEach { key ->
+            OutlinedButton({input=when(key){"⌫"->input.dropLast(1);"−"->if(input.startsWith("-"))input.drop(1) else "-$input";else->(input+key).take(12)}},Modifier.size(60.dp),contentPadding=PaddingValues(0.dp)) {Text(key,style=MaterialTheme.typography.titleLarge)}
+        }
+    }
     if(misses>0) Text(s.say("Try this step again.","Bu adımı tekrar dene.","Intenta este paso otra vez."))
     Button({
         if(MathEngine.sameAnswer(input,step.optString("a")) || misses>=1) {solved++;input="";misses=0} else misses++

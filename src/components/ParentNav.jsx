@@ -16,6 +16,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { PC, FONT, SPACE, TAP } from '../lib/parentUI'
 import { useT } from '../lib/parentI18n'
 import { useAskUnseen } from '../lib/parentAsk'
+import { haptic } from '../lib/nativeShell'
 
 const PARENT_TABS = [
   { id: 'children', glyph: '👧', labelKey: 'nav_children', route: '/parent/dashboard' },
@@ -51,7 +52,7 @@ export default function ParentNav({ active }) {
 
   return (
     <nav className="tc-pnav" style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, viewTransitionName: 'tt-bottom-nav',
       margin: '0 auto',
       background: PC.card,
       borderTop: `1px solid ${PC.line}`,
@@ -61,7 +62,7 @@ export default function ParentNav({ active }) {
       {PARENT_TABS.map(({ id, glyph, labelKey, route }) => {
         const on = current === id
         return (
-          <button key={id} onClick={() => nav(route)} role="tab" aria-selected={on}
+          <button key={id} onClick={() => { haptic('selection'); nav(route) }} role="tab" aria-selected={on}
             aria-label={id === 'tuto' && unseen > 0 ? `${s(labelKey)} · ${s('tt_new_answer')}` : undefined}
             style={{
               flex: 1, minHeight: TAP.min, background: 'none', border: 'none', cursor: 'pointer',

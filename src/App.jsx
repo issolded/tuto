@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
@@ -47,7 +47,38 @@ function StoriesEntry() {
   return <StoriesScreen key={location.key} />
 }
 
+// Screens split out of the main bundle, fetched in the background once the child or parent
+// side is open so the first tap on them doesn't wait on the network (their Suspense fallback is
+// an empty screen). The labs stay out: the English lexicon alone is 3.8MB.
+const PREFETCH = {
+  child: () => [import('./screens/EnglishScreen'), import('./screens/PuzzleScreen'), import('./screens/ReviewScreen'), import('./screens/ChildSettings')],
+  parent: () => [import('./screens/ParentTuto'), import('./screens/ParentScreenTime'), import('./screens/ParentReports'), import('./screens/ReviewScreen'), import('./screens/ScreenControlSettings')],
+}
+const prefetched = new Set()
+function usePrefetchScreens() {
+  const { pathname } = useLocation()
+  const side = pathname.startsWith('/child') ? 'child' : pathname.startsWith('/parent') ? 'parent' : null
+  useEffect(() => {
+    if (!side || prefetched.has(side)) return
+    prefetched.add(side)
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500))
+    idle(() => PREFETCH[side]().forEach(p => p.catch(() => {})))
+  }, [side])
+}
+
+// The existing <Routes> live under one splat route of a data router, because only a data
+// router can run navigations as View Transitions (the screen-to-screen animation in index.css).
+// Every navigate() asks for one; browsers without the API just navigate.
+const router = createBrowserRouter([{ path: '*', element: <AppRoutes /> }])
+const routerNavigate = router.navigate
+router.navigate = (to, opts) => routerNavigate(to, typeof to === 'number' ? opts : { viewTransition: true, ...opts })
+
 export default function App() {
+  return <RouterProvider router={router} />
+}
+
+function AppRoutes() {
+  usePrefetchScreens()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -63,13 +94,10 @@ export default function App() {
   }, [])
 
   if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#1A1A2E', color:'#FFD93D', fontSize:48 }}>
-      ✨
-    </div>
+    <div style={{ height:'100vh', background:'var(--cream)' }} />
   )
 
   return (
-    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Opening />} />
         <Route path="/parent/login" element={<ParentLogin />} />
@@ -106,6 +134,5 @@ export default function App() {
         <Route path="/child/reading" element={<ReadingFlow />} />
         <Route path="/child/library" element={<LibraryScreen />} />
       </Routes>
-    </BrowserRouter>
   )
 }

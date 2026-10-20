@@ -32,7 +32,7 @@ import org.json.JSONObject
             places.forEach { p -> Card(Modifier.width(120.dp)) { Column(Modifier.padding(8.dp)) {
                 if(onColumn!=null) TextButton({onColumn(p)},Modifier.testTag("pv-column-$p")) {Text(name(p))} else Text(name(p))
                 Text(List((values[p] ?: 0).coerceIn(0,20)){"▣"}.joinToString(" "),Modifier.heightIn(min=56.dp))
-                if(showDigits) Text("${values[p] ?: 0}",style=MaterialTheme.typography.headlineSmall)
+                if(showDigits) Text(if(mode=="shift" && acted && (values[p] ?: 0)<10 && (values[p] ?: 0)!=PlaceValue.digits(start,places)[p]) "?" else "${values[p] ?: 0}",style=MaterialTheme.typography.headlineSmall)
             } } }
         }
     }

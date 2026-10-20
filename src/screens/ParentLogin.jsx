@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { oauthRedirect } from '../lib/nativeShell'
 import { PC, FONT, PCSS, TopBar, Btn, Field, GoogleMark } from '../lib/parentUI'
 import { useT } from '../lib/parentI18n'
 
@@ -28,7 +29,7 @@ export default function ParentLogin() {
   }
 
   const googleLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/parent/dashboard' } })
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: oauthRedirect('/parent/dashboard') } })
   }
 
   return (

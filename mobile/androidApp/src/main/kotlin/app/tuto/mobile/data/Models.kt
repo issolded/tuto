@@ -80,11 +80,13 @@ data class Today(
     }
 }
 
-data class MathPlan(val level: Int?, val focusTopicId: String?, val weakTopicIds: List<String>) {
+data class MathPlan(val level: Int?, val focusTopicId: String?, val weakTopicIds: List<String>, val skipTopicIds: List<String> = emptyList(), val reviewTopicIds: List<String> = emptyList()) {
     companion object {
         fun from(j: JSONObject) = MathPlan(
             level = if (j.has("level") && !j.isNull("level")) j.optInt("level") else null,
             focusTopicId = j.optJSONObject("focus")?.optStringOrNull("topic_id"),
+            skipTopicIds = j.optJSONArray("skip_topic_ids")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList(),
+            reviewTopicIds = j.optJSONArray("review_topic_ids")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList(),
             weakTopicIds = j.optJSONArray("weak_topic_ids")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList(),
         )
     }

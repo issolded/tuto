@@ -56,6 +56,7 @@ export default function MathFigure({ visual: v, language = 'en', hint = false, d
                                               : v.kind === 'garden' ? garden(v)
                                                 : v.kind === 'scatter' ? scatter(v)
                                                   : v.kind === 'turn' ? turn(v)
+                                                  : v.kind === 'sectors' ? sectors(v)
                                                   : polygon(v, hint)
   if (!body) return null
   const schematic = ['solid', 'polygon', 'net', 'angles', 'compound', 'algrects', 'cuboid', 'righttri', 'garden', 'circle'].includes(v.kind)
@@ -1109,6 +1110,55 @@ function scatter(v) {
 // A compass with the four directions named, the child in the middle facing one of them, and a
 // short curved arrow for which way round they turn. The arrow does not go the whole way: how far
 // is the question.
+// An angle cut into equal parts — a right angle in two halves, a half turn or a whole turn in
+// right angles. `span` is the whole (90, 180 or 360), `parts` how many equal pieces, `labels` what
+// each piece says, `whole` what the whole says. A 90° piece gets the square corner mark.
+function sectors(v) {
+  const span = v.span, n = v.parts, size = span / n
+  const full = span === 360
+  const R = full ? 82 : span === 180 ? 112 : 128
+  const cx = full ? 160 : span === 180 ? 160 : 92
+  const cy = full ? 108 : span === 180 ? 158 : 178
+  const P2 = (deg, r) => [cx + r * Math.cos(deg * Math.PI / 180), cy - r * Math.sin(deg * Math.PI / 180)]
+  const cuts = Array.from({ length: n + (full ? 0 : 1) }, (_, i) => i * size)
+  const g = <g>
+    {full
+      ? <circle cx={cx} cy={cy} r={R} fill={PAPER} stroke={INK} strokeWidth="2" />
+      : <path d={`M ${cx} ${cy} L ${P2(0, R).join(' ')} A ${R} ${R} 0 0 0 ${P2(span, R).join(' ')} Z`} fill={PAPER} stroke={GRID} strokeWidth="2" />}
+    {cuts.map(a => {
+      const [x, y] = P2(a, R)
+      return <line key={`c${a}`} x1={cx} y1={cy} x2={x} y2={y} stroke={INK} strokeWidth="2.5" strokeLinecap="round" />
+    })}
+    {Array.from({ length: n }, (_, i) => {
+      const a0 = i * size, a1 = a0 + size, mid = (a0 + a1) / 2
+      const mark = size === 90
+        // Each square sits a little inside its own quarter: four marks drawn corner to corner at
+        // the centre close into ONE square, and the child counting right angles counts one.
+        ? (() => {
+          const u = [Math.cos(a0 * Math.PI / 180), -Math.sin(a0 * Math.PI / 180)], w = [Math.cos(a1 * Math.PI / 180), -Math.sin(a1 * Math.PI / 180)]
+          const at = (s1, s2) => [cx + u[0] * s1 + w[0] * s2, cy + u[1] * s1 + w[1] * s2].join(',')
+          const g0 = 4, k = 15
+          return <polygon points={[at(g0, g0), at(g0 + k, g0), at(g0 + k, g0 + k), at(g0, g0 + k)].join(' ')} fill="#fde7cf" stroke={ORANGE} strokeWidth="2" />
+        })()
+        : (() => { const r = 34 + (i % 2) * 8, p = P2(a0, r), q = P2(a1, r); return <path d={`M ${p.join(' ')} A ${r} ${r} 0 0 0 ${q.join(' ')}`} fill="none" stroke={ORANGE} strokeWidth="2.5" /> })()
+      const label = v.labels?.[i]
+      const [lx, ly] = P2(mid, size === 90 ? (full ? 48 : 58) : 64)
+      return <g key={`p${i}`}>{mark}{label ? txt(lx, ly + 5, label, { size: 17, fill: label === '?' ? ORANGE : INK }) : null}</g>
+    })}
+    {v.whole && (() => {
+      // The whole is said once, on a dashed arc just outside the drawing.
+      const r = R + 12, a0 = full ? 0 : 0, a1 = full ? 359.9 : span
+      const p = P2(a0, r), q = P2(a1, r)
+      const [tx, ty] = full ? [cx, cy - R - 22] : P2(span * 0.82, R + 30)
+      return <g>
+        <path d={`M ${p.join(' ')} A ${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 0 ${q.join(' ')}`} fill="none" stroke={TEAL} strokeWidth="2" strokeDasharray="5 5" />
+        {txt(tx, ty, v.whole, { size: 16, fill: v.whole === '?' ? ORANGE : TEAL })}
+      </g>
+    })()}
+  </g>
+  return { h: full ? 222 : span === 180 ? 190 : 200, g }
+}
+
 function turn(v) {
   const cx = 160, cy = 112, R = 78
   const at = { N: -90, E: 0, S: 90, W: 180 }

@@ -79,6 +79,7 @@ fun SettingsScreen(vm: TutoViewModel) {
         Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text(s.say("Settings", "Ayarlar", "Ajustes"), style = MaterialTheme.typography.headlineLarge)
             Text(child.name, style = MaterialTheme.typography.headlineMedium)
+            DeviceScreenSetup(child.id)
             Text(s.say("Your grown-up manages your learning language and activities.", "Öğrenme dilini ve etkinliklerini ebeveynin yönetir.", "Tu familia gestiona tu idioma y tus actividades."), style = MaterialTheme.typography.bodyLarge)
             BigButton(s.say("Parent area", "Ebeveyn alanı", "Área familiar")) { vm.open("parent") }
             BigButton(s.say("Switch child", "Çocuğu değiştir", "Cambiar de niño"), Modifier.fillMaxWidth()) { vm.signOut() }

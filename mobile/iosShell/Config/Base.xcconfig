@@ -1,0 +1,13 @@
+// Shared build settings for the Tuto iOS shell.
+// Personal signing lives in Local.xcconfig (git-ignored); copy Local.xcconfig.example.
+
+PRODUCT_BUNDLE_IDENTIFIER = app.tuto.mobile
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 3
+
+// The site the shell loads. `//` starts a comment in xcconfig, hence the $().
+TUTO_WEB_URL = https:/$()/tuto-blue.vercel.app
+
+CODE_SIGN_STYLE = Automatic
+
+#include? "Local.xcconfig"

@@ -58,7 +58,7 @@ class MathEngine(private val context: Context) : PuzzleRenderer {
                     .put("level", plan?.level ?: JSONObject.NULL)
                     .put("lang", lang)
                     .put("count", 10)
-                    .put("weighting", JSONObject().put("focusTopicId", plan?.focusTopicId ?: JSONObject.NULL).put("weakTopicIds", JSONArray(plan?.weakTopicIds ?: emptyList<String>())))
+                    .put("weighting", JSONObject().put("focusTopicId", plan?.focusTopicId ?: JSONObject.NULL).put("weakTopicIds", JSONArray(plan?.weakTopicIds ?: emptyList<String>())).put("skipTopicIds", JSONArray(plan?.skipTopicIds ?: emptyList<String>())).put("reviewTopicIds", JSONArray(plan?.reviewTopicIds ?: emptyList<String>())))
                     .put("seenTopics", JSONArray(seenTopics))
                     .put("seenKeys", JSONArray(seenKeys))
                 val arg = JSONObject.quote(opts.toString())

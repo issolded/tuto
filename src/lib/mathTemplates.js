@@ -386,9 +386,9 @@ function countingOnSteps(a, b, lang) {
     return [
       say(lang, `Try counting on from ${a}.`, `${a} sayısından ileri saymayı dene.`,
                 `Prueba a contar hacia adelante desde ${a}.`),
-      say(lang, `Count ${b} more starting at ${a}: ${countRun(a, b, 1)}`,
-                `${a} sayısından ${b} tane ileri say: ${countRun(a, b, 1)}`,
-                `Cuenta ${b} más empezando en ${a}: ${countRun(a, b, 1)}`),
+      say(lang, `Count ${b} more starting at ${a} → ${countRun(a, b, 1)}`,
+                `${a} sayısından ${b} tane ileri say → ${countRun(a, b, 1)}`,
+                `Cuenta ${b} más empezando en ${a} → ${countRun(a, b, 1)}`),
     ]
   }
   // Which help a question gets is read off the number itself rather than passed in, so a
@@ -497,6 +497,37 @@ export function addJumpsHelp(from, add) {
   return { help: { kind: 'jumps', mode: 'add', from, to: from + add, stops } }
 }
 
+// Round-and-adjust applies to the hint and to the help alike: one rule, so the two never teach
+// different methods for the same question (760 − ? = 353: the hint said "take 350 away, then 3 more"
+// while the help walked four jumps). Returns the round number to use, or null.
+function roundAdjustPoint(from, to) {
+  const r = roundNear(from)
+  return r !== null && r < to && to > 100 && noExchange(to, r) ? r : null
+}
+
+// The same two steps the hint names, typed: the easy subtraction from the round number, then the
+// small correction.
+function gapRoundChain(from, to, lang) {
+  const r = roundAdjustPoint(from, to)
+  if (r === null) return {}
+  const N = x => num(x, lang)
+  const d = Math.abs(from - r)
+  const mid = to - r
+  return stepsHelp([
+    stp(lang, `${N(to)} − ${N(r)}`, mid,
+      `${N(from)} is just ${d} ${from < r ? 'less' : 'more'} than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy:`,
+      `${N(from)}, ${N(r)} sayısından sadece ${d} ${from < r ? 'eksik' : 'fazla'}. Önce ${N(to)} sayısından ${N(r)} çıkar — bu kolay:`,
+      `${N(from)} es solo ${d} ${from < r ? 'menos' : 'más'} que ${N(r)}. Primero resta ${N(r)} de ${N(to)}: esa es fácil:`),
+    from < r
+      ? stp(lang, `${N(mid)} + ${d}`, to - from,
+          `You took away ${d} too many, so add ${d} back on:`,
+          `${d} fazla çıkardın, o yüzden ${d} geri ekle:`,
+          `Has quitado ${d} de más, así que vuelve a sumar ${d}:`)
+      : stp(lang, `${N(mid)} − ${d}`, to - from,
+          `Then take away ${d} more:`, `Sonra ${d} daha çıkar:`, `Luego quita ${d} más:`),
+  ])
+}
+
 // The gap between two numbers as the jumps between round numbers, each one typed, then added.
 // The picture tool takes up to seven stops; this covers the ones it does not.
 function gapChain(from, to, lang) {
@@ -519,13 +550,13 @@ function gapSteps(from, to, lang) {
   if (to - from <= 10 && to <= 100) {
     const run = Array.from({ length: to - from }, (_, i) => from + i + 1).join(', ')
     return [say(lang, `Count on from ${N(from)} to ${N(to)} on your fingers: ${run}. How many did you count?`,
-                      `${N(from)} sayısından ${N(to)} sayısına parmaklarınla say: ${run}. Kaç tane saydın?`,
-                      `Cuenta con los dedos desde ${N(from)} hasta ${N(to)}: ${run}. ¿Cuántos has contado?`)]
+                      `${N(from)} sayısından ${N(to)} sayısına parmaklarınla say → ${run}. Kaç tane saydın?`,
+                      `Cuenta con los dedos desde ${N(from)} hasta ${N(to)} → ${run}. ¿Cuántos has contado?`)]
   }
-  const r = roundNear(from)
-  // Taking the round number away and putting the difference back is a Year 4+ strategy and the help here
-  // counts on through round numbers: for a two-digit gap (28 → 50) the hint says the same thing the help does.
-  if (r !== null && r < to && to > 100 && noExchange(to, r)) {
+  // Taking the round number away and putting the difference back is a Year 4+ strategy; for a two-digit
+  // gap (28 → 50) the help counts on through round numbers and the hint says the same thing.
+  const r = roundAdjustPoint(from, to)
+  if (r !== null) {
     const d = Math.abs(from - r)
     return from < r
       ? [say(lang, `${N(from)} is just ${d} less than ${N(r)}. Take ${N(r)} away from ${N(to)} first — that one is easy.`,
@@ -556,9 +587,9 @@ function countingBackSteps(a, b, lang) {
     return [
       say(lang, `Start at ${a} and take away ${b}.`, `${a} sayısından başla ve ${b} çıkar.`,
                 `Empieza en ${a} y quita ${b}.`),
-      say(lang, `Count back ${b} from ${a}: ${countRun(a, b, -1)}`,
-                `${a} sayısından ${b} geri say: ${countRun(a, b, -1)}`,
-                `Cuenta ${b} hacia atrás desde ${a}: ${countRun(a, b, -1)}`),
+      say(lang, `Count back ${b} from ${a} → ${countRun(a, b, -1)}`,
+                `${a} sayısından ${b} geri say → ${countRun(a, b, -1)}`,
+                `Cuenta ${b} hacia atrás desde ${a} → ${countRun(a, b, -1)}`),
     ]
   }
   // 56 − 53: the two numbers are neighbours, so the answer is the gap between them. Splitting 53
@@ -616,8 +647,8 @@ function multGroupsVariant(a, b, name, object, lang) {
     hint_steps: [
       say(lang, `${name} has ${a} ${container} — that's ${a} equal groups.`, `${a} ${container} var — yani ${a} eşit grup.`,
                 `Hay ${a} ${container}: son ${a} grupos iguales.`),
-      say(lang, `Each group has ${b}, so it's ${a} groups of ${b}: ${a} × ${b}.`, `Her grupta ${b} tane var: ${a} × ${b}.`,
-                `En cada grupo hay ${b}, así que son ${a} grupos de ${b}: ${a} × ${b}.`),
+      say(lang, `Each group has ${b}, so it's ${a} groups of ${b} = ${a} × ${b}.`, `Her grupta ${b} tane var, yani ${a} × ${b}.`,
+                `En cada grupo hay ${b}, así que son ${a} grupos de ${b} = ${a} × ${b}.`),
     ],
     visual: { kind: 'groups', groups: a, per: b },
   }
@@ -1788,7 +1819,7 @@ function addSubShort(level, lang, columnar) {
       `Para un concierto se preparan ${made} comidas, pero llegan ${came} personas. ¿Cuántas se quedan sin comida?`),
     answer: came - made,
     key: `asw:short:${made}:${came}`,
-    ...firstHelp(jumpsHelp(made, came), gapChain(made, came, lang)),
+    ...firstHelp(gapRoundChain(made, came, lang), jumpsHelp(made, came), gapChain(made, came, lang)),
     hints: [
       say(lang, `The people without a meal are the gap between the people and the meals.`,
                 `Yemeksiz kalanlar, gelen kişi sayısı ile yemek sayısı arasındaki farktır.`,
@@ -3166,6 +3197,12 @@ function placeCountInMultiples(level, lang) {
     format: 'numeric',
     correct_answer: start + step * 4,
     operandKey: `pv:mult:${step}:${start}`,
+    // The same arrows as adding on: the last two terms and the next, each jump labelled +step. The child lands
+    // on a number already in the question first (the rule checks out), then on the answer.
+    help: { kind: 'jumps', mode: 'add', from: terms[2], to: start + step * 4, stops: [terms[2], terms[3], start + step * 4],
+      intro: say(lang, `Each jump is +${num(step, lang)}. Where do you land? Type it! 🦘`,
+                       `Her zıplama +${num(step, lang)}. Nereye vardın? Yaz! 🦘`,
+                       `Cada salto es +${num(step, lang)}. ¿Dónde caes? ¡Escríbelo! 🦘`) },
     hint_steps: [
       say(lang, `Every step goes up by the same amount.`,
                 `Her adımda aynı kadar artıyor.`,
@@ -4303,9 +4340,9 @@ function npHowManyFactors(level, lang) {
       const square = fs.includes(Math.sqrt(n)) && Number.isInteger(Math.sqrt(n))
       return stepsHelp([
         stp(lang, say(lang, `factor pairs of ${n}`, `${n} sayısının çarpan çiftleri`, `parejas de divisores de ${n}`), pairs,
-          `Factors come in pairs that multiply to make ${n}: 1 × ${n}, then try 2, 3, 4… and stop when the numbers meet in the middle. How many pairs?`,
-          `Çarpanlar, çarpımı ${n} olan çiftler halinde gelir: 1 × ${n}, sonra 2, 3, 4… dene ve sayılar ortada buluşunca dur. Kaç çift?`,
-          `Los divisores vienen en parejas que multiplicadas dan ${n}: 1 × ${n}, luego prueba 2, 3, 4… y para cuando se encuentren en el medio. ¿Cuántas parejas?`),
+          `Factors come in pairs that multiply to make ${n}. Start with 1 × ${n}, then try 2, 3, 4… and stop when the numbers meet in the middle. How many pairs?`,
+          `Çarpanlar, çarpımı ${n} olan çiftler halinde gelir. Önce 1 × ${n}, sonra 2, 3, 4… dene ve sayılar ortada buluşunca dur. Kaç çift?`,
+          `Los divisores vienen en parejas que multiplicadas dan ${n}. Empieza por 1 × ${n}, luego prueba 2, 3, 4… y para cuando se encuentren en el medio. ¿Cuántas parejas?`),
         stp(lang, square ? `${pairs} × 2 − 1` : `${pairs} × 2`, fs.length,
           square ? 'Each pair has two factors — but the middle pair is the same number twice, so it counts once:'
                  : 'Each pair has two factors:',
@@ -4713,7 +4750,7 @@ function moneyChange(level, lang) {
     format: 'numeric',
     correct_answer: paid - cost,
     operandKey: `money:chg:${paid}:${cost}`,
-    ...firstHelp(jumpsHelp(cost, paid), gapChain(cost, paid, lang)),
+    ...firstHelp(gapRoundChain(cost, paid, lang), jumpsHelp(cost, paid), gapChain(cost, paid, lang)),
     hint_steps: [
       say(lang, `Change is what is left of what you handed over.`,
                 `Para üstü, verdiğin paradan geriye kalandır.`,
@@ -4872,7 +4909,7 @@ function measureDifference(level, lang) {
     format: 'numeric',
     correct_answer: large - small,
     operandKey: `meas:diff:${set.unit}:${small}:${large}`,
-    ...firstHelp(jumpsHelp(small, large), gapChain(small, large, lang)),
+    ...firstHelp(gapRoundChain(small, large, lang), jumpsHelp(small, large), gapChain(small, large, lang)),
     hint_steps: [
       say(lang, `"How much more" asks for the gap between the two, not for either one.`,
                 `"Kaç fazla" sorusu ikisinin arasındaki farkı ister, sayılardan birini değil.`,
@@ -5588,7 +5625,7 @@ function missingNumber(level, lang, add) {
     return {
       topic: 'addition', level, question_text: q, format: 'numeric', correct_answer: total - known,
       operandKey: `miss:add:${known}:${total}`,
-      ...firstHelp(jumpsHelp(known, total), gapChain(known, total, lang)),
+      ...firstHelp(gapRoundChain(known, total, lang), jumpsHelp(known, total), gapChain(known, total, lang)),
       hint_steps: [
         say(lang, `The missing number and ${num(known, lang)} make ${num(total, lang)} together.`,
                   `Eksik sayı ile ${num(known, lang)} birlikte ${num(total, lang)} eder.`,
@@ -5623,7 +5660,7 @@ function missingNumber(level, lang, add) {
     topic: 'subtraction', level,
     question_text: `${num(start, lang)} − ? = ${num(left, lang)}`, format: 'numeric', correct_answer: takeAway,
     operandKey: `miss:subB:${start}:${left}`,
-    ...firstHelp(jumpsHelp(left, start), gapChain(left, start, lang)),
+    ...firstHelp(gapRoundChain(left, start, lang), jumpsHelp(left, start), gapChain(left, start, lang)),
     hint_steps: [
       say(lang, `How much do you take from ${num(start, lang)} to get down to ${num(left, lang)}?`,
                 `${num(start, lang)} sayısından ne kadar çıkarırsan ${num(left, lang)} kalır?`,
@@ -5809,7 +5846,7 @@ function youngStory(level, lang, add) {
     operandKey: `story:${s.key}:${s.a}:${s.b}`,
     ...(add
       ? firstHelp(addJumpsHelp(Math.max(s.a, s.b), Math.min(s.a, s.b)), partitionChain(Math.max(s.a, s.b), Math.min(s.a, s.b), true, lang))
-      : firstHelp(jumpsHelp(s.b, s.a), gapChain(s.b, s.a, lang), partitionChain(s.a, s.b, false, lang))),
+      : firstHelp(gapRoundChain(s.b, s.a, lang), jumpsHelp(s.b, s.a), gapChain(s.b, s.a, lang), partitionChain(s.a, s.b, false, lang))),
     hint_steps: add
       ? [say(lang, `Both amounts go together, so this is an adding question.`, `İki miktar bir araya geliyor, yani bu bir toplama sorusu.`, `Las dos cantidades se juntan: es una suma.`),
          say(lang, `Add ${N(s.a)} and ${N(s.b)} — split the smaller one into its parts if it helps.`,
@@ -5877,6 +5914,17 @@ const YOUNG_MULT = [
 // panel falls back to the written steps.
 export const HELP_DOTS_MAX = 80
 
+// Count in whichever number is easier to count in. 10 spiders × 8 legs counted in 8s, ten times,
+// is the hard way round; 8 × 10 is the same, and 10, 20, 30… is a count every child has.
+const EASY_COUNT = [10, 5, 2]
+function countInHint(n, per, lang) {
+  const swap = !EASY_COUNT.includes(per) && EASY_COUNT.includes(n)
+  if (!swap) return say(lang, `Count up in ${per}s, ${n} times.`, `${trDist(per)} ${trDist(per)} ${n} kez say.`, `Cuenta de ${per} en ${per}, ${n} veces.`)
+  return say(lang, `${n} × ${per} is the same as ${per} × ${n}, and ${n}s are easier: count up in ${n}s, ${per} times.`,
+    `${n} × ${per} ile ${per} × ${n} aynı şey, ${trDist(n)} saymak daha kolay: ${trDist(n)} ${trDist(n)} ${per} kez say.`,
+    `${n} × ${per} es lo mismo que ${per} × ${n}, y contar de ${n} en ${n} es más fácil: cuenta de ${n} en ${n}, ${per} veces.`)
+}
+
 function youngMultStory(level, lang) {
   const band = bandForLevel(level)
   const tables = tableFor(band)
@@ -5897,11 +5945,11 @@ function youngMultStory(level, lang) {
     operandKey: `ymult:${c.id}:${n}:${per}`,
     ...(n * per <= HELP_DOTS_MAX && n <= 12 && per <= 12 ? { help: { kind: 'groups', groups: n, per } } : multSplitSteps(n, per, lang)),
     hint_steps: [
-      say(lang, `That is ${n} groups of ${per}: ${n} × ${per}.`, `Bu, ${per} tanelik ${n} grup demek: ${n} × ${per}.`,
-                `Son ${n} grupos de ${per}: ${n} × ${per}.`),
+      say(lang, `That is ${n} groups of ${per} = ${n} × ${per}.`, `Bu, ${per} tanelik ${n} grup demek, yani ${n} × ${per}.`,
+                `Son ${n} grupos de ${per} = ${n} × ${per}.`),
       n > 12 || per > 12
         ? multSplitHint(n, per, lang)
-        : say(lang, `Count up in ${per}s, ${n} times.`, `${trDist(per)} ${trDist(per)} ${n} kez say.`, `Cuenta de ${per} en ${per}, ${n} veces.`),
+        : countInHint(n, per, lang),
     ],
   }
 }
@@ -5912,10 +5960,12 @@ function missingFactor(level, lang) {
   const t = pick(tableFor(band))
   const k = randInt(2, 12)
   const p = t * k
-  // The fact to start from: about half way, and never a product or a remainder that is the answer itself
-  // (6 × 2 = 12 as the first step of "? × 2 = 24" would hand over the 12).
-  const half = [Math.floor(k / 2), Math.floor(k / 2) - 1, Math.floor(k / 2) + 1, 2, 3]
-    .find(h => h >= 2 && h <= k - 2 && h * t !== k && p - h * t !== k && h !== k) ?? Math.floor(k / 2)
+  // The fact to start from: one the child really has (5 × or 10 ×), close enough below the answer that the
+  // rest is a few jumps of t, and never a product that is the answer itself (5 × 2 = 10 for "? × 2 = 20").
+  // Not "half way": 3 × 8 is not a fact a 7-year-old holds, and the rest of the way was then a division —
+  // the very thing the question teaches.
+  const half = [5, 10, 4, 6, 3, 2].find(h => h < k && k - h <= 5 && h * t !== k) ?? Math.floor(k / 2)
+  const jumps = Array.from({ length: k - half + 1 }, (_, i) => num((half + i) * t, lang))
   const shape = randInt(0, 2)
   const q = shape === 0 ? `? × ${t} = ${p}` : shape === 1 ? `${t} × ? = ${p}` : `${p} = ? × ${t}`
   return {
@@ -5928,18 +5978,16 @@ function missingFactor(level, lang) {
     ...(k >= 6
       ? stepsHelp([
         stp(lang, `${half} × ${t}`, half * t,
-          `Start with a fact you know. What is ${half} × ${t}?`,
-          `Bildiğin bir işlemle başla. ${half} × ${t} kaç eder?`,
-          `Empieza con algo que ya sabes. ¿Cuánto es ${half} × ${t}?`),
-        stp(lang, `${p} − ${half * t}`, p - half * t,
-          `That gets you part of the way to ${p}. How much is still missing?`,
-          `Bu seni ${p} sayısına kadar bir yere getirdi. Daha ne kadar eksik?`,
-          `Eso te lleva parte del camino hasta ${p}. ¿Cuánto falta todavía?`),
-        stp(lang, `${p - half * t} ÷ ${t}`, k - half,
-          `How many more ${t}s make that?`, `Bu kaç tane daha ${t} eder?`, `¿Cuántos ${t} más hacen eso?`),
+          `Start with an easy fact. What is ${half} × ${t}?`,
+          `Kolay bir işlemle başla. ${half} × ${t} kaç eder?`,
+          `Empieza con algo fácil. ¿Cuánto es ${half} × ${t}?`),
+        stp(lang, jumps.join(' → '), k - half,
+          `Now count on in ${t}s up to ${num(p, lang)}. How many more ${t}s is that?`,
+          `Şimdi ${num(p, lang)} sayısına kadar ${trDist(t)} ${trDist(t)} ileri say. Kaç tane daha ${t}?`,
+          `Ahora cuenta de ${t} en ${t} hasta ${num(p, lang)}. ¿Cuántos ${t} más son?`),
         stp(lang, `${half} + ${k - half}`, k,
           `Add the ${t}s you used first and the ones you just found:`,
-          `Önce kullandığın ${t}'ları ve şimdi bulduklarını topla:`,
+          `Baştaki ${half} tane ile şimdi saydıklarını topla:`,
           `Suma los ${t} que usaste primero y los que acabas de encontrar:`),
       ])
       : p <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: p, size: t, mode: 'exact' } } : {}),
@@ -5947,9 +5995,9 @@ function missingFactor(level, lang) {
       say(lang, `Which number in the ${t} times table makes ${p}?`, `${t} çarpım tablosunda hangi sayı ${p} eder?`,
                 `¿Qué número de la tabla del ${t} da ${p}?`),
       k >= 6
-        ? say(lang, `Use a fact you know: ${half} × ${t} = ${half * t}. How many more ${t}s do you need to reach ${p}?`,
-                    `Bildiğin bir işlemi kullan: ${half} × ${t} = ${half * t}. ${p} sayısına ulaşmak için kaç tane daha ${t} lazım?`,
-                    `Usa algo que sabes: ${half} × ${t} = ${half * t}. ¿Cuántos ${t} más necesitas para llegar a ${p}?`)
+        ? say(lang, `Start from an easy fact: ${half} × ${t} = ${half * t}. Then count on in ${t}s to ${p}.`,
+                    `Kolay bir işlemden başla: ${half} × ${t} = ${half * t}. Sonra ${p} sayısına kadar ${trDist(t)} ${trDist(t)} say.`,
+                    `Empieza por algo fácil: ${half} × ${t} = ${half * t}. Luego cuenta de ${t} en ${t} hasta ${p}.`)
         : say(lang, `Count up in ${t}s until you reach ${p}, and count how many steps it took.`,
                     `${p} sayısına ulaşana kadar ${trDist(t)} ${trDist(t)} say ve kaç adım attığını say.`,
                     `Cuenta de ${t} en ${t} hasta llegar a ${p} y cuenta cuántos saltos has dado.`),
@@ -6084,7 +6132,7 @@ function youngDivision(level, lang) {
       format: 'numeric', correct_answer: rem, operandKey: `yrem:${n}:${d}`,
       ...(n <= HELP_DOTS_MAX ? { help: { kind: 'fill', total: n, size: d, mode: 'remainder' } } : {}),
       hint_steps: [
-        say(lang, `${q} × ${d} = ${q * d}.`, `${q} tane ${d}: ${q} × ${d} = ${q * d}.`, `${q} veces ${d}: ${q} × ${d} = ${q * d}.`),
+        say(lang, `${q} × ${d} = ${q * d}.`, `${q} tane ${d}, yani ${q} × ${d} = ${q * d}.`, `${q} veces ${d}, o sea ${q} × ${d} = ${q * d}.`),
         say(lang, `Take ${q * d} away from ${n}. What is left over?`, `${n} sayısından ${q * d} çıkarınca geriye ne kalır?`, `Si a ${n} le quitas ${q * d}, ¿qué sobra?`),
       ],
     }
@@ -6411,7 +6459,21 @@ function timeYoung(level, lang) {
         }
         return stepsHelp(steps, { kind: 'digital', times: [here] }, true)
       })()),
-      hint_steps: [
+      // The same three cases as the help above. "Count back to the o'clock first" from 08:00 points at a
+      // step that does not exist, and when the minutes stay inside the hour there is no o'clock to reach.
+      hint_steps: !crosses ? [
+        say(lang, `The ${add} minutes stay inside this hour, so the hour does not change.`, `${add} dakika bu saatin içinde kalıyor, saat değişmez.`,
+                  `Los ${add} minutos caben en esta hora, así que la hora no cambia.`),
+        say(lang, `Only the minutes change: ${after ? 'add' : 'take away'} ${add}.`, `Yalnız dakikalar değişir: ${add} ${after ? 'ekle' : 'çıkar'}.`,
+                  `Solo cambian los minutos: ${after ? 'suma' : 'resta'} ${add}.`),
+      ] : !after && start % 60 === 0 ? [
+        say(lang, `${hm(start, pad)} is already an o'clock. Going back takes you into the hour before.`,
+                  `${hm(start, pad)} zaten tam saat. Geri gidince bir önceki saate geçersin.`,
+                  `Las ${hm(start, pad)} ya es una hora en punto. Al retroceder pasas a la hora anterior.`),
+        say(lang, `${add} minutes before the hour is 60 − ${add} minutes past the hour before.`,
+                  `Tam saatten ${add} dakika önce, bir önceki saatin 60 − ${add} dakika geçesidir.`,
+                  `${add} minutos antes de la hora en punto son 60 − ${add} minutos pasadas de la hora anterior.`),
+      ] : [
         say(lang, `Count ${after ? 'on' : 'back'} to the o'clock first.`, `Önce ${after ? 'ileri' : 'geri'} doğru tam saate kadar say.`,
                   `Cuenta primero ${after ? 'hacia delante' : 'hacia atrás'} hasta la hora en punto.`),
         say(lang, `Then ${after ? 'add' : 'take away'} whatever is left of the ${add} minutes.`, `Sonra ${add} dakikadan kalanı ${after ? 'ekle' : 'çıkar'}.`,
@@ -6803,7 +6865,8 @@ function geoAngleFacts(level, lang) {
             say(lang, 'Half of it is 90 ÷ 2.', 'Yarısı 90 ÷ 2 eder.', 'La mitad es 90 ÷ 2.')] },
     ]
     const f = pick(facts)
-    return { topic: 'geometry', level, question_text: f.q, format: 'numeric', correct_answer: f.a, operandKey: `angfact:${f.a}`, hint_steps: f.h }
+    return { topic: 'geometry', level, question_text: f.q, format: 'numeric', correct_answer: f.a, operandKey: `angfact:${f.a}`, hint_steps: f.h,
+      ...angleFactHelp(f.a, lang) }
   }
   const bigger = Math.random() < 0.5
   const target = bigger ? randInt(95, 170) : randInt(15, 85)
@@ -6823,6 +6886,39 @@ function geoAngleFacts(level, lang) {
     hint_steps: [say(lang, 'A right angle is 90°.', 'Dik açı 90°\'dir.', 'Un ángulo recto mide 90°.'),
                  say(lang, `Look for the one ${bigger ? 'more' : 'less'} than 90.`, `90'dan ${bigger ? 'büyük' : 'küçük'} olanı bul.`, `Busca el que sea ${bigger ? 'mayor' : 'menor'} que 90.`)],
   }
+}
+
+// The help for each fact draws it and has the child do the one small sum: the hint says the fact
+// in words, the help shows the turn cut into its parts. Halving and doubling, not ÷ 4 and × 4:
+// a seven-year-old halves 360 twice more easily than they divide it by four.
+function angleFactHelp(a, lang) {
+  const S = (span, parts, labels, whole) => ({ kind: 'sectors', span, parts, labels, whole })
+  if (a === 45) return stepsHelp([
+    stp(lang, '90 ÷ 2', 45, 'A right angle is 90°. The line cuts it into two equal halves. How big is each half?',
+      'Dik açı 90°. Çizgi onu iki eşit yarıya bölüyor. Her yarısı kaç derece?',
+      'Un ángulo recto mide 90°. La línea lo parte en dos mitades iguales. ¿Cuánto mide cada mitad?'),
+  ], S(90, 2, ['?', '?'], '90°'))
+  if (a === 90) return stepsHelp([
+    stp(lang, '360 ÷ 2', 180, 'A whole turn is 360°. First cut it in half: a half turn.',
+      'Tam tur 360°. Önce ikiye böl: yarım tur.', 'Una vuelta completa son 360°. Primero pártela por la mitad: media vuelta.'),
+    stp(lang, '180 ÷ 2', 90, 'A right angle is half of a half turn.',
+      'Dik açı, yarım turun yarısıdır.', 'Un ángulo recto es la mitad de media vuelta.'),
+  ], S(360, 4, ['?', '', '', ''], '360°'))
+  if (a === 360) return stepsHelp([
+    stp(lang, '90 + 90', 180, 'Each right angle is 90°. Two of them make a half turn.',
+      'Her dik açı 90°. İkisi yarım tur eder.', 'Cada ángulo recto mide 90°. Dos forman media vuelta.'),
+    stp(lang, '180 + 180', 360, 'Two half turns make the whole turn.',
+      'İki yarım tur, tam turu eder.', 'Dos medias vueltas forman la vuelta completa.'),
+  ], S(360, 4, ['90°', '90°', '90°', '90°'], '?'))
+  if (a === 4) return stepsHelp([
+    stp(lang, '1 + 1 + 1 + 1', 4, 'Each square corner is one right angle. Count them all the way round.',
+      'Her kare köşe bir dik açı. Tam tur boyunca hepsini say.', 'Cada esquina cuadrada es un ángulo recto. Cuéntalas en toda la vuelta.'),
+  ], S(360, 4, ['', '', '', '']))
+  if (a === 2) return stepsHelp([
+    stp(lang, '1 + 1', 2, 'Each square corner is one right angle. Count them in the half turn.',
+      'Her kare köşe bir dik açı. Yarım turdakileri say.', 'Cada esquina cuadrada es un ángulo recto. Cuéntalas en la media vuelta.'),
+  ], S(180, 2, ['', '']))
+  return {}
 }
 
 function geometryYoung(level, lang) {
@@ -7435,7 +7531,7 @@ function dataSorting(level, lang) {
   const L = p => p[lang] ?? p.en
   const describe = n => {
     const a = A.test(n) ? L(A.is) : L(A.not), b = B.test(n) ? L(B.is) : L(B.not)
-    return say(lang, `${n} ${a} and ${b}.`, `${n}: ${a}, ${b}.`, `${n} ${a} y ${b}.`)
+    return say(lang, `${n} ${a} and ${b}.`, `${n} sayısı ${a}, ${b}.`, `${n} ${a} y ${b}.`)
   }
   // A wrong number says which label it breaks: "12 is even, but it is not a multiple of 5", not
   // "12 is not a multiple of 5 and is even", where the reader has to work out which half matters.
@@ -7445,7 +7541,7 @@ function dataSorting(level, lang) {
     const ok = [0, 1].filter(i => has[i] === want[i]).map(i => fact([A, B][i], has[i]))
     const bad = [0, 1].filter(i => has[i] !== want[i]).map(i => fact([A, B][i], has[i]))
     if (!ok.length) return describe(n)
-    return say(lang, `${n} ${ok[0]}, but it ${bad[0]}.`, `${n}: ${ok[0]}, ama ${bad[0]}.`, `${n} ${ok[0]}, pero ${bad[0]}.`)
+    return say(lang, `${n} ${ok[0]}, but it ${bad[0]}.`, `${n} sayısı ${ok[0]}, ama ${bad[0]}.`, `${n} ${ok[0]}, pero ${bad[0]}.`)
   }
   const right = opt(answer, describe(answer))
   const wrongs = others.map(n => opt(n, why(n)))
@@ -8822,8 +8918,8 @@ function y8Powers(level, lang) {
     if (kind === 'mult') return say(lang, `${n} ÷ ${k} leaves ${n % k} over.`, `${n} ÷ ${k} işleminde ${n % k} kalır.`, `${n} ÷ ${k} da resto ${n % k}.`)
     const r = kind === 'square' ? Math.floor(Math.sqrt(n)) : Math.floor(Math.cbrt(n) + 1e-9)
     return kind === 'square'
-      ? say(lang, `${r}² = ${r * r} and ${r + 1}² = ${(r + 1) ** 2}, so ${n} is not a square.`, `${r}² = ${r * r}, ${r + 1}² = ${(r + 1) ** 2}; ${n} kare sayı değil.`, `${r}² = ${r * r} y ${r + 1}² = ${(r + 1) ** 2}: ${n} no es un cuadrado.`)
-      : say(lang, `${r}³ = ${r ** 3} and ${r + 1}³ = ${(r + 1) ** 3}, so ${n} is not a cube.`, `${r}³ = ${r ** 3}, ${r + 1}³ = ${(r + 1) ** 3}; ${n} küp sayı değil.`, `${r}³ = ${r ** 3} y ${r + 1}³ = ${(r + 1) ** 3}: ${n} no es un cubo.`)
+      ? say(lang, `${r}² = ${r * r} and ${r + 1}² = ${(r + 1) ** 2}, so ${n} is not a square.`, `${r}² = ${r * r}, ${r + 1}² = ${(r + 1) ** 2}; ${n} kare sayı değil.`, `${r}² = ${r * r} y ${r + 1}² = ${(r + 1) ** 2}, así que ${n} no es un cuadrado.`)
+      : say(lang, `${r}³ = ${r ** 3} and ${r + 1}³ = ${(r + 1) ** 3}, so ${n} is not a cube.`, `${r}³ = ${r ** 3}, ${r + 1}³ = ${(r + 1) ** 3}; ${n} küp sayı değil.`, `${r}³ = ${r ** 3} y ${r + 1}³ = ${(r + 1) ** 3}, así que ${n} no es un cubo.`)
   }
   const name = kind === 'prime' ? say(lang, 'a prime number', 'asal sayı', 'un número primo')
     : kind === 'square' ? say(lang, 'a square number', 'kare sayı', 'un número cuadrado')
@@ -10022,7 +10118,7 @@ function y8Statistics(level, lang) {
       question_text: say(lang, `Two fair dice are rolled and the scores added. What is the probability of a total of ${T2}${orLess ? ' or less' : ''}?`, `Hilesiz iki zar atılıp sonuçlar toplanıyor. Toplamın ${T2}${orLess ? ' ya da daha az' : ''} olma olasılığı nedir?`, `Se lanzan dos dados y se suman. ¿Cuál es la probabilidad de un total de ${T2}${orLess ? ' o menos' : ''}?`),
       format: 'choice', options: choiceOf(right, wrongs), correct_answer: right.value, operandKey: `s8:d:${T2}:${orLess}`,
       ...stepsHelp([
-        stp(lang, say(lang, `ways to score ${T2}${orLess ? ' or less' : ''}`, `${T2}${orLess ? ' ya da daha az' : ''} yapan yollar`, `formas de sumar ${T2}${orLess ? ' o menos' : ''}`), count, `List the pairs of dice that give ${T2}${orLess ? ' or less' : ''}: (2, 5) and (5, 2) count as different pairs. How many pairs are there?`, `${T2}${orLess ? ' ya da daha azını' : ''} veren zar çiftlerini listele: (2, 5) ile (5, 2) farklı çiftler sayılır. Kaç çift var?`, `Haz la lista de parejas de dados que dan ${T2}${orLess ? ' o menos' : ''}: (2, 5) y (5, 2) cuentan como parejas distintas. ¿Cuántas hay?`),
+        stp(lang, say(lang, `ways to score ${T2}${orLess ? ' or less' : ''}`, `${T2}${orLess ? ' ya da daha az' : ''} yapan yollar`, `formas de sumar ${T2}${orLess ? ' o menos' : ''}`), count, `List the pairs of dice that give ${T2}${orLess ? ' or less' : ''}. (2, 5) and (5, 2) count as different pairs. How many pairs are there?`, `${T2}${orLess ? ' ya da daha azını' : ''} veren zar çiftlerini listele. (2, 5) ile (5, 2) farklı çiftler sayılır. Kaç çift var?`, `Haz la lista de parejas de dados que dan ${T2}${orLess ? ' o menos' : ''}. (2, 5) y (5, 2) cuentan como parejas distintas. ¿Cuántas hay?`),
         stp(lang, '6 × 6', 36, 'And how many ways can two dice land altogether? Put the first over this, then simplify:', 'İki zar toplam kaç şekilde düşebilir? Birincisini bunun üstüne yaz, sonra sadeleştir:', '¿Y de cuántas formas pueden caer dos dados? Pon el primero sobre este y simplifica:'),
       ], null, true),
       hint_steps: [say(lang, 'There are 6 × 6 = 36 equally likely ways for two dice to land.', 'İki zarın düşebileceği 6 × 6 = 36 eşit olasılıklı yol var.', 'Hay 6 × 6 = 36 formas igual de probables de caer.'),
@@ -10163,7 +10259,7 @@ export { SHAPES }
 
 // The visual kinds drawn by components/MathFigure. Kept here, beside the templates that emit
 // them, so the screen can ask "is this a picture question?" without importing a component.
-export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale', 'plane', 'angles', 'compound', 'machine', 'numcross', 'dots', 'algrects', 'gears', 'cuboid', 'circle', 'righttri', 'garden', 'scatter', 'turn'])
+export const FIGURE_KINDS = new Set(['scale', 'fraction', 'coords', 'solid', 'tally', 'polygon', 'prices', 'digital', 'net', 'venn', 'carroll', 'route', 'spinner', 'mapscale', 'plane', 'angles', 'compound', 'machine', 'numcross', 'dots', 'algrects', 'gears', 'cuboid', 'circle', 'righttri', 'garden', 'scatter', 'turn', 'sectors'])
 
 export const TOPICS = Object.keys(REGISTRY)
 

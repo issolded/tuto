@@ -47,6 +47,8 @@ import java.time.Instant
                 return@FeaturePage
             }
             when (p.page) {
+                "device-screen" -> NativeScreenDashboard(p)
+                "math-skip" -> NativeMathSkip(p)
                 "children" -> {
                     Text(s.say("Family code", "Aile kodu", "Código familiar") + ": " + p.profile.optString("family_code"), style = MaterialTheme.typography.headlineMedium)
                     p.children.forEach { child -> Card(onClick = { p.work { p.loadChild(child) } }, modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text(child.optString("name"), style = MaterialTheme.typography.headlineSmall); Text("${child.optInt("age")} · ${child.optString("language")}") } } }
@@ -64,7 +66,8 @@ import java.time.Instant
                         TextButton(onClick = { go("tasks", p.selected!!.optJSONObject("task_settings") ?: JSONObject()) }) { Text(s.say("Activities", "Etkinlikler", "Actividades")) }
                         TextButton(onClick = { p.work { p.loadWeek(0) } }) { Text(s.say("Weekly report", "Haftalık rapor", "Informe semanal")) }
                         TextButton(onClick = { go("rewards") }) { Text(s.say("Rewards & Gems", "Ödüller ve Gem", "Premios y gemas")) }
-                        TextButton(onClick = { go("screen", p.profile.optJSONObject("prefs")?.optJSONObject("screen_control_web")?.optJSONObject(p.selected!!.getString("id")) ?: JSONObject()) }) { Text(s.say("Screen plan", "Ekran planı", "Plan de pantalla")) }
+                        TextButton(onClick = { p.page = "math-skip" }) { Text(s.say("Skip maths topics", "Matematik konularını atla", "Omitir temas de matemáticas")) }
+                        TextButton(onClick = { p.page = "device-screen" }) { Text(s.say("Screen time & usage", "Ekran süresi ve kullanım", "Tiempo de pantalla y uso")) }
                     }
                     Text(s.say("Awaiting approval", "Onay bekleyenler", "Pendientes"), style = MaterialTheme.typography.titleLarge)
                     val groups = listOf("submissions" to "submissions", "paintings" to "paintings", "contributions" to "contributions", "claims" to "reward-claims", "suggestions" to "reward-suggestions")

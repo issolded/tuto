@@ -8,6 +8,7 @@
 // Everything crosses the bridge as JSON: Kotlin calls TutoMath.buildSession(json) and gets a JSON
 // string back. Figures are rendered here, with the web's React components, to SVG markup — so a
 // chart or a clock on the tablet is drawn by exactly the code that draws it in the browser.
+import { splitAsk } from '../../src/lib/splitAsk'
 import { renderToStaticMarkup } from 'react-dom/server'
 import MathGeometry from '../../src/components/MathGeometry'
 import MathChart from '../../src/components/MathChart'
@@ -122,7 +123,8 @@ export function buildSession(opts) {
       topic_name: s.curriculum?.name ?? null,
       template: s.templateTopic,
       source: { ...p, level, templateTopic: s.templateTopic },
-      question: p.question_text,
+      question: splitAsk(p.question_text).join("\n\n"),
+      help_figure: p.help?.picture ? figure(p.help.picture, lang) : null,
       answer: p.correct_answer,
       format: p.format === 'choice' ? 'choice' : p.format === 'decimal' ? 'decimal' : 'integer',
       options: Array.isArray(p.options) ? p.options.map(o => ({ value: String(o.value), label: String(o.label ?? o.value), why: o.why ?? null })) : null,
@@ -145,7 +147,8 @@ globalThis.TutoMath = {
     if (!p) throw new Error('No matching practice question')
     const d = drawable(p, lang)
     if (!d.ok) throw new Error('Practice figure could not render')
-    return JSON.stringify({ ...old, source: p, question: p.question_text, answer: p.correct_answer, format: p.format || 'integer', options: p.options?.map(o => ({value:String(o.value),label:String(o.label ?? o.value),why:o.why})), hints: p.hint_steps || [], operand_key: p.operandKey, visual: p.visual, figure: d.fig })
+    return JSON.stringify({ ...old, source: p, question: splitAsk(p.question_text).join("\n\n"),
+      help_figure: p.help?.picture ? figure(p.help.picture, lang) : null, answer: p.correct_answer, format: p.format || 'integer', options: p.options?.map(o => ({value:String(o.value),label:String(o.label ?? o.value),why:o.why})), hints: p.hint_steps || [], operand_key: p.operandKey, visual: p.visual, figure: d.fig })
   },
   sameAnswer: (given, expected) => sameAnswer(given, expected),
   // For tests and debugging: what the tablet would draw for one visual.

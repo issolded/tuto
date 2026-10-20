@@ -17,6 +17,7 @@ import kotlin.math.*
 @Composable fun MathHelp(q: MathQuestion) {
     val s=LocalStrings.current
     val v=q.raw.optJSONObject("source")?.optJSONObject("help") ?: q.visual
+    q.raw.optJSONObject("help_figure")?.optString("svg")?.takeIf { it.isNotBlank() }?.let { SvgFigure(it, Modifier.fillMaxWidth(), 200.dp) }
     if(v==null) { ArithmeticCounters(q); return }
     var touched by remember(q.question) { mutableStateOf<Set<Int>>(emptySet()) }
     var dealt by remember(q.question) { mutableIntStateOf(0) }

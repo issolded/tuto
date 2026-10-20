@@ -77,7 +77,7 @@ export default function PlaceValueHelp({ help, language: lang }) {
   let bubble, chart, below = null
 
   // One column: header, blocks, and the digit the child has built there (or null for none).
-  const column = (place, blocks, digit, { onTap, lit = false, zero = false } = {}) => (
+  const column = (place, blocks, digit, { onTap, lit = false, zero = false, ask = false } = {}) => (
     <div key={place} onClick={onTap} style={{
       width: places.length === 3 ? 86 : 110, borderRadius: 14, background: lit ? '#fff7ef' : 'white',
       border: `2px ${lit ? 'dashed' : 'solid'} ${lit ? ORANGE : '#e4def3'}`, padding: '6px 4px 4px',
@@ -88,7 +88,9 @@ export default function PlaceValueHelp({ help, language: lang }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: place === 1 ? 3 : 4, justifyContent: 'center', alignContent: 'flex-start', width: '100%', maxWidth: place === 1 ? 55 : place === 10 ? 55 : '100%', minHeight: 60 }}>
         {blocks}
       </div>
-      {digit !== false && <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 26, lineHeight: 1, color: zero ? ORANGE : digit == null ? '#d6d0e6' : MATH_DEEP }}>{digit ?? '·'}</div>}
+      {ask
+        ? <div className="math-asking" style={{ fontFamily: FRED, fontWeight: 700, fontSize: 22, lineHeight: 1, color: 'white', background: ORANGE, borderRadius: 999, padding: '3px 12px' }}>?</div>
+        : digit !== false && <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 26, lineHeight: 1, color: zero ? ORANGE : digit == null ? '#d6d0e6' : MATH_DEEP }}>{digit ?? '·'}</div>}
     </div>
   )
   const row = cols => <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>{cols}</div>
@@ -141,6 +143,10 @@ export default function PlaceValueHelp({ help, language: lang }) {
     const full = help.up ? places.find(p => c[p] >= 10) : null
     const broke = !help.up && !acted && c[help.amount] > 0 && c[help.amount] !== digitsOf(help.start, places)[help.amount]
     const done = acted && full == null
+    // Once the move is made the digits that changed are the answer, so they are not printed: the
+    // child counts the blocks and finds them. The rest are the question's own digits.
+    const startDigits = digitsOf(help.start, places)
+    const changed = done ? places.filter(p => c[p] !== startDigits[p]) : []
     const sign = help.up ? '+' : '−'
     const act = () => {
       if (acted || full != null) return
@@ -174,14 +180,22 @@ export default function PlaceValueHelp({ help, language: lang }) {
                     `Şimdi ${c[help.amount]} ${noun(help.amount, lang, false)} var. ${sign}${help.amount} düğmesine dokun.`,
                     `Ahora hay ${c[help.amount]} ${noun(help.amount, lang, false)}. Toca ${sign}${help.amount}.`)
         : done
-        ? say(lang, 'Read the digits under the columns — that is your answer. Type it! 💪', 'Sütunların altındaki rakamları oku — cevabın bu. Yaz! 💪', 'Lee las cifras de debajo de las columnas: esa es tu respuesta. ¡Escríbela! 💪')
+        ? (changed.length === 1
+          ? say(lang, `Count the ${colName(changed[0], lang).toLowerCase()} now — that digit goes where the ? is. Then type the whole number! 💪`,
+                      `Şimdi ${({ 100: 'yüzlükleri', 10: 'onlukları', 1: 'birlikleri' })[changed[0]]} say — o rakam ? olan yere gelir. Sonra sayının tamamını yaz! 💪`,
+                      `Cuenta ahora las ${colName(changed[0], lang).toLowerCase()}: esa cifra va donde está el ?. ¡Luego escribe el número entero! 💪`)
+          : say(lang, 'Count the blocks in each column with a ? — those are the new digits. Then type the whole number! 💪',
+                      '? olan her sütundaki blokları say — yeni rakamlar onlar. Sonra sayının tamamını yaz! 💪',
+                      'Cuenta los bloques de cada columna con ?: son las cifras nuevas. ¡Luego escribe el número entero! 💪'))
         : say(lang, `This is ${help.start}. Tap ${sign}${help.amount} to ${help.up ? 'add' : 'take away'} one ${noun(help.amount, lang)}.`,
                     `Bu ${help.start}. ${sign}${help.amount} düğmesine dokun, bir ${noun(help.amount, lang)} ${help.up ? 'ekle' : 'çıkar'}.`,
                     `Esto es ${help.start}. Toca ${sign}${help.amount} para ${help.up ? 'añadir' : 'quitar'} una ${noun(help.amount, lang)}.`))
     chart = row(places.map(p => column(p,
       // A leading 0 is left blank, as a chart is written: 99 reads 99, not 099.
       Array.from({ length: c[p] }, (_, k) => <Block key={k} place={p} />), c[p] >= 10 ? '10' : (c[p] === 0 && p !== 1 && places.every(q => q < p || c[q] === 0) ? null : c[p]),
-      { onTap: () => tapCol(p), lit: full === p || (!!note && p > help.amount && c[p] > 0) })))
+      { onTap: () => tapCol(p), lit: full === p || (!!note && p > help.amount && c[p] > 0),
+        // A column emptied at the front (100 − 1) stays blank, as the number is written.
+        ask: changed.includes(p) && !(c[p] === 0 && places.every(q => q < p || c[q] === 0)) })))
     below = !acted && (
       <button onClick={act} className="math-press" style={{
         border: 'none', borderRadius: 16, padding: '10px 22px', background: ORANGE, color: 'white',

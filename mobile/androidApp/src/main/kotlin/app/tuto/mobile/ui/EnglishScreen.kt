@@ -151,7 +151,7 @@ internal fun englishPrompt(q: JSONObject, s: Strings): String {
         "not-from-letters", "unscramble" -> v("letters").ifBlank { v("word") }.uppercase()
         "letter-analogy" -> "${v("a")} is to ${v("b")} as ${v("c")} is to ?\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "analogy" -> "${v("a")} is to ${v("A")} as ${v("b")} is to ?"
-        "rhyme-synonym" -> "${v("word")} ${s("eng_rhymes_with")} ${v("rhyme")}"
+        "rhyme-synonym" -> s("eng_rs_means").replace("%w%",v("word").uppercase()) + "\n" + s("eng_rs_rhymes").replace("%w%",v("rhyme").uppercase())
         "pair-meaning" -> s(if (p.optBoolean("opposite")) "eng_pair_most_opposite" else "eng_pair_most_similar")
         "logic-grid" -> arr("lines").joinToString("\n") + "\n" + v("question")
         "letter-sum" -> "${v("table")}\n${v("sum")} = ?"

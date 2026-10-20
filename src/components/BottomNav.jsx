@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { t, childLang } from '../lib/i18n'
+import { haptic } from '../lib/nativeShell'
 
 const ACCENT = '#f79433'
 const INK_SOFT = '#b6aecb'
@@ -39,12 +40,12 @@ export default function BottomNav({ active, fixed = false, maxWidth = 430 }) {
       flexShrink: 0, background: '#fff', borderRadius: '24px 24px 0 0',
       padding: '12px 14px 22px', display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       boxShadow: '0 -6px 20px rgba(40,30,70,.07)',
-      ...(fixed ? { position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth, margin: '0 auto', zIndex: 100 } : {}),
+      ...(fixed ? { position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth, margin: '0 auto', zIndex: 100, viewTransitionName: 'tt-bottom-nav' } : {}),
     }}>
       {NAV_ITEMS.map(({ id, labelKey, route }) => {
         const color = id === active ? ACCENT : INK_SOFT
         return (
-          <button key={id} onClick={() => nav(route)}
+          <button key={id} onClick={() => { haptic('selection'); nav(route) }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px' }}>
             <NavIcon id={id} color={color} />
             <span style={{ fontFamily: FRED, fontWeight: 500, fontSize: 12, color }}>{t(labelKey, lang)}</span>

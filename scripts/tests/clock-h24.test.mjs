@@ -110,10 +110,13 @@ test('missing-factor help: a known fact first, the rest after, and the answer ne
     if (k < 6) { assert.ok(!p.help || p.help.kind === 'fill'); continue }
     seen++
     const st = p.help.steps
-    assert.equal(st.length, 4)
-    assert.equal(st[0].a + st[1].a, total, `${p.operandKey}: ${st.map(s => `${s.q}=${s.a}`)}`)
-    assert.equal(st[2].a * t, st[1].a)
-    assert.equal(st[3].a, k)
+    assert.equal(st.length, 3)
+    // An easy fact (5 × or 10 × where it fits), then a few jumps of t up to the product, then the two added.
+    assert.equal(st[0].a + st[1].a * t, total, `${p.operandKey}: ${st.map(s => `${s.q}=${s.a}`)}`)
+    assert.ok(st[1].a >= 1 && st[1].a <= 5, `${p.operandKey}: ${st[1].a} jumps`)
+    assert.equal(st[1].q.split(' → ').length, st[1].a + 1)
+    assert.doesNotMatch(st[1].q, /÷/)
+    assert.equal(st[2].a, k)
     assert.equal(p.correct_answer, k)
     for (const s of [st[0], st[1]]) assert.notEqual(s.a, k, 'an early line equals the answer')
     // The answer is not stated as a result ("= 10"), whatever else shares the number with the table.

@@ -12,10 +12,12 @@ import { usePhotoCrop } from '../components/usePhotoCrop'
 import { useIsTablet } from '../components/Shell'
 import { generateCurriculumQuestions, evaluateMath, maxQuestionChars } from '../lib/gemini'
 import { generateProblem, SHAPES, isCountable, measureGridCells, dnum, num, FIGURE_KINDS } from '../lib/mathTemplates'
+import { splitAsk } from '../lib/splitAsk'
 import { findBadAnswers, needsWrittenMethod } from '../lib/mathVerify'
 import { numeralise } from '../lib/numerals'
 import { t, say } from '../lib/i18n'
 import { planSession, templateTopicFor, startingLevelForAge, clampLevelToAge, yearLabelForAge } from '../lib/mathCurriculum'
+import { useFeedbackHaptics } from '../lib/nativeShell'
 
 const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.up.railway.app'
 
@@ -356,7 +358,7 @@ function getScoreMsg(pct, age, language) {
 // would put a decimal point in front of a five-year-old counting apples.
 // The point key is labelled the way the question prints its decimals — a comma in Turkish and
 // Spanish — but what it types is always a point, so the answer is still read as a number.
-function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false, language = 'en' }) {
+function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = false, language = 'en', size = 70, maxLength = 7 }) {
   const ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], allowDecimal ? ['⌫','0','.','✓'] : ['⌫','0','✓']]
   return (
     <div className="math-keys" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
@@ -382,12 +384,12 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
                   else if (isBack) onChange(v => v.slice(0, -1))
                   // One point only, and never as the first character.
                   else if (key === '.') { if (value.length && !value.includes('.')) onChange(v => v + '.') }
-                  else if (value.length < 7) onChange(v => v + key)
+                  else if (value.length < maxLength) onChange(v => v + key)
                 }}
                 style={{
-                  width: row.length > 3 ? 62 : 70, height: row.length > 3 ? 62 : 70, borderRadius: '50%', border: 'none',
+                  width: row.length > 3 ? size - 8 : size, height: row.length > 3 ? size - 8 : size, borderRadius: '50%', border: 'none',
                   background: bg, color: '#fff',
-                  fontSize: isSubmit || isBack ? 24 : 27,
+                  fontSize: Math.round((isSubmit || isBack ? 24 : 27) * size / 70),
                   fontFamily: FRED, fontWeight: 600,
                   cursor: disabled ? 'default' : 'pointer',
                   opacity: disabled ? 0.45 : 1,
@@ -399,6 +401,22 @@ function NumberKeyboard({ value, onChange, onSubmit, disabled, allowDecimal = fa
           })}
         </div>
       ))}
+    </div>
+  )
+}
+
+// The keypad of the step-by-step helpers: the answer keyboard the child has just used, a size
+// down, under a box framed in the same orange as the "?" it fills — so it is plain which jump
+// the number goes to. (It was a 36px grid of its own, too small for a seven-year-old's finger.)
+function ArrowKeypad({ value, setValue, onOk, maxLength = 5 }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+      <div style={{
+        fontFamily: FRED, fontSize: 26, fontWeight: 700, color: value ? INK : ORANGE,
+        background: '#fff', border: `3px solid ${ORANGE}`, borderRadius: 14,
+        padding: '4px 22px', minWidth: 64, textAlign: 'center', boxSizing: 'border-box',
+      }}>{value || '?'}</div>
+      <NumberKeyboard value={value} onChange={setValue} onSubmit={() => { if (value) onOk(value) }} size={60} maxLength={maxLength} />
     </div>
   )
 }
@@ -426,6 +444,18 @@ const FRACTION_RE = /(\d{1,3})\/(\d{1,3})/g
 // Strict on purpose: no digit or slash may touch either side, so a division written "8 / 2"
 // and a stray "1/2/3" are left exactly as they are. Division questions use ÷ anyway, which is
 // what makes a bare slash safe to read as a fraction at all.
+// The question card: what we know, then on its own line what is asked (`splitAsk`).
+export function QuestionText({ text }) {
+  const [info, ask] = splitAsk(text)
+  if (ask === undefined) return <MathText text={text} />
+  return (
+    <>
+      <span style={{ display: 'block' }}><MathText text={info} /></span>
+      <span style={{ display: 'block', marginTop: '0.45em' }}><MathText text={ask} /></span>
+    </>
+  )
+}
+
 function MathText({ text }) {
   if (typeof text !== 'string' || !text.includes('/')) return text ?? null
   const parts = []
@@ -1277,23 +1307,8 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           })}
         </div>
         {active !== null && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
-            {['1','2','3','4','5','6','7','8','9','0', ...(decimal ? ['.'] : []), '⌫','✓'].map(k => (
-              <button key={k} className="math-press"
-                onClick={() => {
-                  if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
-                  if (k === '✓') { confirm(); return }
-                  if (k === '.' && arrowInput.includes('.')) return
-                  if (arrowInput.length < 9) setArrowInput(v => v + k)
-                }}
-                style={{
-                  width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                  fontFamily: FRED, fontWeight: 600, fontSize: 15,
-                  background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
-                  color: k === '✓' || k === '⌫' ? 'white' : INK,
-                }}>{k === '.' && language !== 'en' ? ',' : k}</button>
-            ))}
-          </div>
+          <NumberKeyboard value={arrowInput} onChange={setArrowInput} onSubmit={confirm} allowDecimal={decimal}
+            language={language} size={60} maxLength={9} />
         )}
       </div>
     )
@@ -1526,12 +1541,12 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           background: 'rgba(90,169,230,.1)', borderRadius: 14, padding: '8px 14px',
           textAlign: 'center', maxWidth: 290,
         }}>
-          {tutoBubble || t.addJumpsTap}
+          {tutoBubble || jumps.intro || t.addJumpsTap}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 4, maxWidth: 330 }}>
           {stops.map((n, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{
+              <div className={i === nextI ? 'math-asking' : undefined} style={{
                 minWidth: 44, height: 44, padding: '0 9px', borderRadius: 13, boxSizing: 'border-box',
                 background: i === 0 || found(i) ? MATH : 'transparent', color: i === 0 || found(i) ? 'white' : ORANGE,
                 border: i === 0 || found(i) ? 'none' : `3px dashed ${i === nextI ? ORANGE : '#d9d2ee'}`,
@@ -1550,28 +1565,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
           ))}
         </div>
         {nextI !== undefined && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
-            <div style={{
-              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
-              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
-            }}>{arrowInput || '?'}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
-              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
-                <button key={k} className="math-press"
-                  onClick={() => {
-                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
-                    if (k === '✓') { if (arrowInput) confirm(arrowInput); return }
-                    if (arrowInput.length < 5) setArrowInput(v => v + k)
-                  }}
-                  style={{
-                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
-                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
-                    color: k === '✓' || k === '⌫' ? 'white' : INK,
-                  }}>{k}</button>
-              ))}
-            </div>
-          </div>
+          <ArrowKeypad value={arrowInput} setValue={setArrowInput} onOk={confirm} />
         )}
       </div>
     )
@@ -1645,40 +1639,26 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                   display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, padding: '4px 2px',
                   cursor: solvedArrows[i] !== undefined ? 'default' : 'pointer', userSelect: 'none',
                 }}>
-                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1,
-                    color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE }}>
-                    {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}${timed ? ` ${minWord}` : ''}` : '?'}
-                  </span>
+                  {solvedArrows[i] === undefined && activeArrow === i ? (
+                    <span className="math-asking" style={{
+                      fontFamily: FRED, fontWeight: 700, fontSize: 16, lineHeight: 1, color: 'white',
+                      background: ORANGE, borderRadius: 999, padding: '4px 10px',
+                    }}>?</span>
+                  ) : (
+                    <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1, padding: '4px 0',
+                      color: solvedArrows[i] !== undefined ? GREEN : activeArrow === null ? ORANGE : INK_SOFT }}>
+                      {solvedArrows[i] !== undefined ? `+${N(solvedArrows[i])}${timed ? ` ${minWord}` : ''}` : '?'}
+                    </span>
+                  )}
                   <span style={{ fontSize: 24, lineHeight: 1,
-                    color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : INK_SOFT }}>⤻</span>
+                    color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? ORANGE : INK_SOFT }}>⤻</span>
                 </div>
               )}
             </div>
           ))}
         </div>
         {activeArrow !== null && !allSolved && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
-            <div style={{
-              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
-              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
-            }}>{arrowInput || '?'}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
-              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
-                <button key={k} className="math-press"
-                  onClick={() => {
-                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
-                    if (k === '✓') { if (arrowInput) confirm(activeArrow, arrowInput); return }
-                    if (arrowInput.length < 5) setArrowInput(v => v + k)
-                  }}
-                  style={{
-                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
-                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
-                    color: k === '✓' || k === '⌫' ? 'white' : INK,
-                  }}>{k}</button>
-              ))}
-            </div>
-          </div>
+          <ArrowKeypad value={arrowInput} setValue={setArrowInput} onOk={(v) => confirm(activeArrow, v)} />
         )}
       </div>
     )
@@ -1822,12 +1802,19 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
                   userSelect: 'none',
                 }}
               >
-                <span style={{
-                  fontFamily: FRED, fontWeight: 700, fontSize: 11, lineHeight: 1,
-                  color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : ORANGE,
-                }}>
-                  {solvedArrows[i] !== undefined ? stepLabel(solvedArrows[i]) : '?'}
-                </span>
+                {solvedArrows[i] === undefined && activeArrow === i ? (
+                  <span className="math-asking" style={{
+                    fontFamily: FRED, fontWeight: 700, fontSize: 14, lineHeight: 1, color: 'white',
+                    background: ORANGE, borderRadius: 999, padding: '3px 9px',
+                  }}>?</span>
+                ) : (
+                  <span style={{
+                    fontFamily: FRED, fontWeight: 700, fontSize: 11, lineHeight: 1,
+                    color: solvedArrows[i] !== undefined ? GREEN : activeArrow === null ? ORANGE : INK_SOFT,
+                  }}>
+                    {solvedArrows[i] !== undefined ? stepLabel(solvedArrows[i]) : '?'}
+                  </span>
+                )}
                 <span style={{
                   fontSize: 15, lineHeight: 1,
                   color: solvedArrows[i] !== undefined ? GREEN : activeArrow === i ? MATH : INK_SOFT,
@@ -1845,34 +1832,7 @@ export function HelpPanel({ question, questionType, templateTopic, hintSteps, vi
         </div>
 
         {activeArrow !== null && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center' }}>
-            <div style={{
-              fontFamily: FRED, fontSize: 24, fontWeight: 700, color: INK,
-              background: '#f0edf8', borderRadius: 12, padding: '5px 20px', minWidth: 56, textAlign: 'center',
-            }}>
-              {arrowInput || '?'}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 216 }}>
-              {['1','2','3','4','5','6','7','8','9','0','⌫','✓'].map(k => (
-                <button
-                  key={k}
-                  className="math-press"
-                  onClick={() => {
-                    if (k === '⌫') { setArrowInput(v => v.slice(0, -1)); return }
-                    if (k === '✓') { if (arrowInput) confirmArrow(activeArrow, arrowInput); return }
-                    if (arrowInput.length < 2) setArrowInput(v => v + k)
-                  }}
-                  style={{
-                    width: k === '✓' || k === '⌫' ? 48 : 36, height: 36,
-                    borderRadius: 10, border: 'none', cursor: 'pointer',
-                    fontFamily: FRED, fontWeight: 600, fontSize: 15,
-                    background: k === '✓' ? GREEN : k === '⌫' ? ORANGE : '#e8e4f5',
-                    color: k === '✓' || k === '⌫' ? 'white' : INK,
-                  }}
-                >{k}</button>
-              ))}
-            </div>
-          </div>
+          <ArrowKeypad value={arrowInput} setValue={setArrowInput} onOk={(v) => confirmArrow(activeArrow, v)} maxLength={2} />
         )}
       </div>
     )
@@ -2243,6 +2203,7 @@ export default function MathScreen() {
   const [input,         setInput]        = useState('')
   const [flash,         setFlash]        = useState(null)        // { correct, answer }
   const [evalResult,    setEvalResult]   = useState(savedResult?.evalResult ?? null)
+  useFeedbackHaptics(flash, evalResult?.gems_earned)
   const [retrying,      setRetrying]     = useState(false)
   const [leveledUp,     setLeveledUp]    = useState(false)
   const [helpUsed,      setHelpUsed]     = useState(saved?.helpUsed ?? false)
@@ -2586,6 +2547,8 @@ export default function MathScreen() {
         const lvl = clampLevelToAge(plan?.level, age)
         const w = {
           focusTopicId: plan?.focus?.topic_id ?? null,
+          // Topics the parent left out for now; the server has already taken them out of the other lists.
+          skipTopicIds: Array.isArray(plan?.skip_topic_ids) ? plan.skip_topic_ids : [],
           // Skills left over from a review the child did not take come first: they were just shown to
           // have gone wrong, and the weak list is the longer memory behind them.
           weakTopicIds: [...new Set([
@@ -2602,9 +2565,9 @@ export default function MathScreen() {
         setLevel(lvl)
         setWeighting(w)
         // Replaced only if the plan says something the guess did not: another rung, a focus
-        // topic, or a weakness to lean towards. Usually it does not, and the session already
+        // topic, a topic to leave out, or a weakness to lean towards. Usually it does not, and the session already
         // waiting is the one that gets played.
-        const sameAsGuess = lvl === guess && !w.focusTopicId && w.weakTopicIds.length === 0
+        const sameAsGuess = lvl === guess && !w.focusTopicId && w.weakTopicIds.length === 0 && w.skipTopicIds.length === 0
         if (!resuming && !sameAsGuess) startPrefetch(lvl, w, true)
       } catch (e) {
         // A session with no weighting is still a good session; one that will not start is not.
@@ -3324,7 +3287,7 @@ export default function MathScreen() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 17 : 22, color: INK, lineHeight: 1.5 }}>
-                  <MathText text={q} />
+                  <QuestionText text={q} />
                 </div>
                 <QuestionPicture visual={templateProblems[i]?.visual} language={language} description={q} />
                 {/* Paper mode had no hints at all: the child on screen could ask for a nudge and
@@ -3610,7 +3573,7 @@ export default function MathScreen() {
                   <Pictogram unit={questionPicto.unit} each={questionPicto.each} rows={questionPicto.rows} />
                 )}
                 <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: isWord ? 18 : (questionShapes || questionCount || questionClock || questionPicto || qVisual?.kind === 'geometry' || qVisual?.kind === 'chart' || FIGURE_KINDS.has(qVisual?.kind) ? 20 : 32), color: INK, lineHeight: 1.55 }}>
-                  <MathText text={q} />
+                  <QuestionText text={q} />
                 </div>
               </div>
 

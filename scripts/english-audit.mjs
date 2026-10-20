@@ -218,13 +218,17 @@ for (const bandKey of BAND_KEYS) {
   // ── sittings ────────────────────────────────────────────────────────────────────────────
   let short = 0
   let repeated = 0
+  let sameKind = 0
   for (let i = 0; i < 200; i++) {
     const session = generateSession(bandKey, 10, 1000 + i * 7919, { variety })
     if (session.length < 10) short++
     const sigs = new Set(session.map(itemSignature))
     if (sigs.size !== session.length) repeated++
+    // Every band has at least ten kinds, so a sitting never needs one twice.
+    if (new Set(session.map(q => q.type)).size !== session.length) sameKind++
   }
-  console.log(`  200 sittings: ${short} short, ${repeated} with a repeat`)
+  console.log(`  200 sittings: ${short} short, ${repeated} with a repeat, ${sameKind} with a kind twice`)
+  if (sameKind) fail(`${bandKey}: ${sameKind} sittings asked the same kind twice`)
   if (short) fail(`${bandKey}: ${short} sittings could not reach 10 questions`)
   if (repeated) fail(`${bandKey}: ${repeated} sittings repeated a question`)
 

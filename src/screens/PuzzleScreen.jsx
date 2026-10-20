@@ -6,6 +6,7 @@ import { useIsTablet } from '../components/Shell'
 import { Figure, Prompt, CodeChip } from '../components/PuzzleView'
 import { PuzzleReviewList } from '../components/SittingReview'
 import { ensureIconFont } from '../lib/puzzleIcons'
+import { useFeedbackHaptics } from '../lib/nativeShell'
 
 // The child's shape & pattern puzzles (NVR). Ten questions from the child's age band, one at a
 // time, each marked the moment it is answered.
@@ -96,6 +97,7 @@ export default function PuzzleScreen() {
   const [flash, setFlash] = useState(null)        // { correct, correct_index } while the overlay is up
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [result, setResult] = useState(null)
+  useFeedbackHaptics(flash, result?.gems_earned)
   // Help for the question on screen: the hints asked for so far (built by the server when asked, never sent with
   // the question) and the options out of play, by a hint or by a first wrong try.
   const [rungs, setRungs] = useState([])

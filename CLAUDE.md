@@ -55,6 +55,17 @@ yaşıyor (Ebeveyn İletişim Mimarisi). Özet kurallar:
 - Gem/submission yazan endpoint'ler **sunucu tarafı doğrulama** yapmadan yazmasın.
 - `.env` ve auth dosyaları repoya girmesin; sırları repoya sokma.
 
+## Native (Android) ile ilişki — backend/web değişikliği native'i nasıl etkiler
+
+Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, karıştırma:**
+- **Sunucuda yaşayan her şey kendiliğinden native'e de geçer:** endpoint'ler, kurallar/kapılar, sohbet araçları, DB. Yeni *alan eklemek* native'i kırmaz (okunmazsa yok sayılır),
+  ama okunmadığı sürece **o alanın istemci tarafı etkisi native'de yoktur**.
+- **`src/lib` altındaki istemci mantığı native'e kendiliğinden GEÇMEZ:** native matematik motorunu Kotlin'de yazmıyor, `mobile/engine` ile web'in `src/lib` motorunu
+  (şablonlar, ipuçları/yardım, `planSession`, bulmaca çizimi) QuickJS içinde paketlenmiş bir kopya olarak çalıştırıyor (`assets/engine/math.js`). Paket yeniden derlenene kadar
+  eski mantık çalışır. Kotlin tarafında `MathPlan`/`weighting` gibi sözleşme modelleri de elle eşleniyor.
+- Bu yüzden `src/lib` mantığına ya da `/math-plan`, `/english-*`, `/puzzle-*` gibi istemcinin okuduğu yanıtların şekline dokunan iş, CLAUDE.md kaydına **"Native etkisi"** satırı yazar:
+  paket yeniden derlenmeli mi, Kotlin modeline alan eklenmeli mi.
+
 ## Sabit kararlar (tekrar önerme)
 
 - **Kitap okuma alanı** (2026-10-04): okuyucu telefon sütununa sabitlenmez; portal ile
@@ -128,6 +139,64 @@ bunların tamamlandığı anlamına gelmez.
 
 ## Açık işler / yol haritası
 
+- [ ] iOS kabuğu (2026-10-07, Claude; `claude/ios-shell`, kullanıcı kararı: iOS'ta native arayüz değil kabuk).
+      `mobile/iosShell`: iPhone + iPad, WKWebView canlı siteyi (`tuto-blue.vercel.app`) yükler. **Kural:** Vercel/Railway ile çıkan her şey
+      (ekranlar, sorular, `src/lib` motoru, yeni modül) uygulamaya release'siz gider; yalnız bu klasördeki değişiklik (Ekran Süresi, izin, ikon,
+      bildirim) App Store release ister. Android'den farklı: orada `src/lib` APK'da paketli. Kabuk: güvenli alan, oturum kalıcı, zoom/link önizleme/geri
+      kaydırma kapalı, dış linkler dışarıda, alert/confirm, çevrimdışı ekranı (ağ gelince kendiliğinden yeniler), kamera izni EN/TR/ES, UA'da
+      `TutoShell/<sürüm>` (`src/lib/nativeShell.js`). **Google girişi:** gömülü görünümde Google reddeder → kabukta `redirectTo`
+      `app.tuto.mobile://auth/<yol>`, kabuk `/auth/v1/authorize`'ı `ASWebAuthenticationSession`'da açar. **Supabase'de bir kez:** Redirect URLs'e
+      `app.tuto.mobile://**` (yoksa Google girişi kabukta tamamlanmaz; e-posta girişi etkilenmez). Proje XcodeGen'le üretilir (`project.yml`), bundle
+      ID `app.tuto.mobile`. Simülatörde iPhone/iPad çalıştı. İkon ve açılış mor `TutoMascot`; açılış `design_handoff_app_opening` seçenek D
+      (lila zemin, maskot + "tuto" yan yana, maskot yaylanarak düşer, yazı belirir; launch screen bilerek yalnız lila — animasyon boştan başladığı
+      için lockup orada olsa göz kırpardı). **TestFlight:** App Store Connect "Tuto: Learn & Earn", 1.0 (1) ve (2) yüklendi; yükleme
+      `mobile/iosShell/upload-testflight.sh` (bireysel hesap, kayıtlı cihaz yok → imzasız arşiv + yerel Apple Distribution sertifikasıyla export).
+      Gökhan App Store Connect ekibine davet edildi (ilk gün form kilitliydi, ertesi gün açıldı) → dahili test, inceleme yok. Sıradaki: Family
+      Controls entitlement başvurusu (dağıtım onayı haftalar sürebilir), App Store öncesi Sign in with Apple (4.8). Service worker yok (çevrimiçi).
+
+- [ ] Matematikte atlanan konular (2026-10-06, Claude; kullanıcı kararı). **Tuto öğretici değil asesör:** ebeveyn seviyeyi elle düşüremez/çıkaramaz
+      (ölçümü bozar); ama "okulda henüz işlenmedi, bir süre sorma" diyebilir (kapsamı tanımlar). `children.math_skip` (jsonb), **4 hafta varsayılan, en çok 12,
+      aynı anda en çok 3 konu**, kendiliğinden biter (`server/mathSkip.js`). Seviye ve doğruluk hesabına dokunmaz. Süzme tek yerde: `/math-plan` `skip_topic_ids`
+      döner ve zayıf/pekiştirme/odak listelerinden de çıkarır; `planSession` kalan <3 konu olacaksa yoksayar. `set_math_skip` sohbet aracı (uygulama "Tuto'ya Sor"
+      kanalı dahil; konu id'leri `mathCurriculumTopics`, atlananlar `mathSkipped` bağlamda), çocuk sayfasında "Matematikte atlanan konular" kartı
+      (`GET/POST /api/parent/children/:id/math-skip`, ebeveyn JWT). Sistem istemine kural: "zorlanıyor/seviyeyi düşür" denince önce "bu konu işlendi mi?" sorulur,
+      "ara ver" ilk öneri olmaz. Odak ile atlama çakışmaz (atlama odağı temizler, atlanan konuya odak verilmez). **Migration önce:** `server/migrations/2026-10-06_math_skip.sql`;
+      yokken hiçbir şey atlanmaz (`readMathSkip` hatayı yutar), yazma "şu an kaydedilemedi" der. Test: `scripts/tests/math-skip.test.mjs`; harness'te (gerçek `index.js`,
+      sahte Supabase) panel uçları + `math-plan` + sohbet bağlamı uçtan uca. **Açık:** gerçek Gemini ile `set_math_skip` çağrısı ve ebeveyn panelinin tarayıcıda görünüşü
+      denenmedi (panel derlemede ve lint'te temiz; gerçek giriş gerektiriyor); atlanan konu İngilizce/NVR için yok; 12 haftadan uzunu bilerek yok.
+      **Native etkisi (Android, `codex/android-complete`):** sunucu tarafı (kurallar, uçlar, sohbet aracı, `/math-plan` filtreleri) native'e kendiliğinden ulaşır; ama native
+      oturumu `src/lib` motoruyla kendisi kurar (aşağıya bak) ve `MathPlan`/`weighting` yalnız `focus` + `weak_topic_ids` taşıyor, `skip_topic_ids`'i bilmiyor →
+      **native'de atlanan konu rotasyonda hâlâ çıkar** (zayıf/odak/pekiştirme listeleri sunucuda süzüldüğü için onlardan çıkmaz). Yapılacak: `Models.kt` `MathPlan`'a
+      `skipTopicIds`, `MathEngine.kt` `weighting`'e `skipTopicIds` (ve `mobile/engine` paketinin yeniden derlenmesi, çünkü `planSession` filtresi paketin içinde).
+      **Bitmeden hatırlatma (2026-10-16, Claude):** bitişten 2 gün önce ebeveyne bir kez sabit metin (`reminderText`, EN/TR/ES, `say()`): "N hafta önce X'i
+      çıkarmıştık, <tarih>'te geri geliyor; geri ekleyeyim mi, bir süre daha mı? Cevap gelmezse <tarih>'te planlandığı gibi geri gelir." `remindEndingMathSkips`
+      15 dk'da bir; yalnız ebeveynin saatiyle 09–20, kayıt girdinin içinde `reminded_at` (migration yok; listeye compare-and-swap, yazma ÖNCE, mesaj sonra →
+      kanal düşerse o mesaj kaybolur ama transkriptte durur, tekrar gitmez). Mesaj `sendNotification` ile transkripte girer, cevap mevcut `set_math_skip`'le
+      (uzat = aynı topic_id + weeks, geri ekle = `resume`); uzatma yeni girdi yazar, yeni bitiş yeni hatırlatma alır. **Gate kararı:** yeni tür `reminder` her
+      `notify_level`'dan geçer (autopilot mesajıyla aynı gerekçe: "quiet" = olanı anlatma demek, ayarımı sormadan değiştir demek değil); sessiz saatler ve
+      otomatik pilot tutar ama süpürme girdiyi işaretlemez, sonra tekrar dener (genel kapı tutulan mesajı düşürür, bu düşürmez). WhatsApp şablonu `activity`.
+      **12 hafta artık toplam:** `since` (ilk çıkarılış) uzatmalarda korunur, uzatma `since + 12 hafta`yı geçemez (kırpılırsa `shortened_to_max`, zaten tavandaysa
+      `at_max`); tavana bir haftadan az kaldıysa hatırlatma uzatma önermez. Eskiden her uzatma sayacı sıfırlıyordu (sonsuz uzatılabilirdi). Test: `math-skip.test.mjs`
+      (19), harness'te `server/scripts/math-skip-reminder.mjs` (quiet ebeveyn, gece/sessiz saat/otomatik pilot tutması, transkript, tavan ES, araç), `chat-probe`
+      gerçek modelle (`--prior-tuto`, `--overlay`, `--expect-tool` eklendi): "bir süre daha kalsın"/"uzat" 6/6 `weeks:4`, "geri ekle"/"işlendi, geri ekle" 6/6
+      `resume:true`, tavanda uzatılamadığını söylüyor. Gerçek Telegram'da gönderilmedi. **Native etkisi:** yok — sunucu süpürmesi ve sohbet; istemcinin okuduğu
+      `skip_topic_ids` değişmedi (`describeSkips`'e `since`/`latest_until` alanı eklendi, okumayan yok sayar).
+- [x] "N'er say, sırada ne var" yardımı oklu (2026-10-13, Claude; kullanıcı bulgusu). `placeCountInMultiples` (400, 500, 600, 700, …) yardımda yalnız
+      iki ipucu cümlesi gösteriyordu. Artık toplama ile aynı `jumps` `mode: 'add'` oku: son iki terim + cevap, her ok +adım; çocuk önce sorudaki
+      sayıya (kural tutuyor mu), sonra cevaba zıplar. Giriş cümlesi yardımın kendi `intro`'su ("Her zıplama +100…"), yoksa eski `addJumpsTap`.
+      **Native etkisi:** `mathTemplates.js` paketli → `mobile/engine` yeniden derlenmeli; native yardım ekranı `jumps.intro`'yu okumuyorsa eski cümleyi gösterir.
+- [x] Eksik çarpan yardımı doğrudan (2026-10-13, Claude; kullanıcı bulgusu). "? × 8 = 48" yardımı 3 × 8'den başlıyor, kalanı `24 ÷ 8` ile
+      buluyordu: çapa "bildiğin işlem" değildi ve öğretilen bölmeyi kullanıyordu. Artık 3 adım: kolay çapa (5 × ya da 10 ×; en çok 5 zıplama
+      kalacak şekilde, çarpımı cevaba eşit olmayan), t'şer ileri sayma (`40 → 48`, zıplama sayısı), topla. İpucu aynı yolu söyler. TR "8'ları" eki kalktı.
+      Test `clock-h24.test.mjs`, math:check temiz. **Native etkisi:** `mathTemplates.js` native pakette; `mobile/engine` yeniden derlenmeli.
+- [x] Saat "başladı/bitirir" ipucu (2026-10-13, Claude; kullanıcı bulgusu). 08:00'da biten 43 dk'lık ders için ipucu "önce tam saate geri say" diyordu — zaten tam saat.
+      İpucu artık yardımın üç durumunu izliyor: dakikalar saatin içinde kalıyorsa "saat değişmez, yalnız dakikalar", tam saatten geri gidiliyorsa
+      "zaten tam saat, bir önceki saate geçersin; 60 − n", yalnız gerçekten tam saat aşılıyorsa eski iki adım. math:check temiz.
+      **Native etkisi:** `mathTemplates.js` native pakette; `mobile/engine` yeniden derlenene kadar native eski ipucunu gösterir.
+- [x] Boşluk sorularında yardım ile ipucu aynı yöntemi öğretir (2026-10-06, Claude). 760 − ? = 353: ipucu "350'yi çıkar, sonra 3" derken yardım 4 zıplama
+      gösteriyordu. `roundAdjustPoint` koşulu ikisinde ortak, yardım `gapRoundChain` (iki adım) kullanıyor; yuvarlağa yakın değilse zıplama ikisinde de kalır.
+      **Native etkisi:** `mathTemplates.js` native pakette (`assets/engine/math.js`) olduğu için bu düzeltme native'e ancak `mobile/engine` yeniden derlenince girer.
+
 - [x] Astra'nın İngilizce/NVR/PIN incelemesi (2026-10-04, Claude; `e15821e` üzerinde). Düzeltilenler: **NVR'a "Bilmiyorum"** (sıfır gem, cevap + açıklama; İngilizcedeki gibi, yalnız hiçbir şık seçili değilken);
       **NVR ipucu 2'de çizilen şıkkın sebebi** (`reasonFor`: şıkın `why`'ı + türün anlamı — "farklı olan"da şık özelliği paylaşır, "ait olan"da paylaşmaz; glyph/icon aileleri için tür bazlı sebep);
       glyph-odd 3. basamak "ne işe yarar/nerede yaşar" kalktı (meyve/bitki sorusunu yanlış eksene götürüyordu); TR "farklı bak" dilbilgisi; kelime merdiveni "↓ 1 letter" etiketi çevrildi;
@@ -149,6 +218,30 @@ bunların tamamlandığı anlamına gelmez.
       `src/components/EnglishHelpVisual.jsx`. Denetim: açık resim cevabı taşımıyor, dolu resim cevabı yazıyor (`english-help-audit`). Tarayıcıda 390px.
       **Sıradaki fikir (kullanıcı):** kapalı küme "ölçek kartı" (north→south için dört yön, "?" karşıda; günler, mevsimler, aylar, büyüklük/sıcaklık
       ölçekleri) — elle yazılmış küçük bir tablo ister (antonimlerin çoğu kapalı küme değil), kapsam tahminen %5-15.
+- [x] Matematik yardımı, kullanıcı ekran görüntülerinden (2026-10-15, Claude). **(1) Büyük tuşlar:** yardımların dört ayrı 36px tuş ızgarası
+      vardı (zıplama, "katlarla say", adım adım, dizi okları); hepsi artık ana cevap klavyesinin kendisi, bir boy küçük (60px, `NumberKeyboard size`).
+      **(2) Hangi "?":** sorulan "?" turuncu hap içinde titrer (`.math-asking`, Hareketi Azalt'ta durur), cevap kutusu aynı turuncu çerçevede,
+      sırası gelmeyenler gri. **(3) İki sayı arasında ":" yok:** Türkiye'de ":" bölme işareti; "25 groups of 8: 25 × 8" 8 ÷ 25 gibi okunuyordu.
+      Aynı şeyin iki söylenişi "=", sayma listesi "→", sebep kelimeyle (Venn/Carroll TR "12 sayısı 5'ten büyük değil…"). Oranlar ("x : 4") kaldı.
+      `scripts/math-colon-check.mjs` `math:check` içinde. **(4) Basamak yardımı cevabı yazmıyordu artık:** +10/−1 sonrası değişen sütunun rakamı
+      turuncu "?" (`PlaceValueHelp` shift), çocuk blokları sayar; elde/bozma ara adımındaki "10" kalır. **(5) Bilgi ve soru ayrı paragraf:** soru
+      kartında (ekran + kâğıt) metnin sonundaki soru cümlesi alt satıra iner (`src/lib/splitAsk.js`, yalnız gösterim; ondalık ve "Mr." bölünmez;
+      test `split-ask.test.mjs`); ~%45 soru bölünüyor. **(6) Açı bilgisi yardımı:** dik açının yarısı / dik açı kaç derece / tam tur kaç derece /
+      tam ve yarım tur kaç dik açı sorularında yardım ipucunu tekrarlıyordu; artık `sectors` çizimi (açı eşit parçalara bölünmüş, her 90° parçada ayrı
+      dik açı karesi) + çocuğun yazdığı zincir (90 ÷ 2; 360 ÷ 2 → 180 ÷ 2; 90 + 90 → 180 + 180; kareleri say). **(7) Kolay olanla say:** çarpma
+      hikâyesinde grup sayısı 10/5/2 ise ipucu yer değiştirir ("10 × 8 = 8 × 10: 10'ar 10'ar 8 kez say").
+      Tarayıcıda lab'da 375px (+ yatay iPad 1180×820 klavye); gerçek MathScreen oturumunda oynanmadı (soru kartı bölmesi bileşen olarak çizildi).
+      **Native etkisi:** (3)(6)(7) `mathTemplates.js`'te → Android/iOS motor paketleri yeniden derlenmeli; `sectors` çizimi web `MathFigure`'da, native
+      yardım panelleri (iOS `HelpPanel.swift`, Android) onu, büyük tuşları, titreyen "?"yi, basamak "?"sini ve bilgi/soru bölmesini ayrıca ister.
+- [x] Sohbetten görev gizleme/açma (2026-10-16, Claude; kullanıcı kararı). `update_task_reward` `active` artık her görev tipinde
+      (önceden yalnız bonus): "İngilizce görevini şimdilik gizle" → `active: false` (kart, oturum, gem yok; geçmiş kalır), tekrar
+      açılınca aynı ayarlar döner. Sayı gerekmez; gem/sınır değişikliğine karışmaz. Sohbet bağlamında `taskRewards` kapalı görevi
+      "SWITCHED OFF" diye gösterir. Kapanan görev bonustan da düşer (`bonusSettings` zaten süzüyordu); bonus tek etkinliğe ya da sıfıra
+      inerse sonuç `bonusNote` ile ebeveyne söyletir. Gerekçe: temel düzeyde zorlanan çocuk için ebeveyne "İngilizce görevini geçici
+      olarak gizleyebilirim, bana söylemen yeterli" mesajı (bkz. `docs/ENGLISH-SKILL-LADDERS.md`, Codex'in branch'inde). Ekranda
+      kapatma Görev Ayarları'nda zaten vardı. Doğrulama: chat-probe (gerçek model, yazma duvarı) TR gizleme 3/3 doğru çağrı,
+      belirsiz "bunu kaldıralım" hiçbir şeyi kapatmadı, "matematiği 40 gem yap" `active` göndermedi; testler 137/137.
+      **Native etkisi:** yok (sunucu aracı; native kartı aynı `task_settings`'ten okuyor).
 - [ ] Uygulamada hikâye yazma (2026-10-02, Codex): yerel geliştirme hazır. Otomatik kayıt,
       cihazda kurtarma kopyası, birden fazla taslak, kütüphaneden devam, sürüm çakışması koruması.
       Değerlendirme sunucuda; taslakta Gem yok, ilk tamamlamada mevcut ödül akışı.
@@ -1228,3 +1321,6 @@ API26/27 and decode failure use a matching transparent poster. No runtime genera
 white video rectangle. Nine actual completed records/page; narrow devices pan the room.
 Version 13/0.10.0-paper-library. Verification pending. No backend/web deployment or data
 migration; persistent cross-device award ledger remains outside this UI change.
+
+### 2026-10-20 Android device screen time
+User prioritized real Android app usage measurement/enforcement and parent daily/weekly/monthly dashboard, plus all main changes missing in Android. Working branch codex/android-screen-time merges main 18e2f57 into Android 78ba7e5. New screen_devices/screen_policies/screen_usage require migration 2026-10-20_device_screen_time.sql (user runs DB changes). Parent-owned short-lived pairing, separate encrypted device token, offline local rules, UsageEvents + Accessibility shielding, native/web parent reporting. Existing screen_control_web demo/Gem tools are separate and must not claim to control this device policy. Precise setup, implemented behavior and unverified limits: mobile/SCREEN_TIME_2026-10-20.md. Not deployed or physically validated yet.
