@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+export { usageTotals } from '../../server/screenUsageReport.js'
 const SERVER=import.meta.env.VITE_SERVER_URL||'https://tuto-production-d1db.up.railway.app'
 export async function deviceScreenCall(childId,suffix='',method='GET',body) {
  const {data:{session}}=await supabase.auth.getSession()
@@ -14,9 +15,4 @@ export function reportRange(day,period) {
  if(period==='week')d.setUTCDate(d.getUTCDate()+6)
  if(period==='month'){d.setUTCMonth(d.getUTCMonth()+1);d.setUTCDate(0)}
  return {from,to:d.toISOString().slice(0,10)}
-}
-export function usageTotals(rows) {
- const apps={},days={}
- for(const r of rows){const a=apps[r.package] ||= {label:r.label,seconds:0};a.seconds+=r.seconds;days[r.day]=(days[r.day]||0)+r.seconds}
- return {apps:Object.entries(apps).sort((a,b)=>b[1].seconds-a[1].seconds),days,total:Object.values(days).reduce((a,b)=>a+b,0)}
 }

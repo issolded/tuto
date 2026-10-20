@@ -1327,3 +1327,26 @@ User prioritized real Android app usage measurement/enforcement and parent daily
 
 
 Android screen-time validation complete (20 October 2026): tested source 4b78cf8, CI39378994905 passed all three jobs: 28 JVM tests and 27/27 tests each on standard and 16 KiB API35 tablets, plus APK signature/alignment. APK 0.11.0 is 23,772,603 bytes. Web build, 151 Node tests and six synthetic browser scenarios passed. Canonical delivery evidence and remaining activation gates: ANDROID_SCREEN_TIME_DELIVERY.md (supersedes earlier pending test notes). User-run SQL migration and infrastructure deployment are still required; no live family writes or messages. PR #27 contains all changes; not merged/deployed.
+
+### 2026-10-20 Screen usage in parent chat
+
+Parent chat was still reading `prefs.screen_control_web` and telling the model that device
+usage was not measured, although the dashboard reads `screen_usage`. `getParentContext`
+now reads real usage for all three chat channels through `server/screenUsageReport.js`.
+Dashboard and chat share the paginated reader, visible-app filtering and totals. Chat supplies
+today, yesterday, this week and this month to date, using the device policy timezone (Dubai
+fallback, as in the dashboard), with Tuto learning separate and last-sync metadata. Outside
+these ranges it must not invent a report. Missing records, unpaired devices and failed reads
+are distinct; no records is not proof of zero usage. Ownership is checked before device reads.
+`give_screen_time` remains the separate legacy web-trial write tool; this change does not
+connect it to Android policy or grants.
+
+Validation: `scripts/tests/screen-chat.test.mjs` runs synthetic read-only database fixtures
+through the real report route and the extracted real `getParentContext`, without importing
+the server or starting pollers. Covers report parity, siblings/other families, multiple devices,
+pagination, timezone/month/year boundaries and failed/empty reads. Validation: 159 Node tests,
+web production build and new-file ESLint passed. User explicitly approved publication,
+merge after checks and backend/web deployment on 20 October. No migration, real-family test
+write or real message is needed. Native effect: backend chat context changes after backend
+deployment; no Android APK rebuild is needed. Live conversational acceptance remains for
+the user to verify by asking WhatsApp after deployment.

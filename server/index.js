@@ -1,4 +1,5 @@
 import { installDeviceScreenTime } from './deviceScreenTime.js'
+import { deviceScreenContext } from './screenUsageReport.js'
 import { matchFamilyChild } from './familyPin.js'
 import { bandForAge as puzzleBandForAge } from './puzzle/puzzleTemplates.js'
 import { questionShareMean, sessionGems } from './mathGems.js'
@@ -12,7 +13,7 @@ import { storyDraftHandler, storyAssessmentHandler } from './storyDrafts.js'
 import { buildWeekReport, weekContext } from './week.js'
 import { inboundVerdict, inboundRefusal } from './inboundGate.js'
 import { appChatView, joinReplies, isMissingTable } from './appChat.js'
-import { applyScreenExtra, screenTimeContext, SCREEN_EXTRA_MAX } from './screenTime.js'
+import { applyScreenExtra, SCREEN_EXTRA_MAX } from './screenTime.js'
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
@@ -243,6 +244,7 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
       { data: englishSessions },
       englishSkills,
       thisWeek,
+      screenTime,
     ] = await Promise.all([
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at, feedback, generated_questions').eq('child_id', child.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('submissions').select('task_type, score, gems_earned, status, created_at').eq('child_id', child.id).gte('created_at', todayStart).lte('created_at', todayEnd).order('created_at', { ascending: false }),
@@ -304,6 +306,7 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
       // The Reports screen's own numbers, so chat and chart agree. A failure here must not cost
       // the parent their answer about everything else.
       withWeek ? weekForChild(child.id, tz, 0).catch(() => null) : null,
+      deviceScreenContext(supabase, parentId, child.id),
     ])
 
     // The questions of the latest English sitting and how each went: without them "what did she get wrong?"
@@ -450,9 +453,8 @@ async function getParentContext(parentId, { withWeek = false } = {}) {
           return [type, `${rate}, for the first ${cap} a day — anything past that still counts and is still saved, it just earns nothing`]
         })
       ),
-      // Screen time rules from the parent's Screen time tab. A web trial: rules only, nothing on
-      // a device is measured or enforced, so there is no usage figure to report — only the plan.
-      screenTime: screenTimeContext(prefsAll?.screen_control_web?.[child.id], userNow.toISODate()),
+      // Real Android usage, shared across WhatsApp, Telegram and the in-app chat.
+      screenTime,
       // The same figures the parent's Reports screen draws for this week (Monday first). Use these
       // for "how was this week" questions rather than re-counting from the lists above, which are
       // capped at 10-20 rows and would give a different number than the chart.
