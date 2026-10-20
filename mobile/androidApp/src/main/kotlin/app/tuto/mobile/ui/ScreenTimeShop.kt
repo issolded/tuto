@@ -19,7 +19,7 @@ import org.json.JSONObject
  LaunchedEffect(childId){refresh()}
  val offer=data?.optJSONObject("offer");val pending=store.pendingPurchase
  val names=mapOf("com.google.android.youtube" to "YouTube","com.netflix.mediaclient" to "Netflix","com.roblox.client" to "Roblox")
- fun buy(pkg:String){busy=true;confirm=null;scope.launch{try{data=store.buyMinutes(pkg,childId);error=false;success=true;onPurchased(data!!.optInt("balance"))}catch(e:Exception){error=true;runCatching {data=store.loadShop()}}finally{busy=false}}}
+ fun buy(pkg:String){val quotedRevision=data?.optLong("revision")?:0L;busy=true;confirm=null;scope.launch{try{data=store.buyMinutes(pkg,childId,quotedRevision);error=false;success=true;onPurchased(data!!.optInt("balance"))}catch(e:Exception){error=true;runCatching {data=store.loadShop()}}finally{busy=false}}}
  Card(Modifier.fillMaxWidth()){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Text(s.say("More time with Gems","Gem ile ek süre","Más tiempo con Gems"),style=MaterialTheme.typography.titleLarge)
   if(data!=null)Text("${data!!.optLong("balance")} Gems · ${data!!.optString("day")}")

@@ -42,10 +42,10 @@ class ScreenStore(private val context:Context) {
         prefs.edit().putString("shop",result.toString()).commit()
         result
     }
-    suspend fun buyMinutes(pkg:String,expectedChild:String)=syncMutex.withLock {
+    suspend fun buyMinutes(pkg:String,expectedChild:String,quotedRevision:Long)=syncMutex.withLock {
         val auth=secret.read() ?: error("not_paired")
         require(auth.optString("child_id")==expectedChild)
-        val request=pendingPurchase ?: JSONObject().put("request_id",java.util.UUID.randomUUID().toString()).put("package",pkg).put("revision",shop.optLong("revision"))
+        val request=pendingPurchase ?: JSONObject().put("request_id",java.util.UUID.randomUUID().toString()).put("package",pkg).put("revision",quotedRevision)
         require(request.optString("package")==pkg)
         check(prefs.edit().putString("purchase_pending",request.toString()).commit())
         try {
