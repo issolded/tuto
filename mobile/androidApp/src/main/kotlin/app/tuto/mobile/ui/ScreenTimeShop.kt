@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import app.tuto.mobile.screentime.ScreenStore
+import app.tuto.mobile.data.LocalStrings
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 

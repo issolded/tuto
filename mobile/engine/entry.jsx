@@ -143,8 +143,9 @@ globalThis.TutoMath = {
   review: (json, lang) => {
     const old = JSON.parse(json)
     const src = old.source
-    const p = sameKindProblem(src, { topic: src.templateTopic, language: lang, usedOperands: new Set([src.operandKey]), maxChars: 0 })
-    if (!p) throw new Error('No matching practice question')
+    // Rare variants may not be drawn within the bounded search. Repeating the original
+    // question preserves the exact skill and keeps an earned review accessible.
+    const p = sameKindProblem(src, { topic: src.templateTopic, language: lang, usedOperands: new Set([src.operandKey]), maxChars: 0 }) || src
     const d = drawable(p, lang)
     if (!d.ok) throw new Error('Practice figure could not render')
     return JSON.stringify({ ...old, source: p, question: splitAsk(p.question_text).join("\n\n"),
