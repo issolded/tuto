@@ -7,7 +7,8 @@ import {PC,FONT,PCSS,TopBar,Card} from '../lib/parentUI'
 import './ParentScreenTime.css'
 import ParentNav from '../components/ParentNav'
 import ScreenAppActions from '../components/ScreenAppActions'
-import {SYSTEM_PACKAGES,protectedPackage,screenEventMessage} from '../../server/screenAppRules'
+import {protectedPackage,screenEventMessage} from '../../server/screenAppRules'
+import {isLearningApp,visibleUsage} from '../../server/screenUsageReport'
 const NAMES={'com.google.android.youtube':'YouTube','com.netflix.mediaclient':'Netflix','com.roblox.client':'Roblox'}
 const duration=(s,lang)=>`${Math.floor(s/3600)}${lang==='tr'?'sa':'h'} ${Math.floor(s%3600/60)}${lang==='tr'?'dk':'m'}`
 export default function ParentScreenTime(){
@@ -42,10 +43,9 @@ function DevicePanel({child}){
  function edit(p){setPolicy({...policy,...p});setSaved(false)}
  useEffect(()=>{let alive=true;const read=()=>call('/events').then(j=>{if(alive){setEvents(j.events);setEventError(false)}}).catch(()=>{if(alive)setEventError(true)});read();const timer=setInterval(read,30000);return()=>{alive=false;clearInterval(timer)}},[call,refresh])
  const purchase=policy?.purchase||{enabled:false,gemCost:10,minutes:15,dailyMax:60}
- const isLearning=p=>p==='app.tuto.mobile'||p.startsWith('app.tuto.mobile.')
- const visible=rows?.filter(r=>!isLearning(r.package)&&(showSystem||(!SYSTEM_PACKAGES.has(r.package)&&!(policy?.report?.hidden||[]).includes(r.package))))
+ const visible=rows?visibleUsage(rows,policy,showSystem):null
  const totals=visible?usageTotals(visible):null
- const learning=rows?.filter(r=>isLearning(r.package)).reduce((n,r)=>n+r.seconds,0)||0
+ const learning=rows?.filter(r=>isLearningApp(r.package)).reduce((n,r)=>n+r.seconds,0)||0
  async function saveApp(rule,hidden){const hiddenApps=new Set(policy.report?.hidden||[]);hidden?hiddenApps.add(selected.package):hiddenApps.delete(selected.package);const next={...policy,apps:{...policy.apps,[selected.package]:rule},report:{hidden:[...hiddenApps]}};const j=await call('','PUT',{policy:next,revision:state.revision});setState({...state,...j});setPolicy(j.policy);setSelected(null);setSaved(true)}
  const extraIds=useRef({})
  async function extra(deviceId,minutes,pkg,requestId){const key=[deviceId,minutes,pkg,requestId||''].join('|');const id=extraIds.current[key] ||= crypto.randomUUID();await call('/extra','POST',{id,device_id:deviceId,package:pkg,minutes,request_id:requestId});delete extraIds.current[key];setRefresh(r=>r+1);setSelected(null)}

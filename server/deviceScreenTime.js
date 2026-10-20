@@ -1,4 +1,5 @@
 import { protectedPackage, validPackage, validateReportOptions, screenEventMessage } from './screenAppRules.js'
+import { readScreenUsage } from './screenUsageReport.js'
 import { randomBytes, createHash } from 'node:crypto'
 const hash = s => createHash('sha256').update(s).digest('hex')
 const validDay = s => typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0,10)===s
@@ -121,10 +122,7 @@ export function installDeviceScreenTime(app, db, parentFromBearer, notify = null
   app.get(root+'/usage',route(async(req,res)=>{
     await parent(req)
     const {from,to,device:deviceId}=req.query
-    if(!validDay(from)||!validDay(to)||from>to|| (Date.parse(to)-Date.parse(from))/86400000>31) throw Error('invalid_range')
-    let q=db.from('screen_usage').select('device_id,day,package,label,seconds').eq('child_id',req.params.childId).gte('day',from).lte('day',to).order('day').order('package').order('device_id')
-    if(deviceId) q=q.eq('device_id',deviceId)
-    const rows=[];for(let offset=0;offset<100000;offset+=1000){const page=await checked(q.range(offset,offset+999));rows.push(...page);if(page.length<1000)break}
+    const rows=await readScreenUsage(db,req.params.childId,{from,to,device:deviceId})
     res.json({rows})
   }))
   app.post('/api/device-screen/enroll',route(async(req,res)=>{
