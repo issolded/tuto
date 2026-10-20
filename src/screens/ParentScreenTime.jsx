@@ -1,13 +1,13 @@
 import {useEffect,useState,useCallback} from 'react'
 import {useNavigate,useSearchParams} from 'react-router-dom'
 import {supabase} from '../lib/supabase'
-import {useT,adoptAccountLang} from '../lib/parentI18n'
+import {useT,useUiLang,adoptAccountLang} from '../lib/parentI18n'
 import {deviceScreenCall,reportRange,usageTotals} from '../lib/deviceScreenTime'
 import {PC,FONT,PCSS,TopBar,Card} from '../lib/parentUI'
 import './ParentScreenTime.css'
 import ParentNav from '../components/ParentNav'
 const NAMES={'com.google.android.youtube':'YouTube','com.netflix.mediaclient':'Netflix','com.roblox.client':'Roblox'}
-const duration=s=>`${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`
+const duration=(s,lang)=>`${Math.floor(s/3600)}${lang==='tr'?'sa':'h'} ${Math.floor(s%3600/60)}${lang==='tr'?'dk':'m'}`
 export default function ParentScreenTime(){
  const s=useT(),nav=useNavigate(),[params]=useSearchParams()
  const wanted=params.get('child')
@@ -25,7 +25,7 @@ export default function ParentScreenTime(){
  </main><ParentNav/></div>
 }
 function DevicePanel({child}){
- const s=useT(),[state,setState]=useState(null),[policy,setPolicy]=useState(null),[report,setReport]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[code,setCode]=useState(''),[saved,setSaved]=useState(false)
+ const lang=useUiLang(),s=useT(),[state,setState]=useState(null),[policy,setPolicy]=useState(null),[report,setReport]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[code,setCode]=useState(''),[saved,setSaved]=useState(false)
  const [period,setPeriod]=useState('day'),[day,setDay]=useState(new Date().toLocaleDateString('en-CA')),[device,setDevice]=useState('')
  const range=reportRange(day,period)
  const call=useCallback((suffix='',method='GET',body)=>deviceScreenCall(child,suffix,method,body),[child])
@@ -43,7 +43,7 @@ function DevicePanel({child}){
  <Card><h2>{s('ds_usage')}</h2><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{['day','week','month'].map(v=><button className="tc-btn" key={v} aria-pressed={period===v} onClick={()=>setPeriod(v)}>{s('ds_'+v)}</button>)}</div>
  <input aria-label={s('ds_date')} type="date" value={day} onChange={e=>e.target.value&&setDay(e.target.value)}/><p>{range.from} — {range.to}</p>
  <select aria-label={s('ds_device')} value={device} onChange={e=>setDevice(e.target.value)}><option value="">{s('ds_all_devices')}</option>{state.devices.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>
- {totals?<><h3>{duration(totals.total)}</h3>{!rows.length?<p>{s('ds_no_data')}</p>:<>{totals.apps.map(([pkg,a])=><div key={pkg} style={{margin:'14px 0'}}><div style={{display:'flex',justifyContent:'space-between',gap:10,overflowWrap:'anywhere'}}><span>{NAMES[pkg]||a.label}</span><strong>{duration(a.seconds)}</strong></div><meter style={{width:'100%'}} min="0" max={totals.total||1} value={a.seconds}/></div>)}<h3>{s('ds_daily')}</h3>{Object.entries(totals.days).map(([date,seconds])=><div key={date} className="ds-day"><span>{date} · {duration(seconds)}</span><meter min="0" max={Math.max(...Object.values(totals.days),1)} value={seconds}/></div>)}</>}</>:<p>{s('loading')}</p>}
+ {totals?<><h3>{duration(totals.total,lang)}</h3>{!rows.length?<p>{s('ds_no_data')}</p>:<>{totals.apps.map(([pkg,a])=><div key={pkg} style={{margin:'14px 0'}}><div style={{display:'flex',justifyContent:'space-between',gap:10,overflowWrap:'anywhere'}}><span>{NAMES[pkg]||a.label}</span><strong>{duration(a.seconds,lang)}</strong></div><meter style={{width:'100%'}} min="0" max={totals.total||1} value={a.seconds}/></div>)}<h3>{s('ds_daily')}</h3>{Object.entries(totals.days).map(([date,seconds])=><div key={date} className="ds-day"><span>{date} · {duration(seconds,lang)}</span><meter min="0" max={Math.max(...Object.values(totals.days),1)} value={seconds}/></div>)}</>}</>:<p>{s('loading')}</p>}
  <small>{s('ds_measure_note')}</small></Card>
  <Card><h2>{s('ds_devices')}</h2>{state.devices.map(d=><div key={d.id} style={{borderBottom:'1px solid #ddd',padding:'12px 0'}}><strong>{d.name}</strong><p>{d.last_seen?new Date(d.last_seen).toLocaleString():s('ds_never')}</p><p>{d.revoked_at?s('ds_revoked'):d.last_seen&&d.applied_revision===state.revision?s('ds_applied'):s('ds_pending')}</p><p>{s('ds_usage_permission')}: {d.status?.usage_access?'✓':'—'} · {s('ds_protection')}: {d.status?.accessibility?'✓':'—'}</p>{!d.revoked_at&&<button disabled={busy} onClick={()=>{if(window.confirm(s('ds_revoke_confirm')))act(async()=>{await call('/revoke/'+d.id,'POST',{});await load()})}}>{s('ds_revoke')}</button>}</div>)}
  <button disabled={busy} onClick={()=>act(async()=>setCode((await call('/pair','POST',{})).code))}>{s('ds_pair')}</button>{code&&<p><strong style={{letterSpacing:2}}>{code}</strong><br/>{s('ds_pair_note')}</p>}</Card>

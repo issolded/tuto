@@ -1,9 +1,11 @@
 import { randomBytes, createHash } from 'node:crypto'
 const hash = s => createHash('sha256').update(s).digest('hex')
+const validDay = s => typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0,10)===s
 const integer = (n, max) => Number.isInteger(n) && n >= 0 && n <= max
 export const SCREEN_APPS = ['com.google.android.youtube', 'com.netflix.mediaclient', 'com.roblox.client']
 export function validatePolicy(p) {
   if (!p || typeof p.enabled !== 'boolean' || !integer(p.weekday,1440) || !integer(p.weekend,1440)) throw Error('invalid_policy')
+  if(typeof p.timezone!=='string' || !p.timezone) throw Error('invalid_timezone')
   try { new Intl.DateTimeFormat('en',{timeZone:p.timezone}).format() } catch { throw Error('invalid_timezone') }
   if (!Array.isArray(p.weekendDays) || p.weekendDays.length > 7 || p.weekendDays.some(d=>!integer(d,6))) throw Error('invalid_weekend')
   if (!/^\d{2}:\d{2}$/.test(p.start) || !/^\d{2}:\d{2}$/.test(p.end) || [p.start,p.end].some(t=>+t.slice(0,2)>23 || +t.slice(3)>59)) throw Error('invalid_hours')
@@ -15,7 +17,7 @@ export function defaultPolicy() { return {enabled:false,weekday:60,weekend:90,we
 export function validateUsage(rows) {
   if (!Array.isArray(rows) || rows.length>3000) throw Error('invalid_usage')
   return rows.map(r=>{
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(r.day) || !/^[a-zA-Z0-9_.]{1,180}$/.test(r.package) || !integer(r.seconds,90000) || typeof r.label!=='string') throw Error('invalid_usage')
+    if (!validDay(r.day) || !/^[a-zA-Z0-9_.]{1,180}$/.test(r.package) || !integer(r.seconds,90000) || typeof r.label!=='string') throw Error('invalid_usage')
     return {day:r.day,package:r.package,label:r.label.slice(0,100),seconds:r.seconds}
   })
 }
@@ -40,10 +42,10 @@ export function installDeviceScreenTime(app, db, parentFromBearer) {
   }))
   app.put(root,route(async(req,res)=>{
     const id=await parent(req), policy=validatePolicy(req.body.policy)
-    const revision=Date.now()
     // Optimistic update prevents a stale parent editor from overwriting a newer rule.
     const existing=await checked(db.from('screen_policies').select('revision').eq('child_id',req.params.childId).maybeSingle())
     if(existing && existing.revision!==req.body.revision) return res.status(409).json({error:'policy_changed'})
+    const revision=Math.max(Date.now(),(existing?.revision||0)+1)
     const row={child_id:req.params.childId,parent_id:id,policy,revision}
     if(existing) { const data=await checked(db.from('screen_policies').update(row).eq('child_id',req.params.childId).eq('revision',existing.revision).select('revision'));if(!data.length)return res.status(409).json({error:'policy_changed'}) }
     else await checked(db.from('screen_policies').insert(row))
@@ -60,8 +62,8 @@ export function installDeviceScreenTime(app, db, parentFromBearer) {
   app.get(root+'/usage',route(async(req,res)=>{
     await parent(req)
     const {from,to,device:deviceId}=req.query
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to|| (Date.parse(to)-Date.parse(from))/86400000>31) throw Error('invalid_range')
-    let q=db.from('screen_usage').select('device_id,day,package,label,seconds').eq('child_id',req.params.childId).gte('day',from).lte('day',to).order('day').order('package')
+    if(!validDay(from)||!validDay(to)||from>to|| (Date.parse(to)-Date.parse(from))/86400000>31) throw Error('invalid_range')
+    let q=db.from('screen_usage').select('device_id,day,package,label,seconds').eq('child_id',req.params.childId).gte('day',from).lte('day',to).order('day').order('package').order('device_id')
     if(deviceId) q=q.eq('device_id',deviceId)
     const rows=[];for(let offset=0;offset<100000;offset+=1000){const page=await checked(q.range(offset,offset+999));rows.push(...page);if(page.length<1000)break}
     res.json({rows})

@@ -48,6 +48,7 @@ import java.time.Instant
  val s=LocalStrings.current;val scope=rememberCoroutineScope();val id=p.selected!!.getString("id")
  var state by remember(id){mutableStateOf<JSONObject?>(null)};var policy by remember(id){mutableStateOf(JSONObject())};var rows by remember(id){mutableStateOf<List<JSONObject>?>(null)}
  var period by remember {mutableStateOf("day")};var day by remember {mutableStateOf(LocalDate.now())};var device by remember {mutableStateOf("")};var code by remember {mutableStateOf("")}
+ var reportRefresh by remember {mutableIntStateOf(0)}
  var revoke by remember {mutableStateOf<String?>(null)}
  var error by remember {mutableStateOf("")};var busy by remember {mutableStateOf(false)};var saved by remember {mutableStateOf(false)}
  val root="/api/parent/children/${enc(id)}/device-screen"
@@ -57,7 +58,7 @@ import java.time.Instant
  LaunchedEffect(id){try{load();day=LocalDate.now(ZoneId.of(policy.optString("timezone","Asia/Dubai")))}catch(e:Exception){error=s.say("Device screen time is not ready on the server.","Sunucuda cihaz ekran süresi henüz hazır değil.","El tiempo de pantalla aún no está listo en el servidor.")}}
  val from=when(period){"week"->day.minusDays((day.dayOfWeek.value-1).toLong());"month"->day.withDayOfMonth(1);else->day}
  val to=when(period){"week"->from.plusDays(6);"month"->from.plusMonths(1).minusDays(1);else->from}
- LaunchedEffect(id,from,to,device){rows=null;try{rows=p.cloud.parentCall("GET","$root/usage?from=$from&to=$to"+if(device.isBlank())"" else "&device=${enc(device)}").optJSONArray("rows").objects()}catch(e:Exception){error=s.say("Usage data unavailable","Kullanım verisine ulaşılamadı","Uso no disponible")}}
+ LaunchedEffect(id,from,to,device,reportRefresh){rows=null;try{rows=p.cloud.parentCall("GET","$root/usage?from=$from&to=$to"+if(device.isBlank())"" else "&device=${enc(device)}").optJSONArray("rows").objects()}catch(e:Exception){error=s.say("Usage data unavailable","Kullanım verisine ulaşılamadı","Uso no disponible")}}
  if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
  if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
  if(state==null){Button({act{load()}}){Text(s.say("Retry","Tekrar dene","Reintentar"))};return}
@@ -66,9 +67,9 @@ import java.time.Instant
  Row {TextButton({day=when(period){"week"->day.minusWeeks(1);"month"->day.minusMonths(1);else->day.minusDays(1)}}){Text("←")};Text("$from — $to");TextButton({day=when(period){"week"->day.plusWeeks(1);"month"->day.plusMonths(1);else->day.plusDays(1)}}){Text("→")}}
  val devices=state!!.optJSONArray("devices").objects()
  FlowRow {FilterChip(device.isBlank(),{device=""},label={Text(s.say("All devices (sum)","Tüm cihazlar (toplam)","Todos (suma)"))});devices.forEach {d->FilterChip(device==d.optString("id"),{device=d.optString("id")},label={Text(d.optString("name"))})}}
- fun duration(n:Long)="${n/3600}h ${(n%3600)/60}m"
+ fun duration(n:Long)="${n/3600}${s.say("h","sa","h")} ${(n%3600)/60}${s.say("m","dk","m")}"
  val total=rows?.sumOf {it.optLong("seconds")} ?: 0
- Text(duration(total),style=MaterialTheme.typography.headlineLarge)
+ if(rows!=null && rows!!.isNotEmpty())Text(duration(total),style=MaterialTheme.typography.headlineLarge)
  if(rows==null)Text(s.say("Loading","Yükleniyor","Cargando"))
  else if(rows!!.isEmpty())Text(s.say("No measurements received. This does not mean zero use.","Ölçüm alınmadı. Bu, sıfır kullanım anlamına gelmez.","No se recibieron mediciones. No significa uso cero."))
  rows.orEmpty().groupBy {it.optString("package")}.entries.sortedByDescending {it.value.sumOf {r->r.optLong("seconds")}}.forEach {(_,list)->val seconds=list.sumOf {it.optLong("seconds")};Text("${list.first().optString("label")} · ${duration(seconds)}");LinearProgressIndicator(progress={if(total>0)seconds.toFloat()/total else 0f},modifier=Modifier.fillMaxWidth())}
@@ -98,7 +99,7 @@ import java.time.Instant
  }
  Button({act{val j=p.cloud.parentCall("PUT",root,JSONObject().put("policy",policy).put("revision",state!!.optLong("revision")));state=JSONObject(state.toString()).put("revision",j.getLong("revision"));saved=true}},enabled=!busy){Text(s.say("Save rules","Kuralları kaydet","Guardar reglas"))}
  if(saved)Text(s.say("Saved; waiting for device acknowledgement.","Kaydedildi; cihazın doğrulaması bekleniyor.","Guardado; esperando confirmación del dispositivo."))
- Button({act{load()}},enabled=!busy){Text(s.say("Refresh device status","Cihaz durumunu yenile","Actualizar estado"))}
+ Button({act{load();reportRefresh++}},enabled=!busy){Text(s.say("Refresh device status","Cihaz durumunu yenile","Actualizar estado"))}
 }
 
 @Composable fun NativeMathSkip(p:ParentRun) {

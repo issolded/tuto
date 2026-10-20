@@ -25,3 +25,16 @@ alter table public.screen_devices enable row level security;
 alter table public.screen_usage enable row level security;
 revoke all on public.screen_policies, public.screen_devices, public.screen_usage from anon, authenticated;
 grant all on public.screen_policies, public.screen_devices, public.screen_usage to service_role;
+
+-- A delayed retry must not replace a newer cumulative bucket with a smaller value.
+create or replace function public.screen_usage_monotonic()
+returns trigger language plpgsql set search_path = public as $$
+begin
+ new.seconds := greatest(old.seconds, new.seconds);
+ return new;
+end;
+$$;
+revoke all on function public.screen_usage_monotonic() from public, anon, authenticated;
+drop trigger if exists screen_usage_keep_total on public.screen_usage;
+create trigger screen_usage_keep_total before update on public.screen_usage
+for each row execute function public.screen_usage_monotonic();
