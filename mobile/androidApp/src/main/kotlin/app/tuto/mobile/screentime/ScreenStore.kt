@@ -18,6 +18,7 @@ import java.time.ZoneId
 /** One device identity, independent of the child's educational PIN/session. */
 class ScreenStore(private val context:Context) {
     private val prefs=context.getSharedPreferences("tuto-screen",Context.MODE_PRIVATE)
+    private val usage=UsageDatabase(context)
     private val secret=ParentCredentials(context,"screen-device")
     val paired get()=secret.read()!=null
     val policy get()=JSONObject(prefs.getString("policy","{}")!!)
@@ -41,6 +42,7 @@ class ScreenStore(private val context:Context) {
         // The parent-owned pairing code is authoritative, never a user-supplied child UUID.
         require(j.optString("child_id")==expectedChild) {"Pairing code belongs to another child"}
         prefs.edit().clear().commit()
+        usage.reset(System.currentTimeMillis())
         secret.write(j)
         showNotification()
         prefs.edit().putLong("since",System.currentTimeMillis()).putLong("cursor",System.currentTimeMillis()).apply()
@@ -49,56 +51,56 @@ class ScreenStore(private val context:Context) {
     }
     fun collect():Unit = synchronized(collectLock) {
         if(!paired) return
-        if(!usageAccess || !notificationsEnabled) {
-            prefs.edit().putLong("cursor",System.currentTimeMillis()).putString("foreground","").putBoolean("visible",false).commit()
-            return
-        }
-        val now=System.currentTimeMillis();val from=prefs.getLong("cursor",now)
-        if(now<from) return // Do not credit time twice after a backwards clock change.
-        val rows=JSONObject(prefs.getString("rows","{}")!!)
-        var pkg=prefs.getString("foreground","").orEmpty()
-        var visible=prefs.getBoolean("visible",false)
-        var at=from
-        fun credit(until:Long) {
-            if(visible && pkg.isNotBlank()) UsageBuckets.credit(rows,pkg,label(pkg),at,until,zone)
-            at=until
-        }
-        val events=(context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager).queryEvents(from,now) ?: return
-        val e=UsageEvents.Event()
-        while(events.hasNextEvent()) {
-            events.getNextEvent(e);if(e.timeStamp<from || e.timeStamp>now)continue
-            // An abrupt restart may have no shutdown event: never charge the powered-off gap.
-            if(e.eventType==UsageEvents.Event.DEVICE_STARTUP) {visible=false;pkg="";at=e.timeStamp;continue}
-            credit(e.timeStamp)
-            when(e.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED->{pkg=e.packageName.orEmpty();visible=true}
-                UsageEvents.Event.ACTIVITY_PAUSED->if(pkg==e.packageName){pkg=""}
-                UsageEvents.Event.SCREEN_NON_INTERACTIVE,UsageEvents.Event.KEYGUARD_SHOWN->{visible=false;pkg=""}
-                UsageEvents.Event.DEVICE_SHUTDOWN->{visible=false;pkg=""}
+        val db=usage.writableDatabase
+        db.beginTransaction()
+        try {
+            val now=System.currentTimeMillis()
+            if(!usageAccess || !notificationsEnabled) {
+                usage.writeState("cursor",now.toString());usage.writeState("foreground","");usage.writeState("visible","false")
+                db.setTransactionSuccessful();return
             }
-        }
-        credit(now)
-        // Keep a rolling 93-day local retry cache; server holds report history.
-        val cutoff=Instant.ofEpochMilli(now).atZone(zone).toLocalDate().minusDays(93).toString()
-        rows.keys().asSequence().toList().filter {it.take(10)<cutoff}.forEach(rows::remove)
-        prefs.edit().putString("rows",rows.toString()).putLong("cursor",now).putString("foreground",pkg).putBoolean("visible",visible).commit()
-        Unit
+            val from=usage.readState("cursor",now.toString()).toLong()
+            if(now<from)return
+            var pkg=usage.readState("foreground","")
+            var visible=usage.readState("visible","false").toBoolean()
+            var at=from
+            fun credit(until:Long) {
+                if(visible && pkg.isNotBlank()) {
+                    val increments=JSONObject()
+                    UsageBuckets.credit(increments,pkg,label(pkg),at,until,zone)
+                    increments.keys().forEach {usage.add(increments.getJSONObject(it))}
+                }
+                at=until
+            }
+            val events=(context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager).queryEvents(from,now) ?: return
+            val e=UsageEvents.Event()
+            while(events.hasNextEvent()) {
+                events.getNextEvent(e);if(e.timeStamp<from || e.timeStamp>now)continue
+                if(e.eventType==UsageEvents.Event.DEVICE_STARTUP) {visible=false;pkg="";at=e.timeStamp;continue}
+                credit(e.timeStamp)
+                when(e.eventType) {
+                    UsageEvents.Event.ACTIVITY_RESUMED->{pkg=e.packageName.orEmpty();visible=true}
+                    UsageEvents.Event.ACTIVITY_PAUSED->if(pkg==e.packageName){pkg=""}
+                    UsageEvents.Event.SCREEN_NON_INTERACTIVE,UsageEvents.Event.KEYGUARD_SHOWN,UsageEvents.Event.DEVICE_SHUTDOWN->{visible=false;pkg=""}
+                }
+            }
+            credit(now)
+            usage.writeState("cursor",now.toString());usage.writeState("foreground",pkg);usage.writeState("visible",visible.toString())
+            db.setTransactionSuccessful()
+        } finally {db.endTransaction()}
     }
     private fun label(pkg:String)=runCatching {context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(pkg,0)).toString()}.getOrDefault(pkg)
-    fun today():Map<String,Long> {
-        val day=Instant.now().atZone(zone).toLocalDate().toString();val rows=JSONObject(prefs.getString("rows","{}")!!)
-        return rows.keys().asSequence().filter {it.startsWith("$day|")}.associate { val r=rows.getJSONObject(it);r.getString("package") to r.optLong("ms")/1000 }
-    }
+    fun today():Map<String,Long> = usage.today(Instant.now().atZone(zone).toLocalDate().toString())
     suspend fun sync()=syncMutex.withLock {
         val auth=secret.read() ?: return@withLock
         showNotification()
         collect()
-        val rows=JSONObject(prefs.getString("rows","{}")!!)
-        val data=rows.keys().asSequence().map { rows.getJSONObject(it).let { r->JSONObject().put("day",r.getString("day")).put("package",r.getString("package")).put("label",r.getString("label")).put("seconds",(r.optLong("ms")/1000).coerceAtMost(90000)) } }.toList()
+        val data=usage.pending()
         for(batch in (if(data.isEmpty()) listOf(emptyList()) else data.chunked(3000))) {
             val body=JSONObject().put("rows",JSONArray(batch)).put("applied_revision",prefs.getLong("revision",0)).put("status",JSONObject().put("usage_access",usageAccess).put("accessibility",accessibility).put("notifications",notificationsEnabled).put("timezone",zone.id).put("measured_since",Instant.ofEpochMilli(prefs.getLong("since",System.currentTimeMillis())).toString()))
             try {
                 val response=JSONObject(http(BuildConfig.SERVER_URL+"/api/device-screen/sync","POST",body.toString().toByteArray(),mapOf("Authorization" to "Bearer ${auth.getString("token")}")))
+                usage.acknowledge(batch,Instant.now().atZone(zone).toLocalDate().minusDays(93).toString())
                 prefs.edit().putString("policy",response.getJSONObject("policy").toString()).putLong("revision",response.getLong("revision")).putLong("sync",System.currentTimeMillis()).commit()
             } catch(e:ApiFailure) {
                 if(e.status==401) {(context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).cancel(3001);secret.write(null);prefs.edit().putString("policy","{}").commit()}

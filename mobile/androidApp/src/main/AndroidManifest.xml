@@ -1,7 +1,8 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+    <!-- Special app access granted explicitly by the parent in Usage Access settings. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:label="Tuto" android:theme="@style/AppTheme" android:allowBackup="false" android:supportsRtl="true">
         <service android:name=".screentime.ScreenAccessService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/screen_access" /></service>
         <meta-data android:name="isMonitoringTool" android:value="child_monitoring" />
