@@ -7392,9 +7392,11 @@ function playState(sessionId, index) {
   }
   return st
 }
-async function englishLangOf(childId) {
-  const { data } = await supabase.from('children').select('language').eq('id', childId).maybeSingle()
-  return ['en', 'tr', 'es'].includes(data?.language) ? data.language : 'en'
+// The language of the hints and explanations a child reads in an English session. Always English: the
+// English section speaks English whatever children.language says (user decision 2026-10-17). Kept as
+// a function so the call sites read the same; parent messages keep prefs.language.
+async function englishLangOf() {
+  return 'en'
 }
 async function openEnglishSession(sessionId) {
   let session = englishOpen.get(sessionId)
@@ -8633,6 +8635,14 @@ async function syncAgesFromBirthDates() {
     if (upErr) console.error(`[AGE] ${c.id}: ${upErr.message}`)
     else console.log(`[AGE] ${c.id}: ${c.age} → ${age}`)
   }
+}
+
+// English ladder lab sitting: off unless LITERACY_LAB=1 (internal; no child card, no gems, no parent message).
+// Imported only when on, so a server without the flag never loads it (it uses JSON import attributes, which
+// older Node versions reject at load time, and that would take the whole server down).
+if (process.env.LITERACY_LAB === '1') {
+  const { mountLiteracyLab } = await import('./literacyLab.js')
+  mountLiteracyLab(app, { supabase, tzForChild })
 }
 
 app.listen(3000, async () => {

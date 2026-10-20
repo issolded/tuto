@@ -1,0 +1,241 @@
+{
+  "id": "E3-astra80-B3-E3-03",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-03",
+    "level": "E3",
+    "category": "clothes",
+    "title": "The Hat in the Wind",
+    "passage": "Sam put a paper hat on his toy bear outside. A little wind carried the hat across the table. Zoe caught it above the table before it fell onto the grass. She moved the bear inside because the wind kept taking its hat. Sam followed with a book and sat beside the bear. He read quietly because Zoe was listening to a song. The bear sat between them with its hat still on. Zoe said it had the best seat for books and music.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Zoe catch the hat?",
+        "options": [
+          "Above the table.",
+          "Below a chair.",
+          "Beside the door."
+        ],
+        "answer": 0,
+        "evidence": "Zoe caught it above the table before it fell onto the grass."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Zoe take the bear inside?",
+        "options": [
+          "Its clothes had become wet outside.",
+          "Its seat had become too hot outside.",
+          "Its hat would not stay on outside."
+        ],
+        "answer": 2,
+        "evidence": "She moved the bear inside because the wind kept taking its hat."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sam read quietly?",
+        "options": [
+          "Zoe wanted to hear her music.",
+          "The bear was beside a sleeping cat.",
+          "Their teacher had asked for quiet."
+        ],
+        "answer": 0,
+        "evidence": "He read quietly because Zoe was listening to a song."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "across",
+          "keep",
+          "follow",
+          "beside",
+          "still",
+          "become",
+          "stay",
+          "hear"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": [
+          "become"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 84,
+        "sentences": 8,
+        "flyers": [
+          "across",
+          "keep",
+          "follow",
+          "beside",
+          "still",
+          "become",
+          "stay",
+          "hear"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": [
+          "become"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

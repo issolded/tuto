@@ -1,0 +1,252 @@
+{
+  "id": "E4-astra80-B3-E4-13",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-13",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-13",
+    "level": "E4",
+    "category": "food",
+    "title": "The Recipe Picture",
+    "passage": "Lily wanted to show Ben how she made her usual fruit bowl. She drew a banana, some grapes, and a spoon on a page. Ben looked at the drawing and put a whole banana beside the grapes in a bowl. Lily smiled and showed him the small banana pieces she had meant. He asked how he could have known that from her picture. Lily drew three little pictures below: peeling the banana, breaking it into pieces, and adding grapes. Ben followed them and stirred the fruit with the spoon. He drew one more picture at the end, showing two bowls. They divided the fruit between them and sat down at the table. Lily put the picture recipe beside her bowl. Ben added two smiling faces below the last step. Now the page showed not only what went in, but what happened afterwards too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Ben add to the picture recipe?",
+        "options": [
+          "A picture of two bowls.",
+          "A picture of three apples.",
+          "A picture of a tall glass."
+        ],
+        "answer": 0,
+        "evidence": "He drew one more picture at the end, showing two bowls."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Lily add the smaller pictures?",
+        "options": [
+          "Ben wanted to change the grapes for another fruit.",
+          "The first picture had not shown what to do with the fruit.",
+          "The banana was too small to see in the first drawing."
+        ],
+        "answer": 1,
+        "evidence": "Lily drew three little pictures below: peeling the banana, breaking it into pieces, and adding grapes.",
+        "rationale": "Ben assembles whole ingredients because the original only depicts objects; the added sequence supplies actions."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Choosing different fruit because a first recipe tasted unpleasant.",
+          "Turning a picture of ingredients into instructions someone can follow.",
+          "Learning to draw food so it looks exactly like a real meal."
+        ],
+        "answer": 1,
+        "evidence": "Ben followed them and stirred the fruit with the spoon.",
+        "rationale": "The change is from an ingredient picture to an understandable preparation sequence."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 143,
+        "sentences": 12,
+        "flyers": [
+          "whole",
+          "beside",
+          "peel",
+          "stir",
+          "divide",
+          "afterwards",
+          "unpleasant",
+          "exact",
+          "real"
+        ],
+        "outside": [
+          "recipe",
+          "usual",
+          "mainly",
+          "ingredient",
+          "instruction"
+        ],
+        "content": [
+          "recipe",
+          "usual",
+          "ingredient",
+          "instruction"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 143,
+        "sentences": 12,
+        "flyers": [
+          "whole",
+          "beside",
+          "peel",
+          "stir",
+          "divide",
+          "afterwards",
+          "unpleasant",
+          "exact",
+          "real"
+        ],
+        "outside": [
+          "recipe",
+          "usual",
+          "mainly",
+          "ingredient",
+          "instruction"
+        ],
+        "content": [
+          "recipe",
+          "usual",
+          "ingredient",
+          "instruction"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

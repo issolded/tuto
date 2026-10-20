@@ -1,0 +1,221 @@
+{
+  "id": "E2-astra80-B3-E2-02",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-02",
+    "level": "E2",
+    "category": "discovery",
+    "title": "The Book Flower",
+    "passage": "Lily opened an old picture book on the table. A dry yellow flower fell out between two pages. Ben brought some paper, and Lily put the flower on it. They drew a garden around the flower and stood their picture beside the book.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What fell from the book?",
+        "options": [
+          "A green leaf.",
+          "A white feather.",
+          "A yellow flower."
+        ],
+        "answer": 2,
+        "evidence": "A dry yellow flower fell out between two pages."
+      },
+      {
+        "op": "detail",
+        "stem": "What did they draw around the flower?",
+        "options": [
+          "A house.",
+          "A boat.",
+          "A garden."
+        ],
+        "answer": 2,
+        "evidence": "They drew a garden around the flower and stood their picture beside the book."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Lily put the flower on paper.",
+          "They drew around the flower.",
+          "Ben brought paper."
+        ],
+        "answer": 2,
+        "evidence": "Ben brought some paper, and Lily put the flower on it."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "feather",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "feather"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "feather",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "feather"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

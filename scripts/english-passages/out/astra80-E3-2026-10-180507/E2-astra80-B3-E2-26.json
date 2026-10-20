@@ -1,0 +1,241 @@
+{
+  "id": "E2-astra80-B3-E2-26",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-26",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-26",
+    "level": "E2",
+    "category": "school",
+    "title": "The Classroom Fish",
+    "passage": "Raj drew a fish beside his name on the classroom board. Ella drew another fish beside her name. The teacher added a blue circle around both names and fish. Raj looked at their new little pond and asked where they could put a duck.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Raj draw his fish?",
+        "options": [
+          "Above the clock.",
+          "Under the date.",
+          "Beside his name."
+        ],
+        "answer": 2,
+        "evidence": "Raj drew a fish beside his name on the classroom board."
+      },
+      {
+        "op": "detail",
+        "stem": "What did the teacher add?",
+        "options": [
+          "A blue square.",
+          "A blue star.",
+          "A blue circle."
+        ],
+        "answer": 2,
+        "evidence": "The teacher added a blue circle around both names and fish."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "The teacher drew the circle.",
+          "Raj asked about a duck.",
+          "Ella drew a fish."
+        ],
+        "answer": 2,
+        "evidence": "Ella drew another fish beside her name."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "pond",
+          "date",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "pond",
+          "date"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "pond",
+          "date",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "pond",
+          "date"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

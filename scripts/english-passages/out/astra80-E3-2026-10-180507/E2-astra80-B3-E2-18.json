@@ -1,0 +1,228 @@
+{
+  "id": "E2-astra80-B3-E2-18",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-18",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-18",
+    "level": "E2",
+    "category": "games",
+    "title": "The Animal Guess",
+    "passage": "Max put his hands above his head like long ears. Priya guessed that he was a rabbit. Max hopped across the rug and nodded. Priya moved her arms like wings, and Max guessed a bird before she could fly.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which animal did Max act out?",
+        "options": [
+          "A frog.",
+          "A kangaroo.",
+          "A rabbit."
+        ],
+        "answer": 2,
+        "evidence": "Priya guessed that he was a rabbit."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Priya move like wings?",
+        "options": [
+          "Her hands above her head.",
+          "Her arms.",
+          "Her feet under her chair."
+        ],
+        "answer": 1,
+        "evidence": "Priya moved her arms like wings, and Max guessed a bird before she could fly."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Priya guessed a rabbit.",
+          "Max hopped on the rug.",
+          "Priya moved her arms."
+        ],
+        "answer": 0,
+        "evidence": "Priya guessed that he was a rabbit."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 39,
+        "sentences": 4,
+        "flyers": [
+          "guess",
+          "across",
+          "wing",
+          "act",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "wing",
+          "act"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 39,
+        "sentences": 4,
+        "flyers": [
+          "guess",
+          "across",
+          "wing",
+          "act",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "wing",
+          "act"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Common sense alone makes 'arms' the obvious choice for what someone moves like wings compared to hands above head or feet under a chair."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [
+      "q2 pedagogy needs_text (Common sense alone makes 'arms' the obvious choice for what someone moves like wings compared to hands above head or feet under a chair.)",
+      "q2 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

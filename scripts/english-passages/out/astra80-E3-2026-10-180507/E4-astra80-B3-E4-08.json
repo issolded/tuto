@@ -1,0 +1,269 @@
+{
+  "id": "E4-astra80-B3-E4-08",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-08",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-08",
+    "level": "E4",
+    "category": "music",
+    "title": "The Recorded Rain",
+    "passage": "Jack and Aisha wanted rain sounds for a story they were recording. They listened at the window, but the real rain was too quiet for their tablet. Jack shook a box of dry rice, and Aisha listened with her eyes closed. She said it sounded more like a short shower than a whole rainy afternoon. Jack shook it for longer, but his arm soon became tired. Aisha brought a second box and filled it with a little rice. They took turns, starting one box before the other stopped. On the recording, the rain went on without a sudden gap. Jack read the story while Aisha played their sound back. At the end, the rain slowly faded as they had planned. Outside, the real rain had stopped as well. They opened the window and listened to the quiet ending that nobody had recorded.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Jack shake to make rain sounds?",
+        "options": [
+          "A box of dry rice.",
+          "A box of small stones.",
+          "A box of paper pieces."
+        ],
+        "answer": 0,
+        "evidence": "Jack shook a box of dry rice, and Aisha listened with her eyes closed."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did using two boxes help?",
+        "options": [
+          "One could make the story words easier to hear.",
+          "One could keep the real rain away from the tablet.",
+          "One could continue while the other person rested."
+        ],
+        "answer": 2,
+        "evidence": "They took turns, starting one box before the other stopped.",
+        "rationale": "Jack cannot sustain the sound alone; overlapping turns extend it without gaps."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Comparing different weather reports before recording them.",
+          "Working together to make a sound for a story.",
+          "Learning why real rain is sometimes quiet and sometimes loud."
+        ],
+        "answer": 1,
+        "evidence": "On the recording, the rain went on without a sudden gap.",
+        "rationale": "The narrative follows their attempt to produce continuous rain audio, resolved by shared turns."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 142,
+        "sentences": 12,
+        "flyers": [
+          "record",
+          "real",
+          "shook",
+          "whole",
+          "rainy",
+          "became",
+          "fill",
+          "sudden",
+          "plan",
+          "nobody",
+          "shake",
+          "rest",
+          "compare",
+          "report"
+        ],
+        "outside": [
+          "gap",
+          "fad",
+          "continue",
+          "mainly"
+        ],
+        "content": [
+          "gap",
+          "fad",
+          "continue"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 142,
+        "sentences": 12,
+        "flyers": [
+          "record",
+          "real",
+          "shook",
+          "whole",
+          "rainy",
+          "became",
+          "fill",
+          "sudden",
+          "plan",
+          "nobody",
+          "shake",
+          "rest",
+          "compare",
+          "report"
+        ],
+        "outside": [
+          "gap",
+          "fad",
+          "continue",
+          "mainly"
+        ],
+        "content": [
+          "gap",
+          "fad",
+          "continue"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

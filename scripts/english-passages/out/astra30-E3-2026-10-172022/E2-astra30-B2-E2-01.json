@@ -1,0 +1,212 @@
+{
+  "id": "E2-astra30-B2-E2-01",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-01",
+    "level": "E2",
+    "category": "friendship",
+    "title": "The Second Seat",
+    "passage": "Tom sat on a mat with his picture book. Mia came over and asked to look at the pictures. Tom moved his bag off the mat, and Mia sat beside him. They opened the book together and found a frog wearing boots.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Tom sit?",
+        "options": [
+          "On a small chair.",
+          "On a green sofa.",
+          "On a floor mat."
+        ],
+        "answer": 2,
+        "evidence": "Tom sat on a mat with his picture book."
+      },
+      {
+        "op": "detail",
+        "stem": "What was the frog wearing?",
+        "options": [
+          "A pair of boots.",
+          "A little hat.",
+          "A long scarf."
+        ],
+        "answer": 0,
+        "evidence": "They opened the book together and found a frog wearing boots."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Tom moved his bag.",
+          "Mia asked to see the pictures.",
+          "They opened the book together."
+        ],
+        "answer": 1,
+        "evidence": "Mia came over and asked to look at the pictures."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "over",
+          "beside",
+          "together"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "over",
+          "beside",
+          "together"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "The addition of 'floor' to 'mat' is a standard clarification and does not add unwarranted new information."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Perfect detail question."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests the sequence of events explicitly stated in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A sweet, simple, and logical vignette that perfectly fits the E2 level."
+      },
+      "model": "gemini-3.1-pro-preview"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

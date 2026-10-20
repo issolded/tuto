@@ -1,0 +1,230 @@
+{
+  "id": "E3-astra80-B3-E3-24",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-24",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-24",
+    "level": "E3",
+    "category": "food",
+    "title": "The Picnic Table",
+    "passage": "Lily and Ben put their picnic on a table in the garden. A light wind lifted their paper plates. Ben put an apple on each plate because the wind kept moving them. Lily brought cups and placed them beside the plates. She moved one cup because a leaf had fallen inside it. She took out the leaf and filled the cup with water. Ben picked up his apple, and his plate moved again. He laughed and held the plate while he ate.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Ben put on the paper plates?",
+        "options": [
+          "Pears.",
+          "Oranges.",
+          "Apples."
+        ],
+        "answer": 2,
+        "evidence": "Ben put an apple on each plate because the wind kept moving them."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ben put fruit on each plate?",
+        "options": [
+          "To show which plates needed washing.",
+          "To keep the fruit out of the sun.",
+          "To stop the wind taking the plates."
+        ],
+        "answer": 2,
+        "evidence": "Ben put an apple on each plate because the wind kept moving them."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Lily move a cup?",
+        "options": [
+          "There was a toy in it.",
+          "There was paint on it.",
+          "There was a leaf in it."
+        ],
+        "answer": 2,
+        "evidence": "She moved one cup because a leaf had fallen inside it."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "light",
+          "each",
+          "keep",
+          "beside",
+          "fill",
+          "while"
+        ],
+        "outside": [],
+        "content": [
+          "light",
+          "fill"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "light",
+          "each",
+          "keep",
+          "beside",
+          "fill",
+          "while"
+        ],
+        "outside": [],
+        "content": [
+          "light",
+          "fill"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "An adult could deduce C without the passage because paper plates are not washed (eliminating A) and plates do not shade fruit from the sun (eliminating B)."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q2 pedagogy needs_text (An adult could deduce C without the passage because paper plates are not washed (eliminating A) and plates do not shade fruit from the sun (eliminating B).)",
+      "q2 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "rejected"
+}

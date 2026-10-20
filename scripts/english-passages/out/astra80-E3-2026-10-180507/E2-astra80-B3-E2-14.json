@@ -1,0 +1,231 @@
+{
+  "id": "E2-astra80-B3-E2-14",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-14",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-14",
+    "level": "E2",
+    "category": "art",
+    "title": "The Missing Tail",
+    "passage": "Sam showed Zoe his drawing of a green lizard. Zoe pointed to its tail going off the paper. Sam put another piece of paper beside the first one. He drew a long tail across it, and Zoe called it a two-page lizard.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What animal did Sam draw?",
+        "options": [
+          "A green snake.",
+          "A green frog.",
+          "A green lizard."
+        ],
+        "answer": 2,
+        "evidence": "Sam showed Zoe his drawing of a green lizard."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Sam draw on the new paper?",
+        "options": [
+          "The animal's head.",
+          "The animal's tail.",
+          "The animal's feet."
+        ],
+        "answer": 1,
+        "evidence": "He drew a long tail across it, and Zoe called it a two-page lizard."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Sam added more paper.",
+          "Zoe pointed at the tail.",
+          "Sam drew the long tail."
+        ],
+        "answer": 1,
+        "evidence": "Zoe pointed to its tail going off the paper."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "piece",
+          "beside",
+          "across",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "piece"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "piece",
+          "beside",
+          "across",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "piece"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

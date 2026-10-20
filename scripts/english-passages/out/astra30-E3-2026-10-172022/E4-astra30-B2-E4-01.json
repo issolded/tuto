@@ -1,0 +1,234 @@
+{
+  "id": "E4-astra30-B2-E4-01",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-01",
+    "level": "E4",
+    "category": "friendship",
+    "title": "A Game for Two",
+    "passage": "Tom had brought a new card game to school. At lunch, he put the cards on a table and waited. Mia stopped to look, but she did not sit down. Tom began explaining every rule, speaking faster each time she looked towards the door. Then Mia pointed at the clock and said she had only five minutes before music. Tom looked at the large pile of cards in front of him. He put most of them back in the box and left six on the table. They played one short round before Mia had to go. At the door, she asked him to bring the whole game tomorrow. Tom packed the cards with a smile. This time, he put two chairs beside the table before leaving.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How many cards did Tom leave on the table?",
+        "options": [
+          "Six cards.",
+          "Eight cards.",
+          "Ten cards."
+        ],
+        "answer": 0,
+        "evidence": "He put most of them back in the box and left six on the table."
+      },
+      {
+        "op": "inference",
+        "stem": "What did Tom learn about Mia's first reaction?",
+        "options": [
+          "She already knew all the game rules.",
+          "She wanted to play with someone else.",
+          "She had little time for a long game."
+        ],
+        "answer": 2,
+        "evidence": "Then Mia pointed at the clock and said she had only five minutes before music.",
+        "rationale": "Mia stops to look and later requests the whole game; her limited time, rather than dislike, explains not sitting down."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Choosing a different game after losing a round.",
+          "Teaching a class to play a game without cards.",
+          "Changing a plan so a friend can join in."
+        ],
+        "answer": 2,
+        "evidence": "They played one short round before Mia had to go.",
+        "rationale": "Tom changes the length of the activity to fit Mia’s available time, making a shared game possible."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 126,
+        "sentences": 11,
+        "flyers": [
+          "rule",
+          "towards",
+          "pile",
+          "whole",
+          "pack",
+          "beside",
+          "plan"
+        ],
+        "outside": [
+          "reaction"
+        ],
+        "content": [
+          "reaction"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 126,
+        "sentences": 11,
+        "flyers": [
+          "rule",
+          "towards",
+          "pile",
+          "whole",
+          "pack",
+          "beside",
+          "plan"
+        ],
+        "outside": [
+          "reaction"
+        ],
+        "content": [
+          "reaction"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

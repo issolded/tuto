@@ -1,0 +1,635 @@
+{
+  "id": "E3-goal-new-term",
+  "level": "E3",
+  "premise": {
+    "id": "goal-new-term",
+    "genre": "fiction",
+    "theme": "school",
+    "source": "150 Writing Prompts p6 (shape only)",
+    "premise": "A child sets one small goal for the new school term and finds a clever way to practise a little every day."
+  },
+  "names": [
+    "Aisha",
+    "Dan"
+  ],
+  "models": {
+    "generator": "gemini-3.5-flash",
+    "safety": "gemini-3.1-pro-preview",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "Dan's New Words",
+    "passage": "Dan wants to learn five new words every day. He writes his new words on green paper. His floor is dirty today. Dan puts the green paper on his desk so it is clean. Dan likes to learn when he eats breakfast. He reads his paper in the morning because he eats his food then. He says all five words out loud. Dan smiles because he knows every word now.",
+    "questions": [
+      {
+        "stem": "What paper does Dan put on his desk?",
+        "options": [
+          "the green paper",
+          "the blue paper",
+          "the yellow paper"
+        ],
+        "evidence": "Dan puts the green paper on his desk so it is clean.",
+        "op": "detail",
+        "answer": 0
+      },
+      {
+        "stem": "Why does Dan read his paper in the morning?",
+        "options": [
+          "because he sits at his desk then",
+          "because he drinks his milk then",
+          "because he eats his food then"
+        ],
+        "evidence": "He reads his paper in the morning because he eats his food then.",
+        "op": "cause",
+        "answer": 2
+      },
+      {
+        "stem": "Why does Dan put the paper on his desk?",
+        "options": [
+          "so it is clean",
+          "so it is safe",
+          "so it is flat"
+        ],
+        "evidence": "Dan puts the green paper on his desk so it is clean.",
+        "op": "cause",
+        "answer": 0
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 70,
+        "sentences": 8,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "By his bed"
+        },
+        {
+          "q": 2,
+          "favourite": "He wanted to get better"
+        },
+        {
+          "q": 3,
+          "favourite": "Because it was quiet"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "Next to his bed"
+        },
+        {
+          "q": 2,
+          "favourite": "To play at a school show"
+        },
+        {
+          "q": 3,
+          "favourite": "So he saw it in the morning"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Dan and His Guitar",
+        "passage": "Dan loved his new music hobby. He wanted to practise every day because he wanted to play for his friends. Dan put his guitar by his bed so he saw it before bed. Every night, he sat down and played a sweet song. His friends listened and clapped for him. Dan smiled because he was happy with his music. He enjoyed playing every day.",
+        "questions": [
+          {
+            "stem": "Where did Dan put his guitar?",
+            "options": [
+              "By his bed",
+              "By his desk",
+              "By his chair"
+            ],
+            "evidence": "Dan put his guitar by his bed",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why did Dan want to practise his guitar?",
+            "options": [
+              "To play for his class",
+              "To play for his friends",
+              "To play for his family"
+            ],
+            "evidence": "He wanted to practise every day because he wanted to play for his friends.",
+            "op": "cause",
+            "answer": 1
+          },
+          {
+            "stem": "Why did Dan put his guitar by his desk?",
+            "options": [
+              "So he saw it after school",
+              "So he saw it after dinner",
+              "So he saw it before bed"
+            ],
+            "evidence": "Dan put his guitar by his bed so he saw it before bed.",
+            "op": "cause",
+            "answer": 2
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Dan wanted to practise playing his guitar every day for his new class. He put his guitar by his desk so he saw it after school.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did Dan put his guitar?",
+            "options": [
+              "By his bed",
+              "By his desk",
+              "By his chair"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Dan want to practise his guitar?",
+            "options": [
+              "To play for his class",
+              "To play for his friends",
+              "To play for his family"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Dan put his guitar by his desk?",
+            "options": [
+              "So he saw it after school",
+              "So he saw it after dinner",
+              "So he saw it before bed"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        1,
+        2
+      ],
+      "round": 1,
+      "mode": "write",
+      "verdict": "revise",
+      "problems": [
+        "q3 pedagogy measures_op (The question stem contains an error ('by his desk' instead of 'by his bed'). According to the text, Dan did not put his guitar by his desk.)",
+        "q3 pedagogy single_correct (The question stem contains an error ('by his desk' instead of 'by his bed'). According to the text, Dan did not put his guitar by his desk.)",
+        "q3 pedagogy wrong_by_text (The question stem contains an error ('by his desk' instead of 'by his bed'). According to the text, Dan did not put his guitar by his desk.)"
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": [
+        "regional? practise"
+      ]
+    },
+    {
+      "item": {
+        "title": "Dan and His Guitar",
+        "passage": "Dan loved his new music hobby. He wanted to practise every day because he wanted to play for his friends. Dan put his guitar by his bed so he saw it before bed. Every night, he sat down and played a sweet song. His friends listened and clapped for him. Dan smiled because he was happy with his music. He enjoyed playing every day.",
+        "questions": [
+          {
+            "stem": "Where did Dan put his guitar?",
+            "options": [
+              "By his bed",
+              "By his desk",
+              "By his chair"
+            ],
+            "evidence": "Dan put his guitar by his bed",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why did Dan want to practise his guitar?",
+            "options": [
+              "To play for his class",
+              "To play for his friends",
+              "To play for his family"
+            ],
+            "evidence": "He wanted to practise every day because he wanted to play for his friends.",
+            "op": "cause",
+            "answer": 1
+          },
+          {
+            "stem": "Why did Dan put his guitar by his bed?",
+            "options": [
+              "So he saw it after school",
+              "So he saw it after dinner",
+              "So he saw it before bed"
+            ],
+            "evidence": "Dan put his guitar by his bed so he saw it before bed.",
+            "op": "cause",
+            "answer": 2
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Dan wanted to practise playing his guitar every day for his new class. He put his guitar by his desk so he saw it after school.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did Dan put his guitar?",
+            "options": [
+              "By his bed",
+              "By his desk",
+              "By his chair"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Dan want to practise his guitar?",
+            "options": [
+              "To play for his class",
+              "To play for his friends",
+              "To play for his family"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Dan put his guitar by his desk?",
+            "options": [
+              "So he saw it after school",
+              "So he saw it after dinner",
+              "So he saw it before bed"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        1,
+        2
+      ],
+      "round": 2,
+      "mode": "repair",
+      "verdict": "revise",
+      "problems": [
+        "q1 solved WITHOUT the text 3/3"
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": [
+        "regional? practise"
+      ]
+    },
+    {
+      "round": 3,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "a white paper"
+        },
+        {
+          "q": 2,
+          "favourite": "because he wants to learn new words"
+        },
+        {
+          "q": 3,
+          "favourite": "so he sees it every day"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 2,
+          "favourite": "because he is not busy then"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Dan's New Words",
+        "passage": "Dan makes a goal to learn five new words every day. He writes his words on green paper. Dan puts the green paper on his desk so it is clean. Dan reads his paper in the morning because he eats his food then. He looks at all five new words carefully. After he eats, he says the words out loud. Learning new words is great fun for Dan.",
+        "questions": [
+          {
+            "stem": "What paper does Dan put on his desk?",
+            "options": [
+              "the green paper",
+              "the blue paper",
+              "the yellow paper"
+            ],
+            "evidence": "Dan puts the green paper on his desk so it is clean.",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why does Dan read his paper in the morning?",
+            "options": [
+              "because he sits at his desk then",
+              "because he drinks his milk then",
+              "because he eats his food then"
+            ],
+            "evidence": "Dan reads his paper in the morning because he eats his food then.",
+            "op": "cause",
+            "answer": 2
+          },
+          {
+            "stem": "Why does Dan put the paper on his desk?",
+            "options": [
+              "so it is clean",
+              "so it is safe",
+              "so it is flat"
+            ],
+            "evidence": "Dan puts the green paper on his desk so it is clean.",
+            "op": "cause",
+            "answer": 0
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Dan makes a goal to learn five new words every day. He puts paper on his desk so he reads it every morning.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What paper does Dan put on his desk?",
+            "options": [
+              "the green paper",
+              "the blue paper",
+              "the yellow paper"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why does Dan read his paper in the morning?",
+            "options": [
+              "because he sits at his desk then",
+              "because he drinks his milk then",
+              "because he eats his food then"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why does Dan put the paper on his desk?",
+            "options": [
+              "so it is clean",
+              "so it is safe",
+              "so it is flat"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        2,
+        0
+      ],
+      "round": 3,
+      "mode": "write",
+      "verdict": "revise",
+      "problems": [
+        "passage natural (Some causal relationships feel contrived and unnatural ('Dan puts the green paper on his desk so it is clean' and 'Dan reads his paper in the morning because he eats his food then').)"
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "item": {
+        "title": "Dan's New Words",
+        "passage": "Dan wants to learn five new words every day. He writes his new words on green paper. His floor is dirty today. Dan puts the green paper on his desk so it is clean. Dan likes to learn when he eats breakfast. He reads his paper in the morning because he eats his food then. He says all five words out loud. Dan smiles because he knows every word now.",
+        "questions": [
+          {
+            "stem": "What paper does Dan put on his desk?",
+            "options": [
+              "the green paper",
+              "the blue paper",
+              "the yellow paper"
+            ],
+            "evidence": "Dan puts the green paper on his desk so it is clean.",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why does Dan read his paper in the morning?",
+            "options": [
+              "because he sits at his desk then",
+              "because he drinks his milk then",
+              "because he eats his food then"
+            ],
+            "evidence": "He reads his paper in the morning because he eats his food then.",
+            "op": "cause",
+            "answer": 2
+          },
+          {
+            "stem": "Why does Dan put the paper on his desk?",
+            "options": [
+              "so it is clean",
+              "so it is safe",
+              "so it is flat"
+            ],
+            "evidence": "Dan puts the green paper on his desk so it is clean.",
+            "op": "cause",
+            "answer": 0
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Dan makes a goal to learn five new words every day. He puts paper on his desk so he reads it every morning.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What paper does Dan put on his desk?",
+            "options": [
+              "the green paper",
+              "the blue paper",
+              "the yellow paper"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why does Dan read his paper in the morning?",
+            "options": [
+              "because he sits at his desk then",
+              "because he drinks his milk then",
+              "because he eats his food then"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why does Dan put the paper on his desk?",
+            "options": [
+              "so it is clean",
+              "so it is safe",
+              "so it is flat"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        2,
+        0
+      ],
+      "round": 4,
+      "mode": "repair",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,220 @@
+{
+  "id": "E2-astra80-B3-E2-27",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-27",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-27",
+    "level": "E2",
+    "category": "pets",
+    "title": "The Sleeping Player",
+    "passage": "Nina and Omar put picture cards on the living room rug. Their cat sat on the card with a mouse on it. Omar held up a fish card, but the cat closed its eyes. Nina moved their game to the table and let the cat keep its mouse.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which card did the cat sit on?",
+        "options": [
+          "The bird card.",
+          "The mouse card.",
+          "The rabbit card."
+        ],
+        "answer": 1,
+        "evidence": "Their cat sat on the card with a mouse on it."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did Nina move the game?",
+        "options": [
+          "Onto the sofa.",
+          "Onto the table.",
+          "Onto the bed."
+        ],
+        "answer": 1,
+        "evidence": "Nina moved their game to the table and let the cat keep its mouse."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "The cat closed its eyes.",
+          "Omar showed the fish card.",
+          "Nina moved the game."
+        ],
+        "answer": 1,
+        "evidence": "Omar held up a fish card, but the cat closed its eyes."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 48,
+        "sentences": 4,
+        "flyers": [
+          "let",
+          "keep",
+          "happen"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 48,
+        "sentences": 4,
+        "flyers": [
+          "let",
+          "keep",
+          "happen"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

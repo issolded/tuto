@@ -1,0 +1,262 @@
+{
+  "id": "E3-astra30-B2-E3-10",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-10",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-10",
+    "level": "E3",
+    "category": "imagination",
+    "title": "The Cloud Sheep",
+    "passage": "Ravi wrote a story about a sheep made from a cloud. Yan drew the sheep above a small house. Ravi gave it long legs because it needed to reach the ground. Yan drew the legs right down to the grass. Then he added boots because Ravi wanted the sheep to walk through rain. The sheep now had four big yellow boots. Ravi wrote that it took them off before going inside. Yan drew four little clouds coming out of the boots.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Yan draw below the sheep?",
+        "options": [
+          "A little boat.",
+          "A little train.",
+          "A little house."
+        ],
+        "answer": 2,
+        "evidence": "Yan drew the sheep above a small house."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ravi give the sheep long legs?",
+        "options": [
+          "Its feet needed to get down to the ground.",
+          "Its feet needed to get over a tall wall.",
+          "Its feet needed to get across a big lake."
+        ],
+        "answer": 0,
+        "evidence": "Ravi gave it long legs because it needed to reach the ground."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Yan add boots?",
+        "options": [
+          "The story needed a trip through cold snow.",
+          "The story needed a walk in wet weather.",
+          "The story needed a dance in new clothes."
+        ],
+        "answer": 1,
+        "evidence": "Then he added boots because Ravi wanted the sheep to walk through rain."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "reach",
+          "through",
+          "over",
+          "across"
+        ],
+        "outside": [],
+        "content": [
+          "reach"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "reach",
+          "through",
+          "over",
+          "across"
+        ],
+        "outside": [],
+        "content": [
+          "reach"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Spatial reasoning (above/below) is direct enough to count as a detail."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Directly matches the text."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Good paraphrase of 'walk through rain'."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A charming and creative story about two children collaborating on a drawing and story."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

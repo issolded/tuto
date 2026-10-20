@@ -1,0 +1,230 @@
+{
+  "id": "E3-astra80-B3-E3-28",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-28",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-28",
+    "level": "E3",
+    "category": "nature",
+    "title": "The Different Stones",
+    "passage": "Amir and Sara looked at stones in the school garden with their teacher. Amir chose a flat one, and Sara chose a round one. Sara put hers in a bowl because it kept falling off the table. Amir put his beside it, where it stayed still. He washed his stone because the dry dirt hid its marks. When it was clean, little white lines showed across the top. Sara drew the two stones in her book. She gave the round one a bowl in the drawing too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What shape was Sara's stone?",
+        "options": [
+          "Flat.",
+          "Round.",
+          "Square."
+        ],
+        "answer": 1,
+        "evidence": "Amir chose a flat one, and Sara chose a round one."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sara put her stone in a bowl?",
+        "options": [
+          "It needed water to wash off dirt.",
+          "It would not stay on the table.",
+          "It was too hot to hold in her hand."
+        ],
+        "answer": 1,
+        "evidence": "Sara put hers in a bowl because it kept falling off the table."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Amir wash his stone?",
+        "options": [
+          "He wanted to paint a face on it.",
+          "He wanted to give it to the teacher.",
+          "He wanted to see its hidden marks."
+        ],
+        "answer": 2,
+        "evidence": "He washed his stone because the dry dirt hid its marks."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 87,
+        "sentences": 8,
+        "flyers": [
+          "stone",
+          "keep",
+          "beside",
+          "stay",
+          "still",
+          "dirt",
+          "across"
+        ],
+        "outside": [],
+        "content": [
+          "stone",
+          "dirt"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 87,
+        "sentences": 8,
+        "flyers": [
+          "stone",
+          "keep",
+          "beside",
+          "stay",
+          "still",
+          "dirt",
+          "across"
+        ],
+        "outside": [],
+        "content": [
+          "stone",
+          "dirt"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

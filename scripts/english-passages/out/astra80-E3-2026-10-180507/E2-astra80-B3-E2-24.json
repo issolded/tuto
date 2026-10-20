@@ -1,0 +1,231 @@
+{
+  "id": "E2-astra80-B3-E2-24",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-24",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-24",
+    "level": "E2",
+    "category": "food",
+    "title": "The Orange Plate",
+    "passage": "Lily put orange pieces around the outside of a plate. Ben placed a round sandwich in the middle. Lily called their lunch a sun and carried it to the table. Ben ate one orange piece and said some of the sun had gone.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was around the outside of the plate?",
+        "options": [
+          "Pieces of orange.",
+          "Pieces of apple.",
+          "Pieces of pear."
+        ],
+        "answer": 0,
+        "evidence": "Lily put orange pieces around the outside of a plate."
+      },
+      {
+        "op": "detail",
+        "stem": "What was in the middle?",
+        "options": [
+          "A round sandwich.",
+          "A round cake.",
+          "A round pancake."
+        ],
+        "answer": 0,
+        "evidence": "Ben placed a round sandwich in the middle."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Lily carried the plate.",
+          "Ben put down the sandwich.",
+          "Ben ate an orange piece."
+        ],
+        "answer": 1,
+        "evidence": "Ben placed a round sandwich in the middle."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "piece",
+          "middle",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "piece",
+          "middle"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [
+          "piece",
+          "middle",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "piece",
+          "middle"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

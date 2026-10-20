@@ -1,0 +1,250 @@
+{
+  "id": "E4-astra80-B3-E4-03",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-03",
+    "level": "E4",
+    "category": "clothes",
+    "title": "The Pocket Museum",
+    "passage": "Sam was helping Zoe sort clothes before putting them away. In one coat pocket, he found a small stone and a paper ticket. Zoe remembered collecting the stone on a walk with their grandfather. The ticket was from a train journey they had taken the same day. Sam put both things on the table and asked what was in the next pocket. They found a button, a little drawing, and a folded shopping list. Zoe could remember a story for almost every object. Sam arranged them in a row and made paper labels for them. He called their table a museum of ordinary days. Zoe put the shopping list back because they still needed it. Then she added a label to the empty place where it had been. It said that this part of the museum had gone shopping.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where had Zoe collected the stone?",
+        "options": [
+          "At school with her teacher.",
+          "On a beach with her cousin.",
+          "On a walk with her grandfather."
+        ],
+        "answer": 2,
+        "evidence": "Zoe remembered collecting the stone on a walk with their grandfather."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Sam call the table a museum?",
+        "options": [
+          "The objects were all very expensive.",
+          "The objects had stories worth showing.",
+          "The objects had all been found under the ground."
+        ],
+        "answer": 1,
+        "evidence": "Zoe could remember a story for almost every object.",
+        "rationale": "Zoe recalls events for the objects and Sam arranges and labels them for display."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Deciding which old clothes should be given away.",
+          "Making a list of things to buy on a journey.",
+          "Finding memories in things kept in pockets."
+        ],
+        "answer": 2,
+        "evidence": "He called their table a museum of ordinary days.",
+        "rationale": "The central activity turns ordinary objects into reminders of shared experiences."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 139,
+        "sentences": 12,
+        "flyers": [
+          "sort",
+          "button",
+          "fold",
+          "list",
+          "almost",
+          "arrange",
+          "row",
+          "worth"
+        ],
+        "outside": [
+          "object",
+          "label",
+          "ordinary",
+          "mainly",
+          "memory"
+        ],
+        "content": [
+          "object",
+          "label",
+          "ordinary",
+          "memory"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 139,
+        "sentences": 12,
+        "flyers": [
+          "sort",
+          "button",
+          "fold",
+          "list",
+          "almost",
+          "arrange",
+          "row",
+          "worth"
+        ],
+        "outside": [
+          "object",
+          "label",
+          "ordinary",
+          "mainly",
+          "memory"
+        ],
+        "content": [
+          "object",
+          "label",
+          "ordinary",
+          "memory"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,210 @@
+{
+  "id": "E2-astra80-B3-E2-01",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-01",
+    "level": "E2",
+    "category": "food",
+    "title": "The Banana Smile",
+    "passage": "Mia put a banana on her breakfast plate. Tom added two grapes above it and called it a face. Mia ate one grape and made the face look different. Tom closed one eye to look like the face, and Mia laughed.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was on the plate first?",
+        "options": [
+          "An apple.",
+          "A pear.",
+          "A banana."
+        ],
+        "answer": 2,
+        "evidence": "Mia put a banana on her breakfast plate."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Tom put above the banana?",
+        "options": [
+          "Two grapes.",
+          "Two beans.",
+          "Two peas."
+        ],
+        "answer": 0,
+        "evidence": "Tom added two grapes above it and called it a face."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Tom closed one eye.",
+          "Mia ate a grape.",
+          "Mia laughed at Tom."
+        ],
+        "answer": 1,
+        "evidence": "Mia ate one grape and made the face look different."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [
+          "happen"
+        ],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Effectively tests an explicit detail from the first sentence."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Effectively tests an explicit detail from the second sentence."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Effectively tests the sequence of events as they occurred in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A cute, logical, and well-structured short passage that perfectly fits the E2 level requirements."
+      },
+      "model": "gemini-3.1-pro-preview"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

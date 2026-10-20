@@ -171,7 +171,11 @@ for (const bandKey of BAND_KEYS) {
       for (const w of [...words, ...groups]) {
         if (BLOCKED.has(w)) { blocked++; fail(`${bandKey}/${type} seed ${item.seed}: blocked word "${w}"`) }
       }
-      for (const w of words) {
+      // Hand-written tables that were read for a child's age are not held to the frequency
+      // bar: `toothache`, `daydream` and `snowflake` are rarer in print than `payroll` and are
+      // still the right compounds for a seven-year-old. Blocklist still applies (above).
+      const handRead = ['compound-front'].includes(type)
+      for (const w of handRead ? [] : words) {
         if (WORD_Z[w] !== undefined && WORD_Z[w] < band.option && w.length > 2) {
           rare++
           fail(`${bandKey}/${type} seed ${item.seed}: "${w}" is Zipf ${(WORD_Z[w] / 10).toFixed(1)}`)

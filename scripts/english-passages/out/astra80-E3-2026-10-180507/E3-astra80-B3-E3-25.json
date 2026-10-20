@@ -1,0 +1,226 @@
+{
+  "id": "E3-astra80-B3-E3-25",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-25",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-25",
+    "level": "E3",
+    "category": "performance",
+    "title": "The Lost Word",
+    "passage": "Sam was reading a poem to Zoe in the classroom. He stopped because his finger was hiding the next word. Zoe pointed below the word, and he moved his hand. Now he could read all the words. He tried again because he wanted to read from start to end. Now he kept his finger below each line. Zoe listened until he got to the last word. Then she clapped and asked to read the poem to him.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Who listened to Sam's poem?",
+        "options": [
+          "Their teacher.",
+          "Their parent.",
+          "Zoe."
+        ],
+        "answer": 2,
+        "evidence": "Sam was reading a poem to Zoe in the classroom."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sam stop reading?",
+        "options": [
+          "His page had fallen on the floor.",
+          "His hand was hiding a word.",
+          "His friend had asked a question."
+        ],
+        "answer": 1,
+        "evidence": "He stopped because his finger was hiding the next word."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sam start again?",
+        "options": [
+          "He wanted to read it all from start to end.",
+          "He wanted to read a different poem.",
+          "He wanted to show another picture."
+        ],
+        "answer": 0,
+        "evidence": "He tried again because he wanted to read from start to end."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 77,
+        "sentences": 8,
+        "flyers": [
+          "poem",
+          "finger",
+          "keep",
+          "each",
+          "until"
+        ],
+        "outside": [],
+        "content": [
+          "poem",
+          "finger"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 77,
+        "sentences": 8,
+        "flyers": [
+          "poem",
+          "finger",
+          "keep",
+          "each",
+          "until"
+        ],
+        "outside": [],
+        "content": [
+          "poem",
+          "finger"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

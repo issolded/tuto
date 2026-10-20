@@ -74,6 +74,7 @@ const WHY_LABEL = {
   'same-meaning-pair': 'a same-meaning pair',
   'same-group-pair': 'two of a kind',
   'unrelated-pair': 'unrelated',
+  'sound-alike-pair': 'sounds alike, means something else',
   'wrong-person': 'the facts rule them out',
   'one-out-of-order': 'one letter out of order',
   'out-of-order': 'out of order',

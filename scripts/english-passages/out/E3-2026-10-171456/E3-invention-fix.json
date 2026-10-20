@@ -1,0 +1,419 @@
+{
+  "id": "E3-invention-fix",
+  "level": "E3",
+  "premise": {
+    "id": "invention-fix",
+    "genre": "fiction",
+    "theme": "invention",
+    "source": "150 Writing Prompts p6 (shape only)",
+    "premise": "A child builds a simple invention to solve a small problem at home. The first try goes wrong in a funny way, and a change makes it work."
+  },
+  "names": [
+    "Raj",
+    "Kofi"
+  ],
+  "models": {
+    "generator": "gemini-3.5-flash",
+    "safety": "gemini-3.1-pro-preview",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "Raj and His Machine",
+    "passage": "Raj made a machine so he could pick up socks. He built the clever machine with a red box. The red machine could move around the room. It worked very well at first. Then the machine tried to carry a big ball. It dropped the ball on the mat. Raj added a net because it dropped a ball. Now the machine could hold everything carefully.",
+    "questions": [
+      {
+        "stem": "What did Raj build his machine with?",
+        "options": [
+          "A blue box",
+          "A green box",
+          "A red box"
+        ],
+        "evidence": "He built the clever machine with a red box.",
+        "op": "detail",
+        "answer": 2
+      },
+      {
+        "stem": "Why did Raj make the machine?",
+        "options": [
+          "To pick up socks",
+          "To pick up toys",
+          "To pick up books"
+        ],
+        "evidence": "Raj made a machine so he could pick up socks.",
+        "op": "cause",
+        "answer": 0
+      },
+      {
+        "stem": "Why did Raj add a net to the machine?",
+        "options": [
+          "Because it dropped a sock",
+          "Because it dropped a shoe",
+          "Because it dropped a ball"
+        ],
+        "evidence": "Raj added a net because it dropped a ball.",
+        "op": "cause",
+        "answer": 2
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 65,
+        "sentences": 8,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "In a blue bowl"
+        },
+        {
+          "q": 2,
+          "favourite": "The box moved too quickly"
+        },
+        {
+          "q": 3,
+          "favourite": "His machine worked well"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "In his bedroom"
+        },
+        {
+          "q": 2,
+          "favourite": "The box hit the chair"
+        },
+        {
+          "q": 3,
+          "favourite": "Kofi moved the chair"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Kofi's Cat Machine",
+        "passage": "Kofi wanted to feed his pet cat with a machine. He used a box and a bottle to make it. First, the food fell on the floor because the box was too small. His cat sat by the machine and watched. Kofi had a clever idea to fix it. The machine worked the second time because Kofi moved the box up. The cat was happy and ate the food.",
+        "questions": [
+          {
+            "stem": "What did Kofi use to make his machine?",
+            "options": [
+              "A box and a cup",
+              "A box and a bowl",
+              "A box and a bottle"
+            ],
+            "evidence": "He used a box and a bottle to make it.",
+            "op": "detail",
+            "answer": 2
+          },
+          {
+            "stem": "Why did the food fall on the floor?",
+            "options": [
+              "Because the box was too big",
+              "Because the box was too small",
+              "Because the box was too old"
+            ],
+            "evidence": "First, the food fell on the floor because the box was too small.",
+            "op": "cause",
+            "answer": 1
+          },
+          {
+            "stem": "Why did the machine work the second time?",
+            "options": [
+              "Because Kofi moved the box down",
+              "Because Kofi moved the box up",
+              "Because Kofi moved the box back"
+            ],
+            "evidence": "The machine worked the second time because Kofi moved the box up.",
+            "op": "cause",
+            "answer": 1
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Kofi built a small machine to feed his pet cat. His first try dropped food on the floor, but a change made it work.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Kofi use to make his machine?",
+            "options": [
+              "A box and a cup",
+              "A box and a bowl",
+              "A box and a bottle"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the food fall on the floor?",
+            "options": [
+              "Because the box was too big",
+              "Because the box was too small",
+              "Because the box was too old"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the machine work the second time?",
+            "options": [
+              "Because Kofi moved the box down",
+              "Because Kofi moved the box up",
+              "Because Kofi moved the box back"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        2,
+        1,
+        1
+      ],
+      "round": 1,
+      "mode": "write",
+      "verdict": "revise",
+      "problems": [
+        "q1 solved WITHOUT the text 3/3",
+        "q2 solved WITHOUT the text 3/3"
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "round": 2,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A big box"
+        },
+        {
+          "q": 2,
+          "favourite": "To pick up socks"
+        },
+        {
+          "q": 3,
+          "favourite": "Because it dropped a shoe"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "mode": "plan-check",
+      "favourites": []
+    },
+    {
+      "item": {
+        "title": "Raj and His Machine",
+        "passage": "Raj made a machine so he could pick up socks. He built the clever machine with a red box. The red machine could move around the room. It worked very well at first. Then the machine tried to carry a big ball. It dropped the ball on the mat. Raj added a net because it dropped a ball. Now the machine could hold everything carefully.",
+        "questions": [
+          {
+            "stem": "What did Raj build his machine with?",
+            "options": [
+              "A blue box",
+              "A green box",
+              "A red box"
+            ],
+            "evidence": "He built the clever machine with a red box.",
+            "op": "detail",
+            "answer": 2
+          },
+          {
+            "stem": "Why did Raj make the machine?",
+            "options": [
+              "To pick up socks",
+              "To pick up toys",
+              "To pick up books"
+            ],
+            "evidence": "Raj made a machine so he could pick up socks.",
+            "op": "cause",
+            "answer": 0
+          },
+          {
+            "stem": "Why did Raj add a net to the machine?",
+            "options": [
+              "Because it dropped a sock",
+              "Because it dropped a shoe",
+              "Because it dropped a ball"
+            ],
+            "evidence": "Raj added a net because it dropped a ball.",
+            "op": "cause",
+            "answer": 2
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Raj built a machine from a red box to pick up socks. It dropped a shoe, so Raj added a net to fix it.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Raj build his machine with?",
+            "options": [
+              "A blue box",
+              "A green box",
+              "A red box"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Raj make the machine?",
+            "options": [
+              "To pick up socks",
+              "To pick up toys",
+              "To pick up books"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Raj add a net to the machine?",
+            "options": [
+              "Because it dropped a sock",
+              "Because it dropped a shoe",
+              "Because it dropped a ball"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        2,
+        0,
+        2
+      ],
+      "round": 2,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "status": "awaiting-human"
+}

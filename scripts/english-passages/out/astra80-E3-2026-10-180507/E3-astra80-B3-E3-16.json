@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-16",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-16",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-16",
+    "level": "E3",
+    "category": "pets",
+    "title": "The Ball Below the Sofa",
+    "passage": "Nina played with her cat and a small blue ball. The ball went under the sofa, and the cat waited beside it. Omar brought a ruler because his hand could not get to the ball. He moved the ball with the ruler until Nina could pick it up. She wiped it because it was dirty from the floor. Then she put it in front of the cat. The cat sent it across the room again. Omar put the ruler beside the sofa for another try.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Omar bring?",
+        "options": [
+          "A pencil.",
+          "A book.",
+          "A ruler."
+        ],
+        "answer": 2,
+        "evidence": "Omar brought a ruler because his hand could not get to the ball."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Omar bring the ruler?",
+        "options": [
+          "The ball was too big for Nina to hold.",
+          "The ball had gone through a small window.",
+          "The ball was too far under the sofa for his hand."
+        ],
+        "answer": 2,
+        "evidence": "Omar brought a ruler because his hand could not get to the ball."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Nina wipe the ball?",
+        "options": [
+          "It was wet from the cat's bowl.",
+          "It was dirty after going under the sofa.",
+          "It had fallen into some blue paint."
+        ],
+        "answer": 1,
+        "evidence": "She wiped it because it was dirty from the floor."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "beside",
+          "until",
+          "wipe",
+          "across",
+          "through",
+          "far"
+        ],
+        "outside": [],
+        "content": [
+          "wipe",
+          "far"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 85,
+        "sentences": 8,
+        "flyers": [
+          "beside",
+          "until",
+          "wipe",
+          "across",
+          "through",
+          "far"
+        ],
+        "outside": [],
+        "content": [
+          "wipe",
+          "far"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

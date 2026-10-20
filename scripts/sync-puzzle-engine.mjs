@@ -22,14 +22,21 @@ const ENGINES = [
     'fontGate.js', 'puzzleArt.generated.js', 'puzzleExplain.js', 'puzzleHelp.js',
   ] },
   { to: 'server/english', files: ['englishTemplates.js', 'englishTables.js', 'englishLexicon.generated.js', 'englishHelp.js'] },
+  // The English ladder (literacy): the server rebuilds every child's state from stored answers and decides VR offers,
+  // so the rules have to be the same file the lab and the tests use. The banks come along because the lab sitting
+  // deals and marks their items on the server.
+  { from: 'src/lib/literacy', to: 'server/literacy', files: [
+    'ladder.js', 'vrPrereqs.js', 'vrOffer.js', 'catalog.js', 'engine.js', 'content.js', 'sentenceBank.js',
+    'trialSet.js', 'listeningBank.js', 'readingPreview.generated.json', 'readingStories.generated.json',
+  ] },
 ]
 const FROM = 'src/lib'
 
 if (process.argv.includes('--check')) {
   let bad = false
-  for (const { to, files } of ENGINES) {
+  for (const { from = FROM, to, files } of ENGINES) {
     const stale = files.filter(f => !existsSync(`${to}/${f}`)
-      || !readFileSync(`${FROM}/${f}`).equals(readFileSync(`${to}/${f}`)))
+      || !readFileSync(`${from}/${f}`).equals(readFileSync(`${to}/${f}`)))
     if (stale.length) {
       console.error(`✗ ${to} is behind src/lib: ${stale.join(', ')}\n\nRun: npm run puzzle:sync`)
       bad = true
@@ -38,8 +45,8 @@ if (process.argv.includes('--check')) {
   process.exit(bad ? 1 : 0)
 }
 
-for (const { to, files } of ENGINES) {
+for (const { from = FROM, to, files } of ENGINES) {
   mkdirSync(to, { recursive: true })
-  for (const f of files) writeFileSync(`${to}/${f}`, readFileSync(`${FROM}/${f}`))
+  for (const f of files) writeFileSync(`${to}/${f}`, readFileSync(`${from}/${f}`))
   console.log(`copied ${files.length} files to ${to}`)
 }

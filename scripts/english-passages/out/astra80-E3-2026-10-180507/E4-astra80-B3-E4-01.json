@@ -1,0 +1,239 @@
+{
+  "id": "E4-astra80-B3-E4-01",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-01",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-01",
+    "level": "E4",
+    "category": "friendship",
+    "title": "The Unopened Box",
+    "passage": "Mia brought a box of drawing things when she visited Tom. She had planned to teach him how to draw a horse. Tom met her at the door holding a page covered in tiny buildings. He began showing her the shops, park, and school in his paper town. Mia kept her box closed while he talked. When he pointed to an empty field, she asked what belonged there. Tom said he had not decided yet. Mia opened her box and drew a horse on a fresh piece of paper. Tom placed it in the field and drew a path leading to the town. They spent the afternoon adding animals and places for them to live. On her way home, Mia saw she had never given her drawing lesson. Her horse had found somewhere to live instead.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which part of the town was empty?",
+        "options": [
+          "A field.",
+          "A shop.",
+          "A school."
+        ],
+        "answer": 0,
+        "evidence": "When he pointed to an empty field, she asked what belonged there."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Mia wait before opening her box?",
+        "options": [
+          "She had forgotten where she put her pencils.",
+          "She was listening to Tom's idea first.",
+          "She wanted Tom to guess her best-loved animal."
+        ],
+        "answer": 1,
+        "evidence": "Mia kept her box closed while he talked.",
+        "rationale": "She arrives with a lesson planned but listens to his town and adds something that fits it."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Combining two different ideas during a visit.",
+          "Finishing a drawing lesson before going outside.",
+          "Choosing which friend has made the better picture."
+        ],
+        "answer": 0,
+        "evidence": "They spent the afternoon adding animals and places for them to live.",
+        "rationale": "Mia’s planned horse drawing becomes part of Tom’s town rather than a separate lesson."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 136,
+        "sentences": 12,
+        "flyers": [
+          "plan",
+          "cover",
+          "tiny",
+          "belong",
+          "fresh",
+          "lead",
+          "forgotten"
+        ],
+        "outside": [
+          "unopen",
+          "mainly",
+          "combin"
+        ],
+        "content": [
+          "unopen",
+          "combin"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 136,
+        "sentences": 12,
+        "flyers": [
+          "plan",
+          "cover",
+          "tiny",
+          "belong",
+          "fresh",
+          "lead",
+          "forgotten"
+        ],
+        "outside": [
+          "unopen",
+          "mainly",
+          "combin"
+        ],
+        "content": [
+          "unopen",
+          "combin"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

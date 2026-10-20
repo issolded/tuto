@@ -26,6 +26,11 @@ const PuzzleLab = lazy(() => import('./screens/PuzzleLab'))
 // file. The child's screen (EnglishScreen) never imports it — it reads the questions from the
 // server, the way PuzzleScreen does, so the answer never reaches the browser at all.
 const EnglishLab = lazy(() => import('./screens/EnglishLab'))
+const LiteracyLab = lazy(() => import('./screens/LiteracyLab'))
+// The English trial set with its recordings and pictures; a reviewer tool, answer keys included.
+const EnglishTrialLab = lazy(() => import('./screens/EnglishTrialLab'))
+// A design preview of a reading sitting with candidate passages (not approved; answer keys inside).
+const EnglishReadingPreview = lazy(() => import('./screens/EnglishReadingPreview'))
 const EnglishScreen = lazy(() => import('./screens/EnglishScreen'))
 // Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
 // screen needs.
@@ -122,6 +127,9 @@ function AppRoutes() {
         <Route path="/child/math" element={<MathScreen />} />
         <Route path="/math-lab" element={<MathLab />} />
         <Route path="/puzzle-lab" element={<Suspense fallback={null}><PuzzleLab /></Suspense>} />
+        <Route path="/literacy-lab" element={<Suspense fallback={null}><LiteracyLab /></Suspense>} />
+        <Route path="/english-trial-lab" element={<Suspense fallback={null}><EnglishTrialLab /></Suspense>} />
+        <Route path="/english-reading-preview" element={<Suspense fallback={null}><EnglishReadingPreview /></Suspense>} />
         <Route path="/english-lab" element={<Suspense fallback={null}><EnglishLab /></Suspense>} />
         <Route path="/child/stories" element={<StoriesEntry />} />
         <Route path="/child/homework" element={<HomeworkScreen />} />

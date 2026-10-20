@@ -1,0 +1,233 @@
+{
+  "id": "E2-astra80-B3-E2-16",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-16",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-16",
+    "level": "E2",
+    "category": "observation",
+    "title": "The Wet Circle",
+    "passage": "Nina lifted her cold glass from the kitchen table. A wet circle was left where the glass had stood. Omar brought a towel and dried the table. Nina put her glass on a small plate, ready for its next little circle.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was wet on the table?",
+        "options": [
+          "A square.",
+          "A circle.",
+          "A star."
+        ],
+        "answer": 1,
+        "evidence": "A wet circle was left where the glass had stood."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Nina put under her glass?",
+        "options": [
+          "A small book.",
+          "A small plate.",
+          "A small box."
+        ],
+        "answer": 1,
+        "evidence": "Nina put her glass on a small plate, ready for its next little circle."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Nina lifted her glass.",
+          "Omar dried the table.",
+          "Nina added the plate."
+        ],
+        "answer": 0,
+        "evidence": "Nina lifted her cold glass from the kitchen table."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [
+          "leave",
+          "ready",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "ready"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [
+          "leave",
+          "ready",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "ready"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": false,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Neither 'square' nor 'star' appears in the text, so a careless reader scanning the passage would not be tempted by them."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": false,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "'Small book' and 'small box' are not mentioned in the text, offering no textual hook for a careless reader."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 weak distractors (Neither 'square' nor 'star' appears in the text, so a careless reader scanning the passage would not be tempted by them.)",
+      "q2 weak distractors ('Small book' and 'small box' are not mentioned in the text, offering no textual hook for a careless reader.)",
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,235 @@
+{
+  "id": "E3-revised23-E3-04",
+  "level": "E3",
+  "premise": {
+    "id": "E3-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E3-04",
+    "level": "E3",
+    "title": "The Quiet Bell",
+    "passage": "Jack made a little shop for his toys at home. Aisha rang a bell when she wanted to buy something. Their dog came running because that bell meant dinner to him. He sat beside the shop with his bowl. Jack put the bell away because the dog was waiting for food. Aisha wrote OPEN on some paper. Now she pointed at the paper when she wanted something. The dog went to sleep, and the shop stayed open.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did the dog have with him at the shop?",
+        "options": [
+          "His toy ball.",
+          "His small blanket.",
+          "His food bowl."
+        ],
+        "answer": 2,
+        "evidence": "He sat beside the shop with his bowl."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did the dog run to the shop?",
+        "options": [
+          "He thought the bell meant food.",
+          "He wanted Jack to take him outside.",
+          "He heard Aisha calling his name."
+        ],
+        "answer": 0,
+        "evidence": "Their dog came running because that bell meant dinner to him."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Jack put the bell away?",
+        "options": [
+          "His sister was trying to sleep.",
+          "The dog kept waiting for dinner.",
+          "Aisha could not hear it from her chair."
+        ],
+        "answer": 1,
+        "evidence": "Jack put the bell away because the dog was waiting for food."
+      }
+    ],
+    "metrics": {
+      "words": 77,
+      "sentences": 8,
+      "max_sentence_words": 12
+    },
+    "change_note_tr": "Bell/ring korundu, empty/sign ve ağır soru sözcükleri sadeleşti; önceden uyumadığı için back to sleep çıkarıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 77,
+        "sentences": 8,
+        "flyers": [
+          "bell",
+          "ring",
+          "beside",
+          "away",
+          "stay",
+          "hear",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "bell",
+          "ring"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 77,
+        "sentences": 8,
+        "flyers": [
+          "bell",
+          "ring",
+          "beside",
+          "away",
+          "stay",
+          "hear",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "bell",
+          "ring"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

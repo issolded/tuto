@@ -1,0 +1,237 @@
+{
+  "id": "E2-astra80-B3-E2-11",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-11",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-11",
+    "level": "E2",
+    "category": "library",
+    "title": "The Animal Page",
+    "passage": "Kofi opened a library book and showed Rita a picture of a goat. Rita turned the page and found a much smaller animal. It was a mouse standing beside a huge piece of cheese. Kofi put his finger beside the mouse and said hello to the little reader.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which animal did Kofi show Rita first?",
+        "options": [
+          "A horse.",
+          "A donkey.",
+          "A goat."
+        ],
+        "answer": 2,
+        "evidence": "Kofi opened a library book and showed Rita a picture of a goat."
+      },
+      {
+        "op": "detail",
+        "stem": "What was beside the mouse?",
+        "options": [
+          "A big piece of bread.",
+          "A big piece of cheese.",
+          "A big piece of cake."
+        ],
+        "answer": 1,
+        "evidence": "It was a mouse standing beside a huge piece of cheese."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Rita turned the page.",
+          "Rita found the smaller animal.",
+          "Kofi said hello to the mouse."
+        ],
+        "answer": 0,
+        "evidence": "Rita turned the page and found a much smaller animal."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 48,
+        "sentences": 4,
+        "flyers": [
+          "turn",
+          "beside",
+          "piece",
+          "finger",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "piece",
+          "finger"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 48,
+        "sentences": 4,
+        "flyers": [
+          "turn",
+          "beside",
+          "piece",
+          "finger",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "piece",
+          "finger"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

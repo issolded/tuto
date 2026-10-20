@@ -1,0 +1,261 @@
+{
+  "id": "E2-astra30-B2-E2-09",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-09",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-09",
+    "level": "E2",
+    "category": "observation",
+    "title": "The Blue Foot",
+    "passage": "Meera found a blue mark on the kitchen floor. Dan showed her his sock with blue paint on the bottom. He took off the sock and washed the mark off the floor. Meera looked at the clean floor and gave him a dry sock.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was the blue mark?",
+        "options": [
+          "On the kitchen floor.",
+          "On the bathroom wall.",
+          "On the bedroom door."
+        ],
+        "answer": 0,
+        "evidence": "Meera found a blue mark on the kitchen floor."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Meera give Dan?",
+        "options": [
+          "A towel that was wet.",
+          "A shoe that was clean.",
+          "A sock that was dry."
+        ],
+        "answer": 2,
+        "evidence": "Meera looked at the clean floor and gave him a dry sock."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Dan took off his sock.",
+          "Dan washed the floor mark.",
+          "Meera gave Dan another sock."
+        ],
+        "answer": 0,
+        "evidence": "He took off the sock and washed the mark off the floor."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Perfectly targets an explicit detail from the first sentence."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Effectively tests a detail from the final sentence with plausible distractors related to cleaning and feet."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests the sequence of events as they occurred in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is a clear, logical, and age-appropriate short narrative that perfectly fits the E2 level requirements."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,245 @@
+{
+  "id": "E4-astra30-B2-E4-05",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-05",
+    "level": "E4",
+    "category": "pets",
+    "title": "The Visitor at the Window",
+    "passage": "Nina was drawing at a low window while Omar read beside her. Their cat jumped onto the wide seat below the glass and watched Nina move her pencil. Whenever she lifted it, the cat reached towards its bright red end. Nina put the pencil down, but the cat stayed, looking at her hand. Omar brought its toy mouse and moved it across the floor. The cat jumped down to follow, leaving Nina room to draw. She finished a picture of the cat with one foot in the air. Then she put the pencil in a drawer and showed Omar her page. He held it near the cat, but the cat walked past without looking. Omar laughed that the cat had liked the moving pencil much more than its own picture.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Omar bring for the cat?",
+        "options": [
+          "Its blue blanket.",
+          "Its toy mouse.",
+          "Its food bowl."
+        ],
+        "answer": 1,
+        "evidence": "Omar brought its toy mouse and moved it across the floor."
+      },
+      {
+        "op": "inference",
+        "stem": "What most likely caught the cat's attention at the window?",
+        "options": [
+          "The animal drawn on the page.",
+          "The smell of food near the chair.",
+          "The way the pencil moved."
+        ],
+        "answer": 2,
+        "evidence": "Whenever she lifted it, the cat reached towards its bright red end.",
+        "rationale": "The cat reaches when the pencil moves, then follows a moving toy; both clues support movement as the attraction."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Teaching a cat to sit still while someone draws its picture.",
+          "Helping a child finish drawing by giving her cat something else to follow.",
+          "Finding a lost toy by watching where a cat looks."
+        ],
+        "answer": 1,
+        "evidence": "The cat jumped down to follow, leaving Nina room to draw.",
+        "rationale": "Omar redirects the cat to a moving toy, which resolves the interruption without teaching it a new skill."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 130,
+        "sentences": 10,
+        "flyers": [
+          "visitor",
+          "beside",
+          "wide",
+          "whenever",
+          "reach",
+          "towards",
+          "bright",
+          "own",
+          "attention"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 130,
+        "sentences": 10,
+        "flyers": [
+          "visitor",
+          "beside",
+          "wide",
+          "whenever",
+          "reach",
+          "towards",
+          "bright",
+          "own",
+          "attention"
+        ],
+        "outside": [
+          "onto"
+        ],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

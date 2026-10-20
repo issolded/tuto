@@ -1,0 +1,264 @@
+{
+  "id": "E3-astra30-B2-E3-03",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-03",
+    "level": "E3",
+    "category": "art",
+    "title": "The Purple Tree",
+    "passage": "Sam was painting a tree for the classroom wall. He looked for green paint but found only purple. Zoe brought a different box because the green paint was inside it. Sam looked at his purple tree and smiled. He kept it purple because he liked the strange tree. Zoe painted orange apples on its branches. Sam added a yellow bird with a purple tail. They called their picture a tree from a dream.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Zoe paint on the tree?",
+        "options": [
+          "Yellow lemons.",
+          "Orange apples.",
+          "Red flowers."
+        ],
+        "answer": 1,
+        "evidence": "Zoe painted orange apples on its branches."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Zoe bring another box?",
+        "options": [
+          "It had paper for a new picture.",
+          "It had the paint Sam wanted.",
+          "It had a place for the wet picture."
+        ],
+        "answer": 1,
+        "evidence": "Zoe brought a different box because the green paint was inside it."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sam keep the tree purple?",
+        "options": [
+          "He wanted to paint a night sky.",
+          "He liked how the purple tree looked.",
+          "He wanted a tree like one in a book."
+        ],
+        "answer": 1,
+        "evidence": "He kept it purple because he liked the strange tree."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 73,
+        "sentences": 8,
+        "flyers": [
+          "keep",
+          "strange",
+          "branch"
+        ],
+        "outside": [],
+        "content": [
+          "strange",
+          "branch"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 73,
+        "sentences": 8,
+        "flyers": [
+          "keep",
+          "strange",
+          "branch"
+        ],
+        "outside": [],
+        "content": [
+          "strange",
+          "branch"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests an explicit detail from the text."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests an explicit cause. 'The paint Sam wanted' is a good paraphrase for 'green paint' which he was looking for."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests an explicit cause stated in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is a sweet, coherent story that perfectly fits the E3 level requirements."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

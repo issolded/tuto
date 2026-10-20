@@ -1,0 +1,269 @@
+{
+  "id": "E4-astra80-B3-E4-16",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-16",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-16",
+    "level": "E4",
+    "category": "pets",
+    "title": "The Sound at the Door",
+    "passage": "Nina heard a soft scratching sound beside the kitchen door. She thought their dog wanted to come inside from the hall. Omar opened the door, but the dog was asleep on a mat farther away. He closed it again, and the scratching returned. Nina stood still and watched the bottom of the door. A loose paper notice hung there, brushing the floor when air moved through the gap. Omar held the paper against the door, and the sound stopped. They moved the notice higher and fixed it with another piece of tape. When they opened and closed the door, nothing scratched. The dog woke up and came over to see them. Nina laughed and said they had answered the paper before the dog. Omar opened the door once more and let the real visitor walk into the kitchen.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was the dog when Omar first opened the door?",
+        "options": [
+          "Playing beside a chair.",
+          "Asleep on a mat.",
+          "Drinking near its bowl."
+        ],
+        "answer": 1,
+        "evidence": "Omar opened the door, but the dog was asleep on a mat farther away."
+      },
+      {
+        "op": "inference",
+        "stem": "What showed that the paper caused the sound?",
+        "options": [
+          "Holding it still stopped the scratching.",
+          "The dog woke up when they spoke.",
+          "The notice had writing on both sides."
+        ],
+        "answer": 0,
+        "evidence": "Omar held the paper against the door, and the sound stopped.",
+        "rationale": "The noise returns with the door closed and ceases when the moving paper is restrained."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Teaching a dog to wait quietly outside a kitchen.",
+          "Checking a first guess to find the real source of a sound.",
+          "Writing a clearer notice so visitors can find the right door."
+        ],
+        "answer": 1,
+        "evidence": "They moved the notice higher and fixed it with another piece of tape.",
+        "rationale": "The children revise their initial explanation after observation and a direct test."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 138,
+        "sentences": 12,
+        "flyers": [
+          "scratch",
+          "beside",
+          "farther",
+          "return",
+          "loose",
+          "notice",
+          "hung",
+          "against",
+          "tape",
+          "real",
+          "visitor",
+          "cause",
+          "spoke",
+          "side",
+          "check",
+          "clear"
+        ],
+        "outside": [
+          "gap",
+          "mainly",
+          "source"
+        ],
+        "content": [
+          "gap",
+          "source"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 138,
+        "sentences": 12,
+        "flyers": [
+          "scratch",
+          "beside",
+          "farther",
+          "return",
+          "loose",
+          "notice",
+          "hung",
+          "against",
+          "tape",
+          "real",
+          "visitor",
+          "cause",
+          "spoke",
+          "side",
+          "check",
+          "clear"
+        ],
+        "outside": [
+          "gap",
+          "mainly",
+          "source"
+        ],
+        "content": [
+          "gap",
+          "source"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

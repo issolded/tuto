@@ -1,0 +1,223 @@
+{
+  "id": "E3-animal-shelter-trick",
+  "level": "E3",
+  "premise": {
+    "id": "animal-shelter-trick",
+    "genre": "fiction",
+    "theme": "animals",
+    "source": "own",
+    "premise": "An animal finds a clever way to stay warm or dry, and a child works out how it did it."
+  },
+  "names": [
+    "Lily",
+    "Jack"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Green Hat",
+    "passage": "It was raining loudly, so Jack looked out the window. He saw a little cat in his garden. The cat was very dry because it sat under a huge plant. The plant had very big leaves. The rain bounced off the top of the big leaves. Jack smiled because he understood the clever animal. The ground under the plant was safe and dry. The leaves were a great green hat!",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Jack see in his garden?",
+        "options": [
+          "A big dog.",
+          "A small cat.",
+          "A black bird."
+        ],
+        "answer": 1,
+        "evidence": "He saw a little cat in his garden."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Jack look out the window?",
+        "options": [
+          "His friends were calling him.",
+          "The children were laughing.",
+          "The rain was very loud."
+        ],
+        "answer": 2,
+        "evidence": "It was raining loudly, so Jack looked out the window."
+      },
+      {
+        "op": "cause",
+        "stem": "Why was the little cat dry?",
+        "options": [
+          "It was sitting below a big plant.",
+          "It was hiding in a big box.",
+          "It ran into the house."
+        ],
+        "answer": 0,
+        "evidence": "The cat was very dry because it sat under a huge plant."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 70,
+        "sentences": 8,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2
+      ]
+    },
+    {
+      "item": {
+        "title": "The Green Hat",
+        "passage": "It was raining loudly, so Jack looked out the window. He saw a little cat in his garden. The cat was very dry because it sat under a huge plant. The plant had very big leaves. The rain bounced off the top of the big leaves. Jack smiled because he understood the clever animal. The ground under the plant was safe and dry. The leaves were a great green hat!",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Jack see in his garden?",
+            "options": [
+              "A big dog.",
+              "A small cat.",
+              "A black bird."
+            ],
+            "answer": 1,
+            "evidence": "He saw a little cat in his garden."
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Jack look out the window?",
+            "options": [
+              "His friends were calling him.",
+              "The children were laughing.",
+              "The rain was very loud."
+            ],
+            "answer": 2,
+            "evidence": "It was raining loudly, so Jack looked out the window."
+          },
+          {
+            "op": "cause",
+            "stem": "Why was the little cat dry?",
+            "options": [
+              "It was sitting below a big plant.",
+              "It was hiding in a big box.",
+              "It ran into the house."
+            ],
+            "answer": 0,
+            "evidence": "The cat was very dry because it sat under a huge plant."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q1 guessable by a strong model without the text",
+        "q2 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

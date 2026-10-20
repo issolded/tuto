@@ -1,0 +1,255 @@
+{
+  "id": "E4-astra80-B3-E4-05",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-05",
+    "level": "E4",
+    "category": "pets",
+    "title": "The Best Cat Picture",
+    "passage": "Nina wanted a photograph of her cat sitting beside a plant pot. Omar held the camera while she placed a toy near the pot. The cat walked over, looked at the toy, and sat facing the other way. Nina moved around the pot, hoping to catch its face. The cat turned again, following a bird outside the window. Omar lowered the camera and watched for a moment. Then he moved beside Nina and took a picture from behind the cat. The photograph showed two pointed ears, the window, and a tiny bird beyond the glass. Nina began to say that the face was missing. But she stopped when she noticed how clearly the picture showed what the cat was watching. She asked Omar to send her that one. Under it, she wrote that their cat had chosen the view.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was the cat watching outside?",
+        "options": [
+          "A dog.",
+          "A butterfly.",
+          "A bird."
+        ],
+        "answer": 2,
+        "evidence": "The cat turned again, following a bird outside the window."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Nina change her mind about the photograph?",
+        "options": [
+          "It showed something interesting about the cat's attention.",
+          "It showed the cat's face more clearly than she expected.",
+          "It showed that the plant pot was in the wrong place."
+        ],
+        "answer": 0,
+        "evidence": "But she stopped when she noticed how clearly the picture showed what the cat was watching.",
+        "rationale": "She first wants a face portrait but values the image that reveals the cat’s viewpoint."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Teaching a cat to follow instructions for a photograph.",
+          "Learning to take pictures without looking through a camera.",
+          "Discovering that an unexpected picture can be worth keeping."
+        ],
+        "answer": 2,
+        "evidence": "She asked Omar to send her that one.",
+        "rationale": "The successful photograph differs from the planned one but tells a small story of its own."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 139,
+        "sentences": 12,
+        "flyers": [
+          "beside",
+          "pot",
+          "tiny",
+          "notice",
+          "clear",
+          "chosen",
+          "attention",
+          "expect",
+          "discover",
+          "worth"
+        ],
+        "outside": [
+          "photograph",
+          "beyond",
+          "mainly",
+          "instruction",
+          "unexpect"
+        ],
+        "content": [
+          "photograph",
+          "beyond",
+          "instruction",
+          "unexpect"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 139,
+        "sentences": 12,
+        "flyers": [
+          "beside",
+          "pot",
+          "tiny",
+          "notice",
+          "clear",
+          "chosen",
+          "attention",
+          "expect",
+          "discover",
+          "worth"
+        ],
+        "outside": [
+          "photograph",
+          "beyond",
+          "mainly",
+          "instruction",
+          "unexpect"
+        ],
+        "content": [
+          "photograph",
+          "beyond",
+          "instruction",
+          "unexpect"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,242 @@
+{
+  "id": "E4-astra80-B3-E4-10",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-10",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-10",
+    "level": "E4",
+    "category": "imagination",
+    "title": "The Letter to a Robot",
+    "passage": "Ravi wrote a letter to the robot in his new story. He asked it to bring him something that would make a rainy day better. Yan drew the robot arriving with a large umbrella. Ravi said that was useful, but his character had planned to stay indoors. Yan drew the robot bringing a board game instead. Now Ravi pointed out that the character was alone until the afternoon. They looked back at the letter and saw how little it told the robot. Ravi added that the character liked drawing and had no blue pencil. Yan drew a small box holding a blue pencil and some clean paper. In the last picture, the character drew a sky full of blue clouds. The robot waited beside him, holding the umbrella over the drawing. Ravi kept that part because it made him laugh.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was in the last box?",
+        "options": [
+          "A board game and cards.",
+          "An umbrella and a book.",
+          "A blue pencil and paper."
+        ],
+        "answer": 2,
+        "evidence": "Yan drew a small box holding a blue pencil and some clean paper."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Ravi add details to the letter?",
+        "options": [
+          "The robot needed to know more about what would help.",
+          "The robot could only read very long messages.",
+          "The robot had lost the character's address."
+        ],
+        "answer": 0,
+        "evidence": "They looked back at the letter and saw how little it told the robot.",
+        "rationale": "Earlier choices are reasonable but unsuitable because the initial request omits relevant preferences and circumstances."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Teaching a robot to draw clouds in different shapes.",
+          "Making a request clearer by adding useful details.",
+          "Choosing a game that can be played in rainy weather."
+        ],
+        "answer": 1,
+        "evidence": "Ravi added that the character liked drawing and had no blue pencil.",
+        "rationale": "Revising the letter resolves the mismatch between the request and the imagined deliveries."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 140,
+        "sentences": 12,
+        "flyers": [
+          "rainy",
+          "useful",
+          "plan",
+          "indoors",
+          "beside",
+          "clear"
+        ],
+        "outside": [
+          "character",
+          "detail",
+          "mainly",
+          "request"
+        ],
+        "content": [
+          "character",
+          "detail",
+          "request"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 140,
+        "sentences": 12,
+        "flyers": [
+          "rainy",
+          "useful",
+          "plan",
+          "indoors",
+          "beside",
+          "clear"
+        ],
+        "outside": [
+          "character",
+          "detail",
+          "mainly",
+          "request"
+        ],
+        "content": [
+          "character",
+          "detail",
+          "request"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

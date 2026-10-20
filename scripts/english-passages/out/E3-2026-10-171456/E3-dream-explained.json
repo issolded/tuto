@@ -1,0 +1,291 @@
+{
+  "id": "E3-dream-explained",
+  "level": "E3",
+  "premise": {
+    "id": "dream-explained",
+    "genre": "fiction",
+    "theme": "dreams",
+    "source": "150 Writing Prompts cover (shape only)",
+    "premise": "A child has a strange dream, and in the morning finds an ordinary reason for each odd part of it."
+  },
+  "names": [
+    "Ben",
+    "Yan"
+  ],
+  "models": {
+    "generator": "gemini-3.5-flash",
+    "safety": "gemini-3.1-pro-preview",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "A Strange Night",
+    "passage": "Ben had a strange dream last night. He heard a loud noise because his clock fell off his desk. Next, he saw a strange shape on his wall. He saw it because his box was in front of his lamp. In the morning, he saw what made the noise. His clock was on the floor. He found a green sock under his bed. Ben smiled and put his clock back on his desk.",
+    "questions": [
+      {
+        "stem": "What did Ben find under his bed?",
+        "options": [
+          "A yellow shoe",
+          "A green sock",
+          "A blue ball"
+        ],
+        "evidence": "He found a green sock under his bed.",
+        "op": "detail",
+        "answer": 1
+      },
+      {
+        "stem": "Why did Ben hear a loud noise at night?",
+        "options": [
+          "His book fell off his desk.",
+          "His clock fell off his desk.",
+          "His box fell off his desk."
+        ],
+        "evidence": "He heard a loud noise because his clock fell off his desk.",
+        "op": "cause",
+        "answer": 1
+      },
+      {
+        "stem": "Why did Ben see a strange shape on his wall?",
+        "options": [
+          "His bag was in front of his lamp.",
+          "His plant was in front of his lamp.",
+          "His box was in front of his lamp."
+        ],
+        "evidence": "He saw it because his box was in front of his lamp.",
+        "op": "cause",
+        "answer": 2
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 73,
+        "sentences": 8,
+        "flyers": [
+          "strange",
+          "heard",
+          "hear"
+        ],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 2,
+          "favourite": "A wet leaf hit the window."
+        },
+        {
+          "q": 3,
+          "favourite": "His coat was on his chair."
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": []
+    },
+    {
+      "item": {
+        "title": "A Strange Night",
+        "passage": "Ben had a strange dream last night. He heard a loud noise because his clock fell off his desk. Next, he saw a strange shape on his wall. He saw it because his box was in front of his lamp. In the morning, he saw what made the noise. His clock was on the floor. He found a green sock under his bed. Ben smiled and put his clock back on his desk.",
+        "questions": [
+          {
+            "stem": "What did Ben find under his bed?",
+            "options": [
+              "A yellow shoe",
+              "A green sock",
+              "A blue ball"
+            ],
+            "evidence": "He found a green sock under his bed.",
+            "op": "detail",
+            "answer": 1
+          },
+          {
+            "stem": "Why did Ben hear a loud noise at night?",
+            "options": [
+              "His book fell off his desk.",
+              "His clock fell off his desk.",
+              "His box fell off his desk."
+            ],
+            "evidence": "He heard a loud noise because his clock fell off his desk.",
+            "op": "cause",
+            "answer": 1
+          },
+          {
+            "stem": "Why did Ben see a strange shape on his wall?",
+            "options": [
+              "His bag was in front of his lamp.",
+              "His plant was in front of his lamp.",
+              "His box was in front of his lamp."
+            ],
+            "evidence": "He saw it because his box was in front of his lamp.",
+            "op": "cause",
+            "answer": 2
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Ben had a strange dream at night. In the morning, he saw what made the strange noise.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What did Ben find under his bed?",
+            "options": [
+              "A yellow shoe",
+              "A green sock",
+              "A blue ball"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Ben hear a loud noise at night?",
+            "options": [
+              "His book fell off his desk.",
+              "His clock fell off his desk.",
+              "His box fell off his desk."
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Ben see a strange shape on his wall?",
+            "options": [
+              "His bag was in front of his lamp.",
+              "His plant was in front of his lamp.",
+              "His box was in front of his lamp."
+            ]
+          }
+        ]
+      },
+      "picks": [
+        1,
+        1,
+        2
+      ],
+      "round": 1,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "status": "awaiting-human"
+}

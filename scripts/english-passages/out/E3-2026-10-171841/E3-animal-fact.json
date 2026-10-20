@@ -1,0 +1,285 @@
+{
+  "id": "E3-animal-fact",
+  "level": "E3",
+  "premise": {
+    "id": "animal-fact",
+    "genre": "information",
+    "theme": "animals",
+    "source": "own",
+    "premise": "A short information text about how one well-known animal finds food or stays safe, with one cause and its effect. Facts must be true and simple."
+  },
+  "names": [
+    "Yan",
+    "Tom"
+  ],
+  "models": {
+    "generator": "gemini-3.1-pro-preview",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.5-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "The Green Frog",
+    "passage": "A little green frog lives in the tall grass. Hungry birds fly above the grass to find food. The frog is green, so the birds can not see it. Sometimes a snake comes into the grass. The frog must move quickly to be safe. It jumps up because it has very strong back legs. The snake is slow and can not catch the frog. The safe frog goes to sleep on a big leaf.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What flies above the grass to find food?",
+        "options": [
+          "Birds that want to eat.",
+          "Bees that want to eat.",
+          "Ducks that want to eat."
+        ],
+        "answer": 0,
+        "evidence": "Hungry birds fly above the grass to find food."
+      },
+      {
+        "op": "cause",
+        "stem": "Why can the birds not see the frog?",
+        "options": [
+          "It hides behind a big brown animal.",
+          "Its body is green like the grass.",
+          "It goes into a big dirty lake."
+        ],
+        "answer": 1,
+        "evidence": "The frog is green, so the birds can not see it."
+      },
+      {
+        "op": "cause",
+        "stem": "Why does the frog jump up?",
+        "options": [
+          "The legs at its back are very strong.",
+          "It wants to catch a fly for dinner.",
+          "It is afraid of a big brown dog."
+        ],
+        "answer": 0,
+        "evidence": "It jumps up because it has very strong back legs."
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 74,
+        "sentences": 8,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_makes_sense": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "The Big Tiger",
+        "passage": "A tiger is a very big cat. It lives in the hot green forest. The tiger likes to have meat for its dinner. It quietly hides in the tall yellow grass. Animals can not see the tiger well. This is because it has orange and black lines. The tiger waits for a long time. Then the tiger runs very quickly. It runs quickly so it can catch its food.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What does the tiger like to eat for dinner?",
+            "options": [
+              "It wants to eat fish.",
+              "It wants to eat birds.",
+              "It wants to eat meat."
+            ],
+            "answer": 2,
+            "evidence": "The tiger likes to have meat for its dinner."
+          },
+          {
+            "op": "cause",
+            "stem": "Why is it difficult for animals to see the tiger?",
+            "options": [
+              "It is a very small animal.",
+              "Its body is orange and black.",
+              "It hides behind big rocks."
+            ],
+            "answer": 1,
+            "evidence": "This is because it has orange and black lines."
+          },
+          {
+            "op": "cause",
+            "stem": "Why does the tiger run very quickly?",
+            "options": [
+              "To get its dinner.",
+              "To find its family.",
+              "To get a drink."
+            ],
+            "answer": 0,
+            "evidence": "It runs quickly so it can catch its food."
+          }
+        ]
+      },
+      "round": 1,
+      "mode": "write",
+      "verdict": "regenerate",
+      "problems": [
+        "safety false-fact: It lives in the hot green forest.",
+        "q1 pedagogy needs_text (An adult can easily answer that tigers eat meat using general knowledge.)",
+        "q3 pedagogy needs_text (An adult can infer that tigers run fast to catch food/dinner without reading the text.)",
+        "q1 solved WITHOUT the text 3/3 (and the reviewer agrees)",
+        "q3 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+      ],
+      "warnings": [],
+      "notes": []
+    },
+    {
+      "round": 2,
+      "mode": "guess-check",
+      "guessed": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "item": {
+        "title": "The Green Frog",
+        "passage": "A little green frog lives in the tall grass. Hungry birds fly above the grass to find food. The frog is green, so the birds can not see it. Sometimes a snake comes into the grass. The frog must move quickly to be safe. It jumps up because it has very strong back legs. The snake is slow and can not catch the frog. The safe frog goes to sleep on a big leaf.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What flies above the grass to find food?",
+            "options": [
+              "Birds that want to eat.",
+              "Bees that want to eat.",
+              "Ducks that want to eat."
+            ],
+            "answer": 0,
+            "evidence": "Hungry birds fly above the grass to find food."
+          },
+          {
+            "op": "cause",
+            "stem": "Why can the birds not see the frog?",
+            "options": [
+              "It hides behind a big brown animal.",
+              "Its body is green like the grass.",
+              "It goes into a big dirty lake."
+            ],
+            "answer": 1,
+            "evidence": "The frog is green, so the birds can not see it."
+          },
+          {
+            "op": "cause",
+            "stem": "Why does the frog jump up?",
+            "options": [
+              "The legs at its back are very strong.",
+              "It wants to catch a fly for dinner.",
+              "It is afraid of a big brown dog."
+            ],
+            "answer": 0,
+            "evidence": "It jumps up because it has very strong back legs."
+          }
+        ]
+      },
+      "round": 2,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [],
+      "notes": [
+        "q1 guessable by a strong model without the text",
+        "q2 guessable by a strong model without the text"
+      ]
+    }
+  ],
+  "status": "awaiting-human"
+}

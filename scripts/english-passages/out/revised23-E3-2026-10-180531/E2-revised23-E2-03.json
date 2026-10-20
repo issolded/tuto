@@ -1,0 +1,242 @@
+{
+  "id": "E2-revised23-E2-03",
+  "level": "E2",
+  "premise": {
+    "id": "E2-03",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E2-03",
+    "level": "E2",
+    "title": "One More Duck",
+    "passage": "Sam drew three yellow ducks on a big piece of paper. Zoe put her hand in the blue paint. Her hand left a blue mark beside the ducks. Sam added an eye and a beak to the mark, making one more duck.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How many yellow ducks did Sam draw?",
+        "options": [
+          "Two.",
+          "Four.",
+          "Three."
+        ],
+        "answer": 2,
+        "evidence": "Sam drew three yellow ducks on a big piece of paper."
+      },
+      {
+        "op": "detail",
+        "stem": "What made the blue mark?",
+        "options": [
+          "Zoe's hand.",
+          "Sam's shoe.",
+          "Zoe's cup."
+        ],
+        "answer": 0,
+        "evidence": "Her hand left a blue mark beside the ducks."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Zoe made a blue mark.",
+          "Sam drew three yellow ducks.",
+          "Sam added an eye to the mark."
+        ],
+        "answer": 1,
+        "evidence": "Sam drew three yellow ducks on a big piece of paper."
+      }
+    ],
+    "metrics": {
+      "words": 42,
+      "sentences": 4,
+      "max_sentence_words": 14
+    },
+    "change_note_tr": "Gereksiz wet ve fazla kelimeler çıkarıldı; başlık sadeleşti, sıralama sorusu metindeki olaylara dayanıyor.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "piece",
+          "leave",
+          "beside",
+          "happen"
+        ],
+        "outside": [
+          "beak"
+        ],
+        "content": [
+          "piece",
+          "beak"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "piece",
+          "leave",
+          "beside",
+          "happen"
+        ],
+        "outside": [
+          "beak"
+        ],
+        "content": [
+          "piece",
+          "beak"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

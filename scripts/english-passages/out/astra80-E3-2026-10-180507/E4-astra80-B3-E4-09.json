@@ -1,0 +1,248 @@
+{
+  "id": "E4-astra80-B3-E4-09",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-09",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-09",
+    "level": "E4",
+    "category": "helping",
+    "title": "The Finished Corner",
+    "passage": "Meera and Dan were helping their class make a huge picture of a park. Meera carefully drew flowers in one corner while Dan painted a path. When their teacher asked whether they were finished, Meera shook her head. She could still see places where more flowers might fit. Dan had already put his brush down, but he waited beside her. He asked where someone in the picture would walk to reach the flowers. Meera looked at the path and noticed it stopped before her corner. She put down her flower pencil and helped him extend the path. Now it curved around the flowers and joined the rest of the park. Meera stepped back far enough to see the whole picture. She decided that her corner did not need another flower. It had needed a way for the rest of the picture to reach it.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was Dan painting?",
+        "options": [
+          "A pond.",
+          "A path.",
+          "A fence."
+        ],
+        "answer": 1,
+        "evidence": "Meera carefully drew flowers in one corner while Dan painted a path."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Meera stop adding flowers?",
+        "options": [
+          "She saw how her corner connected with the whole picture.",
+          "She had used all the flower paint in the classroom.",
+          "She wanted Dan to finish the flowers without her."
+        ],
+        "answer": 0,
+        "evidence": "Meera stepped back far enough to see the whole picture.",
+        "rationale": "Extending the path and stepping back lets her assess the composition rather than just fill local space."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Looking at a whole project to decide what it still needs.",
+          "Learning to draw flowers by copying a classmate's work.",
+          "Finishing a picture quickly before the teacher takes it away."
+        ],
+        "answer": 0,
+        "evidence": "She decided that her corner did not need another flower.",
+        "rationale": "Meera’s idea of completion changes from adding detail to connecting her part to the shared scene."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 144,
+        "sentences": 12,
+        "flyers": [
+          "shook",
+          "fit",
+          "beside",
+          "reach",
+          "notice",
+          "curve",
+          "rest",
+          "whole",
+          "fence",
+          "connect",
+          "copy"
+        ],
+        "outside": [
+          "whether",
+          "extend",
+          "mainly"
+        ],
+        "content": [
+          "whether",
+          "extend"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 144,
+        "sentences": 12,
+        "flyers": [
+          "shook",
+          "fit",
+          "beside",
+          "reach",
+          "notice",
+          "curve",
+          "rest",
+          "whole",
+          "fence",
+          "connect",
+          "copy"
+        ],
+        "outside": [
+          "whether",
+          "extend",
+          "mainly"
+        ],
+        "content": [
+          "whether",
+          "extend"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

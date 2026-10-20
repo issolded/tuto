@@ -1,0 +1,235 @@
+{
+  "id": "E2-astra80-B3-E2-15",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-15",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-15",
+    "level": "E2",
+    "category": "school",
+    "title": "The Blue Pencil",
+    "passage": "Raj asked Ella for a blue pencil in their drawing lesson. She gave him a short one from her pencil case. Raj drew a little lake, then gave the pencil back. Ella added a tiny boat to his lake before putting the pencil away.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Raj ask for?",
+        "options": [
+          "A black pen.",
+          "A green crayon.",
+          "A blue pencil."
+        ],
+        "answer": 2,
+        "evidence": "Raj asked Ella for a blue pencil in their drawing lesson."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Ella add to the lake?",
+        "options": [
+          "A little boat.",
+          "A little duck.",
+          "A little fish."
+        ],
+        "answer": 0,
+        "evidence": "Ella added a tiny boat to his lake before putting the pencil away."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Raj drew the lake.",
+          "Raj gave the pencil back.",
+          "Ella drew the boat."
+        ],
+        "answer": 0,
+        "evidence": "Raj drew a little lake, then gave the pencil back."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "case",
+          "tiny",
+          "away",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "case",
+          "tiny"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "case",
+          "tiny",
+          "away",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "case",
+          "tiny"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

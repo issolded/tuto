@@ -1,0 +1,224 @@
+{
+  "id": "E2-astra30-B2-E2-05",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-05",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-05",
+    "level": "E2",
+    "category": "pets",
+    "title": "The Warm Seat",
+    "passage": "Nina put a blanket on a chair for her cat. Omar sat on the sofa to read a book. The cat walked past the chair and sat beside Omar. Nina brought the blanket over, and the cat went to sleep on it.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was Omar doing on the sofa?",
+        "options": [
+          "Drawing a picture.",
+          "Playing a game.",
+          "Reading his book."
+        ],
+        "answer": 2,
+        "evidence": "Omar sat on the sofa to read a book."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did the cat choose to sit?",
+        "options": [
+          "Next to Omar.",
+          "Next to Nina.",
+          "Under the table."
+        ],
+        "answer": 0,
+        "evidence": "The cat walked past the chair and sat beside Omar."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Nina brought the blanket over.",
+          "The cat went to sleep.",
+          "The cat sat beside Omar."
+        ],
+        "answer": 2,
+        "evidence": "The cat walked past the chair and sat beside Omar."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "warm",
+          "past",
+          "beside",
+          "over"
+        ],
+        "outside": [],
+        "content": [
+          "warm",
+          "past"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "warm",
+          "past",
+          "beside",
+          "over"
+        ],
+        "outside": [],
+        "content": [
+          "warm",
+          "past"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests an explicit detail."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests an explicit detail using a simple synonym (next to / beside)."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately tests the sequence of events."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A sweet, simple, and logical story that perfectly fits the E2 level."
+      },
+      "model": "gemini-3.1-pro-preview"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

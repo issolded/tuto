@@ -68,6 +68,27 @@ Native uygulama aynı backend'e (Express) bağlı, ama **iki ayrı katman var, k
 
 ## Sabit kararlar (tekrar önerme)
 
+- **Sözel akıl yürütme kalıyor (2026-10-16, kullanıcı):** bugünkü "English" kartı (Bond 11+ harf/kelime bulmacaları)
+  silinmez; yeni İngilizce merdiveni gelince büyük ihtimalle İngilizcenin alt modülü olur. Merdivenin beceri kanıtına
+  karışmaz (VR sonucu İngilizce basamağı değiştirmez). Yeri ve varsayılanı açık: `docs/ENGLISH-SKILL-LADDERS.md`, açık soru 6.
+
+- **İngilizce navigasyon ve VR (2026-10-18, kullanıcı; rev. 2–3 Astra incelemeleriyle):** tek "English" kartı, matematik gibi; alt alanları planlayıcı seçer, çocuk başlangıçta yalnız hikâye konusu ve blok sırası seçer (beceri/uzunluk/kelime yükü/destek eşdeğer; gem aynı; seçilmeyen hikâye havuza döner). VR "Bulmacalarım"a girmez (bulmaca dilden bağımsız); English kartı içinde ayrı oturum, kanıt/gem/geçmiş ayrı. Açılma ebeveyn beyanından değil ölçümden; önkoşul VR soru ailesi başına (VR-1 ↔ B3, VR-2 ↔ B4 yalnız hipotez), oturum yalnız açılmış ailelerden çeker. Deneme erişimi ≠ yeterlik: pilot kuralı iki uygun ailede üçer yeni soru tamamı yardımsız doğruysa ebeveyne "Word puzzles denemesi" önerilebilir (yeterlik eşiği değil), `secure` ikinci günü bekler. Reddedilirse sonraki VR seviyesinde yeniden sorulur; "bir daha sorma" teklifleri kapatır, elle açma iki yüzeyde açık. Ada'nın VR'si açık kalır. Kanıt: beceri alan içinde ayrı; `secure` = "şimdilik yeterli bağımsız kanıt", kalıcı değil; metin bir bağımlılık grubu, sonuçlar beceri başına (aynı metin aynı beceriye tek örnek; tekrar okuma gecikmeli tekrar); eşik beceriye göre, alanlar arası ortak sayı yok, 4 çocuklu pilot eşik doğrulamaz; ham kayıt (içerik + kural sürümüyle) saklanır, yeterlik/teklif uygunluğu türetilir, ama gönderilmiş teklif/ret/"bir daha sorma"/elle açma kalıcı olaydır, yeniden hesaplanmaz. Ses kontrolü "Duydum / Şimdi ses kullanamıyorum", beyan kanıt değil. Ebeveyn mesajının iddia kapsamını kod seçer (beceri × durum kalıpları, yalnız ilgili kanıt varsa). Öncelik: kanıt sayma kuralları + VR önkoşul tablosu (mevcut üreticilerden, motoru bilen ajan taslaklar, gerçek sorularla incelenir), eşikler en son. Ayrıntı: `docs/ENGLISH-SKILL-LADDERS.md`, "Navigasyon ve sözel akıl yürütme". Kod değişmedi. Native etkisi: kural/teklif sunucuda; kart içi seçenekler web/Android/iOS'ta ayrı.
+
+- **E3 okuma metinlerinde kelime politikası (2026-10-17, kullanıcı; Astra'yla tartışılarak):** izinli kelimeler Cambridge Starters + Movers + 25 kelimelik **temel anlatım listesi** (`BASE_WORDS`, `scripts/english-passages/spec.mjs`: same, other, each, beside, across, through, over, together, somewhere, soon, later, still, usually, already, until, keep, feel, stay, hear, follow, guess, leave, turn, hope, let; aynı gün eklenen işlev ve soru kalıbı kelimeleri: as, away, onto, such, while, happen, mainly; toplam 32; `lie` bilerek yok, "yalan" anlamı da var). Bunların dışındaki her kelime, hangi listede olursa olsun ya da hiçbirinde olmasın, **içerik kelimesidir**; metin başına tek sınır **en çok 2**, aşılırsa ret. Sayım başlık + metin + sorular üzerinden, **kök kelimeyle** (kept/keep, heavy/heavier bir sayılır). Bu bir ürün değişikliğidir: önceki "Movers + en çok 4 ek kelime" kuralına göre yazılmış metinler bu kurala uymuş sayılmaz, yeniden kapıdan geçer. **E2** aynı kural (en çok 2). **E4:** üç Cambridge listesi + Dale-Chall (4. sınıfın bildiği ~3.000 kelime) + temel liste serbest; hiçbirinde olmayan kelime içerik kelimesi, en çok 4 (ilk deneme "Flyers + 4" record/tiny/button'u saydı ve iyi E4 hikâyelerinin hepsini 10–14 ile düşürdü). E2/E4 sayıları pilotla ayarlanacak. Gerekçe: Flyers'ın anlatım kelimeleri (same, other, beside…) yasaklanınca metinler liste gibi okunuyordu; okuma yükünü asıl içerik kelimeleri (soil, hero, term) artırıyor. Native etkisi: yok (çevrimdışı içerik hattı).
+
+- **İngilizce bölümü tamamen İngilizce (2026-10-17, kullanıcı):** İngilizce bölümüne girince ekranda çıkan her şey İngilizce: doğru/yanlış geri bildirimi, Gönder, Bilmiyorum, İpucu, Devam, sonuç ekranı dahil; çocuğun uygulama dili bölümün içinde hiçbir metni değiştirmez (bölüm dışında geçerli). Ebeveyn mesajları `prefs.language` ile kalır. 2026-10-16 kaydındaki "genel uygulama kontrolleri çocuğun dilinde" geçersiz. Uygulandığı yerler: `/english-reading-preview`; canlı İngilizce ekranı `EnglishScreen` (`/child/english`: düğmeler, geri bildirim, `eng_why_*` açıklamaları, sonuç ve pekiştirme teklifi); çocuğun gem geçmişinden açtığı İngilizce oturumu (`ReviewScreen`, ebeveyn görünümü ebeveynin dilinde kalır); sunucu ipucu/açıklama dili (`englishLangOf` artık hep 'en', bu yüzden `children.language` İngilizce oturumunda okunmuyor). Harness'te Türkçe çocukla uçtan uca denendi; `english-matrix.mjs` ipucunu her çocukta İngilizce bekliyor. **Native etkisi:** sunucudan gelen ipucu ve açıklamalar native'de de (iOS/Android) İngilizceleşir; native İngilizce ekranının kendi düğme/geri bildirim metinleri (Swift/Kotlin dizgileri ve paketli i18n JSON) çocuğun dilinde kalır, bunlar ayrıca değiştirilmeli.
+
+- **İngilizce etkinlik dili (2026-10-16, kullanıcı):** soru, metin, şık, yönerge, ipucu ve açıklamalar çocuğun uygulama dilinden bağımsız İngilizcedir. Genel uygulama kontrolleri çocuğun dilinde (2026-10-17'de geçersiz, yukarı bak); ebeveyn mesajları `prefs.language` ile kalır. Başlangıçta kısa yönerge, ses/görsel ve yeni cevap biçiminde puansız çözülmüş örnek kullanılır; yönerge güçlüğü hedef beceri hatası sayılmaz. Önceki yönerge/yardımı EN/TR/ES çevirme önerisi geçersiz. Üç İngilizce tasarım belgesi güncellendi; kod değişmedi. Native etkisi: yok, yalnız tasarım kaydı.
+
+- **İngilizcede temel düzeyde zorlanma (2026-10-16, kullanıcı):** günlük İngilizce görevi kendiliğinden kaldırılmaz. Yanlış sonrası açıklama ve pratik devam eder; yardımlı/tekrar cevap bağımsız ilk kanıttan ayrılır. Yeterli farklı örnekte tekrarlanan zorlanma ebeveyne bir kez, gözlem olarak iletilir; gizleme/açma ebeveyn kararıdır. Yaş farkı, sessiz cihaz veya eksik oturum başarısızlık kanıtı değildir. Mesaj ve uygulama önkoşulları: `docs/ENGLISH-SKILL-LADDERS.md`, “Temel düzeyde zorlanan çocuk”. Sayısal bildirim eşikleri henüz doğrulanmadı. `docs/ENGLISH-TRIAL-SET.md` 36 soruluk editoryal deneme taslağıdır; ses/görsel varlıklar ve çocuk testi bekliyor. Native etkisi: yok, yalnız doküman.
+
+- **İngilizce okuryazarlık pilotu UK/US ortak kapsam (2026-10-15, kullanıcı):** mümkün olduğunca
+  iki çeşitte ortak, tek doğru cevaplı kelime/ses/dilbilgisi örnekleri seçilir. Yazımı veya
+  cevabı bölgesel kullanımla değişen, aksana duyarlı maddeler ilk pilot dışında. Ortaklığı
+  doğrulanmış phonics korunur; UK/US metadata ve mevcut tercih silinmez. Ayrıntı:
+  `docs/ENGLISH-LITERACY-ARCHITECTURE.md` bölüm 7. Native etkisi: yalnız tasarım kaydı, kod değişmedi.
+
+
 - **Kitap okuma alanı** (2026-10-04): okuyucu telefon sütununa sabitlenmez; portal ile
   tam ekran açılır, masaüstünde 680px sayfa ve 18px metin kullanır. Telefonlarda genişliğe
   uyarlanır; sayfa taşarsa metin kaydırılır, sayfa değişince kaydırma sıfırlanır.
@@ -138,6 +159,115 @@ WhatsApp teslim testi değildir. Eksik native modüller dosyada ayrı; CI/yayın
 bunların tamamlandığı anlamına gelmez.
 
 ## Açık işler / yol haritası
+
+- [x] VR içerik bulguları 1–4 düzeltildi (2026-10-19, Claude; `codex/english-literacy`, push yok). Kaynak `docs/ENGLISH-VR-PREREQUISITES.md`
+      "İçerik bulguları". **rhyme-synonym:** UK ya da US'e bağlı ipuçları çıktı (SPONGE→cake, EVENING MEAL→tea, AUTUMN→fall, RENT→hire,
+      FRIEND→mate, PIPS→seeds), 10 ortak ipucu eklendi. **compound-front:** sözlükten türetme bırakıldı (payroll/payload/sidekick/highland;
+      yarısı bileşik bile değildi: bar+gain, man+age, sea+son), yerine elle `COMPOUND_HEADS` (31 baş × ≥4 çocuk bileşiği, UK/US ortak;
+      `someone` gibi sözlükte olmayanları tablo onaylar, `isCompound`). Audit'te bu tip frekans eşiğinden muaf (elle okunmuş tablo; blocklist
+      hâlâ geçerli). **hidden-word:** WordNet örnek cümleleri yerine elle 53 cümle (`HIDDEN_SENTENCES`), cevap ve çeldiriciler Dale-Chall üç
+      harflileri (argo/isim/ses kelimeleri hariç); eski `band.hidden` kadranı artık okunmuyor. **odd-two:** kap/vücut bölümü/"case" grupları
+      çıktı, dorm/hash/automobile/technician/basin/sedan/laundry/lounge/ridge/organ/queen/servant/bathtub/robe üye değil; 7-8 havuzu 40'ın altına
+      düşünce Dale-Chall kelimesi 3.4'e kadar inebiliyor. Havuz (3000 seed, cevap): rhyme-synonym 43→47, compound-front 30→31, 7-8 odd-two
+      118→150, 8-9 odd-two 371→203, hidden-word 60→45; `vrPrereqs.js` güncellendi. `english:check`, `npm test` 208/208 temiz.
+      **Bulgu 5 (2026-10-20):** `pair-meaning`'in dördüncü şıkkı rastgele iki kelime yerine UK/US ortak sesteş çift (`PAIR_SOUND_ALIKE`, 32);
+      aynı türden çift `odd-two` filtrelerinden (`childGroups`); 7-8'de doğru çiftin iki kelimesi Dale-Chall ya da Zipf ≥ 4.7
+      (`PAIR_MEANING_YOUNG_SKIP` tek lehçeli/seyrekleri ayırır). Doğru çift havuzu 153→90; `vrPrereqs` B4'te bırakıldı (B3'e inmesi açık karar).
+      Yeni sebep anahtarı `eng_why_sound_alike_pair` (native'de `eng_why_*` kopyası zaten yok).
+      **Açık:** cümleler/bileşikler/sesteş çiftler çocukla denenmedi. **Native etkisi:** İngilizce
+      soruyu sunucu üretiyor (`server/english` senkronlu), deploy sonrası native'e kendiliğinden geçer; `mobile/engine` paketi etkilenmez,
+      yeni tip/alan yok.
+
+- [x] Cambridge kelime listesi veri oldu (2026-10-16, Claude). `src/lib/literacy/yleWordlist.generated.js`: 2018 Pre A1 Starters /
+      A1 Movers / A2 Flyers listesinden 1.407 kayıt (S 495, M 399, F 513), sözcük türü, not, İngiliz/Amerikan karşılığı (44), 20 konu; kimlik
+      anlam başına (`at` / `at-2`). Üretim `python3 scripts/english/build_yle_wordlist.py <pdf> --write` (PDF `english books/official-free/`,
+      repoda değil). Aynı belgenin üç okuması birbirini denetliyor: birleşik A-Z listesi (S/M/F işaretli, birincil), düzey başına listeler,
+      konu listesi; uyuşmazlık derlemeyi düşürür. Bağımsız kontrol: 2010 el kitabının 1.080 kelimesinin 1.046'sı yeni listede; eksikler
+      Cambridge'in 2018 notunun "çıkarıldı" dediği kelimeler (John, supper, policeman…), "eklendi" dedikleri (laptop, shorts, by myself,
+      police officer) var. Test `scripts/tests/yle-wordlist.test.mjs` sayfa görüntüsünden gözle okunmuş sabit örneklerle (14/14 rastgele
+      örneklem de tuttu; yolda iç içe parantez "candy (UK sweet(s))" bulundu ve düzeltildi). Yalnız kelime bilgisi; sınav içeriği yok.
+      Henüz hiçbir ekran içe aktarmıyor. **Native etkisi:** şimdilik yok.
+
+- [ ] İngilizce ses hattı ve dinleme bankası (2026-10-17/18, Claude; `codex/english-literacy`, push yok).
+      **Motor Chirp 3 HD** (Cloud TTS, `scripts/english-audio/build.mjs` varsayılanı). `gemini-3.8-flash-tts` Tier 1'de günde 100 istekte
+      kalıyordu; Chirp dakikada 200 istek veriyor. Aynı 50 kayıtta kontrollerden eşit geçti. Kimlik `gcloud auth application-default login`,
+      kota projesi `vertexli` (API anahtarı kabul etmiyor).
+      **Kodlama AAC 64 kb/s, macOS `aac_at`.** ffmpeg `aac` 32k kullanıcının duyduğu tıslamaydı; ham FLAC repo dışında (`~/Downloads/tuto-audio-masters`).
+      **Storage:** herkese açık `english-audio` (karma adlı m4a, 1 yıl değişmez önbellek) ve özel `english-audio-masters` (FLAC); yükleme `upload.mjs`.
+      Repoda yalnız kod ve manifest. Lab sesi Storage'dan çalıyor.
+      **Kayıtlar:** deneme seti 50; Cambridge Starters/Movers/Flyers 2.690 (anlama göre okunuşu değişen close/live/read/use/wind dışarıda);
+      dinleme bankası 80 madde (`src/lib/literacy/listeningBank.js`: 40 A5 konuşma, 40 A4 anlatım, sesli şıklar).
+      **Banka kontrolü** `scripts/english-listening/check.mjs`:
+      - Starters+Movers kelimeleri, UK/US farkı olan kelime yok.
+      - Kör çözücü: konuşmasız 3/3 bilinen soru reddedilir. İlk 80'in 28'i sağduyuyla bilindi (yağmur → şemsiye, öğle → 12), cevapları ters çevrildi.
+      **Whisper kontrolü** aynı okunan yazımları kabul ediyor (by/bye, centre/center, 100/hundred; UK/US IPA sözlüğü).
+      Node bağlantısına 2 sn tanınıyor (yavaş hatta 250 ms'de bütün işçiler düşmüştü).
+      **Açık:** hiçbir kayıt onaylı değil (lab'da "approve?" + `approve.mjs`); UK /ɔː/ kelimelerinde (ball, wall) Whisper şüphesi dinlenmeli;
+      A1–A3 için resim gerekiyor; banka çocukla denenmedi; yetişkin konuşmacılar (Dad, Grandma) çocuk sesleriyle aynı.
+      **Native etkisi:** ses Storage'dan; dinleme sorusu ekranı (sesli şık) her istemcide ayrıca yapılmalı.
+
+- [ ] İngilizce ses (2026-10-16, Claude; deneme, kod projede değil). `gemini-3.8-flash-tts`, aksan `languageCode` en-GB/en-US,
+      düz metin (talimat metne yazılırsa okunur; sistem talimatı kabul edilmiyor). API PCM sonuna C2PA etiketi ekliyor: ses diye
+      yazılırsa 125 ms cızırtı, ayrı `.c2pa` dosyasına alınır. Kota dakikada 10. Kalite kontrolü üç katman: kod (süre/sessizlik/
+      patlama/son ses), Whisper (`whisper-cpp` + `ggml-base.en.bin`, metin birebir), kör dinleyen model (aksan söylenmez; söylenince
+      etikete uydu). 16 iyi kayıt geçti, bilerek bozulan 5'in 5'i yakalandı. AAC 32k: kelime ~6 KB, cümle ~10 KB. **Açık:** tek kelimede
+      US aksanı tutmuyor; İngiliz konuşmada erkek ses (Puck) aksan kayması şüphesi, kullanıcı dinleyecek. Ayrıntı `docs/ENGLISH-AUDIO.md`.
+      Kaynaklar: 18 resmî ücretsiz belge `english books/official-free/` (Cambridge 2018 listeleri, örnek sınavlar, A2 Key/B1 PfS; UK müfredat
+      ekleri, KS2 2024 sınavları), eşleştirme `docs/ENGLISH-SKILL-LADDERS.md` "Kaynaklar". **Native etkisi:** ses Storage'dan gelir, 🔊 ve yeni cevap
+      biçimleri her istemcide ayrıca.
+
+- [x] İngilizce okuryazarlık ilk yerel lab (2026-10-15, Codex; `codex/literacy-pilot`, yayın/push yok).
+      `/literacy-lab`: 100 özgün kelime, 24 bağlam + 24 be cümle kalıbı, 6 özgün mini metin,
+      10 beceri; deterministik üretim, ipucu, harf kurma/seçme, cevap/açıklama, beceri bazlı sonuç
+      ve içerik envanteri. Yalnız bellekte: hesap/DB/Gem/assessment/mastery yok; cevap anahtarı
+      lab istemcisinde, production çocuk ekranında kullanılamaz. UK/US ortak içerik adayları;
+      phonics/ses/serbest yazma yok. İngilizce reviewer lab; child UI'da da etkinlik yönerge/yardımı İngilizce kalacak.
+      `npm run literacy:check`: 5 test (5.000 soru + 200 oturum); Chromium/WebKit telefon/tablet
+      akışları geçti, build/lint/font temiz, i18n mevcut 115 bulguda aynı. Açık: editoryal/çocuk
+      denemesi, başlangıç için tanımların okuma yükü, adaptif planlama ve canlı entegrasyon.
+      Ayrıntı: `docs/LITERACY-PILOT.md`. Native etkisi: yok; yalnız yeni web lab, native paket değişmedi.
+
+
+- [ ] İngilizce kanıt modeli rev. 3 (2026-10-19, Claude; `codex/english-literacy`, push yok). `src/lib/literacy/ladder.js` Astra'yla varılan kurallara geçti
+      (`RULES_VERSION` `ladder-2`): kanıt birimi cevap değil (basamak, beceri, grup); bir metin tek grup, aynı beceriye tek birim, farklı beceriler ayrı;
+      birim yalnız ilk gündeki cevapların hepsi doğruysa doğru; aynı grup başka gün = gecikmeli tekrar, yeni kanıt değil. `settled` → `secure`: her beceri
+      için birim/gün/doğruluk + basamakta en az iki soru ailesi; eşik `SECURE` + `SECURE_BY_TRACK` (E 3, Ca 4 birim) + `SECURE_BY_SKILL`, ölçülmüş değil.
+      `secure` her cevapta yeniden okunur, kaybedilebilir. `start({ skills })` basamağın kapsaması gereken becerileri verir. `summary` beceri başına
+      durum seçer (`secure`/`struggling`/`helped`/`little`/`unknown`) + `ceiling` — ebeveyn cümlesinin iddia kapsamı buradan. `replay(attempts)`
+      durumu ham kayıtlardan kurar; her cevap içerik ve kural sürümü taşır. Test: `ladder.test.mjs` 26 (13 yeni), `npm test` 193/193, yerleştirme
+      simülasyonu eşiği değişmedi. **Migration (henüz bağlı değil, çalıştırmak davranış değiştirmez):** `server/migrations/2026-10-19_english_literacy_evidence.sql`:
+      `english_literacy_attempts` (ham cevap; seviye saklanmaz), `english_parent_events` (teklif/ret/"bir daha sorma"/VR aç-kapa/zorlanma bildirimi;
+      tetikleyiciyle yalnız eklenir), `children.english_vr`; VR geçmişi olan çocuk `existing` ile açık başlar. PGlite'ta iki kez çalıştırıldı.
+      **Sunucu (aynı gün):** `server/literacyEvidence.js` cevap yazar, durumu `replay` ile kurar, olayları okur/ekler, `vrDecision` (varsayılan kuru;
+      `write: true` teklifi seviye başına bir kez kaydeder, mesaj göndermez). Karar `src/lib/literacy/vrOffer.js` + veri `vrPrereqs.js` (önkoşul tablosu
+      taslak 1; probe isteyen aile kapalı: K0 bekliyor). Kurallar sunucuya `server/literacy` kopyasıyla (`npm run puzzle:sync`, `english:check`
+      denetliyor). **Lab oturumu** `server/literacyLab.js`, yalnız `LITERACY_LAB=1` iken (yoksa 404): `POST /api/lab/literacy/:childId/next`,
+      `POST /api/lab/literacy/sittings/:id/answer`, `GET /api/lab/literacy/:childId/state`; çocuk kartı yok, gem yok, ebeveyn mesajı yok. Sunucu soruyu
+      katalogdan dağıtır (basamağı ladder seçer), anahtarı tutar, işaretler, yazar. Yalnız metin kaynakları (literacy motoru, VR motoru, cümle bankası,
+      okuma metinleri; `build` hariç); dinleme/resim/deneme seti atlanır. Test `literacy-evidence.test.mjs` 13; harness'te uçtan uca
+      (`server/scripts/literacy-lab-play.mjs`): bayrak kapalı 404, 10 soru, anahtar sızıntısı 0, ipuçlu cevap kanıt değil, metin 3 soru tek grup, replay.
+      Yolda: `server/puzzle` kopyası 4 Ekim'den beri gerideydi ("corner mark" → "little dot" sunucuya hiç gitmemişti), senkronlandı.
+      **VR önkoşul tablosu taslak 2 (2026-10-19):** 23 aile × 7 gerçek soru okundu (`scripts/english/vr-sample.mjs`). 7-8'in çoğu harf bulmacası
+      (anagram, merdiven, değişim kalıbı, "yapılamayan kelime", karışık harf: şıklar verili, harf harf çözülüyor) → yük `letters`; kullanıcının
+      "okuryazarlık tabanı" kararıyla her aileye **taban B2 + D1** (`FLOOR`). Anlam aileleri bir basamak ağır (pair-meaning/compound-front B4,
+      hidden-word B5 + Ca4). 8-9 kendi beş ailesiyle açılamıyordu: seviye artık alttaki bantla birlikte sayılıyor (kendi bandından ≥3).
+      İçerik bulguları (canlı English kartında, düzeltilmedi): `rhyme-synonym` SPONGE→cake yalnız UK; `compound-front` payroll/payload;
+      `hidden-word` yetişkin/bozuk WordNet cümleleri; 8-9 `odd-two` dorm/hash/automobile. Ayrıntı `docs/ENGLISH-VR-PREREQUISITES.md`.
+      **Açık:** migration çalışmadan lab 503 der; ebeveyn cümle kalıpları ve gerçek teklif mesajı; VR önkoşul tablosunun gerçek sorularla incelemesi;
+      K0 probe'ları; deneme kuralı için VR maddesi soran yoklama yok; lab'ın arayüzü yok (yalnız uçlar).
+      Native etkisi: yok; ladder.js native paketlerine girmiyor, kurallar sunucuda.
+- [ ] VR içeriğini tamamla (2026-10-18, kullanıcı: "unutmayalım"). Gerçek akıl yürütme tipleri yalnız 7-8 ve 8-9 bantlarında; 9-12 bantları Bond "English" kitaplarından (kelime/yazım/dilbilgisi) ve merdivene geçecek. Ana dili İngilizce 10-12 yaş için VR tavanı düşük: Bond 9-12 Verbal Reasoning kitapları motora hiç girmedi; VR-3+ seviyeleri onlardan kurulup merdivene eşlenmeli.
+- [ ] İngilizce okuryazarlık tasarımı (2026-10-15, Codex; kullanıcıyla kapsam görüşmesi).
+      İlk pilot 6–8 yaş odaklı; yaş İngilizce yeterliği değildir (9 yaş başlangıç / 7 yaş ileri okuyucu mümkün).
+      Reading, vocabulary, spelling ve temel grammar için beceri haritası ve mimari önerisi
+      `docs/ENGLISH-LITERACY-ARCHITECTURE.md` içinde. Öneri: yaş sunum/konu, performans beceri seçimi;
+      alan bazında kanıt, geçici 10 soruluk başlangıç yoklaması, çalışma anında LLM'siz kurallı üretim +
+      editoryal kelime/cümle/metin bankaları. Grade/CEFR eşdeğerliği veya 10 soruda kesin seviye iddiası yok.
+      Mevcut VR geçmişini literacy becerilerine dönüştürmeme, içerik sürümleme ve kapsam tavanı taslakta.
+      Bunlar uygulamaya alınmış kararlar değil; eşikler, ilk beceri listesi ve ürün geçişi netleşecek.
+      Kaynak incelemesi içindekiler + örnek sayfalar; tam kitap audit'i değil. Vocabulary ve ara okuma
+      seviyelerinin kapsamı açık. Native etkisi: bu doküman değişikliğinde yok; uygulama planı dokümanda.
+
 
 - [ ] iOS kabuğu (2026-10-07, Claude; `claude/ios-shell`, kullanıcı kararı: iOS'ta native arayüz değil kabuk).
       `mobile/iosShell`: iPhone + iPad, WKWebView canlı siteyi (`tuto-blue.vercel.app`) yükler. **Kural:** Vercel/Railway ile çıkan her şey
@@ -1240,6 +1370,8 @@ mevcut hook/handler/Supabase wiring'e dokunma, veri olmayan yere veri uydurma. D
 - 2026-10-04: My Books ortak aktif kitap/hikâye sayfasıdır; /child/stories idle aynı LibraryScreen bileşenini gösterir. Write ve upload doğrudan editöre gider. Raflı arşivin etiketi My Library; üstte iki sekme. Story route location.key ile remount olur, aynı route üzerindeki farklı taslak/action state değerleri kaybolmaz.
 
 - 2026-10-04 kullanıcı kararı: My Books içinde Story Studio / Book Explorer renkli seçim kartları aynı sayfada yalnız ilgili aktif kitap listesini gösterir. My Library kartı ikisinin altında raflı arşivi açar. Son alan çocuk kimliğine göre bu cihazda hatırlanır; EN/TR/ES etiketleri yerelleştirilir.
+
+- **İngilizce deneme seti revizyon 2 (2026-10-16, Codex):** `docs/ENGLISH-TRIAL-SET.md` içindeki 36 maddenin geri bildirimleri İngilizce/kelimesiz görsel + İngilizce ses olarak netleşti; D01/02 sun/fish, CA03 farklı nesne, CA02–CA06 üç şık, B03 doğrudan zıt anlam sorusu oldu. Görev gizleme aracı `576db82` ile origin/main içinde koddan doğrulandı; commit kaydındaki gerçek model testi yeniden çalıştırılmadı. Bu literacy dalı henüz o commiti içermiyor. Native etkisi: yok, yalnız doküman.
 
 ### 2026-10-06 Android publication and device validation
 User explicitly approved publishing `codex/android-complete` to public `issolded/tuto`.

@@ -1,0 +1,228 @@
+{
+  "id": "E3-astra80-B3-E3-17",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-17",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-17",
+    "level": "E3",
+    "category": "nature",
+    "title": "The Wet Leaves",
+    "passage": "Amir and Sara wanted to make pictures with fallen leaves. They found yellow ones beside the school garden. Amir put them on a towel because the rain had made them wet. They waited and chose paper for their pictures. Sara chose blue because she wanted her leaves to look like fish in water. When the leaves were dry, she placed them on the paper. Amir drew eyes beside their pointed ends. The yellow leaves had become a school of fish.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which word tells us about the leaves?",
+        "options": [
+          "Brown.",
+          "Green.",
+          "Yellow."
+        ],
+        "answer": 2,
+        "evidence": "They found yellow ones beside the school garden."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Amir put the leaves on a towel?",
+        "options": [
+          "They needed to stay warm near a window.",
+          "They needed to dry after the rain.",
+          "They needed to stay hidden until lunch."
+        ],
+        "answer": 1,
+        "evidence": "Amir put them on a towel because the rain had made them wet."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Sara choose blue paper?",
+        "options": [
+          "It would look like sky above her birds.",
+          "It would look like water around her fish.",
+          "It would look like a door on her house."
+        ],
+        "answer": 1,
+        "evidence": "Sara chose blue because she wanted her leaves to look like fish in water."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 80,
+        "sentences": 8,
+        "flyers": [
+          "leave",
+          "beside",
+          "become",
+          "stay",
+          "warm",
+          "until"
+        ],
+        "outside": [],
+        "content": [
+          "become",
+          "warm"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 80,
+        "sentences": 8,
+        "flyers": [
+          "leave",
+          "beside",
+          "become",
+          "stay",
+          "warm",
+          "until"
+        ],
+        "outside": [],
+        "content": [
+          "become",
+          "warm"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": false,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "An adult could guess that putting something on a towel is for drying, as towels are not typically used to keep leaves warm or hide them."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [
+      "q2 pedagogy needs_text (An adult could guess that putting something on a towel is for drying, as towels are not typically used to keep leaves warm or hide them.)",
+      "q2 solved WITHOUT the text 3/3 (and the reviewer agrees)"
+    ],
+    "verdict": "revise",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [],
+  "status": "rejected"
+}

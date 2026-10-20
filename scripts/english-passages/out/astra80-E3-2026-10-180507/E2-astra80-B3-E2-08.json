@@ -1,0 +1,223 @@
+{
+  "id": "E2-astra80-B3-E2-08",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-08",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-08",
+    "level": "E2",
+    "category": "music",
+    "title": "The Last Clap",
+    "passage": "Jack sang a short song while Aisha listened from the sofa. When he stopped, she clapped three times. Jack sang one more word that he had forgotten. Aisha gave him one more clap, and he smiled at his very small ending.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Aisha listen?",
+        "options": [
+          "On the sofa.",
+          "On the stairs.",
+          "On the bed."
+        ],
+        "answer": 0,
+        "evidence": "Jack sang a short song while Aisha listened from the sofa."
+      },
+      {
+        "op": "detail",
+        "stem": "How many claps came before the last word?",
+        "options": [
+          "Two claps.",
+          "Three claps.",
+          "Four claps."
+        ],
+        "answer": 1,
+        "evidence": "When he stopped, she clapped three times."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Jack sang the forgotten word.",
+          "Aisha gave one more clap.",
+          "Jack smiled at the ending."
+        ],
+        "answer": 0,
+        "evidence": "Jack sang one more word that he had forgotten."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [
+          "while",
+          "time",
+          "forgotten",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "time",
+          "forgotten"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 41,
+        "sentences": 4,
+        "flyers": [
+          "while",
+          "time",
+          "forgotten",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "time",
+          "forgotten"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

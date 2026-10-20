@@ -1,0 +1,259 @@
+{
+  "id": "E4-astra80-B3-E4-15",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-15",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-15",
+    "level": "E4",
+    "category": "school",
+    "title": "The Partner Who Waited",
+    "passage": "Raj and Ella were making a poster about animals that live in cold places. Raj quickly wrote a title and began drawing a penguin. Ella sat with her pencil above the paper but did not start. Raj asked if she wanted him to draw her part too. She shook her head and pointed to a photograph in their book. She was studying how the penguin held its feet while walking. Raj looked at his own drawing and noticed that both feet pointed the same way. He waited while Ella drew one foot lifted above the ground. Her penguin looked as though it was taking a careful step. Raj added another bird behind it and changed his title to a question about walking. They spent the rest of the lesson watching short clips chosen by their teacher. The poster had started slowly, but it now had a question they both wanted to answer.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was Ella studying in the photograph?",
+        "options": [
+          "The penguin's beak.",
+          "The penguin's feathers.",
+          "The penguin's feet."
+        ],
+        "answer": 2,
+        "evidence": "She was studying how the penguin held its feet while walking."
+      },
+      {
+        "op": "inference",
+        "stem": "Why had Ella not started drawing straight away?",
+        "options": [
+          "She was looking carefully before deciding how to draw.",
+          "She wanted Raj to finish the whole poster for her.",
+          "She had forgotten which animal their poster was about."
+        ],
+        "answer": 0,
+        "evidence": "She shook her head and pointed to a photograph in their book.",
+        "rationale": "Her attention to the photograph and the subsequent walking pose show preparation rather than unwillingness."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Finishing an animal poster faster by dividing the drawing equally.",
+          "Choosing an easier animal when a first drawing goes wrong.",
+          "Noticing that taking time to look can lead to a useful question."
+        ],
+        "answer": 2,
+        "evidence": "The poster had started slowly, but it now had a question they both wanted to answer.",
+        "rationale": "Ella’s slow observation changes the project into an inquiry that interests both children."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 152,
+        "sentences": 12,
+        "flyers": [
+          "partner",
+          "title",
+          "shook",
+          "own",
+          "notice",
+          "though",
+          "rest",
+          "clip",
+          "chosen",
+          "feather",
+          "whole",
+          "forgotten",
+          "divide",
+          "equal",
+          "lead",
+          "useful"
+        ],
+        "outside": [
+          "photograph",
+          "beak",
+          "mainly"
+        ],
+        "content": [
+          "photograph",
+          "beak"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 152,
+        "sentences": 12,
+        "flyers": [
+          "partner",
+          "title",
+          "shook",
+          "own",
+          "notice",
+          "though",
+          "rest",
+          "clip",
+          "chosen",
+          "feather",
+          "whole",
+          "forgotten",
+          "divide",
+          "equal",
+          "lead",
+          "useful"
+        ],
+        "outside": [
+          "photograph",
+          "beak",
+          "mainly"
+        ],
+        "content": [
+          "photograph",
+          "beak"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "regional? straight away",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

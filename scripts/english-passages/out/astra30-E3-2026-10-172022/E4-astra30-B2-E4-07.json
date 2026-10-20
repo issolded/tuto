@@ -1,0 +1,249 @@
+{
+  "id": "E4-astra30-B2-E4-07",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-07",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-07",
+    "level": "E4",
+    "category": "games",
+    "title": "The Round That Did Not Count",
+    "passage": "Max and Priya made a game in which players rolled a ball towards three boxes. The nearest box was worth one point, and the farthest was worth three. Priya scored eight points before Max noticed that one box had moved. Each time the ball touched it, the light box slid a little farther across the floor. Max had been playing after Priya, so his throws had started with the box farther away. They put a book inside each box to stop it moving. Priya suggested starting again with no points. Max agreed, and they tested one throw each before the new round. This time, all three boxes stayed in place. Priya still scored eight points. Max smiled and said he could believe those eight much more easily.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did they put inside the boxes?",
+        "options": [
+          "Towels to make them softer.",
+          "Books to hold them still.",
+          "Paper to cover the bottoms."
+        ],
+        "answer": 1,
+        "evidence": "They put a book inside each box to stop it moving."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did they start again with no points?",
+        "options": [
+          "They had forgotten which box was worth three.",
+          "The moving box had made the turns unequal.",
+          "The ball had broken before Max could play."
+        ],
+        "answer": 1,
+        "evidence": "Max had been playing after Priya, so his throws had started with the box farther away.",
+        "rationale": "The position changed between players; resetting the score after fixing it gives both the same conditions."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Finding and fixing a problem that made a game unfair.",
+          "Learning to throw a ball farther to get more points.",
+          "Making a game shorter by taking one box out."
+        ],
+        "answer": 0,
+        "evidence": "This time, all three boxes stayed in place.",
+        "rationale": "The story centres on identifying unequal conditions and removing their cause."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 127,
+        "sentences": 11,
+        "flyers": [
+          "roll",
+          "towards",
+          "worth",
+          "notice",
+          "slid",
+          "farther",
+          "test",
+          "cover",
+          "forgotten",
+          "unfair"
+        ],
+        "outside": [
+          "farthest",
+          "suggest",
+          "unequal"
+        ],
+        "content": [
+          "farthest",
+          "suggest",
+          "unequal"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 127,
+        "sentences": 11,
+        "flyers": [
+          "roll",
+          "towards",
+          "worth",
+          "notice",
+          "slid",
+          "farther",
+          "test",
+          "cover",
+          "forgotten",
+          "unfair"
+        ],
+        "outside": [
+          "farthest",
+          "suggest",
+          "unequal"
+        ],
+        "content": [
+          "farthest",
+          "suggest",
+          "unequal"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

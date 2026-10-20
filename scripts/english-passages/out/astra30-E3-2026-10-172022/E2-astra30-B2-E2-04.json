@@ -1,0 +1,207 @@
+{
+  "id": "E2-astra30-B2-E2-04",
+  "level": "E2",
+  "premise": {
+    "id": "B2-E2-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E2-04",
+    "level": "E2",
+    "category": "school",
+    "title": "A Very Small Teacher",
+    "passage": "Raj put his toy bear on the desk before school started. Ella gave the bear a pencil and a small book. Their teacher came in and smiled at the bear. Raj moved it to his bag, but Ella said it needed homework too.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Raj first put his bear?",
+        "options": [
+          "On the classroom floor.",
+          "On the classroom desk.",
+          "By the classroom door."
+        ],
+        "answer": 1,
+        "evidence": "Raj put his toy bear on the desk before school started."
+      },
+      {
+        "op": "detail",
+        "stem": "What did Ella give the bear with its pencil?",
+        "options": [
+          "A little book.",
+          "A little ruler.",
+          "A little bag."
+        ],
+        "answer": 0,
+        "evidence": "Ella gave the bear a pencil and a small book."
+      },
+      {
+        "op": "sequence",
+        "stem": "Which came first?",
+        "options": [
+          "Raj put the bear in his bag.",
+          "Ella said the bear needed homework.",
+          "The teacher smiled at the bear."
+        ],
+        "answer": 2,
+        "evidence": "Their teacher came in and smiled at the bear."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 43,
+        "sentences": 4,
+        "flyers": [],
+        "outside": [],
+        "content": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Valid detail question. 'Classroom desk' is a fair paraphrase given the school context."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Valid detail question. 'Little' is a good paraphrase for 'small'."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Valid sequence question testing the order of events explicitly stated in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "A cute, coherent, and age-appropriate vignette that perfectly fits the E2 level requirements."
+      },
+      "model": "gemini-3.1-pro-preview"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

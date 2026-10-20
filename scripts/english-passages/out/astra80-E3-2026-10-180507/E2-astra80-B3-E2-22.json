@@ -1,0 +1,245 @@
+{
+  "id": "E2-astra80-B3-E2-22",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-22",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-22",
+    "level": "E2",
+    "category": "library",
+    "title": "The Long Name",
+    "passage": "Kofi wrote his name on a paper bookmark. Rita wrote her name below his, then drew a line around both. They put the bookmark inside the book they were reading together. Kofi said the book now had two readers waiting on the same page.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Kofi write on?",
+        "options": [
+          "A paper bookmark.",
+          "A paper plate.",
+          "A paper bag."
+        ],
+        "answer": 0,
+        "evidence": "Kofi wrote his name on a paper bookmark."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did Rita write her name?",
+        "options": [
+          "Above Kofi's name.",
+          "Below Kofi's name.",
+          "Beside Kofi's name."
+        ],
+        "answer": 1,
+        "evidence": "Rita wrote her name below his, then drew a line around both."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Rita wrote her name.",
+          "Rita drew around the names.",
+          "They put the bookmark in the book."
+        ],
+        "answer": 0,
+        "evidence": "Rita wrote her name below his, then drew a line around both."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "together",
+          "same",
+          "beside",
+          "happen"
+        ],
+        "outside": [
+          "bookmark"
+        ],
+        "content": [
+          "bookmark"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 44,
+        "sentences": 4,
+        "flyers": [
+          "together",
+          "same",
+          "beside",
+          "happen"
+        ],
+        "outside": [
+          "bookmark"
+        ],
+        "content": [
+          "bookmark"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

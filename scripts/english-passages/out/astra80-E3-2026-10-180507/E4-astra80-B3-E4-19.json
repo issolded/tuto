@@ -1,0 +1,257 @@
+{
+  "id": "E4-astra80-B3-E4-19",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-19",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-19",
+    "level": "E4",
+    "category": "music",
+    "title": "The Song from Next Door",
+    "passage": "Jack was trying to remember a tune he had heard at school. He hummed the first few notes, then stopped at the same place each time. Aisha listened from the next room while she sorted her books. After several tries, she hummed a possible ending back to him. Jack said it was not the ending he remembered, but asked her to sing it again. He joined her, changing one note where their voices did not fit together. They repeated the new tune until neither had to stop. Later, Jack found the original song in a recording from their teacher. Its ending was quite different from the one they had made. Aisha asked if they should change theirs to match. Jack listened to both and shook his head. They gave their version a new name and kept the school song for another day.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was Aisha when she first heard Jack?",
+        "options": [
+          "In the next room.",
+          "Outside the window.",
+          "At the kitchen table."
+        ],
+        "answer": 0,
+        "evidence": "Aisha listened from the next room while she sorted her books."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did they give their version a new name?",
+        "options": [
+          "They could not find the original recording anywhere.",
+          "Their teacher had told them to stop singing the old song.",
+          "It had become a different tune they wanted to keep."
+        ],
+        "answer": 2,
+        "evidence": "Its ending was quite different from the one they had made.",
+        "rationale": "They know the original but deliberately retain their collaborative variation as a separate song."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Learning an old song exactly as the teacher recorded it.",
+          "Finding a quiet room where two people can sing without stopping.",
+          "Turning an incomplete memory into something new together."
+        ],
+        "answer": 2,
+        "evidence": "They gave their version a new name and kept the school song for another day.",
+        "rationale": "The attempt to remember leads to a new version, which they choose to preserve."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 142,
+        "sentences": 12,
+        "flyers": [
+          "hum",
+          "sort",
+          "possible",
+          "note",
+          "voice",
+          "fit",
+          "neither",
+          "record",
+          "shook",
+          "become",
+          "exact"
+        ],
+        "outside": [
+          "original",
+          "version",
+          "mainly",
+          "incomplete",
+          "memory"
+        ],
+        "content": [
+          "original",
+          "version",
+          "incomplete",
+          "memory"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 142,
+        "sentences": 12,
+        "flyers": [
+          "hum",
+          "sort",
+          "possible",
+          "note",
+          "voice",
+          "fit",
+          "neither",
+          "record",
+          "shook",
+          "become",
+          "exact"
+        ],
+        "outside": [
+          "original",
+          "version",
+          "mainly",
+          "incomplete",
+          "memory"
+        ],
+        "content": [
+          "original",
+          "version",
+          "incomplete",
+          "memory"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

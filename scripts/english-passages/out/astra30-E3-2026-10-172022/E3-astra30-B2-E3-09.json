@@ -1,0 +1,270 @@
+{
+  "id": "E3-astra30-B2-E3-09",
+  "level": "E3",
+  "premise": {
+    "id": "B2-E3-09",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E3-09",
+    "level": "E3",
+    "category": "observation",
+    "title": "The Moving Poster",
+    "passage": "Meera saw the classroom poster moving against the wall. Dan looked behind it but found nothing there. They watched it move again when their teacher opened the window. Dan closed the window because he wanted to test the wind. The poster stopped moving against the wall. Meera opened the window again because the room was getting hot. Now Dan held the bottom of the poster. Its paper animals stayed still, and the room felt better.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was drawn on the poster?",
+        "options": [
+          "Pictures of animals.",
+          "Pictures of boats.",
+          "Pictures of flowers."
+        ],
+        "answer": 0,
+        "evidence": "Its paper animals stayed still, and the room felt better."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Dan close the window?",
+        "options": [
+          "To hear what the teacher was saying.",
+          "To stop rain coming into the classroom.",
+          "To see what the wind was doing."
+        ],
+        "answer": 2,
+        "evidence": "Dan closed the window because he wanted to test the wind."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Meera open the window again?",
+        "options": [
+          "The playground was too quiet.",
+          "The classroom felt too hot.",
+          "The poster was still moving."
+        ],
+        "answer": 1,
+        "evidence": "Meera opened the window again because the room was getting hot."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 75,
+        "sentences": 8,
+        "flyers": [
+          "against",
+          "test",
+          "stay",
+          "still",
+          "feel",
+          "hear"
+        ],
+        "outside": [],
+        "content": [
+          "against",
+          "test"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 75,
+        "sentences": 8,
+        "flyers": [
+          "against",
+          "test",
+          "stay",
+          "still",
+          "feel",
+          "hear"
+        ],
+        "outside": [],
+        "content": [
+          "against",
+          "test"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests an explicit detail found in the last sentence ('paper animals')."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests explicit cause. 'To see what the wind was doing' is an appropriate paraphrase for 'test the wind'."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Correctly tests explicit cause stated directly in the text."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is well-structured for the E3 level. The sequence of events (cause and effect regarding the wind, the window, and the poster) is logical, clear, and easy for a child to follow."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

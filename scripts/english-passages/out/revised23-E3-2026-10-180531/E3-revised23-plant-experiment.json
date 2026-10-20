@@ -1,0 +1,233 @@
+{
+  "id": "E3-revised23-plant-experiment",
+  "level": "E3",
+  "premise": {
+    "id": "plant-experiment",
+    "genre": "fiction",
+    "theme": "nature",
+    "source": "revised23: own",
+    "premise": "Two children grow the same seeds in two places. One plant grows better, and they find out what made the difference."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "plant-experiment",
+    "title": "Two Bean Plants",
+    "passage": "Priya and Max planted the same beans in two cups. Both cups had the same soil and water. Max put his by the window and drew a star on it. He drew it because the cups looked the same. Priya put hers behind a bookcase because their cat played with cups. After two weeks, Max's plant had bigger, greener leaves. Priya's plant grew badly because the bookcase kept the light off it. They moved both cups to a sunny room and closed the door. A week later, new green leaves were growing on Priya's plant.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Max draw on his cup?",
+        "options": [
+          "A circle.",
+          "A star.",
+          "A square."
+        ],
+        "answer": 1,
+        "evidence": "Max put his by the window and drew a star on it."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Max draw on his cup?",
+        "options": [
+          "To tell his cup from Priya's.",
+          "To make a picture for his teacher.",
+          "To show how much water to add."
+        ],
+        "answer": 0,
+        "evidence": "He drew it because the cups looked the same."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Priya put her cup behind the bookcase?",
+        "options": [
+          "To leave room for a new toy.",
+          "To put it near her drawing things.",
+          "To keep it away from their cat."
+        ],
+        "answer": 2,
+        "evidence": "Priya put hers behind a bookcase because their cat played with cups."
+      }
+    ],
+    "id": "R1-E3-08",
+    "level": "E3",
+    "change_note_tr": "Hazırlanmamış kitap taşıma sonu kaldırıldı; üç soru genel bitki bilgisinden bu hikâyedeki işaret ve yer seçimine taşındı; kediyi dışarıda tutan yeni yer ve büyüme sonucu bağlandı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 95,
+        "sentences": 9,
+        "flyers": [
+          "same",
+          "soil",
+          "leave",
+          "keep",
+          "light",
+          "later",
+          "away"
+        ],
+        "outside": [],
+        "content": [
+          "soil",
+          "light"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 95,
+        "sentences": 9,
+        "flyers": [
+          "same",
+          "soil",
+          "leave",
+          "keep",
+          "light",
+          "later",
+          "away"
+        ],
+        "outside": [],
+        "content": [
+          "soil",
+          "light"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

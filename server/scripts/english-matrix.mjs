@@ -42,7 +42,8 @@ for (const [key, f] of Object.entries(fam)) {
     if (!Array.isArray(h[2].steps) || !h[2].steps.length) note(key, `q${i} ${q.type} rung3 empty`)
     const all = JSON.stringify(h)
     if (/undefined|NaN|\[object/.test(all)) note(key, `q${i} ${q.type} bad text: ${all.slice(0, 120)}`)
-    if (!MARK[lang].test(h[0].text)) note(key, `q${i} ${q.type} rung1 not in ${lang}: ${h[0].text}`)
+    // Hints are English for every child (decision 2026-10-17); parent messages below keep the parent's language.
+    if (!MARK.en.test(h[0].text)) note(key, `q${i} ${q.type} rung1 not in English (child ${lang}): ${h[0].text}`)
     const a = await ans(A.sid, i, q.correct)
     if (!a.correct || !a.helped) note(key, `q${i} right after hint should be correct+helped: ${JSON.stringify(a).slice(0, 100)}`)
     const late = await post(`/api/english-sessions/${A.sid}/hint`, { question_index: i })

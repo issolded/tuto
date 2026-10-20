@@ -1,0 +1,225 @@
+{
+  "id": "E3-astra80-B3-E3-07",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-07",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-07",
+    "level": "E3",
+    "category": "games",
+    "title": "The Number Game",
+    "passage": "Max drew ten squares in a line on some paper. Priya put a toy frog on the first square. She moved it slowly because she was counting every square out loud. Max wrote the numbers beside the squares. He made the last square bigger because the frog needed room to sit. Priya moved the frog to the end and clapped. Then Max drew a little lake around the last square. The frog had counted its steps home.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How many squares did Max draw?",
+        "options": [
+          "Eight squares.",
+          "Twelve squares.",
+          "Ten squares."
+        ],
+        "answer": 2,
+        "evidence": "Max drew ten squares in a line on some paper."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Priya move the frog slowly?",
+        "options": [
+          "She was keeping it away from wet paint.",
+          "She was looking for a lost toy car.",
+          "She was saying a number for each square."
+        ],
+        "answer": 2,
+        "evidence": "She moved it slowly because she was counting every square out loud."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Max make the end square bigger?",
+        "options": [
+          "The lake needed room for more fish.",
+          "The number needed room for more letters.",
+          "The frog needed a place to sit."
+        ],
+        "answer": 2,
+        "evidence": "He made the last square bigger because the frog needed room to sit."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 77,
+        "sentences": 8,
+        "flyers": [
+          "beside",
+          "step",
+          "keep",
+          "away",
+          "each"
+        ],
+        "outside": [],
+        "content": [
+          "step"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 77,
+        "sentences": 8,
+        "flyers": [
+          "beside",
+          "step",
+          "keep",
+          "away",
+          "each"
+        ],
+        "outside": [],
+        "content": [
+          "step"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

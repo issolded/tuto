@@ -1,0 +1,658 @@
+{
+  "id": "E3-own-cartoon",
+  "level": "E3",
+  "premise": {
+    "id": "own-cartoon",
+    "genre": "fiction",
+    "theme": "creativity",
+    "source": "150 Writing Prompts p7 (shape only)",
+    "premise": "A child invents a cartoon animal hero. The hero has one weakness that turns out to be useful."
+  },
+  "names": [
+    "Mia",
+    "Omar"
+  ],
+  "models": {
+    "generator": "gemini-3.5-flash",
+    "safety": "gemini-3.1-pro-preview",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "title": "Omar's Story",
+    "passage": "Omar drew a pretty cat for his short story. The cat was lost in a big garden. A brave dog came to help the cat. The dog was afraid because the water was cold. He did not want to swim in the lake. Because he walked on the grass, the dog found the lost cat. The cat was happy to go home with Omar.",
+    "questions": [
+      {
+        "stem": "What animal did Omar draw for his story?",
+        "options": [
+          "A cat",
+          "A dog",
+          "A rabbit"
+        ],
+        "evidence": "Omar drew a pretty cat for his short story.",
+        "op": "detail",
+        "answer": 0
+      },
+      {
+        "stem": "Why was the dog afraid?",
+        "options": [
+          "He was afraid of cold water",
+          "He was afraid of loud noise",
+          "He was afraid of big cars"
+        ],
+        "evidence": "The dog was afraid because the water was cold.",
+        "op": "cause",
+        "answer": 0
+      },
+      {
+        "stem": "Why did the dog find the lost cat?",
+        "options": [
+          "Because he walked on the grass",
+          "Because he walked on the sand",
+          "Because he walked on the street"
+        ],
+        "evidence": "Because he walked on the grass, the dog found the lost cat.",
+        "op": "cause",
+        "answer": 0
+      }
+    ]
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 64,
+        "sentences": 7,
+        "flyers": [],
+        "outside": []
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "level_ok": true,
+        "note": ""
+      }
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "otherConcerns": [],
+    "notes": []
+  },
+  "log": [
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A big bear"
+        },
+        {
+          "q": 2,
+          "favourite": "He was very cold"
+        },
+        {
+          "q": 3,
+          "favourite": "The kitten was cold"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "At the kitchen table"
+        },
+        {
+          "q": 2,
+          "favourite": "His pencil broke"
+        },
+        {
+          "q": 3,
+          "favourite": "He saw a fish"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Omar's Picture",
+        "passage": "Omar drew a big cat on some paper. The big cat was afraid of loud noise. Omar stopped drawing because he was hungry. He put his picture on the table and went to eat. In the picture, the cat listened to a loud noise. The cat ran back because he heard the noise. When he ran back, he found a lost ball. Omar saw the lost ball and smiled.",
+        "questions": [
+          {
+            "stem": "Where did Omar put his picture?",
+            "options": [
+              "On the table",
+              "On the wall",
+              "On the desk"
+            ],
+            "evidence": "He put his picture on the table and went to eat.",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why did Omar stop drawing?",
+            "options": [
+              "He was hungry",
+              "He was tired",
+              "It was late"
+            ],
+            "evidence": "Omar stopped drawing because he was hungry.",
+            "op": "cause",
+            "answer": 0
+          },
+          {
+            "stem": "Why did the cat run back?",
+            "options": [
+              "He heard a noise",
+              "He saw a bird",
+              "He wanted a toy"
+            ],
+            "evidence": "The cat ran back because he heard the noise.",
+            "op": "cause",
+            "answer": 0
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Omar drew a big cat that was afraid of loud noise. When the cat ran back from a noise, he found a lost ball.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did Omar put his picture?",
+            "options": [
+              "On the table",
+              "On the wall",
+              "On the desk"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did Omar stop drawing?",
+            "options": [
+              "He was hungry",
+              "He was tired",
+              "It was late"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the cat run back?",
+            "options": [
+              "He heard a noise",
+              "He saw a bird",
+              "He wanted a toy"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        0,
+        0
+      ],
+      "round": 1,
+      "mode": "write",
+      "verdict": "revise",
+      "problems": [
+        "q3 solved WITHOUT the text 3/3"
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "round": 2,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A clever cat"
+        },
+        {
+          "q": 3,
+          "favourite": "Because he wanted to get a toy from the river."
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A small cat"
+        },
+        {
+          "q": 3,
+          "favourite": "Because he wanted to get a ball from the river."
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Omar's Comic",
+        "passage": "Omar sat in his bedroom and drew a funny comic. His story was about a brave cat who liked water. The cat sat on the grass because he wanted to find his lost ball. He looked around and saw his friend Mia near the river. The cat took a long net because Mia dropped her bag into the river. He got the bag out with the net quickly. Mia was very happy and thanked the clever cat.",
+        "questions": [
+          {
+            "stem": "Where did Omar draw his comic?",
+            "options": [
+              "In the bedroom",
+              "In the garden",
+              "In the kitchen"
+            ],
+            "evidence": "Omar sat in his bedroom and drew a funny comic.",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why did the cat sit on the grass?",
+            "options": [
+              "Because he was afraid of water.",
+              "Because he wanted to find his ball.",
+              "Because he was tired after a long run."
+            ],
+            "evidence": "The cat sat on the grass because he wanted to find his lost ball.",
+            "op": "cause",
+            "answer": 1
+          },
+          {
+            "stem": "Why did the cat pick up a long net?",
+            "options": [
+              "Because Mia dropped her hat into the river.",
+              "Because Mia dropped her bag into the river.",
+              "Because Mia dropped her shoe into the river."
+            ],
+            "evidence": "The cat took a long net because Mia dropped her bag into the river.",
+            "op": "cause",
+            "answer": 1
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Omar drew a comic in the kitchen about a cat who was afraid of water. Because the cat stayed on the grass, he used a net to save Mia's bag from the river.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "Where did Omar draw his comic?",
+            "options": [
+              "In the bedroom",
+              "In the garden",
+              "In the kitchen"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the cat sit on the grass?",
+            "options": [
+              "Because he was afraid of water.",
+              "Because he wanted to find his ball.",
+              "Because he was tired after a long run."
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the cat pick up a long net?",
+            "options": [
+              "Because Mia dropped her hat into the river.",
+              "Because Mia dropped her bag into the river.",
+              "Because Mia dropped her shoe into the river."
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        1,
+        1
+      ],
+      "round": 2,
+      "mode": "write",
+      "verdict": "regenerate",
+      "problems": [
+        "safety copyable-danger: saw his friend Mia near the river. The cat took a long net because Mia dropped her bag into the river. He got the bag out with the net quickly."
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "round": 3,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A white rabbit"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "In his bedroom"
+        },
+        {
+          "q": 3,
+          "favourite": "Because she gets her lost ball"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Omar's Picture",
+        "passage": "Omar draws a picture at his desk. He draws a story about a clever rabbit. The rabbit hides inside a box because of a scary dog. Inside the box, the rabbit finds a lost toy. The clever rabbit gives the toy to Mia. Mia is happy because she gets her lost toy. Omar loves his good picture.",
+        "questions": [
+          {
+            "stem": "Where does Omar draw his picture?",
+            "options": [
+              "At his desk",
+              "At the table",
+              "On the floor"
+            ],
+            "evidence": "Omar draws a picture at his desk.",
+            "op": "1) detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why does the rabbit hide in the box?",
+            "options": [
+              "Because of a loud noise",
+              "Because of a big truck",
+              "Because of a scary dog"
+            ],
+            "evidence": "The rabbit hides inside a box because of a scary dog.",
+            "op": "2) cause",
+            "answer": 2
+          },
+          {
+            "stem": "Why is Mia happy at the end?",
+            "options": [
+              "Because she gets her lost ball",
+              "Because she gets her lost book",
+              "Because she gets her lost toy"
+            ],
+            "evidence": "Mia is happy because she gets her lost toy.",
+            "op": "3) cause",
+            "answer": 2
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Omar draws a story about a clever rabbit who is afraid of loud noise. The rabbit hides inside a box and finds a lost ball for Mia.",
+        "questions": [
+          {
+            "op": "1) detail",
+            "stem": "Where does Omar draw his picture?",
+            "options": [
+              "At his desk",
+              "At the table",
+              "On the floor"
+            ]
+          },
+          {
+            "op": "2) cause",
+            "stem": "Why does the rabbit hide in the box?",
+            "options": [
+              "Because of a loud noise",
+              "Because of a big truck",
+              "Because of a scary dog"
+            ]
+          },
+          {
+            "op": "3) cause",
+            "stem": "Why is Mia happy at the end?",
+            "options": [
+              "Because she gets her lost ball",
+              "Because she gets her lost book",
+              "Because she gets her lost toy"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        2,
+        2
+      ],
+      "round": 3,
+      "mode": "write",
+      "verdict": "regenerate",
+      "problems": [
+        "safety fear: The rabbit hides inside a box because of a scary dog.",
+        "q3 solved WITHOUT the text 3/3"
+      ],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q2: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "round": 4,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A brave brown bear"
+        },
+        {
+          "q": 2,
+          "favourite": "He was afraid of cold water"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "mode": "plan-check",
+      "favourites": [
+        {
+          "q": 1,
+          "favourite": "A brave dog"
+        },
+        {
+          "q": 2,
+          "favourite": "He did not like loud noise"
+        },
+        {
+          "q": 3,
+          "favourite": "Because he looked in the trees"
+        }
+      ]
+    },
+    {
+      "item": {
+        "title": "Omar's Story",
+        "passage": "Omar drew a pretty cat for his short story. The cat was lost in a big garden. A brave dog came to help the cat. The dog was afraid because the water was cold. He did not want to swim in the lake. Because he walked on the grass, the dog found the lost cat. The cat was happy to go home with Omar.",
+        "questions": [
+          {
+            "stem": "What animal did Omar draw for his story?",
+            "options": [
+              "A cat",
+              "A dog",
+              "A rabbit"
+            ],
+            "evidence": "Omar drew a pretty cat for his short story.",
+            "op": "detail",
+            "answer": 0
+          },
+          {
+            "stem": "Why was the dog afraid?",
+            "options": [
+              "He was afraid of cold water",
+              "He was afraid of loud noise",
+              "He was afraid of big cars"
+            ],
+            "evidence": "The dog was afraid because the water was cold.",
+            "op": "cause",
+            "answer": 0
+          },
+          {
+            "stem": "Why did the dog find the lost cat?",
+            "options": [
+              "Because he walked on the grass",
+              "Because he walked on the sand",
+              "Because he walked on the street"
+            ],
+            "evidence": "Because he walked on the grass, the dog found the lost cat.",
+            "op": "cause",
+            "answer": 0
+          }
+        ]
+      },
+      "planned": {
+        "outline": "Omar drew a story about a brave dog who was afraid of cold water. Because he walked on the grass, the dog found a lost cat.",
+        "questions": [
+          {
+            "op": "detail",
+            "stem": "What animal did Omar draw for his story?",
+            "options": [
+              "A cat",
+              "A dog",
+              "A rabbit"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why was the dog afraid?",
+            "options": [
+              "He was afraid of cold water",
+              "He was afraid of loud noise",
+              "He was afraid of big cars"
+            ]
+          },
+          {
+            "op": "cause",
+            "stem": "Why did the dog find the lost cat?",
+            "options": [
+              "Because he walked on the grass",
+              "Because he walked on the sand",
+              "Because he walked on the street"
+            ]
+          }
+        ]
+      },
+      "picks": [
+        0,
+        0,
+        0
+      ],
+      "round": 4,
+      "mode": "write",
+      "verdict": "pass",
+      "problems": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "status": "awaiting-human"
+}

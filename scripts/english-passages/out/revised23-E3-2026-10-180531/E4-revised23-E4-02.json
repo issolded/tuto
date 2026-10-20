@@ -1,0 +1,238 @@
+{
+  "id": "E4-revised23-E4-02",
+  "level": "E4",
+  "premise": {
+    "id": "E4-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "revised23: revised23"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "E4-02",
+    "level": "E4",
+    "title": "The Second Map",
+    "passage": "Ravi drew a map of the classroom for a treasure game. Nina had to follow it to find a paper star. He marked a table, a bookcase, and a chair, then drew a line between them. Nina followed the line and stopped at the wrong chair. There were four chairs that looked exactly like the one on his map. Ravi pointed towards the right chair, but Nina asked him to wait. She wanted to try without being shown the answer. Ravi looked around and noticed a picture of a whale above the right chair. He added the whale to his map and gave it back. This time, Nina found the star under the seat. She turned it over and drew a tiny whale on the back. Ravi put it beside his map, ready for the next player.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What picture was above the chair with the star?",
+        "options": [
+          "A whale.",
+          "A boat.",
+          "A tree."
+        ],
+        "answer": 0,
+        "evidence": "Ravi looked around and noticed a picture of a whale above the right chair."
+      },
+      {
+        "op": "inference",
+        "stem": "Why might Nina have added a whale to the star?",
+        "options": [
+          "To show which animal she wanted Ravi to draw next.",
+          "To remember the clue that helped her find the star.",
+          "To show which animal the next player should search for."
+        ],
+        "answer": 1,
+        "evidence": "She turned it over and drew a tiny whale on the back.",
+        "rationale": "The earlier whale picture identified the correct chair; after finding the star, Nina repeats that particular image on it."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "A child improves his map after a player has trouble following it.",
+          "A child changes his hiding place after a player finds it too quickly.",
+          "A child adds more prizes after a player finishes the first game."
+        ],
+        "answer": 0,
+        "evidence": "He added the whale to his map and gave it back.",
+        "rationale": "The hiding place stays the same; the map changes so another person can use it successfully."
+      }
+    ],
+    "metrics": {
+      "words": 137,
+      "sentences": 12,
+      "max_sentence_words": 15
+    },
+    "change_note_tr": "Soru ayrıntısı balina resmine taşındı; çıkarım yıldızın arkasındaki balinayı önceki ipucuna bağlıyor; üç ana fikir şıkkı eş üslupta yazıldı.",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 137,
+        "sentences": 12,
+        "flyers": [
+          "exact",
+          "towards",
+          "notice",
+          "tiny",
+          "beside",
+          "trouble"
+        ],
+        "outside": [
+          "clue",
+          "mainly"
+        ],
+        "content": [
+          "clue"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 137,
+        "sentences": 12,
+        "flyers": [
+          "exact",
+          "towards",
+          "notice",
+          "tiny",
+          "beside",
+          "trouble"
+        ],
+        "outside": [
+          "clue",
+          "mainly"
+        ],
+        "content": [
+          "clue"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

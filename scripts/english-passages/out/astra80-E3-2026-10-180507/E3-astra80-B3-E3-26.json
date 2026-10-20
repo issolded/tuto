@@ -1,0 +1,222 @@
+{
+  "id": "E3-astra80-B3-E3-26",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-26",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-26",
+    "level": "E3",
+    "category": "school",
+    "title": "The Class Photo",
+    "passage": "Raj and Ella helped their teacher choose a place for a class photo. Ella chose the wall with the big animal picture. Raj moved a chair because it was in front of the picture. The teacher asked everyone to stand beside the wall. Ella stepped closer because she was outside the camera's picture. Now the teacher could see all the children together. Raj pointed to the painted giraffe behind them. It looked like one more classmate, much taller than the others.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What was painted behind the children?",
+        "options": [
+          "A giraffe.",
+          "An elephant.",
+          "A tiger."
+        ],
+        "answer": 0,
+        "evidence": "Raj pointed to the painted giraffe behind them."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj move the chair?",
+        "options": [
+          "It was needed at the teacher's desk.",
+          "It was hiding part of the wall picture.",
+          "It was too small for a child to sit on."
+        ],
+        "answer": 1,
+        "evidence": "Raj moved a chair because it was in front of the picture."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Ella step closer?",
+        "options": [
+          "She was not in the camera picture.",
+          "She wanted to stand beside the teacher.",
+          "She wanted to see the picture better."
+        ],
+        "answer": 0,
+        "evidence": "Ella stepped closer because she was outside the camera's picture."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "beside",
+          "step",
+          "together",
+          "other"
+        ],
+        "outside": [],
+        "content": [
+          "step"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 81,
+        "sentences": 8,
+        "flyers": [
+          "beside",
+          "step",
+          "together",
+          "other"
+        ],
+        "outside": [],
+        "content": [
+          "step"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

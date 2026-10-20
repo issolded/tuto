@@ -1,0 +1,396 @@
+{
+  "models": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-3.1-pro-preview"
+  ],
+  "runs": 2,
+  "table": {
+    "gemini-3.5-flash": {
+      "clean-shell": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "station-water": [
+        {
+          "verdict": "MISSED",
+          "note": ""
+        },
+        {
+          "verdict": "MISSED",
+          "note": ""
+        }
+      ],
+      "clean-green-hat": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "omar-grass": [
+        {
+          "verdict": "caught",
+          "note": "The sentence 'Because he walked on the grass, the dog found the lost cat' lacks everyday cause-and-effect logic."
+        },
+        {
+          "verdict": "caught",
+          "note": "Sentence 6 ('Because he walked on the grass, the dog found the lost cat') uses an illogical cause-and-effect relationship."
+        }
+      ],
+      "park-mother": [
+        {
+          "verdict": "caught",
+          "note": "Option A includes 'with her mother', which is not mentioned in the passage."
+        },
+        {
+          "verdict": "caught",
+          "note": "Option A claims Lily went 'with her mother', which is not mentioned in the text."
+        }
+      ],
+      "red-shoes": [
+        {
+          "verdict": "caught",
+          "note": "Option A specifies the color 'red', which is not mentioned in the passage."
+        },
+        {
+          "verdict": "caught",
+          "note": "Option A adds the color 'red', which is not mentioned in the passage."
+        }
+      ],
+      "chair-fixed": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "clean-snail": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "ice-sun": [
+        {
+          "verdict": "caught",
+          "note": "Sentence 3 ('After ten minutes, the ice cube was bigger because the sun was hot') is physically impossible; ice melts and gets smaller in heat."
+        },
+        {
+          "verdict": "caught",
+          "note": "The sentence 'After ten minutes, the ice cube was bigger because the sun was hot' defies real-world physics because heat melts ice."
+        }
+      ],
+      "pencil-wearing": [
+        {
+          "verdict": "caught",
+          "note": "The key states Lily was wearing the shoe, while the passage only says 'her shoe'."
+        },
+        {
+          "verdict": "MISSED",
+          "note": ""
+        }
+      ],
+      "chair-roof": [
+        {
+          "verdict": "caught",
+          "note": "In sentence 7, moving the chair inside because rain came through the roof does not make physical sense."
+        },
+        {
+          "verdict": "caught",
+          "note": "Sentence 7 ('She had moved the big chair inside because rain came through the roof') is ill-logical because rain coming through a roof makes the inside wet."
+        }
+      ],
+      "pencil-fixed": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ]
+    },
+    "gemini-3.8-flash": {
+      "clean-green-hat": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "red-shoes": [
+        {
+          "verdict": "caught",
+          "note": "Option A introduces the color 'red', which is not mentioned in the text."
+        },
+        {
+          "verdict": "caught",
+          "note": "Option A adds the color 'red', which is not mentioned in the passage."
+        }
+      ],
+      "clean-shell": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "chair-fixed": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "station-water": [
+        {
+          "verdict": "MISSED",
+          "note": ""
+        },
+        {
+          "verdict": "MISSED",
+          "note": ""
+        }
+      ],
+      "ice-sun": [
+        {
+          "verdict": "caught",
+          "note": "Sentence 3 ('After ten minutes, the ice cube was bigger because the sun was hot.') defies basic physical reality, as heat melts ice rather than making it expand."
+        },
+        {
+          "verdict": "caught",
+          "note": "Sentence 3 ('After ten minutes, the ice cube was bigger because the sun was hot.') is physically impossible: heat melts ice rather than making it expand."
+        }
+      ],
+      "omar-grass": [
+        {
+          "verdict": "caught",
+          "note": "'Because he walked on the grass, the dog found the lost cat' does not make everyday causal sense; walking on grass is not a natural reason for finding a lost animal."
+        },
+        {
+          "verdict": "caught",
+          "note": "Sentence 6 ('Because he walked on the grass, the dog found the lost cat') presents an illogical causal connection. Additionally, the transition from Omar drawing a cat to the cat interacting with a dog and going home with Omar is disjointed."
+        }
+      ],
+      "pencil-fixed": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": "Option C paraphrases 'too light' by referencing the lack of weight inside that caused it to tip."
+        }
+      ],
+      "clean-snail": [
+        {
+          "verdict": "clean",
+          "note": ""
+        },
+        {
+          "verdict": "clean",
+          "note": ""
+        }
+      ],
+      "chair-roof": [
+        {
+          "verdict": "caught",
+          "note": "Sentence 7 ('She had moved the big chair inside because rain came through the roof') is illogical: a leaking roof makes the indoors wet, so it makes no sense to bring outdoor furniture inside to protect it."
+        },
+        {
+          "verdict": "caught",
+          "note": "Sentence 7 ('She had moved the big chair inside because rain came through the roof.') is illogical because rain coming through a roof makes the inside wet, so moving an outdoor chair inside to protect it makes no physical sense."
+        }
+      ],
+      "park-mother": [
+        {
+          "verdict": "caught",
+          "note": "Option A adds 'with her mother', which is never mentioned in the text, making the key factually unsupported by the passage. / The causal connection is implicit across two sentences ('Then the string broke. The kite flew into a tree.') without an explicit connective like 'because' or 'so', making this an inference rather than an explicit cause operation."
+        },
+        {
+          "verdict": "caught",
+          "note": "Option A adds 'with her mother', which is never mentioned in the passage. / The causal link between the string breaking and the kite flying into a tree is inferred from sequence; no explicit connective (because/so) is used."
+        }
+      ],
+      "pencil-wearing": [
+        {
+          "verdict": "caught",
+          "note": "The passage states the pencil went 'into her shoe', but does not explicitly state Lily was wearing it."
+        },
+        {
+          "verdict": "caught",
+          "note": "Option B specifies 'the shoe Lily was wearing', but the passage only says 'into her shoe' without specifying whether she was wearing it or it was on the floor."
+        }
+      ]
+    },
+    "gemini-3.1-pro-preview": {
+      "ice-sun": [
+        {
+          "verdict": "caught",
+          "note": "The passage contains a major logical flaw: 'the ice cube was bigger because the sun was hot.' Ice melts in the heat. This defies basic physics and everyday experience, making it unsuitable for a children's reading app."
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "station-water": [
+        {
+          "verdict": "caught",
+          "note": "The passage feels like a disjointed list of sentences. The logic in 'They do not add much water today, so the new box is strong' is flawed because it never establishes what they are adding water to (presumably the paint, but it is not stated). The sudden appearance of the ball is also abrupt."
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "omar-grass": [
+        {
+          "verdict": "caught",
+          "note": "The passage lacks coherence and logic. It jumps from a garden to a cold lake without transition. The causal link 'Because he walked on the grass, the dog found the lost cat' makes no everyday sense. Furthermore, the premise is confusing: Omar draws a cat for a story, but then the drawn cat goes home with him as if it were real."
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "chair-fixed": [
+        {
+          "verdict": "FALSE-ALARM",
+          "note": "The logic and coherence of the story are flawed. If it was raining, why was a small blue chair placed outside in its stead? Why bring the big chair inside to save the teddy instead of just bringing the teddy inside? The pronoun reference in 'She had brought the chair inside' is also confusing because 'the small chair' was the last one mentioned."
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "clean-snail": [
+        {
+          "verdict": "FALSE-ALARM",
+          "note": "There is a major logical and narrative gap: the text states the rabbit 'ran on' with the bag and the snail is very slow, so it makes no physical sense for all the apples to suddenly be back in the bag in the next sentence without any explanation of how the snail caught up."
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "park-mother": [
+        {
+          "verdict": "caught",
+          "note": "The passage is appropriate for the level, natural, and tells a clear, simple story."
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "pencil-fixed": [
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "pencil-wearing": [
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "clean-shell": [
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "chair-roof": [
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "clean-green-hat": [
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ],
+      "red-shoes": [
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        },
+        {
+          "verdict": "ERROR",
+          "note": "gemini-3.1-pro-preview: gave up (429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, pl"
+        }
+      ]
+    }
+  },
+  "usage": {
+    "gemini-3.5-flash": {
+      "calls": 24,
+      "in": 23018,
+      "out": 40566,
+      "secs": 207
+    },
+    "gemini-3.8-flash": {
+      "calls": 24,
+      "in": 23018,
+      "out": 33558,
+      "secs": 268
+    },
+    "gemini-3.1-pro-preview": {
+      "calls": 6,
+      "in": 5690,
+      "out": 12262,
+      "secs": 104
+    }
+  }
+}

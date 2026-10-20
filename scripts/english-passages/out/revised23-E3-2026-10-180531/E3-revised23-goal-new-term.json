@@ -1,0 +1,229 @@
+{
+  "id": "E3-revised23-goal-new-term",
+  "level": "E3",
+  "premise": {
+    "id": "goal-new-term",
+    "genre": "fiction",
+    "theme": "school",
+    "source": "revised23: 150 Writing Prompts p6 (shape only)",
+    "premise": "A child sets one small goal for the new school term and finds a clever way to practise a little every day."
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "revised23",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "premise": "goal-new-term",
+    "title": "One Word at Breakfast",
+    "passage": "At the start of the school term, Raj chose a small goal. He wanted to learn five difficult words for his animal story. His sister Nina wrote the first word on some paper. Raj put it by his bowl because he ate breakfast there every day. Each morning, he looked, covered the word, and wrote it again. Nina drew an animal beside each word because Raj liked guessing animals. On Friday, Raj could write all five words. His story had a dolphin, a giraffe, and a very surprised chicken.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "How many difficult words did Raj want to learn?",
+        "options": [
+          "Five words.",
+          "Seven words.",
+          "Ten words."
+        ],
+        "answer": 0,
+        "evidence": "He wanted to learn five difficult words for his animal story."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Raj put the paper by his bowl?",
+        "options": [
+          "He did his homework in that place.",
+          "He kept his drawing things in that place.",
+          "He had his morning food in that place."
+        ],
+        "answer": 2,
+        "evidence": "Raj put it by his bowl because he ate breakfast there every day."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Nina draw animals beside the words?",
+        "options": [
+          "Raj wanted pictures to give his teacher.",
+          "Raj enjoyed working out which animals they were.",
+          "Raj needed pictures to show his classmates."
+        ],
+        "answer": 1,
+        "evidence": "Nina drew an animal beside each word because Raj liked guessing animals."
+      }
+    ],
+    "id": "R1-E3-04",
+    "level": "E3",
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 89,
+        "sentences": 8,
+        "flyers": [
+          "term",
+          "each",
+          "cover",
+          "beside",
+          "guess",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "term",
+          "cover"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 89,
+        "sentences": 8,
+        "flyers": [
+          "term",
+          "each",
+          "cover",
+          "beside",
+          "guess",
+          "keep"
+        ],
+        "outside": [],
+        "content": [
+          "term",
+          "cover"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

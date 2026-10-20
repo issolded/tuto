@@ -1,0 +1,254 @@
+{
+  "id": "E4-astra30-B2-E4-02",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-02",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-02",
+    "level": "E4",
+    "category": "home",
+    "title": "The Sock Window",
+    "passage": "Lily and Ben were putting clean socks into pairs. One blue sock was missing, although they had checked the washing basket twice. Ben looked under the table and behind the door. Lily picked up a white shirt from the basket and noticed something blue through the thin cloth. She put her hand inside a sleeve and pulled out the missing sock. Ben laughed and held up another shirt like a window. There was nothing inside that one, but he checked the rest before putting them down. Soon, every sock had a partner. Lily placed the last blue pair on top of the pile. Ben put the empty basket on his head for a moment. Lily told him to check it first, in case there was another sock hiding inside.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Lily find the missing sock?",
+        "options": [
+          "Inside a pillow cover.",
+          "Inside a shirt sleeve.",
+          "Inside another blue sock."
+        ],
+        "answer": 1,
+        "evidence": "She put her hand inside a sleeve and pulled out the missing sock."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Ben check the other shirts?",
+        "options": [
+          "He thought the shirts might still be wet.",
+          "He thought Lily had put them in the wrong pile.",
+          "He thought more socks could be inside them."
+        ],
+        "answer": 2,
+        "evidence": "There was nothing inside that one, but he checked the rest before putting them down.",
+        "rationale": "A missing sock has just been found inside one shirt; Ben applies that discovery to the remaining shirts."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Learning to wash clothes without mixing them up.",
+          "Making a new game from clothes that no longer fit.",
+          "Finding a missing item during an ordinary job."
+        ],
+        "answer": 2,
+        "evidence": "She put her hand inside a sleeve and pulled out the missing sock.",
+        "rationale": "The central problem is the missing sock, resolved by noticing it inside another item of clothing."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "check",
+          "basket",
+          "notice",
+          "cloth",
+          "sleeve",
+          "rest",
+          "partner",
+          "pile",
+          "case",
+          "pillow",
+          "cover",
+          "fit"
+        ],
+        "outside": [
+          "although",
+          "item",
+          "ordinary"
+        ],
+        "content": [
+          "although",
+          "item",
+          "ordinary"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "check",
+          "basket",
+          "notice",
+          "cloth",
+          "sleeve",
+          "rest",
+          "partner",
+          "pile",
+          "case",
+          "pillow",
+          "cover",
+          "fit"
+        ],
+        "outside": [
+          "although",
+          "item",
+          "ordinary"
+        ],
+        "content": [
+          "although",
+          "item",
+          "ordinary"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "regional? washing basket",
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

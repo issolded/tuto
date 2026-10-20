@@ -1,0 +1,282 @@
+{
+  "id": "E4-astra30-B2-E4-04",
+  "level": "E4",
+  "premise": {
+    "id": "B2-E4-04",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra30: astra30"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra30",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B2-E4-04",
+    "level": "E4",
+    "category": "school",
+    "title": "The Practice Reader",
+    "passage": "Raj was going to read his short story to the class on Friday. At home, he read it to Ella, but he kept stopping to ask if she liked it. Ella answered every question, and they never reached the last page. The next evening, she put a toy rabbit on a chair. She sat beside it and asked Raj to read to the rabbit first. Raj nearly stopped after the first page, then looked at its quiet face and went on. He reached the ending before asking Ella anything. She told him which part had made her laugh. On Friday, Raj pictured the rabbit while he stood in front of the class. He read the whole story, then looked up. Several children were smiling at the same funny ending.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Which toy did Ella put on a chair?",
+        "options": [
+          "A toy rabbit.",
+          "A toy monkey.",
+          "A toy penguin."
+        ],
+        "answer": 0,
+        "evidence": "The next evening, she put a toy rabbit on a chair."
+      },
+      {
+        "op": "inference",
+        "stem": "How did the rabbit help Raj?",
+        "options": [
+          "It helped him choose a new name for his story.",
+          "It helped him read on without asking for comments.",
+          "It helped him remember a page that he had lost."
+        ],
+        "answer": 1,
+        "evidence": "Raj nearly stopped after the first page, then looked at its quiet face and went on.",
+        "rationale": "Raj had repeatedly asked Ella for reactions; addressing a silent toy lets him continue to the ending."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is this story mostly about?",
+        "options": [
+          "Changing a story after friends ask for a different ending.",
+          "Trying a new way to prepare for reading aloud.",
+          "Choosing a toy to take to a classroom show."
+        ],
+        "answer": 1,
+        "evidence": "He reached the ending before asking Ella anything.",
+        "rationale": "The toy is a practice aid that helps Raj complete his reading, both at home and later in class."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "reach",
+          "beside",
+          "whole",
+          "aloud"
+        ],
+        "outside": [
+          "comment"
+        ],
+        "content": [
+          "comment"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 129,
+        "sentences": 11,
+        "flyers": [
+          "reach",
+          "beside",
+          "whole",
+          "aloud"
+        ],
+        "outside": [
+          "comment"
+        ],
+        "content": [
+          "comment"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ],
+    "pedagogyPro": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "A straightforward detail question that directly matches the text."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "A good inference question. The reader must connect the rabbit's 'quiet face' with Raj reaching the ending without asking questions."
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": "Accurately captures the main idea. Distractors use words from the text (ending, toy, classroom) to tempt careless readers."
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": "The passage is well-written, relatable, and perfectly suited for the target age group and reading level."
+      },
+      "model": "gemini-3.1-pro-preview"
+    }
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

@@ -1,0 +1,229 @@
+{
+  "id": "E3-astra80-B3-E3-27",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-27",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-27",
+    "level": "E3",
+    "category": "pets",
+    "title": "The Dog in the Photo",
+    "passage": "Nina showed Omar a photo of their dog as a puppy. Omar laughed because the puppy was asleep with a toy on its head. The dog came over and put its wet nose beside the photo. Nina moved it higher because she wanted to keep the paper dry. Omar looked from the photo to the dog beside them. The dog was awake now and looked at the photo with them. Nina took another photo with Omar sitting beside the dog. He held up the old photo, so both dogs were in the new picture.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Omar hold in the new photo?",
+        "options": [
+          "The old puppy photo.",
+          "The dog's little toy.",
+          "The dog's water bowl."
+        ],
+        "answer": 0,
+        "evidence": "He held up the old photo, so both dogs were in the new picture."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Omar laugh at the old photo?",
+        "options": [
+          "The sleeping puppy had a blanket over its feet.",
+          "The sleeping puppy had its tail in a bowl.",
+          "The sleeping puppy had a toy on its head."
+        ],
+        "answer": 2,
+        "evidence": "Omar laughed because the puppy was asleep with a toy on its head."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Nina move the photo higher?",
+        "options": [
+          "She wanted Omar to look at it in sunlight.",
+          "She wanted to put it on the top of a bookcase.",
+          "She wanted it away from the dog's wet nose."
+        ],
+        "answer": 2,
+        "evidence": "Nina moved it higher because she wanted to keep the paper dry."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 94,
+        "sentences": 8,
+        "flyers": [
+          "as",
+          "over",
+          "beside",
+          "high",
+          "keep",
+          "sunlight",
+          "away"
+        ],
+        "outside": [],
+        "content": [
+          "high",
+          "sunlight"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 94,
+        "sentences": 8,
+        "flyers": [
+          "as",
+          "over",
+          "beside",
+          "high",
+          "keep",
+          "sunlight",
+          "away"
+        ],
+        "outside": [],
+        "content": [
+          "high",
+          "sunlight"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

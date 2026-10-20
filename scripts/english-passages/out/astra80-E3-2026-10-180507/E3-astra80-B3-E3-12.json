@@ -1,0 +1,225 @@
+{
+  "id": "E3-astra80-B3-E3-12",
+  "level": "E3",
+  "premise": {
+    "id": "B3-E3-12",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E3-12",
+    "level": "E3",
+    "category": "building",
+    "title": "The Toy Garage",
+    "passage": "Tom made a garage from a box for his toy cars. Mia tried to put a tall toy bus inside. Tom lifted the roof because the bus was too tall. He put another little box under each end of the roof. Now the bus could go in beside the cars. Mia drew a bus on the door because she wanted drivers to find it. Tom added a little car below the bus. The garage was open to small cars and tall visitors.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Mia try to put inside?",
+        "options": [
+          "A toy bus.",
+          "A toy train.",
+          "A toy plane."
+        ],
+        "answer": 0,
+        "evidence": "Mia tried to put a tall toy bus inside."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Tom lift the roof?",
+        "options": [
+          "The cars needed more room beside them.",
+          "The door needed more room to open.",
+          "The bus needed more room above it."
+        ],
+        "answer": 2,
+        "evidence": "Tom lifted the roof because the bus was too tall."
+      },
+      {
+        "op": "cause",
+        "stem": "Why did Mia draw a bus on the door?",
+        "options": [
+          "To show bus drivers the right place.",
+          "To show Tom her newest school drawing.",
+          "To show which bus she rode to school."
+        ],
+        "answer": 0,
+        "evidence": "Mia drew a bus on the door because she wanted drivers to find it."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "garage",
+          "each",
+          "beside",
+          "visitor"
+        ],
+        "outside": [],
+        "content": [
+          "garage",
+          "visitor"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [],
+      "stats": {
+        "words": 82,
+        "sentences": 8,
+        "flyers": [
+          "garage",
+          "each",
+          "beside",
+          "visitor"
+        ],
+        "outside": [],
+        "content": [
+          "garage",
+          "visitor"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

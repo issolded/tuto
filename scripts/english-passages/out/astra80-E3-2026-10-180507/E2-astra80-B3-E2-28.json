@@ -1,0 +1,237 @@
+{
+  "id": "E2-astra80-B3-E2-28",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-28",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-28",
+    "level": "E2",
+    "category": "nature",
+    "title": "The Small Feather",
+    "passage": "Amir found a feather beside a tree at school. Sara brought a piece of paper and drew its shape. They left the feather under the tree and took their drawing inside. Amir added a bird above the shape, with one feather missing from its tail.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where was the feather?",
+        "options": [
+          "Beside a wall.",
+          "Beside a tree.",
+          "Beside a door."
+        ],
+        "answer": 1,
+        "evidence": "Amir found a feather beside a tree at school."
+      },
+      {
+        "op": "detail",
+        "stem": "What did they take inside?",
+        "options": [
+          "Their drawing.",
+          "Their feather.",
+          "Their leaf."
+        ],
+        "answer": 0,
+        "evidence": "They left the feather under the tree and took their drawing inside."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Sara drew the feather's shape.",
+          "They took the drawing inside.",
+          "Amir added a bird."
+        ],
+        "answer": 0,
+        "evidence": "Sara brought a piece of paper and drew its shape."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 45,
+        "sentences": 4,
+        "flyers": [
+          "feather",
+          "beside",
+          "piece",
+          "leave",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "feather",
+          "piece"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 45,
+        "sentences": 4,
+        "flyers": [
+          "feather",
+          "beside",
+          "piece",
+          "leave",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "feather",
+          "piece"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

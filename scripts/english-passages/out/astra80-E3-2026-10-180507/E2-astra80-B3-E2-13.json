@@ -1,0 +1,242 @@
+{
+  "id": "E2-astra80-B3-E2-13",
+  "level": "E2",
+  "premise": {
+    "id": "B3-E2-13",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E2-13",
+    "level": "E2",
+    "category": "home",
+    "title": "The Small Towel",
+    "passage": "Lily put a little towel beside the bathroom sink. Ben washed his hands and found the towel was too small. He brought a bigger towel from the cupboard. Lily picked up the little one and put it back with her doll's clothes.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "Where did Lily first put the little towel?",
+        "options": [
+          "Beside the kitchen bowl.",
+          "Beside the bathroom sink.",
+          "Beside the bedroom mirror."
+        ],
+        "answer": 1,
+        "evidence": "Lily put a little towel beside the bathroom sink."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did Ben find a bigger towel?",
+        "options": [
+          "In a basket.",
+          "In a cupboard.",
+          "In a bag."
+        ],
+        "answer": 1,
+        "evidence": "He brought a bigger towel from the cupboard."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Ben washed his hands.",
+          "Ben brought a bigger towel.",
+          "Lily put the little towel back."
+        ],
+        "answer": 0,
+        "evidence": "Ben washed his hands and found the towel was too small."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "sink",
+          "basket",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "sink",
+          "basket"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        },
+        {
+          "code": "word-match",
+          "detail": "q3: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 42,
+        "sentences": 4,
+        "flyers": [
+          "beside",
+          "sink",
+          "basket",
+          "happen"
+        ],
+        "outside": [],
+        "content": [
+          "sink",
+          "basket"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "q1 guessable by a strong model without the text",
+      "q2 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

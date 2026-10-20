@@ -1,0 +1,253 @@
+{
+  "id": "E4-astra80-B3-E4-06",
+  "level": "E4",
+  "premise": {
+    "id": "B3-E4-06",
+    "genre": "fiction",
+    "premise": "(none given)",
+    "source": "astra80: astra80"
+  },
+  "names": [
+    "Tom",
+    "Mia",
+    "Sam",
+    "Leo",
+    "Zoe",
+    "Raj",
+    "Amir",
+    "Lily",
+    "Omar",
+    "Ella",
+    "Ben",
+    "Priya",
+    "Kofi",
+    "Nina",
+    "Jack",
+    "Aisha",
+    "Ravi",
+    "Yan",
+    "Sara",
+    "Max",
+    "Kang",
+    "Meera",
+    "Dan",
+    "Rita"
+  ],
+  "models": {
+    "generator": "astra80",
+    "safety": "gemini-3.8-flash",
+    "safetyFallback": "gemini-3.8-flash",
+    "pedagogy": "gemini-3.1-pro-preview",
+    "pedagogyFallback": "gemini-3.8-flash",
+    "solver": "gemma-4-31b-it"
+  },
+  "item": {
+    "id": "B3-E4-06",
+    "level": "E4",
+    "category": "nature",
+    "title": "The Ant Route",
+    "passage": "Amir and Sara watched ants crossing a dry patch of ground in the school garden. They stayed beside their teacher and kept their hands away from the insects. Sara drew a line on paper to show where the ants were going. At first, she made the line straight. Amir pointed to a fallen leaf that several ants were walking around. Sara changed her line to bend around a leaf shape. Then they noticed a second group taking a different route past a small rock. Instead of rubbing out the first line, Sara added another. By the end of their visit, the page looked like a little road map. Back in class, Amir tried following one line with his finger. He stopped at a crossing and asked which way to go. Sara laughed and said their map needed another visit before they could answer that.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did several ants walk around?",
+        "options": [
+          "A fallen leaf.",
+          "An apple core.",
+          "A paper cup."
+        ],
+        "answer": 0,
+        "evidence": "Amir pointed to a fallen leaf that several ants were walking around."
+      },
+      {
+        "op": "inference",
+        "stem": "Why did Sara keep the first line?",
+        "options": [
+          "She could not remember where the first route went.",
+          "She had seen more than one route being used.",
+          "She wanted the map to look like a star."
+        ],
+        "answer": 1,
+        "evidence": "Then they noticed a second group taking a different route past a small rock.",
+        "rationale": "The new route belongs to another group, so it adds information rather than replacing the earlier observation."
+      },
+      {
+        "op": "main-idea",
+        "stem": "What is the story mainly about?",
+        "options": [
+          "Guiding insects along a route chosen by children.",
+          "Making a map that shows every path in a garden.",
+          "Changing a drawing to match what is being observed."
+        ],
+        "answer": 2,
+        "evidence": "Instead of rubbing out the first line, Sara added another.",
+        "rationale": "Their paper develops as they notice more of the ants’ actual movements; it remains incomplete."
+      }
+    ],
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 144,
+        "sentences": 12,
+        "flyers": [
+          "ant",
+          "route",
+          "patch",
+          "beside",
+          "notice",
+          "rub",
+          "guide",
+          "chosen"
+        ],
+        "outside": [
+          "core",
+          "mainly",
+          "observe"
+        ],
+        "content": [
+          "core",
+          "observe"
+        ]
+      }
+    }
+  },
+  "check": {
+    "gate": {
+      "ok": true,
+      "issues": [],
+      "warnings": [
+        {
+          "code": "word-match",
+          "detail": "q1: only the answer is copied from the text"
+        }
+      ],
+      "stats": {
+        "words": 144,
+        "sentences": 12,
+        "flyers": [
+          "ant",
+          "route",
+          "patch",
+          "beside",
+          "notice",
+          "rub",
+          "guide",
+          "chosen"
+        ],
+        "outside": [
+          "core",
+          "mainly",
+          "observe"
+        ],
+        "content": [
+          "core",
+          "observe"
+        ]
+      }
+    },
+    "safety": {
+      "flags": {},
+      "other": [],
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ]
+    },
+    "pedagogy": {
+      "questions": [
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        },
+        {
+          "measures_op": true,
+          "single_correct": true,
+          "wrong_by_text": true,
+          "distractors_plausible": true,
+          "needs_text": true,
+          "reason_logical": true,
+          "key_adds_info": false,
+          "note": ""
+        }
+      ],
+      "passage": {
+        "natural": true,
+        "coherent": true,
+        "logic_ok": true,
+        "level_ok": true,
+        "story_quality": true,
+        "note": ""
+      },
+      "model": "gemini-3.8-flash"
+    },
+    "solve": [
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "withText": [
+          true,
+          true
+        ],
+        "noText": [
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "problems": [],
+    "verdict": "pass",
+    "reviewerFallback": "gemini-3.8-flash",
+    "otherConcerns": [],
+    "notes": [
+      "regional? Instead of rubbing out the first line",
+      "q2 guessable by a strong model without the text",
+      "q3 guessable by a strong model without the text"
+    ]
+  },
+  "log": [],
+  "status": "awaiting-human"
+}

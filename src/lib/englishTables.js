@@ -122,6 +122,29 @@ export const PAIR_ANTONYMS = [
   ['noisy', 'quiet'],
 ]
 
+// The book's third wrong pair in pair-meaning: two words that only SOUND alike (fear, fare). It
+// asks whether the child is reading the word or hearing it. Each pair sounds the same in both
+// UK and US speech (checked against both IPA dictionaries), both words are ones a 7-8 year old
+// reads, and none depends on accent: root/route, which some US speakers split, is left out.
+export const PAIR_SOUND_ALIKE = [
+  ['sea', 'see'], ['son', 'sun'], ['meat', 'meet'], ['week', 'weak'], ['hear', 'here'],
+  ['too', 'two'], ['right', 'write'], ['peace', 'piece'], ['hole', 'whole'], ['mail', 'male'],
+  ['buy', 'bye'], ['plain', 'plane'], ['steal', 'steel'], ['tail', 'tale'], ['bear', 'bare'],
+  ['deer', 'dear'], ['break', 'brake'], ['sail', 'sale'], ['waist', 'waste'], ['way', 'weigh'],
+  ['fair', 'fare'], ['made', 'maid'], ['hair', 'hare'], ['heard', 'herd'], ['not', 'knot'],
+  ['peak', 'peek'], ['toe', 'tow'], ['heel', 'heal'], ['pair', 'pear'], ['night', 'knight'],
+  ['wait', 'weight'], ['some', 'sum'],
+]
+
+// Right pairs that pair-meaning does not use in the youngest band although both words pass its
+// reading bar: they mean the same in one variety only (rent/hire and autumn/fall are UK, the
+// pavement/sidewalk pair crosses the two), or one word is rarer than it reads (a `graze`, a
+// `brook`, `domestic` as the opposite of foreign).
+export const PAIR_MEANING_YOUNG_SKIP = new Set([
+  'rent|hire', 'autumn|fall', 'pavement|sidewalk', 'graze|scratch', 'brook|stream',
+  'foreign|domestic',
+])
+
 // Four genuinely interchangeable/near-equivalent words for `odd-synonym`. These are groups,
 // not all pairwise combinations inferred from a dictionary sense: contextual and slang groups
 // such as dough/lettuce/bread/cabbage and fink/canary/sneaker/snitch are deliberately absent.
@@ -685,10 +708,16 @@ export const ENDING_GROUPS = [
 // here — the lexicon supplies one per question from the answer's own rhyme group. Written by
 // hand because WordNet's synonyms cross senses: generated, this type offered `most` for ABOUT
 // and `sick` for CRAZY.
+//
+// UK/US common scope (2026-10-19): a clue whose answer only works in one variety is out —
+// SPONGE → cake and EVENING MEAL → tea are British, AUTUMN → fall is American, RENT → hire
+// and FRIEND → mate read as British usage. PIPS → seeds went with them (`pips` is the British
+// word; American children say seeds). The rhyme already follows the variety; the meaning
+// cannot, because the clue is printed the same for both.
 export const RHYME_CLUES = [
-  ['RENT', 'hire'], ['FRIEND', 'mate'], ['WOOLLY ANIMAL', 'sheep'], ['MIDDAY', 'noon'],
-  ['PIPS', 'seeds'], ['VEHICLE', 'car'], ['A ROAD', 'street'], ['GROCERIES', 'food'],
-  ['SPONGE', 'cake'], ['INSTRUCT', 'teach'], ['GRAZE', 'scratch'], ['BROOK', 'stream'],
+  ['WOOLLY ANIMAL', 'sheep'], ['MIDDAY', 'noon'],
+  ['VEHICLE', 'car'], ['A ROAD', 'street'], ['GROCERIES', 'food'],
+  ['INSTRUCT', 'teach'], ['GRAZE', 'scratch'], ['BROOK', 'stream'],
   ['RAIL CARRIAGES', 'train'], ['SEASHORE', 'coast'], ['A DOG', 'hound'], ['QUARREL', 'fight'],
   ['TO BEGIN', 'start'], ['A SMALL RODENT', 'mouse'], ['A BOX', 'crate'], ['CABLE', 'wire'],
   ['SHUT', 'close'], ['LARGE', 'big'], ['TINY', 'small'], ['ANGRY', 'cross'], ['QUICK', 'fast'],
@@ -697,7 +726,119 @@ export const RHYME_CLUES = [
   ['SLEEP', 'nap'], ['TALE', 'story'], ['PRESENT', 'gift'], ['CLEVER', 'bright'],
   ['BEGINNING', 'start'], ['FINISH', 'end'], ['FLOOR COVERING', 'rug'], ['BOAT', 'ship'],
   ['TIDY', 'neat'], ['LOOK', 'see'], ['TALK', 'speak'], ['HOME', 'house'], ['STOP', 'halt'],
-  ['PULL', 'drag'], ['AUTUMN', 'fall'], ['EVENING MEAL', 'tea'], ['CHAT', 'talk'],
+  ['PULL', 'drag'], ['CHAT', 'talk'],
   ['CHILD', 'kid'], ['SCARED', 'afraid'], ['CORRECT', 'right'], ['BREAK', 'snap'],
   ['PAN', 'pot'], ['PEBBLE', 'stone'], ['HOLE', 'gap'], ['HURRY', 'rush'],
+  // Added 2026-10-19 to replace the six variety-bound rows.
+  ['PLATE', 'dish'], ['FIX', 'mend'], ['SHINE', 'glow'], ['DASH', 'run'], ['HAT', 'cap'],
+  ['HURT', 'pain'], ['GRIN', 'smile'], ['TOSS', 'throw'], ['TUMBLE', 'fall'], ['SPEEDY', 'quick'],
+]
+
+// ── a word in front of four words (VR 7-8 compound-front) ──────────────────────────────
+// "Find a word that can be put in front of each of the following words to make new, compound
+// words. CAKE CUP POT ROOM" — TEA. Written by hand (2026-10-19). Generated from the lexicon,
+// every split of a frequent word counted: `pay` brought payroll/payload, `side` sidekick,
+// `high` highland, and half the "compounds" were not compounds at all (bar+gain, off+end,
+// man+age, rest+ore, sea+son). Every word here is one a seven-year-old says, the same in UK
+// and US English: no `airplane`/`aeroplane`, `sandpit`/`sandbox`, `ladybird`/`ladybug`,
+// `windscreen`, `bathtub`, `eggplant`. A head needs at least four tails; the question shows
+// four of them. The generator still asks the lexicon which OTHER heads fit some of the four
+// tails, so the traps are real words.
+export const COMPOUND_HEADS = {
+  sun: ['shine', 'set', 'rise', 'flower', 'light', 'burn', 'glasses'],
+  snow: ['man', 'ball', 'flake', 'drop', 'storm', 'fall'],
+  rain: ['bow', 'coat', 'drop', 'fall', 'storm'],
+  foot: ['ball', 'print', 'step', 'path'],
+  bed: ['room', 'time', 'side', 'bug'],
+  play: ['ground', 'time', 'room', 'house', 'mate'],
+  tea: ['pot', 'cup', 'spoon', 'time', 'bag'],
+  fire: ['man', 'place', 'work', 'wood', 'fly'],
+  hand: ['bag', 'shake', 'writing', 'made', 'stand'],
+  some: ['one', 'thing', 'body', 'where', 'time'],
+  any: ['one', 'thing', 'body', 'where'],
+  every: ['one', 'thing', 'body', 'where', 'day'],
+  book: ['case', 'shop', 'mark', 'worm'],
+  door: ['bell', 'mat', 'step', 'way'],
+  hair: ['brush', 'cut', 'pin', 'style'],
+  sea: ['shell', 'side', 'weed', 'food', 'horse'],
+  out: ['side', 'door', 'fit', 'line'],
+  day: ['time', 'light', 'dream', 'break'],
+  back: ['pack', 'bone', 'ground', 'hand'],
+  over: ['night', 'head', 'flow', 'sleep', 'hear'],
+  under: ['water', 'ground', 'line', 'wear'],
+  down: ['stairs', 'hill', 'town', 'pour'],
+  up: ['stairs', 'hill', 'set', 'side'],
+  head: ['band', 'ache', 'light', 'phones'],
+  tooth: ['brush', 'paste', 'ache', 'pick'],
+  ear: ['ring', 'ache', 'phone', 'plug'],
+  black: ['bird', 'board', 'berry', 'out'],
+  grand: ['mother', 'father', 'son', 'child'],
+  eye: ['brow', 'lash', 'lid', 'ball'],
+  sand: ['castle', 'paper', 'storm', 'bag'],
+  school: ['bag', 'boy', 'girl', 'work'],
+}
+
+// ── a small word hidden in a longer one (VR 8-9 hidden-word) ────────────────────────────
+// "The tooth fairy put a coin under my pil___." — `low`. [sentence, the long word as it
+// stands in the sentence, the three-letter word hidden in it]. Written by hand (2026-10-19).
+// The generated version took WordNet's example sentences, which are a dictionary's, not a
+// child book's: "water is the element of fishes", "the book underwent fundamental changes",
+// "ask the foreman", "bachelor quarters". 83 hosts in 3000 seeds and a third of them
+// unreadable to a nine-year-old. Every sentence here is about a child's world, every host is a
+// word a child says and every hidden word is on Dale-Chall. The long word may end in the
+// hidden word, as the book's own `pillow` does.
+export const HIDDEN_SENTENCES = [
+  ['The tooth fairy put a coin under my pillow.', 'pillow', 'low'],
+  ['Everyone sang songs at the birthday party.', 'party', 'art'],
+  ['The farmer drove his tractor into the field.', 'tractor', 'act'],
+  ['My sister plays the trumpet in the school band.', 'trumpet', 'pet'],
+  ['The kitten fell asleep in a basket.', 'basket', 'ask'],
+  ['Mum keeps the milk in the fridge.', 'fridge', 'rid'],
+  ['I wear a scarf when it snows.', 'scarf', 'car'],
+  ['The children sat on the carpet to hear a story.', 'carpet', 'pet'],
+  ['We grow carrots and beans in the garden.', 'garden', 'den'],
+  ['The baby is sleeping in her cot.', 'sleeping', 'pin'],
+  ['Dad climbed up a ladder to fix the roof.', 'ladder', 'add'],
+  ['I like to go on the swing at the park.', 'swing', 'win'],
+  ['The clown had a big red nose.', 'clown', 'low'],
+  ['The pirate hid a box of gold on the island.', 'pirate', 'rat'],
+  ['A rabbit hopped across the grass.', 'rabbit', 'bit'],
+  ['The snow made the whole garden white.', 'white', 'hit'],
+  ['The ambulance had a flashing blue light.', 'flashing', 'ash'],
+  ['The dragon in the story could breathe fire.', 'dragon', 'rag'],
+  ['I keep my socks in the top drawer.', 'drawer', 'raw'],
+  ['The children played games in the playground.', 'played', 'lay'],
+  ['The farmer feeds the hens every morning.', 'farmer', 'arm'],
+  ['She wore a silver bracelet on her wrist.', 'bracelet', 'let'],
+  ['We put the puzzle together on the floor.', 'together', 'get'],
+  ['Our football team won the match.', 'football', 'all'],
+  ['We built a snowman with a carrot for a nose.', 'snowman', 'now'],
+  ['He stirred the soup with a big spoon.', 'stirred', 'red'],
+  ['After the storm we saw a rainbow.', 'rainbow', 'bow'],
+  ['We went camping by the lake.', 'camping', 'pin'],
+  ['We eat our dinner at six.', 'dinner', 'inn'],
+  ['Grandad fell asleep in his armchair.', 'armchair', 'air'],
+  ['The giant lived in a castle in the clouds.', 'giant', 'ant'],
+  ['We planted seeds in little pots.', 'planted', 'ant'],
+  ['She put her foot into a soft slipper.', 'slipper', 'lip'],
+  ['She wrote her name on the paper.', 'paper', 'ape'],
+  ['The teacher wrote the date on the board.', 'board', 'oar'],
+  ['Mum made a pot of tea in the teapot.', 'teapot', 'pot'],
+  ['I lost a button from my coat.', 'button', 'ton'],
+  ['The horse pulled a wagon full of hay.', 'wagon', 'ago'],
+  ['We had tomato soup for lunch.', 'tomato', 'mat'],
+  ['A magnet can pick up pins.', 'magnet', 'net'],
+  ['We live on the planet Earth.', 'planet', 'net'],
+  ['The kitten chased a ball of wool.', 'kitten', 'ten'],
+  ['Grandpa has a long white beard.', 'beard', 'ear'],
+  ['My heart beats fast when I run.', 'heart', 'art'],
+  ['I hurt my thumb on the door.', 'thumb', 'hum'],
+  ['The king wore a gold crown.', 'crown', 'row'],
+  ['Dry your hands on the towel.', 'towel', 'owe'],
+  ['Please do not frown, give me a smile.', 'frown', 'own'],
+  ['The donkey carried a heavy bag up the hill.', 'donkey', 'key'],
+  ['The monkey swung from tree to tree.', 'monkey', 'key'],
+  ['Rabbits like to eat cabbage.', 'cabbage', 'bag'],
+  ['Our village has one little shop.', 'village', 'ill'],
+  ['They stayed in a cottage by the sea.', 'cottage', 'tag'],
 ]
