@@ -31,6 +31,7 @@ const GENERATED = [
   // ── A1 / B1: a word heard or read -> one of four pictures ──
   { source: PIC, step: 'A1', format: 'listen-picture', ref: { kind: 'listen' }, note: '32 Starters nouns drawn in the project; recordings not approved' },
   { source: PIC, step: 'B1', format: 'read-picture', ref: { kind: 'read' }, note: '32 Starters nouns drawn in the project' },
+  { source: PIC, step: 'D1', format: 'build', ref: { kind: 'build' }, note: 'picture -> letter tiles, 3-5 letter Starters nouns' },
   // ── B: written word meaning ──
   { source: LIT, step: 'B2', format: 'read-choice', ref: { skill: 'meaning' }, note: 'word -> definition; reading load is the definition' },
   { source: LIT, step: 'B2', format: 'read-choice', ref: { skill: 'cloze' } },

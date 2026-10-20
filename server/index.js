@@ -8637,6 +8637,23 @@ async function syncAgesFromBirthDates() {
   }
 }
 
+// English ladder sittings on the child's English card. The module is imported on first use, not at start: it uses
+// JSON import attributes, and a Node that rejects them must cost this endpoint, never the whole server.
+let literacyChild = null
+async function literacyRoutes() {
+  if (!literacyChild) literacyChild = import('./literacyLab.js').then(m => m.childHandlers({ supabase, tzForChild }))
+  return literacyChild
+}
+const literacyRoute = (name) => async (req, res) => {
+  try { await (await literacyRoutes())[name](req, res) } catch (err) {
+    console.error('[LITERACY]', err.message)
+    res.status(err.code === 'ERR_IMPORT_ATTRIBUTE_MISSING' || /import attribute|assert/i.test(err.message) ? 503 : 500).json({ error: err.message })
+  }
+}
+app.get('/api/children/:childId/english-menu', literacyRoute('menu'))
+app.post('/api/children/:childId/literacy/next', literacyRoute('next'))
+app.post('/api/literacy-sittings/:id/answer', literacyRoute('answer'))
+
 // English ladder lab sitting: off unless LITERACY_LAB=1 (internal; no child card, no gems, no parent message).
 // Imported only when on, so a server without the flag never loads it (it uses JSON import attributes, which
 // older Node versions reject at load time, and that would take the whole server down).

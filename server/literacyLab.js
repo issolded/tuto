@@ -1,14 +1,19 @@
-// English ladder lab sitting: an INTERNAL way for real answers to reach the evidence store before any child screen
-// exists. Off unless the server runs with LITERACY_LAB=1; not linked from any card; pays no gems; sends nothing to a
-// parent. The server deals each question from the catalog (the ladder picks the step), keeps the key, marks the
-// answer and writes it to english_literacy_attempts.
+// English ladder sittings: the server deals each question from the catalog (the ladder picks the step), keeps the
+// key, marks the answer and writes it to english_literacy_attempts. Two doors onto the same sitting:
 //
-//   POST /api/lab/literacy/:childId/next          { sitting_id?, min_status? }  -> the next question (key kept back)
-//   POST /api/lab/literacy/sittings/:id/answer    { item_id, answers: [{ question_id, chosen }], hints_used }
-//   GET  /api/lab/literacy/:childId/state                                       -> ladder summary + VR decision (dry run)
+//   the child's English card (always on; index.js loads this module on first use)
+//     GET  /api/children/:childId/english-menu       -> { vr }        does the card offer "Word puzzles" too
+//     POST /api/children/:childId/literacy/next      { sitting_id? } -> the next question (key kept back)
+//     POST /api/literacy-sittings/:id/answer         { item_id, answers: [{ question_id, chosen }], skipped }
+//   the internal lab (LITERACY_LAB=1 only)
+//     POST /api/lab/literacy/:childId/next           { sitting_id?, min_status? }
+//     POST /api/lab/literacy/sittings/:id/answer
+//     GET  /api/lab/literacy/:childId/state          -> ladder summary + VR decision (dry run)
 //
-// Only text sources are dealt here: the literacy engine, the VR engine, the sentence bank and the reading texts.
-// Listening, pictures and the trial set need audio or art the lab does not serve; their steps are skipped (gaps).
+// No gems, no parent message yet. Sources: the literacy engine, the VR engine, the sentence bank, the reading texts
+// and the picture words (B1 read a word -> picture, D1 picture -> build the word). Listening needs approved audio and
+// Ca1 needs scene art: those steps are gaps for now. A sitting lives in memory: a restart loses the question on
+// screen, never a stored answer.
 
 import crypto from 'node:crypto'
 import { DateTime } from 'luxon'
@@ -16,22 +21,26 @@ import { nextProbe, RULES_VERSION } from './literacy/ladder.js'
 import { entriesFor } from './literacy/catalog.js'
 import { SENTENCE_ITEMS, SENTENCE_REVISION } from './literacy/sentenceBank.js'
 import { generateItem as literacyItem } from './literacy/engine.js'
+import { pictureItem, pictureBuildItem } from './literacy/pictureWords.js'
 import STORIES from './literacy/readingStories.generated.json' with { type: 'json' }
 import READING from './literacy/readingPreview.generated.json' with { type: 'json' }
 import { literacyState, saveAttempt, vrDecision, loadAttempts } from './literacyEvidence.js'
 
 export const LAB_ON = () => process.env.LITERACY_LAB === '1'
-const SITTING_LENGTH = 10
+export const SITTING_LENGTH = 10
+const CHILD_MIN_STATUS = 'checked'
 const TEXTS = { 'reading-stories-200': STORIES.items, 'reading-passages': READING.items }
-const SUPPORTED = new Set(['literacy-engine', 'vr-engine', 'sentence-bank', 'reading-stories-200', 'reading-passages'])
+const SUPPORTED = new Set(['literacy-engine', 'vr-engine', 'sentence-bank', 'reading-stories-200', 'reading-passages', 'picture-words'])
+// The literacy engine's build is from a definition (a reading load); D1 is served by the picture build instead.
+// Picture words' listen kind needs approved audio.
+const servable = e => SUPPORTED.has(e.source) && !(e.source === 'literacy-engine' && e.ref?.skill === 'build')
+  && !(e.source === 'picture-words' && e.ref?.kind === 'listen')
 
-const supported = (minStatus) => (track, step) =>
-  entriesFor(track, step, { minStatus }).some(e => SUPPORTED.has(e.source) && !(e.source === 'literacy-engine' && e.ref?.skill === 'build'))
+const supported = (minStatus) => (track, step) => entriesFor(track, step, { minStatus }).some(servable)
 
-// One source for the step, like catalog.pick but only among sources this lab can serve.
+// One source for the step, like catalog.pick but only among sources a sitting can serve.
 function pickSource(track, step, seed, { minStatus, avoid }) {
-  const list = entriesFor(track, step, { minStatus })
-    .filter(e => SUPPORTED.has(e.source) && !(e.source === 'literacy-engine' && e.ref?.skill === 'build'))
+  const list = entriesFor(track, step, { minStatus }).filter(servable)
   if (!list.length) return null
   const e = list[seed % list.length]
   if (e.kind === 'bank') {
@@ -44,7 +53,7 @@ function pickSource(track, step, seed, { minStatus, avoid }) {
 
 // A dealt item: questions with options and keys. Each question carries the evidence fields the ladder records.
 // Keys stay on the server; publicItem() is what is sent.
-export async function dealItem(track, step, pick) {
+export async function dealItem(track, step, pick, { avoid = new Set() } = {}) {
   const base = { track, step, source: pick.source, format: pick.format }
   if (pick.source === 'sentence-bank') {
     const it = SENTENCE_ITEMS.find(x => x.id === pick.id)
@@ -60,10 +69,25 @@ export async function dealItem(track, step, pick) {
         skill: q.op, group: `text:${it.id}`, family: pick.source, explain: q.evidence,
       })) }
   }
+  if (pick.source === 'picture-words') {
+    const words = new Set([...avoid].filter(a => a.startsWith('word:')).map(a => a.slice(5)))
+    if (pick.ref.kind === 'build') {
+      const it = pictureBuildItem(pick.ref.seed, { avoid: words })
+      if (!it) return null
+      return { ...base, id: it.id, contentVersion: 'picture-words-1', prompt: { ...it.prompt, instruction: it.instruction.text },
+        questions: [{ id: 'q0', mode: 'build', letters: it.letters, key: [it.key], skill: 'build-picture', group: `word:${it.key}`,
+          family: 'picture-build', explain: it.key }] }
+    }
+    const it = pictureItem('read', pick.ref.seed, { avoid: words })
+    if (!it) return null
+    return { ...base, id: it.id, contentVersion: 'picture-words-1', prompt: { text: it.prompt.text, instruction: it.instruction.text },
+      questions: [{ id: 'q0', options: it.options, key: [it.key], skill: 'read-picture', group: `word:${it.key}`,
+        family: 'picture-words', explain: it.key }] }
+  }
   if (pick.source === 'literacy-engine') {
     const q = literacyItem(pick.ref.skill, pick.ref.seed)
     return { ...base, id: `lit:${pick.ref.skill}:${pick.ref.seed}`, contentVersion: `${q.contentVersion}/${q.engineVersion}`,
-      prompt: { text: q.prompt, stem: q.stem ?? null }, passage: q.passage ?? null,
+      prompt: { text: q.prompt, stem: q.stem ?? null }, passage: q.passage ? { title: q.passage.title, text: q.passage.sentences.join(' ') } : null,
       questions: [{ id: 'q0', options: q.options, key: q.options.filter(o => o.text === q.answer).map(o => o.id),
         skill: pick.ref.skill, group: q.family, family: `lit:${pick.ref.skill}`, explain: q.explanation }] }
   }
@@ -75,10 +99,10 @@ export async function dealItem(track, step, pick) {
       const options = q.options.map((o, j) => ({ id: `o${j}`, text: o.text }))
       const answer = q.correct.map(j => q.options[j].text).sort().join('+')
       return { ...base, id: `vr:${pick.ref.band}:${pick.ref.type}:${q.seed}`, contentVersion: `english-engine:${pick.ref.band}`,
-        prompt: { stem_key: q.stem_key, ...q.prompt, pick: q.pick },
+        prompt: { stem_key: q.stem_key, type: q.type, vr: q.prompt, pick: q.pick },
         // The answer word is the group: the same word met again under another seed is the same word.
         questions: [{ id: 'q0', options, key: q.correct.map(j => `o${j}`), skill: pick.ref.type, group: `vr:${pick.ref.type}:${answer}`,
-          family: `vr:${pick.ref.type}`, explain: null }] }
+          family: `vr:${pick.ref.type}`, explain: q.correct.map(j => q.options[j].text).join(', ') }] }
     }
     return null
   }
@@ -88,98 +112,131 @@ export async function dealItem(track, step, pick) {
 export function publicItem(item) {
   return {
     id: item.id, track: item.track, step: item.step, format: item.format, prompt: item.prompt ?? null, passage: item.passage ?? null,
-    questions: item.questions.map(q => ({ id: q.id, stem: q.stem ?? null, options: q.options, pick: q.key.length })),
+    questions: item.questions.map(q => (q.mode === 'build'
+      ? { id: q.id, mode: 'build', letters: q.letters }
+      : { id: q.id, stem: q.stem ?? null, options: q.options, pick: q.key.length })),
   }
 }
 
-// Right only if exactly the key was chosen.
+// Right only if exactly the key was chosen; a built word is right if the letters spell it.
 export function judge(question, chosen) {
+  if (question.mode === 'build') return String(chosen ?? '').trim().toLowerCase() === question.key[0]
   const got = [].concat(chosen ?? []).map(String).sort()
   const key = [...question.key].sort()
   return got.length === key.length && got.every((c, i) => c === key[i])
 }
 
+const sittings = new Map()
+
+// Is English (the card) switched on for this child? Same task setting as the VR card: one card.
+function englishActive(child) {
+  const ts = child?.task_settings?.english
+  return ts?.active !== false
+}
+
+async function childOf(supabase, id) {
+  return (await supabase.from('children').select('*').eq('id', id).maybeSingle()).data
+}
+
+async function nextFor(supabase, child, { sittingId, minStatus }) {
+  let sitting = sittings.get(sittingId)
+  if (!sitting || sitting.childId !== child.id) {
+    sitting = { id: crypto.randomUUID(), childId: child.id, minStatus, items: new Map(), dealt: 0, right: 0, answered: 0 }
+    sittings.set(sitting.id, sitting)
+    if (sittings.size > 500) sittings.delete(sittings.keys().next().value)
+  }
+  const head = { sitting_id: sitting.id, of: SITTING_LENGTH }
+  if (sitting.dealt >= SITTING_LENGTH) return { ...head, done: true, right: sitting.right, answered: sitting.answered }
+  const { state, missing } = await literacyState(supabase, child)
+  if (missing) return { error: [503, 'english ladder tables missing'] }
+  const probe = nextProbe(state, { has: supported(sitting.minStatus), session: sitting.id })
+  if (!probe) return { ...head, done: true, right: sitting.right, answered: sitting.answered, reason: 'no content' }
+  const { rows } = await loadAttempts(supabase, child.id)
+  // Bank items and words already met (a text is stored as `text:<id>`, a word as `word:<w>`) are not dealt again.
+  const avoid = new Set(rows.flatMap(r => [String(r.grp), String(r.grp).replace(/^text:/, '')]))
+  for (const it of sitting.items.values()) for (const q of it.questions) avoid.add(String(q.group))
+  let item = null
+  for (let k = 0; k < 8 && !item; k++) {
+    const pick = pickSource(probe.track, probe.step, crypto.randomInt(1, 2 ** 30), { minStatus: sitting.minStatus, avoid })
+    if (pick) item = await dealItem(probe.track, probe.step, pick, { avoid })
+  }
+  if (!item) return { error: [500, `could not deal ${probe.step}`] }
+  item.dealtId = crypto.randomUUID()
+  sitting.items.set(item.dealtId, item)
+  sitting.dealt++
+  return { ...head, n: sitting.dealt, easy: probe.easy, item: { ...publicItem(item), id: item.dealtId } }
+}
+
+async function answerFor(supabase, tzForChild, sittingId, body) {
+  const sitting = sittings.get(sittingId)
+  if (!sitting) return { error: [404, 'sitting not found'] }
+  const item = sitting.items.get(body?.item_id)
+  if (!item) return { error: [404, 'item not found'] }
+  if (item.answered) return { error: [409, 'already answered'] }
+  const skipped = body?.skipped === true
+  const given = new Map((body?.answers || []).map(a => [a.question_id, a.chosen]))
+  if (!skipped && item.questions.some(q => !given.has(q.id))) return { error: [400, 'answer every question'] }
+  item.answered = true
+  // "I don't know" is an honest wrong answer, independent: nothing was shown before it.
+  const hinted = Number(body?.hints_used) > 0
+  const day = DateTime.now().setZone(await tzForChild(sitting.childId)).toISODate()
+  const results = []
+  for (const q of item.questions) {
+    const correct = !skipped && judge(q, given.get(q.id))
+    const saved = await saveAttempt(supabase, sitting.childId, {
+      track: item.track, step: item.step, skill: q.skill, group: q.group, family: q.family,
+      item: `${item.id}#${q.id}`, format: item.format, correct, independent: !hinted,
+      hintsUsed: hinted ? 1 : 0, session: sitting.id, day, contentVersion: item.contentVersion, ruleVersion: RULES_VERSION,
+    })
+    if (!saved.ok) return { error: [saved.missing ? 503 : 500, saved.error || 'english ladder tables missing'] }
+    sitting.answered++
+    if (correct) sitting.right++
+    results.push({ question_id: q.id, correct, key: q.key, explain: q.explain })
+  }
+  return { results }
+}
+
+const send = (res, out) => (out.error ? res.status(out.error[0]).json({ error: out.error[1] }) : res.json(out))
+
+// The child's door. Called from index.js after a lazy import, so a load failure here never takes the server down.
+export function childHandlers({ supabase, tzForChild }) {
+  return {
+    async menu(req, res) {
+      const child = await childOf(supabase, req.params.childId)
+      if (!child) return res.status(404).json({ error: 'child not found' })
+      // Column missing (migration not run) = the card as it was: Word puzzles on.
+      const vr = child.english_vr === undefined ? true : !!child.english_vr?.enabled
+      res.json({ active: englishActive(child), vr })
+    },
+    async next(req, res) {
+      const child = await childOf(supabase, req.params.childId)
+      if (!child) return res.status(404).json({ error: 'child not found' })
+      if (!englishActive(child)) return res.status(403).json({ error: 'English is switched off for this child' })
+      send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus: CHILD_MIN_STATUS }))
+    },
+    async answer(req, res) {
+      send(res, await answerFor(supabase, tzForChild, req.params.id, req.body))
+    },
+  }
+}
+
 export function mountLiteracyLab(app, { supabase, tzForChild }) {
-  const sittings = new Map()
   const gate = (req, res, next) => (LAB_ON() ? next() : res.status(404).json({ error: 'not found' }))
   app.use('/api/lab/literacy', gate)
-
-  const childOf = async (id) => (await supabase.from('children').select('*').eq('id', id).maybeSingle()).data
-
-  app.post('/api/lab/literacy/:childId/next', async (req, res) => {
-    try {
-      const child = await childOf(req.params.childId)
-      if (!child) return res.status(404).json({ error: 'child not found' })
-      const minStatus = ['draft', 'checked', 'approved'].includes(req.body?.min_status) ? req.body.min_status : 'checked'
-      let sitting = sittings.get(req.body?.sitting_id)
-      if (!sitting || sitting.childId !== child.id) {
-        sitting = { id: crypto.randomUUID(), childId: child.id, minStatus, items: new Map(), dealt: 0 }
-        sittings.set(sitting.id, sitting)
-        if (sittings.size > 200) sittings.delete(sittings.keys().next().value)
-      }
-      if (sitting.dealt >= SITTING_LENGTH) return res.json({ sitting_id: sitting.id, done: true })
-      const { state, missing } = await literacyState(supabase, child)
-      if (missing) return res.status(503).json({ error: 'run server/migrations/2026-10-19_english_literacy_evidence.sql first' })
-      const probe = nextProbe(state, { has: supported(sitting.minStatus), session: sitting.id })
-      if (!probe) return res.json({ sitting_id: sitting.id, done: true, reason: 'no content at this status' })
-      const { rows } = await loadAttempts(supabase, child.id)
-      // Bank items already met (a text is stored as its group `text:<id>`) are not dealt again.
-      const avoid = new Set(rows.map(r => String(r.grp).replace(/^text:/, '')))
-      let item = null
-      for (let k = 0; k < 8 && !item; k++) {
-        const pick = pickSource(probe.track, probe.step, crypto.randomInt(1, 2 ** 30), { minStatus: sitting.minStatus, avoid })
-        if (pick) item = await dealItem(probe.track, probe.step, pick)
-      }
-      if (!item) return res.status(500).json({ error: `could not deal ${probe.step}` })
-      item.dealtId = crypto.randomUUID()
-      sitting.items.set(item.dealtId, item)
-      sitting.dealt++
-      res.json({ sitting_id: sitting.id, n: sitting.dealt, of: SITTING_LENGTH, easy: probe.easy, item: { ...publicItem(item), id: item.dealtId } })
-    } catch (err) {
-      console.error('[LITERACY-LAB]', err.message)
-      res.status(500).json({ error: err.message })
-    }
-  })
-
-  app.post('/api/lab/literacy/sittings/:id/answer', async (req, res) => {
-    try {
-      const sitting = sittings.get(req.params.id)
-      if (!sitting) return res.status(404).json({ error: 'sitting not found' })
-      const item = sitting.items.get(req.body?.item_id)
-      if (!item) return res.status(404).json({ error: 'item not found' })
-      if (item.answered) return res.status(409).json({ error: 'already answered' })
-      const given = new Map((req.body?.answers || []).map(a => [a.question_id, a.chosen]))
-      if (item.questions.some(q => !given.has(q.id))) return res.status(400).json({ error: 'answer every question' })
-      item.answered = true
-      const hinted = Number(req.body?.hints_used) > 0
-      const day = DateTime.now().setZone(await tzForChild(sitting.childId)).toISODate()
-      const results = []
-      for (const q of item.questions) {
-        const correct = judge(q, given.get(q.id))
-        const saved = await saveAttempt(supabase, sitting.childId, {
-          track: item.track, step: item.step, skill: q.skill, group: q.group, family: q.family,
-          item: `${item.id}#${q.id}`, format: item.format, correct, independent: !hinted,
-          hintsUsed: hinted ? 1 : 0, session: sitting.id, day, contentVersion: item.contentVersion, ruleVersion: RULES_VERSION,
-        })
-        if (!saved.ok) return res.status(saved.missing ? 503 : 500).json({ error: saved.error || 'migration not run' })
-        results.push({ question_id: q.id, correct, key: q.key, explain: q.explain })
-      }
-      res.json({ results })
-    } catch (err) {
-      console.error('[LITERACY-LAB]', err.message)
-      res.status(500).json({ error: err.message })
-    }
-  })
-
-  app.get('/api/lab/literacy/:childId/state', async (req, res) => {
-    try {
-      const child = await childOf(req.params.childId)
-      if (!child) return res.status(404).json({ error: 'child not found' })
-      const [{ summary, answers, missing }, vr] = await Promise.all([literacyState(supabase, child), vrDecision(supabase, child)])
-      res.json({ answers, missing, summary, vr })
-    } catch (err) {
-      console.error('[LITERACY-LAB]', err.message)
-      res.status(500).json({ error: err.message })
-    }
-  })
+  const guard = (fn) => async (req, res) => {
+    try { await fn(req, res) } catch (err) { console.error('[LITERACY-LAB]', err.message); res.status(500).json({ error: err.message }) }
+  }
+  app.post('/api/lab/literacy/:childId/next', guard(async (req, res) => {
+    const child = await childOf(supabase, req.params.childId)
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const minStatus = ['draft', 'checked', 'approved'].includes(req.body?.min_status) ? req.body.min_status : 'checked'
+    send(res, await nextFor(supabase, child, { sittingId: req.body?.sitting_id, minStatus }))
+  }))
+  app.post('/api/lab/literacy/sittings/:id/answer', guard(async (req, res) => send(res, await answerFor(supabase, tzForChild, req.params.id, req.body))))
+  app.get('/api/lab/literacy/:childId/state', guard(async (req, res) => {
+    const child = await childOf(supabase, req.params.childId)
+    if (!child) return res.status(404).json({ error: 'child not found' })
+    const [{ summary, answers, missing }, vr] = await Promise.all([literacyState(supabase, child), vrDecision(supabase, child)])
+    res.json({ answers, missing, summary, vr })
+  }))
 }
