@@ -38,7 +38,7 @@ class ScreenAccessService:AccessibilityService() {
  }
  private fun enforce() {
   if(!store.paired || !store.usageAccess || !store.notificationsEnabled){hide();return}
-  val reason=ScreenRules.reason(store.policy,foreground,store.today(),ZonedDateTime.now(store.zone))
+  val reason=ScreenRules.reason(store.policy,foreground,store.today(),ZonedDateTime.now(store.zone),store.shop)
   if(reason==null){hide();return}
   if(overlay!=null)return
   // Return to the launcher so blocked video/game time does not keep accruing behind the shield.

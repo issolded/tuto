@@ -22,4 +22,14 @@ class ScreenRulesTest {
   assertNull(ScreenRules.reason(policy().put("enabled",false),"roblox",mapOf("roblox" to 10000),now))
   assertNull(ScreenRules.reason(policy(),"tuto",mapOf("tuto" to 18000),now.withHour(23)))
  }
+ @Test fun boughtMinutesExtendBothBudgetsButExpireAndNeverBypassBlocks(){
+  val bonus=JSONObject().put("day","2026-10-20").put("bonus",JSONObject().put("roblox",15))
+  val usage=mapOf("roblox" to 1800L,"youtube" to 1800L)
+  assertNull(ScreenRules.reason(policy(),"roblox",usage,now,bonus))
+  assertEquals("daily",ScreenRules.reason(policy(),"roblox",usage,now.plusDays(1),bonus))
+  assertEquals("schedule",ScreenRules.reason(policy(),"roblox",usage,now.withHour(23),bonus))
+  val blocked=policy();blocked.getJSONObject("apps").getJSONObject("roblox").put("mode","blocked")
+  assertEquals("blocked",ScreenRules.reason(blocked,"roblox",usage,now,bonus))
+  assertEquals("app",ScreenRules.reason(policy(),"youtube",mapOf("youtube" to 2400L),now,bonus))
+ }
 }

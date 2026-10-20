@@ -87,6 +87,12 @@ export function useT() {
 // One flat dictionary, grouped by screen in comments only — the same shape as the child's, for
 // the same reason: a missing translation is obvious in a list and invisible in a tree.
 const P = {
+  ds_gem_shop: {en:'Buy time with Gems',tr:'Gem ile süre satın alma',es:'Comprar tiempo con Gems'},
+  ds_gem_enabled: {en:'Allow purchases',tr:'Satın almaya izin ver',es:'Permitir compras'},
+  ds_gem_cost: {en:'Gems per pack',tr:'Paket fiyatı (Gem)',es:'Gems por paquete'},
+  ds_gem_minutes: {en:'Minutes per pack',tr:'Paket süresi (dakika)',es:'Minutos por paquete'},
+  ds_gem_max: {en:'Daily purchase cap (minutes)',tr:'Günlük satın alma sınırı (dk)',es:'Máximo diario (minutos)'},
+  ds_gem_note: {en:'Purchased time expires tonight on the buying device. It extends app and shared minutes; blocked apps and allowed hours still apply.',tr:'Satın alınan süre bu cihazda gece sona erer. Uygulama ve toplam süreye eklenir; engelli uygulamalar ve izin saatleri değişmez.',es:'El tiempo comprado caduca esta noche en el dispositivo comprador. Aumenta el límite por app y total; se mantienen bloqueos y horarios.'},
   ds_usage: {en: "Device usage", tr: "Cihaz kullanımı", es: "Uso del dispositivo"},
   ds_day: {en: "Day", tr: "Gün", es: "Día"},
   ds_week: {en: "Week", tr: "Hafta", es: "Semana"},

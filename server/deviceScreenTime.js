@@ -3,6 +3,7 @@ const hash = s => createHash('sha256').update(s).digest('hex')
 const validDay = s => typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0,10)===s
 const integer = (n, max) => Number.isInteger(n) && n >= 0 && n <= max
 export const SCREEN_APPS = ['com.google.android.youtube', 'com.netflix.mediaclient', 'com.roblox.client']
+export const defaultPurchase = () => ({enabled:false,gemCost:10,minutes:15,dailyMax:60})
 export function validatePolicy(p) {
   if (!p || typeof p.enabled !== 'boolean' || !integer(p.weekday,1440) || !integer(p.weekend,1440)) throw Error('invalid_policy')
   if(typeof p.timezone!=='string' || !p.timezone) throw Error('invalid_timezone')
@@ -11,9 +12,11 @@ export function validatePolicy(p) {
   if (!/^\d{2}:\d{2}$/.test(p.start) || !/^\d{2}:\d{2}$/.test(p.end) || [p.start,p.end].some(t=>+t.slice(0,2)>23 || +t.slice(3)>59)) throw Error('invalid_hours')
   if (!p.apps || Object.keys(p.apps).length > 100) throw Error('invalid_apps')
   for (const [pkg,a] of Object.entries(p.apps)) if (!/^[a-zA-Z0-9_.]+$/.test(pkg) || !['timed','allowed','blocked'].includes(a.mode) || !integer(a.limit,1440)) throw Error('invalid_app')
-  return {enabled:p.enabled,weekday:p.weekday,weekend:p.weekend,weekendDays:p.weekendDays,timezone:p.timezone,start:p.start,end:p.end,apps:p.apps}
+  const purchase=p.purchase||defaultPurchase()
+  if(typeof purchase.enabled!=='boolean' || !integer(purchase.gemCost,10000) || purchase.gemCost<1 || !integer(purchase.minutes,120) || purchase.minutes<1 || !integer(purchase.dailyMax,240) || purchase.dailyMax<purchase.minutes) throw Error('invalid_purchase')
+  return {purchase,enabled:p.enabled,weekday:p.weekday,weekend:p.weekend,weekendDays:p.weekendDays,timezone:p.timezone,start:p.start,end:p.end,apps:p.apps}
 }
-export function defaultPolicy() { return {enabled:false,weekday:60,weekend:90,weekendDays:[0,6],timezone:'Asia/Dubai',start:'00:00',end:'00:00',apps:Object.fromEntries(SCREEN_APPS.map(p=>[p,{mode:'timed',limit:1440}]))} }
+export function defaultPolicy() { return {purchase:defaultPurchase(),enabled:false,weekday:60,weekend:90,weekendDays:[0,6],timezone:'Asia/Dubai',start:'00:00',end:'00:00',apps:Object.fromEntries(SCREEN_APPS.map(p=>[p,{mode:'timed',limit:1440}]))} }
 export function validateUsage(rows) {
   if (!Array.isArray(rows) || rows.length>3000) throw Error('invalid_usage')
   return rows.map(r=>{
@@ -33,6 +36,15 @@ export function installDeviceScreenTime(app, db, parentFromBearer) {
     const token=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');if(!/^[a-f0-9]{64}$/.test(token)) deny(401)
     const d=await checked(db.from('screen_devices').select('*').eq('token_hash',hash(token)).is('revoked_at',null).maybeSingle());if(!d) deny(401);return d
   }
+  async function shop(d) {return checked(db.rpc('screen_shop',{p_device:d.id}))}
+  app.get('/api/device-screen/shop',route(async(req,res)=>res.json(await shop(await device(req)))))
+  app.post('/api/device-screen/purchase',route(async(req,res)=>{
+    const d=await device(req),{request_id,package:pkg,revision}=req.body
+    if(!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(request_id)||!SCREEN_APPS.includes(pkg)||!Number.isSafeInteger(revision))throw Error('invalid_purchase')
+    const {data,error}=await db.rpc('buy_screen_minutes',{p_device:d.id,p_request:request_id,p_package:pkg,p_revision:revision})
+    if(error){const known=['insufficient_gems','purchase_daily_limit','purchases_disabled','app_not_eligible','outside_allowed_hours','offer_changed','request_conflict','device_revoked'];const reason=known.find(k=>error.message?.includes(k));return res.status(reason?409:503).json({error:reason||'screen_time_not_ready'})}
+    res.json(data)
+  }))
   const root='/api/parent/children/:childId/device-screen'
   app.get(root,route(async(req,res)=>{
     await parent(req)
@@ -82,6 +94,6 @@ export function installDeviceScreenTime(app, db, parentFromBearer) {
     const status={usage_access:req.body.status?.usage_access===true,accessibility:req.body.status?.accessibility===true,notifications:req.body.status?.notifications===true,measured_since:String(req.body.status?.measured_since||'').slice(0,40),timezone:String(req.body.status?.timezone||'').slice(0,60)}
     await checked(db.from('screen_devices').update({last_seen:new Date().toISOString(),status,applied_revision:Number.isSafeInteger(req.body.applied_revision)?req.body.applied_revision:0}).eq('id',d.id))
     const p=await checked(db.from('screen_policies').select('policy,revision').eq('child_id',d.child_id).maybeSingle())
-    res.json({policy:p?.policy||defaultPolicy(),revision:p?.revision||0,server_time:new Date().toISOString()})
+    res.json({policy:p?.policy||defaultPolicy(),revision:p?.revision||0,shop:await shop(d),server_time:new Date().toISOString()})
   }))
 }

@@ -38,7 +38,7 @@ test('device sync does not accept parent JWTs or missing device tokens',async()=
 // In-memory PostgREST semantics exercise the real routes without touching a family.
 function integrationHarness(){
  const tables={children:[{id:'child',parent_id:'parent'}],screen_policies:[],screen_devices:[],screen_usage:[]};let serial=0
- const db={from(name){let action='select',payload,filters=[],single=false,columns='*',conflict='';const q={
+ const db={rpc(){return Promise.resolve({data:{bonus:{},balance:0},error:null})},from(name){let action='select',payload,filters=[],single=false,columns='*',conflict='';const q={
   select(c='*'){columns=c;return this},eq(k,v){filters.push(r=>r[k]===v);return this},is(k,v){filters.push(r=>(r[k]??null)===v);return this},gt(k,v){filters.push(r=>r[k]>v);return this},gte(k,v){filters.push(r=>r[k]>=v);return this},lte(k,v){filters.push(r=>r[k]<=v);return this},order(){return this},range(){return this},maybeSingle(){single=true;return this},insert(p){action='insert';payload=p;return this},update(p){action='update';payload=p;return this},upsert(p,o){action='upsert';payload=p;conflict=o.onConflict;return this},
   then(resolve){let rows=tables[name].filter(r=>filters.every(f=>f(r)));if(action==='insert'){rows=(Array.isArray(payload)?payload:[payload]).map(r=>({id:'id'+ ++serial,...r}));tables[name].push(...rows)}if(action==='update')rows.forEach(r=>Object.assign(r,payload));if(action==='upsert'){rows=payload.map(r=>{const old=tables[name].find(x=>conflict.split(',').every(k=>x[k]===r[k]));if(old){Object.assign(old,r);return old}tables[name].push({...r});return r})}const data=rows.map(r=>columns==='*'?{...r}:Object.fromEntries(columns.split(',').map(k=>[k,r[k]])));return Promise.resolve({data:single?data[0]||null:data,error:null}).then(resolve)}
  };return q}}
@@ -66,4 +66,9 @@ test('parent saves rule and stale revision cannot overwrite it',async()=>{
  const second=await request('put',root,{policy:{...policy,weekday:10},revision:first.body.revision});assert.equal(second.status,200);assert.ok(second.body.revision>first.body.revision)
  assert.equal((await request('put',root,{policy,revision:first.body.revision})).status,409)
  assert.equal((await request('get',root)).body.policy.weekday,10)
+})
+
+test('purchase pricing is parent-controlled and bounded',()=>{
+ for(const purchase of [{enabled:true,gemCost:0,minutes:15,dailyMax:60},{enabled:true,gemCost:10,minutes:121,dailyMax:240},{enabled:true,gemCost:10,minutes:15,dailyMax:10}])assert.throws(()=>validatePolicy({...defaultPolicy(),purchase}))
+ assert.equal(defaultPolicy().purchase.enabled,false)
 })

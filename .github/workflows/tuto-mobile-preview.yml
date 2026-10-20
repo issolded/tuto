@@ -44,6 +44,12 @@ jobs:
           node mobile/engine/qjs-test.mjs
           node mobile/engine/review-test.mjs
           node mobile/engine/puzzle-test.mjs
+      - name: Verify Gem purchase transactions in isolated PostgreSQL
+        working-directory: .
+        run: |
+          npm install --prefix /tmp/tuto-pg @electric-sql/pglite@0.5.10 --no-audit --no-fund
+          PGLITE_MODULE=/tmp/tuto-pg/node_modules/@electric-sql/pglite/dist/index.js node scripts/screen-gems-db-test.mjs
+          node --test scripts/tests/device-screen.test.mjs
       - run: node prepare-assets.mjs
       - run: gradle :shared:jvmTest :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug --stacktrace
       - name: Verify distributable APK signature and 16 KiB native alignment

@@ -88,6 +88,7 @@ fun GoalsScreen(vm: TutoViewModel) {
             Text(s("goals_title"), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
             GemPill(gems)
         }
+        ScreenTimeShop(child.id) { balance -> gems=balance }
         if (failed) SoftButton(s.say("Try again", "Tekrar dene", "Reintentar")) { reload++ }
         if (actionFailed) Text(s.say("Your request couldn't be sent. Check the connection and try again.", "İsteğin gönderilemedi. Bağlantını kontrol edip tekrar dene.", "No se pudo enviar tu solicitud. Revisa la conexión e inténtalo otra vez."), style = MaterialTheme.typography.bodyLarge)
         when {

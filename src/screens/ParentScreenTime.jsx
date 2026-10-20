@@ -36,6 +36,7 @@ function DevicePanel({child}){
  useEffect(()=>{let alive=true;call(`/usage?from=${range.from}&to=${range.to}${device?'&device='+encodeURIComponent(device):''}`).then(j=>{if(alive)setReport({key:reportKey,rows:j.rows})}).catch(()=>{if(alive)setError('ds_unavailable')});return()=>{alive=false}},[call,range.from,range.to,device,reportKey])
  async function act(fn){setBusy(true);setError('');try{await fn()}catch(e){setError(e.message==='policy_changed'?'ds_conflict':'ds_unavailable')}finally{setBusy(false)}}
  function edit(p){setPolicy({...policy,...p});setSaved(false)}
+ const purchase=policy?.purchase||{enabled:false,gemCost:10,minutes:15,dailyMax:60}
  const totals=rows?usageTotals(rows):null
  if(!state)return <p role="status">{error?s(error):s('loading')}</p>
  return <div style={{display:'grid',gap:16,marginTop:16}}>
@@ -54,6 +55,10 @@ function DevicePanel({child}){
  <label>{s('ds_weekend')}<select value={policy.weekendDays.join(',')} onChange={e=>edit({weekendDays:e.target.value.split(',').map(Number)})}><option value="0,6">{s('ds_sat_sun')}</option><option value="5,6">{s('ds_fri_sat')}</option></select></label>
  <label>{s('ds_start')}<input type="time" value={policy.start} onChange={e=>edit({start:e.target.value})}/></label><label>{s('ds_end')}<input type="time" value={policy.end} onChange={e=>edit({end:e.target.value})}/></label><small>{s('ds_hours_note')}</small>
  {Object.entries(policy.apps).map(([pkg,a])=><div key={pkg}><strong>{NAMES[pkg]||pkg}</strong><select value={a.mode} onChange={e=>edit({apps:{...policy.apps,[pkg]:{...a,mode:e.target.value}}})}>{['timed','allowed','blocked'].map(m=><option key={m} value={m}>{({timed:s('sc_timed'),allowed:s('sc_allowed'),blocked:s('sc_blocked')})[m]}</option>)}</select>{a.mode==='timed'&&<label>{s('ds_app_limit')}<input type="number" min="0" max="1440" value={a.limit} onChange={e=>edit({apps:{...policy.apps,[pkg]:{...a,limit:Number(e.target.value)}}})}/></label>}</div>)}
+ <h3>{s('ds_gem_shop')}</h3>
+ <label><input type="checkbox" checked={purchase.enabled} onChange={e=>edit({purchase:{...purchase,enabled:e.target.checked}})}/>{s('ds_gem_enabled')}</label>
+ {[['gemCost',s('ds_gem_cost'),10000],['minutes',s('ds_gem_minutes'),120],['dailyMax',s('ds_gem_max'),240]].map(([key,label,max])=><label key={key}>{label}<input type="number" min="1" max={max} value={purchase[key]} onChange={e=>edit({purchase:{...purchase,[key]:Number(e.target.value)}})}/></label>)}
+ <small>{s('ds_gem_note')}</small>
  <button onClick={()=>act(async()=>{const j=await call('','PUT',{policy,revision:state.revision});setState({...state,...j});setSaved(true)})}>{s('save')}</button>{saved&&<p role="status">{s('ds_saved')}</p>}
  </fieldset><p>{s('ds_local_note')}</p></Card></div>
 }

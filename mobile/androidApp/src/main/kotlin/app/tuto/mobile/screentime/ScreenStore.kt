@@ -34,6 +34,29 @@ class ScreenStore(private val context:Context) {
         val pending=android.app.PendingIntent.getActivity(context,0,android.content.Intent(context,app.tuto.mobile.MainActivity::class.java),android.app.PendingIntent.FLAG_IMMUTABLE)
         manager.notify(3001,androidx.core.app.NotificationCompat.Builder(context,"screen-time").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("Tuto screen time").setContentText("App usage is shared with your linked parent").setOngoing(true).setContentIntent(pending).build())
     }
+    val shop get()=JSONObject(prefs.getString("shop","{}")!!)
+    val pendingPurchase get()=prefs.getString("purchase_pending",null)?.let {JSONObject(it)}
+    suspend fun loadShop()=syncMutex.withLock {
+        val auth=secret.read() ?: error("not_paired")
+        val result=JSONObject(http(BuildConfig.SERVER_URL+"/api/device-screen/shop",headers=mapOf("Authorization" to "Bearer ${auth.getString("token")}")))
+        prefs.edit().putString("shop",result.toString()).commit()
+        result
+    }
+    suspend fun buyMinutes(pkg:String,expectedChild:String)=syncMutex.withLock {
+        val auth=secret.read() ?: error("not_paired")
+        require(auth.optString("child_id")==expectedChild)
+        val request=pendingPurchase ?: JSONObject().put("request_id",java.util.UUID.randomUUID().toString()).put("package",pkg).put("revision",shop.optLong("revision"))
+        require(request.optString("package")==pkg)
+        check(prefs.edit().putString("purchase_pending",request.toString()).commit())
+        try {
+            val result=JSONObject(http(BuildConfig.SERVER_URL+"/api/device-screen/purchase","POST",request.toString().toByteArray(),mapOf("Authorization" to "Bearer ${auth.getString("token")}")))
+            prefs.edit().putString("shop",result.toString()).remove("purchase_pending").commit()
+            result
+        } catch(e:ApiFailure) {
+            if(e.status in listOf(400,401,403,409))prefs.edit().remove("purchase_pending").commit()
+            throw e
+        }
+    }
     val lastSync get()=prefs.getLong("sync",0)
     val childId get()=secret.read()?.optString("child_id").orEmpty()
     suspend fun enroll(code:String, expectedChild:String) {
@@ -101,7 +124,7 @@ class ScreenStore(private val context:Context) {
             try {
                 val response=JSONObject(http(BuildConfig.SERVER_URL+"/api/device-screen/sync","POST",body.toString().toByteArray(),mapOf("Authorization" to "Bearer ${auth.getString("token")}")))
                 usage.acknowledge(batch,Instant.now().atZone(zone).toLocalDate().minusDays(93).toString())
-                prefs.edit().putString("policy",response.getJSONObject("policy").toString()).putLong("revision",response.getLong("revision")).putLong("sync",System.currentTimeMillis()).commit()
+                prefs.edit().putString("shop",response.optJSONObject("shop")?.toString()?:"{}").putString("policy",response.getJSONObject("policy").toString()).putLong("revision",response.getLong("revision")).putLong("sync",System.currentTimeMillis()).commit()
             } catch(e:ApiFailure) {
                 if(e.status==401) {(context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).cancel(3001);secret.write(null);prefs.edit().putString("policy","{}").commit()}
                 throw e
