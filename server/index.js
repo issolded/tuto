@@ -4248,6 +4248,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       { data: paintings },
       { data: puzzles },
       { data: englishes },
+      { data: literacies },
       { data: ledger },
       { data: rewards },
       { data: child },
@@ -4262,6 +4263,8 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       // Finished sittings only: one abandoned after two questions is not a puzzle session done.
       supabase.from('puzzle_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
       supabase.from('english_sessions').select('created_at').eq('child_id', childId).not('finished_at', 'is', null).gte('created_at', since).lte('created_at', nowIso),
+      // An English ladder sitting has no session row; its ledger row (paid or capped) is the sitting done.
+      supabase.from('bt_ledger').select('created_at').eq('child_id', childId).eq('reason', 'english_literacy').gte('created_at', since).lte('created_at', nowIso),
       supabase.from('bt_ledger').select('amount').eq('child_id', childId),
       supabase.from('rewards').select('id, name, icon, bt_cost').eq('child_id', childId).is('archived_at', null).order('bt_cost'),
       supabase.from('children').select('age, task_settings').eq('id', childId).maybeSingle(),
@@ -4278,6 +4281,7 @@ app.get('/api/children/:childId/today-summary', async (req, res) => {
       ...(paintings || []).map(r => ['drawing', dayOf(r.created_at)]),
       ...(puzzles || []).map(r => ['puzzle', dayOf(r.created_at)]),
       ...(englishes || []).map(r => ['english', dayOf(r.created_at)]),
+      ...(literacies || []).map(r => ['english', dayOf(r.created_at)]),
     ]
     const TYPES = ['reading', 'math', 'writing', 'homework', 'drawing', 'puzzle', 'english']
     const blank = () => Object.fromEntries(TYPES.map(k => [k, 0]))
@@ -5900,6 +5904,13 @@ function taskSettingsFor(taskSettings, key, defaults) {
   return { gems, dailyCap: cap, active: s.active !== false }
 }
 
+// The English card's sittings paid today: word puzzles and the English ladder share one daily limit (one card,
+// one setting; the ledger keeps them apart so history and evidence stay separate). Null if either count fails.
+async function englishDoneToday(childId, tz) {
+  const [vr, lit] = await Promise.all([rewardedToday(childId, tz, 'english'), rewardedToday(childId, tz, 'english_literacy')])
+  return vr === null || lit === null ? null : vr + lit
+}
+
 async function rewardedToday(childId, tz, reason) {
   const now = DateTime.now().setZone(tz)
   const { data, error } = await supabase
@@ -7366,7 +7377,7 @@ app.post('/api/children/:childId/english-session', async (req, res) => {
     keepEnglishOpen({ id: session.id, child_id: childId, band, variety, seed, question_count: sheet.length, finished_at: null, sheet })
 
     const tz = await tzForChild(childId)
-    const doneToday = await rewardedToday(childId, tz, 'english')
+    const doneToday = await englishDoneToday(childId, tz)
     res.json({
       session_id: session.id, band, variety,
       questions: sheet.map(publicEnglishItem),
@@ -7546,7 +7557,7 @@ app.post('/api/english-sessions/:sessionId/finish', async (req, res) => {
     }
 
     const tz = await tzForChild(child.id)
-    const doneToday = await rewardedToday(child.id, tz, 'english')
+    const doneToday = await englishDoneToday(child.id, tz)
     let gems = 0
     let capped = false
     if (!settings.active || doneToday === null || doneToday >= settings.dailyCap) capped = true
@@ -8636,6 +8647,46 @@ async function syncAgesFromBirthDates() {
     else console.log(`[AGE] ${c.id}: ${c.age} → ${age}`)
   }
 }
+
+// English ladder sittings on the child's English card. The module is imported on first use, not at start: it uses
+// JSON import attributes, and a Node that rejects them must cost this endpoint, never the whole server.
+let literacyChild = null
+// Gems for an English ladder sitting: the English card's own setting and its daily limit, shared with word puzzles.
+// Per question, like the VR sitting: right with no help a whole share, wrong or "I don't know" none.
+const literacyGems = {
+  async quote(child) {
+    const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
+    const doneToday = await englishDoneToday(child.id, await tzForChild(child.id))
+    return { gems: settings.gems, daily_cap: settings.dailyCap, will_pay: settings.active && doneToday !== null && doneToday < settings.dailyCap }
+  },
+  async pay(child, sitting) {
+    if (!sitting.answered) return { gems_earned: 0, capped: false }
+    // Once per sitting, even across a restart: the ledger row carries the sitting id.
+    const { data: had } = await supabase.from('bt_ledger').select('amount, capped').eq('reason', 'english_literacy').eq('ref_id', sitting.id).limit(1)
+    if (had?.length) return { gems_earned: had[0].amount || 0, capped: !!had[0].capped }
+    const settings = taskSettingsFor(child.task_settings, 'english', ENGLISH_DEFAULTS)
+    const doneToday = await englishDoneToday(child.id, await tzForChild(child.id))
+    const capped = !settings.active || doneToday === null || doneToday >= settings.dailyCap
+    let gems = capped ? 0 : Math.round(settings.gems * (sitting.shares / sitting.answered))
+    const led = await recordGems(child.id, gems, 'english_literacy', { capped, ref: sitting.id })
+    if (gems > 0 && !led.ok) gems = 0
+    queueDailyBonus(child.id)
+    return { gems_earned: gems, capped, daily_cap: settings.dailyCap }
+  },
+}
+async function literacyRoutes() {
+  if (!literacyChild) literacyChild = import('./literacyLab.js').then(m => m.childHandlers({ supabase, tzForChild, gems: literacyGems }))
+  return literacyChild
+}
+const literacyRoute = (name) => async (req, res) => {
+  try { await (await literacyRoutes())[name](req, res) } catch (err) {
+    console.error('[LITERACY]', err.message)
+    res.status(err.code === 'ERR_IMPORT_ATTRIBUTE_MISSING' || /import attribute|assert/i.test(err.message) ? 503 : 500).json({ error: err.message })
+  }
+}
+app.get('/api/children/:childId/english-menu', literacyRoute('menu'))
+app.post('/api/children/:childId/literacy/next', literacyRoute('next'))
+app.post('/api/literacy-sittings/:id/answer', literacyRoute('answer'))
 
 // English ladder lab sitting: off unless LITERACY_LAB=1 (internal; no child card, no gems, no parent message).
 // Imported only when on, so a server without the flag never loads it (it uses JSON import attributes, which

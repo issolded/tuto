@@ -26,7 +26,7 @@ const ENGINES = [
   // so the rules have to be the same file the lab and the tests use. The banks come along because the lab sitting
   // deals and marks their items on the server.
   { from: 'src/lib/literacy', to: 'server/literacy', files: [
-    'ladder.js', 'vrPrereqs.js', 'vrOffer.js', 'catalog.js', 'engine.js', 'content.js', 'sentenceBank.js',
+    'ladder.js', 'vrPrereqs.js', 'vrOffer.js', 'catalog.js', 'engine.js', 'content.js', 'sentenceBank.js', 'pictureWords.js',
     'trialSet.js', 'listeningBank.js', 'readingPreview.generated.json', 'readingStories.generated.json',
   ] },
 ]

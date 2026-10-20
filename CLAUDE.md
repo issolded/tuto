@@ -228,6 +228,23 @@ bunların tamamlandığı anlamına gelmez.
       Ayrıntı: `docs/LITERACY-PILOT.md`. Native etkisi: yok; yalnız yeni web lab, native paket değişmedi.
 
 
+- [ ] İngilizce merdiveni çocuğun English kartında (2026-10-20, Claude; `claude/english-ladder-child`; kullanıcı: "kullanan çocuk yok, ana ekrana al").
+      `/child/english` artık kapı (`EnglishMenu`): `children.english_vr.enabled` olan çocuk "English" / "Word puzzles" seçer, diğeri doğrudan
+      `/child/english/learn` (`LiteracyScreen`); VR ekranı `/child/english/words`. Sunucu `GET /api/children/:id/english-menu`,
+      `POST /api/children/:id/literacy/next`, `POST /api/literacy-sittings/:id/answer` (çocuk kimliğiyle, mevcut English uçlarıyla aynı düzey; modül
+      ilk istekte yüklenir, yüklenemezse yalnız bu uçlar 503). 10 soru, basamağı ladder seçer, anahtar sunucuda, cevap `english_literacy_attempts`'e;
+      içerik `checked` düzeyinde (taslak 200 hikâye girmiyor). **Yeni:** B1 resimden kelime (`picture-words`) ve D1 resme bakıp harflerle kelime kurma
+      (`pictureBuildItem`, Noto SVG çizimleri) — VR tabanı B2 + D1 artık ölçülebiliyor. Hâlâ boş: A1–A5 (onaylı ses yok), Ca1 (sahne çizimi), E5.
+      Okuma metni tek blok, soruları birlikte cevaplanır. **Gem (kullanıcı kararı 2026-10-20):** kart başına tek ayar; English kartının gem/günlük
+      sınırı iki oturuma birlikte (`englishDoneToday` = `english` + `english_literacy` ödenmiş satırlar), ledger sebebi ayrı (`english_literacy`,
+      `ref_id` = oturum, oturum başına bir kez). Soru başı pay: yardımsız doğru tam, yanlış/"I don't know" sıfır; metnin her sorusu ayrı pay (kanıt tek
+      birim). Ana ekran sayacı (`today-summary`) ve gem geçmişi/çocuk sayfası etiketi English; ebeveyn haftalık raporu ve panodaki "bugün" sayısı
+      henüz okuryazarlık oturumunu saymıyor (oturum tablosu yok). Harness'te: 3 ödenmiş oturumdan sonra VR ve English ikisi de `will_pay: false`.
+      İpucu yok; "I don't know" bağımsız yanlış. Ebeveyn mesajı yok. Doğrulama: tarayıcıda 375px harness'le kapı (VR açık/kapalı), 10 soruluk oturum
+      (VR antonim, cümle bankası, resim, harf kurma; yanlış cevap geri bildirimi), metin bloğu çizimi (taklit yanıtla), Word puzzles yolu; kayıtlar
+      beceri/grup/aile/günle yazıldı. Test `literacy-sitting.test.mjs` (her kaynak işaretlenebilir, açık öğede anahtar yok). Gerçek Supabase/iPad'de denenmedi.
+      **Native etkisi:** Android/iOS native English kartı kendi VR ekranını açıyor; merdiven oturumu native'de yok (uçlar sunucuda hazır, çizim yazılmalı).
+      iOS kabuğu web'i yüklediği için orada deploy'la gelir.
 - [ ] İngilizce kanıt modeli rev. 3 (2026-10-19, Claude; `codex/english-literacy`, push yok). `src/lib/literacy/ladder.js` Astra'yla varılan kurallara geçti
       (`RULES_VERSION` `ladder-2`): kanıt birimi cevap değil (basamak, beceri, grup); bir metin tek grup, aynı beceriye tek birim, farklı beceriler ayrı;
       birim yalnız ilk gündeki cevapların hepsi doğruysa doğru; aynı grup başka gün = gecikmeli tekrar, yeni kanıt değil. `settled` → `secure`: her beceri

@@ -32,6 +32,8 @@ const EnglishTrialLab = lazy(() => import('./screens/EnglishTrialLab'))
 // A design preview of a reading sitting with candidate passages (not approved; answer keys inside).
 const EnglishReadingPreview = lazy(() => import('./screens/EnglishReadingPreview'))
 const EnglishScreen = lazy(() => import('./screens/EnglishScreen'))
+const EnglishMenu = lazy(() => import('./screens/EnglishMenu'))
+const LiteracyScreen = lazy(() => import('./screens/LiteracyScreen'))
 // Lazy for the same reason as the lab: the engine and its emoji drawings are ~500KB that no other
 // screen needs.
 const PuzzleScreen = lazy(() => import('./screens/PuzzleScreen'))
@@ -56,7 +58,7 @@ function StoriesEntry() {
 // side is open so the first tap on them doesn't wait on the network (their Suspense fallback is
 // an empty screen). The labs stay out: the English lexicon alone is 3.8MB.
 const PREFETCH = {
-  child: () => [import('./screens/EnglishScreen'), import('./screens/PuzzleScreen'), import('./screens/ReviewScreen'), import('./screens/ChildSettings')],
+  child: () => [import('./screens/EnglishScreen'), import('./screens/EnglishMenu'), import('./screens/LiteracyScreen'), import('./screens/PuzzleScreen'), import('./screens/ReviewScreen'), import('./screens/ChildSettings')],
   parent: () => [import('./screens/ParentTuto'), import('./screens/ParentScreenTime'), import('./screens/ParentReports'), import('./screens/ReviewScreen'), import('./screens/ScreenControlSettings')],
 }
 const prefetched = new Set()
@@ -135,7 +137,10 @@ function AppRoutes() {
         <Route path="/child/homework" element={<HomeworkScreen />} />
         <Route path="/child/drawings" element={<DrawingsScreen />} />
         <Route path="/child/puzzle" element={<Suspense fallback={null}><PuzzleScreen /></Suspense>} />
-        <Route path="/child/english" element={<Suspense fallback={null}><EnglishScreen /></Suspense>} />
+        {/* One English card: the menu sends a child with word puzzles on to a choice, everyone else into English. */}
+        <Route path="/child/english" element={<Suspense fallback={null}><EnglishMenu /></Suspense>} />
+        <Route path="/child/english/learn" element={<Suspense fallback={null}><LiteracyScreen /></Suspense>} />
+        <Route path="/child/english/words" element={<Suspense fallback={null}><EnglishScreen /></Suspense>} />
         <Route path="/child/review/:ledgerId" element={<Suspense fallback={null}><ReviewScreen /></Suspense>} />
         <Route path="/child/goals" element={<GoalsScreen />} />
         <Route path="/child/gems" element={<GemsScreen />} />

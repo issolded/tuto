@@ -1,6 +1,8 @@
-// Picture-word items for the two lowest ladder steps (docs/ENGLISH-SKILL-LADDERS.md):
+// Picture-word items for the lowest ladder steps (docs/ENGLISH-SKILL-LADDERS.md):
 //   A1 listen-picture: hear "apple" (wordlist recording yw-apple) -> choose one of four pictures
 //   B1 read-picture:   read "apple" -> choose one of four pictures; after a wrong answer the word is heard
+//   D1 build:          see 🐱 -> put c / a / t in order (pictureBuildItem). A picture, not a definition: a
+//                      definition would test reading, which D1 must not.
 // Pictures are the Noto emoji drawings already in the project (src/lib/puzzleArt.generated.js), words are
 // Cambridge Starters nouns with a one-to-one picture. Left out on purpose: truck (UK "lorry"), sea (the emoji
 // is a wave), fly (also a verb), motorbike (the emoji is a scooter).
@@ -57,5 +59,25 @@ export function pictureItem(kind, seed, { avoid = new Set() } = {}) {
     options: options.map(w => ({ id: w.word, picture: { emoji: w.emoji } })),
     key: target.word,
     feedback: { audio: `yw-${target.word}` },
+  }
+}
+
+// D1: build the word for a picture from its letters. Short words only (3-5 letters), the letters shuffled so
+// they never already spell it. The key is the word; the answer is the letters in the order tapped.
+const BUILD_WORDS = PICTURE_WORDS.filter(w => w.word.length >= 3 && w.word.length <= 5)
+export function pictureBuildItem(seed, { avoid = new Set() } = {}) {
+  const r = rng(seed * 2246822519)
+  const pool = BUILD_WORDS.filter(w => !avoid.has(w.word))
+  if (!pool.length) return null
+  const target = take(pool, r)
+  const letters = [...target.word].map((letter, id) => ({ id, letter }))
+  for (let i = letters.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [letters[i], letters[j]] = [letters[j], letters[i]] }
+  if (letters.map(l => l.letter).join('') === target.word) letters.reverse()
+  if (letters.map(l => l.letter).join('') === target.word) return null     // a palindrome-like word: try another seed
+  return {
+    id: `pw-build-${target.word}-${seed}`, track: 'D', area: 'D', step: 'D1', mode: 'build',
+    instruction: { text: 'Look at the picture. Build the word.' },
+    prompt: { picture: { emoji: target.emoji } },
+    letters, key: target.word,
   }
 }
