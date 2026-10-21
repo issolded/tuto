@@ -50,6 +50,14 @@ export async function saveAttempt(db, childId, attempt) {
   return { ok: true }
 }
 
+// One answer item's rows (a reading text has up to three) in one round trip.
+export async function saveAttempts(db, childId, attempts) {
+  const { error } = await db.from('english_literacy_attempts').insert(attempts.map(a => attemptRow(childId, a)))
+  if (tableMissing(error)) return { ok: false, missing: true }
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
+}
+
 export async function loadAttempts(db, childId) {
   const { data, error } = await db.from('english_literacy_attempts').select('*')
     .eq('child_id', childId).order('created_at', { ascending: true })
@@ -59,10 +67,11 @@ export async function loadAttempts(db, childId) {
 }
 
 // The child's ladder state, rebuilt from every stored answer under today's rules. Never stored.
-export async function literacyState(db, child, { skills = {} } = {}) {
-  const { rows, missing } = await loadAttempts(db, child.id)
+// `loaded` is a loadAttempts() result the caller already has (the sitting reads the rows once per question).
+export async function literacyState(db, child, { skills = {}, loaded = null } = {}) {
+  const { rows, missing } = loaded || await loadAttempts(db, child.id)
   const state = replay(rows.map(attemptFromRow), { age: child.age, stop: null, skills })
-  return { state, summary: summary(state), answers: rows.length, missing: !!missing }
+  return { state, summary: summary(state), answers: rows.length, missing: !!missing, rows }
 }
 
 export async function loadEvents(db, childId) {
