@@ -42,18 +42,22 @@ import kotlin.math.*
    Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
     Fox(Modifier.weight(.24f).height(360.dp))
     Column(Modifier.weight(.76f),verticalArrangement=Arrangement.spacedBy(14.dp)){
-     ids.chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(14.dp)){row.forEach{id->OutlinedCard(onClick={game=id;round=0},modifier=Modifier.weight(1f).height(177.dp).testTag("game-$id"),colors=CardDefaults.outlinedCardColors(containerColor=Color.White),border=BorderStroke(1.dp,Ink.soft.copy(alpha=.4f))){
+     ids.chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(14.dp)){row.forEach{id->OutlinedCard(onClick={game=id;round=0;hint=false;react(FoxPose.Welcome)},modifier=Modifier.weight(1f).height(177.dp).testTag("game-$id"),colors=CardDefaults.outlinedCardColors(containerColor=Color.White),border=BorderStroke(1.dp,Ink.soft.copy(alpha=.4f))){
       Column(Modifier.fillMaxSize().padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){PaperIcon(id,Modifier.size(100.dp));Text(labels[ids.indexOf(id)],style=MaterialTheme.typography.titleLarge)}
      }}}}
     }
    }
   }else{
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp),verticalAlignment=Alignment.Top){
+    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(12.dp)){
+     CompositionLocalProvider(LocalGameReaction provides react){key(game,round){when(game){"memory"->MemoryGame();"tangram"->TangramGame();"words"->WordGame();"sudoku"->SudokuGame((vm.child?.age?:8)>=10);"maze"->MazeGame();else->PatternGame()}}}
+    }
+    Column(Modifier.width(140.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){
     Box(Modifier.size(90.dp).clickable{hint=!hint;react(FoxPose.Hint)}.testTag("game-helper")){Fox(Modifier.fillMaxSize(),helperPose,event=helperEvent)}
     TextButton(onClick={hint=!hint;react(FoxPose.Hint)}){Text(s.say("Need a hint?","İpucu ister misin?","¿Una pista?"))}
-    if(hint)Text(when(game){"words"->s.say("Follow one straight line, including diagonals.","Çapraz da olabilir; düz bir çizgiyi izle.","Sigue una línea recta, también diagonal.");"memory"->s.say("Remember the position of each picture.","Her resmin yerini hatırla.","Recuerda la posición de cada dibujo.");"sudoku"->s.say("Look for a row with one empty square.","Tek boş karesi olan satırı bul.","Busca una fila con una casilla vacía.");"maze"->s.say("Trace a path and try another turn at a dead end.","Çıkmazda başka bir dönüş dene.","Prueba otro giro en un callejón sin salida.");"tangram"->s.say("Use outlines, then rotate the selected piece.","Çizgileri aç ve seçili parçayı döndür.","Muestra los contornos y gira la pieza.");else->s.say("Find the group of shapes that repeats.","Tekrarlanan şekil grubunu bul.","Busca el grupo que se repite.")},Modifier.weight(1f))
+    if(hint)Text(when(game){"words"->s.say("Follow one straight line, including diagonals.","Çapraz da olabilir; düz bir çizgiyi izle.","Sigue una línea recta, también diagonal.");"memory"->s.say("Remember the position of each picture.","Her resmin yerini hatırla.","Recuerda la posición de cada dibujo.");"sudoku"->s.say("Look for a row with one empty square.","Tek boş karesi olan satırı bul.","Busca una fila con una casilla vacía.");"maze"->s.say("Trace a path and try another turn at a dead end.","Çıkmazda başka bir dönüş dene.","Prueba otro giro en un callejón sin salida.");"tangram"->s.say("Use outlines, then rotate the selected piece.","Çizgileri aç ve seçili parçayı döndür.","Muestra los contornos y gira la pieza.");else->s.say("Find the group of shapes that repeats.","Tekrarlanan şekil grubunu bul.","Busca el grupo que se repite.")})
+    }
    }
-   CompositionLocalProvider(LocalGameReaction provides react){key(game,round){when(game){"memory"->MemoryGame();"tangram"->TangramGame();"words"->WordGame();"sudoku"->SudokuGame((vm.child?.age?:8)>=10);"maze"->MazeGame();else->PatternGame()}}}
    OutlinedButton(onClick={round++;hint=false;react(FoxPose.Welcome)},modifier=Modifier.testTag("game-restart")){Text(s.say("New game","Yeni oyun","Nueva partida"))}
   }
  }

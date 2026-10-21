@@ -81,10 +81,35 @@ class ModulesTest {
     }
     private fun open(a:ActivityScenario<MainActivity>,type:String) { a.onActivity { ViewModelProvider(it)[TutoViewModel::class.java].open(type) };compose.waitForIdle() }
     @After fun reset() { Services.api=HttpTutoApi();Services.cloudFactory=null }
-    private fun screenshot(name:String){
-        compose.waitForIdle();val instrumentation=InstrumentationRegistry.getInstrumentation();instrumentation.waitForIdleSync();android.os.SystemClock.sleep(400)
+    private fun screenshot(name:String,activity:ActivityScenario<MainActivity>){
+        activity.onActivity{(it.getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).hideSoftInputFromWindow(it.window.decorView.windowToken,0)}
+        compose.waitForIdle()
+        if(name=="bookshelf")compose.onNodeWithText("Back to my room").performScrollTo() else if(name!="word-hunt-complete")compose.onNodeWithText("Back").performScrollTo()
+        val instrumentation=InstrumentationRegistry.getInstrumentation();instrumentation.waitForIdleSync();android.os.SystemClock.sleep(400)
         val dir=java.io.File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
         instrumentation.uiAutomation.takeScreenshot().let{bitmap->java.io.File(dir,"sprint-$name.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()}
+    }
+    @Test fun avatarControlsSaveIndependentFaceHairOutfitAndPet(){
+        launch(Api()).use{activity->
+            open(activity,"avatar")
+            compose.onNodeWithTag("avatar-gender-1").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-choice-0-9").performScrollTo().performClick()
+            compose.onNodeWithTag("Hair color-4").performScrollTo().performClick()
+            compose.onNodeWithText("Face").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-choice-0-2").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-tab-1").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-choice-1-2").performScrollTo().performClick()
+            compose.onNodeWithTag("Outfit color-3").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-tab-2").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-choice-2-1").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-tab-3").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-choice-3-2").performScrollTo().performClick()
+            compose.onNodeWithTag("Pet color-3").performScrollTo().performClick()
+            val context=InstrumentationRegistry.getInstrumentation().targetContext
+            val saved=AvatarStore(context).read(child.id)
+            assertEquals(9,saved.hair);assertEquals(2,saved.face);assertEquals(4,saved.hairColor);assertEquals(3,saved.shirt);assertEquals(2,saved.outfit);assertEquals(1,saved.accessory);assertEquals(2,saved.pet);assertEquals(3,saved.petColor)
+            activity.recreate();activity.onActivity{assertEquals(saved,ViewModelProvider(it)[TutoViewModel::class.java].avatar)}
+        }
     }
     @Test fun readingCanCreateUpdateAndReopenWithoutAssessment(){
         launch(Api()).use{a->
@@ -93,12 +118,12 @@ class ModulesTest {
             compose.onNodeWithTag("book-total").performTextInput("120")
             compose.onNodeWithTag("book-current").performTextReplacement("30")
             compose.onNodeWithTag("book-save").performScrollTo().performClick();compose.waitForIdle()
-            assertEquals(30,activeCloud.books.last().optInt("current_page"));screenshot("reading")
+            assertEquals(30,activeCloud.books.last().optInt("current_page"));screenshot("reading",a)
             compose.onNodeWithTag("book-current").performTextReplacement("120")
             compose.onNodeWithTag("book-save").performScrollTo().performClick();compose.waitForIdle();assertTrue(activeCloud.books.last().optBoolean("completed"))
             compose.onNodeWithText("My bookshelf").performScrollTo().performClick()
             compose.onNodeWithTag("books-filter-completed").performScrollTo().performClick()
-            compose.onNodeWithText("The notebook adventure").assertExists();screenshot("bookshelf")
+            compose.onNodeWithText("The notebook adventure").assertExists();screenshot("bookshelf",a)
         }
     }
     @Test fun writingPagesAutosaveAndAvatarPersist(){
@@ -111,7 +136,7 @@ class ModulesTest {
             compose.onNodeWithText("Title").performTextInput("A new adventure")
             compose.onNodeWithTag("writing-page-0").performTextInput("My first page.")
             compose.onNodeWithTag("writing-page-1").performTextInput("My second page.")
-            screenshot("writing")
+            screenshot("writing",a)
             compose.onNodeWithTag("writing-next").performScrollTo().performClick();compose.onNodeWithTag("writing-page-0").performTextInput("My third page.")
             compose.onNodeWithTag("writing-previous").performScrollTo().performClick();compose.onNodeWithText("My first page.").assertExists()
             a.recreate();compose.onNodeWithText("My first page.").assertExists()
@@ -129,7 +154,7 @@ class ModulesTest {
                 compose.onNodeWithTag("word-cell-${pair.first}").performScrollTo().performClick();compose.onNodeWithTag("word-cell-${pair.second}").performScrollTo().performClick()
                 compose.onNodeWithTag("word-progress").assertTextContains("${index+1} / 5",substring=true)
             }
-            compose.onNodeWithText("You did it!").assertExists();screenshot("word-hunt-complete")
+            compose.onNodeWithText("You did it!").assertExists();screenshot("word-hunt-complete",a)
             a.recreate();compose.onNodeWithTag("word-progress").assertTextContains("5 / 5",substring=true)
         }
     }

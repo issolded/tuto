@@ -24,13 +24,13 @@ import app.tuto.mobile.data.LocalStrings
  var expressions by rememberSaveable{mutableStateOf(false)}
  Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)){TextButton(onClick={vm.open("me")}){Text(s.say("Back","Geri","Atrás"))};Text("TUTO",style=MaterialTheme.typography.headlineLarge);VerticalDivider(Modifier.height(32.dp));Text(s.say("Create your avatar","Avatarını oluştur","Crea tu avatar"),style=MaterialTheme.typography.headlineLarge)}
-  Row(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(28.dp)) {
-   Column(Modifier.weight(.38f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
+  Row(Modifier.fillMaxWidth().weight(1f),horizontalArrangement=Arrangement.spacedBy(28.dp)) {
+   Column(Modifier.weight(.38f).fillMaxHeight().verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
     Fox(Modifier.fillMaxWidth().height(345.dp),animate=false)
     Text((a.nickname.ifBlank{vm.child?.name.orEmpty()})+(if(a.pet>=0&&a.petName.isNotBlank())" & ${a.petName}" else ""),style=MaterialTheme.typography.headlineMedium)
     OutlinedTextField(a.nickname.ifBlank{vm.child?.name.orEmpty()},{vm.updateAvatar(a.copy(nickname=it.take(30)))},label={Text(s.say("Your name","Adın","Tu nombre"))},singleLine=true,modifier=Modifier.fillMaxWidth())
    }
-   Column(Modifier.weight(.62f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+   Column(Modifier.weight(.62f).fillMaxHeight().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
      listOf(s.say("Boy","Erkek","Niño"),s.say("Girl","Kız","Niña")).forEachIndexed{i,label->FilterChip(a.gender==i,{vm.updateAvatar(a.copy(gender=i,hair=if(i==0)0 else 2,outfit=0))},label={Text(label)},modifier=Modifier.testTag("avatar-gender-$i"))}
     }
@@ -47,7 +47,7 @@ import app.tuto.mobile.data.LocalStrings
      row.forEach{id->
       val outfit=id
       val selected=when(tab){0->if(expressions)a.face==id else a.hair==id;1->a.outfit==id;2->a.accessory==id;else->a.pet==id}
-      val label=when(tab){0->if(expressions)s.say("Face ${id+1}","Yüz ${id+1}","Rostro ${id+1}") else listOf("Curly","Short","Bob","Ponytail","Spiky","Braids","Side part","Crop","Bun","Waves")[id];1->listOf(s.say("Shorts","Şort","Pantalón corto"),s.say("Trousers","Pantolon","Pantalón"),s.say("Dress","Elbise","Vestido"))[outfit];2->listOf(s.say("None","Yok","Ninguno"),s.say("Glasses","Gözlük","Gafas"),s.say("Headphones","Kulaklık","Auriculares"),s.say("Cap","Şapka","Gorra"))[id];else->petLabels[id]}
+      val label=when(tab){0->if(expressions)s.say("Face ${id+1}","Yüz ${id+1}","Rostro ${id+1}") else listOf(s.say("Curly","Kıvırcık","Rizado"),s.say("Short","Kısa","Corto"),s.say("Bob","Küt","Melena"),s.say("Ponytail","At kuyruğu","Coleta"),s.say("Spiky","Dik","De punta"),s.say("Braids","Örgü","Trenzas"),s.say("Side part","Yandan ayrık","Raya lateral"),s.say("Crop","Kısa kesim","Recortado"),s.say("Bun","Topuz","Moño"),s.say("Waves","Dalgalı","Ondulado"))[id];1->listOf(s.say("Shorts","Şort","Pantalón corto"),s.say("Trousers","Pantolon","Pantalón"),s.say("Dress","Elbise","Vestido"))[outfit];2->listOf(s.say("None","Yok","Ninguno"),s.say("Glasses","Gözlük","Gafas"),s.say("Headphones","Kulaklık","Auriculares"),s.say("Cap","Şapka","Gorra"))[id];else->petLabels[id]}
       OutlinedCard(onClick={vm.updateAvatar(when(tab){0->if(expressions)a.copy(face=id) else a.copy(hair=id);1->a.copy(outfit=outfit);2->a.copy(accessory=id);else->a.copy(pet=id)})},modifier=Modifier.weight(1f).height(136.dp).testTag("avatar-choice-$tab-$id"),border=BorderStroke(if(selected)3.dp else 1.dp,if(selected)MaterialTheme.colorScheme.primary else Ink.soft.copy(alpha=.35f)),colors=CardDefaults.outlinedCardColors(containerColor=androidx.compose.ui.graphics.Color.White)){
        Box(Modifier.fillMaxWidth().weight(1f).padding(8.dp)) {
         if(tab==3)NotebookArt(petDrawing(id,a.petColor),Modifier.fillMaxSize(),description=label)

@@ -9,4 +9,9 @@ fi
 gradle :androidApp:connectedDebugAndroidTest --stacktrace -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
 tuto_test_status=$?
 adb pull /sdcard/Android/data/app.tuto.mobile.preview/files/screenshots mobile-screenshots || true
+if [ "$tuto_test_status" -ne 0 ]; then
+  mkdir -p mobile-screenshots
+  adb logcat -d -b crash > mobile-screenshots/device-crash.log 2>&1 || true
+  adb logcat -d '*:E' > mobile-screenshots/device-errors.log 2>&1 || true
+fi
 exit "$tuto_test_status"
