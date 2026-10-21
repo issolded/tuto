@@ -46,40 +46,40 @@
     "level": "E2",
     "category": "observation",
     "title": "The Mirror Name",
-    "passage": "Meera wrote her name on paper and held it up to a mirror. Dan looked at the strange letters in the glass. He turned the paper around, and the writing disappeared from the glass. Meera turned it back and held it beside the mirror to look at both names.",
+    "passage": "Meera wrote her name on paper and held it up to the mirror. Dan looked in the mirror and saw that her name was back to front. Meera turned the paper around to face Dan. Now he could read her name the right way.",
     "questions": [
       {
         "op": "detail",
-        "stem": "What did Meera write?",
+        "stem": "How did Meera's name look in the mirror?",
         "options": [
-          "Her name.",
-          "Her age.",
-          "Her address."
+          "The right way.",
+          "Back to front.",
+          "Very small."
         ],
-        "answer": 0,
-        "evidence": "Meera wrote her name on paper and held it up to a mirror."
+        "answer": 1,
+        "evidence": "Dan looked in the mirror and saw that her name was back to front."
       },
       {
         "op": "detail",
-        "stem": "Where did Dan see strange letters?",
+        "stem": "What did Meera do so Dan could read her name?",
         "options": [
-          "On the window.",
-          "On the wall.",
-          "In the mirror."
+          "She wrote it again.",
+          "She cleaned the mirror.",
+          "She turned the paper around."
         ],
         "answer": 2,
-        "evidence": "Dan looked at the strange letters in the glass."
+        "evidence": "Meera turned the paper around to face Dan."
       },
       {
         "op": "sequence",
         "stem": "What happened first?",
         "options": [
+          "Meera wrote her name.",
           "Dan looked in the mirror.",
-          "Dan turned the paper around.",
-          "Meera turned the paper back."
+          "Meera turned the paper around."
         ],
         "answer": 0,
-        "evidence": "Dan looked at the strange letters in the glass."
+        "evidence": "Meera wrote her name on paper and held it up to the mirror."
       }
     ],
     "gate": {
@@ -222,5 +222,44 @@
     ]
   },
   "log": [],
-  "status": "awaiting-human"
+  "status": "awaiting-human",
+  "original": {
+    "passage": "Meera wrote her name on paper and held it up to a mirror. Dan looked at the strange letters in the glass. He turned the paper around, and the writing disappeared from the glass. Meera turned it back and held it beside the mirror to look at both names.",
+    "questions": [
+      {
+        "op": "detail",
+        "stem": "What did Meera write?",
+        "options": [
+          "Her name.",
+          "Her age.",
+          "Her address."
+        ],
+        "answer": 0,
+        "evidence": "Meera wrote her name on paper and held it up to a mirror."
+      },
+      {
+        "op": "detail",
+        "stem": "Where did Dan see strange letters?",
+        "options": [
+          "On the window.",
+          "On the wall.",
+          "In the mirror."
+        ],
+        "answer": 2,
+        "evidence": "Dan looked at the strange letters in the glass."
+      },
+      {
+        "op": "sequence",
+        "stem": "What happened first?",
+        "options": [
+          "Dan looked in the mirror.",
+          "Dan turned the paper around.",
+          "Meera turned the paper back."
+        ],
+        "answer": 0,
+        "evidence": "Dan looked at the strange letters in the glass."
+      }
+    ]
+  },
+  "revision": "Rewritten by hand 2026-10-21 (user: the story could not be understood): the mirror turning letters back to front is now said, not left to infer; \"glass\" for mirror removed; questions ask the mirror effect and the turn. Word gate E2 passes; model reviewers not re-run; awaiting Astra. The check results in this file are for the original text."
 }
