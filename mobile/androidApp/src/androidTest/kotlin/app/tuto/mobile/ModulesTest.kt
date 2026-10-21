@@ -126,7 +126,7 @@ class ModulesTest {
             compose.onNodeWithTag("avatar-gender-1").performScrollTo().performClick()
             compose.onNodeWithTag("avatar-tab-1").performScrollTo().performClick()
             capture("girl-outfits")
-            compose.onNodeWithText("Back").performScrollTo().performClick()
+            compose.onNodeWithText("Back").assertIsDisplayed().performClick()
             compose.onNodeWithTag("nav-goals").performClick()
             capture("goals")
             compose.onNodeWithTag("nav-games").performClick()

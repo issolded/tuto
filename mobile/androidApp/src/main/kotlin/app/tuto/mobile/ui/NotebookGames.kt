@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -54,14 +55,14 @@ import kotlin.math.*
  var open by remember{mutableStateOf(listOf<Int>())};var matched by remember{mutableStateOf(setOf<Int>())};var turns by remember{mutableIntStateOf(0)}
  LaunchedEffect(open){if(open.size==2){turns++;if(cards[open[0]]==cards[open[1]])matched=matched+open else kotlinx.coroutines.delay(850);open=emptyList()}}
  Text(s.say("Find the matching pairs. Turns: $turns","Eşleri bul. Hamle: $turns","Encuentra las parejas. Turnos: $turns"))
- cards.indices.toList().chunked(4).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){row.forEach{i->OutlinedButton(onClick={if(i !in open)open=open+i},enabled=open.size<2&&i !in matched,modifier=Modifier.weight(1f).height(90.dp)){Text(if(i in open||i in matched)cards[i]else"?",style=MaterialTheme.typography.headlineLarge)}}}}
+ cards.indices.toList().chunked(4).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){row.forEach{i->OutlinedButton(onClick={if(i !in open)open=open+i},enabled=open.size<2&&i !in matched,shape=RoundedCornerShape(12.dp),modifier=Modifier.weight(1f).height(90.dp)){Text(if(i in open||i in matched)cards[i]else"?",style=MaterialTheme.typography.headlineLarge)}}}}
  if(matched.size==12)GameWin()
 }
 @Composable private fun WordGame(){
  val s=LocalStrings.current;val grid=remember{NotebookPuzzles.wordGrid()};var start by remember{mutableStateOf<Int?>(null)};var found by remember{mutableStateOf(setOf<String>())};var marked by remember{mutableStateOf(setOf<Int>())};var message by remember{mutableStateOf("")}
  Text(s.say("Tap the first and last letter of a word.","Kelimenin ilk ve son harfine dokun.","Toca la primera y la última letra."))
  Text(grid.words.joinToString("   "){if(it in found)"✓ $it"else it},style=MaterialTheme.typography.titleLarge)
- Column(Modifier.widthIn(max=520.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){(0 until grid.size).forEach{y->Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){(0 until grid.size).forEach{x->val i=y*grid.size+x;OutlinedButton(onClick={if(start==null)start=i else {val line=NotebookPuzzles.line(start!!,i,grid.size);val word=line.map{grid.letters[it]}.joinToString("");val match=grid.words.firstOrNull{it==word||it==word.reversed()};if(match!=null){found=found+match;marked=marked+line;message="✓ $match"}else message=s.say("Try another line.","Başka bir çizgi dene.","Prueba otra línea.");start=null}},modifier=Modifier.weight(1f).height(52.dp),contentPadding=PaddingValues(0.dp),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(i==start)Color(0xFFF4C650)else if(i in marked)Color(0xFFBCE9E5)else Color.White)){Text(grid.letters[i].toString(),color=Ink.main)}}}}}
+ Column(Modifier.widthIn(max=520.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){(0 until grid.size).forEach{y->Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){(0 until grid.size).forEach{x->val i=y*grid.size+x;OutlinedButton(onClick={if(start==null)start=i else {val line=NotebookPuzzles.line(start!!,i,grid.size);val word=line.map{grid.letters[it]}.joinToString("");val match=grid.words.firstOrNull{it==word||it==word.reversed()};if(match!=null){found=found+match;marked=marked+line;message="✓ $match"}else message=s.say("Try another line.","Başka bir çizgi dene.","Prueba otra línea.");start=null}},shape=RoundedCornerShape(8.dp),modifier=Modifier.weight(1f).height(52.dp),contentPadding=PaddingValues(0.dp),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(i==start)Color(0xFFF4C650)else if(i in marked)Color(0xFFBCE9E5)else Color.White)){Text(grid.letters[i].toString(),color=Ink.main)}}}}}
  Text(message);if(found.size==grid.words.size)GameWin()
 }
 @Composable private fun SudokuGame(advanced:Boolean){
@@ -69,8 +70,8 @@ import kotlin.math.*
  val done=values==puzzle.solution
  Text(s.say("Use each number once in every row, column and box.","Her sayı satırda, sütunda ve kutuda bir kez olsun.","Usa cada número una vez por fila, columna y bloque."))
  Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
-  Column(Modifier.weight(.65f).widthIn(max=560.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{y->Row(horizontalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{x->val i=y*puzzle.size+x;val fixed=puzzle.given[i]!=0
-   Box(Modifier.weight(1f).height(if(advanced)44.dp else 76.dp).background(if(i==selected)Color(0xFFBCE9E5)else if(fixed)Color(0xFFF1F0EA)else Color.White).border(if(x%puzzle.box==0||y%puzzle.box==0)2.dp else 1.dp,Ink.soft).clickable(enabled=!fixed&&!done){selected=i},contentAlignment=Alignment.Center){Text(if(values[i]==0)""else values[i].toString(),color=if(checked&&values[i]!=0&&values[i]!=puzzle.solution[i])MaterialTheme.colorScheme.error else Ink.main,style=MaterialTheme.typography.titleLarge)}
+  Column(Modifier.width(if(advanced)430.dp else 360.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{y->Row(horizontalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{x->val i=y*puzzle.size+x;val fixed=puzzle.given[i]!=0
+   Box(Modifier.weight(1f).height(if(advanced)44.dp else 87.dp).background(if(i==selected)Color(0xFFBCE9E5)else if(fixed)Color(0xFFF1F0EA)else Color.White).border(if(x%puzzle.box==0||y%puzzle.box==0)2.dp else 1.dp,Ink.soft).clickable(enabled=!fixed&&!done){selected=i},contentAlignment=Alignment.Center){Text(if(values[i]==0)""else values[i].toString(),color=if(checked&&values[i]!=0&&values[i]!=puzzle.solution[i])MaterialTheme.colorScheme.error else Ink.main,style=MaterialTheme.typography.titleLarge)}
   }}}}
   Column(Modifier.weight(.35f),verticalArrangement=Arrangement.spacedBy(10.dp)){
    (1..puzzle.size).toList().chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{v->OutlinedButton(onClick={values=values.toMutableList().also{it[selected]=v};checked=false},enabled=selected>=0&&!done,modifier=Modifier.weight(1f)){Text("$v")}}}}
@@ -104,12 +105,12 @@ private val TangramShapes=listOf(listOf(0f to 0f,4f to 0f,2f to 2f),listOf(0f to
 @Composable private fun TangramGame(){
  val s=LocalStrings.current;val colors=listOf(0xFFBCE9E5,0xFFF6D2CA,0xFFF6E5AE,0xFFD5E5CA,0xFFC9DBEA,0xFFE5D6E7,0xFFE7DDD0).map{Color(it)}
  val centers=remember{TangramShapes.map{ps->Offset(ps.map{it.first}.average().toFloat()+1,ps.map{it.second}.average().toFloat()+.5f)}}
- var positions by remember{mutableStateOf((0..6).map{Offset(.9f+(it%4)*1.8f,6f+(it/4)*1.8f)})};var angles by remember{mutableStateOf(List(7){0})};var placed by remember{mutableStateOf(setOf<Int>())};var selected by remember{mutableIntStateOf(0)};var hints by remember{mutableStateOf(false)};var boardSize by remember{mutableStateOf(IntSize.Zero)};var dragging by remember{mutableStateOf(false)}
+ var positions by remember{mutableStateOf(listOf(Offset(8f,1.5f),Offset(7f,4.5f),Offset(10.6f,3.5f),Offset(10.7f,1.2f),Offset(2f,5.8f),Offset(4.2f,5.8f),Offset(9.5f,5.3f)))};var angles by remember{mutableStateOf(List(7){0})};var placed by remember{mutableStateOf(setOf<Int>())};var selected by remember{mutableIntStateOf(0)};var hints by remember{mutableStateOf(false)};var boardSize by remember{mutableStateOf(IntSize.Zero)};var dragging by remember{mutableStateOf(false)}
  fun snap(){val p=positions[selected];if((p-centers[selected]).getDistance()<.35f&&angles[selected]%4==0){positions=positions.toMutableList().also{it[selected]=centers[selected]};placed=placed+selected}}
  Text(s.say("Drag all seven pieces into the square. Select a piece to rotate it.","Yedi parçayı kareye sürükle. Döndürmek için parça seç.","Arrastra las siete piezas al cuadrado. Selecciona una para girarla."))
  Row(horizontalArrangement=Arrangement.spacedBy(20.dp)){
-  Canvas(Modifier.width(460.dp).height(540.dp).border(1.dp,Ink.soft,RoundedCornerShape(12.dp)).onSizeChanged{boardSize=it}.pointerInput(Unit){detectDragGestures(onDragStart={p->val unit=boardSize.width/8f;val q=p/unit;val candidate=(0..6).filter{it !in placed}.minByOrNull{(positions[it]-q).getDistance()};dragging=candidate!=null&&(positions[candidate]-q).getDistance()<1.5f;if(dragging)selected=candidate!!},onDragEnd={if(dragging)snap();dragging=false},onDragCancel={dragging=false}){change,delta->if(dragging&&selected !in placed){change.consume();positions=positions.toMutableList().also{val next=it[selected]+delta/(boardSize.width/8f);it[selected]=Offset(next.x.coerceIn(.6f,7.4f),next.y.coerceIn(.6f,8.2f))}}}}){
-   val unit=size.width/8f
+  Canvas(Modifier.width(760.dp).height(440.dp).clipToBounds().border(1.dp,Ink.soft,RoundedCornerShape(12.dp)).onSizeChanged{boardSize=it}.pointerInput(Unit){detectDragGestures(onDragStart={p->val unit=boardSize.width/12f;val q=p/unit;val candidate=(0..6).filter{it !in placed}.minByOrNull{(positions[it]-q).getDistance()};dragging=candidate!=null&&(positions[candidate]-q).getDistance()<1.5f;if(dragging)selected=candidate!!},onDragEnd={if(dragging)snap();dragging=false},onDragCancel={dragging=false}){change,delta->if(dragging&&selected !in placed){change.consume();positions=positions.toMutableList().also{val next=it[selected]+delta/(boardSize.width/12f);it[selected]=Offset(next.x.coerceIn(.6f,11.4f),next.y.coerceIn(.6f,6.3f))}}}}){
+   val unit=size.width/12f
    drawRect(Color(0xFFF8F7F2),Offset(unit,.5f*unit),androidx.compose.ui.geometry.Size(4*unit,4*unit));drawRect(Ink.main,Offset(unit,.5f*unit),androidx.compose.ui.geometry.Size(4*unit,4*unit),style=Stroke(2.dp.toPx()))
    fun shape(i:Int,position:Offset,angle:Int):Path {val ps=TangramShapes[i];val cx=centers[i].x-1;val cy=centers[i].y-.5f;val a=angle*PI/2;return Path().apply{ps.forEachIndexed{j,p->val x=p.first-cx;val y=p.second-cy;val out=position+Offset((x*cos(a)-y*sin(a)).toFloat(),(x*sin(a)+y*cos(a)).toFloat());if(j==0)moveTo(out.x*unit,out.y*unit)else lineTo(out.x*unit,out.y*unit)};close()}}
    if(hints)(0..6).forEach{i->drawPath(shape(i,centers[i],0),Ink.soft.copy(alpha=.4f),style=Stroke(1.dp.toPx()))}
