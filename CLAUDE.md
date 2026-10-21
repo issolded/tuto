@@ -160,6 +160,25 @@ bunların tamamlandığı anlamına gelmez.
 
 ## Açık işler / yol haritası
 
+- [ ] İngilizce merdiven oturumu, ilk test bulguları (2026-10-21, Claude; `claude/english-test-findings`, commit yok). Ekran (`LiteracyScreen`)
+      VR oturumunun düzenine geçti: gül başlık, Nunito şıklar / Fredoka düğmeler (şıklar sistem fontuna düşüyordu), doğruda yeşil "Yes! ⭐"
+      flaşı kendiliğinden geçer, yanlışta turuncu flaş cevabı (sesli şıkta açıklama metni + 🔊), ek açıklamayı ve dinlemede **Listen again**
+      gösterip dokunuş bekler. **Ses kendiliğinden çalmaz** (yalnız dokununca). Kayıtlar soru gelince blob olarak önden indirilir, sonraki soru
+      flaş açıkken istenir ve onun sesleri de iner (`src/lib/literacyAudio.js`; iOS için tek `Audio` öğesi, kaynak değişir). Dinle düğmesinde
+      kaydın neresinde olunduğunu gösteren dolan halka (konuşma + soru tek halka, uzunluğa göre). Send'de spinner. Sunucu: soru başına iki
+      tam `english_literacy_attempts` okuması teke indi, metnin 3 cevabı tek insert, çocuk/çeşit/saat dilimi oturum boyunca önbellekte
+      (her soruda 3 tur azaldı). **Sonuç ekranı** matematik/VR gibi: yüzde, gem, bütün cevaplar (`LiteracyReviewList`), sonra **pekiştirme**:
+      yanlış olan adımlardan (adım başına bir, en çok 5) taze soru, `POST /api/literacy-sittings/:id/practice`; **kanıt sayılmaz, gem yok**
+      (ilk karşılaşma değil; VR pekiştirmesinin yarım payı burada bilerek yok — kullanıcı kararı bekliyor). **Gem geçmişi:** biten oturum
+      `english_literacy_sittings`'e gösterildiği hâliyle yazılır, `english_literacy` satırı açılır (çocuk ve ebeveyn). **Migration önce:**
+      `server/migrations/2026-10-21_english_literacy_sittings.sql`; yokken satır açılmaz, başka bir şey değişmez. Doğrulama: harness (gerçek
+      `index.js`, bellek içi DB) API ile tam oturum + pekiştirme (kanıt 10 satır kaldı, ödeme yok, oturum saklandı, review döndü); tarayıcıda
+      375px'te yanlış/doğru flaş, ses kontrolü halkası, otomatik çalmama, Listen again, sonuç + pekiştirme başlangıcı, gem geçmişi sayfası.
+      `npm test` 227/227. **Açık:** gerçek Supabase gecikmesi ölçülmedi; iOS Safari'de çalma ve önden indirme gerçek cihazda denenmedi;
+      L4-006 (Mark/Bill, "his dad comes in the car") metni çıkarım istiyor — düzeltme yeniden kayıt + Storage yüklemesi ister, onay bekliyor.
+      **Native etkisi:** yeni uç ve saklama sunucuda, native'e geçer; ekran değişiklikleri yalnız web. Native İngilizce merdiven ekranı
+      varsa sonuç/pekiştirme/ses halkası ayrıca yazılmalı; `src/lib/literacy` motoru değişmedi, paket yeniden derlenmez.
+
 - [x] VR içerik bulguları 1–4 düzeltildi (2026-10-19, Claude; `codex/english-literacy`, push yok). Kaynak `docs/ENGLISH-VR-PREREQUISITES.md`
       "İçerik bulguları". **rhyme-synonym:** UK ya da US'e bağlı ipuçları çıktı (SPONGE→cake, EVENING MEAL→tea, AUTUMN→fall, RENT→hire,
       FRIEND→mate, PIPS→seeds), 10 ortak ipucu eklendi. **compound-front:** sözlükten türetme bırakıldı (payroll/payload/sidekick/highland;

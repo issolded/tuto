@@ -124,7 +124,7 @@ export default function GemsScreen() {
               const emoji = REASON_EMOJI[key] || (isPositive ? '🫴' : '🫳')
               const day = row.created_at ? formatDate(row.created_at, lang) : ''
               // A maths, puzzle or English sitting opens again, question by question.
-              const opens = (key === 'math' || key === 'puzzle' || key === 'english' || key === 'math_review' || key === 'english_review' || key === 'puzzle_review') && row.id
+              const opens = (key === 'math' || key === 'puzzle' || key === 'english' || key === 'english_literacy' || key === 'math_review' || key === 'english_review' || key === 'puzzle_review') && row.id
               return (
                 <div
                   key={row.id ?? i}

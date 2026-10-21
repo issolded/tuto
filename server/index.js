@@ -6899,6 +6899,14 @@ app.get('/api/children/:childId/review/:ledgerId', async (req, res) => {
       })
     }
 
+    // An English ladder sitting is stored as it was shown (literacyLab.js storeSitting): read back, nothing rebuilt.
+    if (row.reason === 'english_literacy') {
+      const { storedSitting } = await import('./literacyLab.js')
+      const sitting = row.ref_id ? await storedSitting(supabase, row.ref_id, childId) : null
+      if (!sitting) return res.status(404).json({ error: 'no sitting found for this row' })
+      return res.json({ kind: 'literacy', at: row.created_at, correct: sitting.correct, total: sitting.total, items: sitting.items })
+    }
+
     if (row.reason === 'english' || row.reason === 'english_review') {
       let session = null
       if (row.ref_id) ({ data: session } = await supabase.from('english_sessions').select('*').eq('id', row.ref_id).maybeSingle())
@@ -8687,6 +8695,7 @@ const literacyRoute = (name) => async (req, res) => {
 app.get('/api/children/:childId/english-menu', literacyRoute('menu'))
 app.post('/api/children/:childId/literacy/next', literacyRoute('next'))
 app.post('/api/literacy-sittings/:id/answer', literacyRoute('answer'))
+app.post('/api/literacy-sittings/:id/practice', literacyRoute('practice'))
 
 // English ladder lab sitting: off unless LITERACY_LAB=1 (internal; no child card, no gems, no parent message).
 // Imported only when on, so a server without the flag never loads it (it uses JSON import attributes, which

@@ -5,6 +5,7 @@ import { useUiLang } from '../lib/parentI18n'
 import { useIsTablet } from '../components/Shell'
 import { PuzzleReviewList, MathReviewList, EnglishReviewList } from '../components/SittingReview'
 import { ensureIconFont } from '../lib/puzzleIcons'
+import { LiteracyReviewList } from '../components/LiteracyReview'
 
 // A finished maths, puzzle or English sitting, opened again. The child reaches it from a gem history row,
 // the parent from the child's card — the same questions and marks either way, because what a
@@ -17,7 +18,7 @@ const SERVER = import.meta.env.VITE_SERVER_URL || 'https://tuto-production-d1db.
 const INK = '#241f3a'
 const INK_SOFT = '#8d83ad'
 const FRED = "'TrRound', 'Fredoka', 'Baloo 2', sans-serif"
-const ANIM = '@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }'
+const ANIM = '@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } } @keyframes lt-bob { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }'
 
 export default function ReviewScreen({ parent = false }) {
   const nav = useNavigate()
@@ -43,10 +44,10 @@ export default function ReviewScreen({ parent = false }) {
   const back = () => (parent ? nav(`/parent/child/${id}`) : nav('/child/gems'))
   // A child's own English sitting reads in English, like the screen it came from (decision 2026-10-17);
   // a parent reads it in the parent's language.
-  const shown = !parent && data?.kind === 'english' ? 'en' : lang
-  const title = data?.kind === 'puzzle' ? t('task_puzzle', shown) : data?.kind === 'english' ? t('task_english', shown)
+  const shown = !parent && (data?.kind === 'english' || data?.kind === 'literacy') ? 'en' : lang
+  const title = data?.kind === 'puzzle' ? t('task_puzzle', shown) : data?.kind === 'english' || data?.kind === 'literacy' ? t('task_english', shown)
     : data?.kind === 'math' ? t(data.practice ? 'gem_math_review' : 'task_math', shown) : ''
-  const score = data?.kind === 'puzzle' || data?.kind === 'english' ? `${data.correct ?? 0}/${data.total ?? 0}`
+  const score = data?.kind === 'puzzle' || data?.kind === 'english' || data?.kind === 'literacy' ? `${data.correct ?? 0}/${data.total ?? 0}`
     : data?.kind === 'math' ? `${data.items.filter(r => r.correct).length}/${data.items.length}` : ''
 
   return (
@@ -73,6 +74,9 @@ export default function ReviewScreen({ parent = false }) {
           <PuzzleReviewList questions={data.questions} answers={data.answers} lang={shown} px={isTablet ? 56 : 40} />
         ) : data.kind === 'english' && data.questions ? (
           <EnglishReviewList questions={data.questions} answers={data.answers} lang={shown} />
+        ) : data.kind === 'literacy' && data.items?.length ? (
+          // The ladder sitting's questions and marks are English whoever reads them: they were asked in English.
+          <LiteracyReviewList entries={data.items} />
         ) : data.kind === 'math' && data.items?.length ? (
           <MathReviewList items={data.items} lang={shown} />
         ) : (
