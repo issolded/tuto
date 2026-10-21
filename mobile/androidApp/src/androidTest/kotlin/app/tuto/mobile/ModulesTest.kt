@@ -45,6 +45,7 @@ class ModulesTest {
     }
     private lateinit var activeCloud:TestCloud
     private class TestCloud(context:Context):Cloud(context) {
+        var childAge=9
         val books=mutableListOf(JSONObject("""{"id":"book-test","title":"Test library book","current_page":12,"total_pages":100,"completed":false}"""))
         @Volatile var pendingOAuth=false
         @Volatile var exchanged=false
@@ -58,7 +59,7 @@ class ModulesTest {
         override suspend fun signIn(email:String,password:String) { require(password=="test-password") }
         override suspend fun rows(table:String,query:String,method:String,body:Any?,parent:Boolean):List<JSONObject> = when(table) {
             "parents" -> listOf(JSONObject("""{"id":"parent-test","family_code":"TESTONLY","prefs":{"language":"en"}}"""))
-            "children" -> listOf(JSONObject("""{"id":"module-test","name":"Test learner","age":9,"language":"en"}"""))
+            "children" -> listOf(JSONObject("""{"id":"module-test","name":"Test learner","age":9,"language":"en"}""").put("age",childAge))
             "books" -> {
                 val id=query.substringAfter("id=eq.","").substringBefore("&")
                 when(method){
@@ -147,6 +148,7 @@ class ModulesTest {
     }
     @Test fun olderChildCanPlayNineByNineSudoku(){
         launch(Api()).use{a->
+            activeCloud.childAge=13
             a.onActivity{ViewModelProvider(it)[TutoViewModel::class.java].signedIn(child.copy(age=13))}
             open(a,"games");compose.onNodeWithTag("game-sudoku").performScrollTo().performClick()
             compose.onNodeWithTag("sudoku-cell-2").performScrollTo().performClick()
