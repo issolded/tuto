@@ -18,24 +18,24 @@ import app.tuto.mobile.R
 
 // Paper & Play: Outfit headings and Nunito Sans body, including EN/TR/ES glyphs.
 // The Baloo alias preserves the existing call sites while applying the new type system.
-val Baloo = FontFamily(Font(R.font.outfit_bold, FontWeight.Bold), Font(R.font.outfit_extrabold, FontWeight.ExtraBold))
+val Baloo = FontFamily(Font(R.font.patrick_hand, FontWeight.Bold), Font(R.font.patrick_hand, FontWeight.ExtraBold))
 val Nunito = FontFamily(Font(R.font.nunito_sans_regular, FontWeight.Normal), Font(R.font.nunito_sans_semibold, FontWeight.SemiBold), Font(R.font.nunito_bold, FontWeight.Bold), Font(R.font.nunito_extrabold, FontWeight.ExtraBold))
 
 object Ink {
-    val main = Color(0xFF14284B)
-    val soft = Color(0xFF52627A)
+    val main = Color(0xFF202022)
+    val soft = Color(0xFF616163)
     val white = Color.White
     val green = Color(0xFF427659)
     val greenSoft = Color(0xFFE6F0E5)
     val wrongSoft = Color(0xFFFFE5DC)
-    val lilacSoft = Color(0xFFE9EFF9)
+    val lilacSoft = Color(0xFFF4F3EF)
     val jar = Color(0xFF7FD3F7)
 }
 
 /** The three simple themes from the design's Tweaks panel. Only the ground and accent change. */
 data class TutoPalette(val name: String, val bg: Color, val soft: Color, val accent: Color)
 
-val Sunlight = TutoPalette("sun", Color.White, Color(0xFFE5EDFA), Color(0xFF426FC4))
+val Sunlight = TutoPalette("sun", Color.White, Color(0xFFF1F3EF), Color(0xFF168F91))
 val Forest = TutoPalette("forest", Color(0xFFEAF6EC), Color(0xFFCFEBD6), Color(0xFF46C07A))
 val Sea = TutoPalette("sea", Color(0xFFE8F3FF), Color(0xFFCFE4FF), Color(0xFF62B0FF))
 

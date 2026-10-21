@@ -47,7 +47,7 @@ private suspend fun FeatureRun.saveDraft() {
 @Composable fun BooksScreen(vm: TutoViewModel) {
     val f = vm.feature ?: return
     val s = LocalStrings.current
-    var archive by rememberSaveable { mutableStateOf(true) }
+    var archive by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
     var currentPage by rememberSaveable { mutableStateOf("") }
     var totalPages by rememberSaveable { mutableStateOf("") }

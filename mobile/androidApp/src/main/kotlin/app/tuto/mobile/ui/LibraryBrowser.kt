@@ -26,6 +26,7 @@ import org.json.JSONObject
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun LibraryBrowser(books: List<JSONObject>, stories: List<JSONObject>, archive: Boolean, onArchive: (Boolean)->Unit, busy: Boolean, allowReading: Boolean, allowWriting: Boolean, onNewBook:()->Unit, onNewStory:()->Unit, onOpen:(JSONObject,Boolean)->Unit, onFinish:(JSONObject)->Unit, onDelete:(JSONObject,Boolean)->Unit) {
     val s=LocalStrings.current
+    var award by remember { mutableStateOf<Int?>(null) }
     var choosingBook by remember { mutableStateOf(false) }
     var filters by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -40,17 +41,15 @@ import org.json.JSONObject
     val years=all.filter(::completed).map { finishedYear(it.first) }.filter { it.isNotBlank() }.distinct().sortedDescending()
     Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Text(s.say("My Library", "Kütüphanem", "Mi biblioteca"), style=MaterialTheme.typography.headlineMedium)
+            Text(s.say("My Stories", "Hikâyelerim", "Mis historias"), style=MaterialTheme.typography.headlineMedium)
             Text(s.say("A little reading, a big adventure.", "Biraz okuma, büyük bir macera.", "Un poco de lectura, una gran aventura."), color=Ink.soft)
         }
     }
     FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         FilterChip(selected=!archive,onClick={onArchive(false);page=0},label={Text(s.say("Continue reading", "Okumaya devam", "Seguir leyendo"))})
         FilterChip(selected=archive,onClick={onArchive(true);page=0},label={Text(s.say("My bookshelf", "Kitap rafım", "Mi estantería"))},modifier=Modifier.testTag("library-archive"))
-        if (!archive) {
-            if(allowReading) Button(onClick={choosingBook=true},enabled=!busy) { Text(s.say("Choose a book", "Kitap seç", "Elegir un libro")) }
+            if(allowReading) Button(onClick={choosingBook=true},enabled=!busy,modifier=Modifier.testTag("choose-book")) { Text(s.say("Choose a book", "Kitap seç", "Elegir un libro")) }
             if(allowWriting) Button(onClick=onNewStory,enabled=!busy,modifier=Modifier.testTag("new-story")) { Text(s.say("Write a story", "Hikâye yaz", "Escribir cuento")) }
-        }
         TextButton(onClick={filters=!filters}) { Text(s.say("Search and filters", "Arama ve filtreler", "Buscar y filtrar")) }
     }
     if (filters) {
@@ -74,13 +73,12 @@ import org.json.JSONObject
             ShelfRoom(shown, archive, busy, onSelect={selected=it})
         }
         Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            if (archive) ReadingRoom(shown, completedCount, busy, allowReading, allowWriting, { choosingBook=true }, onNewStory) { selected = it }
-            else if(wide) Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(24.dp), verticalAlignment=Alignment.Top) {
-                Box(Modifier.weight(1f)) { shelves() }
-                ReadingNook(completedCount, Modifier.width(260.dp))
-            } else {
-                ReadingNook(completedCount, Modifier.fillMaxWidth(), compact=true)
-                shelves()
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.Top) {
+                if(wide) Column(Modifier.width(220.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                    Fox(Modifier.fillMaxWidth().height(240.dp),FoxPose.Reading)
+                    Text(s.say("$completedCount books finished", "$completedCount kitap tamamlandı", "$completedCount libros terminados"))
+                }
+                Box(Modifier.weight(1f)){shelves()}
             }
             if(pages>1) Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
                 TextButton(onClick={page=(current-1).coerceAtLeast(0)}, enabled=current>0) { Text(s.say("Previous", "Önceki", "Anterior")) }
@@ -89,6 +87,12 @@ import org.json.JSONObject
             }
         }
     }
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        ReadingMilestones.forEach { target ->
+            OutlinedButton(onClick={award=target},modifier=Modifier.testTag("reading-award-$target")){Text("$target")}
+        }
+    }
+    award?.let { target -> AlertDialog(onDismissRequest={award=null},title={Text(s.say("$target-book award", "$target kitap ödülü", "Premio de $target libros"))},text={Text(s.say("${(target-completedBookCount(books)).coerceAtLeast(0)} more completed books to fill this shelf. Every book counts once.", "${(target-completedBookCount(books)).coerceAtLeast(0)} kitap kaldı. Her kitap bir kez sayılır.", "Faltan ${(target-completedBookCount(books)).coerceAtLeast(0)} libros. Cada libro cuenta una vez."))},confirmButton={TextButton(onClick={award=null}){Text(s.say("Close","Kapat","Cerrar"))}}) }
     if (choosingBook && allowReading) AlertDialog(onDismissRequest={choosingBook=false},
         title={Text(s.say("What are you reading now?", "Şimdi hangi kitabı okuyorsun?", "¿Qué estás leyendo ahora?"))},
         text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -142,7 +146,7 @@ private val BookColors=listOf(Color(0xFF315B75), Color(0xFF6C8265), Color(0xFFA7
 
 @Composable private fun ShelfRoom(items:List<Pair<JSONObject,Boolean>>, archive:Boolean, busy:Boolean, onSelect:(Pair<JSONObject,Boolean>)->Unit) {
     val s=LocalStrings.current
-    BoxWithConstraints(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color(0xFFF4F0E8)).padding(18.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().testTag("reading-room").clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
         val cols=(maxWidth.value/126).toInt().coerceIn(2,6)
         val rows=items.chunked(cols)
         Column(verticalArrangement=Arrangement.spacedBy(24.dp)) {

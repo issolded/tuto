@@ -1,0 +1,625 @@
+[
+  {
+    "id": "moon-0",
+    "topic": "moon",
+    "band": 0,
+    "ages": "6–8",
+    "title": "Ay neden değişik görünür?",
+    "steps": [
+      {
+        "title": "Ay’dan bir parça mı eksildi?",
+        "text": "Bak! Aynı Ay bazen ince, bazen yarım, bazen dolu görünüyor. Sence ne değişiyor? Önce bir tahmin seç; sonra birlikte araştıralım.",
+        "task": "Bir tahmine dokun.",
+        "optionsText": "Ay’ın kendisi küçülüyor. / Gördüğümüz aydınlık bölüm değişiyor. / Henüz bilmiyorum.",
+        "answerText": "Gördüğümüz aydınlık bölüm değişiyor.",
+        "feedback": "Her tahmin: Tahminini aldım. Şimdi görsellere bakıp bir ipucu bulalım.",
+        "hint": "Doğru cevabı hemen bilmen gerekmiyor.",
+        "options": [
+          "Ay’ın kendisi küçülüyor.",
+          "Gördüğümüz aydınlık bölüm değişiyor.",
+          "Henüz bilmiyorum."
+        ]
+      },
+      {
+        "title": "Üç görünüş, aynı Ay",
+        "text": "Kartları sırayla aç. İnce görünen aydınlığa hilal deriz. Yarım aydınlık görünüş de var. Dolu görünen Ay’ın adı dolunay. Kartları istediğin kadar yeniden açabilirsin. Acele etmeden benzerlikleri ve farkları bul.",
+        "task": "Hangi kartta görünen aydınlık bölüm en büyük?",
+        "optionsText": "Hilal / Yarım aydınlık / Dolunay",
+        "answerText": "Dolunay",
+        "feedback": "Doğru: Evet! Dolunay kartındaki görünen yüzün tamamı aydınlık. Yeniden deneme: Aydınlık alanları karşılaştır. En ince olanı değil, en geniş olanı arıyoruz.",
+        "hint": "Kartların açık renkli bölümlerine bak.",
+        "options": [
+          "Hilal",
+          "Yarım aydınlık",
+          "Dolunay"
+        ]
+      },
+      {
+        "title": "Ay’ı gezdir",
+        "text": "Güneş Ay’ı aydınlatır. Ay, Dünya çevresinde ilerlerken biz aydınlık bölümün farklı miktarlarını görürüz. Ay’ın kendisinden parça kopmaz!",
+        "task": "Ay’ı üç durakta dene. Dünya’dan görünümde dolunayı bul ve Buldum’a dokun.",
+        "optionsText": "Hilal durağı / Yarım aydınlık durağı / Dolunay durağı",
+        "answerText": "Dolunay durağı",
+        "feedback": "Doğru: Buldun! Ay aynı küre; bize görünen aydınlık alan değişti. Yeniden deneme: Bu durakta görünen yüzün tamamı aydınlık değil. Başka bir durağı dene.",
+        "hint": "Dünya’dan görünüm kutusunu izle.",
+        "options": [
+          "Hilal durağı",
+          "Yarım aydınlık durağı",
+          "Dolunay durağı"
+        ]
+      },
+      {
+        "title": "Bir keşif kartı yap",
+        "text": "Bir Ay görünüşü seç. Sonra keşif kartına doğru cümleyi ekle. İstersen seçtiğin Ay’ın çevresine yıldızlar da çizebilirsin.",
+        "task": "Resim ve açıklama seç.",
+        "optionsText": "Ay’dan bir parça koptu. / Ay’ın aydınlık bölümünü farklı görüyoruz.",
+        "answerText": "Ay’ın aydınlık bölümünü farklı görüyoruz.",
+        "feedback": "Doğru: Keşif kartın hazır! Resmin ve cümlen aynı fikri anlatıyor. Yeniden deneme: Modelde Ay hep bütündü. Cümleni buna göre değiştirebilir misin?",
+        "hint": "Küreye değil, gördüğümüz aydınlık bölüme dikkat et.",
+        "options": [
+          "Ay’dan bir parça koptu.",
+          "Ay’ın aydınlık bölümünü farklı görüyoruz."
+        ]
+      },
+      {
+        "title": "Ay keşfin defterinde",
+        "text": "İlk tahminin: {prediction}. Keşif kartın: {creation}. Bugün Ay’ın görünüşünü araştırdın. Evreleri Dünya’nın gölgesi yapmaz; Dünya’nın gölgesi Ay’a düşerse ayrı bir olay, Ay tutulması olur.",
+        "task": "Kartını kontrol et; Defterime koy’a dokun.",
+        "optionsText": "Defterime koy / Kartımı değiştir",
+        "feedback": "Kayıt sonrası: Kaydedildi! Bir tahmin yaptın, gözlemledin ve açıklama oluşturdun.",
+        "hint": "İstersen önceki ekranlara dönüp yeniden deneyebilirsin.",
+        "options": [
+          "Defterime koy",
+          "Kartımı değiştir"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "moon-1",
+    "topic": "moon",
+    "band": 1,
+    "ages": "9–10",
+    "title": "Ay neden değişik görünür?",
+    "steps": [
+      {
+        "title": "Yarım Ay gerçekten yarım mı?",
+        "text": "Fotoğrafta Ay’ın yarısı aydınlık görünüyor. Uzaydaki Ay’ın biçimi hakkında ne düşünüyorsun? Bir tahmin seç; sonra iki farklı bakış açısından sınayacağız.",
+        "task": "Tahminini seç.",
+        "optionsText": "Ay yarım küreye dönüşür. / Ay küredir; aydınlık yüzünün bir bölümünü görürüz. / Karar vermek için gözlem gerek.",
+        "answerText": "Ay küredir; aydınlık yüzünün bir bölümünü görürüz.",
+        "feedback": "Her tahmin: Tahmin kaydedildi. Kanıt aramaya hazırsın.",
+        "hint": "Fotoğraf yalnızca Dünya’dan görünen yüzü gösteriyor.",
+        "options": [
+          "Ay yarım küreye dönüşür.",
+          "Ay küredir; aydınlık yüzünün bir bölümünü görürüz.",
+          "Karar vermek için gözlem gerek."
+        ]
+      },
+      {
+        "title": "Aynı an, iki bakış",
+        "text": "Uzaydan model ile Dünya’dan görünüm aynı anı gösteriyor. İlk dördün ve dolunay düğmelerine sırayla dokun. Güneş’in hangi tarafı aydınlattığını izle.",
+        "task": "İki konum arasında ne değişti?",
+        "optionsText": "Ay’ın küre biçimi / Dünya’dan gördüğümüz aydınlık miktarı / Güneş ışığının kaynağı",
+        "answerText": "Dünya’dan gördüğümüz aydınlık miktarı",
+        "feedback": "Doğru: Evet. İki görünüş farklı; Ay yine aynı küre. Yeniden deneme: İki panelde Ay’ın sınırını ve aydınlık kısmını ayrı ayrı karşılaştır.",
+        "hint": "Küre biçimi aynı mı? Dünya panelindeki açık alan aynı mı?",
+        "options": [
+          "Ay’ın küre biçimi",
+          "Dünya’dan gördüğümüz aydınlık miktarı",
+          "Güneş ışığının kaynağı"
+        ]
+      },
+      {
+        "title": "Evre yolunu kur",
+        "text": "Yeniaydan başlayacağız. Dört ana evreyi sıraya koy. Aralarda başka görünüşler de vardır; bunlar dört ana duraktır.",
+        "task": "Kartları 1–4 yuvalarına yerleştir.",
+        "optionsText": "Dolunay / Son dördün / Yeniay / İlk dördün",
+        "answerText": "Yeniay / İlk dördün / Dolunay / Son dördün",
+        "feedback": "Doğru: Sıra tamam! Son dördünden sonra döngü yeniaya doğru sürer. Yeniden deneme: Yeniayı başlangıca koy. Sonra modelde ileri ilerleyerek sıralamanı karşılaştır.",
+        "hint": "Yeniay → ilk dördün → dolunay → son dördün.",
+        "options": [
+          "Dolunay",
+          "Son dördün",
+          "Yeniay",
+          "İlk dördün"
+        ]
+      },
+      {
+        "title": "Küçük bir açıklama hazırla",
+        "text": "Bir arkadaşın “Ay’ın evrelerini Dünya’nın gölgesi yapıyor” diyor. Modelden yararlanarak iki parçalı bir açıklama kur.",
+        "task": "Her satırdan bir kart seç.",
+        "optionsText": "Neden: Dünya her ay Ay’ı parça parça örter. / Neden: Ay ilerledikçe aydınlık yarısının farklı bölümünü görürüz. / Kanıt: Modelde Güneş’e dönük yarı aydınlıktı. / Kanıt: Ay modelde küçüldü.",
+        "answerText": "Neden: Ay ilerledikçe aydınlık yarısının farklı bölümünü görürüz. / Kanıt: Modelde Güneş’e dönük yarı aydınlıktı.",
+        "feedback": "Doğru: Açıklaman gözleme dayanıyor. Dünya gölgesi Ay tutulmasıyla ilgilidir; normal evrelerin nedeni değildir. Yeniden deneme: Uzay paneline dön. Ay küçüldü mü? Işığı hangi yönden aldı?",
+        "hint": "Önce değişeni, sonra değişmeyeni anlat.",
+        "options": [
+          "Neden: Dünya her ay Ay’ı parça parça örter.",
+          "Neden: Ay ilerledikçe aydınlık yarısının farklı bölümünü görürüz.",
+          "Kanıt: Modelde Güneş’e dönük yarı aydınlıktı.",
+          "Kanıt: Ay modelde küçüldü."
+        ]
+      },
+      {
+        "title": "Kanıtını yanında götür",
+        "text": "Defterine evre sıran ve açıklaman eklenecek. İlk tahminin: {prediction}. Gözlemden sonra fikrinin değişmesi araştırmanın doğal bir parçasıdır.",
+        "task": "Bir değerlendirme seç, sonra Kaydet ve bitir’e dokun.",
+        "optionsText": "Fikrimi değiştirdim. / Tahminime kanıt buldum. / Bir kez daha incelemek istiyorum.",
+        "feedback": "Kayıt sonrası: Keşfin kaydedildi. Dilersen modeli yeniden açabilirsin.",
+        "hint": "Değerlendirmenin tek doğru cevabı yok.",
+        "options": [
+          "Fikrimi değiştirdim.",
+          "Tahminime kanıt buldum.",
+          "Bir kez daha incelemek istiyorum."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "moon-2",
+    "topic": "moon",
+    "band": 2,
+    "ages": "11–13",
+    "title": "Ay neden değişik görünür?",
+    "steps": [
+      {
+        "title": "Bir iddiayı sınayalım",
+        "text": "“Dolunaydan sonra Dünya’nın gölgesi Ay’ı giderek kapatır.” Bu açıklama doğru olabilir mi? Yanıtını kaydet; modelden kanıt topladıktan sonra yeniden değerlendireceğiz.",
+        "task": "Başlangıç görüşünü seç.",
+        "optionsText": "Katılıyorum. / Katılmıyorum. / Emin değilim.",
+        "answerText": "Katılmıyorum.",
+        "feedback": "Her tahmin: Görüşün kaydedildi. Şimdi açıklamanın gözlemlerle uyuşup uyuşmadığını incele.",
+        "hint": "Bir iddia için hangi gözlemin gerekli olduğunu düşün.",
+        "options": [
+          "Katılıyorum.",
+          "Katılmıyorum.",
+          "Emin değilim."
+        ]
+      },
+      {
+        "title": "Neyi ölçüyoruz?",
+        "text": "Sekiz durağı incele. Tablo Dünya’dan görünen diskin aydınlık oranını gösterir: yeniay %0, ilk dördün %50, dolunay %100, son dördün %50. Bunlar tüm Ay yüzeyinin oranları değildir.",
+        "task": "İlk ve son dördünü ayırmak için hangi bilgi yeterli?",
+        "optionsText": "Yalnızca %50 değeri / Döngüdeki sırası ve aydınlık bölümün artıp azalması / Ay’ın küre olup olmaması",
+        "answerText": "Döngüdeki sırası ve aydınlık bölümün artıp azalması",
+        "feedback": "Doğru: Aynı oran farklı evrelerde görülür; döngüdeki konum ayırt edicidir. Yeniden deneme: Tabloda iki farklı evre %50. Tek başına bu sayı hangisi olduğunu söyler mi?",
+        "hint": "İlk dördünde artış, son dördünde azalış sürer.",
+        "options": [
+          "Yalnızca %50 değeri",
+          "Döngüdeki sırası ve aydınlık bölümün artıp azalması",
+          "Ay’ın küre olup olmaması"
+        ]
+      },
+      {
+        "title": "Tahminini modelde test et",
+        "text": "Model dolunayda başlıyor. Bir sonraki ana evrede görünen aydınlık oranı ne olur? Önce tahmin et, sonra Ay’ı ileri götürüp sınayalım.",
+        "task": "Oranı seç; Sonraki ana evre düğmesine dokun.",
+        "optionsText": "%0 / %50 / %100",
+        "answerText": "%50",
+        "feedback": "Doğru: Tahmin modelle uyuştu: son dördünde görünen diskin yarısı aydınlık. Yeniden deneme: Model son dördünü gösteriyor. Aydınlık alanı dolunayla karşılaştır; oran %50.",
+        "hint": "Dolunaydan sonraki ana durak son dördündür.",
+        "options": [
+          "%0",
+          "%50",
+          "%100"
+        ]
+      },
+      {
+        "title": "İddia, kanıt, gerekçe",
+        "text": "Başlangıç iddiasına yanıt veren bir açıklama oluştur. Evre modelinin Dünya gölgesini değil, Güneş’le aydınlanan yüzü ve gözlemciyi gösterdiğini hatırla.",
+        "task": "Her çiftte uygun kartı seç.",
+        "optionsText": "İddia: Evreler değişen bakış geometrisiyle oluşur. / İddia: Her evre tutulmadır. / Kanıt: Uzay panelinde Güneş’e dönük yarı aydınlık kaldı. / Kanıt: Ay’ın boyutu yarıya indi. / Gerekçe: Dünya’dan bu yarının farklı miktarını görüyoruz. / Gerekçe: Güneş her gece söner.",
+        "answerText": "İddia: Evreler değişen bakış geometrisiyle oluşur. / Kanıt: Uzay panelinde Güneş’e dönük yarı aydınlık kaldı. / Gerekçe: Dünya’dan bu yarının farklı miktarını görüyoruz.",
+        "feedback": "Doğru: Üç parçan birbiriyle tutarlı. Dünya gölgesinin Ay’a düşmesi Ay tutulmasıdır. Yörünge eğikliği yüzünden bu her dolunayda gerçekleşmez. Yeniden deneme: Her kartı iki paneldeki gözleminle karşılaştır. Gözlenmeyen bir değişime dayanan kartı değiştir.",
+        "hint": "Ay’ın biçimini, ışık yönünü ve görünen oranı ayrı düşün.",
+        "options": [
+          "İddia: Evreler değişen bakış geometrisiyle oluşur.",
+          "İddia: Her evre tutulmadır.",
+          "Kanıt: Uzay panelinde Güneş’e dönük yarı aydınlık kaldı.",
+          "Kanıt: Ay’ın boyutu yarıya indi.",
+          "Gerekçe: Dünya’dan bu yarının farklı miktarını görüyoruz.",
+          "Gerekçe: Güneş her gece söner."
+        ]
+      },
+      {
+        "title": "Modelin sınırını da kaydet",
+        "text": "Evre döngüsü yaklaşık 29,5 gündür. Bu model gerçek boyutları, uzaklıkları veya hareket hızlarını göstermez. Açıklamana bir model sınırı ekle.",
+        "task": "Bir sınır seç ve Deftere kaydet’e dokun.",
+        "optionsText": "Boyutlar ve uzaklıklar ölçekli değil. / Model gerçek gökyüzündeki her ayrıntıyı gösteriyor.",
+        "answerText": "Boyutlar ve uzaklıklar ölçekli değil.",
+        "feedback": "Doğru: Açıklaman ve model sınırın kaydedildi. Bilimsel modeller işe yarar; sınırlarını bilmek de önemlidir. Yeniden deneme: Modelde Dünya ve Ay birbirine gerçekte olduğundan yakın gösteriliyor.",
+        "hint": "Model bir açıklama aracıdır, uzayın birebir kopyası değildir.",
+        "options": [
+          "Boyutlar ve uzaklıklar ölçekli değil.",
+          "Model gerçek gökyüzündeki her ayrıntıyı gösteriyor."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "art-0",
+    "topic": "art",
+    "band": 0,
+    "ages": "6–8",
+    "title": "Bir resim nasıl hikâye anlatır?",
+    "steps": [
+      {
+        "title": "Bu resimde birazdan ne olabilir?",
+        "text": "Bir resim konuşmadan da bize fikir verebilir. Sence teknedeki kişiler birazdan ne yapacak? Resme bak ve bir olasılık seç. Henüz doğru cevabı aramıyoruz; senin fikrini merak ediyoruz.",
+        "task": "Birini seç: Bir yere gidecekler / Biraz dinlenecekler / Başka bir şey olacak. Son seçenek açılırsa yazı alanı: Bence…",
+        "feedback": "Bu senin ilk tahminin. Resimde yeni ayrıntılar bulunca fikrini değiştirebilirsin.",
+        "hint": "Önce tekneye, sonra kişilere bak. Harekete geçeceklerini mi, bekleyeceklerini mi hayal ediyorsun?",
+        "options": []
+      },
+      {
+        "title": "Gözlerin ne buldu?",
+        "text": "Şimdi yalnız resimde görünenleri toplayalım. Henüz kişilerin ne düşündüğünü bilmiyoruz. İki ayrıntı seç; her seçtiğin ayrıntı küçük bir defter kartına dönüşsün.",
+        "task": "İki kişi / Beyaz giysi / Su / Teknenin eğik kenarı düğmelerinden ikisini seç. Seçimi kaldırmak için yeniden dokun.",
+        "feedback": "İki ayrıntı topladın. Bunlar hikâyen için başlangıç olabilir; aynı ayrıntı herkese aynı şeyi düşündürmeyebilir.",
+        "hint": "Bir kişiyle ilgili, bir de çevreyle ilgili ayrıntı seçmeyi dene.",
+        "options": []
+      },
+      {
+        "title": "Gördüm mü, hayal mi ettim?",
+        "text": "Kartı seç, sonra onu uygun kutuya koy. Görüyorum kutusu resimde gösterilebilen şeyler içindir. Hayal ediyorum kutusu senin eklediğin hikâye içindir.",
+        "task": "Kartlar: Teknede iki kişi var. / Birazdan pikniğe gidecekler. Kutular: Görüyorum / Hayal ediyorum. Kontrol et düğmesine bas.",
+        "feedback": "İlk kart Görüyorum: kişileri gösterebiliriz. İkinci kart Hayal ediyorum: piknik mümkün bir hikâye, ama resimde gösterilmiyor. Hayal etmek yanlış değildir!",
+        "hint": "Piknik çantası aramak yerine şunu sor: Bu cümleyi yalnız resme bakarak kesin söyleyebilir miyim?",
+        "options": []
+      },
+      {
+        "title": "Bir ayrıntı, bir hikâye",
+        "text": "Topladığın kartlardan birini seç. Sonra cümleni tamamla: Resimde … gördüm. Bu bana … düşündürdü. İstersen yazmak yerine küçük bir sonraki an çiz.",
+        "task": "Ayrıntı kartını seç; Dinleniyor olabilirler / Yolculuğa çıkmış olabilirler / Kendi fikrim seçeneklerinden birini ekle. Çizim seçilirse ayrıntı kartı çizimin yanında kalır.",
+        "feedback": "Resimdeki bir ayrıntıyla kendi fikrini yan yana getirdin. Senin hikâyen, ressamın kesin olarak anlattığı hikâye demek değil.",
+        "hint": "Tekne sana bir yolculuk düşündürebilir. Sana başka ne düşündürüyor?",
+        "options": []
+      },
+      {
+        "title": "Resimden doğan hikâyem",
+        "text": "Bu eser Manet’nin Boating adlı resmi. İlk tahminin ve son hikâyen burada. Fikrin aynı kalabilir veya değişebilir. İkisi de olur; önemli olan resme dikkatle bakmandı.",
+        "task": "Kartı gözden geçir. Aynı düşünüyorum / Fikrim değişti seç. Düzenle ile önceki ekrana dönebilir veya Defterime kaydet ile bitirebilirsin.",
+        "feedback": "Bir ayrıntı buldun, gözlemle hayali ayırdın ve kendi hikâyeni kurdun. Keşfin tamamlandı!",
+        "options": []
+      }
+    ]
+  },
+  {
+    "id": "art-1",
+    "topic": "art",
+    "band": 1,
+    "ages": "9–10",
+    "title": "Bir resim nasıl hikâye anlatır?",
+    "steps": [
+      {
+        "title": "Aynı resim, farklı hikâyeler",
+        "text": "Bu tekne sahnesi sana nasıl bir an düşündürüyor? İlk izlenimini seç. Birazdan resme daha yakından bakacak ve fikrini ayrıntılarla ilişkilendireceksin. Şimdilik tek bir doğru cevap yok.",
+        "task": "Sakin bir an / Hareketli bir an / Karar veremedim / Başka bir izlenim seçeneklerinden birini seç. Son seçenek kısa yazı alanı açar.",
+        "feedback": "İlk izlenimin not edildi. Daha sonra değiştirmek, yanlış yaptığın anlamına gelmez.",
+        "hint": "Kişilerden veya teknenin yönünden başlayabilirsin. Hissettiğin şeyi seçmen yeterli.",
+        "options": []
+      },
+      {
+        "title": "Yorumdan önce ayrıntı",
+        "text": "Yakınlaştır veya resmi dinle. Görünen iki ayrıntı seç. Kişilerin duygularını henüz ayrıntı listesine ekleme: birinin sıkıldığını düşünmek, beyaz giysi görmekten farklıdır.",
+        "task": "İki kişi / Beyaz giysi / Su / Teknenin eğik kenarı seçeneklerinden iki farklı kart seç; sonra Bu ayrıntıyı görüyorum düğmesiyle onayla.",
+        "feedback": "Gözlem kartların hazır. Şimdi onları kullanarak kendi yorumunu açıklayabilirsin.",
+        "hint": "Bir ayrıntıyı başkasına gösterebilir veya betimlemede bulabilir misin? Bulabiliyorsan gözlem için iyi bir başlangıçtır.",
+        "options": []
+      },
+      {
+        "title": "İpucundan yoruma",
+        "text": "Her ayrıntı kartını bir düşünceyle eşleştir. Kartı seç, sonra yorumunu seç. Aynı ayrıntı iki farklı düşünceye de yol açabilir; bağlantını sen açıklayacaksın.",
+        "task": "Her kart için: Yolculuk olabilir / Dinlenme olabilir / Hareket hissediyorum / Başka fikrim var / Bu ayrıntı bana henüz bir şey düşündürmedi. Ardından bir bağlantıyı seçip Bu ayrıntı bana bunu düşündürdü, çünkü… alanını tamamla veya Henüz bağlantı kuramadım seç.",
+        "feedback": "Bağlantı cümlesi varsa: Ayrıntıyla yorumunu ilişkilendirdin. Bu, hikâyenin kesin olarak böyle yaşandığını kanıtlamaz; yorumunu anlaşılır kılar. Henüz bağlantı kuramadım seçildiyse: Şimdilik bir bağlantı kurmadın. Bu da geçerli bir gözlem; yorum üretmek zorunda değilsin. İstersen sonraki adımda başka bir olasılık deneyebilirsin.",
+        "hint": "Eğik tekne kenarı sana hareket düşündürebilir. Başka bir ayrıntı sende başka bir çağrışım yapabilir.",
+        "options": []
+      },
+      {
+        "title": "Başka ne olmuş olabilir?",
+        "text": "İlk hikâyenden farklı bir olasılık kur. İnsanların adlarını veya düşüncelerini bilmiyoruz; onları hayal edebilirsin. Hayal ettiğin kısmı kesin bilgi gibi yazmamaya dikkat et.",
+        "task": "İki satırı tamamla: Bir olasılık: … olabilir. Başka bir olasılık: … olabilir. Sonra birini seç ve iki gözlem kartından en az birini iliştir. Yazmak yerine iki kutulu çizim ve hazır olasılık etiketleri kullanılabilir.",
+        "feedback": "Bir görüntünün birden fazla hikâyeye kapı açabileceğini denedin. Hangi yorumun sana daha güçlü geldiğini seçebilirsin; diğerini silmen gerekmiyor.",
+        "hint": "Aynı tekne bir yere gidiyor da olabilir, bir yerde bekliyor da. Sen iki olasılığı nasıl ayırırsın?",
+        "options": []
+      },
+      {
+        "title": "Kanıtım ve yorumum",
+        "text": "Eser: Édouard Manet, Boating, 1874. Defterinde ilk izlenimin, iki gözlemin ve iki olası hikâyen var. Hangisi gözlem, hangisi hayal? Kartların başlıklarını son kez kontrol et.",
+        "task": "Yorumum değişti / Yorumum aynı kaldı seç. Ardından Beni en çok düşündüren ayrıntı… alanına kartlarından birini ekle. Düzenle veya Defterime kaydet düğmesine bas.",
+        "feedback": "Gördüğün şeyi yorumundan ayırdın ve başka bir olasılığı düşündün. Keşfin tamamlandı!",
+        "options": []
+      }
+    ]
+  },
+  {
+    "id": "art-2",
+    "topic": "art",
+    "band": 2,
+    "ages": "11–13",
+    "title": "Bir resim nasıl hikâye anlatır?",
+    "steps": [
+      {
+        "title": "Bir kare, ne kadar hikâye?",
+        "text": "Bu resim bir olayın tamamını mı, yalnızca bir anını mı gösteriyor? Bir ön yorum seç. Ressamın niyetini bildiğimizi varsaymadan, görüntünün sende nasıl bir etki yarattığını araştıracağız.",
+        "task": "Durağan bir bekleyiş / Süren bir yolculuk / İkisi de olabilir / Kendi yorumum seçeneklerinden birini seç. Eminlik: Şimdilik kararsızım / Bir fikrim var. Bu seçimler puan değildir.",
+        "feedback": "Ön yorumun kaydedildi. Görsel ayrıntılar onu güçlendirebilir, değiştirebilir veya belirsiz bırakabilir.",
+        "hint": "Görüntü bize öncesini ve sonrasını göstermiyor. Bu boşluk, hikâye kurmamıza alan açabilir.",
+        "options": []
+      },
+      {
+        "title": "Resmin kurduğu düzen",
+        "text": "Kompozisyon, görüntüdeki öğelerin düzenidir. İki düzenleme ayrıntısı seç ve nerede fark ettiğini incele. Duygusal etkisini bir sonraki adımda yorumlayacağız; şimdi yalnız neyi gördüğünü belirle.",
+        "task": "Beyaz giysi ile su arasındaki renk farkı / Teknenin eğik kenarı / Tekne ve yelkenin çerçevede kesilmesi kartlarından ikisini seç. Tam resim / Yakınlaştır / Betimlemeyi oku düğmeleriyle incele.",
+        "feedback": "İki görsel tercih belirledin. Bir tercihin herkeste aynı etkiyi yaratması gerekmez.",
+        "hint": "Kenarların resim sınırında nasıl bittiğine veya giysinin çevresinden nasıl ayrıldığına bak.",
+        "options": []
+      },
+      {
+        "title": "Dikkatin nereye gidiyor?",
+        "text": "Seçtiğin ayrıntılardan birine odaklan. Görseli değiştirmeden bir inceleme çerçevesi açıp kapat; sonra tam resme dön. Bu bir bakış deneyi, eserin yeni sürümü değil.",
+        "task": "Bir ayrıntı seç → İnceleme çerçevesini göster → Tam resme dön. Ardından etki seç: Dikkatim kişiye gitti / Hareket hissi oluştu / Kadrajın dışını merak ettim / Etkim değişmedi / Başka etki. Cümleyi tamamla: … ayrıntısı bende … etkisi yarattı, çünkü…",
+        "feedback": "Kendi bakışındaki etkiyi açıkladın. Bu deney ressamın niyetini veya bütün izleyicilerin tepkisini kanıtlamaz.",
+        "hint": "Çerçeveyi kullanamıyorsan aynı ayrıntının betimlemesini seç; etkiyi bu anlatım üzerinden düşün.",
+        "options": []
+      },
+      {
+        "title": "Yorumunu savun, sınırını göster",
+        "text": "Şimdi kısa bir müze etiketi yaz. Okur, hangi parçanın gözlem, hangi parçanın yorum olduğunu anlayabilsin. Aynı ayrıntılardan başka birinin farklı bir hikâye çıkarabileceğini de düşün.",
+        "task": "Üç alan: Yorumum… / Bunu düşündüren iki görünür ayrıntı… / Yine de başka biri … düşünebilir; çünkü… İkinci alana iki seçili gözlem kartı eklenir. İlk ve üçüncü alan kısa metin veya hazır cümle başlangıçlarıyla tamamlanır.",
+        "feedback": "İddianı ayrıntılarla birlikte sundun ve başka bir okumaya yer açtın. Çok farklı yorumlar olabilir; önemli olan aradaki bağlantıyı açıkça göstermektir.",
+        "hint": "Kesinlikle üzgünler yerine Bana düşünceli görünüyorlar diyebilirsin. Duyguyu görünür bir gerçek gibi sunmaktan kaçın.",
+        "options": []
+      },
+      {
+        "title": "Yorumumun sınırları",
+        "text": "Eser: Édouard Manet, Boating, 1874. Kendi etiketin eserin açıklamasına eklenen bir yorumdur, müzenin veya sanatçının sözü değildir. İlk ve son yorumunu yan yana incele.",
+        "task": "Bir öz değerlendirme seç: Ayrıntı ekledim / Yorumumu değiştirdim / Belirsizliği daha iyi gördüm. Sonra kontrol et: İki ayrıntı var. Yorumumu kesin bilgi diye sunmadım. Başka okumaya yer verdim. Düzenle veya Defterime kaydet seç.",
+        "feedback": "Görsel düzenlemeyi inceledin, yorumunu gerekçelendirdin ve sınırlarını gösterdin. Keşfin tamamlandı!",
+        "options": []
+      }
+    ]
+  },
+  {
+    "id": "water-0",
+    "topic": "water",
+    "band": 0,
+    "ages": "6–8",
+    "title": "Su evimize nasıl gelir?",
+    "steps": [
+      {
+        "title": "Musluğun arkasında ne var?",
+        "text": "Bir damla musluktan çıkıyor. Acaba yolculuğu nerede başladı? Bugün hayalî bir yerin su yolunu keşfedeceğiz. Bu resim senin evinin haritası değil. Her yerde aynı yol bulunmayabilir. Önce tahmin et; sonra fikrini değiştirebilirsin.",
+        "task": "Sence bu örnekte su ilk nereden geliyor? Bir kart seç.",
+        "optionsText": "Gölden / Musluğun içinde oluşuyor / Bilmiyorum",
+        "feedback": "Genel: Tahminini aldım. Şimdi damlanın yolunu birlikte inceleyelim.",
+        "hint": "Musluk yolculuğun başı mı, sonu mu olabilir? / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Gölden",
+          "Musluğun içinde oluşuyor",
+          "Bilmiyorum"
+        ]
+      },
+      {
+        "title": "Dört durağı keşfet",
+        "text": "Damlayı izle veya dört durağa dokun. Kaynak: Bu örnekte su gölden alınır. Arıtma: Uygun işlemler uygulanır. Depo ve dağıtım: Su depoda tutulabilir; borularla taşınır. Musluk: Su bize ulaşır. İstersen anlatımı durdurup yeniden dinle. Sayılar durakların sırasını gösterir. Arıtma ile taşıma farklı işlerdir.",
+        "task": "Dört durağı aç. Sonra şu soruya yanıt ver: Suyu taşıyan hangisi?",
+        "optionsText": "Borular / Bulut resmi",
+        "answerText": "Borular",
+        "feedback": "Doğru: Evet, bu örnekte borular suyu taşır. Yeniden deneme: Bulut bu taşıma yolunda değil. Boru çizgisini takip et.",
+        "hint": "Depodan musluğa uzanan çizgiye bak. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Borular",
+          "Bulut resmi"
+        ]
+      },
+      {
+        "title": "Yolu sen kur",
+        "text": "Kartlar karıştı! Damlanın izleyebileceği bir yol yap. Kaynak başlangıçta, musluk sonda olacak. Aradaki iki durağı düşün. Bir kartı seçip numaralı yere dokunabilirsin; sürüklemek zorunda değilsin. Hazır olunca Yolu kontrol et düğmesine bas.",
+        "task": "Dört kartı sıraya koy.",
+        "optionsText": "Musluk / Kaynak / Depo ve dağıtım / Arıtma",
+        "answerText": "Kaynak / Arıtma / Depo ve dağıtım / Musluk",
+        "feedback": "Doğru: Yol birleşti! Damla bu modelde dört duraktan geçti. Yeniden deneme: Henüz bütün yol birleşmedi. Kaynakla başla; arıtma kartını ondan sonra dene.",
+        "hint": "Önce Kaynak, sonra Arıtma. Kalan iki karttan hangisi son durak? / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Musluk",
+          "Kaynak",
+          "Depo ve dağıtım",
+          "Arıtma"
+        ]
+      },
+      {
+        "title": "Damlanın hikâyesi",
+        "text": "Şimdi yolu bir arkadaşına anlatır gibi tamamla. İstersen hazır kelimeleri seç; istersen kutuya kendi cümleni yaz. Güzel yazman değil, fikrini göstermen önemli. Çizmek istersen dört kutuya birer durak simgesi ekleyebilirsin.",
+        "task": "Cümleyi tamamla: Su bu örnekte ___ başlar, ___ geçer, borularla ___ ulaşır.",
+        "optionsText": "gölden / arıtmadan / musluğa / musluktan / gölden / buluta",
+        "answerText": "gölden / arıtmadan / musluğa",
+        "feedback": "Doğru: Hikâyen yolun başlangıcını ve sonunu gösteriyor. Yeniden deneme: Resimdeki okları izleyelim. Gölden başlıyor, musluğa ulaşıyoruz. Serbest yanıt: Anlatımın eklendi. Örnek cümleyle karşılaştırabilirsin.",
+        "hint": "İlk iki kutuya bak: göl ve arıtma tesisi. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "gölden",
+          "arıtmadan",
+          "musluğa",
+          "musluktan",
+          "gölden",
+          "buluta"
+        ]
+      },
+      {
+        "title": "Keşif defterim",
+        "text": "Bugünkü keşfin: Musluk, su yolculuğunun başlangıcı değildir. Örnek yolun ve anlatımın defterine eklenmeye hazır. İlk tahminine dönüp bak: Aynı mı düşünüyorsun? Fikrini değiştirmek öğrenmenin bir parçası. Kaydettikten sonra yolunu yeniden açıp inceleyebilirsin.",
+        "task": "Bir yansıma seç, ardından Deftere ekle ve Bitir düğmelerine dokun.",
+        "optionsText": "Tahminim aynı kaldı / Fikrim değişti / Bir daha incelemek istiyorum",
+        "feedback": "Genel: Seçimin eklendi. Kayıt sonrası: Su yolculuğun defterine kaydedildi!",
+        "hint": "İstersen önceki ekranlara geri dön. Hiçbir şeyi yeniden yapmak zorunda değilsin.",
+        "options": [
+          "Tahminim aynı kaldı",
+          "Fikrim değişti",
+          "Bir daha incelemek istiyorum"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "water-1",
+    "topic": "water",
+    "band": 1,
+    "ages": "9–10",
+    "title": "Su evimize nasıl gelir?",
+    "steps": [
+      {
+        "title": "Görünmeyen yol",
+        "text": "Bir çizimde yalnızca musluk görüyorsun. Oysa musluğa ulaşmadan önce suyun bir yolu var. Bugün hayalî bir yerleşimin modelini tamamlayacağız. Gerçek sistemler farklı olabilir; burada bütün dünyaya ait tek bir plan çizmediğimizi unutma.",
+        "task": "Bu modelde arıtmanın görevi sence ne olabilir?",
+        "optionsText": "Suyu uygun işlemlerden geçirmek / Yeni su üretmek / Yalnızca boruyu uzatmak / Henüz bilmiyorum",
+        "feedback": "Genel: Tahmin kaydedildi. Birazdan onu modeldeki bilgilerle karşılaştıracağız.",
+        "hint": "Bir işlemin göreviyle, suyun taşındığı yolu ayrı düşün. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Suyu uygun işlemlerden geçirmek",
+          "Yeni su üretmek",
+          "Yalnızca boruyu uzatmak",
+          "Henüz bilmiyorum"
+        ]
+      },
+      {
+        "title": "Her parçanın bir işi var",
+        "text": "Dört bilgi kartını aç: Kaynak, suyun alındığı yerdir; burada bir göldür. Arıtma, suya uygun işlemlerin uygulandığı bölümdür. Depo ve dağıtım, bekletme ve taşıma görevlerini gösterir. Musluk, bu yolun evdeki çıkışıdır. Bu sade çizimde bütün ayrıntılar görünmez.",
+        "task": "Bu modelde taşıma görevini en iyi anlatan kartı seç.",
+        "optionsText": "Depo ve dağıtım / Kaynak / Musluk",
+        "answerText": "Depo ve dağıtım",
+        "feedback": "Doğru: Evet. Boru ağı taşıma görevini gösteriyor. Yeniden deneme: Seçtiğin kart başka bir görevi gösteriyor. Boru ağının etiketini bul.",
+        "hint": "Su hangi karttaki çizgileri izleyerek ilerliyor? / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Depo ve dağıtım",
+          "Kaynak",
+          "Musluk"
+        ]
+      },
+      {
+        "title": "Eksik planı tamamla",
+        "text": "Dört kartı doğru sıraya yerleştir. Sonra arıtmanın yerine yalnızca uzun bir boru koyduğumuzu hayal et. Uzun bir boru, arıtmanın görevini yapar mı? Bu bir düşünce deneyi; gerçek suyla işlem yapmayacağız.",
+        "task": "Önce yolu kur; sonra Boru yeterli mi? sorusunu yanıtla.",
+        "optionsText": "Kaynak / Arıtma / Depo ve dağıtım / Musluk / Evet, uzunluk yeterlidir / Hayır, taşıma ile arıtma farklı işlerdir",
+        "answerText": "route: Kaynak / Arıtma / Depo ve dağıtım / Musluk choice: Hayır, taşıma ile arıtma farklı işlerdir",
+        "feedback": "Doğru: Plan tamamlandı. Bir parçanın görevini başka bir parçanın varlığı otomatik olarak karşılamaz. Yeniden deneme: Önce kaynakla başla. Sonra düşün: Bir şeyi taşımak, onu arıtmakla aynı mı?",
+        "hint": "Arıtma kartını kaynaktan sonra yerleştir. Boru için taşıma kelimesini kullan. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Kaynak",
+          "Arıtma",
+          "Depo ve dağıtım",
+          "Musluk",
+          "Evet, uzunluk yeterlidir",
+          "Hayır, taşıma ile arıtma farklı işlerdir"
+        ]
+      },
+      {
+        "title": "Bir rehber kartı hazırla",
+        "text": "Modelin yanına iki cümlelik bir rehber koyacağız. Birinci cümle yolu anlatsın. İkinci cümle modelin sınırını söylesin. Hazır cümleleri seçebilir veya kendi kelimelerinle yazabilirsin. Gerçek adres, okul adı ya da ev fotoğrafı eklemene gerek yok.",
+        "task": "İki doğru cümleyi seç.",
+        "optionsText": "Bu örnekte kaynak, arıtma, depo ve dağıtım, musluk sırası var. / Her yerin su sistemi kesinlikle aynıdır. / Bu çizim bazı ayrıntıları göstermeyen bir örnektir.",
+        "answerText": "0 / 2",
+        "feedback": "Doğru: Rehberin hem yolu anlatıyor hem de aşırı genellemeyi önlüyor. Yeniden deneme: Her yerin aynı olduğunu söyleyen cümleyi yeniden düşün. Serbest yanıt: Rehberin eklendi. Örnekle karşılaştır: Yol var; ama her yerde aynı değil.",
+        "hint": "Bir doğru cümle sıralamayı, diğeri çizimin bir örnek olduğunu anlatır. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Bu örnekte kaynak, arıtma, depo ve dağıtım, musluk sırası var.",
+          "Her yerin su sistemi kesinlikle aynıdır.",
+          "Bu çizim bazı ayrıntıları göstermeyen bir örnektir."
+        ]
+      },
+      {
+        "title": "Bir keşif, bir soru",
+        "text": "Defterinde tahminin, kurduğun yol ve rehber kartın bulunacak. İlk tahminin değiştiyse bunun için bir neden söyleyebilirsin. İstersen aşağıdaki merak sorularından birini ekle. Burada sorunun yanıtını bilmek zorunda değilsin.",
+        "task": "Bir merak sorusu seç; Deftere ekle ile kaydet.",
+        "optionsText": "Depo neden kullanılır? / Başka hangi kaynaklar olabilir? / Borular nasıl korunur?",
+        "feedback": "Genel: Sorun defter taslağına eklendi. Kayıt sonrası: Keşfin kaydedildi. Bitir ile keşfi tamamlayabilirsin.",
+        "hint": "Gözlem kartlarından seni en çok düşündüreni hatırla.",
+        "options": [
+          "Depo neden kullanılır?",
+          "Başka hangi kaynaklar olabilir?",
+          "Borular nasıl korunur?"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "water-2",
+    "topic": "water",
+    "band": 2,
+    "ages": "11–13",
+    "title": "Su evimize nasıl gelir?",
+    "steps": [
+      {
+        "title": "Aynı başlangıç, farklı sonuç",
+        "text": "İki hayalî şehir: Çınar ve Ada. İkisinin de dağıtımına aynı sürede 100 su birimi giriyor. Musluklara aynı miktar ulaşır mı? Buradaki şehirler ve sayılar yalnızca öğrenmek için üretildi; gerçek şehirleri değerlendirmiyoruz. Birim, bu modelde seçtiğimiz hayalî miktar ölçüsüdür.",
+        "task": "Önce tahminini seç.",
+        "optionsText": "Kesinlikle aynı miktar ulaşır / Kayıplar farklıysa miktar değişebilir / Veri görmeden karar veremem",
+        "feedback": "Genel: Tahminin kaydedildi. Şimdi karşılaştırmanın kanıtlarına bakalım.",
+        "hint": "Başlangıç miktarı tek başına bütün yolculuğu açıklar mı? / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Kesinlikle aynı miktar ulaşır",
+          "Kayıplar farklıysa miktar değişebilir",
+          "Veri görmeden karar veremem"
+        ]
+      },
+      {
+        "title": "Veri kartlarını oku",
+        "text": "Örnek yol: kaynak → arıtma → depo ve dağıtım → musluk. Dört durağı aç. Şimdi tabloyu incele: Çınar dağıtım girişi 100, boru kaybı 20, ulaşan 80. Ada dağıtım girişi 100, boru kaybı 10, ulaşan 90. Aynı süreyi karşılaştırıyoruz; modelde başka kayıp veya depoda miktar değişimi yok.",
+        "task": "Hangi şehirde daha çok su ulaşıyor ve fark kaç birim?",
+        "optionsText": "Ada, 10 / Çınar, 20 / İkisinde eşit",
+        "answerText": "Ada, 10",
+        "feedback": "Doğru: 90 − 80 = 10. Ada’da 10 birim daha çok ulaşıyor. Yeniden deneme: Ulaşan sütunundaki 90 ve 80 sayılarını karşılaştır.",
+        "hint": "Girişten kaybı çıkar: 100 − 20 ve 100 − 10. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Ada, 10",
+          "Çınar, 20",
+          "İkisinde eşit"
+        ]
+      },
+      {
+        "title": "Bir çözümü sınayalım",
+        "text": "Önce dört yol kartını sırala. Ardından Çınar için bir seçenek dene. Model varsayımı: Kaçak onarımı kaybı 20’den 5’e indirir; depo büyütme bu sürede kaybı değiştirmez. Her iki seçenekte giriş 100 kalır. Bunlar gerçek projeler için garanti değildir.",
+        "task": "Yolu kur; daha fazla su ulaştıran seçeneği ve sonucunu seç.",
+        "optionsText": "Kaynak / Arıtma / Depo ve dağıtım / Musluk / Kaçak onarımı: 95 ulaşır / Depo büyütme: 80 ulaşır",
+        "answerText": "route: Kaynak / Arıtma / Depo ve dağıtım / Musluk choice: Kaçak onarımı: 95 ulaşır",
+        "feedback": "Doğru: 100 − 5 = 95. Çınar’da önceye göre 15 birim daha çok su ulaşıyor. Yeniden deneme: Bu modelde depo büyütmek kaybı azaltmıyor. Onarım sonrası kayıp değerini girişten çıkar.",
+        "hint": "Önce kaynakla başla. Hesap için 100 − 5 kullan; sonra 95 ile 80’i karşılaştır. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Kaynak",
+          "Arıtma",
+          "Depo ve dağıtım",
+          "Musluk",
+          "Kaçak onarımı: 95 ulaşır",
+          "Depo büyütme: 80 ulaşır"
+        ]
+      },
+      {
+        "title": "Kanıtlı önerini yaz",
+        "text": "Şehir ekibine kısa bir öneri hazırla. Önerin bir seçim, bir sayısal kanıt ve bir sınır içersin. Bu tablo yalnızca miktarı anlatır; suyun içilebilirliğini veya projenin maliyetini göstermez. Gerçek karar için başka bilgiler de gerekir.",
+        "task": "Üç parçayı birleştir veya kendi metnini yaz.",
+        "optionsText": "Kaçak onarımını seçiyorum. / Ulaşan miktar 80’den 95’e çıkıyor; artış 15. / Maliyet ve uygulanabilirlik bilgisi de gerekir. / 95 birim olması suyun kesin güvenli olduğunu kanıtlar.",
+        "answerText": "0 / 1 / 2",
+        "feedback": "Doğru: Önerin seçim, kanıt ve sınır içeriyor. Yeniden deneme: Miktar verisinden su güvenliği sonucu çıkarılamaz. Son cümleyi değiştir. Serbest yanıt: Önerin eklendi. Kontrol et: seçim, 15 birim artış ve bir sınır var mı?",
+        "hint": "Şablon: ___ seçiyorum; çünkü ___. Ancak ___ bilmiyoruz. / İstersen Adım adım göster ile örnek çözümü incele.",
+        "options": [
+          "Kaçak onarımını seçiyorum.",
+          "Ulaşan miktar 80’den 95’e çıkıyor; artış 15.",
+          "Maliyet ve uygulanabilirlik bilgisi de gerekir.",
+          "95 birim olması suyun kesin güvenli olduğunu kanıtlar."
+        ]
+      },
+      {
+        "title": "Kararının izini sakla",
+        "text": "Defterine ilk tahminin, iki şehrin tablosu ve kanıtlı önerin eklenecek. Sayıların hayalî olduğu notu da kalacak. Böylece daha sonra kararını hangi bilgiye dayandırdığını görebilirsin. İyi bir açıklama yalnız sonucu değil, düşünme yolunu da gösterir.",
+        "task": "Bir sonraki araştırma sorunu seç; Deftere ekle ve Bitir.",
+        "optionsText": "Onarım maliyeti nedir? / Kayıp nasıl ölçülür? / Sonuç başka günlerde değişir mi?",
+        "feedback": "Genel: Yeni sorun taslağa eklendi. Kayıt sonrası: Kanıtlı önerin defterine kaydedildi.",
+        "hint": "Tablonun yanıtlayamadığı bir soruyu düşün.",
+        "options": [
+          "Onarım maliyeti nedir?",
+          "Kayıp nasıl ölçülür?",
+          "Sonuç başka günlerde değişir mi?"
+        ]
+      }
+    ]
+  }
+]

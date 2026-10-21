@@ -20,6 +20,7 @@ class ModulesTest {
     private val child = Child.from(JSONObject("""{"id":"module-test","name":"Test learner","age":9,"language":"en"}"""))
     private class Api : TutoApi {
         val calls=mutableListOf<String>()
+        var literacyAnswered=false
         override suspend fun familyChildren(code:String)=emptyList<ChildSummary>()
         override suspend fun verifyPin(code:String,pin:String,childId:String?)=PinResult.Wrong(4)
         override suspend fun todaySummary(childId:String)=Today.EMPTY
@@ -28,6 +29,8 @@ class ModulesTest {
         override suspend fun call(method:String,path:String,body:JSONObject?):JSONObject {
             calls+=path
             return when {
+                path.endsWith("/literacy/next") -> if(literacyAnswered) JSONObject("""{"sitting_id":"lit-test","done":true,"gems_earned":3}""") else JSONObject("""{"sitting_id":"lit-test","n":1,"of":1,"item":{"id":"i","prompt":{"text":"Choose cat"},"questions":[{"id":"q","options":[{"id":"a","text":"cat"},{"id":"b","text":"dog"}]}]}}""")
+                path.startsWith("/api/literacy-sittings/") -> {literacyAnswered=true;JSONObject("""{"results":[{"question_id":"q","correct":true,"key":["a"]}]}""")}
                 path.endsWith("english-session") -> JSONObject("""{"session_id":"eng-test","questions":[{"type":"definition","stem_key":"eng_stem_definition","pick":1,"prompt":{"definition":"A pet that purrs"},"options":[{"text":"cat"},{"text":"dog"}]}]}""")
                 path.endsWith("/answer") -> JSONObject("""{"correct":true,"chosen":[0],"correct_indices":[0]}""")
                 path.endsWith("/finish") -> JSONObject("""{"correct":1,"total":1,"gems_earned":3}""")
@@ -71,12 +74,13 @@ class ModulesTest {
     @After fun reset() { Services.api=HttpTutoApi();Services.cloudFactory=null }
     @Test fun englishCanFinishFromRealControls() {
         val api=Api();launch(api).use { a ->
-            open(a,"english");compose.onNodeWithTag("english-begin").performScrollTo().performClick()
-            compose.onNodeWithTag("english-option-0").performScrollTo().performClick()
-            compose.onNodeWithTag("english-send").performScrollTo().performClick()
-            compose.onNodeWithTag("english-next").performScrollTo().performClick()
-            compose.onNodeWithText("1 / 1").assertExists()
-            assertTrue(api.calls.any { it.endsWith("/finish") })
+            open(a,"english")
+            compose.onNodeWithText("cat").performScrollTo().performClick()
+            compose.onNodeWithText("Send").performScrollTo().performClick()
+            compose.onNodeWithText("Next").performScrollTo().performClick()
+            compose.onNodeWithText("All done!").assertExists()
+            assertTrue(api.calls.any { it.startsWith("/api/literacy-sittings/") })
+
         }
     }
     @Test fun libraryDraftAndHomeworkUseRealRoutesAcrossRotation() {
@@ -90,6 +94,35 @@ class ModulesTest {
             compose.waitForIdle();assertTrue(api.calls.any { it.endsWith("story-draft") })
             open(a,"homework");compose.onNodeWithText("2026-10-06").assertExists()
             open(a,"drawing");compose.onNodeWithText("Free drawing").assertExists()
+        }
+    }
+    @Test fun notebookScreensKeepRealControlsReachable() {
+        launch(Api()).use { a ->
+            fun capture(name:String) {
+                compose.waitForIdle()
+                val instrumentation=InstrumentationRegistry.getInstrumentation()
+                val dir=java.io.File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
+                instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
+                    java.io.File(dir,"notebook-$name.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+                    bitmap.recycle()
+                }
+            }
+            capture("home")
+            compose.onNodeWithTag("nav-me").performClick()
+            compose.onNodeWithText("Make it yours").assertExists()
+            capture("me")
+            compose.onNodeWithTag("nav-goals").performClick()
+            capture("goals")
+            compose.onNodeWithTag("nav-games").performClick()
+            compose.onNodeWithText("Games · Memory pairs").assertExists()
+            capture("games")
+            open(a,"library")
+            compose.onNodeWithTag("new-story").assertExists()
+            capture("stories")
+            open(a,"explore")
+            compose.onNodeWithText("Ay neden değişik görünür?").performScrollTo().performClick()
+            compose.onNodeWithText("Devam").assertExists()
+            capture("explore")
         }
     }
     @Test fun oauthDeepLinkRequiresInitiatedFlowAndUnlocksAfterExchange() {

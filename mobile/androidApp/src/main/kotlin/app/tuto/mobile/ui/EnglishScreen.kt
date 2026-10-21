@@ -41,8 +41,9 @@ fun FeaturePage(title: String, onBack: () -> Unit, showHeader: Boolean = true, c
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun EnglishScreen(vm: TutoViewModel) {
     val run = vm.english ?: return
-    val s = LocalStrings.current
+    val s = LocalStrings.current.withLang("en")
     LaunchedEffect(run) { if (run.session == null) run.start() }
+    LaunchedEffect(run.phase) { if (run.phase == EnglishRun.Phase.Welcome) run.begin() }
     FeaturePage(s("task_english"), { vm.home() }) {
         if (run.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (run.error) FailureMessage(if (run.phase == EnglishRun.Phase.Failed) ({ run.retry() }) else null)
@@ -70,6 +71,7 @@ fun FeaturePage(title: String, onBack: () -> Unit, showHeader: Boolean = true, c
                             modifier = Modifier.testTag("english-option-$i").widthIn(min = 120.dp).heightIn(min = 64.dp)) { Text(option.optString("text"), style = MaterialTheme.typography.titleLarge) }
                     }
                 }
+                if (run.hints.isNotEmpty()) Fox(Modifier.size(150.dp), FoxPose.Hint, event=run.index)
                 run.hints.forEach { h ->
                     if (h.optString("text").isNotBlank()) Text(h.optString("text"))
                     h.optJSONArray("steps").strings().forEach { Text(it) }

@@ -56,68 +56,47 @@ import java.util.Calendar
 
 @Composable
 fun HomeScreen(vm: TutoViewModel) {
-    val s = LocalStrings.current
-    val child = vm.child ?: return
-    val today = vm.today
-    LaunchedEffect(child.id) { vm.refreshToday() }
-    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        val scale = LocalDensity.current.fontScale.coerceAtLeast(1f)
-        val cols = if (maxWidth / scale >= 640.dp) 3 else 1
-        Column(Modifier.widthIn(max = 1280.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(if (maxWidth < 600.dp) 18.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Fox(Modifier.size(if (cols == 3) 180.dp else 104.dp), event = child.id)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(s.say("Hello, ${child.name}!", "Merhaba, ${child.name}!", "¡Hola, ${child.name}!"), style = MaterialTheme.typography.headlineMedium)
-                    Text(s.say("What will you discover today?", "Bugün ne keşfedeceksin?", "¿Qué descubrirás hoy?"), color = Ink.soft)
-                    GemPill(if (vm.todayLoaded) today.gems else null, Modifier.clickable { vm.open("gems") })
+    val s=LocalStrings.current;val child=vm.child?:return
+    LaunchedEffect(child.id){vm.refreshToday()}
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide=maxWidth/LocalDensity.current.fontScale.coerceAtLeast(1f)>=760.dp
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text("TUTO",style=MaterialTheme.typography.headlineLarge)
+                Text(s.say("Hello, ${child.name}!","Merhaba, ${child.name}!","¡Hola, ${child.name}!"),Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium)
+                GemPill(if(vm.todayLoaded)vm.today.gems else null,Modifier.clickable{vm.open("gems")})
+                androidx.compose.material3.TextButton(onClick={vm.open("settings")}){Text(s.say("Settings","Ayarlar","Ajustes"))}
+            }
+            val tiles=buildList {
+                listOf("math","english","puzzle").filter{child.active(it)}.forEach{add(it)}
+                if(child.active("reading")||child.active("writing"))add("library")
+                add("explore");if(child.active("drawing"))add("drawing")
+            }
+            val cards:@Composable ()->Unit={
+                Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    tiles.chunked(if(wide)3 else 2).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)){
+                        row.forEach{type->Column(Modifier.weight(1f).height(182.dp).border(1.5.dp,Ink.main,RoundedCornerShape(18.dp)).clickable(role=Role.Button){vm.open(type)}.testTag("quest_$type").padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp,Alignment.CenterVertically)){
+                            PaperIcon(type,Modifier.size(76.dp))
+                            Text(when(type){"math"->s.say("Math","Matematik","Matemáticas");"english"->"English";"puzzle"->s.say("Puzzles","Bulmacalar","Acertijos");"library"->s.say("My Stories","Hikâyelerim","Mis historias");"explore"->s.say("Explore","Keşfet","Explorar");else->s.say("My Drawing","Çizimlerim","Mis dibujos")},style=MaterialTheme.typography.titleLarge,maxLines=2,textAlign=TextAlign.Center)
+                        }}
+                        repeat((if(wide)3 else 2)-row.size){Spacer(Modifier.weight(1f))}
+                    }}
                 }
             }
-            val goal = today.nearestGoal
-            Row(Modifier.fillMaxWidth().card(Ink.lilacSoft).clickable(role = Role.Button) { vm.open("goals") }.testTag("home-goal").padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                PaperIcon("goals", Modifier.size(56.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(s.say("YOUR NEXT GOAL", "SIRADAKİ HEDEFİN", "TU PRÓXIMA META"), style = MaterialTheme.typography.labelLarge, color = Ink.soft)
-                    if (vm.todayLoaded && goal != null) {
-                        Text(goal.name, style = MaterialTheme.typography.titleLarge)
-                        val left = (goal.cost - today.gems).coerceAtLeast(0)
-                        Text(if (left > 0) s.say("$left Gems to go", "$left Gem kaldı", "Faltan $left gems") else s.say("Ready to claim!", "Ödülünü isteyebilirsin!", "¡Ya puedes pedirlo!"), color = Ink.green)
-                        androidx.compose.material3.LinearProgressIndicator(progress = { if(goal.cost > 0) (today.gems.toFloat()/goal.cost).coerceIn(0f,1f) else 1f }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape))
-                    } else Text(if (!vm.todayLoaded) s.say("Loading your goal…", "Hedefin yükleniyor…", "Cargando tu meta…") else s.say("Choose something to work towards", "Ulaşmak istediğin bir hedef seç", "Elige tu próxima meta"), style = MaterialTheme.typography.titleMedium)
+            if(wide) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp),verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(.29f),horizontalAlignment=Alignment.CenterHorizontally){Fox(Modifier.fillMaxWidth().height(310.dp),event=child.id);Text(s.say("A little curiosity, every day.","Her gün biraz merak.","Un poco de curiosidad cada día."),textAlign=TextAlign.Center)}
+                Box(Modifier.weight(.71f)){cards()}
+            } else {Fox(Modifier.fillMaxWidth().height(200.dp),event=child.id);cards()}
+            Row(Modifier.fillMaxWidth().border(1.dp,Ink.soft,RoundedCornerShape(14.dp)).clickable{vm.open("goals")}.padding(18.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically){
+                PaperIcon("goals",Modifier.size(42.dp))
+                Column(Modifier.weight(1f)){
+                    Text(s.say("My next goal","Sıradaki hedefim","Mi próxima meta"),style=MaterialTheme.typography.titleMedium)
+                    val goal=vm.today.nearestGoal
+                    Text(if(goal!=null) "${goal.name} · ${(goal.cost-vm.today.gems).coerceAtLeast(0)} Gem" else s.say("Choose a goal","Bir hedef seç","Elige una meta"))
                 }
-                Text("›", style = MaterialTheme.typography.headlineMedium)
+                Text("→",style=MaterialTheme.typography.titleLarge)
             }
-            if (vm.todayError) Text(s.say("Couldn't refresh progress. Try again when you're connected.", "İlerleme yenilenemedi. Bağlanınca tekrar dene.", "No se pudo actualizar el progreso. Inténtalo al conectarte."), color = Ink.soft)
-            val primary = listOf("math", "english", "puzzle").filter { child.active(it) }
-            primary.chunked(cols).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    row.forEach { type ->
-                        var launching by remember { mutableStateOf(false) }
-                        val still = reduceMotion()
-                        LaunchedEffect(launching) { if (launching) { if (!still) delay(420); vm.open(type) } }
-                        Column(Modifier.weight(1f).card().clickable(enabled = !launching, role = Role.Button) { launching = true }.testTag("quest_$type").padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedPaperIcon(type, launching, Modifier.size(if (cols == 3) 112.dp else 88.dp))
-                            Text(s.say(when(type) { "math" -> "Math"; "english" -> "English"; else -> "Puzzles" }, s("task_$type"), s("task_$type")), style = MaterialTheme.typography.titleLarge)
-                            Text(s.say(when(type) { "math" -> "Solve a challenge"; "english" -> "Play with words"; else -> "Find the pattern" }, "Keşfet ve öğren", "Explora y aprende"), color = Ink.soft, textAlign = TextAlign.Center)
-                            BigButton(s.say("Start", "Başla", "Empezar"), Modifier.fillMaxWidth(), enabled = !launching) { launching = true }
-                            if (today.done(type)) Text(s.say("Done today", "Bugün tamamlandı", "Hecho hoy"), color = Ink.green, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    repeat(cols-row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-            Text(s.say("More to explore", "Keşfedecek daha çok şey var", "Más por descubrir"), style = MaterialTheme.typography.titleLarge)
-            listOf("drawing", "homework", "tree").filter { child.active(it) }.chunked(cols).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    row.forEach { type ->
-                        Row(Modifier.weight(1f).heightIn(min = 80.dp).card().clickable(role = Role.Button) { vm.open(type) }.testTag("quest_$type").padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            PaperIcon(type, Modifier.size(44.dp))
-                            Text(s.say(when(type) { "drawing" -> "Drawing"; "homework" -> "Homework"; else -> "My Tree" }, s("task_$type"), s("task_$type")), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                            Text("›", color = Ink.soft)
-                        }
-                    }
-                    repeat(cols-row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
+            if(vm.todayError)Text(s.say("Progress could not refresh. Try again when connected.","İlerleme yenilenemedi. Bağlanınca tekrar dene.","No se pudo actualizar el progreso."),color=Ink.soft)
         }
     }
 }

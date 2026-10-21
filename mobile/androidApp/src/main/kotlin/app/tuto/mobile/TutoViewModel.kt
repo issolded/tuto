@@ -1,5 +1,6 @@
 package app.tuto.mobile
 
+import app.tuto.mobile.data.AvatarStore
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,7 @@ sealed interface Screen {
     data object Puzzle : Screen
     data object English : Screen
     data class Content(val type: String) : Screen
+    data class Notebook(val page: String) : Screen
     data object Parent : Screen
     /** An activity the tablet does not do natively yet; says so rather than pretending. */
     data class Soon(val type: String) : Screen
@@ -43,8 +45,13 @@ sealed interface Screen {
 
 class TutoViewModel(app: Application) : AndroidViewModel(app) {
     val session = Session(app)
+    private val avatars = AvatarStore(app)
+    var avatar by mutableStateOf(avatars.read(session.child?.id.orEmpty()))
+        private set
+    fun updateAvatar(value: app.tuto.mobile.data.Avatar) { child?.id?.let { avatars.save(it, value); avatar = value } }
     val cloud by lazy { Services.cloudFactory?.invoke(getApplication()) ?: Cloud(getApplication()) }
     val parent by lazy { ParentRun(cloud, api, viewModelScope, getApplication()) }
+    var literacy by mutableStateOf<LiteracyRun?>(null)
     var english by mutableStateOf<EnglishRun?>(null)
     var feature by mutableStateOf<FeatureRun?>(null)
     val engine = MathEngine(app)
@@ -81,6 +88,7 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     fun signedIn(c: Child) {
         session.child = c
         child = c
+        avatar = avatars.read(c.id)
         today = Today.EMPTY
         todayLoaded = false
         screen = Screen.Home
@@ -134,10 +142,12 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
             puzzle = newPuzzleRun()
             screen = Screen.Puzzle
         } else if (type == "english") {
-            english = EnglishRun(viewModelScope, api, child ?: return); screen = Screen.English
+            literacy = LiteracyRun(viewModelScope, api, child ?: return); english = null; screen = Screen.English
         } else if (type in setOf("reading", "writing", "library", "drawing", "homework", "tree", "gems")) {
             feature = FeatureRun(child ?: return, api, cloud, viewModelScope, getApplication())
             screen = Screen.Content(type)
+        } else if (type in setOf("me", "games", "explore")) {
+            screen = Screen.Notebook(type)
         } else if (type == "parent") {
             parent.lock(); screen = Screen.Parent
         } else if (type == "goals") {
@@ -164,7 +174,7 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
     fun home() {
         if (screen == Screen.Math) { math?.close { screen = Screen.Home; refreshToday() }; return }
         if (screen == Screen.Parent) { if(parent.busy) return; parent.lock(); screen = if (child != null) Screen.Home else if (session.familyCode != null) Screen.Pin else Screen.Setup; refreshToday(); return }
-        if (screen == Screen.English) { english?.close { screen = Screen.Home; refreshToday() }; return }
+        if (screen == Screen.English) { if (literacy?.busy == true) return; screen = Screen.Home; refreshToday(); return }
         if (screen is Screen.Content && feature?.busy == true) return
         if (screen == Screen.Puzzle && puzzle?.reviewToClose != null) {
             puzzle?.declineThen { home() }

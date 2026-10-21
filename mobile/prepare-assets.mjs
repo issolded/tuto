@@ -11,3 +11,9 @@ rmSync(assets+'drawings', {recursive:true,force:true});
 writeFileSync(assets+'drawing_steps.json', JSON.stringify(DRAWING_STEPS));
 
 cpSync(fileURLToPath(new URL("./public-config.json", import.meta.url)), assets + "public-config.json");
+
+// Reuse the browser's licensed Noto picture vocabulary for native literacy.
+import { EMOJI_ART } from "../src/lib/puzzleArt.generated.js";
+writeFileSync(assets+"literacy_pictures.json", JSON.stringify(EMOJI_ART));
+
+cpSync(fileURLToPath(new URL("./content/explore_pilots_tr.json", import.meta.url)), assets + "explore_pilots_tr.json");

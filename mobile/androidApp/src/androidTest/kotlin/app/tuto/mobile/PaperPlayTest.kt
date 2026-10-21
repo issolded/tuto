@@ -88,19 +88,20 @@ class PaperPlayTest {
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Next").assertIsDisplayed()
     }
-    @Test fun allMascotClipsAreBundledPlayableAndSilent() {
-        val ctx=InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun allNotebookAvatarPosesRenderVisibleInkAndTransparentCorners() {
         FoxPose.entries.forEach { pose ->
-            assertNotNull("Missing fallback poster for $pose", BitmapFactory.decodeResource(ctx.resources, pose.poster))
-            MediaMetadataRetriever().use { reader ->
-                ctx.resources.openRawResourceFd(pose.clip).use { reader.setDataSource(it.fileDescriptor,it.startOffset,it.length) }
-                assertTrue(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)!!.toLong() in 3900..5200)
-                assertEquals("yes",reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO))
-                assertNull(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO))
-                assertNotNull("Cannot decode $pose", reader.getFrameAtTime(1000000))
-            }
+            val body=avatarDrawing(app.tuto.mobile.data.Avatar(),pose)
+            val svg=com.caverock.androidsvg.SVG.getFromString("""<svg xmlns="http://www.w3.org/2000/svg" width="240" height="400" viewBox="15 0 200 335"><g stroke="#202022" stroke-width="3.2" fill="white">$body</g></svg>""")
+            val bitmap=Bitmap.createBitmap(240,400,Bitmap.Config.ARGB_8888)
+            svg.renderToCanvas(android.graphics.Canvas(bitmap))
+            assertEquals(0,android.graphics.Color.alpha(bitmap.getPixel(0,0)))
+            var ink=0
+            for(y in 0 until 400 step 2)for(x in 0 until 240 step 2){val c=bitmap.getPixel(x,y);if(android.graphics.Color.alpha(c)>0&&android.graphics.Color.red(c)<100)ink++}
+            assertTrue("Missing visible artwork for $pose",ink>300)
+            bitmap.recycle()
         }
     }
+
 }
 
 @Composable private fun TestTheme(content: @Composable () -> Unit) {

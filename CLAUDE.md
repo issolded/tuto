@@ -1505,3 +1505,34 @@ merge after checks and backend/web deployment on 20 October. No migration, real-
 write or real message is needed. Native effect: backend chat context changes after backend
 deployment; no Android APK rebuild is needed. Live conversational acceptance remains for
 the user to verify by asking WhatsApp after deployment.
+
+### 2026-10-21 Android notebook reconstruction
+User approves updating the main Android app; no separate notebook package.
+Reconstruction is on codex/android-notebook from main a1a5b2b, because the prior
+local notebook and 0.14 sources were pruned and their commits unavailable remotely.
+Current decisions override old design notes: tablet, target through age 13, white
+notebook with black ink icons, Home/My Goals/Games/Me; Math/English/Puzzles go
+straight to existing assessment. Latest user requests optional skin tones (paper
+white default), personalised child + pet help entrance and completion celebration.
+Native literacy implementation uses the existing server contract. Explore is a
+Turkish nine-pilot review packet with local notebooks, not a validated curriculum
+or automatic assessor. Exact scope and remaining gates: mobile/design/NOTEBOOK-RECOVERY.md.
+Native effect: APK must be rebuilt; no web/backend/DB deployment in this task.
+
+### Notebook recovery validation and publication status (2026-10-21)
+The reconstructed Android notebook branch builds as the existing application ID
+app.tuto.mobile.preview, versionCode 20 / 0.16.0-notebook. Debug app/test APK,
+lint, 27 Android JVM tests and 5 shared JVM tests pass; 16 KiB native alignment,
+zipalign and v2 signature checks pass. Actual tablet screenshots and original
+0.14 build parity remain unverified; do not claim visual identity or update-key
+compatibility. English UI is fully English and its help entry shows instructions
+with the child's animated companion. Hair/clothing options are EN/TR/ES.
+The GitHub push was rejected by automatic approval review (local build consent
+was not accepted as remote source publication consent). Do not retry through a
+workaround. Preserve the local commits in the supplied incremental Git bundle;
+explicit publication authorization is needed before pushing the branch.
+
+### Remote publication authorization (2026-10-21)
+The user explicitly answered "Evet" to publishing these changes to
+issolded/tuto, branch codex/android-notebook. This supersedes the earlier
+publication hold for this branch. It does not authorize merging into main.

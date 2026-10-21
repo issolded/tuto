@@ -66,6 +66,7 @@ fun PuzzleScreen(vm: TutoViewModel) {
     val run = vm.puzzle ?: return
     val s = LocalStrings.current
     LaunchedEffect(run) { if (run.session == null && run.phase == PuzzleRun.Phase.Loading) run.start() }
+    LaunchedEffect(run.phase) { if (run.phase == PuzzleRun.Phase.Welcome) run.begin() }
     when (run.phase) {
         PuzzleRun.Phase.Loading, PuzzleRun.Phase.Finishing -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
             Fox(Modifier.size(300.dp), FoxPose.Thinking)

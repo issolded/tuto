@@ -182,7 +182,7 @@ class TabletTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             signIn()
             tap("quest_puzzle")
-            waitFor("puzzle welcome", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Welcome }
+            waitFor("puzzle welcome", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Asking }
             val run = Services.currentPuzzle!!
             assertEquals(10, run.total)
             // Every figure the server sent was drawn by the bundled engine.
@@ -192,7 +192,6 @@ class TabletTest {
                 q.options.forEachIndexed { j, o -> if (o.spec != null) assertTrue("q$i option $j undrawn", d.options[j]?.contains("<svg") == true) }
             }
             shot("05-puzzle-welcome")
-            compose.onNodeWithText("Let's go", substring = true).performClick()
             waitFor("puzzle asking") { run.phase == PuzzleRun.Phase.Asking }
 
             // The first answer wrong on purpose, the rest right.
@@ -232,20 +231,18 @@ class TabletTest {
         val api = freshApi().also { it.offerReview = true; it.shortPuzzle = true }
         ActivityScenario.launch(MainActivity::class.java).use {
             signIn()
-            tap("nav-settings")
+            compose.onNodeWithText("Settings").performClick()
             waitFor("settings via bottom navigation") { textExists("Switch child") }
             tap("nav-home")
             tap("quest_puzzle")
-            waitFor("short puzzle ready", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Welcome }
+            waitFor("short puzzle ready", 30_000) { Services.currentPuzzle?.phase == PuzzleRun.Phase.Asking }
             val run = Services.currentPuzzle!!
-            compose.onNodeWithText("Let's go", substring = true).performScrollTo().performClick()
             compose.onNodeWithText("I don’t know").performScrollTo().performClick()
             waitFor("skip settled") { run.answer != null }
             compose.onNodeWithText("Next").performClick()
             waitFor("review offered") { run.phase == PuzzleRun.Phase.Result }
             compose.onNodeWithText("Practise").performScrollTo().performClick()
-            waitFor("review ready") { run.phase == PuzzleRun.Phase.Welcome && run.session?.review == true }
-            compose.onNodeWithText("Let's go", substring = true).performScrollTo().performClick()
+            waitFor("review ready") { run.phase == PuzzleRun.Phase.Asking && run.session?.review == true }
             tap("puzzle_option_${api.answerFor(0)}")
             compose.onNodeWithText("Send", substring = true).performClick()
             waitFor("review finished") { run.phase == PuzzleRun.Phase.Result && api.finishedReview != null }
@@ -274,7 +271,7 @@ class TabletTest {
             // Home, with the server's figures.
             waitFor("home with gems") { textExists("Hello, Ada!") && textExists("42") }
             compose.onNodeWithText("Math").assertExists()
-            compose.onNodeWithTag("nav-library").assertIsDisplayed()
+            compose.onNodeWithTag("quest_library").assertIsDisplayed()
             shot("02-home")
 
             // A full sitting, every answer taken from the engine's own answer key.
