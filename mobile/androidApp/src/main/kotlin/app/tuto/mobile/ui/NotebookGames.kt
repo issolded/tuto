@@ -92,16 +92,19 @@ private val LocalGameReaction=staticCompositionLocalOf<(FoxPose)->Unit>{{}}
  val react=LocalGameReaction.current;val s=LocalStrings.current;val puzzle=remember{NotebookPuzzles.sudoku(advanced)};var values by remember{mutableStateOf(puzzle.given)};var selected by remember{mutableIntStateOf(-1)};var checked by remember{mutableStateOf(false)}
  val done=values==puzzle.solution
  Text(s.say("Use each number once in every row, column and box.","Her sayı satırda, sütunda ve kutuda bir kez olsun.","Usa cada número una vez por fila, columna y bloque."))
+ BoxWithConstraints(Modifier.fillMaxWidth()){
+ val boardWidth=minOf(if(advanced)430.dp else 360.dp,(maxWidth-156.dp).coerceAtLeast(240.dp))
  Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
-  Column(Modifier.width(if(advanced)430.dp else 360.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{y->Row(horizontalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{x->val i=y*puzzle.size+x;val fixed=puzzle.given[i]!=0
-   Box(Modifier.weight(1f).height(if(advanced)44.dp else 87.dp).background(if(i==selected)Color(0xFFBCE9E5)else if(fixed)Color(0xFFF1F0EA)else Color.White).border(if(x%puzzle.box==0||y%puzzle.box==0)2.dp else 1.dp,Ink.soft).clickable(enabled=!fixed&&!done){selected=i},contentAlignment=Alignment.Center){Text(if(values[i]==0)""else values[i].toString(),color=if(checked&&values[i]!=0&&values[i]!=puzzle.solution[i])MaterialTheme.colorScheme.error else Ink.main,style=MaterialTheme.typography.titleLarge)}
+  Column(Modifier.width(boardWidth),verticalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{y->Row(horizontalArrangement=Arrangement.spacedBy(3.dp)){(0 until puzzle.size).forEach{x->val i=y*puzzle.size+x;val fixed=puzzle.given[i]!=0
+   Box(Modifier.weight(1f).height((boardWidth-3.dp*(puzzle.size-1))/puzzle.size).background(if(i==selected)Color(0xFFBCE9E5)else if(fixed)Color(0xFFF1F0EA)else Color.White).border(if(x%puzzle.box==0||y%puzzle.box==0)2.dp else 1.dp,Ink.soft).clickable(enabled=!fixed&&!done){selected=i}.testTag("sudoku-cell-$i"),contentAlignment=Alignment.Center){Text(if(values[i]==0)""else values[i].toString(),color=if(checked&&values[i]!=0&&values[i]!=puzzle.solution[i])MaterialTheme.colorScheme.error else Ink.main,style=MaterialTheme.typography.titleLarge)}
   }}}}
   Column(Modifier.weight(.35f),verticalArrangement=Arrangement.spacedBy(10.dp)){
-   (1..puzzle.size).toList().chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{v->OutlinedButton(onClick={values=values.toMutableList().also{it[selected]=v};checked=false},enabled=selected>=0&&!done,modifier=Modifier.weight(1f)){Text("$v")}}}}
+   (1..puzzle.size).toList().chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{v->OutlinedButton(onClick={values=values.toMutableList().also{it[selected]=v};checked=false},enabled=selected>=0&&!done,modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("sudoku-digit-$v"),contentPadding=PaddingValues(4.dp)){Text("$v")}}}}
    TextButton(onClick={values=values.toMutableList().also{it[selected]=0};checked=false},enabled=selected>=0&&!done){Text(s.say("Erase","Sil","Borrar"))}
    OutlinedButton(onClick={checked=true;react(if(values.withIndex().any{it.value!=0&&it.value!=puzzle.solution[it.index]})FoxPose.Thinking else FoxPose.Happy)}){Text(s.say("Check","Kontrol et","Comprobar"))}
    if(checked&&!done)Text(s.say("Red numbers need another look.","Kırmızı sayılara tekrar bak.","Revisa los números rojos."))
   }
+ }
  }
  if(done)GameWin()
 }

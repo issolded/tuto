@@ -145,6 +145,17 @@ class ModulesTest {
             assertTrue(context.getSharedPreferences("tuto-work-module-test",Context.MODE_PRIVATE).all.values.any{it.toString().contains("My third page.")})
         }
     }
+    @Test fun olderChildCanPlayNineByNineSudoku(){
+        launch(Api()).use{a->
+            a.onActivity{ViewModelProvider(it)[TutoViewModel::class.java].signedIn(child.copy(age=13))}
+            open(a,"games");compose.onNodeWithTag("game-sudoku").performScrollTo().performClick()
+            compose.onNodeWithTag("sudoku-cell-2").performScrollTo().performClick()
+            compose.onNodeWithTag("sudoku-digit-9").performScrollTo().performClick()
+            compose.onNodeWithTag("sudoku-cell-2").assertTextEquals("9")
+            compose.onNodeWithText("Erase").performScrollTo().performClick();compose.onNodeWithTag("sudoku-cell-2").assertTextEquals("")
+            screenshot("sudoku-advanced",a)
+        }
+    }
     @Test fun wordHuntCompletesAllDirectionsAndRetainsProgress(){
         launch(Api()).use{a->open(a,"games");compose.onNodeWithTag("game-words").performScrollTo().performClick()
             val letters=(0 until 49).map{i->compose.onNodeWithTag("word-cell-$i").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString(""){it.text}.single()}
