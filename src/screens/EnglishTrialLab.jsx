@@ -215,6 +215,7 @@ function Item({ item, variety, review, round, onDone }) {
       )}
       {item.prompt?.context && <div style={{ fontFamily: FONT, fontSize: 19, color: INK, lineHeight: 1.5 }}>{item.prompt.context}</div>}
       {item.prompt?.text && <div style={{ fontFamily: FONT, fontSize: item.mode === 'read-picture' ? 26 : 20, fontWeight: 700, color: INK, lineHeight: 1.4 }}>{item.prompt.text}</div>}
+      {item.prompt?.ask && <div style={{ fontFamily: FONT, fontSize: 19, color: INK, lineHeight: 1.5 }}>{item.prompt.ask}</div>}
       {item.prompt?.picture && <Picture p={item.prompt.picture} size={130} />}
       {item.prompt?.audio && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
