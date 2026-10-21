@@ -102,12 +102,18 @@ class ModulesTest {
             fun capture(name:String) {
                 compose.waitForIdle()
                 val instrumentation=InstrumentationRegistry.getInstrumentation()
+                instrumentation.waitForIdleSync()
+                android.os.SystemClock.sleep(400) // Let SurfaceFlinger present the new native screen before capture.
                 val dir=java.io.File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
                 instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
                     java.io.File(dir,"notebook-$name.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
                     bitmap.recycle()
                 }
             }
+            compose.onNodeWithTag("nav-home").assertIsDisplayed()
+            compose.mainClock.advanceTimeBy(300)
+            compose.waitForIdle()
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
             capture("home")
             compose.onNodeWithTag("nav-me").performClick()
             capture("me")
@@ -141,6 +147,17 @@ class ModulesTest {
             listOf("memory","tangram","words","sudoku","maze","pattern").forEach { id ->
                 compose.onNodeWithTag("game-$id").performScrollTo().performClick()
                 compose.onNodeWithTag("game-restart").performScrollTo().performClick()
+                compose.onNodeWithText("Back").performScrollTo()
+                compose.waitForIdle()
+                val instrumentation=InstrumentationRegistry.getInstrumentation()
+                instrumentation.waitForIdleSync()
+                instrumentation.waitForIdleSync()
+                android.os.SystemClock.sleep(400) // Let SurfaceFlinger present the new native screen before capture.
+                val dir=java.io.File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
+                instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
+                    java.io.File(dir,"game-$id.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+                    bitmap.recycle()
+                }
                 compose.onNodeWithText("Back").performScrollTo().performClick()
                 compose.onNodeWithTag("game-$id").assertExists()
             }

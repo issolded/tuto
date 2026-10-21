@@ -77,3 +77,5 @@ content are NOT copied: furniture links into the existing production data flows.
 Restoration is code-native; do not claim the artwork is Rive or Lottie-authored.
 Existing native animation respects reduced motion and lifecycle. Visual match
 must be assessed on actual Android captures before a final design claim.
+
+Creator polish retains all six expression choices inside Character, with illustrated category tabs. Tablet capture waits for the signed-in Home controls and also records every playable game, so the visual review uses actual native screens.

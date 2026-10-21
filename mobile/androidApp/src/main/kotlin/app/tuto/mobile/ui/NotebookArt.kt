@@ -40,6 +40,9 @@ import com.caverock.androidsvg.SVG
 }
 
 internal fun notebookIcon(type:String):String=when(type) {
+    "outfit" -> """<path d="M38 22q22 15 44 0l25 18-16 23-12-9v48H40V54L27 64 12 41Z"/><path d="M44 25q15 22 32 0" fill="none"/>"""
+    "extras" -> """<path d="M23 78q-1-49 36-51 38 0 40 51ZM23 78q46-8 77 0l14 9q-27 16-60 1L23 88Z"/><path d="M59 28q17 15 14 49" fill="none" stroke-width="2"/>"""
+    "pet" -> """<ellipse cx="29" cy="37" rx="11" ry="16" transform="rotate(-25 29 37)"/><ellipse cx="54" cy="23" rx="10" ry="16"/><ellipse cx="79" cy="27" rx="10" ry="16" transform="rotate(15 79 27)"/><ellipse cx="98" cy="47" rx="10" ry="15" transform="rotate(25 98 47)"/><path d="M34 67q25-36 43-6 26 17 14 34-10 13-31 0-24 15-36 2-12-16 10-30Z"/>"""
     "math" -> """<path d="M13 104 14 39l63 65Z"/><path d="M25 89V65l24 24ZM14 52h7m-7 12h6m-6 12h7m-7 12h6m5 16v-6m12 6v-7m12 7v-6m12 6v-7" fill="none" stroke-width="1.7"/><path d="m68 36-19 52m26-50 25 54M60 64q18 9 27 0" fill="none"/><circle cx="70" cy="30" r="9"/><circle cx="70" cy="30" r="3"/><path d="m69 21 1-12m-20 77-4 10m54-3 4 10" fill="none"/>"""
     "english" -> """<path d="M24 21 93 12l12 82-70 10-7-5-10-67q-2-8 6-11Z"/><path d="m31 25 58-8 10 70-58 9ZM24 21l12 77m-8 1 8-1m-9 5 9 1" fill="none" stroke-width="2"/><path d="m48 47 5-17 9 15m-12-5 9-1M58 54l2 18q17-1 10-10 7-8-12-8Zm2 9 8-1M81 76q-16-6-12 9 4 8 16 2" fill="none" stroke-width="2.7"/>"""
     "reading","library","writing" -> """<path d="M60 26Q34 13 12 20v77q25-7 48 4 23-11 48-4V20Q83 13 60 26Z"/><path d="M60 26v75M24 37l23 4M24 51l23 4M24 65l23 4m26-28 23-4M73 55l23-4M73 69l23-4" fill="none" stroke-width="2"/>"""
