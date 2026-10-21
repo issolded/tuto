@@ -14,8 +14,8 @@ android {
         applicationId = "app.tuto.mobile.preview"
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "0.17.0-notebook"
+        versionCode = 22
+        versionName = "0.18.0-notebook"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
         externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=MinSizeRel" } }

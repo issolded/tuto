@@ -39,7 +39,7 @@ fun BottomNavigation(vm: TutoViewModel) {
                 else -> s.say("Me", "Ben", "Yo")
             }
             NavigationBarItem(selected = selected, onClick = { if(route == "home") vm.home() else vm.open(route) },
-                icon = { AnimatedPaperIcon(route, selected, Modifier.size(30.dp)) }, label = { Text(label) },
+                icon = { AnimatedPaperIcon(route, selected, Modifier.size(37.dp)) }, label = { Text(label) },
                 colors = NavigationBarItemDefaults.colors(indicatorColor = LocalPalette.current.soft, selectedTextColor = Ink.main, unselectedTextColor = Ink.soft),
                 modifier = Modifier.testTag("nav-$route"))
         }

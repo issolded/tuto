@@ -109,7 +109,7 @@ internal fun seatedReaderDrawing(a:app.tuto.mobile.data.Avatar):String {
   val u=maxWidth/1216f
   RoomArtwork(Modifier.fillMaxSize())
   NotebookArt(seatedReaderDrawing(a),Modifier.offset(u*475,u*139).size(u*185,u*271),"15 0 190 285",s.say("Your avatar reading","Kitap okuyan avatarın","Tu avatar leyendo"))
-  if(a.pet>=0)NotebookArt(petDrawing(a.pet),Modifier.offset(u*707,u*316).size(u*105,u*105))
+  if(a.pet>=0)NotebookArt(petDrawing(a.pet,a.petColor),Modifier.offset(u*707,u*316).size(u*105,u*105))
   @Composable fun target(x:Float,y:Float,w:Float,h:Float,label:String,tag:String,enabled:Boolean=true,action:()->Unit){
    Box(Modifier.offset(u*x,u*y).size(u*w,u*h).clickable(enabled=enabled,role=Role.Button,onClickLabel=label,onClick=action).testTag(tag),contentAlignment=Alignment.BottomCenter){
     Surface(color=Color.White,shape=RoundedCornerShape(10.dp),border=BorderStroke(1.5.dp,Ink.main),modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(label,Modifier.padding(8.dp),style=MaterialTheme.typography.titleLarge,textAlign=androidx.compose.ui.text.style.TextAlign.Center)}

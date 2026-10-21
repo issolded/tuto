@@ -1,11 +1,11 @@
 package app.tuto.mobile.ui
 
 /** Each species owns its whole silhouette, feet and tail, not just interchangeable ears. */
-internal fun petDrawing(kind:Int):String {
+internal fun petDrawing(kind:Int,color:Int=0):String {
  if(kind<0)return ""
  val shadow="<ellipse cx='61' cy='111' rx='43' ry='4' fill='#E5E3DD' stroke='none'/>"
  val face="<ellipse cx='49' cy='48' rx='2.5' ry='3.5' fill='#202022'/><ellipse cx='69' cy='47' rx='2.5' ry='3.5' fill='#202022'/><path d='M55 58q5-5 10 0l-5 4Z' fill='#202022'/><path d='M60 62q-2 9-9 3m9-3q2 8 9 2' fill='none' stroke-width='1.8'/>"
- return shadow+when(kind){
+ val art=when(kind){
   0->"""<path d='M84 97q17-2 14-24 17 21-2 32' fill='none' stroke-width='7'/>
   <path d='M43 66q-21 21-13 39l14 3h37q15-3 10-18L76 65Z'/>
   <path d='m46 83-1 20q-13-1-10 7h18l2-30m12 0 1 23q13-1 10 7H61l-1-30' fill='white'/>
@@ -46,4 +46,11 @@ internal fun petDrawing(kind:Int):String {
   <path d='M16 90Q16 40 54 43q34 0 33 47-32 14-71 0Z' fill='#8DAB73'/>
   <path d='m41 48-10 18 10 18 24-1 13-18-14-18m-33 19-14 8m24 10-3 13m27-14 7 12m6-30 7 7' fill='none' stroke-width='2.2'/><path d='M16 90q32 14 71 0' fill='none' stroke-width='4'/>"""
  }
+ return shadow+"<g fill='${petColors(kind)[color.coerceIn(0,4)]}'>"+art.replace("fill='white'", "fill='${petColors(kind)[color.coerceIn(0,4)]}'")+"</g>"
+}
+internal fun petColors(kind:Int)=when(kind){
+  3->listOf("#FFFFFF","#D8A077","#C8895F","#D5C5AF","#EEE6D9")
+  4->listOf("#FFFFFF","#FAF5EB","#EBE7DE","#E5E3DE","#F2E9D9")
+  5->listOf("#FFFFFF","#C7D1AE","#B8C7A0","#D4CCAE","#CAD5C5")
+  else->listOf("#FFFFFF","#D9C6AC","#AD8E75","#AEB4BA","#E4D9CD")
 }

@@ -21,13 +21,23 @@ object NotebookPuzzles {
  data class WordGrid(val size:Int,val letters:List<Char>,val words:List<String>)
  fun wordGrid(random:Random=Random.Default):WordGrid {
   val n=7;val words=listOf("CAT","DOG","MOON","STAR","BIRD");val cells=MutableList(n*n){('A'..'Z').random(random)}
-  words.forEachIndexed{i,w->val row=i;val start=random.nextInt(n-w.length+1);w.forEachIndexed{j,c->cells[row*n+start+j]=c}}
+  val paths=listOf(listOf(0,1,2),listOf(14,21,28),listOf(3,11,19,27),listOf(6,12,18,24),listOf(35,36,37,38))
+  val mirror=random.nextBoolean()
+  words.zip(paths).forEach{(word,path)->path.forEachIndexed{i,index->val cell=if(mirror)(index/n)*n+(n-1-index%n)else index;cells[cell]=word[i]}}
   return WordGrid(n,cells,words)
  }
  fun line(start:Int,end:Int,size:Int):List<Int>{
+  if(size<=0||start !in 0 until size*size||end !in 0 until size*size)return emptyList()
   val x=start%size;val y=start/size;val dx=end%size-x;val dy=end/size-y
   if(dx!=0&&dy!=0&&kotlin.math.abs(dx)!=kotlin.math.abs(dy))return emptyList()
   val steps=maxOf(kotlin.math.abs(dx),kotlin.math.abs(dy));if(steps==0)return listOf(start)
   return (0..steps).map{(y+dy/steps*it)*size+x+dx/steps*it}
+ }
+ data class WordSelection(val found:Set<String> = emptySet(),val marked:Set<Int> = emptySet())
+ fun select(grid:WordGrid,state:WordSelection,start:Int,end:Int):WordSelection {
+  val path=line(start,end,grid.size);if(path.isEmpty())return state
+  val word=path.map{grid.letters[it]}.joinToString("")
+  val match=grid.words.firstOrNull{it==word||it==word.reversed()}?:return state
+  return WordSelection(state.found+match,state.marked+path)
  }
 }

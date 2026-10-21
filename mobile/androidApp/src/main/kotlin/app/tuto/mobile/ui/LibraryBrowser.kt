@@ -30,6 +30,7 @@ import org.json.JSONObject
     var choosingBook by remember { mutableStateOf(false) }
     var filters by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var readingFilter by rememberSaveable { mutableStateOf("all") }
     var kind by rememberSaveable { mutableStateOf("all") }
     var year by rememberSaveable { mutableStateOf("") }
     var page by rememberSaveable { mutableIntStateOf(0) }
@@ -37,17 +38,19 @@ import org.json.JSONObject
     val all=books.map { it to false } + stories.map { it to true }
     fun completed(item: Pair<JSONObject,Boolean>) = if(item.second) item.first.optString("status")=="completed" else item.first.optBoolean("completed")
     fun finishedYear(b: JSONObject)=b.optStringOrNull("completed_at")?.take(4).orEmpty()
-    val items=all.filter { completed(it)==archive && it.first.optString("title").contains(query,true) && (kind=="all" || it.second==(kind=="stories")) && (year.isEmpty() || finishedYear(it.first)==year) }
+    val items=all.filter { (if(allowWriting)completed(it)==archive else when(readingFilter){"completed"->completed(it);"reading"->!completed(it)&&it.first.optInt("current_page")>0;"want"->!completed(it)&&it.first.optInt("current_page")==0;else->true}) && it.first.optString("title").contains(query,true) && (kind=="all" || it.second==(kind=="stories")) && (year.isEmpty() || finishedYear(it.first)==year) }
     val years=all.filter(::completed).map { finishedYear(it.first) }.filter { it.isNotBlank() }.distinct().sortedDescending()
     Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Text(s.say("My Stories", "Hikâyelerim", "Mis historias"), style=MaterialTheme.typography.headlineMedium)
+            Text(if(allowWriting)s.say("My Stories", "Hikâyelerim", "Mis historias")else s.say("My bookshelf","Kitap rafım","Mi estantería"), style=MaterialTheme.typography.headlineMedium)
             Text(s.say("A little reading, a big adventure.", "Biraz okuma, büyük bir macera.", "Un poco de lectura, una gran aventura."), color=Ink.soft)
         }
     }
     FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected=!archive,onClick={onArchive(false);page=0},label={Text(s.say("Continue reading", "Okumaya devam", "Seguir leyendo"))})
-        FilterChip(selected=archive,onClick={onArchive(true);page=0},label={Text(s.say("My bookshelf", "Kitap rafım", "Mi estantería"))},modifier=Modifier.testTag("library-archive"))
+        if(allowWriting){
+            FilterChip(!archive,{onArchive(false);page=0},label={Text(s.say("Drafts","Taslaklar","Borradores"))})
+            FilterChip(archive,{onArchive(true);page=0},label={Text(s.say("Completed","Tamamlanan","Terminados"))},modifier=Modifier.testTag("library-archive"))
+        } else listOf("all" to s.say("All","Tümü","Todos"),"reading" to s.say("Reading","Okuyorum","Leyendo"),"completed" to s.say("Completed","Tamamlanan","Terminados"),"want" to s.say("Want to Read","Okumak istiyorum","Quiero leer")).forEach{(value,label)->FilterChip(readingFilter==value,{readingFilter=value;page=0},label={Text(label)},modifier=Modifier.testTag("books-filter-$value"))}
             if(allowReading) Button(onClick={choosingBook=true},enabled=!busy,modifier=Modifier.testTag("choose-book")) { Text(s.say("Choose a book", "Kitap seç", "Elegir un libro")) }
             if(allowWriting) Button(onClick=onNewStory,enabled=!busy,modifier=Modifier.testTag("new-story")) { Text(s.say("Write a story", "Hikâye yaz", "Escribir cuento")) }
         TextButton(onClick={filters=!filters}) { Text(s.say("Search and filters", "Arama ve filtreler", "Buscar y filtrar")) }
@@ -74,7 +77,7 @@ import org.json.JSONObject
         }
         Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.Top) {
-                if(wide) Column(Modifier.width(220.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                if(wide||items.isEmpty()) Column(Modifier.width(220.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                     Fox(Modifier.fillMaxWidth().height(240.dp),FoxPose.Reading)
                     Text(s.say("$completedCount books finished", "$completedCount kitap tamamlandı", "$completedCount libros terminados"))
                 }
@@ -158,7 +161,7 @@ private val BookColors=listOf(Color(0xFF315B75), Color(0xFF6C8265), Color(0xFFA7
                         row.forEach { item ->
                             Column(Modifier.weight(1f).padding(bottom=1.dp).clickable(role=androidx.compose.ui.semantics.Role.Button) { onSelect(item) }.testTag("shelf-${item.first.optString("id")}"), horizontalAlignment=Alignment.CenterHorizontally) {
                                 BookCover(item.first, Modifier.fillMaxWidth().height(164.dp))
-                                if(!archive && !item.second && item.first.optInt("total_pages")>0) {
+                                if(!item.second && item.first.optInt("total_pages")>0) {
                                     val b=item.first
                                     LinearProgressIndicator(progress={(b.optInt("current_page").toFloat()/b.optInt("total_pages")).coerceIn(0f,1f)}, modifier=Modifier.fillMaxWidth().padding(top=6.dp).height(6.dp))
                                 }

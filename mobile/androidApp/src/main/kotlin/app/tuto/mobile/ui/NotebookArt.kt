@@ -31,11 +31,17 @@ import com.caverock.androidsvg.SVG
     Box(Modifier.fillMaxSize()) {
         Canvas(Modifier.fillMaxSize()) {
             val unit=1.dp.toPx()
-            drawLine(Color(0xFFE3E1DB),Offset(27*unit,0f),Offset(27*unit,size.height),unit)
-            var y=24*unit
-            while(y<size.height) { drawOval(Color(0xFF272727),Offset(3*unit,y),androidx.compose.ui.geometry.Size(24*unit,10*unit),style=androidx.compose.ui.graphics.drawscope.Stroke(2*unit));y+=48*unit }
+            drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0x10000000),Color.Transparent),startX=20*unit,endX=29*unit),Offset(20*unit,0f),androidx.compose.ui.geometry.Size(9*unit,size.height))
+            var y=22*unit
+            while(y<size.height) {
+                drawCircle(Color(0xFFE4E2DD),3.5f*unit,Offset(18*unit,y))
+                drawCircle(Color(0xFF555555),2f*unit,Offset(18*unit,y))
+                val wire=androidx.compose.ui.graphics.Path().apply{moveTo(18*unit,y);cubicTo(-3*unit,y-12*unit,-3*unit,y+9*unit,9*unit,y+8*unit)}
+                drawPath(wire,Ink.main,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6f*unit,cap=androidx.compose.ui.graphics.StrokeCap.Round))
+                y+=42*unit
+            }
         }
-        Box(Modifier.fillMaxSize().padding(start=36.dp,end=14.dp)) { content() }
+        Box(Modifier.fillMaxSize().padding(start=30.dp,end=14.dp)) { content() }
     }
 }
 

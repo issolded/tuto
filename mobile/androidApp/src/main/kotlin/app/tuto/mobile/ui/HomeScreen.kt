@@ -60,7 +60,7 @@ fun HomeScreen(vm: TutoViewModel) {
     LaunchedEffect(child.id){vm.refreshToday()}
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide=maxWidth/LocalDensity.current.fontScale.coerceAtLeast(1f)>=760.dp
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                 Text("TUTO",style=MaterialTheme.typography.headlineLarge)
                 Text(s.say("Hello, ${child.name}!","Merhaba, ${child.name}!","¡Hola, ${child.name}!"),Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium)
@@ -75,8 +75,8 @@ fun HomeScreen(vm: TutoViewModel) {
             val cards:@Composable ()->Unit={
                 Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     tiles.chunked(if(wide)3 else 2).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)){
-                        row.forEach{type->Column(Modifier.weight(1f).height(182.dp).border(1.5.dp,Ink.main,RoundedCornerShape(18.dp)).clickable(role=Role.Button){vm.open(type)}.testTag("quest_$type").padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp,Alignment.CenterVertically)){
-                            AnimatedSubjectIcon(type,Modifier.size(86.dp))
+                        row.forEach{type->Column(Modifier.weight(1f).height(161.dp).border(1.5.dp,Ink.main,RoundedCornerShape(18.dp)).clickable(role=Role.Button){vm.open(type)}.testTag("quest_$type").padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp,Alignment.CenterVertically)){
+                            AnimatedSubjectIcon(type,Modifier.size(74.dp))
                             Text(when(type){"math"->s.say("Math","Matematik","Matemáticas");"english"->"English";"puzzle"->s.say("Puzzles","Bulmacalar","Acertijos");"library"->s.say("My Stories","Hikâyelerim","Mis historias");"explore"->s.say("Explore","Keşfet","Explorar");else->s.say("My Drawing","Çizimlerim","Mis dibujos")},style=MaterialTheme.typography.titleLarge,maxLines=2,textAlign=TextAlign.Center)
                         }}
                         repeat((if(wide)3 else 2)-row.size){Spacer(Modifier.weight(1f))}
@@ -84,15 +84,19 @@ fun HomeScreen(vm: TutoViewModel) {
                 }
             }
             if(wide) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp),verticalAlignment=Alignment.CenterVertically){
-                Column(Modifier.weight(.29f),horizontalAlignment=Alignment.CenterHorizontally){Fox(Modifier.fillMaxWidth().height(310.dp),event=child.id);Text(s.say("A little curiosity, every day.","Her gün biraz merak.","Un poco de curiosidad cada día."),textAlign=TextAlign.Center)}
+                Column(Modifier.weight(.29f),horizontalAlignment=Alignment.CenterHorizontally){Fox(Modifier.fillMaxWidth().height(276.dp),event=child.id);Text(s.say("A little curiosity, every day.","Her gün biraz merak.","Un poco de curiosidad cada día."),textAlign=TextAlign.Center)}
                 Box(Modifier.weight(.71f)){cards()}
             } else {Fox(Modifier.fillMaxWidth().height(200.dp),event=child.id);cards()}
-            Row(Modifier.fillMaxWidth().border(1.dp,Ink.soft,RoundedCornerShape(14.dp)).clickable{vm.open("goals")}.padding(18.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically){
+            Row(Modifier.fillMaxWidth().border(1.dp,Ink.soft,RoundedCornerShape(14.dp)).clickable{vm.open("goals")}.padding(12.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically){
                 PaperIcon("goals",Modifier.size(42.dp))
                 Column(Modifier.weight(1f)){
-                    Text(s.say("My next goal","Sıradaki hedefim","Mi próxima meta"),style=MaterialTheme.typography.titleMedium)
-                    val goal=vm.today.nearestGoal
-                    Text(if(goal!=null) "${goal.name} · ${(goal.cost-vm.today.gems).coerceAtLeast(0)} Gem" else s.say("Choose a goal","Bir hedef seç","Elige una meta"))
+                    val today=vm.today
+                    Text(s.say("Today · ${today.activities.values.sum()} activities completed","Bugün · ${today.activities.values.sum()} etkinlik tamamlandı","Hoy · ${today.activities.values.sum()} actividades completadas"),style=MaterialTheme.typography.titleMedium)
+                    if(today.bonusActive&&today.bonusTypes.isNotEmpty()) {
+                        val done=today.bonusTypes.count{today.done(it)};val target=today.bonusTypes.size
+                        androidx.compose.material3.LinearProgressIndicator(progress={done.toFloat()/target},modifier=Modifier.fillMaxWidth().padding(vertical=4.dp))
+                        Text(s.say("Daily target: $done / $target · ${if(today.bonusEarned)"Earned" else "Reward"} ${today.bonusGems} Gems","Günlük hedef: $done / $target · ${today.bonusGems} Gem","Meta diaria: $done / $target · ${today.bonusGems} gemas"),style=MaterialTheme.typography.bodySmall)
+                    }else Text(s.say("Your progress, one activity at a time.","Her etkinlikte bir adım ileri.","Tu progreso, una actividad a la vez."),style=MaterialTheme.typography.bodySmall)
                 }
                 Text("→",style=MaterialTheme.typography.titleLarge)
             }

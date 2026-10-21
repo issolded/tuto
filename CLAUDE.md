@@ -1547,3 +1547,6 @@ appropriate catalog filtering; boy catalog has no skirt. Pets require separate
 full-body silhouettes, not a shared dog torso with switched heads. Room links
 must preserve real reading/writing/library records. Main subject icons retain
 black-ink illustration and add quiet, lifecycle/reduced-motion-aware motion.
+
+### 2026-10-21 Native notebook improvement sprint (Codex)
+User requested native Android changes on codex/android-notebook, preserving approved two-panel creator, room, six modules/games and bottom navigation. 0.18 adds independent hair/pet colors, five faces and five hair styles per gender, reusable pose expressions, legacy avatar JSON migration, direct book tracking with existing books table/IDs and no reward writes, status filters, two-facing-page writing using whitespace page separators in existing text/draft API, endpoint Word Hunt with yellow persistent selection, compact real daily progress and narrow spiral edge. No web/backend/parent-policy changes or DB migration. All reading assessment, handwriting import, cover-title reading and story assessment actions retained. Validation is in progress; do not equate this entry with acceptance. No physical Android tablet is connected; physical QA and live family/provider/storage E2E remain unverified.

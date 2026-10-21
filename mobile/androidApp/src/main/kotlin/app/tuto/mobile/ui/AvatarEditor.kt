@@ -40,24 +40,27 @@ import app.tuto.mobile.data.LocalStrings
      }
     }
     Text(when(tab){0->s.say("Make it look like you","Sana benzesin","Que se parezca a ti");1->s.say("Choose your outfit","Kıyafetini seç","Elige tu ropa");2->s.say("A little personality","Biraz kişilik kat","Un toque personal");else->s.say("Choose your companion","Dostunu seç","Elige tu compañero")},style=MaterialTheme.typography.titleLarge)
-    if(tab==0)Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(!expressions,{expressions=false},label={Text(s.say("Hair","Saç","Pelo"))});FilterChip(expressions,{expressions=true},label={Text(s.say("Expression","İfade","Expresión"))})}
-    val ids=when(tab){0->if(expressions)(0..5).toList() else if(a.gender==0)listOf(0,1,4)else listOf(2,3,5);1->(0..5).toList();2->(0..3).toList();else->(0..5).toList()}
+    if(tab==0)Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(!expressions,{expressions=false},label={Text(s.say("Hair","Saç","Pelo"))});FilterChip(expressions,{expressions=true},label={Text(s.say("Face","Yüz","Rostro"))})}
+    val ids=when(tab){0->if(expressions)(0..4).toList() else hairOptions(a.gender);1->(if(a.gender==0)0..1 else 0..2).toList();2->(0..3).toList();else->(0..5).toList()}
     val petLabels=listOf(s.say("Dog","Köpek","Perro"),s.say("Cat","Kedi","Gato"),s.say("Rabbit","Tavşan","Conejo"),s.say("Fox","Tilki","Zorro"),s.say("Panda","Panda","Panda"),s.say("Turtle","Kaplumbağa","Tortuga"))
     ids.chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
      row.forEach{id->
-      val outfit=if(a.gender==0)id%2 else id%3
-      val selected=when(tab){0->if(expressions)a.face==id else a.hair==id;1->a.shirt==id&&a.outfit==outfit;2->a.accessory==id;else->a.pet==id}
-      val label=when(tab){0->if(expressions)listOf(s.say("Normal","Normal","Normal"),s.say("Happy","Mutlu","Feliz"),s.say("Thinking","Düşünen","Pensando"),s.say("Celebrating","Kutlayan","Celebrando"),s.say("Encouraging","Destekleyen","Animando"),s.say("Surprised","Şaşkın","Sorprendido"))[id] else listOf(s.say("Curly","Kıvırcık","Rizado"),s.say("Short","Kısa","Corto"),s.say("Bob","Küt","Melena"),s.say("Ponytail","At kuyruğu","Coleta"),s.say("Spiky","Dik","De punta"),s.say("Braids","Örgü","Trenzas"))[id];1->listOf(s.say("Shorts","Şort","Pantalón corto"),s.say("Trousers","Pantolon","Pantalón"),s.say("Dress","Elbise","Vestido"))[outfit];2->listOf(s.say("None","Yok","Ninguno"),s.say("Glasses","Gözlük","Gafas"),s.say("Headphones","Kulaklık","Auriculares"),s.say("Cap","Şapka","Gorra"))[id];else->petLabels[id]}
-      OutlinedCard(onClick={vm.updateAvatar(when(tab){0->if(expressions)a.copy(face=id) else a.copy(hair=id);1->a.copy(shirt=id,outfit=outfit);2->a.copy(accessory=id);else->a.copy(pet=id)})},modifier=Modifier.weight(1f).height(136.dp).testTag("avatar-choice-$tab-$id"),border=BorderStroke(if(selected)3.dp else 1.dp,if(selected)MaterialTheme.colorScheme.primary else Ink.soft.copy(alpha=.35f)),colors=CardDefaults.outlinedCardColors(containerColor=androidx.compose.ui.graphics.Color.White)){
+      val outfit=id
+      val selected=when(tab){0->if(expressions)a.face==id else a.hair==id;1->a.outfit==id;2->a.accessory==id;else->a.pet==id}
+      val label=when(tab){0->if(expressions)s.say("Face ${id+1}","Yüz ${id+1}","Rostro ${id+1}") else listOf("Curly","Short","Bob","Ponytail","Spiky","Braids","Side part","Crop","Bun","Waves")[id];1->listOf(s.say("Shorts","Şort","Pantalón corto"),s.say("Trousers","Pantolon","Pantalón"),s.say("Dress","Elbise","Vestido"))[outfit];2->listOf(s.say("None","Yok","Ninguno"),s.say("Glasses","Gözlük","Gafas"),s.say("Headphones","Kulaklık","Auriculares"),s.say("Cap","Şapka","Gorra"))[id];else->petLabels[id]}
+      OutlinedCard(onClick={vm.updateAvatar(when(tab){0->if(expressions)a.copy(face=id) else a.copy(hair=id);1->a.copy(outfit=outfit);2->a.copy(accessory=id);else->a.copy(pet=id)})},modifier=Modifier.weight(1f).height(136.dp).testTag("avatar-choice-$tab-$id"),border=BorderStroke(if(selected)3.dp else 1.dp,if(selected)MaterialTheme.colorScheme.primary else Ink.soft.copy(alpha=.35f)),colors=CardDefaults.outlinedCardColors(containerColor=androidx.compose.ui.graphics.Color.White)){
        Box(Modifier.fillMaxWidth().weight(1f).padding(8.dp)) {
-        if(tab==3)NotebookArt(petDrawing(id),Modifier.fillMaxSize(),description=label)
-        else NotebookArt(avatarDrawing(when(tab){0->if(expressions)a.copy(face=id,accessory=0) else a.copy(hair=id,accessory=0);1->a.copy(shirt=id,outfit=outfit);else->a.copy(accessory=id)},FoxPose.Welcome),Modifier.fillMaxSize(),if(tab==1)"25 125 155 195" else "15 0 165 140",label)
+        if(tab==3)NotebookArt(petDrawing(id,a.petColor),Modifier.fillMaxSize(),description=label)
+        else NotebookArt(avatarDrawing(when(tab){0->if(expressions)a.copy(face=id,accessory=0) else a.copy(hair=id,accessory=0);1->a.copy(outfit=outfit);else->a.copy(accessory=id)},FoxPose.Welcome),Modifier.fillMaxSize(),if(tab==1)"25 125 155 195" else "15 0 165 140",label)
         if(selected)Text("✓",Modifier.align(Alignment.TopEnd),color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.titleLarge)
        }
        Text(label,Modifier.align(Alignment.CenterHorizontally).padding(bottom=8.dp),style=MaterialTheme.typography.labelLarge)
       }
      };repeat(3-row.size){Spacer(Modifier.weight(1f))}
     }}
+    if(tab==0&&!expressions) AvatarColors(s.say("Hair color","Saç rengi","Color de pelo"),HairHex,a.hairColor){vm.updateAvatar(a.copy(hairColor=it))}
+    if(tab==1) AvatarColors(s.say("Outfit color","Kıyafet rengi","Color de ropa"),ShirtHex,a.shirt){vm.updateAvatar(a.copy(shirt=it))}
+    if(tab==3&&a.pet>=0) AvatarColors(s.say("Pet color","Dostunun rengi","Color de mascota"),petColors(a.pet),a.petColor){vm.updateAvatar(a.copy(petColor=it))}
     if(tab==3)Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
      OutlinedTextField(a.petName,{vm.updateAvatar(a.copy(petName=it.take(30)))},label={Text(s.say("Pet name","Dostunun adı","Nombre de mascota"))},singleLine=true,modifier=Modifier.weight(1f))
      FilterChip(a.pet<0,{vm.updateAvatar(a.copy(pet=-1))},label={Text(s.say("No pet","Dost yok","Sin mascota"))})
@@ -70,8 +73,16 @@ import app.tuto.mobile.data.LocalStrings
   }
   HorizontalDivider()
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-   OutlinedButton(onClick={val hair=if(a.gender==0)listOf(0,1,4).random()else listOf(2,3,5).random();vm.updateAvatar(a.copy(hair=hair,shirt=(0..5).random(),outfit=(if(a.gender==0)0..1 else 0..2).random(),accessory=(0..3).random(),pet=(0..5).random()))}){Text(s.say("Shuffle","Karıştır","Mezclar"))}
+   OutlinedButton(onClick={val hair=hairOptions(a.gender).random();vm.updateAvatar(a.copy(hair=hair,shirt=(0..5).random(),outfit=(if(a.gender==0)0..1 else 0..2).random(),accessory=(0..3).random(),pet=(0..5).random()))}){Text(s.say("Shuffle","Karıştır","Mezclar"))}
    Button(onClick={vm.open("me")}){Text(s.say("Looks like me!","İşte benim!","¡Así soy yo!"))}
   }
  }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun AvatarColors(label:String,colors:List<String>,selected:Int,onSelect:(Int)->Unit){
+ Text(label,style=MaterialTheme.typography.labelLarge)
+ FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) { colors.forEachIndexed{i,hex->
+  OutlinedButton(onClick={onSelect(i)},modifier=Modifier.size(48.dp).testTag("$label-$i"),contentPadding=PaddingValues(0.dp),colors=ButtonDefaults.outlinedButtonColors(containerColor=androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(hex))),border=BorderStroke(if(selected==i)3.dp else 1.dp,Ink.main)) { Text(if(selected==i)"✓"else "",color=if(android.graphics.Color.luminance(android.graphics.Color.parseColor(hex))<.35f)androidx.compose.ui.graphics.Color.White else Ink.main) }
+ } }
 }

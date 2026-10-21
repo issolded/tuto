@@ -45,6 +45,7 @@ class ModulesTest {
     }
     private lateinit var activeCloud:TestCloud
     private class TestCloud(context:Context):Cloud(context) {
+        val books=mutableListOf(JSONObject("""{"id":"book-test","title":"Test library book","current_page":12,"total_pages":100,"completed":false}"""))
         @Volatile var pendingOAuth=false
         @Volatile var exchanged=false
         override val hasPendingOAuth get()=pendingOAuth
@@ -58,7 +59,14 @@ class ModulesTest {
         override suspend fun rows(table:String,query:String,method:String,body:Any?,parent:Boolean):List<JSONObject> = when(table) {
             "parents" -> listOf(JSONObject("""{"id":"parent-test","family_code":"TESTONLY","prefs":{"language":"en"}}"""))
             "children" -> listOf(JSONObject("""{"id":"module-test","name":"Test learner","age":9,"language":"en"}"""))
-            "books" -> listOf(JSONObject("""{"id":"book-test","title":"Test library book","current_page":12,"total_pages":100,"completed":false}"""))
+            "books" -> {
+                val id=query.substringAfter("id=eq.","").substringBefore("&")
+                when(method){
+                    "POST"->{books.add(JSONObject(body.toString()));listOf(books.last())}
+                    "PATCH"->{val record=books.first{it.optString("id")==id};val patch=body as JSONObject;patch.keys().forEach{record.put(it,patch.get(it))};listOf(record)}
+                    else->if(query.startsWith("id=eq."))books.filter{it.optString("id")==id}else books.toList()
+                }
+            }
             else -> emptyList()
         }
         override suspend fun parentCall(method:String,path:String,body:JSONObject?)=JSONObject()
@@ -73,6 +81,58 @@ class ModulesTest {
     }
     private fun open(a:ActivityScenario<MainActivity>,type:String) { a.onActivity { ViewModelProvider(it)[TutoViewModel::class.java].open(type) };compose.waitForIdle() }
     @After fun reset() { Services.api=HttpTutoApi();Services.cloudFactory=null }
+    private fun screenshot(name:String){
+        compose.waitForIdle();val instrumentation=InstrumentationRegistry.getInstrumentation();instrumentation.waitForIdleSync();android.os.SystemClock.sleep(400)
+        val dir=java.io.File(instrumentation.targetContext.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
+        instrumentation.uiAutomation.takeScreenshot().let{bitmap->java.io.File(dir,"sprint-$name.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()}
+    }
+    @Test fun readingCanCreateUpdateAndReopenWithoutAssessment(){
+        launch(Api()).use{a->
+            open(a,"library");compose.onNodeWithTag("room-read").performScrollTo().performClick()
+            compose.onNodeWithTag("book-title").performTextInput("The notebook adventure")
+            compose.onNodeWithTag("book-total").performTextInput("120")
+            compose.onNodeWithTag("book-current").performTextReplacement("30")
+            compose.onNodeWithTag("book-save").performScrollTo().performClick();compose.waitForIdle()
+            assertEquals(30,activeCloud.books.last().optInt("current_page"));screenshot("reading")
+            compose.onNodeWithTag("book-current").performTextReplacement("120")
+            compose.onNodeWithTag("book-save").performScrollTo().performClick();compose.waitForIdle();assertTrue(activeCloud.books.last().optBoolean("completed"))
+            compose.onNodeWithText("My bookshelf").performScrollTo().performClick()
+            compose.onNodeWithTag("books-filter-completed").performScrollTo().performClick()
+            compose.onNodeWithText("The notebook adventure").assertExists();screenshot("bookshelf")
+        }
+    }
+    @Test fun writingPagesAutosaveAndAvatarPersist(){
+        val api=Api();launch(api).use{a->
+            a.onActivity{val vm=ViewModelProvider(it)[TutoViewModel::class.java];vm.updateAvatar(Avatar(gender=1,hair=9,hairColor=4,face=2,pet=2,petColor=3))}
+            val context=InstrumentationRegistry.getInstrumentation().targetContext
+            assertEquals(9,AvatarStore(context).read(child.id).hair);assertEquals(3,AvatarStore(context).read(child.id).petColor)
+            a.recreate();a.onActivity{assertEquals(4,ViewModelProvider(it)[TutoViewModel::class.java].avatar.hairColor)}
+            open(a,"library");compose.onNodeWithTag("room-write").performScrollTo().performClick();compose.onNodeWithTag("new-story").performScrollTo().performClick()
+            compose.onNodeWithText("Title").performTextInput("A new adventure")
+            compose.onNodeWithTag("writing-page-0").performTextInput("My first page.")
+            compose.onNodeWithTag("writing-page-1").performTextInput("My second page.")
+            screenshot("writing")
+            compose.onNodeWithTag("writing-next").performScrollTo().performClick();compose.onNodeWithTag("writing-page-0").performTextInput("My third page.")
+            compose.onNodeWithTag("writing-previous").performScrollTo().performClick();compose.onNodeWithText("My first page.").assertExists()
+            a.recreate();compose.onNodeWithText("My first page.").assertExists()
+            compose.onNodeWithText("Save now").performScrollTo().performClick();compose.waitForIdle()
+            assertTrue(api.calls.any{it.endsWith("story-draft")})
+            assertTrue(context.getSharedPreferences("tuto-work-module-test",Context.MODE_PRIVATE).all.values.any{it.toString().contains("My third page.")})
+        }
+    }
+    @Test fun wordHuntCompletesAllDirectionsAndRetainsProgress(){
+        launch(Api()).use{a->open(a,"games");compose.onNodeWithTag("game-words").performScrollTo().performClick()
+            val letters=(0 until 49).map{i->compose.onNodeWithTag("word-cell-$i").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString(""){it.text}.single()}
+            val grid=app.tuto.mobile.games.NotebookPuzzles.WordGrid(7,letters,listOf("CAT","DOG","MOON","STAR","BIRD"))
+            grid.words.forEachIndexed{index,word->
+                val pair=(0 until 49).flatMap{start->(0 until 49).map{end->start to end}}.first{(start,end)->app.tuto.mobile.games.NotebookPuzzles.line(start,end,7).map{letters[it]}.joinToString("")==word}
+                compose.onNodeWithTag("word-cell-${pair.first}").performScrollTo().performClick();compose.onNodeWithTag("word-cell-${pair.second}").performScrollTo().performClick()
+                compose.onNodeWithTag("word-progress").assertTextContains("${index+1} / 5",substring=true)
+            }
+            compose.onNodeWithText("You did it!").assertExists();screenshot("word-hunt-complete")
+            a.recreate();compose.onNodeWithTag("word-progress").assertTextContains("5 / 5",substring=true)
+        }
+    }
     @Test fun englishCanFinishFromRealControls() {
         val api=Api();launch(api).use { a ->
             open(a,"english")
@@ -86,7 +146,7 @@ class ModulesTest {
     }
     @Test fun libraryDraftAndHomeworkUseRealRoutesAcrossRotation() {
         val api=Api();launch(api).use { a ->
-            open(a,"library");compose.onNodeWithTag("room-read").performScrollTo().performClick();compose.onNodeWithText("Test library book").assertExists();compose.onNodeWithText("Back to my room").performScrollTo().performClick();compose.onNodeWithTag("room-write").performScrollTo().performClick()
+            open(a,"library");compose.onNodeWithTag("room-read").performScrollTo().performClick();compose.onNodeWithText("Test library book").assertExists();compose.onNodeWithText("Back").performScrollTo().performClick();compose.onNodeWithText("Back to my room").performScrollTo().performClick();compose.onNodeWithTag("room-write").performScrollTo().performClick()
             compose.onNodeWithTag("new-story").performScrollTo().performClick()
             compose.onNodeWithText("Title").performTextInput("Tablet story")
             compose.onNodeWithText("Your story").performTextInput("Today a little fox found a new book and read it with all of her friends.")
