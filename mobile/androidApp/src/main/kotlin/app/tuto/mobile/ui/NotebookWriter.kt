@@ -12,12 +12,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import app.tuto.mobile.data.LocalStrings
 
 /** Form feeds are whitespace to the existing assessment API; no destructive record migration. */
 @Composable internal fun NotebookWriter(title:String,text:String,onTitle:(String)->Unit,onText:(String)->Unit){
  val s=LocalStrings.current
+ val focus=LocalFocusManager.current
  var spread by rememberSaveable { mutableIntStateOf(0) }
  val pages=text.split('\u000c');val first=spread*2
  fun change(index:Int,value:String){val updated=pages.toMutableList();while(updated.size<=index)updated.add("");updated[index]=value;val result=updated.joinToString("\u000c");if(result.length<=50000)onText(result)}
@@ -30,16 +32,16 @@ import app.tuto.mobile.data.LocalStrings
   }
   Row(Modifier.fillMaxSize().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(36.dp)){
    repeat(2){side->val index=first+side
-    Column(Modifier.weight(1f).fillMaxHeight()){
+    key(index){Column(Modifier.weight(1f).fillMaxHeight()){
      TextField(pages.getOrElse(index){""},{change(index,it)},placeholder={Text(if(index==0)s.say("Your story","Hikâyen","Tu cuento")else s.say("Continue your story…","Hikâyene devam et…","Continúa tu cuento…"))},modifier=Modifier.weight(1f).fillMaxWidth().testTag("writing-page-$side"),colors=TextFieldDefaults.colors(focusedContainerColor=Color.Transparent,unfocusedContainerColor=Color.Transparent,focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent),textStyle=MaterialTheme.typography.bodyLarge)
      Text("${index+1}",Modifier.align(Alignment.CenterHorizontally),style=MaterialTheme.typography.labelMedium)
-    }
+    }}
    }
   }
  }
  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-  TextButton(onClick={spread--},enabled=spread>0,modifier=Modifier.testTag("writing-previous")){Text(s.say("← Previous pages","← Önceki sayfalar","← Páginas anteriores"))}
+  TextButton(onClick={focus.clearFocus(force=true);spread--},enabled=spread>0,modifier=Modifier.testTag("writing-previous")){Text(s.say("← Previous pages","← Önceki sayfalar","← Páginas anteriores"))}
   Text(s.say("Saved on this tablet · syncs automatically","Tablete kaydedilir · otomatik eşitlenir","Guardado en esta tableta · sincronización automática"),style=MaterialTheme.typography.bodySmall)
-  TextButton(onClick={spread++},enabled=spread<99,modifier=Modifier.testTag("writing-next")){Text(s.say("Next pages →","Sonraki sayfalar →","Páginas siguientes →"))}
+  TextButton(onClick={focus.clearFocus(force=true);spread++},enabled=spread<99,modifier=Modifier.testTag("writing-next")){Text(s.say("Next pages →","Sonraki sayfalar →","Páginas siguientes →"))}
  }
 }
