@@ -67,6 +67,7 @@ class ModulesTest {
         val c=InstrumentationRegistry.getInstrumentation().targetContext
         c.getSharedPreferences("tuto",Context.MODE_PRIVATE).edit().clear().commit()
         c.getSharedPreferences("tuto-work-module-test",Context.MODE_PRIVATE).edit().clear().commit()
+        c.getSharedPreferences("tuto-notebook-avatar-v1",Context.MODE_PRIVATE).edit().remove(child.id).commit()
         Services.api=api;Services.cloudFactory={TestCloud(it).also { c -> activeCloud=c }}
         return ActivityScenario.launch(MainActivity::class.java).also { a -> a.onActivity { ViewModelProvider(it)[TutoViewModel::class.java].signedIn(child) } }
     }
@@ -85,7 +86,7 @@ class ModulesTest {
     }
     @Test fun libraryDraftAndHomeworkUseRealRoutesAcrossRotation() {
         val api=Api();launch(api).use { a ->
-            open(a,"library");compose.onNodeWithText("Continue reading").performScrollTo().performClick();compose.onNodeWithText("Test library book").assertExists()
+            open(a,"library");compose.onNodeWithTag("room-read").performScrollTo().performClick();compose.onNodeWithText("Test library book").assertExists();compose.onNodeWithText("Back to my room").performScrollTo().performClick();compose.onNodeWithTag("room-write").performScrollTo().performClick()
             compose.onNodeWithTag("new-story").performScrollTo().performClick()
             compose.onNodeWithText("Title").performTextInput("Tablet story")
             compose.onNodeWithText("Your story").performTextInput("Today a little fox found a new book and read it with all of her friends.")
@@ -109,20 +110,40 @@ class ModulesTest {
             }
             capture("home")
             compose.onNodeWithTag("nav-me").performClick()
-            compose.onNodeWithText("Make it yours").assertExists()
             capture("me")
+            compose.onNodeWithTag("edit-avatar").performClick()
+            compose.onNodeWithText("Create your avatar").assertExists()
+            capture("avatar")
+            compose.onNodeWithTag("avatar-tab-3").performScrollTo().performClick()
+            capture("pets")
+            compose.onNodeWithTag("avatar-choice-3-2").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-gender-1").performScrollTo().performClick()
+            compose.onNodeWithTag("avatar-tab-1").performScrollTo().performClick()
+            capture("girl-outfits")
+            compose.onNodeWithText("Back").performScrollTo().performClick()
             compose.onNodeWithTag("nav-goals").performClick()
             capture("goals")
             compose.onNodeWithTag("nav-games").performClick()
-            compose.onNodeWithText("Games · Memory pairs").assertExists()
+            compose.onNodeWithTag("game-memory").assertExists()
             capture("games")
             open(a,"library")
-            compose.onNodeWithTag("new-story").assertExists()
+            compose.onNodeWithTag("room-write").assertExists()
             capture("stories")
             open(a,"explore")
             compose.onNodeWithText("Ay neden değişik görünür?").performScrollTo().performClick()
             compose.onNodeWithText("Devam").assertExists()
             capture("explore")
+        }
+    }
+    @Test fun allSixGamesOpenRestartAndReturn() {
+        launch(Api()).use { a ->
+            open(a,"games")
+            listOf("memory","tangram","words","sudoku","maze","pattern").forEach { id ->
+                compose.onNodeWithTag("game-$id").performScrollTo().performClick()
+                compose.onNodeWithTag("game-restart").performScrollTo().performClick()
+                compose.onNodeWithText("Back").performScrollTo().performClick()
+                compose.onNodeWithTag("game-$id").assertExists()
+            }
         }
     }
     @Test fun oauthDeepLinkRequiresInitiatedFlowAndUnlocksAfterExchange() {

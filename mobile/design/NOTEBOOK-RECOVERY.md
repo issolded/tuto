@@ -55,3 +55,25 @@ Web/backend, database, real family data and messaging are unchanged.
   authorization covered local main-build work, not publishing source to the remote.
   No alternate push mechanism was used. A local recovery bundle is supplied.
 - APK SHA256: b18a97eec0db05697aee46d6f33d10ea78838b7bda8bda24d2245b7f6d682b7e.
+
+## User correction — 21 October 2026, 0.17 restoration
+The user rejected 0.16's simplified creator, shared pet bodies, removal of five
+games, flat Stories library and low-detail static entry icons. Do not reinterpret
+approved page structure while implementing another feature.
+Authoritative notebook references were recovered and visually inspected:
+- Avatar creator: libfile_56358b495d14819187dfc5deb58c425a (large left avatar,
+  Character/Outfit/Extras/Pet tabs, visual cards, names and footer controls).
+- Home/Goals/Games/Me: libfile_3f08dc94dddc8191b7fba117cb8df50b.
+- Stories room: libfile_f82687ac7778819189d39334deeda8fa (bookshelf left,
+  seated personalized reader in centre, writing desk right).
+Six games verified in both the reference and the older notebook APK: Memory
+Match, Tangram, Word Hunt, Sudoku, Maze, Pattern Play. Never silently replace
+these with one game. Gameplay uses local brain breaks, no invented Gem rewards.
+Boy/Girl is the first creator choice; current catalog filters hair and outfits,
+and the boy catalog excludes skirts. Every pet has its own complete silhouette.
+Room source recovered from Tuto-story-room-v2-source.zip, Library
+libfile_9b2940b612d08191a7a7e55df5af934e. That isolated demo's accounts and fake
+content are NOT copied: furniture links into the existing production data flows.
+Restoration is code-native; do not claim the artwork is Rive or Lottie-authored.
+Existing native animation respects reduced motion and lifecycle. Visual match
+must be assessed on actual Android captures before a final design claim.

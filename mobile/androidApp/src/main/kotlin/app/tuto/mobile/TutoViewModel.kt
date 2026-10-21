@@ -146,7 +146,7 @@ class TutoViewModel(app: Application) : AndroidViewModel(app) {
         } else if (type in setOf("reading", "writing", "library", "drawing", "homework", "tree", "gems")) {
             feature = FeatureRun(child ?: return, api, cloud, viewModelScope, getApplication())
             screen = Screen.Content(type)
-        } else if (type in setOf("me", "games", "explore")) {
+        } else if (type in setOf("me", "avatar", "games", "explore")) {
             screen = Screen.Notebook(type)
         } else if (type == "parent") {
             parent.lock(); screen = Screen.Parent

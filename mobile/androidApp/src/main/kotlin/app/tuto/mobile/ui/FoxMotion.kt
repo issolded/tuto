@@ -40,7 +40,7 @@ internal fun avatarDrawing(a:Avatar,pose:FoxPose,blink:Boolean=false,step:Int=0,
  <path d="M77 219l-${9+stride} 68h18l12-65m20-3 ${8+stride} 68h18l-7-67" fill="$skin"/>
  <path d="M68 279q-19 9-23 26 21 13 51 1l-9-25Zm62 0-5 26q31 13 53-1-5-19-30-24Z"/>
  <path d="M52 300h39m39 0h40m-107-12 19 4m60-4 18 4" fill="none" stroke-width="2"/>
- ${when(a.outfit){1->"<path d='M68 199l-4 79 30 3 13-54 9 54 34-3-10-79Z' fill='#7EA5BD'/>";2->"<path d='M69 199l-14 58q48 14 99-1l-14-57Z' fill='#202022'/>";else->"<path d='M68 199l-3 42 33 4 8-24 7 24 36-4-9-43Z' fill='#202022'/>"}}
+ ${when(a.outfit){1->"<path d='M68 199l-4 79 30 3 13-54 9 54 34-3-10-79Z' fill='#7EA5BD'/>";2->"<path d='M69 199l-14 58q48 14 99-1l-14-57Z' fill='$shirt'/>";else->"<path d='M68 199l-3 42 33 4 8-24 7 24 36-4-9-43Z' fill='#202022'/>"}}
  <path d="M88 112v18h25v-18" fill="$skin"/>
  <path d="M80 128l-23 10-14 34 25 10 1 29q36 12 72-1l-2-30 24-9-15-34-29-9q-20 18-39 0Z" fill="$shirt"/>
  <path d="m76 133-9 60m58-61 10 60" fill="none" stroke-width="9"/>
@@ -55,18 +55,6 @@ internal fun avatarDrawing(a:Avatar,pose:FoxPose,blink:Boolean=false,step:Int=0,
  ${if(pose==FoxPose.Reading) "<path d='M48 160q26-8 55 8 25-16 55-8v56q-30-4-55 7-25-11-55-7Z' fill='#F29485'/><path d='M103 168v55'/>" else ""}
  """
 }
-internal fun petDrawing(kind:Int):String {
- if(kind<0)return ""
- return """<ellipse cx="63" cy="109" rx="48" ry="6" fill="#E4E2DC" stroke="none"/>
- <path d="M80 79q36-6 23-36 24 29-14 50" fill="none"/>
- <path d="M43 65q44-8 46 25l-2 19H75l-3-20-9 1-4 19H45l-1-28Z"/>
- <path d="M45 78Q16 76 15 53L5 44q-2-12 14-9 10-21 33-11 28 8 21 31-5 22-28 23Z"/>
- ${if(kind==1) "<path d='M24 30 27 7 43 24m13 2L72 10l-2 32'/><path d='m16 52-13 3m17 4L5 65' fill='none'/>" else if(kind==2) "<path d='M31 28Q9-12 23 0l22 25M48 25q-2-43 10-24l3 29'/>" else "<path d='M58 28q28 6 22 40-13 17-20-3Z' fill='#202022'/>"}
- <ellipse cx="12" cy="38" rx="6" ry="4" fill="#202022"/><circle cx="37" cy="40" r="3" fill="#202022"/>
- <path d="M15 52q10 10 17-1M34 75l23 4" fill="none"/><path d="M35 76l23 4" stroke="#41B6B5" stroke-width="6"/>
- """
-}
-
 @Composable fun Fox(modifier:Modifier=Modifier,pose:FoxPose=FoxPose.Welcome,event:Any=pose,animate:Boolean=true) {
  val a=LocalAvatar.current;val still=reduceMotion()||!animate;val owner=LocalLifecycleOwner.current
  var active by remember {mutableStateOf(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))}

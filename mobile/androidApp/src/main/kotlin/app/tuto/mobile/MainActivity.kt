@@ -52,7 +52,7 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
     CompositionLocalProvider(LocalStrings provides vm.strings, LocalPalette provides palette, LocalAvatar provides vm.avatar) {
         Box(Modifier.fillMaxSize().background(palette.bg).safeDrawingPadding()) {
             Scaffold(containerColor = palette.bg, bottomBar = {
-                if (vm.screen is Screen.Notebook || vm.screen == Screen.Home || vm.screen == Screen.Goals || vm.screen == Screen.Settings || (vm.screen is Screen.Content && vm.feature?.page == "list")) BottomNavigation(vm)
+                if ((vm.screen is Screen.Notebook && vm.screen != Screen.Notebook("avatar")) || vm.screen == Screen.Home || vm.screen == Screen.Goals || vm.screen == Screen.Settings || (vm.screen is Screen.Content && vm.feature?.page == "list")) BottomNavigation(vm)
             }) { padding -> Box(Modifier.fillMaxSize().padding(padding)) { NotebookPage {
             when (val s = vm.screen) {
                 Screen.Setup -> SetupScreen(vm)
@@ -63,7 +63,7 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
                 Screen.Settings -> SettingsScreen(vm)
                 Screen.Puzzle -> PuzzleScreen(vm)
                 Screen.English -> LiteracyScreen(vm)
-                is Screen.Notebook -> when(s.page) { "me" -> AvatarEditor(vm); "explore" -> ExploreScreen(vm); else -> NotebookGames(vm) }
+                is Screen.Notebook -> when(s.page) { "me" -> NotebookMe(vm); "avatar" -> AvatarEditor(vm); "explore" -> ExploreScreen(vm); else -> NotebookGames(vm) }
                 Screen.Parent -> app.tuto.mobile.ui.ParentScreen(vm)
                 is Screen.Content -> if (s.type in setOf("reading", "writing", "library")) BooksScreen(vm) else ActivitiesScreen(vm, s.type)
                 is Screen.Soon -> SoonScreen(vm, s.type)
@@ -71,6 +71,6 @@ fun TutoApp(vm: TutoViewModel = viewModel()) {
             } } }
         }
         // Back always leads home from an activity; from home it leaves the app as usual.
-        BackHandler(enabled = vm.screen is Screen.Notebook || vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle || vm.screen == Screen.Settings || vm.screen == Screen.English || vm.screen is Screen.Content || vm.screen == Screen.Parent) { vm.home() }
+        BackHandler(enabled = vm.screen is Screen.Notebook || vm.screen is Screen.Math || vm.screen is Screen.Soon || vm.screen is Screen.Goals || vm.screen is Screen.Puzzle || vm.screen == Screen.Settings || vm.screen == Screen.English || vm.screen is Screen.Content || vm.screen == Screen.Parent) { if(vm.screen==Screen.Notebook("avatar"))vm.open("me")else vm.home() }
     }
 }

@@ -2,9 +2,9 @@ package app.tuto.mobile.data
 import android.content.Context
 import org.json.JSONObject
 
-data class Avatar(val hair:Int=0,val skin:Int=0,val shirt:Int=0,val accessory:Int=0,val pet:Int=0,val face:Int=0,val outfit:Int=0) {
-    fun json()=JSONObject().put("hair",hair).put("skin",skin).put("shirt",shirt).put("accessory",accessory).put("pet",pet).put("face",face).put("outfit",outfit).toString()
-    companion object { fun read(raw:String?)=runCatching { val j=JSONObject(raw?:"{}");Avatar(j.optInt("hair").coerceIn(0,5),j.optInt("skin").coerceIn(0,4),j.optInt("shirt").coerceIn(0,5),j.optInt("accessory").coerceIn(0,3),j.optInt("pet").coerceIn(-1,2),j.optInt("face").coerceIn(0,5),j.optInt("outfit").coerceIn(0,2)) }.getOrDefault(Avatar()) }
+data class Avatar(val hair:Int=0,val skin:Int=0,val shirt:Int=0,val accessory:Int=0,val pet:Int=0,val face:Int=0,val outfit:Int=0,val gender:Int=0,val nickname:String="",val petName:String="") {
+    fun json()=JSONObject().put("hair",hair).put("skin",skin).put("shirt",shirt).put("accessory",accessory).put("pet",pet).put("face",face).put("outfit",outfit).put("gender",gender).put("nickname",nickname).put("petName",petName).toString()
+    companion object { fun read(raw:String?)=runCatching { val j=JSONObject(raw?:"{}");Avatar(j.optInt("hair").coerceIn(0,5),j.optInt("skin").coerceIn(0,4),j.optInt("shirt").coerceIn(0,5),j.optInt("accessory").coerceIn(0,3),j.optInt("pet").coerceIn(-1,5),j.optInt("face").coerceIn(0,5),j.optInt("outfit").coerceIn(0,2),j.optInt("gender",if(j.optInt("outfit")==2)1 else 0).coerceIn(0,1),j.optString("nickname").take(30),j.optString("petName").take(30)) }.getOrDefault(Avatar()) }
 }
 class AvatarStore(context:Context) {
  private val prefs=context.getSharedPreferences("tuto-notebook-avatar-v1",Context.MODE_PRIVATE)

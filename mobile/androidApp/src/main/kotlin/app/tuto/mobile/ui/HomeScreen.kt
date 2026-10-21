@@ -76,7 +76,7 @@ fun HomeScreen(vm: TutoViewModel) {
                 Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     tiles.chunked(if(wide)3 else 2).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)){
                         row.forEach{type->Column(Modifier.weight(1f).height(182.dp).border(1.5.dp,Ink.main,RoundedCornerShape(18.dp)).clickable(role=Role.Button){vm.open(type)}.testTag("quest_$type").padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp,Alignment.CenterVertically)){
-                            PaperIcon(type,Modifier.size(76.dp))
+                            AnimatedSubjectIcon(type,Modifier.size(86.dp))
                             Text(when(type){"math"->s.say("Math","Matematik","Matemáticas");"english"->"English";"puzzle"->s.say("Puzzles","Bulmacalar","Acertijos");"library"->s.say("My Stories","Hikâyelerim","Mis historias");"explore"->s.say("Explore","Keşfet","Explorar");else->s.say("My Drawing","Çizimlerim","Mis dibujos")},style=MaterialTheme.typography.titleLarge,maxLines=2,textAlign=TextAlign.Center)
                         }}
                         repeat((if(wide)3 else 2)-row.size){Spacer(Modifier.weight(1f))}

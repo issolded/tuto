@@ -48,6 +48,7 @@ private suspend fun FeatureRun.saveDraft() {
     val f = vm.feature ?: return
     val s = LocalStrings.current
     var archive by rememberSaveable { mutableStateOf(false) }
+    var roomDestination by rememberSaveable { mutableStateOf<String?>(null) }
     var search by rememberSaveable { mutableStateOf("") }
     var currentPage by rememberSaveable { mutableStateOf("") }
     var totalPages by rememberSaveable { mutableStateOf("") }
@@ -75,10 +76,15 @@ private suspend fun FeatureRun.saveDraft() {
         f.notice?.let { Text(it) }
         when (f.page) {
             "list" -> {
+                if(roomDestination==null){
+                    StoryRoom(onShelf={archive=true;roomDestination="shelf"},onRead={archive=false;roomDestination="read"},onWrite={archive=false;roomDestination="write"},allowReading=f.child.active("reading"),allowWriting=f.child.active("writing"))
+                    return@FeaturePage
+                }
+                TextButton(onClick={roomDestination=null}){Text(s.say("Back to my room","Odama dön","Volver a mi habitación"))}
                 LibraryBrowser(
-                    books = f.data.optJSONArray("books").objects(), stories = f.data.optJSONArray("stories").objects(),
+                    books = if(roomDestination=="write") emptyList() else f.data.optJSONArray("books").objects(), stories = if(roomDestination=="read") emptyList() else f.data.optJSONArray("stories").objects(),
                     archive = archive, onArchive = { archive = it }, busy = f.busy,
-                    allowReading = f.child.active("reading"), allowWriting = f.child.active("writing"),
+                    allowReading = f.child.active("reading") && roomDestination!="write", allowWriting = f.child.active("writing") && roomDestination!="read",
                     onNewBook = { archive = false; f.selected = JSONObject().put("id", UUID.randomUUID().toString()); f.title = ""; f.photos = emptyList(); f.page = "new-book" },
                     onNewStory = { archive = false; f.editStory() },
                     onOpen = { book, story ->

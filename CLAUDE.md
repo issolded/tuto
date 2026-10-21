@@ -1536,3 +1536,14 @@ explicit publication authorization is needed before pushing the branch.
 The user explicitly answered "Evet" to publishing these changes to
 issolded/tuto, branch codex/android-notebook. This supersedes the earlier
 publication hold for this branch. It does not authorize merging into main.
+
+### Frozen notebook correction (2026-10-21)
+User rejected 0.16 design drift: preserve original two-panel visual avatar creator,
+room-based Stories, and six-game grid. Full authoritative references are recorded
+in mobile/design/NOTEBOOK-RECOVERY.md. Games are Memory Match, Tangram, Word Hunt,
+Sudoku, Maze, Pattern Play (verified in original APK and concept board). Do not
+remove these on future layout changes. Creator first choice is Boy/Girl, with
+appropriate catalog filtering; boy catalog has no skirt. Pets require separate
+full-body silhouettes, not a shared dog torso with switched heads. Room links
+must preserve real reading/writing/library records. Main subject icons retain
+black-ink illustration and add quiet, lifecycle/reduced-motion-aware motion.
