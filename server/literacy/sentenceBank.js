@@ -108,7 +108,12 @@ export const SENTENCE_ITEMS = SOURCE.map(it => {
   order.splice(at, 0, it.options[0])
   return {
     id: it.id, area: it.step.startsWith('E') ? 'E' : it.step.slice(0, 2), step: it.step, mode: 'read-choice',
-    prompt: { context: it.context, text: it.text },
+    // Ca2 asks which answer fits the question, not what is true for the child. Asked straight ("Where do you live?")
+    // a child answers for themselves ("my house is not small"), so the question is put in someone else's mouth.
+    // No name for the one answering: one item's answer is a name ("Lucy."), and a named friend would contradict it.
+    prompt: it.step === 'Ca2'
+      ? { context: 'Ben asks his friend:', text: `“${it.text}”`, ask: 'What does his friend say?' }
+      : { context: it.context, text: it.text },
     options: order.map((text, i) => ({ id: `o${i + 1}`, text })), key: `o${at + 1}`,
     feedback: { text: it.step === 'Cd6' ? it.text.replace('___', it.options[0]) : it.options[0] },
   }

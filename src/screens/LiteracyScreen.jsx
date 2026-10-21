@@ -262,6 +262,7 @@ export default function LiteracyScreen() {
               {p.context && <div style={{ fontSize: 17, marginBottom: 6 }}>{p.context}</div>}
               {p.text && <div style={{ fontSize: p.instruction ? 30 : 19, textAlign: p.instruction ? 'center' : 'left' }}>{p.text}</div>}
               {p.stem && <div style={{ fontSize: 20, marginTop: 6, letterSpacing: 1 }}>{p.stem}</div>}
+              {p.ask && <div style={{ fontSize: 17, marginTop: 8 }}>{p.ask}</div>}
             </>}
         </div>
         {item.questions.map(q => (
