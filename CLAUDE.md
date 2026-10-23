@@ -161,7 +161,7 @@ bunların tamamlandığı anlamına gelmez.
 ## Açık işler / yol haritası
 
 - [ ] İngilizce canlı içerik: mantık incelemesi düzeltmeleri (2026-10-23, Claude; `claude/english-bank-fixes`, push yok). Yayındaki her şey elle
-      okundu (80 dinleme, 75 cümle, 147 hikâye, 126 parça + üreteç örnekleri); rapor `tuto-app/handoff/ENGLISH-LOGIC-REVIEW-2026-10-23.md`.
+      okundu (80 dinleme, 75 cümle, 147 hikâye, 126 parça + üreteç örnekleri); rapor `handoff/ENGLISH-LOGIC-REVIEW-2026-10-23.md`.
       **Canlı hata:** D1'de literacy motorunun "build the word" üreteci harf karosu döndürüyor, `dealItem` `options` bekleyip fırlatıyordu →
       merdiven D1'i bu kaynaktan çekince aralıklı 500 ("Something went wrong"). `dealItem` artık `mode: 'letters'`'ı build sorusuna çeviriyor;
       `literacy-sitting.test.mjs` katalogdaki her üreteci deniyor. **Dinleme:** L4-006 (eve nasıl döndüğü söylenmiyordu), L5-005, L5-006
