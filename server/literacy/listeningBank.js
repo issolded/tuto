@@ -12,7 +12,7 @@
 // different voices in A5. Audio: scripts/english-audio/clips.mjs (`--set listening`). Answer keys are
 // here because the lab is a reviewer tool; a child screen gets items from the server without the key.
 
-export const LISTENING_REVISION = 'listen-2'
+export const LISTENING_REVISION = 'listen-3'
 export const NARRATOR = 'narrator'
 // Names from the Cambridge Starters list (+ family words); the gender picks the voice in clips.mjs.
 export const SPEAKER_GENDER = {
@@ -62,15 +62,15 @@ const SOURCE = [
     ['Nick', 'How do you get to school, Alice?'],
     ['Alice', 'I usually walk with my brother. But today Dad took us in the car.'],
     ['Nick', 'Why?'],
-    ['Alice', 'Because it was raining a lot. Sometimes I go by bus, when Dad starts work early.'],
+    ['Alice', 'Because it was raining a lot. When it rains and Dad starts work early, we take the bus.'],
   ], question: 'How did Alice get to school today?', options: ['By car.', 'She walked.', 'By bus.'],
   feedback: 'By car. Dad took her because it was raining.' },
 
   { id: 'L5-006', step: 'A5', topic: 'Food & drink', lines: [
     ['Hugo', "Can I have an orange, May? I'm thirsty."],
-    ['May', 'Sorry, there are only three now. We bought six on Monday.'],
+    ['May', 'Yes, but there are only three now. We bought six on Monday.'],
     ['Hugo', 'Who ate the other three?'],
-    ['May', 'I ate two, and my brother ate one. He really likes apples more.'],
+    ['May', 'I ate two, and my brother ate one. Here you are!'],
   ], question: "How many oranges did May's brother eat?", options: ['One.', 'Two.', 'Three.'],
   feedback: 'One. May ate two, and her brother ate one.' },
 
@@ -376,8 +376,8 @@ const SOURCE = [
     question: 'Where is the dog sleeping?', options: ['On the sofa.', 'Under the table.', 'On the bed.'], feedback: 'On the sofa. The cat is under the table.' },
   { id: 'L4-005', step: 'A4', topic: 'Food & drink', lines: n("Grace likes oranges, but she doesn't like bananas. Her brother likes bananas."),
     question: 'Who likes bananas?', options: ["Grace's brother.", 'Grace.', 'Grace and her brother.'], feedback: "Grace's brother. Grace likes oranges." },
-  { id: 'L4-006', step: 'A4', topic: 'Transport', lines: n('Mark walks to school with his friend Bill. After school, his dad comes in the car.'),
-    question: 'How does Mark go home?', options: ['In the car.', 'He walks.', 'By bus.'], feedback: 'In the car. His dad comes after school.' },
+  { id: 'L4-006', step: 'A4', topic: 'Transport', lines: n('Mark walks to school with his friend Bill. After school, his dad takes him home in the car.'),
+    question: 'How does Mark go home?', options: ['In the car.', 'He walks.', 'By bus.'], feedback: 'In the car. His dad takes him home after school.' },
   { id: 'L4-007', step: 'A4', topic: 'The home', lines: n('Jill is reading a book in the living room. Her brother is playing a game in the kitchen.'),
     question: 'Where is Jill?', options: ['In the living room.', 'In the kitchen.', 'In the bedroom.'], feedback: 'In the living room. Her brother is in the kitchen.' },
   { id: 'L4-008', step: 'A4', topic: 'Weather', lines: n('It is raining, so Nick takes his coat. His sister takes her umbrella.'),

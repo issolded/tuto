@@ -34,6 +34,25 @@ test('each source deals an item whose key judges right, and the public item carr
   }
 })
 
+// Every generator the catalog lists for a child deals without throwing (D1's definition build once crashed the
+// sitting: it has letter tiles, not options).
+test('every catalog generator deals markable items', async () => {
+  const { CATALOG } = await import('../../src/lib/literacy/catalog.js')
+  for (const e of CATALOG.filter(x => x.kind === 'generator' && x.status !== 'draft')) {
+    let dealt = 0
+    for (let seed = 1; seed <= 30 && dealt < 3; seed++) {
+      const item = await dealItem(e.track, e.step, { source: e.source, format: e.format, ref: { ...e.ref, seed } })
+      if (!item) continue
+      dealt++
+      for (const q of item.questions) {
+        assert.equal(judge(q, q.mode === 'build' ? q.key[0] : q.key), true, `${e.source} ${e.step} ${JSON.stringify(e.ref)} key`)
+        if (q.mode === 'build') assert.equal([...q.letters].map(l => l.letter).sort().join(''), [...q.key[0]].sort().join(''))
+      }
+    }
+    assert.ok(dealt > 0, `${e.source} ${e.step} ${JSON.stringify(e.ref)} dealt nothing in 30 seeds`)
+  }
+})
+
 test('a reading text deals its questions together, one group', async () => {
   const item = await dealItem('E', 'E2', { source: 'reading-passages', format: 'passage', id: 'B2-E2-01' })
   assert.ok(item.questions.length > 1)
@@ -68,4 +87,14 @@ test('the 200 stories: only questions a blind solver could not answer are asked'
   const item = await dealItem('E', story.level, { source: 'reading-stories-200', format: 'passage', id: story.id })
   const kept = story.questions.filter(q => q.blindRight <= TEXT_ONLY_BLIND).map(q => q.stem)
   assert.deepEqual(item.questions.map(q => q.stem), kept)
+})
+
+// A script corrected after recording is held back until it is recorded again; every other item still plays.
+test('listening items whose recordings no longer match the script are not dealt', async () => {
+  const { recordingMatches } = await import('../../server/literacyLab.js')
+  const { LISTENING_ITEMS } = await import('../../server/literacy/listeningBank.js')
+  const stale = LISTENING_ITEMS.filter(it => !recordingMatches(it)).map(it => it.id)
+  assert.deepEqual(stale.sort(), ['L4-006', 'L5-005', 'L5-006'])
+  assert.equal(await dealItem('A', 'A4', { source: 'listening-bank', format: 'listen-answer', id: 'L4-006' }), null)
+  assert.ok(await dealItem('A', 'A4', { source: 'listening-bank', format: 'listen-answer', id: 'L4-007' }))
 })

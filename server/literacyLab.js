@@ -22,7 +22,7 @@ import crypto from 'node:crypto'
 import { DateTime } from 'luxon'
 import { nextProbe, RULES_VERSION } from './literacy/ladder.js'
 import { entriesFor, TEXT_ONLY_BLIND } from './literacy/catalog.js'
-import { LISTENING_ITEMS, listenClip } from './literacy/listeningBank.js'
+import { LISTENING_ITEMS, listenClip, NARRATOR } from './literacy/listeningBank.js'
 import AUDIO from './literacy/audioManifest.generated.json' with { type: 'json' }
 import { SENTENCE_ITEMS, SENTENCE_REVISION } from './literacy/sentenceBank.js'
 import { generateItem as literacyItem } from './literacy/engine.js'
@@ -53,6 +53,19 @@ export function audioUrl(clip, variety = 'uk') {
   return m && m.status === 'ok' && !m.issues?.length ? AUDIO_BASE + m.file : null
 }
 
+// A recording stores the words it says. When a script is corrected after recording, the old clip would say the old
+// words, so a listening item is dealt only while every clip still matches its script (re-record to bring it back).
+export function recordingMatches(it, variety = 'uk') {
+  const rec = clip => AUDIO[`${clip}:${variety}`] || AUDIO[`${clip}:uk`]
+  const talk = rec(listenClip.talk(it.id))
+  if (!talk) return false
+  const said = talk.lines ? talk.lines.map(l => [l.speaker, l.text]) : [[NARRATOR, talk.text]]
+  if (said.length !== it.lines.length || said.some(([who, text], i) => who !== it.lines[i][0] || text !== it.lines[i][1])) return false
+  if (rec(listenClip.question(it.id))?.text !== it.question) return false
+  if (it.options.some((o, i) => rec(listenClip.option(it.id, i))?.text !== o)) return false
+  return rec(listenClip.feedback(it.id))?.text === it.feedback
+}
+
 // One source for the step, like catalog.pick but only among sources a sitting can serve.
 function pickSource(track, step, seed, { minStatus, avoid, audio = true }) {
   const list = entriesFor(track, step, { minStatus }).filter(e => servable(e, { audio }))
@@ -77,6 +90,7 @@ export async function dealItem(track, step, pick, { avoid = new Set(), variety =
   }
   if (pick.source === 'listening-bank') {
     const it = LISTENING_ITEMS.find(x => x.id === pick.id)
+    if (!recordingMatches(it, variety)) return null
     const talk = audioUrl(listenClip.talk(it.id), variety)
     const question = audioUrl(listenClip.question(it.id), variety)
     const options = it.choices.map(c => ({ id: c.id, audio: audioUrl(c.audio, variety) }))
@@ -125,6 +139,13 @@ export async function dealItem(track, step, pick, { avoid = new Set(), variety =
   }
   if (pick.source === 'literacy-engine') {
     const q = literacyItem(pick.ref.skill, pick.ref.seed)
+    // "Build the word" comes as letter tiles, not options: the same shape as the picture build, from a definition.
+    if (q.mode === 'letters') {
+      return { ...base, id: `lit:${pick.ref.skill}:${pick.ref.seed}`, contentVersion: `${q.contentVersion}/${q.engineVersion}`,
+        prompt: { text: q.prompt },
+        questions: [{ id: 'q0', mode: 'build', letters: q.letters, key: [q.answer], skill: pick.ref.skill, group: q.family,
+          family: `lit:${pick.ref.skill}`, explain: q.explanation }] }
+    }
     return { ...base, id: `lit:${pick.ref.skill}:${pick.ref.seed}`, contentVersion: `${q.contentVersion}/${q.engineVersion}`,
       prompt: { text: q.prompt, stem: q.stem ?? null }, passage: q.passage ? { title: q.passage.title, text: q.passage.sentences.join(' ') } : null,
       questions: [{ id: 'q0', options: q.options, key: q.options.filter(o => o.text === q.answer).map(o => o.id),

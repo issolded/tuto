@@ -74,6 +74,13 @@ export const RELATION_NAMES = {
 // related in a particular construction but are not synonyms on the page. These pairs are the
 // deliberately small, ordinary-vocabulary bank used by pair-meaning and the youngest synonym
 // questions.
+// Words a British child reads as American (the British word is different): never shown, in either variety, so a
+// question means the same in both. `fall` = autumn was a synonym pair; `mailbox` and `automobile` were spelled-right
+// fillers beside a misspelt word. Words also at home in British English (truck, movie, cookie, sweater) are not here.
+export const US_ONLY = new Set(('mom mommy vacation candy fries apartment pants trash garbage elevator math eraser ' +
+  'sidewalk flashlight highway faucet diaper mailman pajamas mailbox pocketbook automobile freeway subway drugstore ' +
+  'stroller closet cellphone gasoline').split(' '))
+
 export const PAIR_SYNONYMS = [
   ['rent', 'hire'], ['friend', 'mate'], ['midday', 'noon'], ['pips', 'seeds'],
   ['vehicle', 'car'], ['groceries', 'food'], ['instruct', 'teach'], ['graze', 'scratch'],
@@ -84,7 +91,7 @@ export const PAIR_SYNONYMS = [
   ['sea', 'ocean'], ['hill', 'mound'], ['sleep', 'nap'], ['tale', 'story'],
   ['present', 'gift'], ['clever', 'bright'], ['beginning', 'start'], ['finish', 'end'],
   ['boat', 'ship'], ['tidy', 'neat'], ['look', 'see'], ['talk', 'speak'],
-  ['home', 'house'], ['stop', 'halt'], ['pull', 'drag'], ['autumn', 'fall'],
+  ['home', 'house'], ['stop', 'halt'], ['pull', 'drag'],
   ['chat', 'talk'], ['child', 'kid'], ['scared', 'afraid'], ['correct', 'right'],
   ['break', 'snap'], ['pebble', 'stone'], ['hole', 'gap'], ['hurry', 'rush'],
   ['feast', 'banquet'], ['remarkable', 'noteworthy'], ['imminent', 'impending'],

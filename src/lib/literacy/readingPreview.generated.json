@@ -1894,7 +1894,7 @@
    "title": "Two Lunch Boxes",
    "reviewer": "flash",
    "reviewNote": "",
-   "passage": "Raj opened a green lunch box and found a toy frog. Ella opened another green lunch box and found two sandwiches. They looked at the names on the boxes and laughed. They gave each other the right box, and Ella sat her frog beside her lunch.",
+   "passage": "Raj opened a green lunch box and found a toy frog and an apple. Ella opened another green lunch box and found two sandwiches. They looked at the names on the boxes and laughed. They gave each other the right box, and Ella sat her frog beside her lunch.",
    "questions": [
     {
      "op": "detail",
@@ -1905,7 +1905,7 @@
       "A toy fish."
      ],
      "answer": 0,
-     "evidence": "Raj opened a green lunch box and found a toy frog."
+     "evidence": "Raj opened a green lunch box and found a toy frog and an apple."
     },
     {
      "op": "detail",
@@ -2078,7 +2078,7 @@
    "title": "The Purple Tree",
    "reviewer": "pro",
    "reviewNote": "Mantık boşluğu: morla boyadığı yazmıyor. Ekle: 'So he painted the tree purple.'",
-   "passage": "Sam was painting a tree for the classroom wall. He looked for green paint but found only purple. Zoe brought a different box because the green paint was inside it. Sam looked at his purple tree and smiled. He kept it purple because he liked the strange tree. Zoe painted orange apples on its branches. Sam added a yellow bird with a purple tail. They called their picture a tree from a dream.",
+   "passage": "Sam was painting a tree for the classroom wall. He looked for green paint but found only purple. He painted the tree purple while Zoe looked for more paint. Zoe brought a different box because the green paint was inside it. Sam looked at his purple tree and smiled. He kept it purple because he liked the strange tree. Zoe painted orange apples on its branches. Sam added a yellow bird with a purple tail. They called their picture a tree from a dream.",
    "questions": [
     {
      "op": "detail",
@@ -2814,7 +2814,7 @@
    "title": "The Paper Mountain",
    "reviewer": "flash",
    "reviewNote": "",
-   "passage": "Meera had a big box of clean paper on her desk. Dan wanted to help her carry it to the classroom. He took some because the box was too heavy for Meera. They walked together and put their paper on the classroom table. Meera counted the pages because their class needed twenty. There was one page more than they needed. Dan drew a mountain on it with two children at the top. He called it their paper mountain, now much easier to carry.",
+   "passage": "Meera had a box of clean paper by the school door. Dan wanted to help her carry it to the classroom. He took some because the box was too heavy for Meera. They walked together and put their paper on the classroom table. Meera counted the pages because their class needed twenty. One more page came out stuck to the last one. Dan drew a mountain on it with two children at the top. He called it their paper mountain.",
    "questions": [
     {
      "op": "detail",
@@ -3780,7 +3780,7 @@
    "title": "The Quiet Bell",
    "reviewer": "flash",
    "reviewNote": "",
-   "passage": "Jack made a little shop for his toys at home. Aisha rang a bell when she wanted to buy something. Their dog came running because that bell meant dinner to him. He sat beside the shop with his bowl. Jack put the bell away because the dog was waiting for food. Aisha wrote OPEN on some paper. Now she pointed at the paper when she wanted something. The dog went to sleep, and the shop stayed open.",
+   "passage": "Jack made a little shop for his toys at home. Aisha rang a bell when she wanted to buy something. Their dog came running because that bell meant dinner to him. He sat beside the shop with his bowl. Jack put the bell away because the dog was waiting for food. Aisha wrote PLEASE on some paper. Now she held up the paper when she wanted to buy something. The dog went to sleep, and the shop stayed open.",
    "questions": [
     {
      "op": "detail",
@@ -4056,11 +4056,11 @@
    "title": "The Missing Chair",
    "reviewer": "flash",
    "reviewNote": "",
-   "passage": "Ella and her grandfather Dan walked past the bookshop on their school walk. A small blue chair stood where the big chair usually stood. Ella stopped because she always waved to the teddy on the big chair. That afternoon, a woman was painting the small chair outside. She had taken the big chair and teddy inside because rain was coming. After the rain stopped, she brought the small chair outside for painting. Now the big chair and teddy were outside again too. Ella waved to the teddy, and Dan waved too.",
+   "passage": "Ella and her grandfather Dan walked past the bookshop on their way to school. A small blue chair stood where the big chair usually stood. Ella stopped because she always waved to the teddy on the big chair. On the way home, they saw a woman painting the small chair. She had taken the big chair and teddy inside because rain was coming. Now the sun was out, and the big chair and teddy were back. Ella waved to the teddy, and Dan waved too.",
    "questions": [
     {
      "op": "detail",
-     "stem": "What stood outside the bookshop that morning?",
+     "stem": "What stood outside the bookshop when they walked to school?",
      "options": [
       "A little green table.",
       "A little blue chair.",

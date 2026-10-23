@@ -62,7 +62,7 @@ import {
   HOMOPHONE_SETS, HOMOPHONE_CLOZE, GRAMMAR_CLOZE, COMPARATIVES, GENDER_PAIRS, COLLECTIVES,
   PROVERBS, SILENT_PATTERNS, ENDING_GROUPS, RHYME_CLUES, PAIR_SYNONYMS, PAIR_ANTONYMS,
   SYNONYM_GROUPS, GRID_OPPOSITES, SENSE_ANSWERS, COMPOUND_HEADS, HIDDEN_SENTENCES,
-  PAIR_SOUND_ALIKE, PAIR_MEANING_YOUNG_SKIP,
+  PAIR_SOUND_ALIKE, PAIR_MEANING_YOUNG_SKIP, US_ONLY,
 } from './englishTables.js'
 
 const CONCRETE = new Set([
@@ -160,6 +160,9 @@ const BAD_SENSE_WORDS = new Set(['club'])
 const BAD_DEFINITION_WORDS = new Set([
   'bipolar', 'boyfriend', 'centre', 'despite', 'few', 'progressive', 'psycho',
   'swept', 'united', 'viii', 'willing', 'written', 'years',
+  // -ing words filed under another sense: `lighting` "having abundant light", `accounting` "a convincing explanation",
+  // `boring` "the act of drilling" (a child reads it as dull).
+  'lighting', 'accounting', 'boring',
 ])
 // WordNet records every attested inflection, including specialist senses and alternative
 // plurals. Those are not automatically fair "write the plural" questions: `fish/fishes`,
@@ -171,7 +174,9 @@ const BAD_PLURAL_WORDS = new Set([
 ])
 // `beaten` is a participle, not the simple past of `beat`; `might` is not a mechanical past
 // tense of modal `may` in the sense this question tests.
-const BAD_PAST_WORDS = new Set(['beat', 'may'])
+// beat/may: no single simple past. ring: `ringed` is right too (a ring drawn round). swell: the simple past is `swelled`
+// (`swollen` is the participle). clothe: `clothed`, not the old `clad`.
+const BAD_PAST_WORDS = new Set(['beat', 'may', 'ring', 'swell', 'clothe'])
 // Generated derivations can share spelling without being a teachable base+suffix relation.
 const BAD_SUFFIX_PAIRS = new Set(['tense|tensor'])
 // A bare base is not a fair prefix question when the table itself gives it two answers.
@@ -1495,6 +1500,9 @@ function glossMismatch(w, d) {
   // `settled`, whatever the lexicon files `settled` under.
   const base = /ied$/.test(w) ? w.slice(0, -3) + 'y' : /ed$/.test(w) ? w.slice(0, -2) : null
   if (base && (base in WORD_Z || (base + 'e') in WORD_Z) && glossReadsAsVerb(d)) return true
+  // An -ing word answers a definition that opens like a noun ("the act of…", "a…") or an adjective, never a bare verb:
+  // "look past, fail to notice" is `overlook`, not `overlooking`; "pull, as against a resistance" is not `dragging`.
+  if (/ing$/.test(w) && !/^(the|a|an|having|being|lacking|causing|showing|full|not|very|so|too)\b/.test(d)) return true
   return pos === 'adj' && /ed$/.test(w) && !ADJ_GLOSS.test(d)
 }
 
@@ -3091,6 +3099,8 @@ export function validateItem(item) {
     }
   }
   if (!item.correct.length) return 'no correct option'
+  const american = [item.prompt.word, ...texts].find(t => t && US_ONLY.has(String(t).toLowerCase()))
+  if (american) return `"${american}" is an American word`
   // One variety per question, throughout. The failure this guards against is not picking the
   // wrong spelling — it is `color` in one option and `colour` in the next.
   if (item.variety) {
@@ -3187,6 +3197,8 @@ export function validateItem(item) {
     if (!SENSE_ANSWERS[item.prompt.sentence]?.includes(answers[0])) {
       return `the answer "${answers[0]}" is not approved for this sentence`
     }
+    // "a big (or large) barn" asked for the word meaning `large` and offered `big`: the sentence gives the answer away.
+    if (new RegExp(`\\b${answers[0]}\\b`, 'i').test(item.prompt.sentence)) return `the sentence already says "${answers[0]}"`
   }
 
   // ── the word-knowledge family ───────────────────────────────────────────────────────────

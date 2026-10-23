@@ -10,7 +10,7 @@
 // Checked by scripts/english-ladder/check-bank.mjs: Starters + Movers words (Cd6 also Flyers), the safety lists,
 // no UK/US words, and a blind solver (guessed without the context = rejected; missed with it = rejected).
 
-export const SENTENCE_REVISION = 'sentences-1'
+export const SENTENCE_REVISION = 'sentences-2'
 
 const SOURCE = [
   // ── Ca2: question and answer ───────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ const SOURCE = [
   { id: 'C3-001', step: 'Ca3', context: 'Yesterday the dog was in the kitchen. Today it is in the bedroom.', text: 'Where is the dog today?', options: ['In the bedroom.', 'In the kitchen.', 'In the hall.'] },
   { id: 'C3-002', step: 'Ca3', context: 'The park is not open on Monday. It is open on Tuesday.', text: 'When can you go to the park?', options: ['On Tuesday.', 'On Monday.', 'On Sunday.'] },
   { id: 'C3-003', step: 'Ca3', context: 'Ben does not like milk. He likes orange juice.', text: 'What does Ben like?', options: ['Orange juice.', 'Milk.', 'Water.'] },
-  { id: 'C3-004', step: 'Ca3', context: 'Last week Anna had short hair. Now her hair is long.', text: "What is Anna's hair like now?", options: ['Long.', 'Short.', 'Curly.'] },
+  { id: 'C3-004', step: 'Ca3', context: 'Last week Anna sat next to Tom. This week she sits next to Lily.', text: 'Who does Anna sit next to this week?', options: ['Lily.', 'Tom.', 'Ben.'] },
   { id: 'C3-005', step: 'Ca3', context: 'This morning it was sunny. Now it is raining.', text: 'What is the weather like now?', options: ['It is raining.', 'It is sunny.', 'It is windy.'] },
   { id: 'C3-006', step: 'Ca3', context: 'The box is not empty. There are three pens in it.', text: 'What is in the box?', options: ['Three pens.', 'Nothing.', 'Three pencils.'] },
   { id: 'C3-007', step: 'Ca3', context: 'Tom did not walk to school today. His dad took him in the car.', text: 'How did Tom go to school today?', options: ['In the car.', 'He walked.', 'By bus.'] },
@@ -52,8 +52,8 @@ const SOURCE = [
   { id: 'C4-002', step: 'Ca4', context: 'After Lucy played a game, she did her homework. Then she sang a song.', text: 'What did Lucy do first?', options: ['She played a game.', 'She did her homework.', 'She sang a song.'] },
   { id: 'C4-003', step: 'Ca4', context: 'Grace went swimming before she fed the fish. After that, she went to the library.', text: 'What did Grace do last?', options: ['She went to the library.', 'She went swimming.', 'She fed the fish.'] },
   { id: 'C4-004', step: 'Ca4', context: 'Dan watched TV after lunch. Before lunch, he read a comic. In the evening, he played in the park.', text: 'What did Dan do first?', options: ['He read a comic.', 'He watched TV.', 'He played in the park.'] },
-  { id: 'C4-005', step: 'Ca4', context: 'After the party, Kim made a card. At the party, she sang songs. Before the party, she washed her hair.', text: 'When did Kim make the card?', options: ['After the party.', 'Before the party.', 'At the party.'] },
-  { id: 'C4-006', step: 'Ca4', context: 'Hugo put on his coat after he put on his hat. Then he put on his scarf.', text: 'What did Hugo put on first?', options: ['His hat.', 'His coat.', 'His scarf.'] },
+  { id: 'C4-005', step: 'Ca4', context: 'After the party, Kim made a thank-you card. At the party, she sang songs. Before the party, she washed her hair.', text: 'When did Kim make the card?', options: ['After the party.', 'Before the party.', 'At the party.'] },
+  { id: 'C4-006', step: 'Ca4', context: 'Hugo put on his hat after he put on his scarf. Then he put on his gloves.', text: 'What did Hugo put on first?', options: ['His scarf.', 'His hat.', 'His gloves.'] },
   { id: 'C4-007', step: 'Ca4', context: 'Ann went to the library. After that, she bought some bread. Then she had a drink at the café.', text: 'What did Ann do second?', options: ['She bought some bread.', 'She went to the library.', 'She had a drink.'] },
   { id: 'C4-008', step: 'Ca4', context: 'The children had music after lunch. Before lunch, they had art. English was the last lesson.', text: 'Which lesson was first?', options: ['Art.', 'Music.', 'English.'] },
   { id: 'C4-009', step: 'Ca4', context: 'Matt read a book. Before that, he had a bath. After the book, he played a game.', text: 'What did Matt do last?', options: ['He played a game.', 'He had a bath.', 'He read a book.'] },
@@ -89,7 +89,7 @@ const SOURCE = [
   { id: 'E1-005', step: 'E1', context: "Lucy's bag is under the table. Her book is in the bag.", text: "Where is Lucy's book?", options: ['In her bag.', 'Under the bed.', 'On the table.'] },
   { id: 'E1-006', step: 'E1', context: 'Dan has three pencils and two rulers.', text: 'How many rulers has Dan got?', options: ['Two.', 'Three.', 'Five.'] },
   { id: 'E1-007', step: 'E1', context: 'The bird is in the tree. The cat is under the tree.', text: 'Where is the cat?', options: ['Under the tree.', 'In the tree.', 'On the house.'] },
-  { id: 'E1-008', step: 'E1', context: "Grace can ride a bike. Her little brother can't.", text: 'Who can ride a bike?', options: ['Grace.', 'Her brother.', 'Grace and her brother.'] },
+  { id: 'E1-008', step: 'E1', context: "Grace can ride a bike. Her little brother can't, but he can swim.", text: "What can Grace's brother do?", options: ['Swim.', 'Ride a bike.', 'Play tennis.'] },
   { id: 'E1-009', step: 'E1', context: "It is Matt's birthday. He is eight today.", text: 'How old is Matt?', options: ['Eight.', 'Six.', 'Seven.'] },
   { id: 'E1-010', step: 'E1', context: "Sue's grandma makes a cake. It is a chocolate cake.", text: 'Who makes the cake?', options: ["Sue's grandma.", 'Sue.', "Sue's dad."] },
   { id: 'E1-011', step: 'E1', context: 'There are four ducks in the water. Two are brown.', text: 'How many ducks are there?', options: ['Four.', 'Two.', 'Six.'] },

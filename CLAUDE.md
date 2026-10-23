@@ -160,6 +160,24 @@ bunların tamamlandığı anlamına gelmez.
 
 ## Açık işler / yol haritası
 
+- [ ] İngilizce canlı içerik: mantık incelemesi düzeltmeleri (2026-10-23, Claude; `claude/english-bank-fixes`, push yok). Yayındaki her şey elle
+      okundu (80 dinleme, 75 cümle, 147 hikâye, 126 parça + üreteç örnekleri); rapor `tuto-app/handoff/ENGLISH-LOGIC-REVIEW-2026-10-23.md`.
+      **Canlı hata:** D1'de literacy motorunun "build the word" üreteci harf karosu döndürüyor, `dealItem` `options` bekleyip fırlatıyordu →
+      merdiven D1'i bu kaynaktan çekince aralıklı 500 ("Something went wrong"). `dealItem` artık `mode: 'letters'`'ı build sorusuna çeviriyor;
+      `literacy-sitting.test.mjs` katalogdaki her üreteci deniyor. **Dinleme:** L4-006 (eve nasıl döndüğü söylenmiyordu), L5-005, L5-006
+      düzeltildi (`listen-3`). Ses kaydı metni sakladığı için sunucu artık **kaydı metniyle birebir eşleşmeyen dinleme sorusunu vermiyor**
+      (`recordingMatches`); bu üçü yeniden kaydedilene kadar bekliyor, diğer 77 eşleşiyor. Kayıt: `scripts/english-audio/build.mjs --set listening`
+      + yükleme (Google TTS + Supabase deposu; kullanıcı yapar). **Hikâye** (B4-E2-034/-083/-092/-098, B4-E3-004/-011/-056/-072) ve **parça**
+      (R1-E3-05, B3-E3-09, B2-E3-03, E2-04, E3-04): döngüsel teslim, tutmayan gerekçe, çelişen zaman çizelgesi, eksik adım; kelime kapısı +
+      `check-stories` (metinle 26/26, ikinci savunulabilir şık yok); değişen hikâyelerin `blindRight`'ı yeni ölçümden (B4-E2-098 ve -092'nin
+      birer sorusu artık sunulmuyor). **Cümle:** C3-004, E1-008, C4-005, C4-006 (kör çözücü 0–1/3, `sentences-2`). **VR üreteci:** `ring`
+      (ringed de doğru), `swell` (swelled), `clothe` (clothed) geçmiş zaman sorusundan çıktı; anlam sorusunda cevap cümlede yazıyorsa ret;
+      -ing'li tanım cevabı yalnız isim/sıfat gibi başlayan tanıma (`overlooking` ← "look past" artık yok; lighting/accounting/boring engelli);
+      `US_ONLY` (mom, mailbox, automobile…) hiçbir soruda görünmez, `autumn/fall` eşanlam çifti silindi. Doğrulama: `npm test` 229/229,
+      `english:check`, `check-bank` 75/75, dinleme 80/80, build; harness'te oturum + pekiştirme. **Açık (raporda):** sıra soruları hikâyelerde
+      hep ilk cümle; canlı hikâyeler 18 Ekim'in ilk 200'ü (revize sürüm + B5/B6 yayında değil); üreteç çeldiricileri harf yığını.
+      **Native etkisi:** yok; hepsi sunucuda (içerik, `dealItem`, VR motoru `server/english`), `mobile/engine` paketi etkilenmez.
+
 - [ ] İngilizce merdiven oturumu, ilk test bulguları (2026-10-21, Claude; `claude/english-test-findings`, commit yok). Ekran (`LiteracyScreen`)
       VR oturumunun düzenine geçti: gül başlık, Nunito şıklar / Fredoka düğmeler (şıklar sistem fontuna düşüyordu), doğruda yeşil "Yes! ⭐"
       flaşı kendiliğinden geçer, yanlışta turuncu flaş cevabı (sesli şıkta açıklama metni + 🔊), ek açıklamayı ve dinlemede **Listen again**
