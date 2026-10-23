@@ -1,5 +1,5 @@
 {
- "note": "Reading stories, batch READING-STORIES-200-2026-10-18 (codex/literacy-pilot, commit 5e634845). Passed the passages gate; checked here 2026-10-18 by scripts/english-ladder/check-stories.mjs. blindRight = right answers out of 3 by a solver that never saw the passage: 3 means the question can be answered without reading. NOT approved by a person.",
+ "note": "Reading stories, batch READING-STORIES-200-2026-10-18 (codex/literacy-pilot, commit 5e634845). Passed the passages gate; checked here 2026-10-18 by scripts/english-ladder/check-stories.mjs. blindRight = right answers out of 3 by a solver that never saw the passage: 3 means the question can be answered without reading. NOT approved by a person. Corrected 2026-10-23 (logic review, handoff/ENGLISH-LOGIC-REVIEW-2026-10-23.md): B4-E2-034, -083, -092, -098, B4-E3-004, -011, -056, -072 rewritten and re-checked; their blindRight is from that check.",
  "source": "handoff/READING-STORIES-200-2026-10-18.json",
  "items": [
   {
@@ -1744,18 +1744,18 @@
    "level": "E2",
    "title": "The Yellow Card",
    "category": "School and communication",
-   "passage": "Yan found a yellow card under his desk. Rita read the name on it and took it to their teacher. The teacher gave it to Yan again. It was his card for the class game that afternoon.",
+   "passage": "Rita found a yellow card under her desk. She read the name on it and took it to their teacher. The teacher gave it to Yan. It was his card for the class game that afternoon.",
    "questions": [
     {
      "op": "detail",
-     "stem": "Where did Yan find the card?",
+     "stem": "Where did Rita find the card?",
      "options": [
-      "Inside his bag.",
-      "Under his desk.",
-      "Behind his chair."
+      "Inside her bag.",
+      "Under her desk.",
+      "Behind her chair."
      ],
      "answer": 1,
-     "evidence": "Yan found a yellow card under his desk.",
+     "evidence": "Rita found a yellow card under her desk.",
      "blindRight": 3,
      "flags": [
       "answered 3/3 without the text"
@@ -1763,14 +1763,14 @@
     },
     {
      "op": "detail",
-     "stem": "Who gave Yan the card back?",
+     "stem": "Who gave Yan the card?",
      "options": [
       "Rita.",
       "His brother.",
       "The teacher."
      ],
      "answer": 2,
-     "evidence": "The teacher gave it to Yan again.",
+     "evidence": "The teacher gave it to Yan.",
      "blindRight": 0,
      "flags": []
     },
@@ -1778,12 +1778,12 @@
      "op": "sequence",
      "stem": "What happened first?",
      "options": [
-      "The teacher gave Yan the card back.",
+      "The teacher gave Yan the card.",
       "Rita read the name.",
-      "Yan found a card."
+      "Rita found a card."
      ],
      "answer": 2,
-     "evidence": "Yan found a yellow card under his desk.",
+     "evidence": "Rita found a yellow card under her desk.",
      "blindRight": 3,
      "flags": [
       "answered 3/3 without the text"
@@ -4299,7 +4299,7 @@
    "level": "E2",
    "title": "The Bus Number",
    "category": "Trips and places",
-   "passage": "Amir waited at the bus stop with his grandfather Kang. A bus with the number eight came along. Kang looked at their tickets and let that bus go. They got on the next bus, which had the number six.",
+   "passage": "Amir waited at the bus stop with his grandfather Kang. A bus with the number eight came along. Kang checked the number on their tickets and let that bus go. They got on the next bus, which had the number six.",
    "questions": [
     {
      "op": "detail",
@@ -4323,7 +4323,7 @@
       "A map."
      ],
      "answer": 0,
-     "evidence": "Kang looked at their tickets and let that bus go.",
+     "evidence": "Kang checked the number on their tickets and let that bus go.",
      "blindRight": 0,
      "flags": []
     },
@@ -4774,7 +4774,7 @@
    "level": "E2",
    "title": "The Small Parcel",
    "category": "Home and routines",
-   "passage": "Lily found a small parcel on the kitchen table. Ben read the name on it and gave it to her. Lily opened it and found a new drawing book. Ben brought her pencils, and she drew the empty box.",
+   "passage": "Ben found a small parcel on the kitchen table. He read the name on it and gave it to Lily. Lily opened it and found a new drawing book. Ben brought her pencils, and she drew the empty box.",
    "questions": [
     {
      "op": "detail",
@@ -4785,8 +4785,8 @@
       "On the kitchen table."
      ],
      "answer": 2,
-     "evidence": "Lily found a small parcel on the kitchen table.",
-     "blindRight": 1,
+     "evidence": "Ben found a small parcel on the kitchen table.",
+     "blindRight": 2,
      "flags": []
     },
     {
@@ -4809,11 +4809,11 @@
      "stem": "What happened first?",
      "options": [
       "Ben read the name.",
-      "Lily found a parcel.",
+      "Ben found a parcel.",
       "Lily opened the parcel."
      ],
      "answer": 1,
-     "evidence": "Lily found a small parcel on the kitchen table.",
+     "evidence": "Ben found a small parcel on the kitchen table.",
      "blindRight": 3,
      "flags": [
       "answered 3/3 without the text"
@@ -5090,7 +5090,7 @@
    "level": "E2",
    "title": "A Change of Seat",
    "category": "School and communication",
-   "passage": "Sam sat beside the window for the class story. Zoe sat behind him with a picture of a tiger. Their teacher asked Zoe to show the picture. Sam moved to the chair behind Zoe so everyone could see it.",
+   "passage": "Sam sat beside the window for the class story. Zoe sat behind him with a picture of a tiger. Their teacher asked Zoe to show the picture. Sam could not see it, so he moved beside Zoe.",
    "questions": [
     {
      "op": "detail",
@@ -5113,10 +5113,12 @@
       "Beside Zoe.",
       "In front of Zoe."
      ],
-     "answer": 0,
-     "evidence": "Sam moved to the chair behind Zoe so everyone could see it.",
-     "blindRight": 0,
-     "flags": []
+     "answer": 1,
+     "evidence": "Sam could not see it, so he moved beside Zoe.",
+     "blindRight": 3,
+     "flags": [
+      "answered 3/3 without the text"
+     ]
     },
     {
      "op": "sequence",
@@ -5404,7 +5406,7 @@
    "level": "E3",
    "title": "The Lunch Name",
    "category": "Food and kitchen",
-   "passage": "Priya and Raj had the same green lunch boxes at school. Priya put a rabbit picture on hers before going outside. She chose a rabbit because it was her pet at home. Raj drew a little train on a card for his box. He put the card inside because rain fell as they walked outside. At lunch, Priya saw her rabbit but could not see Raj's train. Raj opened his and showed her the train inside.",
+   "passage": "Priya and Raj had the same green lunch boxes at school. Priya put a rabbit picture on hers before going outside. She chose a rabbit because it was her pet at home. Raj drew a little train on a card for his box. He put the card inside because their boxes waited outside, and rain was coming. At lunch, Priya saw her rabbit but could not see Raj's train. Raj opened his and showed her the train inside.",
    "questions": [
     {
      "op": "detail",
@@ -5445,7 +5447,7 @@
       "He wanted it to stay dry."
      ],
      "answer": 2,
-     "evidence": "He put the card inside because rain fell as they walked outside.",
+     "evidence": "He put the card inside because their boxes waited outside, and rain was coming.",
      "blindRight": 0,
      "flags": []
     }
@@ -5773,7 +5775,7 @@
    "level": "E3",
    "title": "The Small Bag",
    "category": "Trips and places",
-   "passage": "Amir and Kang were going to the park with their teacher. Amir put a little bag inside his school bag. He brought it because they were going to find fallen leaves. Kang brought pencils and a drawing book but left his pens at school. He wanted pencils because he liked making soft lines for leaf pictures. At the park, Amir found a leaf bigger than his little bag. Kang drew it before they left it under the tree.",
+   "passage": "Amir and Kang were going to the park with their teacher. Amir put a little bag inside his school bag. He brought it because they were going to find fallen leaves. Kang brought pencils and a drawing book but left his pens at home. He wanted pencils because he liked making soft lines for leaf pictures. At the park, Amir found a leaf bigger than his little bag. Kang drew it before they left it under the tree.",
    "questions": [
     {
      "op": "detail",
@@ -8144,7 +8146,7 @@
    "level": "E3",
    "title": "A Place for the Cards",
    "category": "Games and pretend play",
-   "passage": "Ben put animal cards on the floor for a game with Lily. Lily moved them to the table because their dog kept walking over them. Ben put three cards face down and asked Lily to choose. She chose the middle card because its back had a little red mark. Ben turned it over and found a funny purple cow. Lily laughed and put it beside her chair. Ben had turned that card over for Lily before they played.",
+   "passage": "Ben put animal cards on the floor for a game with Lily. Lily moved them to the table because their dog kept walking over them. Ben put three cards face down and asked Lily to choose. She chose the middle card because its back had a little red mark. She had seen that mark on the cow card in their last game. Ben turned it over and found a funny purple cow. Lily laughed and put it beside her chair.",
    "questions": [
     {
      "op": "detail",
@@ -8185,7 +8187,7 @@
       "She saw Ben pointing at it with his foot."
      ],
      "answer": 0,
-     "evidence": "She chose the middle card because its back had a little red mark.",
+     "evidence": "She chose the middle card because its back had a little red mark. She had seen that mark on the cow card in their last game.",
      "blindRight": 1,
      "flags": []
     }
@@ -8998,7 +9000,7 @@
    "level": "E3",
    "title": "The Little Red Mark",
    "category": "School and communication",
-   "passage": "Dan put a red mark beside Tuesday on the class calendar. Max asked why there was no picture of a cake. Dan said that the mark was for their trip to the library. He chose red because their teacher had asked for school trips in red. Max drew a little book beside the mark. He added it because he wanted to remember what they were doing that day. Now the mark told them when, and the picture told them what.",
+   "passage": "Dan put a red mark beside Tuesday on the class calendar. Max asked what the mark was for. Dan said that the mark was for their trip to the library. He chose red because their teacher had asked for school trips in red. Max drew a little book beside the mark. He added it because he wanted to remember what they were doing that day. Now the mark told them when, and the picture told them what.",
    "questions": [
     {
      "op": "detail",
