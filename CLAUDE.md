@@ -160,6 +160,17 @@ bunların tamamlandığı anlamına gelmez.
 
 ## Açık işler / yol haritası
 
+- [ ] İngilizce yaş testleri, üreteç düzeltmeleri ve merdiven yaş tavanı (2026-10-24, Claude; `claude/english-age-fixes`, #36'nın üstünde).
+      Her yaş (5–12) için merdiven oturumları sunucunun kendi modülleriyle bellekte oynatıldı + her Word puzzles bandı; 2 turda 872 soru anahtara
+      bakmadan çözüldü, **872/872** (yanlış anahtar yok). Rapor `handoff/ENGLISH-AGE-RUN-2026-10-24.md`. **Merdiven (`ladder-3`):** yerleştirme yaşın
+      "tanıtılan" basamağının bir üstünde duruyor (5 yaş B1'de, eskiden ilk doğru cevaplardan sonra B6 "validity"); yerleşince normal yükselme tavanı
+      aşabilir, ebeveynin `perTrack` başlangıcı tavanı yükseltir; test `ladder.test.mjs`. **Üreteç:** tanım (have, clown, intro), grammar-cloze ("It ___
+      time to go home" → doğal cevap "is" yoktu), sessiz harf (Dale-Chall ya da yaygın; writ/wrought engelli), sesteş (gösterilen kelime yaygın, cevap
+      karşılaşılabilir; yazım çeşitleri ve aksan çiftleri elendi), kafiye (wrath UK), kök (-ate/-ise/-ize), kesme işareti (kesmesiz tamlama "class
+      trip" doğru olduğu için şık değil), geçmiş zaman (can→canned: çocuğun cevabı "could"; man/sum/body gibi isim-önce kelimeler), ie/ei (married,
+      healthier gibi y→ie kelimeleri değil), benzetme (person:foot). **Açık (ürün kararı):** 6 yaş B3/D4'te "cease/axial/societal" görüyor; basamak
+      kaynaklarının kelime düzeyi yaşa göre süzülmüyor. **Native etkisi:** yok; merdiven ve üreteçler sunucuda.
+
 - [ ] Okuma hikâyeleri 315 (revize 200 + B5 + B6) incelendi, düzeltildi, uygulamaya bağlandı (2026-10-23, Claude; `claude/english-stories-315`,
       #35'in üstünde). Codex'in istediği bağımsız inceleme: 315 hikâye / 945 soru elle okundu, aynı denetçiyle (a555085'ten beri değişmemiş
       `check-stories`) yeniden koşuldu. Rapor `handoff/READING-STORIES-315-REVIEW-2026-10-23.md` (71 bulgu tablosu), değişiklik listesi

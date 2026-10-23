@@ -55,7 +55,7 @@ export const RELATIONS = {
     stallion: ['mare'], gander: ['goose'], drake: ['duck'], cockerel: ['hen'],
   },
   foot: {
-    horse: ['hoof'], cat: ['paw'], dog: ['paw'], bird: ['claw'], person: ['foot'],
+    horse: ['hoof'], cat: ['paw'], dog: ['paw'], bird: ['claw'],   // person/foot left out: a bird has feet too
   },
   travels: {
     car: ['road'], train: ['rails', 'track'], boat: ['water', 'sea'], plane: ['sky', 'air'],
@@ -564,7 +564,7 @@ export const GRAMMAR_CLOZE = [
   ['Hannah ___ the whole bottle of water after the race.', 'drank', ['drink', 'drinks', 'drinked']],
   ['There ___ many bags to choose from.', 'are', ['is', 'was', 'be']],
   ['He ___ running when he slipped into the puddle.', 'was', ['were', 'is', 'be']],
-  ['It ___ time to go home.', 'was', ['were', 'are', 'be']],
+  ['Yesterday it ___ very cold.', 'was', ['were', 'are', 'be']],   // was "It ___ time to go home": the natural answer, is, was not offered
   ['When ___ Greg arriving?', 'is', ['are', 'am', 'be']],
   ["You ___ very tired, aren't you?", 'are', ['is', 'was', 'be']],
   ["Susan's sisters ___ much older than her.", 'were', ['was', 'is', 'be']],

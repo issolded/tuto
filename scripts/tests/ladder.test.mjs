@@ -85,7 +85,7 @@ test('a child below the first step is placed at it with floor set', () => {
 test('one slip does not close a step; two misses do; one right answer is not a pass', () => {
   let s = start({ age: 8, stop: 'native' })
   s = record(s, { track: 'B', step: 'B3', correct: false, session: 1 })
-  assert.equal(s.tracks.B.hi, TRACKS.B + 1, 'one miss leaves B3 open')
+  assert.equal(s.tracks.B.hi, s.tracks.B.cap + 1, 'one miss leaves B3 open (the bracket still reaches the age cap)')
   assert.equal(s.tracks.B.step, 2)
   s = record(s, { track: 'B', step: 'B2', correct: true, session: 1 })
   assert.equal(s.tracks.B.lo, 0, 'one right answer at B2 is not yet a pass')
@@ -293,4 +293,22 @@ test('record does not change the state it was given', () => {
   const before = JSON.stringify(s)
   record(s, { track: 'A', step: 'A5', correct: true, session: 1 })
   assert.equal(JSON.stringify(s), before)
+})
+
+// A young child who answers right is not walked up to the top of the ladder while placing: the search stops one step
+// above what the age introduces, and only the placed-phase promotion rules go higher.
+test('placement stops at the age cap; promotion can go past it later', () => {
+  let s = start({ age: 5 })
+  assert.equal(s.tracks.B.cap, 1)
+  for (let i = 0; i < 6; i++) s = record(s, { track: 'B', step: s.tracks.B.step, correct: true, session: 1, group: `g${i}` })
+  assert.equal(s.tracks.B.phase, 'placed')
+  assert.equal(s.tracks.B.step, 1, 'placed at the cap, not at B6')
+  s = start({ age: 6 })
+  for (let i = 0; i < 6; i++) s = record(s, { track: 'Cd', step: s.tracks.Cd.step, correct: true, session: 1, group: `c${i}` })
+  assert.ok(s.tracks.Cd.step <= 3, `six-year-old Cd placed at ${s.tracks.Cd.step}`)
+  // stretch questions one step up, right on two days, promote past the cap
+  for (const [i, day] of [[1, 'd1'], [2, 'd1'], [3, 'd2']]) s = record(s, { track: 'Cd', step: s.tracks.Cd.step + 1, correct: true, session: day, day, group: `p${i}` })
+  assert.ok(s.tracks.Cd.step > 3, 'promotion is not capped')
+  // a parent's own starting step raises the cap
+  assert.equal(start({ age: 5, perTrack: { B: 4 } }).tracks.B.cap, 4)
 })

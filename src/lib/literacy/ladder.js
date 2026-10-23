@@ -38,7 +38,7 @@ export const TRACKS = { A: 5, B: 6, Ca: 4, Cd: 6, D: 6, E: 5 }
 export const TRACK_ORDER = ['A', 'B', 'Ca', 'Cd', 'D', 'E']
 
 // Bump when a rule below changes what a stored answer means; stored answers keep the version they were judged by.
-export const RULES_VERSION = 'ladder-2'
+export const RULES_VERSION = 'ladder-3'   // ladder-3: placement capped one step above the age's introduced step
 
 // Tunable in one place; the pilot sets the real numbers. None of these is a measured standard.
 export const RULES = {
@@ -97,7 +97,11 @@ export function start({ age, stop = null, perTrack = {}, skills = {} }) {
     // Nobody chose: the middle of a wide bracket (age-solid, capped low for the youngest), so one right answer
     // can try a hard one and one wrong answer can drop to the floor.
     else first = Math.max(1, Math.min(row[t][0] || 1, Math.ceil(TRACKS[t] / 2)))
-    tracks[t] = { phase: 'placing', status: 'unknown', step: clamp(t, first), lo: 0, hi: TRACKS[t] + 1, history: [], floor: false }
+    // Placement does not search above one step past what the age introduces (a five-year-old who guesses one synonym
+    // right is not asked "the quality of being valid and rigorous"). A parent's own starting step raises the cap; once
+    // placed, the normal promotion rules can take the child higher.
+    const cap = clamp(t, Math.max((row[t][1] || 0) + 1, perTrack[t] || 0))
+    tracks[t] = { phase: 'placing', status: 'unknown', step: clamp(t, Math.min(first, cap)), lo: 0, hi: TRACKS[t] + 1, cap, history: [], floor: false }
   }
   return { version: RULES_VERSION, age, stop, skills, tracks, probes: 0 }
 }
@@ -169,6 +173,7 @@ export function record(state, attempt) {
     tr.lo = 0; tr.hi = TRACKS[t] + 1
     for (let k = 1; k <= TRACKS[t]; k++) if (passed(tally, k, TRACKS[t])) tr.lo = k
     for (let k = TRACKS[t]; k > tr.lo; k--) if (tooHard(tally, k)) tr.hi = k
+    if (tr.cap) tr.hi = Math.min(tr.hi, tr.cap + 1)                 // the search stops at the age cap
     const placingAnswers = tr.history.filter(h => h.independent).length
     if (tr.hi - tr.lo <= 1 || placingAnswers >= RULES.MAX_PLACING) {
       tr.phase = 'placed'

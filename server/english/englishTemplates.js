@@ -163,6 +163,8 @@ const BAD_DEFINITION_WORDS = new Set([
   // -ing words filed under another sense: `lighting` "having abundant light", `accounting` "a convincing explanation",
   // `boring` "the act of drilling" (a child reads it as dull).
   'lighting', 'accounting', 'boring',
+  // Common words filed under a rare sense: `have` "a person who possesses great material wealth", `clown` "a rude or vulgar fool".
+  'have', 'clown', 'intro',   // intro: the word defined is `introduction`
 ])
 // WordNet records every attested inflection, including specialist senses and alternative
 // plurals. Those are not automatically fair "write the plural" questions: `fish/fishes`,
@@ -176,7 +178,10 @@ const BAD_PLURAL_WORDS = new Set([
 // tense of modal `may` in the sense this question tests.
 // beat/may: no single simple past. ring: `ringed` is right too (a ring drawn round). swell: the simple past is `swelled`
 // (`swollen` is the participle). clothe: `clothed`, not the old `clad`.
-const BAD_PAST_WORDS = new Set(['beat', 'may', 'ring', 'swell', 'clothe'])
+// can: a child's past of `can` is `could`, not `canned`. The rest are nouns first, and a child does not use them as
+// verbs (`man` -> manned, `sum` -> summed, `body` -> bodied).
+const BAD_PAST_WORDS = new Set(['beat', 'may', 'ring', 'swell', 'clothe', 'can', 'body', 'embody', 'man', 'sum', 'cap',
+  'stem', 'spur', 'dot', 'flag', 'bar', 'skin', 'top', 'rig', 'dub', 'levy', 'pad', 'handicap'])
 // Generated derivations can share spelling without being a teachable base+suffix relation.
 const BAD_SUFFIX_PAIRS = new Set(['tense|tensor'])
 // A bare base is not a fair prefix question when the table itself gives it two answers.
@@ -1417,8 +1422,11 @@ const syllablesOf = (w, variety) => SYLLABLES[variety]?.[w]
 // and gives bare `mall` only the /mæl/ pronunciation used in the London street name rather
 // than the ordinary shopping-centre word. Keep the source data intact and quarantine the
 // affected prompts at the question boundary.
+// Homophone pairs that hold only in some accents, or rest on a word no child meets.
+const BAD_HOMOPHONE_WORDS = new Set(['wont', 'bourne', 'borne', 'kraft', 'lure', 'hippy', 'hippie', 'aunty', 'auntie', 'donut', 'doughnut', 'mold', 'mould', 'disk', 'disc'])
+
 const BAD_RHYME_WORDS = {
-  uk: new Set(['mall', 'one']),
+  uk: new Set(['mall', 'one', 'wrath']),   // wrath: British /rɒθ/, rhymed only with American /ræθ/ words (aftermath)
   us: new Set(),
 }
 
@@ -1621,6 +1629,20 @@ function genHomophone(r, band, seed) {
     () => table.map(g => g.filter(ok)).filter(g => g.length >= 2))
   if (!groups.length) return null
   const group = shuffle(r, pickOne(r, groups))
+  // The word printed in the question is one a child knows (`air`, not `heir`; never `bourne` or `wont`); the answer
+  // may be the rarer spelling, which is what the question teaches.
+  // Both words are ones a child can meet (`heir` yes; `lakh`, `moa`, `roc` no), and two spellings of one word
+  // (`aunty/auntie`, `mould/mold`, `disk/disc`) are not homophones.
+  // Dale-Chall words or frequent ones; `familiar` also admits whole WordNet categories, which let `lakh` and `baba` in.
+  const common = (w) => FAMILIAR_SET.has(w) || z(w) >= 42
+  const meetable = (w) => FAMILIAR_SET.has(w) || z(w) >= 38
+  if (group.some(w => BAD_HOMOPHONE_WORDS.has(w))) return null
+  const at = group.findIndex(common)
+  if (at < 0) return null
+  group.unshift(...group.splice(at, 1))
+  const answerAt = group.findIndex((w, i) => i > 0 && meetable(w) && !related(w, group[0]) && !sameWordDifferentEnding(w, group[0]))
+  if (answerAt < 0) return null
+  group.splice(1, 0, ...group.splice(answerAt, 1))
   const [stem, answer] = group
   if (!stem || !answer) return null
 
@@ -1853,7 +1875,7 @@ function genRootWord(r, band, seed) {
     // plain inflections, so `unopposed -> opposed` survived the first attempt. The test is
     // direct — strip each ending in turn and see whether a word is left.
     const INFLECTIONS = ['ed', 'd', 'ing', 'ly', 'ness', 'ment', 'ion', 'tion', 'ous', 'able',
-      'ible', 'ive', 'er', 'est', 'al', 'ity', 'ance', 'ence', 'ist', 'ful', 'less', 's']
+      'ible', 'ive', 'er', 'est', 'al', 'ity', 'ance', 'ence', 'ist', 'ful', 'less', 's', 'ate', 'ise', 'ize']
     const decomposable = (w) => INFLECTIONS.some((suf) => {
       if (!w.endsWith(suf) || w.length - suf.length < 3) return false
       const stem = w.slice(0, -suf.length)
@@ -2741,7 +2763,7 @@ function genApostrophe(r, band, seed) {
   const right = plural && endsS ? `${owner}' ${thing}` : `${owner}'s ${thing}`
   const variants = [
     [`${owner}'s ${thing}`, 'apostrophe-s-added-to-plural'],
-    [`${owner} ${thing}`, 'no-apostrophe'],
+    // Not `${owner} ${thing}`: as a compound it is often right (class trip, family car, sheep field), a second answer.
     [`${owner}' ${thing}`, 'apostrophe-after-s'],
     ...(plural && endsS ? [[`${owner.slice(0, -1)}'s ${thing}`, 'singular-owner']] : []),
     ...(!plural && !endsS
@@ -2822,6 +2844,8 @@ function genIeEi(r, band, seed) {
     // Only where the two letters are ONE sound, which is what the rule is about. In `alien`,
     // `quiet`, `science` and `cookie` they are two sounds or an ending, and no rule helps.
     && !/ie$|ien|iet|ienc|eing|eity|eist/.test(w)
+    // `married`, `accompanied`, `healthier`: the ie is a y changed before an ending, a different rule.
+    && !(/ie(d|r|s|st)$/.test(w) && anyWord(w.replace(/ie(d|r|s|st)$/, 'y')))
     && !anyWord(w.replace(/ie|ei/, m => (m === 'ie' ? 'ei' : 'ie')))))
   if (!words.length) return null
   const word = pickOne(r, words)
@@ -2831,14 +2855,18 @@ function genIeEi(r, band, seed) {
     [{ text: pair === 'ie' ? 'ei' : 'ie', why: 'swapped' }], { kind: 'ie-ei', word }, 2)
 }
 
+// Frequent enough by count, but not words a child writes.
+const RARE_SILENT = new Set(['writ', 'wrought', 'wraith', 'wretched'])
+
 function genSilentLetter(r, band, seed) {
   // "Rewrite each word, adding the missing silent letter: hym, nock, lim, autum, bom."
   // The answer bar, with the rare ones cut by hand below it: `_rought` for `wrought` was the
   // first one out, and the filler bar left too few words for the type to vary.
-  const words = memo(`silent|${band.answer}`, () => {
+  const words = memo(`silent|${band.answer}|${band.filler}`, () => {
     const out = []
     for (const w of Object.keys(WORD_Z)) {
-      if (!plainWord(w) || z(w) < band.answer || w.length < 4) continue
+      // A word a child knows: `writ` passed the answer bar and is not one.
+      if (!plainWord(w) || z(w) < band.answer || w.length < 4 || !(FAMILIAR_SET.has(w) || z(w) >= 32) || RARE_SILENT.has(w)) continue
       for (const p of SILENT_PATTERNS) {
         if (!p.re.test(w)) continue
         const at = p.at < 0 ? w.length + p.at : p.at
