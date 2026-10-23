@@ -89,13 +89,14 @@ const BANKS = [
     'blind-solver and safety checked; recordings not approved one by one: on the child card by user decision 2026-10-20, clips with status ok only'),
   ...bank('sentence-bank', SENTENCES.map(i => ({ id: i.id, step: i.step, format: 'read-choice' })), 'checked',
     'src/lib/literacy/sentenceBank.js: vocabulary, safety and blind-solver checked; not approved'),
-  // 341 of 600 questions were answered right 3/3 by a solver that never saw the story: those are not evidence of
-  // reading. A story is served only for its questions the blind solver got at most 1 of 3 (TEXT_ONLY_BLIND), and
-  // only if it has one; that subset meets the automatic bar, so it is `checked`. Put on the child's card by user
-  // decision 2026-10-20; no person has approved it.
+  // The revised 200 + B5 (100) + B6 (15), corrected 2026-10-23 (handoff/READING-STORIES-315-REVIEW-2026-10-23.md). The
+  // source key stays `reading-stories-200` because stored attempts carry it. A question a solver answered without the story
+  // is not evidence of reading: a story is served only for its questions the blind solver got at most 1 of 3
+  // (TEXT_ONLY_BLIND), and only if it has one; that subset meets the automatic bar, so it is `checked`. Put on the
+  // child's card by user decision 2026-10-20; no person has approved it.
   ...bank('reading-stories-200', STORIES.items.filter(i => i.questions.some(q => (q.blindRight ?? 3) <= TEXT_ONLY_BLIND))
     .map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'checked',
-    'batch of 2026-10-18: only the questions a blind solver could not answer (<= 1 of 3) are served'),
+    '315 stories (revised 200 + B5 + B6), corrected 2026-10-23: only the questions a blind solver could not answer (<= 1 of 3) are served'),
   ...bank('reading-passages', READING.items.map(i => ({ id: i.id, step: i.level, format: 'passage' })), 'checked',
     'scripts/english-passages candidates: passed automatic checks, not approved by a person'),
 ]

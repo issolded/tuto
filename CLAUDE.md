@@ -160,6 +160,20 @@ bunların tamamlandığı anlamına gelmez.
 
 ## Açık işler / yol haritası
 
+- [ ] Okuma hikâyeleri 315 (revize 200 + B5 + B6) incelendi, düzeltildi, uygulamaya bağlandı (2026-10-23, Claude; `claude/english-stories-315`,
+      #35'in üstünde). Codex'in istediği bağımsız inceleme: 315 hikâye / 945 soru elle okundu, aynı denetçiyle (a555085'ten beri değişmemiş
+      `check-stories`) yeniden koşuldu. Rapor `handoff/READING-STORIES-315-REVIEW-2026-10-23.md` (71 bulgu tablosu), değişiklik listesi
+      `handoff/READING-STORIES-315-CHANGES-2026-10-23.json`; teslim asıllarına dokunulmadı, düzeltilmiş kopyalar `tuto-app/handoff/*-FIXED-2026-10-23.json`.
+      **66 hikâye düzeltildi:** metinde olmayan ilişki/nesne (B6-E3-001, B6-E4-003), içine koyup "görsün diye" (B4-E3-004), aynı yolculuk iki yere
+      (B4-E3-023), çelişen sayılar (B4-E2-070), kafaya torba (B4-E2-049), `rubber` (B4-E2-024), canlıda düzelttiğim Sam/kapı hatasının revize
+      sürümde tekrarı (B4-E2-098), anlamsız nedenler, iki savunulabilir ana fikir/çeldirici. 166 sorunun paragraf-boyu `evidence`'ı (çocuğa açıklama
+      olarak gösteriliyor) cevabı taşıyan kesintisiz cümleye indi. Kapı 315/315; değişen 66 hikâye 66/66 (metinle yanlış 0, ikinci şık 0).
+      **Uygulama:** `readingStories.generated.json` artık 315 hikâye (kaynak anahtarı saklı denemeler için `reading-stories-200` kaldı); metinsiz
+      ≤1/3 eşiğiyle sunulan soru **206 → 812**, hikâye 314. #35'teki 8 eski-hikâye düzeltmesi bu dosyayla yerini revize sürümlere bırakır
+      (revize sürümlerde aynı hatalar yok ya da düzeltildi). Doğrulama: `npm test` 229/229, `english:check`, build, 314 hikâyenin hepsi `dealItem`'dan
+      geçti, anahtar sızıntısı yok. **Açık (kalite):** revize 200'de kör çözücü için eklenmiş keyfi ayrıntılar ve ayrıntıya inmiş neden soruları,
+      B5 E2 kalıp tekrarı; kişi onayı ve çocuk denemesi yok. **Native etkisi:** yok; hikâyeleri sunucu dağıtıyor.
+
 - [ ] İngilizce canlı içerik: mantık incelemesi düzeltmeleri (2026-10-23, Claude; `claude/english-bank-fixes`, push yok). Yayındaki her şey elle
       okundu (80 dinleme, 75 cümle, 147 hikâye, 126 parça + üreteç örnekleri); rapor `handoff/ENGLISH-LOGIC-REVIEW-2026-10-23.md`.
       **Canlı hata:** D1'de literacy motorunun "build the word" üreteci harf karosu döndürüyor, `dealItem` `options` bekleyip fırlatıyordu →

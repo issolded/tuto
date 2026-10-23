@@ -1,0 +1,262 @@
+{
+ "B6-E2-001": [
+  "passage: \"Next, they put a blue frog\" -> \"Next, they drew a blue frog\"",
+  "passage: \"they drew a slow panda\" -> \"they drew a big panda\"",
+  "Q3: options=['the blue frog', 'the brown duck', 'the big panda'] answer=1"
+ ],
+ "B6-E2-005": [
+  "Q1: stem=Where did Ella take the beans from?"
+ ],
+ "B6-E3-001": [
+  "passage: \"Tom was bringing a toy, so she kept a place for it.\" -> \"Her brother Tom was bringing a toy, so she kept a place for it.\"",
+  "passage: \"Tom came with a big green frog.\" -> \"Tom came with a small green frog.\"",
+  "passage: \"He chose that chair because the blanket was yellow like his cup.\" -> \"He liked that chair because its blanket was yellow like the frog's cup.\"",
+  "Q3: stem=Why did Tom like the open seat?",
+  "Q3: options=[\"Its blanket went with the frog's cup\", 'Its back was like his bed', 'Its legs were like his table'] answer=0"
+ ],
+ "B6-E3-003": [
+  "Q2: stem=Why did the children make the doll lunch?"
+ ],
+ "B6-E4-001": [
+  "passage: \"Then Yan noticed his aunt working at a small desk near the window.\" -> \"Then Yan noticed his aunt making a card at a small desk near the window.\""
+ ],
+ "B6-E4-002": [
+  "Q2: stem=Why did the teacher and the father miss some of the signs?",
+  "Q2: options=['They each read only the first sign in the line.', 'They could not read the small words.', 'They were looking for the bench.'] answer=0"
+ ],
+ "B6-E4-003": [
+  "Q1: stem=Where did Ella find the crown?",
+  "Q3: stem=What is the main idea of the story?",
+  "Q3: options=['A child finds out who wrote a song for the show.', 'A child finds out who made a crown for the show.', 'A child finds out who painted a stage for the show.'] answer=1"
+ ],
+ "B6-E4-004": [
+  "Q1: stem=Which animal stood by itself near the window first?",
+  "Q1: options=['the blue dog', 'the brown cat', 'the green bear'] answer=1"
+ ],
+ "B5-E2-009": [
+  "passage: \"Mia put a green star on the big white box.\" -> \"Mia put a red star on the big white box.\"",
+  "Q1: options=['a brown star', 'a black star', 'a red star'] answer=2"
+ ],
+ "B5-E2-010": [
+  "passage: \"Then he guessed the bird noise and drew a frog by the rock.\" -> \"Then he guessed the bird noise. He drew the first animal, a frog, by the rock.\"",
+  "passage: \"Then he guessed the bird noise. He drew the first animal, a frog, by the rock.\" -> \"Then he guessed the bird noise and drew the first animal, a frog, by the rock.\"",
+  "passage: \"Then he guessed the bird noise and drew the first animal, a frog, by the rock.\" -> \"Then he guessed the bird noise and drew a frog by the rock.\""
+ ],
+ "B5-E2-030": [
+  "passage: \"Tom moved the train with ten toy cars under the brown book first.\" -> \"Tom moved the train with ten toy cars on it under the brown book first.\""
+ ],
+ "B5-E2-033": [
+  "passage: \"Sam bounced the small bear off the chair and laughed.\" -> \"Sam bounced the small bear on the mat and laughed.\"",
+  "Q2: stem=Which toy did Sam bounce on the mat?"
+ ],
+ "B5-E2-036": [
+  "passage: \"Outside, rain hit the pear picture first.\" -> \"They held the paper out of the window, and rain hit the pear picture first.\""
+ ],
+ "B5-E3-005": [
+  "passage: \"Lily gave one box to Jack because she wanted him to wash it.\" -> \"The shell box was dirty inside, so Lily gave it to Jack because she wanted him to wash it.\"",
+  "passage: \"The shell box was dirty inside, so Lily gave it to Jack because she wanted him to wash it.\" -> \"Lily gave the dirty box to Jack because she wanted him to wash it.\""
+ ],
+ "B5-E3-012": [
+  "passage: \"Tom changed the words on a board because their tune had changed.\" -> \"Tom changed the words on a board because they had a new song.\""
+ ],
+ "B5-E3-019": [
+  "passage: \"Sam sat beside Ben because he wanted to share the card.\" -> \"Sam moved his card and plate beside Ben because he wanted to share the card.\"",
+  "Q3: stem=Why does Sam move beside Ben?",
+  "passage: \"Sam moved his card and plate beside Ben because he wanted to share the card.\" -> \"Sam moved his card beside Ben because he wanted to share the card.\""
+ ],
+ "B5-E3-020": [
+  "passage: \"He asked Zoe for the monkey because his aunt loved that animal.\" -> \"He asked Zoe for the monkey because he wanted to send it to his aunt.\"",
+  "passage: \"Tom sent his funny picture to her, and Zoe laughed.\" -> \"Tom sent his funny picture to his aunt, and Zoe laughed.\"",
+  "passage: \"He asked Zoe for the monkey because he wanted to send it to his aunt.\" -> \"He asked for the monkey because he wanted to send it to his aunt.\""
+ ],
+ "B5-E3-027": [
+  "passage: \"Ella lifted her arm because Sam needed someone to hold his drawing.\" -> \"Ella held the drawing up high because Sam wanted everyone to see it.\"",
+  "passage: \"The teacher saw her arm and picked up the duck book.\" -> \"The teacher saw the duck and picked up the duck book.\"",
+  "Q2: stem=Why did Ella hold the drawing up?",
+  "Q2: options=['to help show the picture', 'to ask to read the story', 'to give back the red book'] answer=0"
+ ],
+ "B5-E3-030": [
+  "passage: \"Nina said a toy monkey lived with them. So, the children added a flat road on the grass. They wanted to make the village look huge.\" -> \"Nina said a toy monkey lived there too. The children added a long flat road on the grass because they wanted the village to look huge.\"",
+  "passage: \"The children added a long flat road on the grass because they wanted the village to look huge.\" -> \"The children added a flat road because they wanted the village to look huge.\""
+ ],
+ "B5-E3-032": [
+  "passage: \"Sara opened her shop because Ben asked to see the cars. Next, Ben asked to see the trains.\" -> \"Sara opened her shop because Ben asked to see her toys. First, Ben asked to see the cars. Next, he asked to see the trains.\"",
+  "Q3: options=['Ben asked to buy her robot.', 'Ben asked to paint her boxes.', 'Ben asked to see her toys.'] answer=2",
+  "Q3: options=['Ben wanted to paint some boxes.', 'Sara had no cars to sell.', 'Ben asked to see her toys.'] answer=2",
+  "Q3: options=['Ben wanted to paint some boxes.', 'Sara had no cars to sell.', 'Ben wanted to look at her toys.'] answer=2"
+ ],
+ "B5-E4-001": [
+  "passage: \"She carefully drew three tall oak trees across his hill.\" -> \"She carefully drew three tall oak trees across his grass.\""
+ ],
+ "B5-E4-002": [
+  "Q2: stem=Why did Jack probably frown?",
+  "Q2: options=['The visitors were too loud.', 'His story was too short.', 'No one said anything about the toys.'] answer=2"
+ ],
+ "B5-E4-003": [
+  "passage: \"Nina put three small flags on the long table.\" -> \"Nina put two small flags on the long table.\""
+ ],
+ "B5-E4-005": [
+  "Q2: stem=Where would a toy smaller than the deer go on their trail?",
+  "Q2: options=['before the deer, at the start', 'between the car and the bear', 'after the bear, at the end'] answer=0"
+ ],
+ "B5-E4-012": [
+  "passage: \"Then they hid a yellow card under the blue table.\" -> \"Then they hid a yellow card under the blue table and a red card between two red books.\""
+ ],
+ "B5-E4-013": [
+  "Q3: options=['drawing two pictures of the same ship model', 'drawing one picture with details from two models', 'drawing a map of the museum room'] answer=1"
+ ],
+ "B4-E2-008": [
+  "passage: \"then a rock in his toy boat.\" -> \"then a rock in his red toy boat.\""
+ ],
+ "B4-E2-024": [
+  "passage: \"and last a red rubber.\" -> \"and last a red pen.\"",
+  "Q3: options=['a red pencil', 'a red ruler', 'a red pen'] answer=1"
+ ],
+ "B4-E2-029": [
+  "passage: \"Nina put a fish on the paper.\" -> \"Nina drew a fish on the paper.\"",
+  "passage: \"Omar put a bag beside the bed.\" -> \"Omar put a bag beside the bed and a box by the door.\""
+ ],
+ "B4-E2-034": [
+  "passage: \"Yan found a yellow card under his desk with a picture of a blue car. Rita took it and gave it back to Yan in the morning.\" -> \"Rita found a yellow card under her desk with a picture of a blue car. It was Yan's card, so she gave it to him in the morning.\"",
+  "Q2: stem=When did Rita give Yan the card?"
+ ],
+ "B4-E2-049": [
+  "passage: \"Tom put a black bag on his head.\" -> \"Tom put a small black book on his head.\"",
+  "Q1: options=['a black book', 'a brown book', 'a white book'] answer=0"
+ ],
+ "B4-E2-058": [
+  "passage rewritten (who made the rings was contradictory)"
+ ],
+ "B4-E2-063": [
+  "passage reordered (flags were added before there was anything to add them to)",
+  "Q3: stem=What did Ella and Leo do next, after putting down the cups?"
+ ],
+ "B4-E2-069": [
+  "passage rewritten (walking to ropes did not lead to two ropes inside a circle)"
+ ],
+ "B4-E2-070": [
+  "passage: \"By the end, Rita had drawn three birds on the card while Yan wrote inside.\" -> \"By the end, Rita had drawn one bird, one star and one egg while Yan wrote inside.\"",
+  "Q1: answer=0",
+  "passage: \"By the end, Rita had drawn one bird, one star and one egg while Yan wrote inside.\" -> \"By the end, Rita had drawn one bird, one star and one egg.\""
+ ],
+ "B4-E2-088": [
+  "passage: \"Their teacher checked the black watch and helped them make their watch right.\" -> \"The clocks did not show the same time, so their teacher checked her black watch and told them.\"",
+  "passage: \"The clocks did not show the same time, so their teacher checked her black watch and told them.\" -> \"The clocks showed different times, so their teacher checked her black watch.\""
+ ],
+ "B4-E2-090": [
+  "passage: \"A child got off and ran beside the tree.\" -> \"A child got off a swing and ran beside the tree.\""
+ ],
+ "B4-E2-098": [
+  "passage: \"Sam moved beside the door so everyone could see the drawing.\" -> \"Zoe stood beside the door so everyone could see the drawing.\"",
+  "Q2: stem=Where did Zoe stand so everyone could see?"
+ ],
+ "B4-E3-004": [
+  "passage: \"He put the card inside so Priya could see it before lunch started.\" -> \"He put the card inside because he wanted a surprise at lunch.\"",
+  "Q3: options=['He wanted a surprise at lunch.', 'He wanted Priya to see it before lunch.', 'He wanted Priya to keep it after lunch.'] answer=0",
+  "Q3: options=['He wanted a surprise at lunch.', 'He wanted the card to stay dry.', 'He wanted Priya to see the rabbit.'] answer=0",
+  "Q3: options=['He wanted to surprise Priya at lunch.', 'He wanted the card to stay dry.', 'He wanted Priya to see the rabbit.'] answer=0"
+ ],
+ "B4-E3-006": [
+  "passage: \"he wanted to help Aisha pick the balls\" -> \"he wanted to help Aisha choose the balls\"",
+  "Q2: options=['to help Aisha choose some balls', 'to help Aisha count the balls', 'to help Aisha carry her shoes'] answer=0"
+ ],
+ "B4-E3-013": [
+  "passage: \"She chose the blue card first because she stood closest to that card.\" -> \"She chose the blue card first because it was the closest card to Tom.\"",
+  "Q2: options=['She liked that card best.', 'She saw that card first.', 'It was nearest to Tom.'] answer=2"
+ ],
+ "B4-E3-016": [
+  "Q3: options=['Because she wanted to eat it.', 'Because she wanted to paint it.', 'Because she wanted to show it.'] answer=1"
+ ],
+ "B4-E3-023": [
+  "passage: \"He added the bus number because he enjoyed his ride to the shop.\" -> \"He added the bus number because he wanted to ride that bus again.\"",
+  "Q2: stem=Why did Amir add the bus number?",
+  "Q2: options=['He wanted to count the buses.', 'He wanted to find his seat.', 'He wanted to ride that bus again.'] answer=2",
+  "Q2: options=['He wanted to count the buses.', 'He wanted to find his seat.', 'He hoped to go on that bus again.'] answer=2"
+ ],
+ "B4-E3-027": [
+  "Q3: options=['Because it was very small.', 'Because it was quick to draw.', 'Because it was fun to draw.'] answer=1"
+ ],
+ "B4-E3-028": [
+  "passage: \"The girl could tell the shoe was hers.\" -> \"The girl had a flower on her other shoe, so she could tell the shoe was hers.\"",
+  "passage: \"The girl had a flower on her other shoe, so she could tell the shoe was hers.\" -> \"The girl had a flower on her other shoe, so she knew it was hers.\"",
+  "passage: \"The girl had a flower on her other shoe, so she knew it was hers.\" -> \"Her other shoe had a flower too, so the girl knew it was hers.\""
+ ],
+ "B4-E3-030": [
+  "passage: \"Jack chose that low bookcase because he hoped to place his toy trucks there.\" -> \"Jack chose that low bookcase because his toy trucks were there too.\"",
+  "Q3: options=['His model planes were on it.', 'His sports photos were on it.', 'His toy trucks were on it.'] answer=2"
+ ],
+ "B4-E3-035": [
+  "passage: \"Amir's first turn would be the quiet one, so he added a towel.\" -> \"Amir wanted his turn to be quiet, so he added a towel.\"",
+  "Q2: options=['He wanted a quiet sound.', 'He wanted a loud sound.', 'He wanted to hide the balls.'] answer=0"
+ ],
+ "B4-E3-043": [
+  "passage: \"Meera wrote Ravi's name because he had the card in his hands.\" -> \"Meera wrote Ravi's name because the pot was going to school.\"",
+  "passage: \"Ravi put the card inside so it would not get wet.\" -> \"Ravi put the card inside the bag so it would not get wet.\"",
+  "Q2: options=['because Ravi was holding the bag', 'because the pot was going to school', 'because Ravi was holding the card'] answer=1",
+  "Q2: options=['because Ravi was holding the bag', 'because the pot would go to school', 'because Ravi was holding the card'] answer=1"
+ ],
+ "B4-E3-048": [
+  "Q3: options=['to show the photo to Max', 'to show the bird to Max', 'to keep them in one place'] answer=2"
+ ],
+ "B4-E3-049": [
+  "Q3: options=['so she could go to sleep', 'so she could rest her eyes', 'so she could wait quietly'] answer=2"
+ ],
+ "B4-E3-054": [
+  "passage: \"Aisha drove the car to the door to make her street longer.\" -> \"Jack added blocks up to the door to make the street longer.\"",
+  "Q2: stem=Why did Jack add blocks up to the door?"
+ ],
+ "B4-E3-059": [
+  "passage: \"Amir chose the clock beside the door because their book needed green things.\" -> \"Amir chose the green clock beside the door because their book needed green things.\"",
+  "passage: \"The classroom window was behind the plant. Only part of the window showed in his first photo. Kang moved back because he wanted every part of the window to show.\" -> \"Only part of the plant showed in his first photo. Kang moved back because he wanted every part of the plant to show.\"",
+  "Q3: options=['to fit all of the clock', 'to fit all of the board', 'to fit all of the plant'] answer=2"
+ ],
+ "B4-E3-060": [
+  "passage: \"Beside the other road was a red flower.\" -> \"Beside the other road were red flowers.\"",
+  "Q1: stem=What grew beside the other road?",
+  "Q1: options=['blue flowers', 'red flowers', 'yellow flowers'] answer=1"
+ ],
+ "B4-E3-061": [
+  "passage: \"Tom put his cap there because he needed to look for his coat.\" -> \"Tom put his cap there because he needed both hands to put on his coat.\"",
+  "Q3: options=['He wanted to find his bag.', 'He wanted to put on his coat.', 'He wanted to find his shoes.'] answer=1",
+  "passage: \"Tom put his cap there because he needed both hands to put on his coat.\" -> \"Tom put his cap there because he needed both hands for his coat.\""
+ ],
+ "B4-E3-067": [
+  "passage: \"Ravi turned the box on its side to look at the top.\" -> \"Ravi turned the box on its side so the door could close.\"",
+  "Q2: options=['to see the back', 'to see the top', 'so the door could close'] answer=2",
+  "Q2: options=['to see the back', 'to see the top', 'so the door would close'] answer=2"
+ ],
+ "B4-E4-001": [
+  "Q3: options=['Two children who pick a picture for their book.', 'Two children who pick a game for their class.', 'Two children who pick a song for their show.'] answer=0"
+ ],
+ "B4-E4-002": [
+  "Q3: options=['Two children paint a shelf before they tidy the toys.', 'Two children tidy toy cars into boxes while the shelf paint dries.', 'Two children make new name cards for the boxes.'] answer=1"
+ ],
+ "B4-E4-004": [
+  "Q2: options=['The first tree in the line.', 'The middle tree in the line.', 'The last tree in the line.'] answer=2"
+ ],
+ "B4-E4-008": [
+  "Q3: options=['Ben and Lily make a card to welcome a new child.', 'Ben and Lily sing a song to welcome a new child.', 'Ben and Lily change a game so a new child can join in.'] answer=2"
+ ],
+ "B4-E4-009": [
+  "passage: \"In Sara's ending, a plastic cup lay beside the path to a party. Sara wanted to act out the party, so she washed a round, flat dish. She could carry pretend cakes on the thing that held her dinner. She decided to bring it to school. Next, they visited different places around the school to ask other classmates for help.\" -> \"In Sara's ending, a plastic cup lay beside the path to a party behind the gate. To act out the party, Sara washed the round, flat thing that held her dinner. She brought it to school to carry pretend cakes.\"",
+  "Q3: options=['Two friends write two endings and let readers choose one.', 'Two friends write one ending and act it out at a party.', 'Two friends hide a key and ask classmates to find it.'] answer=0"
+ ],
+ "B4-E4-010": [
+  "Q3: options=['Two children remember garden birds by drawing their wings.', 'Two children remember garden birds by taking photos.', 'Two children remember garden birds by writing their names.'] answer=0"
+ ],
+ "B4-E4-011": [
+  "Q3: options=['Amir and Kang buy matching socks.', 'Amir and Kang make matching socks.', 'Amir and Kang wash matching socks.'] answer=2"
+ ],
+ "B4-E4-020": [
+  "Q3: options=['Two children change shadows by moving the table.', 'Two children change shadows by moving the paper.', 'Two children change shadows by moving the clock.'] answer=0"
+ ],
+ "B4-E4-022": [
+  "Q3: options=['Two children build the tallest tower in their class.', 'Two children notice that a busy minute can feel shorter.', 'Two children learn to read the clock on the wall.'] answer=1"
+ ],
+ "B4-E4-023": [
+  "Q3: options=['Amir and Kang write a new snack guide for their teacher.', 'Amir and Kang follow their snack guide by preparing cut fruit.', 'Amir and Kang test their snack guide by showing each step.'] answer=1"
+ ],
+ "B4-E4-024": [
+  "Q3: options=['Two boys paint a tree using some paper.', 'Two boys make a bird drawing using some paper.', 'Two boys design a fun poster using some paper.'] answer=1"
+ ]
+}
