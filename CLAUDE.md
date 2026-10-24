@@ -172,7 +172,17 @@ bunların tamamlandığı anlamına gelmez.
       motorundan gelen madde, çocuk bandın ilk yaşından büyük değilse (7-8 bandında ≤7, 9-10 bandında ≤9) sorulan kelime ve cevap Dale-Chall
       listesinden olmalı (`childCanKnow`, `server/literacyLab.js`; harf/ek/yanlış yazım türlerinde yalnız sorulan kelime, suffix'te kök); 80 tohumda
       bulunamazsa süzgeçsiz maddeye düşer (basamak boş kalmaz). 6 yaş artık axial/societal/prey yerine laziness/pianist/witch, 7 yaş cease yerine end
-      görüyor; test `literacy-sitting.test.mjs`. **Native etkisi:** yok; merdiven ve üreteçler sunucuda.
+      görüyor; test `literacy-sitting.test.mjs`. **Güçlü 10 yaş turu (`ladder-4`, aynı gün):** 8 oturum %95 doğru simülasyon. İlk oturumun
+      çoğu yaşın rahat basamağının altındaydı ve tepeye ulaşmış A5 dinleme/Ca4 sıralama oturumda 4 kez geliyordu. Artık 8+ yaş rahat basamaktan
+      başlar; tepede (içeriği olan en üst basamak; E5 boş, E'nin tepesi E4) son 4 birimi doğru parkur oturumda bir kez sorulur; sıralama cevap
+      değil madde sayar (hikâye 3 cevap, dinleme 1); bir parkur oturumda en çok 3 madde (`SESSION_SHARE`) ve başka seçenek varken art arda
+      gelmez. Sonuç: güçlü 10 yaşta rahat basamak altı 0, tepe basamaklar oturumda ~1-2; 5-8 yaş başlangıçları değişmedi. **Üreteç:** 10-11
+      ve 11-12'de (`nearFillers`) çeldiriciler cevabın anlam alanından (WordNet lexname; "painter" yanında dial/skeleton değil senator/client;
+      maaş grubunun dışındaki dividend/customs, horse değil), tanımın kendi kelimesi çeldirici olamaz; kötü tanım cevapları (maria, bound(s),
+      average, mike, sunk, colour, crazy) ve isim/argo çeldiriciler (`NOT_FILLERS`: mike, harry, dude, surrey…) engelli. **İçerik tavanı
+      (açık):** güçlü 10 yaş 2-3. oturumda bütün parkurların tepesine ulaşıyor; A5 (Movers düzeyi dinleme) ve Ca4 (15 maddelik "ilk ne
+      yaptı") onun için hâlâ çok kolay. Daha zor içerik ya E5/A6/Ca5 basamağı ister ya da güçlü çocuğun Word puzzles'a yönlendirilmesi; kullanıcı
+      kararı. **Native etkisi:** yok; merdiven ve üreteçler sunucuda.
 
 - [ ] Okuma hikâyeleri 315 (revize 200 + B5 + B6) incelendi, düzeltildi, uygulamaya bağlandı (2026-10-23, Claude; `claude/english-stories-315`,
       #35'in üstünde). Codex'in istediği bağımsız inceleme: 315 hikâye / 945 soru elle okundu, aynı denetçiyle (a555085'ten beri değişmemiş

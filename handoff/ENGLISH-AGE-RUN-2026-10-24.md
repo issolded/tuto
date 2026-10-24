@@ -130,3 +130,34 @@ Dal `claude/english-age-fixes`:
 - 7 yaş: "cease" yerine "end", "limb", "knitted".
 
 **Doğrulama:** `npm test` 231/231 (yeni test: 6 yaşa giden D4/B3/D5 maddelerinin en az 20/25'i çocuğun kelimeleriyle), build temiz.
+
+## Güçlü 10 yaşındaki çocuk (`ladder-4`, aynı gün)
+
+**Nasıl yapıldı:** sunucunun modülleriyle simülasyon. 10 yaşında bir çocuk 8 oturumu %95 doğrulukla oynadı. Karşılaştırma için 12/%95, 10/%70, 8/%90, 7/%80, 6/%80 ve 5/%80 de koşuldu. 4 oturumun 40 maddesi tek tek okundu.
+
+**Bulunanlar ve yapılanlar:**
+
+| Bulgu | Düzeltme |
+|---|---|
+| İlk oturumun çoğu yaşın rahat basamağının altındaydı. | 8 yaş ve üstü doğrudan rahat basamaktan başlıyor. 8 yaşın altı eskisi gibi. |
+| Tepeye ulaşmış A5 dinleme ve Ca4 sıralama bir oturumda 4 kez geliyordu. | Tepede ve son 4 birimi doğru olan parkur oturumda bir kez soruluyor. "Tepe", içeriği olan en üst basamak: E5'te soru yok, E'nin tepesi E4. |
+| E4 son oturumlarda 5 kez geliyordu. | Tepe artık içeriğe göre belirleniyor. |
+| Sıralama cevap sayıyordu; hikâye 3 cevap getirdiği için dinleme parkuru geride kalıp 4 kez üst üste geliyordu. | Sıralama artık madde sayıyor. Bir parkur oturumda en çok 3 madde alıyor ve başka seçenek varken art arda gelmiyor. |
+| Tanım, eşanlam ve "farklı olan" sorularının çeldiricileri rastgele kelimelerdi; cevap konusu tutan tek kelimeydi ("an artist who paints" → painter / dial / column / skeleton; maaş eşanlamlarının arasında "horse"). | 10-11 ve 11-12 bantlarında çeldiriciler cevabın anlam alanından (WordNet sözcük dosyası) seçiliyor. Tanımın kendi kelimesi çeldirici olamıyor. |
+| Kötü tanım cevapları: maria (ayın denizleri), bound(s), istatistik dilindeki average, mike, sunk, colour ("any material used for its color"), crazy. Çeldiricilerde isim, yer ya da argo kelimeler: mike, harry, dude, surrey, dauphin, argentine… | Hepsi engellendi. |
+
+**Sonuç:**
+- Güçlü 10 yaş: rahat basamağın altında soru 0. Tepe basamaklar oturumda 1–2 kez.
+- 5–8 yaşların akışı değişmedi.
+- 10 yaş %70: zayıf parkurlar doğal olarak aşağıda kalıyor.
+
+**Açık (ürün kararı), içerik tavanı:** Güçlü bir 10 yaş 2-3. oturumda bütün parkurların tepesine ulaşıyor. Bundan sonra gördükleri onun için hâlâ basit:
+- A5 dinleme Movers düzeyinde: "Bill was first … Who was first?"
+- Ca4 yalnız 15 madde: "What did Sue do first?"
+
+Merdiven mantığı artık bunları seyrek soruyor. Daha zor içerik için iki yol var: yeni basamaklar (A6 / Ca5 / E5), ya da tepeye ulaşan çocuğa Word puzzles'ın daha sık önerilmesi.
+
+**Doğrulama:**
+- `npm test` 232/232; `ladder.test.mjs` 29 test (2 yeni: tepe oturumda bir kez; parkur payı ve art arda gelmeme).
+- `english:check` temiz.
+- 10-11 ve 11-12'de tanım, eşanlam ve "farklı olan" türlerinin her birinden 20'şer örnek okundu.

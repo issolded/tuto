@@ -158,6 +158,12 @@ const BAD_SENSE_WORDS = new Set(['club'])
 // whose gloss is unsuitable for the child-facing bank. Examples: `despite` received the noun
 // definition of spite; `swept` received "sweep across"; `centre` received a French place sense.
 const BAD_DEFINITION_WORDS = new Set([
+  // `maria` "a dark region … on the moon" (plural of mare), `bound` "a line determining the limits" (a child says boundary),
+  // `average` "a statistic describing the location of a distribution" (a statistician's gloss).
+  'maria', 'bound', 'bounds', 'average',
+  // `mike` "device for converting sound waves", `sunk` "fall or descend" (a verb gloss), `colour` "any material used for its color"
+  // (gives itself away), `crazy` "someone deranged and possibly dangerous".
+  'mike', 'sunk', 'colour', 'crazy',
   'bipolar', 'boyfriend', 'centre', 'despite', 'few', 'progressive', 'psycho',
   'swept', 'united', 'viii', 'willing', 'written', 'years',
   // -ing words filed under another sense: `lighting` "having abundant light", `accounting` "a convincing explanation",
@@ -419,6 +425,7 @@ export const BANDS = {
     types: ['synonym', 'antonym', 'odd-synonym', 'definition', 'homophone', 'plural',
       'past-tense', 'suffix', 'prefix-antonym', 'root-word', 'missing-vowel',
       'alpha-order', ...GRAMMAR_TYPES],
+    nearFillers: true,
     options: 5,
     answer: 32,
     option: 25,
@@ -451,6 +458,7 @@ export const BANDS = {
       'missing-vowel'],
     // `campus`, `radius`, `criterion` — the book asks these here and nowhere earlier.
     latinPlurals: true,
+    nearFillers: true,
     options: 5,
     answer: 30,
     option: 24,
@@ -743,6 +751,22 @@ const partOfSpeech = (w) => (WORD_LEX[w] || '').split('.')[0]
 // was the whole difference.
 const FILLER_POOLS = new Map()
 
+// Names, places, titles and slang that pass the frequency bar and were seen on 10-12 lines making up the numbers.
+const NOT_FILLERS = new Set(['mike', 'harry', 'chapman', 'dude', 'surrey', 'dauphin', 'argentine', 'commodore',
+  'filibuster', 'sierra', 'ness', 'reverend', 'airforce', 'bullpen', 'entree', 'android', 'piper', 'maria'])
+
+/** The answer's own field (WordNet lexical file), POS-only and not narrowed to concrete words — a meaning field such as
+ *  `noun.possession` has almost nothing concrete in it. Null below eight words. */
+function fieldPool(band, field) {
+  const key = `field|${band.filler}|${field}|${band.familiarOnly ? 'fam' : ''}`
+  if (FILLER_POOLS.has(key)) return FILLER_POOLS.get(key)
+  const list = Object.keys(WORD_Z).filter(w => WORD_LEX[w] === field && z(w) >= band.filler && w.length >= 4
+    && w.length <= 11 && !NOT_FILLERS.has(w) && (!band.familiarOnly || FAMILIAR_SET.has(w)))
+  const pool = list.length >= 8 ? list : null
+  FILLER_POOLS.set(key, pool)
+  return pool
+}
+
 function fillerPool(band, pos) {
   const key = `${band.filler}|${pos || ''}|${band.familiarOnly ? 'fam' : ''}`
   if (FILLER_POOLS.has(key)) return FILLER_POOLS.get(key)
@@ -755,7 +779,7 @@ function fillerPool(band, pos) {
       // anything — it makes up the numbers — so it can afford to be squarely known, and
       // without that `beholder`, `bacteria` and `drainage` were still on eight-year-olds'
       // lines by way of being concrete nouns.
-      && (!band.familiarOnly || FAMILIAR_SET.has(w)))
+      && (!band.familiarOnly || FAMILIAR_SET.has(w)) && !NOT_FILLERS.has(w))
   // Concreteness is the preference and the part of speech is the requirement, in that order —
   // and the order was learned by getting it wrong. Demanding both starved the verbs: WORD_LEX
   // records one lexical file per word, and of the common words it files as verbs only 34 are
@@ -777,9 +801,14 @@ function fillers(r, band, avoid, count, like) {
   // want` does not have to know what any of them mean to find the only noun-ish one. A line
   // that mixes classes gives the answer away to whoever is not reading.
   const pool = fillerPool(band, like ? partOfSpeech(like) : null)
+  // From 10-11 the line is drawn from the answer's own field first (`painter` among `senator`, `client`, `keeper`, not
+  // `dial`, `skeleton`): a ten-year-old reading well was finding the answer as the only word on its topic. `adj.all`
+  // is not a field — it is most adjectives — so they keep the plain pool.
+  const field = band.nearFillers && like && WORD_LEX[like] && !/\.all$/.test(WORD_LEX[like]) ? WORD_LEX[like] : null
+  const near = field ? fieldPool(band, field) : null
   const out = []
   for (let tries = 0; out.length < count && tries < count * 60; tries++) {
-    const w = pickOne(r, pool.length ? pool : COMMON_NOUNS_FALLBACK)
+    const w = pickOne(r, near && tries < count * 30 ? near : pool.length ? pool : COMMON_NOUNS_FALLBACK)
     if (!w || avoid.has(w) || out.includes(w)) continue
     if ([...avoid].some(a => related(a, w))) continue
     if ([...avoid].some(a => synonyms.get(w)?.has(a) || antonyms.get(w)?.has(a))) continue
@@ -1536,6 +1565,9 @@ function genDefinition(r, band, seed) {
   // A distractor the definition also describes is a second answer. The definition is WordNet's
   // own words for this sense, so anything sharing that sense is a candidate.
   if (distractors.some(d => related(d.text, word) || sharesNeighbour(d.text, word))) return null
+  // Nor a word of the definition itself: "an artist who paints" cannot offer `artist`.
+  const glossWords = new Set(DEFINITIONS[word][0].toLowerCase().split(/[^a-z]+/))
+  if (distractors.some(d => glossWords.has(d.text) || glossWords.has(d.text.replace(/s$/, '')))) return null
 
   return {
     seed, band: null, type: 'definition', stem_key: STEM_KEYS.definition,

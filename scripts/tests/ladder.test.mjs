@@ -3,7 +3,7 @@
 // Fixed seeds; the numbers checked are the ones the engine promises (placement within one step, in few answers).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { start, nextProbe, record, replay, summary, gaps, units, skillStatus, TRACKS, TRACK_ORDER, RULES, RULES_VERSION } from '../../src/lib/literacy/ladder.js'
+import { start, nextProbe, record, replay, summary, gaps, units, skillStatus, TRACKS, TRACK_ORDER, RULES, RULES_VERSION, SESSION_SHARE } from '../../src/lib/literacy/ladder.js'
 
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32) }
 
@@ -37,10 +37,12 @@ test('start: a learner who "reads at school" is capped by age on reading tracks'
   assert.deepEqual(Object.fromEntries(TRACK_ORDER.map(t => [t, s.tracks[t].step])), { A: 4, B: 2, Ca: 2, Cd: 2, D: 3, E: 1 })
 })
 
-test('start: a detailed parent sets single tracks; nobody chose -> middle of the bracket', () => {
+test('start: a detailed parent sets single tracks; nobody chose -> middle of the bracket under 8, the solid step from 8', () => {
   assert.equal(start({ age: 9, stop: 'sentences', perTrack: { B: 4 } }).tracks.B.step, 4)
-  const s = start({ age: 9 })
-  for (const t of TRACK_ORDER) assert.ok(s.tracks[t].step <= Math.ceil(TRACKS[t] / 2), `${t} starts at ${s.tracks[t].step}`)
+  const s7 = start({ age: 7 })
+  for (const t of TRACK_ORDER) assert.ok(s7.tracks[t].step <= Math.ceil(TRACKS[t] / 2), `${t} starts at ${s7.tracks[t].step}`)
+  const s10 = start({ age: 10 })
+  assert.deepEqual(TRACK_ORDER.map(t => s10.tracks[t].step), [5, 5, 4, 5, 5, 4], 'a ten-year-old starts at the age-solid steps')
 })
 
 // Measured 2026-10-18 (60 seeds): within one step after 4 sessions 75-96%, after 8 sessions 83-97%, after 12
@@ -70,7 +72,40 @@ test('placement lands within one step of the truth for most simulated children',
 test('placement is short: at most MAX_PLACING answers per track', () => {
   for (let seed = 1; seed <= 30; seed++) {
     const s = run(start({ age: 9 }), { A: 5, B: 4, Ca: 4, Cd: 4, D: 5, E: 4 }, { seed })
-    for (const t of TRACK_ORDER) assert.ok(s.tracks[t].history.length <= RULES.MAX_PLACING + 1)
+    // Replay the answers in order and count each track's answers until it is placed.
+    const all = TRACK_ORDER.flatMap(t => s.tracks[t].history.map(h => ({ ...h, track: t }))).sort((a, b) => a.n - b.n)
+    let st = start({ age: 9 }); const count = {}
+    for (const h of all) {
+      if (st.tracks[h.track].phase === 'placed') continue
+      count[h.track] = (count[h.track] || 0) + 1
+      st = record(st, { track: h.track, step: h.step, correct: h.correct, session: h.session, item: h.item })
+    }
+    for (const t of TRACK_ORDER) assert.ok((count[t] || 0) <= RULES.MAX_PLACING + 1, `${t}: ${count[t]} answers while placing`)
+  }
+})
+
+// A strong child at the top of a short track (A5, Ca4) is not asked it every other question: once its last answers are
+// all right it comes once a session.
+test('a mastered top step is asked once a session', () => {
+  let s = start({ age: 10 })
+  const truth = { A: 5, B: 5, Ca: 4, Cd: 5, D: 5, E: 4 }   // at the top of A and Ca only
+  s = run(s, truth, { seed: 3, slip: 0, guess: 0, sessions: 4 })
+  const perSession = (t, sess) => s.tracks[t].history.filter(h => h.session === sess).length
+  assert.ok(perSession('A', 4) <= 1 && perSession('Ca', 4) <= 1, `A ${perSession('A', 4)}, Ca ${perSession('Ca', 4)} in session 4`)
+})
+
+test('no track takes more than its share of a sitting, nor two turns running, while another can go', () => {
+  for (const age of [7, 10, 12]) {
+    let s = start({ age })
+    s = run(s, { A: 5, B: 4, Ca: 3, Cd: 4, D: 4, E: 3 }, { seed: 11, slip: 0.1, guess: 0.2, sessions: 5 })
+    for (let sess = 1; sess <= 5; sess++) {
+      const asked = Object.keys(s.tracks).flatMap(t => s.tracks[t].history.filter(h => h.session === sess).map(h => [h.n, t]))
+        .sort((a, b) => a[0] - b[0]).map(x => x[1])
+      for (const t of Object.keys(s.tracks)) {
+        assert.ok(asked.filter(x => x === t).length <= SESSION_SHARE, `age ${age} session ${sess}: ${asked.join(' ')}`)
+      }
+      for (let i = 1; i < asked.length; i++) assert.notEqual(asked[i], asked[i - 1], `age ${age} session ${sess}: ${asked.join(' ')}`)
+    }
   }
 })
 

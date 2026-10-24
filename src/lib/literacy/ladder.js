@@ -38,7 +38,7 @@ export const TRACKS = { A: 5, B: 6, Ca: 4, Cd: 6, D: 6, E: 5 }
 export const TRACK_ORDER = ['A', 'B', 'Ca', 'Cd', 'D', 'E']
 
 // Bump when a rule below changes what a stored answer means; stored answers keep the version they were judged by.
-export const RULES_VERSION = 'ladder-3'   // ladder-3: placement capped one step above the age's introduced step
+export const RULES_VERSION = 'ladder-4'   // ladder-3: placement capped one step above the age's introduced step; ladder-4: 8+ start at the solid step, a mastered top step (the highest with questions) is asked once a session, no track more than SESSION_SHARE items a sitting or two turns running
 
 // Tunable in one place; the pilot sets the real numbers. None of these is a measured standard.
 export const RULES = {
@@ -94,9 +94,10 @@ export function start({ age, stop = null, perTrack = {}, skills = {} }) {
     if (perTrack[t]) first = perTrack[t]
     else if (stop === 'native') first = row[t][0] || 1
     else if (stop && STOPS[stop]) first = READING.has(t) ? Math.min(STOPS[stop][t], row[t][1] || 1) : STOPS[stop][t]
-    // Nobody chose: the middle of a wide bracket (age-solid, capped low for the youngest), so one right answer
-    // can try a hard one and one wrong answer can drop to the floor.
-    else first = Math.max(1, Math.min(row[t][0] || 1, Math.ceil(TRACKS[t] / 2)))
+    // Nobody chose: under 8, the middle of a wide bracket (age-solid, capped low), so one right answer can try a hard
+    // one and one wrong answer can drop to the floor. From 8 the age-solid step itself: a ten-year-old's first sitting
+    // was eight questions below their age ("What's your name?").
+    else first = Math.max(1, Math.min(row[t][0] || 1, age >= 8 ? TRACKS[t] : Math.ceil(TRACKS[t] / 2)))
     // Placement does not search above one step past what the age introduces (a five-year-old who guesses one synonym
     // right is not asked "the quality of being valid and rigorous"). A parent's own starting step raises the cap; once
     // placed, the normal promotion rules can take the child higher.
@@ -117,7 +118,11 @@ export function replay(attempts, startOpts) {
 export function nextProbe(state, { has = () => true, session } = {}) {
   const last = recentInSession(state, session)
   const struggling = last.length >= RULES.STRUGGLE && last.slice(-RULES.STRUGGLE).every(a => !a.correct)
-  const order = [...TRACK_ORDER].sort((a, b) => weight(state.tracks[a]) - weight(state.tracks[b]) || TRACK_ORDER.indexOf(a) - TRACK_ORDER.indexOf(b))
+  // The track just asked waits a turn when another can go (four A5 clips in a row while A caught up on items).
+  let lastTrack = null, lastN = -1
+  for (const t of TRACK_ORDER) for (const h of state.tracks[t].history) if (session != null && h.session === session && h.n > lastN) { lastN = h.n; lastTrack = t }
+  const w = t => weight(state.tracks[t], topWithContent(t, has), session) + (t === lastTrack ? 50 : 0)
+  const order = [...TRACK_ORDER].sort((a, b) => w(a) - w(b) || TRACK_ORDER.indexOf(a) - TRACK_ORDER.indexOf(b))
   for (const t of order) {
     const tr = state.tracks[t]
     let want = target(tr, t)
@@ -131,8 +136,31 @@ export function nextProbe(state, { has = () => true, session } = {}) {
   return null
 }
 
-// Tracks with fewer answers come first; placed tracks wait behind placing ones.
-function weight(tr) { return (tr.phase === 'placing' ? 0 : 100) + tr.history.length }
+// Tracks with fewer answers come first; placed tracks wait behind placing ones. A track placed at its top step whose
+// last answers were all right has nothing left to find out: it is asked once a session, not every other question (a
+// strong ten-year-old spent four questions a sitting on A5 listening and Ca4 order).
+// The top is the highest step that has questions (E5 has none yet, so E4 is the top of E).
+function weight(tr, top, session) {
+  const now = session == null ? [] : tr.history.filter(h => h.session === session)
+  const askedNow = now.length > 0
+  // No track takes more than SESSION_SHARE items of a sitting while another can go.
+  const full = new Set(now.map(h => h.item ?? h.group ?? h.n)).size >= SESSION_SHARE
+  // Items, not answers: a story brings three answers, a listening clip one, and counting answers kept the listening
+  // track behind and asked it four times running.
+  const items = new Set(tr.history.map(h => h.item ?? h.group ?? h.n)).size
+  return (tr.phase === 'placing' ? 0 : 100) + items + ((mastered(tr, top) && askedNow) || full ? 1000 : 0)
+}
+function topWithContent(t, has) {
+  for (let s = TRACKS[t]; s > 1; s--) if (has(t, id(t, s))) return s
+  return 1
+}
+export const MASTERED_RUN = 4
+export const SESSION_SHARE = 3
+function mastered(tr, top) {
+  if (tr.phase !== 'placed' || tr.step < top) return false
+  const at = units(tr).filter(u => u.step === tr.step)
+  return at.length >= MASTERED_RUN && at.slice(-MASTERED_RUN).every(u => u.correct)
+}
 
 function target(tr, t) {
   if (tr.phase === 'placing') return tr.step
