@@ -117,3 +117,16 @@ Dal `claude/english-age-fixes`:
 - `english:check` temiz
 - build temiz
 - Değişen türlerden 1500'er soru üretildi; yasaklı durum 0.
+
+### Yaşa göre kelime süzgeci (kullanıcı kararı, aynı gün)
+
+**Ne yapıyor:** Merdivende VR motorundan gelen bir maddede, çocuk bandın ilk yaşından büyük değilse sorulan kelime ve cevap Dale-Chall listesinden seçiliyor. Örnek: 7-8 bandındaki eşanlam sorusu 7 yaş ve altına, 9-10 bandındaki ek sorusu 9 yaş ve altına bu kuralla gidiyor.
+- Harf, ek ya da yanlış yazım cevaplı türlerde yalnız sorulan kelimeye bakılıyor.
+- Ek (suffix) sorusunda kök kelimeye bakılıyor; kuralın ürettiği türetilmiş kelime şart değil.
+- 80 tohumda uygun madde bulunamazsa süzgeçsiz maddeye düşülüyor. Böylece basamak hiçbir zaman sorusuz kalmıyor.
+
+**Etkisi:**
+- 6 yaş: "axis → axial", "society → societal", "prey", "gateway" yerine artık "lazy → laziness", "piano → pianist", "quick", "witch".
+- 7 yaş: "cease" yerine "end", "limb", "knitted".
+
+**Doğrulama:** `npm test` 231/231 (yeni test: 6 yaşa giden D4/B3/D5 maddelerinin en az 20/25'i çocuğun kelimeleriyle), build temiz.

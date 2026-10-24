@@ -168,8 +168,11 @@ bunların tamamlandığı anlamına gelmez.
       time to go home" → doğal cevap "is" yoktu), sessiz harf (Dale-Chall ya da yaygın; writ/wrought engelli), sesteş (gösterilen kelime yaygın, cevap
       karşılaşılabilir; yazım çeşitleri ve aksan çiftleri elendi), kafiye (wrath UK), kök (-ate/-ise/-ize), kesme işareti (kesmesiz tamlama "class
       trip" doğru olduğu için şık değil), geçmiş zaman (can→canned: çocuğun cevabı "could"; man/sum/body gibi isim-önce kelimeler), ie/ei (married,
-      healthier gibi y→ie kelimeleri değil), benzetme (person:foot). **Açık (ürün kararı):** 6 yaş B3/D4'te "cease/axial/societal" görüyor; basamak
-      kaynaklarının kelime düzeyi yaşa göre süzülmüyor. **Native etkisi:** yok; merdiven ve üreteçler sunucuda.
+      healthier gibi y→ie kelimeleri değil), benzetme (person:foot). **Yaşa göre kelime süzgeci (kullanıcı kararı, aynı gün):** VR
+      motorundan gelen madde, çocuk bandın ilk yaşından büyük değilse (7-8 bandında ≤7, 9-10 bandında ≤9) sorulan kelime ve cevap Dale-Chall
+      listesinden olmalı (`childCanKnow`, `server/literacyLab.js`; harf/ek/yanlış yazım türlerinde yalnız sorulan kelime, suffix'te kök); 80 tohumda
+      bulunamazsa süzgeçsiz maddeye düşer (basamak boş kalmaz). 6 yaş artık axial/societal/prey yerine laziness/pianist/witch, 7 yaş cease yerine end
+      görüyor; test `literacy-sitting.test.mjs`. **Native etkisi:** yok; merdiven ve üreteçler sunucuda.
 
 - [ ] Okuma hikâyeleri 315 (revize 200 + B5 + B6) incelendi, düzeltildi, uygulamaya bağlandı (2026-10-23, Claude; `claude/english-stories-315`,
       #35'in üstünde). Codex'in istediği bağımsız inceleme: 315 hikâye / 945 soru elle okundu, aynı denetçiyle (a555085'ten beri değişmemiş

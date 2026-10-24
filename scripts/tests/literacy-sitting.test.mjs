@@ -98,3 +98,22 @@ test('listening items whose recordings no longer match the script are not dealt'
   assert.equal(await dealItem('A', 'A4', { source: 'listening-bank', format: 'listen-answer', id: 'L4-006' }), null)
   assert.ok(await dealItem('A', 'A4', { source: 'listening-bank', format: 'listen-answer', id: 'L4-007' }))
 })
+
+// A child no older than a verbal-reasoning band's first year gets that band's questions in words they can know
+// (Dale-Chall): a six-year-old at D4 is not asked for `axis` + al.
+test('young children get verbal-reasoning items in their own words', async () => {
+  const { childCanKnow } = await import('../../server/literacyLab.js')
+  const { FAMILIAR } = await import('../../server/english/englishLexicon.generated.js')
+  const set = new Set(FAMILIAR)
+  for (const [step, band, type] of [['D4', '9-10', 'suffix'], ['B3', '7-8', 'synonym'], ['D5', '10-11', 'silent-letter']]) {
+    let fitted = 0
+    for (let seed = 1; seed <= 25; seed++) {
+      const item = await dealItem('X', step, { source: 'vr-engine', format: 'read-choice', ref: { band, type, seed: seed * 101 } }, { age: 6 })
+      if (!item) continue
+      const [, , , s] = item.id.split(':')
+      const { generateItem } = await import('../../server/english/englishTemplates.js')
+      if (childCanKnow(generateItem(band, type, Number(s)), set)) fitted++
+    }
+    assert.ok(fitted >= 20, `${step} ${type}: only ${fitted}/25 in a six-year-old's words`)
+  }
+})
