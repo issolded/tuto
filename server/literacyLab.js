@@ -81,7 +81,36 @@ function pickSource(track, step, seed, { minStatus, avoid, audio = true }) {
 
 // A dealt item: questions with options and keys. Each question carries the evidence fields the ladder records.
 // Keys stay on the server; publicItem() is what is sent.
-export async function dealItem(track, step, pick, { avoid = new Set(), variety = 'uk' } = {}) {
+// A verbal-reasoning band is written for an age (`9-10`). When a child no older than its first year reaches it, the word
+// the question is about and its answer must be ones that child can know: Dale-Chall words (known to most 9-10 year
+// olds), with plain endings taken off. Without this a six-year-old at D4 was asked to add -al to `axis` (axial).
+let FAMILIAR_WORDS = null
+async function familiarWords() {
+  if (!FAMILIAR_WORDS) FAMILIAR_WORDS = new Set((await import('./english/englishLexicon.generated.js')).FAMILIAR)
+  return FAMILIAR_WORDS
+}
+const known = (set, word) => {
+  const w = word.toLowerCase()
+  if (set.has(w)) return true
+  const bases = [w.replace(/ies$/, 'y'), w.replace(/ied$/, 'y'), w.replace(/(es|s|ed|d|ing|ly|er|est)$/, ''),
+    w.replace(/(ed|ing|er|est)$/, '') + 'e', w.replace(/([a-z])\1(ed|ing|er|est)$/, '$1')]
+  return bases.some(b => b.length > 1 && set.has(b))
+}
+// Where the answer is a letter, an ending or a misspelling, the word asked about is the thing to know; for an added
+// suffix it is the root (the derived word is what the rule makes).
+const WORD_ONLY = new Set(['silent-letter', 'missing-vowel', 'ie-ei', 'ending', 'misspelt'])
+export function childCanKnow(q, set) {
+  const asked = WORD_ONLY.has(q.type) ? [q.rule?.word]
+    : q.type === 'suffix' ? [q.rule?.of]
+      : [q.prompt?.word, q.rule?.word, q.rule?.of, ...q.correct.map(j => q.options[j].text)]
+  const words = asked
+    .filter(x => typeof x === 'string')
+    .flatMap(x => x.split(/[\s']+/)).filter(x => /^[a-z]{3,}$/i.test(x))
+  return words.every(x => known(set, x))
+}
+const bandAge = band => Number(String(band).split('-')[0]) || 0
+
+export async function dealItem(track, step, pick, { avoid = new Set(), variety = 'uk', age = null } = {}) {
   const base = { track, step, source: pick.source, format: pick.format }
   if (pick.source === 'sentence-bank') {
     const it = SENTENCE_ITEMS.find(x => x.id === pick.id)
@@ -153,20 +182,30 @@ export async function dealItem(track, step, pick, { avoid = new Set(), variety =
   }
   if (pick.source === 'vr-engine') {
     const { generateItem } = await import('./english/englishTemplates.js')
-    for (let k = 0; k < 20; k++) {
+    // At or below the band's first age: look further for a question in the child's words (a seven-year-old at the 7-8
+    // band was asked for `cease`); none in 80 seeds -> the plain one, so a thin type never leaves the step without one.
+    const young = age != null && age <= bandAge(pick.ref.band)
+    const set = young ? await familiarWords() : null
+    let fallback = null
+    for (let k = 0; k < (young ? 80 : 20); k++) {
       const q = generateItem(pick.ref.band, pick.ref.type, pick.ref.seed + k)
       if (!q) continue
-      const options = q.options.map((o, j) => ({ id: `o${j}`, text: o.text }))
-      const answer = q.correct.map(j => q.options[j].text).sort().join('+')
-      return { ...base, id: `vr:${pick.ref.band}:${pick.ref.type}:${q.seed}`, contentVersion: `english-engine:${pick.ref.band}`,
-        prompt: { stem_key: q.stem_key, type: q.type, vr: q.prompt, pick: q.pick },
-        // The answer word is the group: the same word met again under another seed is the same word.
-        questions: [{ id: 'q0', options, key: q.correct.map(j => `o${j}`), skill: pick.ref.type, group: `vr:${pick.ref.type}:${answer}`,
-          family: `vr:${pick.ref.type}`, explain: q.correct.map(j => q.options[j].text).join(', ') }] }
+      if (young && !childCanKnow(q, set)) { fallback ??= q; continue }
+      return vrItem(base, pick, q)
     }
-    return null
+    return fallback ? vrItem(base, pick, fallback) : null
   }
   return null
+}
+
+function vrItem(base, pick, q) {
+  const options = q.options.map((o, j) => ({ id: `o${j}`, text: o.text }))
+  const answer = q.correct.map(j => q.options[j].text).sort().join('+')
+  return { ...base, id: `vr:${pick.ref.band}:${pick.ref.type}:${q.seed}`, contentVersion: `english-engine:${pick.ref.band}`,
+    prompt: { stem_key: q.stem_key, type: q.type, vr: q.prompt, pick: q.pick },
+    // The answer word is the group: the same word met again under another seed is the same word.
+    questions: [{ id: 'q0', options, key: q.correct.map(j => `o${j}`), skill: pick.ref.type, group: `vr:${pick.ref.type}:${answer}`,
+      family: `vr:${pick.ref.type}`, explain: q.correct.map(j => q.options[j].text).join(', ') }] }
 }
 
 export function publicItem(item) {
@@ -230,7 +269,7 @@ async function dealPractice(sitting, rows) {
     const { track, step } = sitting.queue.shift()
     for (let k = 0; k < 8; k++) {
       const pick = pickSource(track, step, crypto.randomInt(1, 2 ** 30), { minStatus: sitting.minStatus, avoid, audio: !sitting.noAudio })
-      const item = pick && await dealItem(track, step, pick, { avoid, variety: sitting.variety })
+      const item = pick && await dealItem(track, step, pick, { avoid, variety: sitting.variety, age: sitting.child?.age })
       if (item) return item
     }
   }
@@ -278,7 +317,7 @@ async function nextFor(supabase, child, { sittingId, minStatus, pay = null, quot
     for (const it of sitting.items.values()) for (const q of it.questions) avoid.add(String(q.group))
     for (let k = 0; k < 8 && !item; k++) {
       const pick = pickSource(probe.track, probe.step, crypto.randomInt(1, 2 ** 30), { minStatus: sitting.minStatus, avoid, audio: !sitting.noAudio })
-      if (pick) item = await dealItem(probe.track, probe.step, pick, { avoid, variety })
+      if (pick) item = await dealItem(probe.track, probe.step, pick, { avoid, variety, age: child.age })
     }
     if (!item) return { error: [500, `could not deal ${probe.step}`] }
   }

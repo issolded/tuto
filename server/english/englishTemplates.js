@@ -158,11 +158,19 @@ const BAD_SENSE_WORDS = new Set(['club'])
 // whose gloss is unsuitable for the child-facing bank. Examples: `despite` received the noun
 // definition of spite; `swept` received "sweep across"; `centre` received a French place sense.
 const BAD_DEFINITION_WORDS = new Set([
+  // `maria` "a dark region … on the moon" (plural of mare), `bound` "a line determining the limits" (a child says boundary),
+  // `average` "a statistic describing the location of a distribution" (a statistician's gloss).
+  'maria', 'bound', 'bounds', 'average',
+  // `mike` "device for converting sound waves", `sunk` "fall or descend" (a verb gloss), `colour` "any material used for its color"
+  // (gives itself away), `crazy` "someone deranged and possibly dangerous".
+  'mike', 'sunk', 'colour', 'crazy',
   'bipolar', 'boyfriend', 'centre', 'despite', 'few', 'progressive', 'psycho',
   'swept', 'united', 'viii', 'willing', 'written', 'years',
   // -ing words filed under another sense: `lighting` "having abundant light", `accounting` "a convincing explanation",
   // `boring` "the act of drilling" (a child reads it as dull).
   'lighting', 'accounting', 'boring',
+  // Common words filed under a rare sense: `have` "a person who possesses great material wealth", `clown` "a rude or vulgar fool".
+  'have', 'clown', 'intro',   // intro: the word defined is `introduction`
 ])
 // WordNet records every attested inflection, including specialist senses and alternative
 // plurals. Those are not automatically fair "write the plural" questions: `fish/fishes`,
@@ -176,7 +184,10 @@ const BAD_PLURAL_WORDS = new Set([
 // tense of modal `may` in the sense this question tests.
 // beat/may: no single simple past. ring: `ringed` is right too (a ring drawn round). swell: the simple past is `swelled`
 // (`swollen` is the participle). clothe: `clothed`, not the old `clad`.
-const BAD_PAST_WORDS = new Set(['beat', 'may', 'ring', 'swell', 'clothe'])
+// can: a child's past of `can` is `could`, not `canned`. The rest are nouns first, and a child does not use them as
+// verbs (`man` -> manned, `sum` -> summed, `body` -> bodied).
+const BAD_PAST_WORDS = new Set(['beat', 'may', 'ring', 'swell', 'clothe', 'can', 'body', 'embody', 'man', 'sum', 'cap',
+  'stem', 'spur', 'dot', 'flag', 'bar', 'skin', 'top', 'rig', 'dub', 'levy', 'pad', 'handicap'])
 // Generated derivations can share spelling without being a teachable base+suffix relation.
 const BAD_SUFFIX_PAIRS = new Set(['tense|tensor'])
 // A bare base is not a fair prefix question when the table itself gives it two answers.
@@ -414,6 +425,7 @@ export const BANDS = {
     types: ['synonym', 'antonym', 'odd-synonym', 'definition', 'homophone', 'plural',
       'past-tense', 'suffix', 'prefix-antonym', 'root-word', 'missing-vowel',
       'alpha-order', ...GRAMMAR_TYPES],
+    nearFillers: true,
     options: 5,
     answer: 32,
     option: 25,
@@ -446,6 +458,7 @@ export const BANDS = {
       'missing-vowel'],
     // `campus`, `radius`, `criterion` — the book asks these here and nowhere earlier.
     latinPlurals: true,
+    nearFillers: true,
     options: 5,
     answer: 30,
     option: 24,
@@ -738,6 +751,22 @@ const partOfSpeech = (w) => (WORD_LEX[w] || '').split('.')[0]
 // was the whole difference.
 const FILLER_POOLS = new Map()
 
+// Names, places, titles and slang that pass the frequency bar and were seen on 10-12 lines making up the numbers.
+const NOT_FILLERS = new Set(['mike', 'harry', 'chapman', 'dude', 'surrey', 'dauphin', 'argentine', 'commodore',
+  'filibuster', 'sierra', 'ness', 'reverend', 'airforce', 'bullpen', 'entree', 'android', 'piper', 'maria'])
+
+/** The answer's own field (WordNet lexical file), POS-only and not narrowed to concrete words — a meaning field such as
+ *  `noun.possession` has almost nothing concrete in it. Null below eight words. */
+function fieldPool(band, field) {
+  const key = `field|${band.filler}|${field}|${band.familiarOnly ? 'fam' : ''}`
+  if (FILLER_POOLS.has(key)) return FILLER_POOLS.get(key)
+  const list = Object.keys(WORD_Z).filter(w => WORD_LEX[w] === field && z(w) >= band.filler && w.length >= 4
+    && w.length <= 11 && !NOT_FILLERS.has(w) && (!band.familiarOnly || FAMILIAR_SET.has(w)))
+  const pool = list.length >= 8 ? list : null
+  FILLER_POOLS.set(key, pool)
+  return pool
+}
+
 function fillerPool(band, pos) {
   const key = `${band.filler}|${pos || ''}|${band.familiarOnly ? 'fam' : ''}`
   if (FILLER_POOLS.has(key)) return FILLER_POOLS.get(key)
@@ -750,7 +779,7 @@ function fillerPool(band, pos) {
       // anything — it makes up the numbers — so it can afford to be squarely known, and
       // without that `beholder`, `bacteria` and `drainage` were still on eight-year-olds'
       // lines by way of being concrete nouns.
-      && (!band.familiarOnly || FAMILIAR_SET.has(w)))
+      && (!band.familiarOnly || FAMILIAR_SET.has(w)) && !NOT_FILLERS.has(w))
   // Concreteness is the preference and the part of speech is the requirement, in that order —
   // and the order was learned by getting it wrong. Demanding both starved the verbs: WORD_LEX
   // records one lexical file per word, and of the common words it files as verbs only 34 are
@@ -772,9 +801,14 @@ function fillers(r, band, avoid, count, like) {
   // want` does not have to know what any of them mean to find the only noun-ish one. A line
   // that mixes classes gives the answer away to whoever is not reading.
   const pool = fillerPool(band, like ? partOfSpeech(like) : null)
+  // From 10-11 the line is drawn from the answer's own field first (`painter` among `senator`, `client`, `keeper`, not
+  // `dial`, `skeleton`): a ten-year-old reading well was finding the answer as the only word on its topic. `adj.all`
+  // is not a field — it is most adjectives — so they keep the plain pool.
+  const field = band.nearFillers && like && WORD_LEX[like] && !/\.all$/.test(WORD_LEX[like]) ? WORD_LEX[like] : null
+  const near = field ? fieldPool(band, field) : null
   const out = []
   for (let tries = 0; out.length < count && tries < count * 60; tries++) {
-    const w = pickOne(r, pool.length ? pool : COMMON_NOUNS_FALLBACK)
+    const w = pickOne(r, near && tries < count * 30 ? near : pool.length ? pool : COMMON_NOUNS_FALLBACK)
     if (!w || avoid.has(w) || out.includes(w)) continue
     if ([...avoid].some(a => related(a, w))) continue
     if ([...avoid].some(a => synonyms.get(w)?.has(a) || antonyms.get(w)?.has(a))) continue
@@ -1417,8 +1451,11 @@ const syllablesOf = (w, variety) => SYLLABLES[variety]?.[w]
 // and gives bare `mall` only the /mæl/ pronunciation used in the London street name rather
 // than the ordinary shopping-centre word. Keep the source data intact and quarantine the
 // affected prompts at the question boundary.
+// Homophone pairs that hold only in some accents, or rest on a word no child meets.
+const BAD_HOMOPHONE_WORDS = new Set(['wont', 'bourne', 'borne', 'kraft', 'lure', 'hippy', 'hippie', 'aunty', 'auntie', 'donut', 'doughnut', 'mold', 'mould', 'disk', 'disc'])
+
 const BAD_RHYME_WORDS = {
-  uk: new Set(['mall', 'one']),
+  uk: new Set(['mall', 'one', 'wrath']),   // wrath: British /rɒθ/, rhymed only with American /ræθ/ words (aftermath)
   us: new Set(),
 }
 
@@ -1528,6 +1565,9 @@ function genDefinition(r, band, seed) {
   // A distractor the definition also describes is a second answer. The definition is WordNet's
   // own words for this sense, so anything sharing that sense is a candidate.
   if (distractors.some(d => related(d.text, word) || sharesNeighbour(d.text, word))) return null
+  // Nor a word of the definition itself: "an artist who paints" cannot offer `artist`.
+  const glossWords = new Set(DEFINITIONS[word][0].toLowerCase().split(/[^a-z]+/))
+  if (distractors.some(d => glossWords.has(d.text) || glossWords.has(d.text.replace(/s$/, '')))) return null
 
   return {
     seed, band: null, type: 'definition', stem_key: STEM_KEYS.definition,
@@ -1621,6 +1661,20 @@ function genHomophone(r, band, seed) {
     () => table.map(g => g.filter(ok)).filter(g => g.length >= 2))
   if (!groups.length) return null
   const group = shuffle(r, pickOne(r, groups))
+  // The word printed in the question is one a child knows (`air`, not `heir`; never `bourne` or `wont`); the answer
+  // may be the rarer spelling, which is what the question teaches.
+  // Both words are ones a child can meet (`heir` yes; `lakh`, `moa`, `roc` no), and two spellings of one word
+  // (`aunty/auntie`, `mould/mold`, `disk/disc`) are not homophones.
+  // Dale-Chall words or frequent ones; `familiar` also admits whole WordNet categories, which let `lakh` and `baba` in.
+  const common = (w) => FAMILIAR_SET.has(w) || z(w) >= 42
+  const meetable = (w) => FAMILIAR_SET.has(w) || z(w) >= 38
+  if (group.some(w => BAD_HOMOPHONE_WORDS.has(w))) return null
+  const at = group.findIndex(common)
+  if (at < 0) return null
+  group.unshift(...group.splice(at, 1))
+  const answerAt = group.findIndex((w, i) => i > 0 && meetable(w) && !related(w, group[0]) && !sameWordDifferentEnding(w, group[0]))
+  if (answerAt < 0) return null
+  group.splice(1, 0, ...group.splice(answerAt, 1))
   const [stem, answer] = group
   if (!stem || !answer) return null
 
@@ -1853,7 +1907,7 @@ function genRootWord(r, band, seed) {
     // plain inflections, so `unopposed -> opposed` survived the first attempt. The test is
     // direct — strip each ending in turn and see whether a word is left.
     const INFLECTIONS = ['ed', 'd', 'ing', 'ly', 'ness', 'ment', 'ion', 'tion', 'ous', 'able',
-      'ible', 'ive', 'er', 'est', 'al', 'ity', 'ance', 'ence', 'ist', 'ful', 'less', 's']
+      'ible', 'ive', 'er', 'est', 'al', 'ity', 'ance', 'ence', 'ist', 'ful', 'less', 's', 'ate', 'ise', 'ize']
     const decomposable = (w) => INFLECTIONS.some((suf) => {
       if (!w.endsWith(suf) || w.length - suf.length < 3) return false
       const stem = w.slice(0, -suf.length)
@@ -2741,7 +2795,7 @@ function genApostrophe(r, band, seed) {
   const right = plural && endsS ? `${owner}' ${thing}` : `${owner}'s ${thing}`
   const variants = [
     [`${owner}'s ${thing}`, 'apostrophe-s-added-to-plural'],
-    [`${owner} ${thing}`, 'no-apostrophe'],
+    // Not `${owner} ${thing}`: as a compound it is often right (class trip, family car, sheep field), a second answer.
     [`${owner}' ${thing}`, 'apostrophe-after-s'],
     ...(plural && endsS ? [[`${owner.slice(0, -1)}'s ${thing}`, 'singular-owner']] : []),
     ...(!plural && !endsS
@@ -2822,6 +2876,8 @@ function genIeEi(r, band, seed) {
     // Only where the two letters are ONE sound, which is what the rule is about. In `alien`,
     // `quiet`, `science` and `cookie` they are two sounds or an ending, and no rule helps.
     && !/ie$|ien|iet|ienc|eing|eity|eist/.test(w)
+    // `married`, `accompanied`, `healthier`: the ie is a y changed before an ending, a different rule.
+    && !(/ie(d|r|s|st)$/.test(w) && anyWord(w.replace(/ie(d|r|s|st)$/, 'y')))
     && !anyWord(w.replace(/ie|ei/, m => (m === 'ie' ? 'ei' : 'ie')))))
   if (!words.length) return null
   const word = pickOne(r, words)
@@ -2831,14 +2887,18 @@ function genIeEi(r, band, seed) {
     [{ text: pair === 'ie' ? 'ei' : 'ie', why: 'swapped' }], { kind: 'ie-ei', word }, 2)
 }
 
+// Frequent enough by count, but not words a child writes.
+const RARE_SILENT = new Set(['writ', 'wrought', 'wraith', 'wretched'])
+
 function genSilentLetter(r, band, seed) {
   // "Rewrite each word, adding the missing silent letter: hym, nock, lim, autum, bom."
   // The answer bar, with the rare ones cut by hand below it: `_rought` for `wrought` was the
   // first one out, and the filler bar left too few words for the type to vary.
-  const words = memo(`silent|${band.answer}`, () => {
+  const words = memo(`silent|${band.answer}|${band.filler}`, () => {
     const out = []
     for (const w of Object.keys(WORD_Z)) {
-      if (!plainWord(w) || z(w) < band.answer || w.length < 4) continue
+      // A word a child knows: `writ` passed the answer bar and is not one.
+      if (!plainWord(w) || z(w) < band.answer || w.length < 4 || !(FAMILIAR_SET.has(w) || z(w) >= 32) || RARE_SILENT.has(w)) continue
       for (const p of SILENT_PATTERNS) {
         if (!p.re.test(w)) continue
         const at = p.at < 0 ? w.length + p.at : p.at
